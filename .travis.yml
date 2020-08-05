@@ -1,0 +1,41 @@
+language: python
+
+python:
+  - '3.7'
+  - '3.6'
+
+sudo: false
+
+os:
+   - linux
+   - osx
+
+install:
+  - pip install -r requirements.txt
+
+script:
+  - pytest tests/
+
+# cache:
+#   directories:
+#     - $HOME/miniconda3
+#
+# before_cache:
+#   - rm -rf $HOME/miniconda3/pkgs/cache
+#   - rm -rf $HOME/miniconda3/envs/exoctk-3.6
+#   - rm -rf $HOME/miniconda3/envs/exoctk-3.7
+
+# before_install:
+#   - export PATH="$HOME/miniconda3/bin:$PATH"
+#   - export EXOCTK_DATA="$HOME/exoctk_data/"
+#   - chmod +x ci/install_conda.sh
+#   - chmod +x ci/setup_conda_env.sh
+
+# install:
+#   - ci/install_conda.sh
+#   - ci/setup_conda_env.sh
+#   - python setup.py install
+
+# script:
+#   - export PATH="$HOME/miniconda3/envs/exoctk-$PYTHON_VERSION/bin:$PATH"
+#   - travis_wait 30 pytest
