@@ -5,15 +5,15 @@ from bokeh.io import output_notebook
 from bokeh.plotting import show
 from importlib import reload
 #from hotsoss import plotting as plt
-sys.path.append('../lightcurve_fitting')
-sys.path.append('../lib')
+sys.path.append('..')
+import eureka
 
 # Get the orbital parameters
-from utils import get_target_data
+from eureka.lightcurve_fitting.utils import get_target_data
 wasp107b_params, url = get_target_data('WASP-107b')
 
 # Generate the simulated light curve
-from simulations import simulate_lightcurve
+from eureka.lightcurve_fitting.simulations import simulate_lightcurve
 npts = 1000
 snr  = 4000.
 #wasp107b_unc = np.ones(npts)/snr
@@ -28,12 +28,12 @@ wasp107b_time, wasp107b_flux, wasp107b_unc, wasp107b_par = simulate_lightcurve('
 #wasp107b_spec = plt.plot_time_series_spectra(wasp107b_wave, wasp107b_flux)
 #show(wasp107b_spec)
 
-import lightcurve as lc
+import eureka.lightcurve_fitting.lightcurve as lc
 reload(lc)
 wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
 
 # Set the intial parameters
-import parameters as p
+import eureka.lightcurve_fitting.parameters as p
 reload(p)
 params = p.Parameters()
 params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
@@ -45,11 +45,11 @@ params.ecc = wasp107b_par['eccentricity'], 'fixed'
 params.w = 90, 'fixed'    #wasp107b_par['omega'], 'fixed'
 params.limb_dark = 'quadratic', 'independent'
 params.transittype = 'primary', 'independent'
-params.u1 = 0.1, 'free', 0., 1.
-params.u2 = 0.1, 'free', 0., 1.
+params.u1 = 0.1, 'free', 0., 0.3
+params.u2 = 0.1, 'free', 0., 0.3
 
 # Make the transit model
-import models as m
+import eureka.lightcurve_fitting.models as m
 reload(m)
 t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
 
@@ -72,11 +72,11 @@ t_model.plot(wasp107b_time, draw=True)
 # Perform fit using LMFIT
 # Create a new model instance from the best fit parameters
 #wasp107b_lc.fit(t_model, fitter='lmfit', method='powell')
-wasp107b_lc2.fit(t_model, fitter='lmfit', method='least_squares')
+#wasp107b_lc2.fit(t_model, fitter='lmfit', method='least_squares')
 #wasp107b_lc2.fit(t_model, fitter='lmfit', method='differential_evolution')
 
 # Plot it
-wasp107b_lc2.plot()
+#wasp107b_lc2.plot()
 # Fit doesn't work!!!
 
 

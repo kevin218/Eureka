@@ -1,0 +1,8 @@
+batman-package
+h5py
+ipython
+matplotlib
+numpy
+pytest
+pyyaml
+scipy
