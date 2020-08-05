@@ -235,9 +235,19 @@ class CompositeModel(Model):
 
         # Evaluate flux at each model
         for model in self.components:
+            if model.time is None:
+                model.time = self.time
             flux *= model.eval(**kwargs)
 
         return flux
+
+    def update(self, newparams, names, **kwargs):
+        """Update parameters in the model components"""
+        # Evaluate flux at each model
+        for model in self.components:
+            model.update(newparams, names, **kwargs)
+
+        return
 
 
 class PolynomialModel(Model):
@@ -297,6 +307,13 @@ class PolynomialModel(Model):
         # Evaluate the polynomial
         return np.polyval(poly, time_local)
 
+    def update(self, newparams, names, **kwargs):
+        """Update parameter values"""
+        for ii,arg in enumerate(names):
+            val = getattr(self.parameters,arg).values[1:]
+            val[0] = newparams[ii]
+            setattr(self.parameters, arg, val)
+        return
 
 class TransitModel(Model):
     """Transit Model"""

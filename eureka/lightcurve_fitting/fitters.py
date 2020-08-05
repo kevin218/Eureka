@@ -13,7 +13,7 @@ reload(lsq)
 from .parameters import Parameters
 
 
-def lsqfitter(time, data, model, uncertainty=None, verbose=True, **kwargs):
+def lsqfitter(lc, model, verbose=True, **kwargs):
     """Perform least-squares fit
 
     Parameters
@@ -47,29 +47,37 @@ def lsqfitter(time, data, model, uncertainty=None, verbose=True, **kwargs):
     freepars = []
     pmin = []
     pmax = []
-    #indep_vars = {}
+    indep_vars = {}
     for ii, item in enumerate(all_params):
         name, param = item
         #param = list(param)
         if param[1] == 'free':
             freenames.append(name)
             freepars.append(param[0])
-            pmin.append(param[2])
-            pmax.append(param[3])
+            if len(param) > 3:
+                pmin.append(param[2])
+                pmax.append(param[3])
+            else:
+                pmin.append(-np.inf)
+                pmax.append(np.inf)
         # elif param[1] == 'fixed':
         #     pinitial.append(param[0])
         #     pmin.append(param[0])
         #     pmax.append(param[0])
-        #else:
-        #    indep_vars[all_keys[ii]] = param[0]
+        elif param[1] == 'independent':
+            indep_vars[name] = param[0]
     freepars = np.array(freepars)
     pmin = np.array(pmin)
     pmax = np.array(pmax)
-    # Set the uncertainty
-    if uncertainty is None:
-        uncertainty = np.sqrt(data)
 
-    results = lsq.minimize(time, data, model, freepars, pmin, pmax, uncertainty, freenames)
+    # Set the uncertainty
+    if lc.unc is None:
+        lc.unc = np.sqrt(lc.flux)
+
+    #lc.etc = {}
+    #lc.etc['time'] = lc.time
+
+    results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if verbose:
         print(results)

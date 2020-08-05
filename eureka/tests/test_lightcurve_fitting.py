@@ -42,7 +42,7 @@ class TestLightcurve(unittest.TestCase):
         comp_model = lin1*lin2
 
         # Test the fitting routine
-        self.lc.fit(comp_model)
+        self.lc.fit(comp_model, verbose=False)
 
 
 class TestModels(unittest.TestCase):
@@ -130,7 +130,7 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(self.param.ptype, ptype)
         self.assertEqual(self.param.mn, pmn)
         self.assertEqual(self.param.mx, pmx)
-        self.assertEqual(self.param.values, (pname, pval, ptype, pmn, pmx))
+        self.assertEqual(self.param.values, [pname, pval, ptype, pmn, pmx])
 
     def test_parameters(self):
         """Test that a Parameters object can be created"""
@@ -139,8 +139,8 @@ class TestParameters(unittest.TestCase):
         self.params.param2 = 234.567, True, 200, 300
 
         # Test the auto attribute assignment
-        self.assertEqual(self.params.param1.values, ('param1', 123.456, 'free'))
-        self.assertEqual(self.params.param2.values, ('param2', 234.567, 'free', 200, 300))
+        self.assertEqual(self.params.param1.values, ['param1', 123.456, 'free'])
+        self.assertEqual(self.params.param2.values, ['param2', 234.567, 'free', 200, 300])
 
 
 class TestSimulations(unittest.TestCase):

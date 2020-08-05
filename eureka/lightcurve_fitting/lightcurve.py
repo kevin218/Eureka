@@ -89,7 +89,7 @@ class LightCurve(Model):
         # Place to save the fit results
         self.results = []
 
-    def fit(self, model, fitter='lmfit', **kwargs):
+    def fit(self, model, fitter='lsq', **kwargs):
         """Fit the model to the lightcurve
 
         Parameters
@@ -102,9 +102,14 @@ class LightCurve(Model):
         # Empty default fit
         fit_model = None
 
+        model.time = self.time
         # Make sure the model is a CompositeModel
         if not isinstance(model, type(CompositeModel)):
             model = CompositeModel([model])
+            model.time = self.time
+        # else:
+        #     for n in range(len(model.components)):
+        #         model.components[n].time = self.time
 
         if fitter == 'lmfit':
 
@@ -119,7 +124,8 @@ class LightCurve(Model):
         elif fitter == 'lsq':
 
             # Run the fit
-            fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
+            fit_model = f.lsqfitter(self, model, **kwargs)
+            #fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
 
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
