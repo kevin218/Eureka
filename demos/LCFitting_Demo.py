@@ -8,6 +8,7 @@ from importlib import reload
 sys.path.append('..')
 import eureka
 
+
 # Get the orbital parameters
 from eureka.lightcurve_fitting.utils import get_target_data
 wasp107b_params, url = get_target_data('WASP-107b')
