@@ -1,15 +1,19 @@
-import os
+
+import os, sys
 import numpy as np
 from bokeh.io import output_notebook
 from bokeh.plotting import show
-from hotsoss import plotting as plt
+from importlib import reload
+#from hotsoss import plotting as plt
+sys.path.append('../lightcurve_fitting')
+sys.path.append('../lib')
 
 # Get the orbital parameters
-from exoctk.utils import get_target_data
+from utils import get_target_data
 wasp107b_params, url = get_target_data('WASP-107b')
 
 # Generate the simulated light curve
-from exoctk.lightcurve_fitting.simulations import simulate_lightcurve
+from simulations import simulate_lightcurve
 npts = 1000
 snr  = 4000.
 #wasp107b_unc = np.ones(npts)/snr
@@ -24,12 +28,14 @@ wasp107b_time, wasp107b_flux, wasp107b_unc, wasp107b_par = simulate_lightcurve('
 #wasp107b_spec = plt.plot_time_series_spectra(wasp107b_wave, wasp107b_flux)
 #show(wasp107b_spec)
 
-from exoctk.lightcurve_fitting.lightcurve import LightCurve
-wasp107b_lc = LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
+import lightcurve as lc
+reload(lc)
+wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
 
 # Set the intial parameters
-from exoctk.lightcurve_fitting.parameters import Parameters
-params = Parameters()
+import parameters as p
+reload(p)
+params = p.Parameters()
 params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
 params.per = wasp107b_par['orbital_period'], 'fixed'
 params.t0 = wasp107b_par['transit_time']-0.01, 'free', wasp107b_par['transit_time']-0.1, wasp107b_par['transit_time']+0.1
@@ -43,27 +49,41 @@ params.u1 = 0.1, 'free', 0., 1.
 params.u2 = 0.1, 'free', 0., 1.
 
 # Make the transit model
-from exoctk.lightcurve_fitting.models import TransitModel
-t_model = TransitModel(parameters=params, name='transit', fmt='r--')
+import models as m
+reload(m)
+t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
 
+
+wasp107b_lc.fit(t_model, fitter='lsq')
+wasp107b_lc.plot()
 # Plot it
+#t_model.plot(wasp107b_time, draw=True)
+'''
+newparams = []
+for arg, val in params.dict.items():
+    newparams.append(val[0])
+newparams[0] = 0.3
+t_model.update(newparams)
 t_model.plot(wasp107b_time, draw=True)
-
+'''
 # Needed to install numdifftools
 # pip install numdifftools
 
+# Perform fit using LMFIT
 # Create a new model instance from the best fit parameters
 #wasp107b_lc.fit(t_model, fitter='lmfit', method='powell')
-wasp107b_lc.fit(t_model, fitter='lmfit', method='least_squares')
-wasp107b_lc.fit(t_model, fitter='lmfit', method='differential_evolution')
+wasp107b_lc2.fit(t_model, fitter='lmfit', method='least_squares')
+#wasp107b_lc2.fit(t_model, fitter='lmfit', method='differential_evolution')
 
 # Plot it
-wasp107b_lc.plot()
+wasp107b_lc2.plot()
 # Fit doesn't work!!!
 
 
-##########################
-from exoctk.lightcurve_fitting.models import CompositeModel
+############
+# Untested
+##############
+from models import CompositeModel
 model = CompositeModel([t_model])
 
 import lmfit
