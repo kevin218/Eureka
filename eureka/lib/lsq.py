@@ -2,17 +2,17 @@
 import numpy as np
 import scipy.optimize as op
 
-def modelfunc(freepars, time, data, model, pmin, pmax, uncertainty, freenames):
+def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     #params[ifreepars] = freepars
     ilow            = np.where(freepars < pmin)
     ihi             = np.where(freepars > pmax)
     freepars[ilow]    = pmin[ilow]
     freepars[ihi]     = pmax[ihi]
-    model.components[0].update(freepars, freenames)
-    model.time = time
-    model.components[0].time = time
+    model.update(freepars, freenames)
+    #model.time = time
+    #model.components[0].time = time
     model_lc        = model.eval()
-    residuals       = (data - model_lc)/uncertainty
+    residuals       = (lc.flux - model_lc)/lc.unc
     '''
     residuals       = []
     for j in range(numevents):
@@ -43,10 +43,10 @@ def modelfunc(freepars, time, data, model, pmin, pmax, uncertainty, freenames):
     '''
     return residuals
 
-def minimize(time, data, model, freepars, pmin, pmax, uncertainty, freenames):
+def minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars):
     #modelfunc = lambda freepars, params, uncertainty: callmodelfunc(freepars, params, uncertainty)
     return op.leastsq(modelfunc, freepars,
-                      args=(time, data, model, pmin, pmax, uncertainty, freenames),
+                      args=(lc, model, pmin, pmax, freenames, indep_vars),
                       factor=100, ftol=1e-16, xtol=1e-16, gtol=1e-16)#, diag=1./stepsize[ifreepars])
 
 #params, pmin, pmax, uncertainty, ifreepars, numevents, fit[j].nobj, cummodels, functype, fit[j].etc, myfuncs, iparams, funcx, flux

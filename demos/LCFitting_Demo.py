@@ -54,8 +54,8 @@ import eureka.lightcurve_fitting.models as m
 reload(m)
 t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
 
-
 wasp107b_lc.fit(t_model, fitter='lsq')
+
 wasp107b_lc.plot()
 # Plot it
 #t_model.plot(wasp107b_time, draw=True)
