@@ -5,8 +5,8 @@ from bokeh.io import output_notebook
 from bokeh.plotting import show
 from importlib import reload
 #from hotsoss import plotting as plt
-sys.path.append('../lightcurve_fitting')
-sys.path.append('../lib')
+sys.path.insert(0, '../lightcurve_fitting')
+sys.path.insert(0, '../lib')
 
 # Get the orbital parameters
 from utils import get_target_data
