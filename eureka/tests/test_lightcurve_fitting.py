@@ -103,6 +103,25 @@ class TestModels(unittest.TestCase):
         # Make the transit model
         self.t_model = models.TransitModel(parameters=params, name='transit')
 
+    def test_exponentialmodel(self):
+        """Tests for the ExponentialModel class"""
+        # Create the model
+        self.exp_model = models.ExponentialModel(r0=1., r1=0.05, r2=0.01, name='single exponential')
+
+        # Evaluate and test output
+        self.exp_model.time = self.time
+        vals = self.exp_model.eval()
+        self.assertEqual(vals.size, self.time.size)
+
+        # Create the model
+        self.exp_model = models.ExponentialModel(r0=1., r1=0.05, r2=0.01,
+                                                 r3=1., r4=0.05, r5=0.01, name='double exponential')
+
+        # Evaluate and test output
+        self.exp_model.time = self.time
+        vals = self.exp_model.eval()
+        self.assertEqual(vals.size, self.time.size)
+
 
 class TestParameters(unittest.TestCase):
     """Tests for the parameters.py module"""

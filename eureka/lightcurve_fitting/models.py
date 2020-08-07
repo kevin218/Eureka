@@ -376,3 +376,74 @@ class TransitModel(Model):
         #     setattr(self.parameters, arg, val)
         #     ii += 1
         return
+
+class ExponentialModel(Model):
+    """Model for single or double exponential ramps"""
+    def __init__(self, **kwargs):
+        """Initialize the exponential ramp model
+        """
+        # Inherit from Model calss
+        super().__init__(**kwargs)
+
+        # Check for Parameters instance
+        self.parameters = kwargs.get('parameters')
+
+        # Generate parameters from kwargs if necessary
+        if self.parameters is None:
+            self._parse_coeffs(kwargs)
+
+    def _parse_coeffs(self, coeff_dict):
+        """Convert dict of 'r#' coefficients into a list
+        of coefficients in increasing order, i.e. ['r0','r1','r2']
+
+        Parameters
+        ----------
+        coeff_dict: dict
+            The dictionary of coefficients
+
+        Returns
+        -------
+        np.ndarray
+            The sequence of coefficient values
+        """
+        params = {rN: coeff for rN, coeff in coeff_dict.items()
+                  if rN.startswith('r') and rN[1:].isdigit()}
+        self.parameters = Parameters(**params)
+
+        # Parse 'c#' keyword arguments as coefficients
+        coeffs = np.zeros(100)
+        for k, v in self.parameters.dict.items():
+            if k.lower().startswith('r') and k[1:].isdigit():
+                coeffs[int(k[1:])] = v[0]
+
+        # Trim zeros and reverse
+        self.coeffs = np.trim_zeros(coeffs)
+
+    def eval(self, **kwargs):
+        """Evaluate the function with the given values"""
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Create the individual coeffs
+        if len(self.coeffs) == 3:
+            r0, r1, r2 = self.coeffs
+            r3, r4, r5 = 0, 0, 0
+        elif len(self.coeffs) == 6:
+            r0, r1, r2, r3, r4, r5 = self.coeffs
+        else:
+            raise IndexError('Exponential ramp requires 3 or 6 parameters labelled r#.')
+
+        # Convert to local time
+        time_local = self.time - self.time.mean()
+
+        # Evaluate the polynomial
+        return r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
+
+    def update(self, newparams, names, **kwargs):
+        """Update parameter values"""
+        for ii,arg in enumerate(names):
+            val = getattr(self.parameters,arg).values[1:]
+            val[0] = newparams[ii]
+            setattr(self.parameters, arg, val)
+        return
