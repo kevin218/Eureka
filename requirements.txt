@@ -9,5 +9,6 @@ numpy
 pandas
 pytest
 pyyaml
+requests
 scipy
 svo_filters
