@@ -4,6 +4,7 @@ used to fit light curves
 Author: Joe Filippazzo
 Email: jfilippazzo@stsci.edu
 """
+import numpy as np
 import copy
 import inspect
 import os
@@ -14,7 +15,6 @@ try:
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 from bokeh.plotting import figure, show
-import numpy as np
 
 from .parameters import Parameters
 from .utils import COLORS

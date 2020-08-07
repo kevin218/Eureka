@@ -1,8 +1,14 @@
+astropy
 batman-package
+bokeh
 h5py
 ipython
+json
+lmfit
 matplotlib
 numpy
+pandas
 pytest
 pyyaml
 scipy
+svo_filters
