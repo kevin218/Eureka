@@ -4,10 +4,10 @@ python:
   - '3.7'
   - '3.6'
 
-sudo: false
+sudo: true
 
 os:
-   - linux
+   #- linux
    - osx
 
 install:
