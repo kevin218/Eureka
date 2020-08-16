@@ -1,0 +1,11 @@
+#param  value       vary    loval     hival    prior    p1        p2
+rp      0.15        Free    0.1       0.2      U        0.1      0.2 
+per     5.72149     Fixed   0.0       10.0     U        0.0      10.0 
+t0      57583.8197  Free    57853.73  57583.93 U        57853.73 57583.93
+inc     89.56       Fixed   0.         90.     U        0.       90.
+a       17.919      Fixed   17.        19.     U        17.      19.   
+ecc     0.          Fixed   0.          1.0    U        0.       1.0
+w       90.         Fixed   0.         90.     U        0.       90.
+u1      0.1         Free    0.0        0.3     U        0.0      0.3
+u2      0.0         Fixed   0.0        0.3     U        0.0      0.3    
+

@@ -49,6 +49,7 @@ params.transittype = 'primary', 'independent'
 params.u1 = 0.1, 'free', 0., 0.3
 params.u2 = 0.1, 'free', 0., 0.3
 
+
 # Make the transit model
 import eureka.lightcurve_fitting.models as m
 reload(m)
@@ -84,7 +85,7 @@ t_model.plot(wasp107b_time, draw=True)
 ############
 # Untested
 ##############
-from models import CompositeModel
+"""from models import CompositeModel
 model = CompositeModel([t_model])
 
 import lmfit
@@ -122,4 +123,4 @@ result = lcmodel.fit(data, weights=1./uncertainty, params=initialParams,
 result.params
 
 result2 = lcmodel.fit(data, weights=1/uncertainty, params=initialParams,
-                    **indep_vars, method='least_squares')
+                    **indep_vars, method='least_squares')"""
