@@ -53,8 +53,9 @@ params.u2 = 0.1, 'free', 0., 0.3
 import eureka.lightcurve_fitting.models as m
 reload(m)
 t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
+model = m.CompositeModel([t_model])
 
-wasp107b_lc.fit(t_model, fitter='lsq')
+wasp107b_lc.fit(model, fitter='lsq')
 
 wasp107b_lc.plot()
 # Plot it
@@ -82,29 +83,27 @@ t_model.plot(wasp107b_time, draw=True)
 
 
 ############
-# Untested
+# Code below runs, but still doesn't fit the data
 ##############
-from models import CompositeModel
-model = CompositeModel([t_model])
-
+"""
 import lmfit
 initialParams = lmfit.Parameters()
-all_params = [i for j in [model.components[n].parameters.list
+all_params = [i for j in [model.components[n].parameters.dict.items()
               for n in range(len(model.components))] for i in j]
 
 # Group the different variable types
 param_list = []
 indep_vars = {}
-for param in all_params:
-    param = list(param)
-    if param[2] == 'free':
-        param[2] = True
-        param_list.append(tuple(param))
-    elif param[2] == 'fixed':
-        param[2] = False
-        param_list.append(tuple(param))
+for item in all_params:
+    name, param = item
+    if param[1] == 'free':
+        param[1] = True
+        param_list.append(tuple([name]+param))
+    elif param[1] == 'fixed':
+        param[1] = False
+        param_list.append(tuple([name]+param))
     else:
-        indep_vars[param[0]] = param[1]
+        indep_vars[name] = param[0]
 indep_vars['time'] = wasp107b_lc.time
 # Get values from input parameters.Parameters instances
 initialParams.add_many(*param_list)
@@ -123,3 +122,5 @@ result.params
 
 result2 = lcmodel.fit(data, weights=1/uncertainty, params=initialParams,
                     **indep_vars, method='least_squares')
+result2.params
+"""
