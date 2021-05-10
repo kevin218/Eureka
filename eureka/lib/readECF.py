@@ -1,13 +1,8 @@
-# $Author: patricio $
-# $Revision: 267 $
-# $Date: 2010-06-08 22:33:22 -0400 (Tue, 08 Jun 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/reader3.py $
-# $Id: reader3.py 267 2010-06-09 02:33:22Z patricio $
 
 import numpy as np
 
 """
-    This class loads a control file (pcf) and lets you
+    This class loads a Eureka! Control File (ecf) and lets you
     querry the parameters and values.
 
     Constructor Parameters:
@@ -25,37 +20,37 @@ import numpy as np
 
     Examples:
     --------
-    >>> # Load a pcf file:
+    >>> # Load a ecf file:
     >>> import reader3 as rd
     >>> reload(rd)
-    >>> pcf = rd.Pcffile('/home/patricio/ast/esp01/anal/wa011bs11/run/wa011bs11.pcf')
+    >>> ecf = rd.ecffile('/home/patricio/ast/esp01/anal/wa011bs11/run/wa011bs11.ecf')
 
     >>> Each parameter has the attribute value, wich is a ndarray:
-    >>> pcf.planet.value
+    >>> ecf.planet.value
     array(['wa011b'],
           dtype='|S6')
 
-    >>> # To get the n-th value of a parameter use pcffile.param.get(n):
+    >>> # To get the n-th value of a parameter use ecffile.param.get(n):
     >>> # if it can't be converted to a number/bool/etc, it returns a string.
-    >>> pcf.planet.get(0)
+    >>> ecf.planet.get(0)
     'wa011b'
-    >>> pcf.photchan.get(0)
+    >>> ecf.photchan.get(0)
     1
-    >>> pcf.fluxunits.get(0)
+    >>> ecf.fluxunits.get(0)
     True
 
-    >>> # Use pcffile.param.value[n] to get the n-th value as string:
-    >>> pcf.aorname.get(0)
+    >>> # Use ecffile.param.value[n] to get the n-th value as string:
+    >>> ecf.aorname.get(0)
     38807808
-    >>> pcf.aorname.value[0]
+    >>> ecf.aorname.value[0]
     '38807808'
 
-    >>> # The function pcffile.param.getarr() returns the numeric/bool/etc
+    >>> # The function ecffile.param.getarr() returns the numeric/bool/etc
     >>> # values of a parameter as a nparray:
-    >>> pcf.sigma.value
+    >>> ecf.sigma.value
     array(['4.0', '4.0'],
           dtype='|S5')
-    >>> pcf.sigma.getarr()
+    >>> ecf.sigma.getarr()
     array([4.0, 4.0], dtype=object)
 
 
@@ -94,7 +89,7 @@ class Param:
     return ret
 
 
-class Pcf:
+class Ecf:
 
   def __init__(self, params):
 
@@ -110,19 +105,19 @@ class Pcf:
     attrib = vars(self)
     keys = attrib.keys()
 
-    file.write("@ " + self.pcfname.get() + "\n")
+    file.write("@ " + self.ecfname.get() + "\n")
     for key in keys:
-      if key != "pcfname":
+      if key != "ecfname":
         file.write(key + " " + attrib.get(key).value[0] + "\n")
     file.close()
 
-def read_pcf(file):
+def read_ecf(file):
     """
     Function to read the file:
     """
 
     # List containing the set of parameters:
-    pcfsets = []
+    ecfsets = []
 
     # Read the file
     file = open(file, 'r')
@@ -152,11 +147,11 @@ def read_pcf(file):
 
 
     if (len(block)-1) == 0:
-      # do normal readpcfs
+      # do normal readecfs
       params = []
       for line in cleanlines:
         params.append( np.array(line.split()) )
-      return Pcf(params)
+      return Ecf(params)
     else:
       # Loop over each block:
       for i in np.arange(len(block)-1):
@@ -171,13 +166,13 @@ def read_pcf(file):
             multiples.append(len(params)-1)
             nval.append(len(params[-1])-1)
 
-        
+
         # number of parameters with multiple values:
         nmul = len(multiples)
 
         if nmul == 0:
-          pcfsets.append(params)
-          pcfsets[-1].append(["pcfname", str(block[i][1])])
+          ecfsets.append(params)
+          ecfsets[-1].append(["ecfname", str(block[i][1])])
         else:
           # calculate total number of sets
           nt = 1
@@ -190,8 +185,8 @@ def read_pcf(file):
           # make nt copies of the original set:
           for j in np.arange(nt):
             parset.append(params[:])
-            # and add the pcfname:
-            parset[j].append(["pcfname", str(block[i][1])])
+            # and add the ecfname:
+            parset[j].append(["ecfname", str(block[i][1])])
 
           # Loop over each multiple valued parameter:
           for j in np.arange(nmul):
@@ -204,12 +199,26 @@ def read_pcf(file):
               parset[k][multiples[j]] = np.array([params[multiples[j]][0],
                                                   mpar[index]])
           for ps in parset:
-            pcfsets.append(ps)
+            ecfsets.append(ps)
 
-      # return a List of Pcf objects (one for each set):
-      pcf = []
+      # return a List of ecf objects (one for each set):
+      ecf = []
       i = 0
-      for pcfset in pcfsets:
-        pcf.append(Pcf(pcfset))
+      for ecfset in ecfsets:
+        ecf.append(Ecf(ecfset))
         i += 1
-      return pcf
+      return ecf
+
+def store_ecf(ev, ecf):
+    '''
+    Store values from Eureka control file as parameters in Event object.
+    '''
+    for key in ecf.__dict__.keys():
+        try:
+            exec('ev.' + key + ' = ecf.'+key+'.get(0)', locals())
+        except:
+            try:
+                exec('ev.' + key + ' = ecf.'+key+'.getarr(0)', locals())
+            except:
+                print("Unable to store parameter: " + key)
+    return

@@ -1,8 +1,3 @@
-# $Author: patricio $
-# $Revision: 288 $
-# $Date: 2010-06-24 03:33:44 -0400 (Thu, 24 Jun 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/manageevent.py $
-# $Id: manageevent.py 288 2010-06-24 07:33:44Z patricio $
 
 import h5py as h5
 try:

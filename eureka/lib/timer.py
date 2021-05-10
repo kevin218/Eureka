@@ -1,8 +1,3 @@
-# $Author: patricio $
-# $Revision: 304 $
-# $Date: 2010-07-13 11:36:20 -0400 (Tue, 13 Jul 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/timer.py $
-# $Id: timer.py 304 2010-07-13 15:36:20Z patricio $
 
 import time
 import numpy as np
@@ -10,7 +5,7 @@ import numpy as np
 
 def hms_time(time, hours=False):
   """
-    Convert time (in seconds) to hours:minutes:seconds format. 
+    Convert time (in seconds) to hours:minutes:seconds format.
 
     Parameters:
     -----------
@@ -40,7 +35,7 @@ class Timer:
     Methods:
     --------
     init:  initialize a Timer object.
-    
+
     check: Check if one of the progress thresholds has been
            fulfilled, print progress if so.
 
