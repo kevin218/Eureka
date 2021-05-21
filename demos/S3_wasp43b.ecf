@@ -1,0 +1,32 @@
+# WASP-43b NIRCam Simulated data
+ncpu        1           # Number of CPUs
+
+suffix      calints     # Data file suffix
+inst        nircam      # JWST instrument
+
+# Subarray region of interest
+ywindow     [5,64]
+xwindow     [100,1700]
+
+# Background parameters
+bg_hw       20
+bg_thresh   [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
+bg_deg      0           # Polynomial order for column-by-column background subtraction
+p3thresh    5           # X-sigma threshold for outlier rejection during background subtraction
+
+# Spectral extraction parameters
+spec_hw     20
+p5thresh    10
+p7thresh    10
+fittype     median
+window_len  31
+deg         3
+
+
+# Project directory
+topdir      /Users/stevekb1/Documents/
+
+# Directories relative to project dir
+datadir     /data/JWST/NIRCam-Sim/Stage2/
+hordir      /code/POET/POET/code/ancil/horizons/
+leapdir     /code/POET/POET/code/ancil/leapseconds/
