@@ -25,15 +25,17 @@
 """
 
 import sys, os, time
-sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka/eureka/S3_data_reduction')
-sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka/eureka/lib')
-from importlib import reload
 import numpy as np
-import logedit
-import readECF as rd
-import manageevent as me
-import sort_nicely as sn
 import matplotlib.pyplot as plt
+from ..lib import logedit
+from ..lib import readECF as rd
+from ..lib import manageevent as me
+from ..lib import sort_nicely as sn
+from . import bright2flux as b2f
+from . import optspex
+from importlib import reload
+reload(optspex)
+reload(b2f)
 
 class Event():
   def __init__(self):
@@ -75,11 +77,11 @@ def reduceJWST(eventlabel, isplots=False):
 
     # Create directories for Stage 3 processing
     datetime= time.strftime('%Y-%m-%d_%H-%M-%S')
-    ev.dirname = 'S3_' + datetime + '_' + ev.eventlabel
-    if not os.path.exists(ev.dirname):
-        os.makedirs(ev.dirname)
-    if not os.path.exists(ev.dirname+"/figs"):
-        os.makedirs(ev.dirname+"/figs")
+    ev.workdir = 'S3_' + datetime + '_' + ev.eventlabel
+    if not os.path.exists(ev.workdir):
+        os.makedirs(ev.workdir)
+    if not os.path.exists(ev.workdir+"/figs"):
+        os.makedirs(ev.workdir+"/figs")
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
@@ -87,11 +89,11 @@ def reduceJWST(eventlabel, isplots=False):
     rd.store_ecf(ev, ecf)
 
     # Load instrument module
-    exec('import ' + ev.inst + ' as inst', globals())
+    exec('from . import ' + ev.inst + ' as inst', globals())
     reload(inst)
 
     # Open new log file
-    ev.logname  = './'+ev.dirname + '/S3_' + ev.eventlabel + ".log"
+    ev.logname  = './'+ev.workdir + '/S3_' + ev.eventlabel + ".log"
     log         = logedit.Logedit(ev.logname)
     log.writelog("\nStarting Stage 3 Reduction")
 
@@ -105,44 +107,71 @@ def reduceJWST(eventlabel, isplots=False):
     log.writelog(f'\nFound {num_data_files} data file(s) ending in {ev.suffix}.fits')
 
     ev.stdspec = np.array([])
-    ev.stdvar  = np.array([])
     # Loop over each segment
     for m in range(num_data_files):
         # Report progress
 
         # Read in data frame and header
-        log.writelog(f'Reading file {m}')
+        log.writelog(f'Reading file {m+1} of {num_data_files}')
         data, err, dq, wave, v0, int_times, mhdr, shdr = inst.read(ev.segment_list[m], returnHdr=True)
         # Get number of integrations and frame dimensions
         n_int, ny, nx = data.shape
         intstart = mhdr['INTSTART']
-        # Locate science image
-        xref_sci = shdr['XREF_SCI']
-        yref_sci = shdr['YREF_SCI']
+        # Locate source postion
+        src_xpos = shdr['SRCXPOS']-ev.xwindow[0]
+        src_ypos = shdr['SRCYPOS']-ev.ywindow[0]
         # Record integration mid-times in BJD_TDB
         bjdtdb = int_times['int_mid_BJD_TDB']
         # Trim data to subarray region of interest
-        subdata  = data[:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
-        suberr   = err [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
-        subdq    = dq  [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
-        subwave  = wave[  ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
-        subv0    = v0  [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
-        subny    = ev.ywindow[1]-ev.ywindow[0]
-        subnx    = ev.xwindow[1]-ev.xwindow[0]
+        subdata     = data    [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
+        suberr      = err     [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
+        subdq       = dq      [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
+        subwave     = wave    [  ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
+        subv0       = v0      [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
+        subny       = ev.ywindow[1]-ev.ywindow[0]
+        subnx       = ev.xwindow[1]-ev.xwindow[0]
         # Create bad pixel mask (1 = good, 0 = bad)
         # FINDME: Will want to use DQ array in the future to flag certain pixels
         submask = np.ones(subdata.shape)
-        # FINDME: Need to convert flux from MJy/sr to electrons
-        # FINDME: err and v0 are all NaNs
-        if np.sum(np.isnan(suberr)) > 30000:
-            log.writelog("ERR array is all NaNs... Assuming ERR = sqrt(DATA), which is very wrong if still in MJy/sr!!!")
-            suberr = np.sqrt(np.abs(subdata))
+        if shdr['BUNIT'] == 'MJy/sr':
+            # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
+            #log.writelog('Converting from brightness to flux units')
+            #subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
+            # Convert from brightness units (MJy/sr) to DNs
+            log.writelog('  Converting from brightness units (MJy/sr) to DNs')
+            photfile = ev.topdir + ev.ancildir +'/'+ mhdr['R_PHOTOM'][7:]
+            subdata, suberr, subv0 = b2f.bright2dn(subdata, suberr, subv0, subwave, photfile, mhdr, shdr)
+
+        # Check if arrays have NaNs
+        if np.sum(np.isnan(subdata)) > 0:
+            log.writelog("  WARNING: DATA array has NaNs.  Your subregion is probably off the edge of the detector subarray. Masking NaN region and continuing, but you should probably stop and reconsider your choices.")
+            inan = np.where(np.isnan(subdata))
+            #subdata[inan]  = 0
+            submask[inan]  = 0
+        if np.sum(np.isnan(suberr)) > 0:
+            log.writelog("  WARNING: ERR array has NaNs. Your subregion is probably off the edge of the detector subarray. Masking NaN region and continuing, but you should probably stop and reconsider your choices.")
+            inan = np.where(np.isnan(suberr))
+            #suberr[inan]  = np.sqrt(np.abs(subdata[inan]))
+            submask[inan]  = 0
+        if np.sum(np.isnan(subv0)) > 0:
+            log.writelog("  WARNING: v0 array has NaNs. Your subregion is probably off the edge of the detector subarray. Masking NaN region and continuing, but you should probably stop and reconsider your choices.")
+            inan = np.where(np.isnan(subv0))
+            #subv0[inan]   = 0
+            submask[inan]  = 0
+
+        # Manually mask regions [colstart, colend, rowstart, rowend]
+        if hasattr(ev, 'manmask'):
+            log.writelog("  Masking manually identified bad pixels")
+            for i in range(len(ev.manmask)):
+                ind, colstart, colend, rowstart, rowend = ev.manmask[i]
+                submask[rowstart:rowend,colstart:colend] = 0
+
         # Perform outlier rejection of sky background along time axis
-        log.writelog('Performing background outlier rejection')
-        bg_y1    = int(yref_sci - ev.bg_hw)
-        bg_y2    = int(yref_sci + ev.bg_hw)
+        log.writelog('  Performing background outlier rejection')
+        bg_y1    = int(src_ypos - ev.bg_hw)
+        bg_y2    = int(src_ypos + ev.bg_hw)
         submask = inst.flag_bg(subdata, suberr, submask, bg_y1, bg_y2, ev.bg_thresh)
-        log.writelog('Performing background subtraction')
+
         # Write background
         def writeBG(arg):
             bg_data, bg_mask, n = arg
@@ -150,6 +179,7 @@ def reduceJWST(eventlabel, isplots=False):
             submask[n] = bg_mask
             return
         # Compute background for each integration
+        log.writelog('  Performing background subtraction')
         subbg  = np.zeros((subdata.shape))
         if ev.ncpu == 1:
             # Only 1 CPU
@@ -174,60 +204,87 @@ def reduceJWST(eventlabel, isplots=False):
 
         # Perform background subtraction
         subdata    -= subbg
+
         # Calulate drift2D
         # print("Calculating 2D drift...")
+
         # print("Performing rough, pixel-scale drift correction...")
+
         # Outlier rejection of full frame along time axis
         # print("Performing full-frame outlier rejection...")
 
         if isplots >= 3:
             for n in range(n_int):
-                plt.figure(3001)
+                plt.figure(3301)
                 plt.clf()
                 plt.suptitle(str(intstart+n))
                 plt.subplot(211)
-                plt.imshow(subdata[n]*submask[n], origin='lower', aspect='auto', vmin=0, vmax=10000)
+                max = np.max(subdata[n]*submask[n])
+                plt.imshow(subdata[n]*submask[n], origin='lower', aspect='auto', vmin=0, vmax=max/10)
                 #plt.imshow(subdata[n], origin='lower', aspect='auto', vmin=0, vmax=10000)
                 plt.subplot(212)
                 #plt.imshow(submask[i], origin='lower', aspect='auto', vmax=1)
-                mean = np.median(subbg[n])
+                median = np.median(subbg[n])
                 std  = np.std(subbg[n])
-                plt.imshow(subbg[n], origin='lower', aspect='auto',vmin=mean-3*std,vmax=mean+3*std)
+                plt.imshow(subbg[n], origin='lower', aspect='auto',vmin=median-3*std,vmax=median+3*std)
                 #plt.imshow(submask[n], origin='lower', aspect='auto', vmin=0, vmax=1)
-                plt.savefig(ev.dirname+'/figs/fig3001-'+str(intstart+n)+'-Image+Background.png')
+                plt.savefig(ev.workdir+'/figs/fig3301-'+str(intstart+n)+'-Image+Background.png')
                 #plt.pause(0.1)
         # print("Performing sub-pixel drift correction...")
+
+        # Select only aperture region
+        ap_y1       = int(src_ypos - ev.spec_hw)
+        ap_y2       = int(src_ypos + ev.spec_hw)
+        apdata      = subdata[:,ap_y1:ap_y2]
+        aperr       = suberr [:,ap_y1:ap_y2]
+        apmask      = submask[:,ap_y1:ap_y2]
+        apbg        = subbg  [:,ap_y1:ap_y2]
+        apv0        = subv0  [:,ap_y1:ap_y2]
         # Extract standard spectrum and its variance
-        stdspec     = np.sum(subdata, axis=1)
-        stdvar      = np.sum(suberr**2, axis=1)
+        stdspec     = np.sum(apdata, axis=1)
+        stdvar      = np.sum(aperr**2, axis=1)  #FINDME: stdvar >> stdspec, which is a problem
         # Compute fraction of masked pixels within regular spectral extraction window
         #numpixels   = 2.*ev.spec_width*subnx
         #fracMaskReg = (numpixels - np.sum(apmask,axis=(2,3)))/numpixels
 
         # Compute median frame
-        ev.meddata  = np.median(subdata, axis=0)
+        ev.medsubdata   = np.median(subdata, axis=0)
+        ev.medapdata    = np.median(apdata, axis=0)
 
         # Extract optimal spectrum with uncertainties
-        # print("Performing optimal spectral extraction...")
+        log.writelog("  Performing optimal spectral extraction")
+        optspec     = np.zeros((stdspec.shape))
+        opterr      = np.zeros((stdspec.shape))
+        gain        = 1         #FINDME: need to determine correct gain
+        for n in range(n_int):
+            optspec[n], opterr[n], mask = optspex.optimize(apdata[n], apmask[n], apbg[n], stdspec[n], gain, apv0[n], p5thresh=ev.p5thresh, p7thresh=ev.p7thresh, fittype=ev.fittype, window_len=ev.window_len, deg=ev.prof_deg, n=intstart+n, isplots=isplots, eventdir=ev.workdir, meddata=ev.medapdata)
 
         # Plotting results
         if isplots >= 3:
             for n in range(n_int):
-                plt.figure(3002)
+                plt.figure(3302)
                 plt.clf()
                 plt.suptitle(str(intstart+n))
-                plt.errorbar(range(subnx), stdspec[n], yerr=np.sqrt(stdvar[n]), fmt='-', color='C1', ecolor='C0', label='Std Spec')
-                #plt.errorbar(range(subnx), spectra[n], specerr[n], fmt='-', color='C2', ecolor='C4', label='Optimal Spec')
+                plt.plot(range(subnx), stdspec[n], '-', color='C1', label='Std Spec')
+                #plt.errorbar(range(subnx), stdspec[n], yerr=np.sqrt(stdvar[n]), fmt='-', color='C1', ecolor='C0', label='Std Spec')
+                plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
                 plt.legend(loc='best')
-                plt.savefig(ev.dirname+'/figs/fig3002-'+str(intstart+n)+'-Spectrum.png')
+                plt.savefig(ev.workdir+'/figs/fig3302-'+str(intstart+n)+'-Spectrum.png')
                 #plt.pause(0.1)
         # Append results
         if len(ev.stdspec) == 0:
-            ev.stdspec = stdspec
-            ev.stdvar  = stdvar
+            ev.wave     = subwave
+            ev.stdspec  = stdspec
+            ev.stdvar   = stdvar
+            ev.optspec  = optspec
+            ev.opterr   = opterr
+            ev.bjdtdb   = bjdtdb
         else:
-            ev.stdspec = np.append(ev.stdspec, stdspec, axis=0)
-            ev.stdvar  = np.append(ev.stdvar, stdvar, axis=0)
+            ev.stdspec  = np.append(ev.stdspec, stdspec, axis=0)
+            ev.stdvar   = np.append(ev.stdvar, stdvar, axis=0)
+            ev.optspec  = np.append(ev.optspec, optspec, axis=0)
+            ev.opterr   = np.append(ev.opterr, opterr, axis=0)
+            ev.bjdtdb   = np.append(ev.bjdtdb, bjdtdb, axis=0)
 
     # Calculate total time
     total = (time.time() - t0)/60.
@@ -235,8 +292,37 @@ def reduceJWST(eventlabel, isplots=False):
 
 
     # Save results
-    log.writelog('Saving results...')
-    me.saveevent(ev, ev.dirname + '/S3_' + ev.eventlabel + "_Save", save=[])
+    log.writelog('Saving results')
+    me.saveevent(ev, ev.workdir + '/S3_' + ev.eventlabel + "_Save", save=[])
+
+    log.writelog('Generating figures')
+    if isplots >= 1:
+        # 2D light curve without drift correction
+        plt.figure(3101, figsize=(8,8))  #ev.n_files/20.+0.8))
+        plt.clf()
+        wmin        = ev.wave.min()
+        wmax        = ev.wave.max()
+        n_int, nx   = ev.optspec.shape
+        #iwmin       = np.where(ev.wave[src_ypos]>wmin)[0][0]
+        #iwmax       = np.where(ev.wave[src_ypos]>wmax)[0][0]
+        vmin        = 0.97
+        vmax        = 1.03
+        #normspec    = np.mean(ev.optspec,axis=1)/np.mean(ev.optspec[ev.inormspec[0]:ev.inormspec[1]],axis=(0,1))
+        normspec    = ev.optspec/np.mean(ev.optspec,axis=0)
+        plt.imshow(normspec,origin='lower', aspect='auto',extent=[wmin,wmax,0,n_int],vmin=vmin,vmax=vmax,cmap=plt.cm.RdYlBu_r)
+        ediff       = np.zeros(n_int)
+        for m in range(n_int):
+            ediff[m]    = 1e6*np.median(np.abs(np.ediff1d(normspec[m])))
+            # plt.scatter(ev.wave[src_ypos], np.zeros(nx)+m, c=normspec[m],
+            #             s=14,linewidths=0,vmin=vmin,vmax=vmax,marker='s',cmap=plt.cm.RdYlBu_r)
+        plt.title("MAD = "+str(np.round(np.mean(ediff),0).astype(int)) + " ppm")
+        #plt.xlim(wmin,wmax)
+        #plt.ylim(0,n_int)
+        plt.ylabel('Integration Number')
+        plt.xlabel('Wavelength ($\mu m$)')
+        plt.colorbar(label='Normalized Flux')
+        plt.tight_layout()
+        plt.savefig(ev.workdir+'/figs/fig3101-2D_LC.png')
 
     log.closelog()
     return ev

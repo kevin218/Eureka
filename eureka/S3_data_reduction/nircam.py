@@ -2,7 +2,7 @@
 # NIRCam specific rountines go here
 import numpy as np
 from astropy.io import fits
-import sigrej, optspex
+from eureka.S3_data_reduction import sigrej, optspex
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, returnHdr=True):
