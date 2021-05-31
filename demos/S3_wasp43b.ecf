@@ -24,9 +24,9 @@ deg         3
 
 
 # Project directory
-topdir      /Users/stevekb1/Documents/
+topdir      /home/zieba/Desktop/
 
 # Directories relative to project dir
-datadir     /data/JWST/NIRCam-Sim/Stage2/
-hordir      /code/POET/POET/code/ancil/horizons/
-leapdir     /code/POET/POET/code/ancil/leapseconds/
+datadir     /Data/JWST_simulated_data_may2021/NIRCam/Stage21/
+hordir      /Projects/Observations/Spitzer/K2-167_11026_dynesty/ch2/ancil/horizons
+leapdir     /Projects/Observations/Spitzer/K2-167_11026_dynesty/ch2/ancil/leapseconds/

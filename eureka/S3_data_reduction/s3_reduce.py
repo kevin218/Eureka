@@ -25,15 +25,21 @@
 """
 
 import sys, os, time
-sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka/eureka/S3_data_reduction')
-sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka/eureka/lib')
+#sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka/eureka/S3_data_reduction')
+#sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka/eureka/lib')
+sys.path.append('/home/zieba/Desktop/Projects/Open_source/Eureka/eureka/S3_data_reduction')
+sys.path.append('/home/zieba/Desktop/Projects/Open_source/Eureka/eureka/lib')
 from importlib import reload
 import numpy as np
 import logedit
 import readECF as rd
 import manageevent as me
-import sort_nicely as sn
+#import sort_nicely as sn
 import matplotlib.pyplot as plt
+
+import zieba_savetable
+import zieba_barycorr
+import optspex
 
 class Event():
   def __init__(self):
@@ -100,7 +106,7 @@ def reduceJWST(eventlabel, isplots=False):
     for fname in os.listdir(ev.topdir + ev.datadir):
         if fname.endswith(ev.suffix + '.fits'):
             ev.segment_list.append(ev.topdir + ev.datadir +'/'+ fname)
-    ev.segment_list = sn.sort_nicely(ev.segment_list)
+    ev.segment_list = ev.segment_list#sn.sort_nicely(ev.segment_list)
     num_data_files = len(ev.segment_list)
     log.writelog(f'\nFound {num_data_files} data file(s) ending in {ev.suffix}.fits')
 
@@ -119,8 +125,13 @@ def reduceJWST(eventlabel, isplots=False):
         # Locate science image
         xref_sci = shdr['XREF_SCI']
         yref_sci = shdr['YREF_SCI']
+        # Target Coordinates
+        ev.ra  = mhdr['TARG_RA'] * np.pi / 180.0  # stores right ascension
+        ev.dec = mhdr['TARG_DEC'] * np.pi / 180.0  # stores right ascension
         # Record integration mid-times in BJD_TDB
-        bjdtdb = int_times['int_mid_BJD_TDB']
+        mjdutc = int_times['int_mid_MJD_UTC']
+        #bjdtdb = int_times['int_mid_BJD_TDB']
+        bjdtdb = zieba_barycorr.to_bjdtdb(ev, mjdutc, m)
         # Trim data to subarray region of interest
         subdata  = data[:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
         suberr   = err [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
@@ -154,6 +165,7 @@ def reduceJWST(eventlabel, isplots=False):
         if ev.ncpu == 1:
             # Only 1 CPU
             for n in range(n_int):
+                print('Does background for integration {0}/{1}'.format(n, n_int-1))
                 # Fit sky background with out-of-spectra data
                 writeBG(inst.fit_bg(subdata[n], submask[n], bg_y1, bg_y2, ev.bg_deg, ev.p3thresh, n, isplots))
         else:
@@ -182,6 +194,7 @@ def reduceJWST(eventlabel, isplots=False):
 
         if isplots >= 3:
             for n in range(n_int):
+                print('Does plots {0}/{1}'.format(n, n_int - 1))
                 plt.figure(3001)
                 plt.clf()
                 plt.suptitle(str(intstart+n))
@@ -208,11 +221,16 @@ def reduceJWST(eventlabel, isplots=False):
         ev.meddata  = np.median(subdata, axis=0)
 
         # Extract optimal spectrum with uncertainties
-        # print("Performing optimal spectral extraction...")
+        print("Performing optimal spectral extraction...")
+
+        #see line 817 in /Eureka/eureka/S3_data_reduction/wfc3_1reduce.py
+
+        print(" Done.")
 
         # Plotting results
         if isplots >= 3:
             for n in range(n_int):
+                print('Does plots {0}/{1}'.format(n, n_int - 1))
                 plt.figure(3002)
                 plt.clf()
                 plt.suptitle(str(intstart+n))
@@ -225,9 +243,18 @@ def reduceJWST(eventlabel, isplots=False):
         if len(ev.stdspec) == 0:
             ev.stdspec = stdspec
             ev.stdvar  = stdvar
+            ev.shapes = np.array([stdspec.shape])
+            ev.wave = np.array([subwave[0]])
+            ev.mjdutc = np.array([mjdutc])
+            ev.bjdtdb = np.array([bjdtdb])
         else:
             ev.stdspec = np.append(ev.stdspec, stdspec, axis=0)
             ev.stdvar  = np.append(ev.stdvar, stdvar, axis=0)
+            ev.shapes  = np.append(ev.shapes, np.array([stdspec.shape]), axis=0)
+            ev.wave = np.append(ev.wave, np.array([subwave[0]]), axis=0)
+            ev.mjdutc = np.append(ev.mjdutc, np.array([mjdutc]), axis=0)
+            ev.bjdtdb = np.append(ev.bjdtdb, np.array([bjdtdb]), axis=0)
+
 
     # Calculate total time
     total = (time.time() - t0)/60.
@@ -235,8 +262,11 @@ def reduceJWST(eventlabel, isplots=False):
 
 
     # Save results
-    log.writelog('Saving results...')
+    log.writelog('Pickle-Save the event...')
     me.saveevent(ev, ev.dirname + '/S3_' + ev.eventlabel + "_Save", save=[])
+
+    log.writelog('Saving results as astropy table...')
+    zieba_savetable.savetable(ev)
 
     log.closelog()
     return ev

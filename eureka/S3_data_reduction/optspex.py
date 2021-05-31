@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
 import scipy.signal as sps
-import gaussian as g
+#import gaussian as g
 # reload(g)
 import smooth
 
