@@ -9,7 +9,7 @@ import numpy as np
 from astropy.io import ascii
 #from astropy.time import Time
 import urllib.request 
-import zieba_suntimecorr
+import suntimecorr
 
 
 
@@ -31,7 +31,7 @@ def to_bjdtdb(event, t_mjd, nvisit):
     for i in range(1):
 	    t_jd = t_mjd + 2400000.5  # converts time to BJD_TDB; see Eastman et al. 2010 equation 4
 	    t_jd = t_jd + (32.184) / (24.0 * 60.0 * 60.0)
-	    t_bjd = t_jd + (zieba_suntimecorr.suntimecorr(event.ra, event.dec, t_jd, horizons_file, verbose=False)) / (60.0 * 60.0 * 24.0)
+	    t_bjd = t_jd + (suntimecorr.suntimecorr(event.ra, event.dec, t_jd, horizons_file, verbose=False)) / (60.0 * 60.0 * 24.0)
     
     return t_bjd
 

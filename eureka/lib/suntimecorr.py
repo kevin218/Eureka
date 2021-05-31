@@ -8,7 +8,7 @@
 import numpy as np
 import re 
 from scipy.constants import c
-from zieba_splinterp import splinterp
+from splinterp import splinterp
 
 def getcoords(file):
   """ 

@@ -222,8 +222,8 @@ added ra, dec for barycentric correction
 
 # 3.  Apply light-time correction (if necessary)
 Done now
-Added /Eureka/eureka/lib/zieba_barycorr.py
-and /Eureka/eureka/lib/zieba_suntimecorr.py
+Added /Eureka/eureka/lib/barycorr.py
+and /Eureka/eureka/lib/suntimecorr.py
 
 this calculation might be moved to the very end so that functions are only called once
 

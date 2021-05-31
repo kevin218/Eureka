@@ -37,8 +37,8 @@ import manageevent as me
 #import sort_nicely as sn
 import matplotlib.pyplot as plt
 
-import zieba_savetable
-import zieba_barycorr
+import savetable
+import barycorr
 import optspex
 
 class Event():
@@ -131,7 +131,7 @@ def reduceJWST(eventlabel, isplots=False):
         # Record integration mid-times in BJD_TDB
         mjdutc = int_times['int_mid_MJD_UTC']
         #bjdtdb = int_times['int_mid_BJD_TDB']
-        bjdtdb = zieba_barycorr.to_bjdtdb(ev, mjdutc, m)
+        bjdtdb = barycorr.to_bjdtdb(ev, mjdutc, m)
         # Trim data to subarray region of interest
         subdata  = data[:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
         suberr   = err [:,ev.ywindow[0]:ev.ywindow[1],ev.xwindow[0]:ev.xwindow[1]]
@@ -266,7 +266,7 @@ def reduceJWST(eventlabel, isplots=False):
     me.saveevent(ev, ev.dirname + '/S3_' + ev.eventlabel + "_Save", save=[])
 
     log.writelog('Saving results as astropy table...')
-    zieba_savetable.savetable(ev)
+    savetable.savetable(ev)
 
     log.closelog()
     return ev
