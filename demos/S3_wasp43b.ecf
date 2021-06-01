@@ -7,6 +7,7 @@ inst        nircam      # JWST instrument
 # Subarray region of interest
 ywindow     [5,64]
 xwindow     [100,1700]
+#inormspec   [-6,None]
 
 # Background parameters
 bg_hw       20
@@ -18,9 +19,9 @@ p3thresh    5           # X-sigma threshold for outlier rejection during backgro
 spec_hw     20
 p5thresh    10
 p7thresh    10
-fittype     median
+fittype     meddata
 window_len  31
-deg         3
+prof_deg    3
 
 
 # Project directory
@@ -28,5 +29,6 @@ topdir      /home/zieba/Desktop/
 
 # Directories relative to project dir
 datadir     /Data/JWST_simulated_data_may2021/NIRCam/Stage21/
+ancildir    /Data/JWST_simulated_data_may2021/NIRCam/ancil/
 hordir      /Projects/Observations/Spitzer/K2-167_11026_dynesty/ch2/ancil/horizons
 leapdir     /Projects/Observations/Spitzer/K2-167_11026_dynesty/ch2/ancil/leapseconds/

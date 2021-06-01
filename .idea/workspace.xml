@@ -30,25 +30,19 @@
     <select>
       <path>
         <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="GROUP_NODE:dev" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="BRANCH:dev/sz" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="BRANCH:origin/master" type="e8cecc67:BranchNodeDescriptor" />
       </path>
     </select>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/eureka/lib/gaussian.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/eureka/lib/sort_nicely.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/LCFitting_Demo.py" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S5/LCFitting_Demo.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/WASP-107b-LC.png" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S5/WASP-107b-LC.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/eureka.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/run_eureka.py" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3/run_eureka.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3_wasp43b.ecf" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3_wasp43b.ecf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/nircam.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/nircam.py" afterDir="false" />
     </list>
-    <list id="bab565b5-c121-48bd-9c0a-765c1ceabbcf" name="reorder demos dir" comment="">
-      <change afterPath="$PROJECT_DIR$/demos/S3/run_eureka.py" afterDir="false" />
-    </list>
-    <list id="8b837792-f0c7-485c-9559-2dc49c328ba4" name="updated ecf" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -166,8 +160,8 @@
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="" />
-      <changelist id="bab565b5-c121-48bd-9c0a-765c1ceabbcf" name="reorder demos dir" comment="" />
-      <changelist id="8b837792-f0c7-485c-9559-2dc49c328ba4" name="updated ecf" comment="" />
+      <changelist id="" name="reorder demos dir" comment="" />
+      <changelist id="" name="updated ecf" comment="" />
       <created>1596808337076</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
@@ -181,7 +175,7 @@
       <workItem from="1620784197276" duration="168000" />
       <workItem from="1622392231706" duration="45408000" />
       <workItem from="1622470177864" duration="3821000" />
-      <workItem from="1622517817161" duration="423000" />
+      <workItem from="1622517817161" duration="1382000" />
     </task>
     <servers />
   </component>
@@ -199,7 +193,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="dev/sz" />
+                        <option value="origin/master" />
                       </list>
                     </value>
                   </entry>
@@ -231,10 +225,11 @@
     </state>
     <state width="703" height="506" key="DebuggerActiveHint/0.28.1920.1024@0.28.1920.1024" timestamp="1619060100195" />
     <state width="1611" height="506" key="DebuggerActiveHint/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622417289309" />
-    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog" timestamp="1622473351792">
+    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog" timestamp="1622519197993">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622473351792" />
+    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622519197993" />
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl" timestamp="1622438471321">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
@@ -284,10 +279,11 @@
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="689" y="225" width="539" height="631" key="RollbackChangesDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622518075481" />
-    <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog" timestamp="1622473351792">
+    <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog" timestamp="1622519197993">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622473351792" />
+    <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622519197993" />
     <state x="803" y="457" width="311" height="167" key="VCS.ChangelistChooser" timestamp="1622473093801">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
