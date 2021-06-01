@@ -39,9 +39,7 @@
   <component name="ChangeListManager">
     <list default="true" id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/S3/run_eureka.py" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3/run_eureka.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/S3_wasp43b.ecf" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3_wasp43b.ecf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/nircam.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/nircam.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -175,7 +173,7 @@
       <workItem from="1620784197276" duration="168000" />
       <workItem from="1622392231706" duration="45408000" />
       <workItem from="1622470177864" duration="3821000" />
-      <workItem from="1622517817161" duration="1382000" />
+      <workItem from="1622517817161" duration="2666000" />
     </task>
     <servers />
   </component>
@@ -225,11 +223,11 @@
     </state>
     <state width="703" height="506" key="DebuggerActiveHint/0.28.1920.1024@0.28.1920.1024" timestamp="1619060100195" />
     <state width="1611" height="506" key="DebuggerActiveHint/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622417289309" />
-    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog" timestamp="1622519197993">
+    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog" timestamp="1622520483137">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622473351792" />
-    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622519197993" />
+    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622520483137" />
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl" timestamp="1622438471321">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
@@ -279,11 +277,11 @@
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="689" y="225" width="539" height="631" key="RollbackChangesDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622518075481" />
-    <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog" timestamp="1622519197993">
+    <state x="0" y="190" width="1728" height="827" key="ShowDiffWithBranchDialog" timestamp="1622520483137">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622473351792" />
-    <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622519197993" />
+    <state x="0" y="190" width="1728" height="827" key="ShowDiffWithBranchDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622520483137" />
     <state x="803" y="457" width="311" height="167" key="VCS.ChangelistChooser" timestamp="1622473093801">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
@@ -331,32 +329,27 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>163</line>
+          <line>189</line>
           <option name="timeStamp" value="10" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>187</line>
+          <line>212</line>
           <option name="timeStamp" value="11" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>242</line>
+          <line>281</line>
           <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>138</line>
-          <option name="timeStamp" value="15" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>135</line>
+          <line>132</line>
           <option name="timeStamp" value="16" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>256</line>
+          <line>295</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
       </breakpoints>
