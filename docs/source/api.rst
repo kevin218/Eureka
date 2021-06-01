@@ -4,7 +4,10 @@ The Code
 ==============
 
 
-jwstobsim
+lib.barycorr
 ---------------
-.. automodule:: eureka.lib
-   :inherited-members:
+
+.. automodule:: eureka.lib.barycorr
+    :members:
+    :undoc-members:
+    :show-inheritance:
