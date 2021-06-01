@@ -37,7 +37,11 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="" />
+    <list default="true" id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/run_eureka.py" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3/run_eureka.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/api.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/api.rst" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -193,7 +197,7 @@
       <workItem from="1620784197276" duration="168000" />
       <workItem from="1622392231706" duration="45408000" />
       <workItem from="1622470177864" duration="3821000" />
-      <workItem from="1622517817161" duration="6642000" />
+      <workItem from="1622517817161" duration="12793000" />
     </task>
     <servers />
   </component>
@@ -233,11 +237,11 @@
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="135" y="526" width="1450" height="526" key="#xdebugger.XInspectDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622413508937" />
-    <state x="177" y="449" width="1319" height="544" key="#xdebugger.evaluate" timestamp="1622453128637">
+    <state x="177" y="449" width="1319" height="544" key="#xdebugger.evaluate" timestamp="1622536853386">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="718" y="286" width="963" height="511" key="#xdebugger.evaluate/0.28.1920.1024@0.28.1920.1024" timestamp="1619059968430" />
-    <state x="177" y="449" width="1319" height="544" key="#xdebugger.evaluate/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622453128637" />
+    <state x="177" y="449" width="1319" height="544" key="#xdebugger.evaluate/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622536853386" />
     <state width="1611" height="506" key="DebuggerActiveHint" timestamp="1622417289309">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
@@ -253,46 +257,46 @@
     </state>
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl/0.28.1920.1024@0.28.1920.1024" timestamp="1619220521363" />
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622438471321" />
-    <state width="1874" height="369" key="GridCell.Tab.0.bottom" timestamp="1622524682268">
+    <state width="1874" height="236" key="GridCell.Tab.0.bottom" timestamp="1622540597914">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.bottom/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213736" />
-    <state width="1874" height="369" key="GridCell.Tab.0.bottom/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622524682268" />
-    <state width="1874" height="369" key="GridCell.Tab.0.center" timestamp="1622524682268">
+    <state width="1874" height="236" key="GridCell.Tab.0.bottom/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
+    <state width="1874" height="236" key="GridCell.Tab.0.center" timestamp="1622540597914">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.center/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213735" />
-    <state width="1874" height="369" key="GridCell.Tab.0.center/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622524682268" />
-    <state width="1874" height="369" key="GridCell.Tab.0.left" timestamp="1622524682268">
+    <state width="1874" height="236" key="GridCell.Tab.0.center/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
+    <state width="1874" height="236" key="GridCell.Tab.0.left" timestamp="1622540597914">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.left/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213735" />
-    <state width="1874" height="369" key="GridCell.Tab.0.left/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622524682268" />
-    <state width="1874" height="369" key="GridCell.Tab.0.right" timestamp="1622524682268">
+    <state width="1874" height="236" key="GridCell.Tab.0.left/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
+    <state width="1874" height="236" key="GridCell.Tab.0.right" timestamp="1622540597914">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.right/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213736" />
-    <state width="1874" height="369" key="GridCell.Tab.0.right/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622524682268" />
-    <state width="1874" height="355" key="GridCell.Tab.1.bottom" timestamp="1622469928344">
+    <state width="1874" height="236" key="GridCell.Tab.0.right/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
+    <state width="1874" height="427" key="GridCell.Tab.1.bottom" timestamp="1622536865001">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.1.bottom/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213737" />
-    <state width="1874" height="355" key="GridCell.Tab.1.bottom/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622469928344" />
-    <state width="1874" height="355" key="GridCell.Tab.1.center" timestamp="1622469928344">
+    <state width="1874" height="427" key="GridCell.Tab.1.bottom/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622536865001" />
+    <state width="1874" height="427" key="GridCell.Tab.1.center" timestamp="1622536865001">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.1.center/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213737" />
-    <state width="1874" height="355" key="GridCell.Tab.1.center/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622469928344" />
-    <state width="1874" height="355" key="GridCell.Tab.1.left" timestamp="1622469928344">
+    <state width="1874" height="427" key="GridCell.Tab.1.center/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622536865001" />
+    <state width="1874" height="427" key="GridCell.Tab.1.left" timestamp="1622536865001">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.1.left/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213737" />
-    <state width="1874" height="355" key="GridCell.Tab.1.left/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622469928344" />
-    <state width="1874" height="355" key="GridCell.Tab.1.right" timestamp="1622469928344">
+    <state width="1874" height="427" key="GridCell.Tab.1.left/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622536865001" />
+    <state width="1874" height="427" key="GridCell.Tab.1.right" timestamp="1622536865001">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.1.right/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213737" />
-    <state width="1874" height="355" key="GridCell.Tab.1.right/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622469928344" />
+    <state width="1874" height="427" key="GridCell.Tab.1.right/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622536865001" />
     <state x="689" y="225" width="539" height="631" key="RollbackChangesDialog" timestamp="1622518075481">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
@@ -372,11 +376,6 @@
           <line>295</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>26</line>
-          <option name="timeStamp" value="18" />
-        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
@@ -384,6 +383,6 @@
     <SUITE FILE_PATH="coverage/Eureka$pytest_in_test_lightcurve_fitting_py.coverage" NAME="pytest in test_lightcurve_fitting.py Coverage Results" MODIFIED="1622396285473" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Eureka$LCFitting_Demo.coverage" NAME="LCFitting_Demo Coverage Results" MODIFIED="1622396313807" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demos" />
     <SUITE FILE_PATH="coverage/Eureka$eureka.coverage" NAME="eureka Coverage Results" MODIFIED="1622453391511" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demos" />
-    <SUITE FILE_PATH="coverage/Eureka$run_eureka.coverage" NAME="run_eureka Coverage Results" MODIFIED="1622524682256" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demos/S3" />
+    <SUITE FILE_PATH="coverage/Eureka$run_eureka.coverage" NAME="run_eureka Coverage Results" MODIFIED="1622540693524" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demos/S3" />
   </component>
 </project>
