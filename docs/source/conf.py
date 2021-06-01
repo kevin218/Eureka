@@ -13,7 +13,6 @@
 import os
 import sys
 
-#sys.path.insert(0, os.path.abspath('/home/zieba/Desktop/Projects/JWST-observation-simulator/'))
 sys.path.insert(0, os.path.abspath('../..'))
 #sys.path.insert(0, os.path.abspath('..'))
 
@@ -21,9 +20,9 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'jwstobsim'
-copyright = '2020, Sebastian Zieba, Evert Nasedkin'
-author = 'Sebastian Zieba, Evert Nasedkin'
+project = 'Eureka'
+copyright = '2020, Kevin, Laura, Sebastian'
+author = 'Kevin, Laura, Sebastian'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'

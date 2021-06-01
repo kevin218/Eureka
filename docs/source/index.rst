@@ -3,10 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to the documentation of the JWST-observation simulator!
-===============================================================
+Welcome to Eureka's documentation!
+==================================
 
-This tool creates simulated spectra based on PandExo.
+Welcome to the documentation for ``Eureka``. 
+
+The full code for ``Eureka`` is available at `GitHub <http://github.com/kevin218/Eureka>`_
 
 Guide
 ^^^^^

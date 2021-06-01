@@ -8,7 +8,7 @@ The simulated spectrum will be then saved in the runs_dir directory.
 
 An example for a simulated spectrum:
 
-.. image:: lc.png
+.. image:: fig3001-1281-Image+Background.png
 
 This code is available in full at https://github.com/sebastian-zieba/JWST-observation-simulator.
 
