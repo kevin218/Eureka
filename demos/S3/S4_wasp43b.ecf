@@ -1,0 +1,6 @@
+# WASP-43b NIRCam Simulated data
+
+# Number of spectroscopic channels spread evenly over given wavelength range
+nspecchan   10
+wave_min    2.5
+wave_max    4.0
