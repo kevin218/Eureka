@@ -38,15 +38,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/S3/run_eureka.py" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3/run_eureka.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/demos/S3_wasp43b.ecf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/sigrej.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/sigrej.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/lib/barycorr.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/lib/barycorr.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/lib/gaussian.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/lib/gaussian.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/lib/savetable.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/lib/savetable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eureka/lib/suntimecorr.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/lib/suntimecorr.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/lc.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/quickstart.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/quickstart.rst" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -203,7 +196,7 @@
       <workItem from="1620784197276" duration="168000" />
       <workItem from="1622392231706" duration="45408000" />
       <workItem from="1622470177864" duration="3821000" />
-      <workItem from="1622517817161" duration="5435000" />
+      <workItem from="1622517817161" duration="6046000" />
     </task>
     <servers />
   </component>

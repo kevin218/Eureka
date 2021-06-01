@@ -6,5 +6,5 @@ The Code
 
 jwstobsim
 ---------------
-.. automodule:: jwstobsim.utils
+.. automodule:: eureka.lib
    :inherited-members:
