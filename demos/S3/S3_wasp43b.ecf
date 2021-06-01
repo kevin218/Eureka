@@ -25,8 +25,8 @@ prof_deg    3
 
 
 # Project directory
-topdir      /Users/stevekb1/Documents/
+topdir      /Users/kreidberg/Desktop/Data/
 
 # Directories relative to project dir
-datadir     /data/JWST/NIRCam-Sim/Stage2/
-ancildir    /data/JWST/NIRCam-Sim/ancil/
+datadir     /JWST/NIRCam-Sim/Stage2/
+ancildir    /JWST/NIRCam-Sim/ancil/

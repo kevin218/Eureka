@@ -17,7 +17,6 @@ except ImportError:
 from bokeh.plotting import figure, show
 
 from .parameters import Parameters
-from .observations import Observations
 from .utils import COLORS
 from .limb_darkening_fit import ld_profile
 
