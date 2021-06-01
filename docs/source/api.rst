@@ -4,8 +4,6 @@ The Code
 ==============
 
 
-lib
-==============
 
 lib.barycorr
 ---------------
@@ -15,18 +13,27 @@ lib.barycorr
     :undoc-members:
     :show-inheritance:
 
-lib.models-POET
+
+lib.correlated_noise
+---------------------
+
+.. automodule:: eureka.lib.correlated_noise
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.gelmanrubin
 ---------------
 
-.. automodule:: eureka.lib.models-POET
+.. automodule:: eureka.lib.gelmanrubin
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 
-eureka.S3_data_reduction
-=========================
+
+
 
 S3_data_reduction.nircam
 -------------------------
