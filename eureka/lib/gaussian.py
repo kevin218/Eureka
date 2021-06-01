@@ -56,7 +56,7 @@
 
 import numpy as np
 import scipy.optimize as so
-import disk as d
+#import disk as d
 
 def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
   """

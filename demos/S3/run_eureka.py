@@ -9,4 +9,4 @@ reload(s3)
 
 eventlabel = 'wasp43b'
 
-ev = s3.reduceJWST(eventlabel, isplots=1)
+ev = s3.reduceJWST(eventlabel, isplots=0)

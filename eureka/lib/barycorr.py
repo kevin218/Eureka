@@ -9,7 +9,7 @@ import numpy as np
 from astropy.io import ascii
 #from astropy.time import Time
 import urllib.request 
-import suntimecorr
+from . import suntimecorr
 
 
 
@@ -69,7 +69,7 @@ def horizons_downloader(event, t_mjd, nvisit):
     #print(settings)
 
 
-    dirname = event.dirname+'/horizons'
+    dirname = event.workdir + '/horizons'
     if not os.path.exists(dirname): os.makedirs(dirname)
 
     for i in range(1): 

@@ -305,7 +305,7 @@ def reduceJWST(eventlabel, isplots=False):
     me.saveevent(ev, ev.workdir + '/S3_' + ev.eventlabel + "_Save", save=[])
 
     log.writelog('Saving results as astropy table...')
-    savetable.savetable(ev)
+    #savetable.savetable(ev)
 
     log.writelog('Generating figures')
     if isplots >= 1:

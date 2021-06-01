@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 def savetable(ev):
-    filename = ev.dirname + '/S3_' + ev.eventlabel + "_spec_lc.txt"
+    filename = ev.workdir + '/S3_' + ev.eventlabel + "_spec_lc.txt"
     #if not os.path.exists(filename):
     fits_filenames = ev.segment_list
 
