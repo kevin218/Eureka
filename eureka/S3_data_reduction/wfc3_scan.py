@@ -4,9 +4,11 @@ import scipy.interpolate as spi
 import scipy.ndimage.interpolation as spni
 import gaussian as g
 import matplotlib.pyplot as plt
-import sys, optspex, smooth, julday, centroid
-import hst_scan as hst
-import sort_nicely as sn
+from . import optspex
+from . import julday
+import sys, smooth, centroid
+#import hst_scan as hst
+from ..lib import sort_nicely as sn
 import astropy.io.fits as pf
 import smoothing
 
@@ -627,7 +629,7 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         return cordata
 
 # Calulate drift2D
-import image_registration as imr
+#import image_registration as imr
 def calcDrift2D(im1, im2, m, n, n_files):
     try:
         sys.stdout.write('\r'+str(m+1)+'/'+str(n_files))
