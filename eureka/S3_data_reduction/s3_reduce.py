@@ -140,7 +140,7 @@ def reduceJWST(eventlabel, isplots=False):
             # Convert from brightness units (MJy/sr) to DNs
             log.writelog('  Converting from brightness units (MJy/sr) to DNs')
             photfile = ev.topdir + ev.ancildir +'/'+ mhdr['R_PHOTOM'][7:]
-            subdata, suberr, subv0 = b2f.bright2dn(subdata, suberr, subv0, subwave, photfile, mhdr, shdr)
+            subdata, suberr, subv0 = b2f.bright2dn(subdata, suberr, subv0, subwave, photfile, mhdr, shdr)  
 
         # Check if arrays have NaNs
         if np.sum(np.isnan(subdata)) > 0:

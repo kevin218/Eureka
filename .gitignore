@@ -128,3 +128,6 @@ dmypy.json
 .pyre/
 
 *.DS_Store
+
+# ecf file 
+*.ecf
