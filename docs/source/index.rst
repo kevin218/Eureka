@@ -26,6 +26,13 @@ Soon to be added...
    api
    acknowledgements
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Examples
+
+   intro
+
+
 
 Indices and tables
 ==================
