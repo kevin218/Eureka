@@ -4,6 +4,59 @@ import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
 
+def dn2electrons(data, err, v0, gainfile, mhdr, ywindow, xwindow):
+    """
+    This function converts the data, uncertainty, and variance arrays from
+    raw units (DN) to electrons.
+
+    Parameters:
+    -----------
+    data:       ndarray
+                data array of shape ([nx, ny, nimpos, npos]) in units of MJy/sr.
+    err:        ndarray
+                uncertainties of data (same shape and units).
+    v0:         ndarray
+                Read noise variance array
+    gainfile:   str
+                Absolute file name of JWST gain reference file (R_GAIN)
+    mhdr:       Record array
+                JWST master header
+    ywindow:    Tuple
+                Start and end of subarray along Y axis
+    xwindow:    Tuple
+                Start and end of subarray along X axis
+
+    Return:
+    -------
+    This procedure returns the input arrays in units of electrons.
+
+    Notes:
+    ------
+    The gain files can be downloaded from CRDS (https://jwst-crds.stsci.edu/browse_db/)
+
+    Modification History:
+    ---------------------
+    Written by Kevin Stevenson      Jun 2021
+    """
+    # Subarray parameters
+    xstart  = mhdr['SUBSTRT1']
+    ystart  = mhdr['SUBSTRT2']
+    nx      = mhdr['SUBSIZE1']
+    ny      = mhdr['SUBSIZE2']
+
+    # Load gain array in units of e-/ADU
+    gain    = fits.getdata(gainfile)[ystart:ystart+ny,xstart:xstart+nx]
+
+    # Gain subarray
+    subgain = gain[ywindow[0]:ywindow[1],xwindow[0]:xwindow[1]]
+
+    # Convert to electrons
+    data *= subgain
+    err  *= subgain
+    v0   *= (subgain)**2
+
+    return data, err, v0
+
 def bright2dn(data, err, v0, wave, photfile, mhdr, shdr):
     """
     This function converts the data, uncertainty, and variance arrays from
@@ -21,9 +74,9 @@ def bright2dn(data, err, v0, wave, photfile, mhdr, shdr):
                 Pixel dependent wavelength values
     photfile:   str
                 Absolute file name of JWST photometric reference file (R_PHOTOM)
-    mhdr:       Recoors array
+    mhdr:       Record array
                 JWST master header
-    shdr:       Recoors array
+    shdr:       Record array
                 JWST science header
 
     Return:
@@ -33,7 +86,7 @@ def bright2dn(data, err, v0, wave, photfile, mhdr, shdr):
 
     Notes:
     ------
-    The input arrays are changed in place.
+    The photometry files can be downloaded from CRDS (https://jwst-crds.stsci.edu/browse_db/)
 
     Modification History:
     ---------------------

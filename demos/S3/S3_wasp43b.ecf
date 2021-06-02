@@ -30,5 +30,3 @@ topdir      /home/zieba/Desktop/
 # Directories relative to project dir
 datadir     /Data/JWST_simulated_data_may2021/NIRCam/Stage21/
 ancildir    /Data/JWST_simulated_data_may2021/NIRCam/ancil/
-hordir      /Projects/Observations/Spitzer/K2-167_11026_dynesty/ch2/ancil/horizons
-leapdir     /Projects/Observations/Spitzer/K2-167_11026_dynesty/ch2/ancil/leapseconds/

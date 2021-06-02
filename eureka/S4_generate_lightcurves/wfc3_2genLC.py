@@ -5,7 +5,7 @@ import scipy.interpolate as spi
 import matplotlib.pyplot as plt
 import manageevent as me
 import sys, time, smooth
-import hst_scan as hst
+#import hst_scan as hst
 import scipy.ndimage.interpolation as spni
 import imp
 #reload(smooth)

@@ -30,17 +30,58 @@
     <select>
       <path>
         <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="GROUP_NODE:dev" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="BRANCH:dev/sz" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="BRANCH:origin/master" type="e8cecc67:BranchNodeDescriptor" />
       </path>
     </select>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/demos/S3/S4_wasp43b.ecf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/julday.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eureka/S4_generate_lightcurves/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eureka/lib/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/Intro to ExoCTK.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/demos/Intro to ExoCTK.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/S3_wasp43b_Save.dat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3101-2D_LC.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1281-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1282-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1283-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1284-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1285-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1286-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3301-1287-Image+Background.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1281-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1282-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1283-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1284-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1285-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1286-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3302-1287-Spectrum.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1281-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1282-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1283-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1284-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1285-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1286-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/figs/fig3305-1287-Profile.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/horizons/bjdcorr_horizons_results_v0.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_2021-06-01_11-44-55_wasp43b/horizons/horizons_results_v0.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/S3/S3_wasp43b.ecf" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3/S3_wasp43b.ecf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/demos/S3/run_eureka.py" beforeDir="false" afterPath="$PROJECT_DIR$/demos/S3/run_eureka.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/api.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/api.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/bright2flux.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/bright2flux.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/wfc3_1reduce.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/wfc3_1reduce.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S3_data_reduction/wfc3_scan.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S3_data_reduction/wfc3_scan.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S4_generate_lightcurves/s4_genLC.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S4_generate_lightcurves/s4_genLC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/S4_generate_lightcurves/wfc3_2genLC.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/S4_generate_lightcurves/wfc3_2genLC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eureka/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/eureka/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -182,8 +223,6 @@
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="cfe3d193-cb03-4c4e-adab-c0b3a3bde6b3" name="Default Changelist" comment="" />
-      <changelist id="" name="reorder demos dir" comment="" />
-      <changelist id="" name="updated ecf" comment="" />
       <created>1596808337076</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
@@ -197,7 +236,9 @@
       <workItem from="1620784197276" duration="168000" />
       <workItem from="1622392231706" duration="45408000" />
       <workItem from="1622470177864" duration="3821000" />
-      <workItem from="1622517817161" duration="12793000" />
+      <workItem from="1622517817161" duration="15323000" />
+      <workItem from="1622634828008" duration="1408000" />
+      <workItem from="1622667297931" duration="915000" />
     </task>
     <servers />
   </component>
@@ -247,36 +288,36 @@
     </state>
     <state width="703" height="506" key="DebuggerActiveHint/0.28.1920.1024@0.28.1920.1024" timestamp="1619060100195" />
     <state width="1611" height="506" key="DebuggerActiveHint/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622417289309" />
-    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog" timestamp="1622520483137">
+    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog" timestamp="1622668002876">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
-    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622473351792" />
+    <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622668002876" />
     <state x="96" y="128" width="1728" height="827" key="DiffContextDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622520483137" />
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl" timestamp="1622438471321">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl/0.28.1920.1024@0.28.1920.1024" timestamp="1619220521363" />
     <state x="743" y="299" width="432" height="482" key="FileChooserDialogImpl/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622438471321" />
-    <state width="1874" height="236" key="GridCell.Tab.0.bottom" timestamp="1622540597914">
+    <state width="1874" height="236" key="GridCell.Tab.0.bottom" timestamp="1622540693530">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.bottom/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213736" />
-    <state width="1874" height="236" key="GridCell.Tab.0.bottom/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
-    <state width="1874" height="236" key="GridCell.Tab.0.center" timestamp="1622540597914">
+    <state width="1874" height="236" key="GridCell.Tab.0.bottom/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540693530" />
+    <state width="1874" height="236" key="GridCell.Tab.0.center" timestamp="1622540693530">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.center/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213735" />
-    <state width="1874" height="236" key="GridCell.Tab.0.center/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
-    <state width="1874" height="236" key="GridCell.Tab.0.left" timestamp="1622540597914">
+    <state width="1874" height="236" key="GridCell.Tab.0.center/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540693530" />
+    <state width="1874" height="236" key="GridCell.Tab.0.left" timestamp="1622540693530">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.left/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213735" />
-    <state width="1874" height="236" key="GridCell.Tab.0.left/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
-    <state width="1874" height="236" key="GridCell.Tab.0.right" timestamp="1622540597914">
+    <state width="1874" height="236" key="GridCell.Tab.0.left/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540693530" />
+    <state width="1874" height="236" key="GridCell.Tab.0.right" timestamp="1622540693530">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state width="1874" height="333" key="GridCell.Tab.0.right/0.28.1920.1024@0.28.1920.1024" timestamp="1619088213736" />
-    <state width="1874" height="236" key="GridCell.Tab.0.right/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540597914" />
+    <state width="1874" height="236" key="GridCell.Tab.0.right/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622540693530" />
     <state width="1874" height="427" key="GridCell.Tab.1.bottom" timestamp="1622536865001">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
@@ -301,10 +342,10 @@
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
     <state x="689" y="225" width="539" height="631" key="RollbackChangesDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622518075481" />
-    <state x="124" y="134" width="1728" height="827" key="ShowDiffWithBranchDialog" timestamp="1622520924033">
+    <state x="74" y="119" width="1728" height="827" key="ShowDiffWithBranchDialog" timestamp="1622668002877">
       <screen x="0" y="28" width="1920" height="1024" />
     </state>
-    <state x="96" y="128" width="1728" height="827" key="ShowDiffWithBranchDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622473351792" />
+    <state x="74" y="119" width="1728" height="827" key="ShowDiffWithBranchDialog/0.28.1920.1024@0.28.1920.1024" timestamp="1622668002877" />
     <state x="124" y="134" width="1728" height="827" key="ShowDiffWithBranchDialog/1920.0.1920.1080/0.28.1920.1024@0.28.1920.1024" timestamp="1622520924033" />
     <state x="803" y="457" width="311" height="167" key="VCS.ChangelistChooser" timestamp="1622473093801">
       <screen x="0" y="28" width="1920" height="1024" />
@@ -353,27 +394,22 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>189</line>
-          <option name="timeStamp" value="10" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>212</line>
+          <line>206</line>
           <option name="timeStamp" value="11" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>281</line>
+          <line>275</line>
           <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>132</line>
+          <line>137</line>
           <option name="timeStamp" value="16" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/eureka/S3_data_reduction/s3_reduce.py</url>
-          <line>295</line>
+          <line>289</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
       </breakpoints>
