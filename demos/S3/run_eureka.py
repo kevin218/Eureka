@@ -4,8 +4,12 @@ import sys, os, time
 sys.path.append('/Users/kreidberg/Desktop/Projects/OpenSource/Eureka/')
 from importlib import reload
 import eureka.S3_data_reduction.s3_reduce as s3
-reload(s3)
+import eureka.S4_generate_lightcurves.s4_genLC as s4
 
 eventlabel = 'wasp43b'
 
-ev = s3.reduceJWST(eventlabel, isplots=1)
+reload(s3)
+ev3 = s3.reduceJWST(eventlabel, isplots=1, testing=False)
+
+reload(s4)
+ev4 = s4.lcJWST(ev.eventlabel, ev.workdir, ev=ev3, isplots=3)
