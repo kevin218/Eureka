@@ -1,3 +1,0 @@
-- How to convert from MJy/sr to electron counts?
-
-- Is ERR = sqrt(DATA) wrong if still in MJy/sr?
