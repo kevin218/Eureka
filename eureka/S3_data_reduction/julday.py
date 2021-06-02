@@ -1,8 +1,3 @@
-# $Author: ccampo $
-# $Revision: 31 $
-# $Date: 2009-06-18 09:55:27 -0400 (Thu, 18 Jun 2009) $
-# $HeadURL: file:///home/esp01/svn/code/auto_aor/trunk/julday.py $
-# $Id: julday.py 31 2009-06-18 13:55:27Z ccampo $
 
 def julday(month, day, year, hour=12, minute=0, second=0):
     '''
@@ -41,7 +36,7 @@ SIDE EFFECTS:
 
 NOTES:
      If a time is not given, the routine defaults to noon.
-     
+
      Adopted from julday.pro; JULDAY is a standard routine in IDL.
      This is roughly equivalent to the IDL routine, with slightly
      more precision in results.
@@ -56,7 +51,7 @@ MODIFICATION HISTORY:
     if month > 12 or month < 1 or day > 31 or day < 1:
         raise ValueError('Error: Date does not exist. Check the input...')
 
-    
+
     # Gregorian to Julian conversion formulae; wikipedia
     a = np.floor((14-month)/12.)
     y = year + 4800 - a
@@ -68,4 +63,3 @@ MODIFICATION HISTORY:
     jd = jdn + ((hour-12)/24.) + (minute/1440.) + (second/86400.)
 
     return jd
-

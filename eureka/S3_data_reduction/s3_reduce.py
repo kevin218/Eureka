@@ -27,6 +27,7 @@
 import sys, os, time
 import numpy as np
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
@@ -46,7 +47,7 @@ class Event():
     #self.foo = 2
     return
 
-def reduceJWST(eventlabel, isplots=False):
+def reduceJWST(eventlabel, isplots=False, testing=False):
     '''
     Reduces data images and calculated optimal spectra.
 
@@ -108,7 +109,11 @@ def reduceJWST(eventlabel, isplots=False):
 
     ev.stdspec = np.array([])
     # Loop over each segment
-    for m in range(num_data_files):
+    if testing == True:
+        istart = num_data_files-1
+    else:
+        istart = 0
+    for m in range(istart, num_data_files):
         # Report progress
 
         # Read in data frame and header
@@ -138,9 +143,11 @@ def reduceJWST(eventlabel, isplots=False):
             #log.writelog('Converting from brightness to flux units')
             #subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
             # Convert from brightness units (MJy/sr) to DNs
-            log.writelog('  Converting from brightness units (MJy/sr) to DNs')
+            log.writelog('  Converting from brightness units (MJy/sr) to electronss')
             photfile = ev.topdir + ev.ancildir +'/'+ mhdr['R_PHOTOM'][7:]
-            subdata, suberr, subv0 = b2f.bright2dn(subdata, suberr, subv0, subwave, photfile, mhdr, shdr)  
+            subdata, suberr, subv0 = b2f.bright2dn(subdata, suberr, subv0, subwave, photfile, mhdr, shdr)
+            gainfile = ev.topdir + ev.ancildir +'/'+ mhdr['R_GAIN'][7:]
+            subdata, suberr, subv0 = b2f.dn2electrons(subdata, suberr, subv0, gainfile, mhdr, ev.ywindow, ev.xwindow)
 
         # Check if arrays have NaNs
         if np.sum(np.isnan(subdata)) > 0:
@@ -190,7 +197,7 @@ def reduceJWST(eventlabel, isplots=False):
             # Multiple CPUs
             pool = mp.Pool(ev.ncpu)
             for n in range(n_int):
-                res = pool.apply_async(inst.fit_bg, args=(subdata[n], submask[n], bg_y1, bg_y2, bg_deg, ev.p3thresh, n, isplots), callback=writeBG)
+                res = pool.apply_async(inst.fit_bg, args=(subdata[n], submask[n], bg_y1, bg_y2, ev.bg_deg, ev.p3thresh, n, isplots), callback=writeBG)
             pool.close()
             pool.join()
             res.wait()
@@ -273,7 +280,8 @@ def reduceJWST(eventlabel, isplots=False):
                 #plt.pause(0.1)
         # Append results
         if len(ev.stdspec) == 0:
-            ev.wave     = subwave
+            ev.wave_2d  = subwave
+            ev.wave_1d  = subwave[src_ypos]
             ev.stdspec  = stdspec
             ev.stdvar   = stdvar
             ev.optspec  = optspec
@@ -300,8 +308,8 @@ def reduceJWST(eventlabel, isplots=False):
         # 2D light curve without drift correction
         plt.figure(3101, figsize=(8,8))  #ev.n_files/20.+0.8))
         plt.clf()
-        wmin        = ev.wave.min()
-        wmax        = ev.wave.max()
+        wmin        = ev.wave_1d.min()
+        wmax        = ev.wave_1d.max()
         n_int, nx   = ev.optspec.shape
         #iwmin       = np.where(ev.wave[src_ypos]>wmin)[0][0]
         #iwmax       = np.where(ev.wave[src_ypos]>wmax)[0][0]
