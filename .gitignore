@@ -129,5 +129,5 @@ dmypy.json
 
 *.DS_Store
 
-# ecf file
+# ecf file 
 *.ecf
