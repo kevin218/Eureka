@@ -33,8 +33,8 @@ def optimal_spectrum(ev, intstart, n, subnx, stdspec, optspec, opterr):
 def lc_nodriftcorr(ev):
     plt.figure(3101, figsize=(8, 8))  # ev.n_files/20.+0.8))
     plt.clf()
-    wmin = ev.wave.min()
-    wmax = ev.wave.max()
+    wmin = ev.wave_1d.min()
+    wmax = ev.wave_1d.max()
     n_int, nx = ev.optspec.shape
     # iwmin       = np.where(ev.wave[src_ypos]>wmin)[0][0]
     # iwmax       = np.where(ev.wave[src_ypos]>wmax)[0][0]
