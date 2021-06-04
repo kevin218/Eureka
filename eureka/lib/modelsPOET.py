@@ -1,8 +1,8 @@
 import numpy as np
 import scipy.interpolate as spi
-import models
-import orbit
-import smoothing
+#import models
+import eureka.lib.orbit
+import eureka.lib.smoothing
 #from trquad import trquad
 #from numpy import *
 
