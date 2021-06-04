@@ -5,14 +5,15 @@ Installation and requirements
 
 Requirements
 ------------
-Eureka is available through pip...
+Eureka! is available through pip...
 
 Installation
 ------------
 You will find a installation guide here.
 
+Under construction...
 
-Install eureka through pip
+Install Eureka! through pip
 
 .. code-block:: bash
 

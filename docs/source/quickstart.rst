@@ -2,7 +2,7 @@
 
 Quickstart
 ============
-Firstly, you have to update the ecf (Eureka control) file
+Firstly, you have to update the ecf (Eureka! control) file
 
 An example for a simulated spectrum:
 

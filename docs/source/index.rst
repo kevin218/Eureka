@@ -3,12 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Eureka's documentation!
-==================================
+Welcome to Eureka!'s documentation!
+====================================
 
-Welcome to the documentation for ``Eureka``. 
+Welcome to the documentation for ``Eureka!``.
 
-The full code for ``Eureka`` is available at `GitHub <http://github.com/kevin218/Eureka>`_
+The full code for ``Eureka!`` is available at `GitHub <http://github.com/kevin218/Eureka>`_
 
 Guide
 ^^^^^

@@ -3,13 +3,6 @@
 The Code
 ==============
 
-lib.barycorr
----------------
-.. automodule:: eureka.lib.barycorr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.correlated_noise
 ---------------------
 .. automodule:: eureka.lib.correlated_noise
@@ -37,8 +30,6 @@ lib.gelmanrubin
     :members:
     :undoc-members:
     :show-inheritance:
-
-
 
 lib.hiloerr
 ---------------
@@ -75,9 +66,12 @@ lib.manageevent
     :undoc-members:
     :show-inheritance:
 
-
-
-
+lib.modelsPOET
+---------------
+.. automodule:: eureka.lib.modelsPOET
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 lib.nasc
 ---------------
@@ -96,13 +90,6 @@ lib.orbit
 lib.plots
 ---------------------
 .. automodule:: eureka.lib.plots
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.plots_s3
----------------
-.. automodule:: eureka.lib.plots_s3
     :members:
     :undoc-members:
     :show-inheritance:
@@ -142,23 +129,6 @@ lib.sort_nicely
     :undoc-members:
     :show-inheritance:
 
-lib.splinterp
----------------
-.. automodule:: eureka.lib.splinterp
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-
-
-lib.suntimecorr
----------------
-.. automodule:: eureka.lib.suntimecorr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.time2phase2
 ---------------------
 .. automodule:: eureka.lib.time2phase2
@@ -188,10 +158,80 @@ lib.util
     :show-inheritance:
 
 
+
+S3_data_reduction.bright2flux
+--------------------------------
+.. automodule:: eureka.S3_data_reduction.bright2flux
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.julday
+------------------------
+.. automodule:: eureka.S3_data_reduction.julday
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.miri
+-----------------------
+.. automodule:: eureka.S3_data_reduction.miri
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 S3_data_reduction.nircam
 -------------------------
-
 .. automodule:: eureka.S3_data_reduction.nircam
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.niriss
+---------------------------
+.. automodule:: eureka.S3_data_reduction.niriss
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.nirspec
+----------------------------
+.. automodule:: eureka.S3_data_reduction.nirspec
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.optspex
+---------------------------
+.. automodule:: eureka.S3_data_reduction.optspex
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.plots_s3
+----------------------------
+.. automodule:: eureka.S3_data_reduction.plots_s3
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.s3_reduce
+----------------------------
+.. automodule:: eureka.S3_data_reduction.s3_reduce
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.wfc3_1reduce
+-------------------------------
+.. automodule:: eureka.S3_data_reduction.wfc3_1reduce
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.wfc3_scan
+----------------------------
+.. automodule:: eureka.S3_data_reduction.wfc3_scan
     :members:
     :undoc-members:
     :show-inheritance:
