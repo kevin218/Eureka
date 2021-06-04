@@ -1,8 +1,8 @@
 
 import numpy as np
 import numpy.random as npr
-import time, timer
-import gelmanrubin as gr
+import time#, timer
+import eureka.lib.gelmanrubin as gr
 #reload(gr)
 #import python_models as mc
 #import models_c as mc

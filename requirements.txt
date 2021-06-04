@@ -12,3 +12,4 @@ pyyaml
 requests
 scipy
 svo_filters
+nbsphinx
