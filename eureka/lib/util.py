@@ -1,6 +1,16 @@
 import numpy as np
 from importlib import reload
 import multiprocessing as mp
+from . import sort_nicely as sn
+import os
+
+def readfiles(ev):
+    ev.segment_list = []
+    for fname in os.listdir(ev.topdir + ev.datadir):
+        if fname.endswith(ev.suffix + '.fits'):
+            ev.segment_list.append(ev.topdir + ev.datadir +'/'+ fname)
+    ev.segment_list = sn.sort_nicely(ev.segment_list)
+    return ev
 
 def check_nans(data, mask, log):
     if np.sum(np.isnan(data)) > 0:

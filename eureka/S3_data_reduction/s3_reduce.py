@@ -30,7 +30,6 @@ import multiprocessing as mp
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
-from ..lib import sort_nicely as sn
 from . import bright2flux as b2f
 from . import optspex
 from importlib import reload
@@ -101,11 +100,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
     log.writelog("\nStarting Stage 3 Reduction")
 
     # Create list of file segments
-    ev.segment_list = []
-    for fname in os.listdir(ev.topdir + ev.datadir):
-        if fname.endswith(ev.suffix + '.fits'):
-            ev.segment_list.append(ev.topdir + ev.datadir +'/'+ fname)
-    ev.segment_list = sn.sort_nicely(ev.segment_list)
+    ev = util.readfiles(ev)
     num_data_files = len(ev.segment_list)
     log.writelog(f'\nFound {num_data_files} data file(s) ending in {ev.suffix}.fits')
 
