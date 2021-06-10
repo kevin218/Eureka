@@ -3,8 +3,9 @@
 import numpy as np
 import scipy.interpolate as spi
 import matplotlib.pyplot as plt
-import manageevent as me
-import sys, time, smooth
+import eureka.lib.manageevent as me
+import sys, time
+import eureka.lib.smooth
 #import hst_scan as hst
 import scipy.ndimage.interpolation as spni
 #import imp
