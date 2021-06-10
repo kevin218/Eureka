@@ -41,7 +41,6 @@ def lsqfitter(lc, model, verbose=True, **kwargs):
     #              for n in range(len(model.components))] for i in j]
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
-
     # Group the different variable types
     freenames = []
     freepars = []

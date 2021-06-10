@@ -5,10 +5,11 @@ Email: jfilippazzo@stsci.edu
 """
 import numpy as np
 import pandas as pd
-from bokeh.plotting import figure, show
+#from bokeh.plotting import figure, show
+import matplotlib.pyplot as plt
 from importlib import reload
 
-from .models import Model, CompositeModel
+from . import models as m
 from . import fitters as f
 reload(f)
 from .utils import COLORS
@@ -40,8 +41,8 @@ class LightCurveFitter:
         return self.results.iloc[self.results[param_name] == value]
 
 
-class LightCurve(Model):
-    def __init__(self, time, flux, unc=None, parameters=None, units='MJD', name='My Light Curve'):
+class LightCurve(m.Model):
+    def __init__(self, time, flux, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
         """
         A class to store the actual light curve
 
@@ -56,7 +57,7 @@ class LightCurve(Model):
         parameters: str, object (optional)
             The orbital parameters of the star/planet system,
             may be a path to a JSON file or a parameter object
-        units: str
+        time_units: str
             The time units
         name: str
             A name for the object
@@ -83,7 +84,7 @@ class LightCurve(Model):
         self.flux = flux
 
         # Set the units
-        self.units = units
+        self.time_units = time_units
         self.name = name
 
         # Place to save the fit results
@@ -104,8 +105,8 @@ class LightCurve(Model):
 
         model.time = self.time
         # Make sure the model is a CompositeModel
-        if not isinstance(model, type(CompositeModel)):
-            model = CompositeModel([model])
+        if not isinstance(model, m.CompositeModel):
+            model = m.CompositeModel([model])
             model.time = self.time
         # else:
         #     for n in range(len(model.components)):
@@ -150,25 +151,35 @@ class LightCurve(Model):
             The figure
         """
         # Make the figure
-        fig = figure(width=800, height=400)
-
+        fig = plt.figure(figsize=(8,6))
         # Draw the data
-        fig.circle(self.time, self.flux, legend=self.name)
-
-        # Plot fit models
+        ax = fig.add_subplot(111)
+        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color=next(COLORS), zorder=0)
+        # Draw best-fit model
         if fits and len(self.results) > 0:
             for model in self.results:
-                model.plot(self.time, fig=fig, color=next(COLORS))
+                model.plot(self.time, ax=ax, color=next(COLORS), zorder=1)
 
+        # fig = figure(width=800, height=400)
+        #
+        # # Draw the data
+        # fig.circle(self.time, self.flux, legend=self.name)
+        #
+        # # Plot fit models
+        # if fits and len(self.results) > 0:
+        #     for model in self.results:
+        #         model.plot(self.time, fig=fig, color=next(COLORS))
+        #
         # Format axes
-        fig.xaxis.axis_label = str(self.units)
-        fig.yaxis.axis_label = 'Flux'
+        ax.set_xlabel(str(self.time_units))
+        ax.set_ylabel('Flux')
+        fig.tight_layout()
 
         # Draw or return
         if draw:
-            show(fig)
+            fig.show()
         else:
-            return fig
+            return
 
     def reset(self):
         """Reset the results"""
