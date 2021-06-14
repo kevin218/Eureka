@@ -5,6 +5,7 @@ Author: Joe Filippazzo
 Email: jfilippazzo@stsci.edu
 """
 import numpy as np
+import matplotlib.pyplot as plt
 import copy
 import inspect
 import os
@@ -14,7 +15,7 @@ try:
     import batman
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
-from bokeh.plotting import figure, show
+#from bokeh.plotting import figure, show
 
 from .parameters import Parameters
 from .utils import COLORS
@@ -121,7 +122,7 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, fig=None, draw=False, color='blue', **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue', **kwargs):
         """Plot the model
 
         Parameters
@@ -130,8 +131,8 @@ class Model:
             The time axis to use
         components: bool
             Plot all model components
-        fig: bokeh.plotting.figure (optional)
-            The figure to plot on
+        ax: Matplotlib Axes
+            The figure axes to plot on
 
         Returns
         -------
@@ -139,27 +140,29 @@ class Model:
             The figure
         """
         # Make the figure
-        if fig is None:
-            fig = figure(width=800, height=400)
+        if ax is None:
+            fig = plt.figure(figsize=(8,6))
+            ax = fig.add_subplot(111)
 
         # Set the time
         self.time = time
 
         # Plot the model
-        fig.line(self.time, self.eval(**kwargs), legend=self.name, color=color)
+        ax.plot(self.time, self.eval(**kwargs), '-', label=self.name, color=color)
+        #fig.line(self.time, self.eval(**kwargs), legend=self.name, color=color)
 
         if components and self.components is not None:
             for comp in self.components:
-                fig = comp.plot(self.time, fig=fig, draw=False, color=next(COLORS), **kwargs)
+                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), **kwargs)
 
         # Format axes
-        fig.xaxis.axis_label = str(self.units)
-        fig.yaxis.axis_label = 'Flux'
+        ax.set_xlabel(str(self.time_units))
+        ax.set_ylabel('Flux')
 
         if draw:
-            show(fig)
+            fig.show()
         else:
-            return fig
+            return
 
     @property
     def time(self):
@@ -167,14 +170,14 @@ class Model:
         return self._time
 
     @time.setter
-    def time(self, time_array, units='MJD'):
+    def time(self, time_array, time_units='BJD'):
         """A setter for the time
 
         Parameters
         ----------
         time_array: sequence, astropy.units.quantity.Quantity
             The time array
-        units: str
+        time_units: str
             The units of the input time_array, ['MJD', 'BJD', 'phase']
         """
         # Check the type
@@ -182,7 +185,7 @@ class Model:
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
         # Set the units
-        self.units = units
+        self.time_units = time_units
 
         # Set the array
         self._time = time_array
