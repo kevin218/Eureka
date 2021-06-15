@@ -3,7 +3,7 @@ from astropy.io import ascii
 import numpy as np
 import os
 
-def savetable(ev):
+def savetable(md, bjdtdb, wave_2d, stdspec, stdvar, optspec, opterr):
     """
       Saves data in an event as .txt using astropy
 
@@ -24,16 +24,16 @@ def savetable(ev):
 
     """
 
-    filename = ev.workdir + '/S3_' + ev.eventlabel + "_spec_lc.txt"
+    filename = md.workdir + '/S3_' + md.eventlabel + "_spec_lc.txt"
 
-    dims = ev.stdspec.shape #tuple (integration, wavelength position)
+    dims = stdspec.shape #tuple (integration, wavelength position)
 
-    bjdtdb = np.repeat(ev.bjdtdb, dims[1])
-    wave_2d = np.tile(ev.wave_2d[0], dims[0])
-    stdspec = ev.stdspec.flatten()
-    stdvar = ev.stdvar.flatten()
-    optspec = ev.optspec.flatten()
-    opterr = ev.opterr.flatten()
+    bjdtdb = np.repeat(bjdtdb, dims[1])
+    wave_2d = np.tile(wave_2d[0], dims[0])
+    stdspec = stdspec.flatten()
+    stdvar = stdvar.flatten()
+    optspec = optspec.flatten()
+    opterr = opterr.flatten()
 
     arr = [bjdtdb, wave_2d, stdspec, stdvar, optspec, opterr]
     table = QTable(arr, names=('int_mid_BJD_TDB', 'wavelength', 'stdspec', 'stdvar', 'optspec', 'opterr'))
