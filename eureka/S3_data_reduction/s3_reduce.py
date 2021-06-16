@@ -56,14 +56,13 @@ class Data():
     #self.foo = 2
     return
 
-def reduceJWST(eventlabel, isplots=False, testing=False):
+def reduceJWST(eventlabel):
     '''
     Reduces data images and calculated optimal spectra.
 
     Parameters
     ----------
     eventlabel  : str, Unique label for this dataset
-    isplots     : boolean, Set True to produce plots
 
     Returns
     -------
@@ -119,7 +118,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
 
     stdspec = np.array([])
     # Loop over each segment
-    if testing == True:
+    if md.testing_S3 == True:
         istart = num_data_files-1
     else:
         istart = 0
@@ -164,7 +163,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
         dat.submask = inst.flag_bg(dat, md)
 
 
-        dat = util.BGsubtraction(dat, md, log, isplots)
+        dat = util.BGsubtraction(dat, md, log, md.isplots_S3)
 
 
         # Calulate drift2D
@@ -175,7 +174,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
         # Outlier rejection of full frame along time axis
         # print("Performing full-frame outlier rejection...")
 
-        if isplots >= 3:
+        if md.isplots_S3 >= 3:
             for n in range(md.n_int):
                 #make image+background plots
                 plots_s3.image_and_background(dat, md, n)
@@ -208,10 +207,10 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
         dat.opterr      = np.zeros((dat.stdspec.shape))
         gain        = 1         #FINDME: need to determine correct gain
         for n in range(md.n_int):
-            dat.optspec[n], dat.opterr[n], mask = optspex.optimize(dat.apdata[n], dat.apmask[n], dat.apbg[n], dat.stdspec[n], gain, dat.apv0[n], p5thresh=md.p5thresh, p7thresh=md.p7thresh, fittype=md.fittype, window_len=md.window_len, deg=md.prof_deg, n=dat.intstart+n, isplots=isplots, eventdir=md.workdir, meddata=md.medapdata)
+            dat.optspec[n], dat.opterr[n], mask = optspex.optimize(dat.apdata[n], dat.apmask[n], dat.apbg[n], dat.stdspec[n], gain, dat.apv0[n], p5thresh=md.p5thresh, p7thresh=md.p7thresh, fittype=md.fittype, window_len=md.window_len, deg=md.prof_deg, n=dat.intstart+n, isplots=md.isplots_S3, eventdir=md.workdir, meddata=md.medapdata)
 
         # Plotting results
-        if isplots >= 3:
+        if md.isplots_S3 >= 3:
             for n in range(md.n_int):
                 #make optimal spectrum plot
                 plots_s3.optimal_spectrum(dat, md, n)
@@ -249,7 +248,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
     astropytable.savetable(md, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
     log.writelog('Generating figures')
-    if isplots >= 1:
+    if md.isplots_S3 >= 1:
         # 2D light curve without drift correction
         plots_s3.lc_nodriftcorr(md, wave_1d, optspec)
 

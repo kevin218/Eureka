@@ -22,8 +22,9 @@ from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
 from ..lib import astropytable
+from . import plots_s4
 
-def lcJWST(eventlabel, workdir, md=None, isplots=False):
+def lcJWST(eventlabel, workdir, md=None):
     #expand=1, smooth_len=None, correctDrift=True
     '''
     Compute photometric flux over specified range of wavelengths
@@ -33,7 +34,6 @@ def lcJWST(eventlabel, workdir, md=None, isplots=False):
     eventlabel  : Unique identifier for these data
     workdir     : Location of save file
     ev          : event object
-    isplots     : Set True to produce plots
 
     Returns
     -------
@@ -109,22 +109,8 @@ def lcJWST(eventlabel, workdir, md=None, isplots=False):
         md.lcerr[i]     = np.sqrt(np.sum(optspec[:,index]**2,axis=1))
 
         # Plot each spectroscopic light curve
-        if isplots >= 3:
-            plt.figure(4100+i, figsize=(8,6))
-            plt.clf()
-            plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (md.wave_low[i],md.wave_hi[i]))
-            ax = plt.subplot(111)
-            mjd     = np.floor(bjdtdb[0])
-            # Normalized light curve
-            norm_lcdata = md.lcdata[i]/md.lcdata[i,-1]
-            norm_lcerr  = md.lcerr[i]/md.lcdata[i,-1]
-            plt.errorbar(bjdtdb-mjd, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec='w')
-            plt.text(0.05, 0.1, "MAD = "+str(np.round(1e6*np.median(np.abs(np.ediff1d(norm_lcdata)))))+" ppm", transform=ax.transAxes, color='k')
-            plt.ylabel('Normalized Flux')
-            plt.xlabel(f'Time [MJD + {mjd}]')
-
-            plt.subplots_adjust(left=0.10,right=0.95,bottom=0.10,top=0.90,hspace=0.20,wspace=0.3)
-            plt.savefig(md.lcdir + '/figs/Fig' + str(4100+i) + '-' + md.eventlabel + '-1D_LC.png')
+        if md.isplots_S4 >= 3:
+            plots_s4.binned_lightcurve(md, bjdtdb, i)
 
     # Save results
     log.writelog('Saving results')
