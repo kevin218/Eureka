@@ -53,7 +53,7 @@ def lc_nodriftcorr(ev):
     # plt.xlim(wmin,wmax)
     # plt.ylim(0,n_int)
     plt.ylabel('Integration Number')
-    plt.xlabel('Wavelength ($\mu m$)')
+    plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     plt.savefig(ev.workdir + '/figs/fig3101-2D_LC.png')

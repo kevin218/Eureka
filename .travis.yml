@@ -12,6 +12,7 @@ os:
 
 install:
   - pip install -r requirements.txt
+  - pip install virtualenv==16.3.0
 
 script:
   - pytest eureka/tests/
