@@ -10,9 +10,11 @@ env:
 os:
    - linux
 
+before_install:
+  - pip install virtualenv==16.3.0
+
 install:
   - pip install -r requirements.txt
-  - pip install virtualenv==16.3.0
 
 script:
   - pytest eureka/tests/
