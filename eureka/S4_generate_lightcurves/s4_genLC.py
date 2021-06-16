@@ -21,8 +21,9 @@ import matplotlib.pyplot as plt
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
+from ..lib import savetable
 
-def lcJWST(eventlabel, workdir, ev=None, isplots=False):
+def lcJWST(eventlabel, workdir, md=None, isplots=False):
     #expand=1, smooth_len=None, correctDrift=True
     '''
     Compute photometric flux over specified range of wavelengths
@@ -44,35 +45,42 @@ def lcJWST(eventlabel, workdir, ev=None, isplots=False):
 
     '''
     #load savefile
-    if ev == None:
-        ev = me.load(workdir+'/S3_'+eventlabel+'_Save.dat')
+    if md == None:
+        md = me.load(workdir+'/S3_'+eventlabel+'_Meta_Save.dat')
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'
     ecf     = rd.read_ecf(ecffile)
-    rd.store_ecf(ev, ecf)
+    rd.store_ecf(md, ecf)
 
     # Create directories for Stage 3 processing
     datetime= time.strftime('%Y-%m-%d_%H-%M-%S')
-    ev.lcdir = ev.workdir + '/S4_' + datetime + '_' + str(ev.nspecchan) + 'chan'
-    if not os.path.exists(ev.lcdir):
-        os.makedirs(ev.lcdir)
-    if not os.path.exists(ev.lcdir+"/figs"):
-        os.makedirs(ev.lcdir+"/figs")
+    md.lcdir = md.workdir + '/S4_' + datetime + '_' + str(md.nspecchan) + 'chan'
+    if not os.path.exists(md.lcdir):
+        os.makedirs(md.lcdir)
+    if not os.path.exists(md.lcdir+"/figs"):
+        os.makedirs(md.lcdir+"/figs")
 
     # Copy existing S3 log file
-    ev.s4_logname  = './'+ev.lcdir + '/S4_' + ev.eventlabel + ".log"
+    md.s4_logname  = './'+md.lcdir + '/S4_' + md.eventlabel + ".log"
     #shutil.copyfile(ev.logname, ev.s4_logname, follow_symlinks=True)
-    log         = logedit.Logedit(ev.s4_logname, read=ev.logname)
+    log         = logedit.Logedit(md.s4_logname, read=md.logname)
     log.writelog("\nStarting Stage 4: Generate Light Curves\n")
 
+    table = savetable.readtable(md)
+
+    optspec, wave_1d, bjdtdb = np.reshape(table['optspec'].data, (-1, md.subnx)), \
+                               table['wave_1d'].data[0:md.subnx], table['bjdtdb'].data[::md.subnx]
+
     #Replace NaNs with zero
-    ev.optspec[np.where(np.isnan(ev.optspec))] = 0
+    optspec[np.where(np.isnan(optspec))] = 0
+
+
 
     # Determine wavelength bins
-    binsize     = (ev.wave_max - ev.wave_min)/ev.nspecchan
-    ev.wave_low = np.round([i for i in np.linspace(ev.wave_min, ev.wave_max-binsize, ev.nspecchan)],3)
-    ev.wave_hi  = np.round([i for i in np.linspace(ev.wave_min+binsize, ev.wave_max, ev.nspecchan)],3)
+    binsize     = (md.wave_max - md.wave_min)/md.nspecchan
+    md.wave_low = np.round([i for i in np.linspace(md.wave_min, md.wave_max-binsize, md.nspecchan)],3)
+    md.wave_hi  = np.round([i for i in np.linspace(md.wave_min+binsize, md.wave_max, md.nspecchan)],3)
 
     # Apply 1D drift correction
     # if correctDrift == True:
@@ -87,40 +95,40 @@ def lcJWST(eventlabel, workdir, ev=None, isplots=False):
     #             ev.spectra[m,n] = spline(np.arange(nx)+ev.drift[m,n])
 
     log.writelog("Generating light curves")
-    n_int, nx   = ev.optspec.shape
-    ev.lcdata   = np.zeros((ev.nspecchan, n_int))
-    ev.lcerr    = np.zeros((ev.nspecchan, n_int))
+    n_int, nx   = optspec.shape
+    md.lcdata   = np.zeros((md.nspecchan, n_int))
+    md.lcerr    = np.zeros((md.nspecchan, n_int))
     # ev.eventname2 = ev.eventname
-    for i in range(ev.nspecchan):
-        log.writelog(f"Bandpass {i} = %.3f - %.3f" % (ev.wave_low[i],ev.wave_hi[i]))
+    for i in range(md.nspecchan):
+        log.writelog(f"Bandpass {i} = %.3f - %.3f" % (md.wave_low[i],md.wave_hi[i]))
         # Compute valid indeces within wavelength range
-        index   = np.where((ev.wave_1d >= ev.wave_low[i])*(ev.wave_1d <= ev.wave_hi[i]))[0]
+        index   = np.where((wave_1d >= md.wave_low[i])*(wave_1d <= md.wave_hi[i]))[0]
         # Sum flux for each spectroscopic channel
-        ev.lcdata[i]    = np.sum(ev.optspec[:,index],axis=1)
+        md.lcdata[i]    = np.sum(optspec[:,index],axis=1)
         # Add uncertainties in quadrature
-        ev.lcerr[i]     = np.sqrt(np.sum(ev.optspec[:,index]**2,axis=1))
+        md.lcerr[i]     = np.sqrt(np.sum(optspec[:,index]**2,axis=1))
 
         # Plot each spectroscopic light curve
         if isplots >= 3:
             plt.figure(4100+i, figsize=(8,6))
             plt.clf()
-            plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (ev.wave_low[i],ev.wave_hi[i]))
+            plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (md.wave_low[i],md.wave_hi[i]))
             ax = plt.subplot(111)
-            mjd     = np.floor(ev.bjdtdb[0])
+            mjd     = np.floor(bjdtdb[0])
             # Normalized light curve
-            norm_lcdata = ev.lcdata[i]/ev.lcdata[i,-1]
-            norm_lcerr  = ev.lcerr[i]/ev.lcdata[i,-1]
-            plt.errorbar(ev.bjdtdb-mjd, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec='w')
+            norm_lcdata = md.lcdata[i]/md.lcdata[i,-1]
+            norm_lcerr  = md.lcerr[i]/md.lcdata[i,-1]
+            plt.errorbar(bjdtdb-mjd, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec='w')
             plt.text(0.05, 0.1, "MAD = "+str(np.round(1e6*np.median(np.abs(np.ediff1d(norm_lcdata)))))+" ppm", transform=ax.transAxes, color='k')
             plt.ylabel('Normalized Flux')
             plt.xlabel(f'Time [MJD + {mjd}]')
 
             plt.subplots_adjust(left=0.10,right=0.95,bottom=0.10,top=0.90,hspace=0.20,wspace=0.3)
-            plt.savefig(ev.lcdir + '/figs/Fig' + str(4100+i) + '-' + ev.eventlabel + '-1D_LC.png')
+            plt.savefig(md.lcdir + '/figs/Fig' + str(4100+i) + '-' + md.eventlabel + '-1D_LC.png')
 
     # Save results
     log.writelog('Saving results')
-    me.saveevent(ev, ev.lcdir + '/S4_' + ev.eventlabel + "_Save", save=[])
+    me.saveevent(md, md.lcdir + '/S4_' + md.eventlabel + "_Meta_Save", save=[])
 
     # if (isplots >= 1) and (correctDrift == True):
     #     # Plot Drift
@@ -128,4 +136,4 @@ def lcJWST(eventlabel, workdir, ev=None, isplots=False):
 
 
     log.closelog()
-    return ev
+    return md

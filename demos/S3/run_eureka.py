@@ -14,4 +14,4 @@ reload(s3)
 ev3 = s3.reduceJWST(eventlabel, isplots=3, testing=False)
 
 reload(s4)
-ev4 = s4.lcJWST(ev3.eventlabel, ev3.workdir, ev=ev3, isplots=3)
+ev4 = s4.lcJWST(ev3.eventlabel, ev3.workdir, md=ev3, isplots=3)

@@ -33,7 +33,7 @@ from ..lib import manageevent as me
 from . import bright2flux as b2f
 from . import optspex
 from importlib import reload
-from ..lib import savetable
+from ..lib import astropytable
 from ..lib import util
 from . import plots_s3
 reload(optspex)
@@ -87,7 +87,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
     md              = Metadata()
     md.eventlabel   = eventlabel
 
-    # Initialize metadata object
+    # Initialize data object
     dat              = Data()
 
 
@@ -254,7 +254,7 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
     me.saveevent(dat, md.workdir + '/S3_' + md.eventlabel + "_Data_Save", save=[])
 
     log.writelog('Saving results as astropy table...')
-    savetable.savetable(md, bjdtdb, wave_2d, stdspec, stdvar, optspec, opterr)
+    astropytable.savetable(md, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
     log.writelog('Generating figures')
     if isplots >= 1:
