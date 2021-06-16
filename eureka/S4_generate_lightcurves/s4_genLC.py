@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
-from ..lib import savetable
+from ..lib import astropytable
 
 def lcJWST(eventlabel, workdir, md=None, isplots=False):
     #expand=1, smooth_len=None, correctDrift=True
@@ -67,7 +67,7 @@ def lcJWST(eventlabel, workdir, md=None, isplots=False):
     log         = logedit.Logedit(md.s4_logname, read=md.logname)
     log.writelog("\nStarting Stage 4: Generate Light Curves\n")
 
-    table = savetable.readtable(md)
+    table = astropytable.readtable(md)
 
     optspec, wave_1d, bjdtdb = np.reshape(table['optspec'].data, (-1, md.subnx)), \
                                table['wave_1d'].data[0:md.subnx], table['bjdtdb'].data[::md.subnx]
