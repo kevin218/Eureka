@@ -1,8 +1,11 @@
 
 # NIRCam specific rountines go here
 import numpy as np
+from importlib import reload
 from astropy.io import fits
 from eureka.S3_data_reduction import sigrej, optspex
+from . import bright2flux as b2f
+reload(b2f)
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, dat, returnHdr=True):
@@ -79,3 +82,16 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     bg, mask = optspex.fitbg(data, mask, y1, y2, deg=bg_deg,
                              threshold=p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)
+
+def unit_convert(dat, md, log):
+    if dat.shdr['BUNIT'] == 'MJy/sr':
+        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
+        # log.writelog('Converting from brightness to flux units')
+        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
+        # Convert from brightness units (MJy/sr) to DNs
+        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
+        md.photfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_PHOTOM'][7:]
+        dat = b2f.bright2dn(dat, md)
+        md.gainfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_GAIN'][7:]
+        dat = b2f.dn2electrons(dat, md)
+    return dat, md

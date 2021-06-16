@@ -30,14 +30,13 @@ import multiprocessing as mp
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
-from . import bright2flux as b2f
 from . import optspex
 from importlib import reload
 from ..lib import astropytable
 from ..lib import util
 from . import plots_s3
 reload(optspex)
-reload(b2f)
+
 
 class Metadata():
   def __init__(self):
@@ -142,16 +141,9 @@ def reduceJWST(eventlabel, isplots=False, testing=False):
         # Create bad pixel mask (1 = good, 0 = bad)
         # FINDME: Will want to use DQ array in the future to flag certain pixels
         dat.submask = np.ones(dat.subdata.shape)
-        if dat.shdr['BUNIT'] == 'MJy/sr':
-            # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
-            #log.writelog('Converting from brightness to flux units')
-            #subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
-            # Convert from brightness units (MJy/sr) to DNs
-            log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-            md.photfile = md.topdir + md.ancildir +'/'+ dat.mhdr['R_PHOTOM'][7:]
-            dat = b2f.bright2dn(dat, md)
-            md.gainfile = md.topdir + md.ancildir +'/'+ dat.mhdr['R_GAIN'][7:]
-            dat = b2f.dn2electrons(dat, md)
+
+        #Convert units (eg. for NIRCam: MJy/sr -> DN -> Electrons)
+        dat, md = inst.unit_convert(dat, md, log)
 
         # Check if arrays have NaNs
         dat.submask = util.check_nans(dat.subdata, dat.submask, log)
