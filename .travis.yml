@@ -1,13 +1,10 @@
-
+language: python
 
 env:
   - NUMPY_VERSION=1.18.0
 
 install:
   - pip install -r requirements.txt
-
-script:
-  - pytest eureka/tests/
 
 matrix:
   include:
@@ -18,6 +15,8 @@ matrix:
       language: python
       env: PYTHON_VERSION=3.6
 
+script:
+  - pytest eureka/tests/
 
 # cache:
 #   directories:
