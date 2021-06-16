@@ -5,7 +5,7 @@ h5py
 ipython
 lmfit
 matplotlib
-numpy --upgrade
+numpy==1.18.0
 pandas
 pytest
 pyyaml
