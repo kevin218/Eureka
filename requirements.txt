@@ -5,7 +5,7 @@ h5py
 ipython
 lmfit
 matplotlib
-numpy
+numpy==18.0.0
 pandas
 pytest
 pyyaml

@@ -5,10 +5,8 @@ python:
   - '3.6'
 
 env:
-    global:
-        # default environment variables
-        - NUMPY_VERSION=stable
-        - ASTROPY_VERSION=stable
+  - NUMPY_VERSION=1.18.0
+
 
 sudo: false
 
