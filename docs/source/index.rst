@@ -8,12 +8,13 @@ Welcome to Eureka!'s documentation!
 
 Welcome to the documentation for ``Eureka!``.
 
+``Eureka!`` is a pipeline for JWST data.
 The full code for ``Eureka!`` is available at `GitHub <http://github.com/kevin218/Eureka>`_
 
-Guide
-^^^^^
+..
+ Guide
+ ^^^^^
 
-Soon to be added...
 
 
 .. toctree::
@@ -21,9 +22,11 @@ Soon to be added...
    :caption: Contents:
 
    installation
+   ecf
    quickstart
    tutorial
-   api
+..   api
+   faq
    acknowledgements
 
 .. toctree::
