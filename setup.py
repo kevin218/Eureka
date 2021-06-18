@@ -6,7 +6,7 @@ REQUIRES = ['batman-package',
             'h5py',
             'ipython',
             'matplotlib',
-            'numpy',
+            'numpy>=1.20.0',
             'pytest',
             'pyyaml',
             'scipy']

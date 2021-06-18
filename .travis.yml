@@ -7,6 +7,9 @@ python:
 os:
    - linux
 
+before_install:
+  - python setup.py install
+
 env:
   - NUMPY_VERSION=1.20.0
 
