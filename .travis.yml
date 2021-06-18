@@ -5,7 +5,6 @@ python:
   - '3.6'
 os:
    - linux
-   - OSX
 
 env:
   - NUMPY_VERSION=1.18.0
