@@ -9,10 +9,6 @@ os:
 env:
   - NUMPY_VERSION=1.18.0
 
-before_install :
-  - pip install -U pip
-  - python setup.py install
-
 install:
   - pip install -r requirements.txt
 
