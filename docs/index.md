@@ -3,7 +3,8 @@
 For source code visit <a href="https://github.com/kevin218/Eureka" target="_blank">the Eureka github repository.</a> </br>
 For full code documentation visit <a href="https://github.com/kevin218/Eureka" target="_blank">the documentation page.</a>
 
-# Contributing to Eureka
+##**Contributing to Eureka**
+------------------------------
 
 ## GitHub Basics
 
@@ -228,7 +229,7 @@ switch to your development branch by doing
 
 and then do
 
-`git pop`
+`git stash pop`
 
 If the changes have been committed then it is a little more complicated, but not too much to worry about. You should create a new branch while being on the main branch that has the committed changes
 
