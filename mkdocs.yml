@@ -1,0 +1,7 @@
+site_name: My Docs
+site_url: https://eureka_jswt.com/
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: light blue
