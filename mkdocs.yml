@@ -1,4 +1,5 @@
 site_name: Eureka
+site_url: ''
 theme:
   name: material
   palette:
