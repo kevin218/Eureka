@@ -7,7 +7,7 @@ Quickstart
 
 .. code-block::
 
-	git clone git@http://github.com/kevin218/Eureka
+	git clone git@https://github.com/kevin218/Eureka
 
 2. Install Eureka! by running ``setup.py``:
 
