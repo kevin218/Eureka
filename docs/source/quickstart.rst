@@ -5,15 +5,15 @@ Quickstart
 
 1. Clone the ``Eureka!`` repository from `GitHub <http://github.com/kevin218/Eureka>`_ in a directory of your choice.
 
+.. code-block::
+
+	git clone git@https://github.com/kevin218/Eureka
+
+2. Install Eureka! by running ``setup.py``:
+
 .. code-block:: python
 
-	git clone git@http://github.com/kevin218/Eureka
-
-2. Install the packages in the requirements.txt file using:
-
-.. code-block:: python
-
-	pip install -r requirements.txt
+	sudo python setup.py install
 
 3. Make a directory on your computer to store the simulated data and ancillary files. E.g.:
 
