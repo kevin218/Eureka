@@ -1,7 +1,7 @@
 # Welcome to the Eureka Home Page
 
 For source code visit <a href="https://github.com/kevin218/Eureka" target="_blank">the Eureka github repository.</a> </br>
-For full code documentation visit <a href="https://github.com/kevin218/Eureka" target="_blank">the documentation page.</a>
+For full code documentation visit <a href="https://eurekadocs.readthedocs.io/en/latest/" target="_blank">the documentation page.</a>
 
 ##**Contributing to Eureka**
 ------------------------------
@@ -184,7 +184,7 @@ the changes done to the code in your pull request. It is always good to be as de
 that might help the reviewers understand your code better. Once you've reviewed the changes and described your feature
 you can open the pull request. Congratulations!
 
-**Important Note:** Even after opening a pull request you can continue to work on your code, every change you push into the code will show up on the pull request. This is meant to be a feature since people can review and comment on your code and you can make the changes directly. Yet, if you are going to work on another feature separate from the one you opened a pull request for, then it is good to create a new development branch for that other feature and work it from there. This of course, as long as your new feature is standalone and does not depend on code submitted in your first pull request. If you started working on changes in your first development branch but you actually want them on a new branch, refer to the troubleshooting section below.
+**Important Note:** Even after opening a pull request you can continue to work on your code, every change you push into the code will show up on the pull request. This is meant to be a feature since people can review and comment on your code and you can make the changes directly. Yet, if you are going to work on another feature separate from the one you opened a pull request for, then it is good to create a new development branch for that other feature and work it from there. **Make sure to create the development branch from main by moving to the main branch first and then creating the new branch** This of course, as long as your new feature is standalone and does not depend on code submitted in your first pull request. If you started working on changes in your first development branch but you actually want them on a new branch, refer to the troubleshooting section below.
 
 ###**Troubleshooting**
 
