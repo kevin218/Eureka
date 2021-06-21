@@ -8,7 +8,7 @@ import sys, time
 import eureka.lib.smooth
 #import hst_scan as hst
 import scipy.ndimage.interpolation as spni
-import imp
+#import imp
 #reload(smooth)
 #reload(hst)
 
@@ -245,7 +245,7 @@ def lcWFC3(eventname, eventdir, nchan, madVariable, madVarSet, wmin=1.125, wmax=
             plt.vlines(xticks,0,ev.n_files,'k','dashed')
         plt.ylim(0,ev.n_files)
         plt.ylabel('Frame Number')
-        plt.xlabel('Wavelength ($\mu m$)')
+        plt.xlabel(r'Wavelength ($\mu m$)')
         plt.xticks(rotation=30)
         plt.colorbar()
         plt.tight_layout()
@@ -280,7 +280,7 @@ def lcWFC3(eventname, eventdir, nchan, madVariable, madVarSet, wmin=1.125, wmax=
             plt.xlim(wmin,wmax)
             plt.ylim(0,ev.n_files)
             plt.ylabel('Frame Number')
-            plt.xlabel('Wavelength ($\mu m$)')
+            plt.xlabel(r'Wavelength ($\mu m$)')
             plt.colorbar()
             plt.tight_layout()
             plt.savefig(ev.eventdir+'/figs/fig'+str(3300+n)+'-2D_LC.png')

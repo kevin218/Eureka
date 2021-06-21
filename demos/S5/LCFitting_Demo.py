@@ -1,20 +1,20 @@
 
 import os, sys
 import numpy as np
-from bokeh.io import output_notebook
-from bokeh.plotting import show
+#from bokeh.io import output_notebook
+#from bokeh.plotting import show
 from importlib import reload
 #from hotsoss import plotting as plt
-sys.path.append('..')
+sys.path.append('../..')
 import eureka
 
 
 # Get the orbital parameters
-from eureka.lightcurve_fitting.utils import get_target_data
+from eureka.S5_lightcurve_fitting.utils import get_target_data
 wasp107b_params, url = get_target_data('WASP-107b')
 
 # Generate the simulated light curve
-from eureka.lightcurve_fitting.simulations import simulate_lightcurve
+from eureka.S5_lightcurve_fitting.simulations import simulate_lightcurve
 npts = 1000
 snr  = 4000.
 #wasp107b_unc = np.ones(npts)/snr
@@ -29,12 +29,12 @@ wasp107b_time, wasp107b_flux, wasp107b_unc, wasp107b_par = simulate_lightcurve('
 #wasp107b_spec = plt.plot_time_series_spectra(wasp107b_wave, wasp107b_flux)
 #show(wasp107b_spec)
 
-import eureka.lightcurve_fitting.lightcurve as lc
+import eureka.S5_lightcurve_fitting.lightcurve as lc
 reload(lc)
 wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
 
 # Set the intial parameters
-import eureka.lightcurve_fitting.parameters as p
+import eureka.S5_lightcurve_fitting.parameters as p
 reload(p)
 params = p.Parameters()
 params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
@@ -50,14 +50,14 @@ params.u1 = 0.1, 'free', 0., 0.3
 params.u2 = 0.1, 'free', 0., 0.3
 
 # Make the transit model
-import eureka.lightcurve_fitting.models as m
+import eureka.S5_lightcurve_fitting.models as m
 reload(m)
 t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
 model = m.CompositeModel([t_model])
 
 wasp107b_lc.fit(model, fitter='lsq')
 
-wasp107b_lc.plot()
+wasp107b_lc.plot(draw=True)
 # Plot it
 #t_model.plot(wasp107b_time, draw=True)
 '''

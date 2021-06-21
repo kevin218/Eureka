@@ -1,11 +1,14 @@
 
 # NIRCam specific rountines go here
 import numpy as np
+from importlib import reload
 from astropy.io import fits
 from eureka.S3_data_reduction import sigrej, optspex
+from . import bright2flux as b2f
+reload(b2f)
 
 # Read FITS file from JWST's NIRCam instrument
-def read(filename, returnHdr=True):
+def read(filename, dat, returnHdr=True):
     '''
     Reads single FITS file from JWST's NIRCam instrument.
 
@@ -32,28 +35,33 @@ def read(filename, returnHdr=True):
     hdulist = fits.open(filename)
 
     # Load master and science headers
-    mhdr    = hdulist[0].header
-    shdr    = hdulist['SCI',1].header
+    dat.mhdr    = hdulist[0].header
+    dat.shdr    = hdulist['SCI',1].header
 
-    intstart    = mhdr['INTSTART']
-    intend      = mhdr['INTEND']
+    dat.intstart    = dat.mhdr['INTSTART']
+    dat.intend      = dat.mhdr['INTEND']
 
-    data    = hdulist['SCI',1].data
-    err     = hdulist['ERR',1].data
-    dq      = hdulist['DQ',1].data
-    wave    = hdulist['WAVELENGTH',1].data
-    v0      = hdulist['VAR_RNOISE',1].data
-    int_times = hdulist['INT_TIMES',1].data[intstart-1:intend]
+    dat.data    = hdulist['SCI',1].data
+    dat.err     = hdulist['ERR',1].data
+    dat.dq      = hdulist['DQ',1].data
+    dat.wave    = hdulist['WAVELENGTH',1].data
+    dat.v0      = hdulist['VAR_RNOISE',1].data
+    dat.int_times = hdulist['INT_TIMES',1].data[dat.intstart-1:dat.intend]
 
-    if returnHdr:
-        return data, err, dq, wave, v0, int_times, mhdr, shdr
-    else:
-        return data, err, dq, wave, v0, int_times
 
-def flag_bg(data, err, mask, y1, y2, bg_thresh):
+    #if returnHdr:
+    #    return data, err, dq, wave, v0, int_times, mhdr, shdr
+    #else:
+    #    return data, err, dq, wave, v0, int_times
+    return dat
+
+def flag_bg(dat, md):
     '''
     Outlier rejection of sky background along time axis
     '''
+
+    data, err, mask, y1, y2, bg_thresh = dat.subdata, dat.suberr, dat.submask, md.bg_y1, md.bg_y2, md.bg_thresh
+
     bgdata1 = data[:,  :y1]
     bgmask1 = mask[:,  :y1]
     bgdata2 = data[:,y2:  ]
@@ -74,3 +82,16 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     bg, mask = optspex.fitbg(data, mask, y1, y2, deg=bg_deg,
                              threshold=p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)
+
+def unit_convert(dat, md, log):
+    if dat.shdr['BUNIT'] == 'MJy/sr':
+        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
+        # log.writelog('Converting from brightness to flux units')
+        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
+        # Convert from brightness units (MJy/sr) to DNs
+        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
+        md.photfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_PHOTOM'][7:]
+        dat = b2f.bright2dn(dat, md)
+        md.gainfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_GAIN'][7:]
+        dat = b2f.dn2electrons(dat, md)
+    return dat, md

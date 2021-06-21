@@ -21,7 +21,9 @@ import unittest
 
 import numpy as np
 
-from ..lightcurve_fitting import lightcurve, models, parameters, simulations
+import batman
+
+from ..S5_lightcurve_fitting import lightcurve, models, parameters, simulations
 
 
 class TestLightcurve(unittest.TestCase):
@@ -176,4 +178,4 @@ class TestSimulations(unittest.TestCase):
         self.assertEqual(len(time), npts)
 
         # Test to fail
-        self.assertRaises(ValueError, simulations.simulate_lightcurve, 'foobar', 0.1)
+        self.assertRaises(KeyError, simulations.simulate_lightcurve, 'foobar', 0.1)

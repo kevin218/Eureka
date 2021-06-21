@@ -3,6 +3,16 @@
 The Code
 ==============
 
+lib
+''''''''''''''''''''
+
+lib.astropytable
+---------------------
+.. automodule:: eureka.lib.astropytable
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.correlated_noise
 ---------------------
 .. automodule:: eureka.lib.correlated_noise
@@ -101,13 +111,6 @@ lib.readECF
     :undoc-members:
     :show-inheritance:
 
-lib.savetable
----------------
-.. automodule:: eureka.lib.savetable
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.smooth
 ---------------------
 .. automodule:: eureka.lib.smooth
@@ -158,6 +161,9 @@ lib.util
     :show-inheritance:
 
 
+
+S3_data_reduction
+''''''''''''''''''''
 
 S3_data_reduction.bright2flux
 --------------------------------
@@ -222,16 +228,20 @@ S3_data_reduction.s3_reduce
     :undoc-members:
     :show-inheritance:
 
-S3_data_reduction.wfc3_1reduce
--------------------------------
-.. automodule:: eureka.S3_data_reduction.wfc3_1reduce
+
+S4_generate_lightcurves
+''''''''''''''''''''''''''
+
+S4_generate_lightcurves.plots_s4
+----------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.plots_s4
     :members:
     :undoc-members:
     :show-inheritance:
 
-S3_data_reduction.wfc3_scan
-----------------------------
-.. automodule:: eureka.S3_data_reduction.wfc3_scan
+S4_generate_lightcurves.s4_genLC
+----------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.s4_genLC
     :members:
     :undoc-members:
     :show-inheritance:
