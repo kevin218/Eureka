@@ -21,6 +21,8 @@ import unittest
 
 import numpy as np
 
+import batman
+
 from ..S5_lightcurve_fitting import lightcurve, models, parameters, simulations
 
 
