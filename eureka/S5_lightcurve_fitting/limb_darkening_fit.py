@@ -104,7 +104,7 @@ def ld_profile(name='quadratic', latex=False):
             profile = inspect.getsource(profile).replace('\n', '')
             profile = profile.replace('\\', '').split('return ')[1]
 
-            for i, j in [('**', '^'), ('m', '\mu'), (' ', ''), ('np.', '\\'),
+            for i, j in [('**', '^'), ('m', r'\mu'), (' ', ''), ('np.', '\\'),
                          ('0.5', '{0.5}'), ('1.5', '{1.5}')]:
                 profile = profile.replace(i, j)
 
@@ -491,8 +491,8 @@ class LDC:
 
         if show:
             if isinstance(fig, matplotlib.figure.Figure):
-                plt.xlabel('$\mu$')
-                plt.ylabel('$I(\mu)/I(\mu = 1)$')
+                plt.xlabel(r'$\mu$')
+                plt.ylabel(r'$I(\mu)/I(\mu = 1)$')
                 plt.legend(loc=0, frameon=False)
                 plt.show()
             else:

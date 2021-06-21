@@ -59,7 +59,7 @@ def lc_nodriftcorr(md, wave_1d, optspec):
     # plt.xlim(wmin,wmax)
     # plt.ylim(0,n_int)
     plt.ylabel('Integration Number')
-    plt.xlabel('Wavelength ($\mu m$)')
+    plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     plt.savefig(md.workdir + '/figs/fig3101-2D_LC.png')

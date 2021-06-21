@@ -5,7 +5,7 @@ h5py
 ipython
 lmfit
 matplotlib
-numpy
+numpy>=1.20.0
 pandas
 pytest
 pyyaml
@@ -15,4 +15,4 @@ svo_filters
 nbsphinx
 recommonmark
 myst_parser
-
+asdf
