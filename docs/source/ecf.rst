@@ -261,7 +261,7 @@ isplots_S4
 Sets how many plots should be saved when running Stage 4.
 
 - ``isplots_S4 >= 3``:
-   -  Plot each spectroscopic light curve
+   -  Plot each spectroscopic light curve. Below an example for a light curve using the Simulated NIRCam data for WASP-43b between 2.5 and 2.65 micron. Due to a bug in the Simulation pipeline the errorbars are currently way bigger than expected.
 
 .. image:: Fig4100-wasp43b-1D_LC.png
 
