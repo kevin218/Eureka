@@ -6,15 +6,19 @@
 Welcome to Eureka!'s documentation!
 ====================================
 
-Welcome to the documentation for ``Eureka!``.
+**Welcome to the documentation for ``Eureka!``.**
 
-``Eureka!`` is a pipeline for JWST data.
-The full code for ``Eureka!`` is available at `GitHub <http://github.com/kevin218/Eureka>`_
+Eureka! will eventually be capable of reducing data from any JWST instrument and fitting light curves .
+At the moment the package is under development, and currently works on NIRCam data only.
+The code is not officially associated with JWST or the ERS team.
 
-..
- Guide
- ^^^^^
+The code is separated into three parts or "Stages":
 
+- Stage 3: Starts with Stage 2 data and reduces the data (performs background subtraction, etc. in order to convert 2D spectra into 1D information)
+- Stage 4: Bins the 1D Spectra and generates light curves
+- Stage 5: Fits the light curves (under development)
+
+The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin218/Eureka>`_
 
 
 .. toctree::
@@ -22,18 +26,18 @@ The full code for ``Eureka!`` is available at `GitHub <http://github.com/kevin21
    :caption: Contents:
 
    installation
-   ecf
    quickstart
-   tutorial
-..   api
-   faq
-   acknowledgements
+   ecf
+   contribute
+   api
+
+
 
 .. toctree::
    :maxdepth: 1
    :caption: Examples
 
-   intro
+   hackathon-day2-tutorial
 
 
 

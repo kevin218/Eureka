@@ -28,8 +28,8 @@ isplots_S3  3
 testing_S3  False  #boolean, Set True to produce plots
 
 # Project directory
-topdir      /home/user/
+topdir      /home/User/
 
 # Directories relative to project dir
-datadir     /Data/Simulated_JWST_Data/NIRCam/stage2/
-ancildir    /Data/Simulated_JWST_Data/NIRCam/ancil/
+datadir     /Data/JWST-Sim/NIRCam/Stage2/
+ancildir    /Data/JWST-Sim/NIRCam/ancil/

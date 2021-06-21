@@ -20,12 +20,12 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'Eureka'
-copyright = '2020, Kevin, Laura, Sebastian'
-author = 'Kevin, Laura, Sebastian'
+project = 'Eureka!'
+copyright = '2021, Kevin Stevenson, Laura Kreidberg, Giannina Guzman, Sebastian Zieba'
+author = 'Kevin Stevenson, Laura Kreidberg, Giannina Guzman, Sebastian Zieba'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = ''
 
 
 # -- General configuration ---------------------------------------------------
@@ -33,7 +33,9 @@ release = '0.0.1'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx_rtd_theme', 'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc', 'numpydoc', 'nbsphinx']
+extensions = ['sphinx_rtd_theme', 'sphinx.ext.todo', 'sphinx.ext.viewcode',
+              'sphinx.ext.autodoc', 'numpydoc', 'nbsphinx', 'myst_parser',
+              'sphinx.ext.autosectionlabel', 'sphinx.ext.napoleon']
 
 master_doc = 'index'
 # Add any paths that contain templates here, relative to this directory.
@@ -52,7 +54,18 @@ pygments_style = 'sphinx'
 #
 html_theme = 'sphinx_rtd_theme'
 
+
+import sphinx_rtd_theme
+# Add any paths that contain custom themes here, relative to this directory.
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+from recommonmark.parser import CommonMarkParser
+
+source_parsers = {'.md': CommonMarkParser}
+source_suffix = ['.rst', '.md']
