@@ -13,4 +13,6 @@ requests
 scipy
 svo_filters
 nbsphinx
+recommonmark
+myst_parser
 asdf

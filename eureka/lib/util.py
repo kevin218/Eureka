@@ -5,6 +5,15 @@ from . import sort_nicely as sn
 import os
 
 def readfiles(ev):
+    """
+    Reads in the files saved in topdir + datadir and saves them into a list
+
+    Args:
+        ev: metadata object
+
+    Returns:
+        ev: metadata object but adds segment_list to metadata containing the sorted data fits files
+    """
     ev.segment_list = []
     for fname in os.listdir(ev.topdir + ev.datadir):
         if fname.endswith(ev.suffix + '.fits'):
@@ -13,6 +22,17 @@ def readfiles(ev):
     return ev
 
 def check_nans(data, mask, log):
+    """
+    Checks where the data array has NaNs
+
+    Args:
+        data: a data array (e.g. data, err, dq, ...)
+        mask: input mask
+        log: log file where NaNs will be mentioned if existent
+
+    Returns:
+        mask: output mask where 0 will be written where the input data array has NaNs
+    """
     if np.sum(np.isnan(data)) > 0:
         log.writelog("  WARNING: array has NaNs.  Your subregion is probably off the edge of the detector subarray. Masking NaN region and continuing, but you should probably stop and reconsider your choices.")
         inan = np.where(np.isnan(data))
@@ -21,6 +41,16 @@ def check_nans(data, mask, log):
     return mask
 
 def trim(dat, md):
+    """
+    Removes the edges of the data arrays
+
+    Args:
+        dat: Data object
+        md: Metadata object
+
+    Returns:
+        subdata arrays with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
+    """
     dat.subdata = dat.data[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
     dat.suberr = dat.err[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
     dat.subdq = dat.dq[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
@@ -34,7 +64,18 @@ def trim(dat, md):
 
 
 def BGsubtraction(dat, md, log, isplots):
+    """
+    Does background subtraction using inst.fit_bg & optspex.fitbg
 
+    Args:
+        dat: Data object
+        md: Metadata object
+        log: log file
+        isplots: amount of plots saved; set in ecf
+
+    Returns:
+        Corrects subdata with the background
+    """
     n_int, bg_y1, bg_y2, subdata, submask = md.n_int, md.bg_y1, md.bg_y2, dat.subdata, dat.submask
 
     # Load instrument module
