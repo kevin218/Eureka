@@ -31,10 +31,10 @@ If your internet connection is slow, download the `smallest file only <https://s
 5. Save the `NIRCam calibration data <https://github.com/ers-transit/hackathon-2021-day2/tree/main/ancil_files/NIRCam>`_ in the `ancil` directory.
 
 
-6. Go into the cloned Eureka! repository and open the file ``Eureka/demos/S3/S3_template.ecf``.
+6. Go into the cloned ``Eureka!`` repository and open the file ``Eureka/demos/S3/S3_template.ecf``.
 Update "topdir + datadir" and "topdir + ancildir" to the location of your Stage2 data and the ancil data, respectively.
 
-You can get more information about the ecf (Eureka! control file) :ref:`here<ecf>`.
+You can get more information about the ecf (``Eureka!`` control file) :ref:`here<ecf>`.
 
 7. Go into the ``run_eureka.py`` script and update the path with the location of the cloned repository, like you see here:
 

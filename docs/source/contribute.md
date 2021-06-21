@@ -1,4 +1,4 @@
-# Contributing to Eureka
+# Contributing to Eureka!
 
 ## GitHub Basics
 

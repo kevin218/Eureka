@@ -1,6 +1,6 @@
 .. _ecf:
 
-Eureka Control File (.ecf)
+Eureka! Control File (.ecf)
 ============================
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
