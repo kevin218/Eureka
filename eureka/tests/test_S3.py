@@ -33,3 +33,4 @@ def test_b2f():
 
     res_dat, res_md = util.trim(dat, md)
     assert int(np.prod(res_dat.subdata.shape)) == int(n * trim_y * trim_x)
+    
