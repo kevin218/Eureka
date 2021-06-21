@@ -13,7 +13,7 @@ Quickstart
 
 .. code-block:: python
 
-	pip install requirements.txt
+	pip install -r requirements.txt
 
 3. Make a directory on your computer to store the simulated data and ancillary files. E.g.:
 
