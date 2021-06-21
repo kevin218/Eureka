@@ -6,9 +6,9 @@
 Welcome to Eureka!'s documentation!
 ====================================
 
-**Welcome to the documentation for ``Eureka!``.**
+**Welcome to the documentation for Eureka!.**
 
-Eureka! will eventually be capable of reducing data from any JWST instrument and fitting light curves .
+``Eureka!`` will eventually be capable of reducing data from any JWST instrument and fitting light curves .
 At the moment the package is under development, and currently works on NIRCam data only.
 The code is not officially associated with JWST or the ERS team.
 
