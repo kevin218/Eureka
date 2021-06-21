@@ -3,71 +3,71 @@ import matplotlib.pyplot as plt
 
 
 #SET PLOTTING FORMAT
-ebfmt   = ['bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',   
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo', 
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',   
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',   
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo',  
-           'bo',  'go',  'ro',  'co',  'mo',  'yo', 
-           'bo',  'go',  'ro',  'co',  'mo',  'yo', 
+ebfmt   = ['bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
+           'bo',  'go',  'ro',  'co',  'mo',  'yo',
            'bo',  'go',  'ro',  'co',  'mo',  'yo']
-pltfmt  = ['b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-', 
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',   
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-', 
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',  
-           'b-',  'g-',  'r-',  'c-',  'm-',  'y-', 
+pltfmt  = ['b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
+           'b-',  'g-',  'r-',  'c-',  'm-',  'y-',
            'b-',  'g-',  'r-',  'c-',  'm-',  'y-']
-pltfmt2 = ['b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
-           'b--', 'g--', 'r--', 'c--', 'm--', 'y--', 
+pltfmt2 = ['b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
+           'b--', 'g--', 'r--', 'c--', 'm--', 'y--',
            'b--', 'g--', 'r--', 'c--', 'm--', 'y--']
 
 
@@ -83,7 +83,7 @@ def binlc(event, fit, fignum, savefile=None, istitle=True, j=0):
         pass
     else:
         plt.suptitle(istitle, size=16)
-    plt.errorbar(fit.abscissauc, fit.binfluxuc, fit.binstduc, fmt='ko', 
+    plt.errorbar(fit.abscissauc, fit.binfluxuc, fit.binstduc, fmt='ko',
                      ms=4, linewidth=1, label='Binned Data', zorder=3)
     plt.plot(fit.abscissa, fit.binnoecl, 'k-', label='No Eclipse', zorder=1)
     #plt.plot(fit.abscissa, fit.binmedianfit, pltfmt2[j], label='Median Fit')
@@ -119,7 +119,7 @@ def normlc(event, fit, fignum, savefile=None, istitle=True, j=0, interclip=None)
             ind0 = np.argmin(np.abs(fit.timeunit-fit.timeunituc[interclip[i][0]]))
             ind1 = np.argmin(np.abs(fit.timeunit-fit.timeunituc[interclip[i][1]]))
             #ind0 = ind1-1
-            plt.plot([fit.timeunit[ind0],fit.timeunit[ind1]], 
+            plt.plot([fit.timeunit[ind0],fit.timeunit[ind1]],
                      [fit.normbestfit[ind0],fit.normbestfit[ind1]], '-w', lw=3, zorder=5)
             #plt.plot(fit.tuall[interclip[i][0]:interclip[i][1]], np.ones(interclip[i][1]-interclip[i][0]), '-w', lw=3)
     plt.setp(a.get_xticklabels(), visible = False)
@@ -172,7 +172,7 @@ def Znormlc(event, fit, fignum, savefile=None, istitle=True, j=0, interclip=None
         zrenorm=(fit.normbestfit)[np.argmin(np.abs(fit.timeunit-zt_ecl))]
         zmax=np.argmax(fit.bestsin)
         zmin=np.argmin(fit.bestsin)
-        
+
         zoff=360.*(fit.timeunit[zmax]-zt_ecl)/zper
         zoff=np.nanmin([np.abs(zoff-360.),np.abs(zoff)])
         zamp=0.5*(fit.bestsin[zmax]-fit.bestsin[zmin])/zrenorm
@@ -209,7 +209,7 @@ def Znormlc(event, fit, fignum, savefile=None, istitle=True, j=0, interclip=None
     plt.ylim(ymin=0.99700)
     plt.figtext(0.93,0.43,'BIC: '+str(np.round(fit.bic,2)),ha='right',va='center',fontproperties='bold',fontsize=15)
     plt.figtext(0.93,0.38,'SDNR [ppm]: '+str(np.round(fit.sdnr*10**6.,2)),ha='right',va='center',fontproperties='bold',fontsize=15)
-    plt.figtext(0.17,0.43,'Hotspot: '+str(np.round(zoff,2))+' $^{\circ}$',ha='left',va='center',fontproperties='bold',fontsize=15)
+    plt.figtext(0.17,0.43,'Hotspot: '+str(np.round(zoff,2))+r' $^{\circ}$',ha='left',va='center',fontproperties='bold',fontsize=15)
     plt.figtext(0.17,0.38,'Amplitude [ppm]: '+str(np.round(zamp*10**6.,2)),ha='left',va='center',fontproperties='bold',fontsize=15)
     plt.axes([0.15,0.1,0.8,0.2])
     # Residuals subplot
@@ -232,7 +232,7 @@ def Znormlc(event, fit, fignum, savefile=None, istitle=True, j=0, interclip=None
     if savefile != None:
         plt.savefig(savefile)
     return
-    
+
 # Trace plots
 def trace(event, fit, fignum, savefile=None, allparams=None, parname=None, iparams=None, stepsize=None, istitle=True):
     if stepsize == None:
@@ -271,7 +271,7 @@ def trace(event, fit, fignum, savefile=None, allparams=None, parname=None, ipara
         else:
             plt.xticks(visible=False)
         k += 1
-    
+
     if savefile != None:
         plt.savefig(savefile)
     return
@@ -314,7 +314,7 @@ def autocorr(event, fit, fignum, savefile=None, allparams=None, parname=None, ip
         else:
             plt.xticks(visible=False)
         k += 1
-    
+
     if savefile != None:
         plt.savefig(savefile)
     return
@@ -374,12 +374,12 @@ def hist2d(event, fit, fignum, savefile=None, allparams=None, parname=None, ipar
                 vmin = np.min(hist2d[np.where(hist2d > 0)])
                 #largerhist = np.zeros((22,22))
                 #largerhist[1:-1,1:-1] = hist2d
-                a = plt.imshow(hist2d.T,extent=(xedges[0],xedges[-1],yedges[0],yedges[-1]), #cmap=palette, 
+                a = plt.imshow(hist2d.T,extent=(xedges[0],xedges[-1],yedges[0],yedges[-1]), #cmap=palette,
                                vmin=vmin, aspect='auto', origin='lower') #,interpolation='bicubic')
             h += 1
             n +=1
         m +=1
-    
+
     if numfp > 2:
         a = plt.subplot(numfp-1, numfp-1, numfp-1, frameon=False)
         a.yaxis.set_visible(False)
@@ -530,7 +530,7 @@ def blissmap(event, fit, fignum, savefile=None, istitle=True, minnumpts=1, srces
     if 'mmbilinint' in fit.model:
         plt.imshow(fit.mastermapFI.reshape(fit.xygrid[0].shape)[iymin:iymax+1,ixmin:ixmax+1], cmap=plt.cm.Greys, vmin=vmin, vmax=vmax, origin='lower',
                extent=(xmin,xmax,ymin,ymax), aspect='auto', interpolation=interp,alpha=0.3,zorder=0)
-    plt.imshow(fit.binipflux[iymin:iymax+1,ixmin:ixmax+1], cmap=palette, vmin=vmin, vmax=vmax, origin='lower', 
+    plt.imshow(fit.binipflux[iymin:iymax+1,ixmin:ixmax+1], cmap=palette, vmin=vmin, vmax=vmax, origin='lower',
                extent=(xmin,xmax,ymin,ymax), aspect='auto',zorder=1)#, interpolation=interp)
     plt.ylabel('Pixel Position in y', size=14)
     plt.xlabel('Pixel Position in x', size=14)
