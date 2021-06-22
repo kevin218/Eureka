@@ -2,16 +2,16 @@ import numpy as np
 from ..lib import util
 
 
-class Metadata():
+class MetaClass:
   def __init__(self):
     return
 
-class Data:
+class DataClass:
   def __init__(self):
     return
 
-md = Metadata()
-dat = Data()
+meta= MetaClass()
+data = DataClass()
 
 
 
@@ -22,11 +22,11 @@ n = 7
 ny = 20
 nx = 100
 
-dat.data = np.ones((n, ny, nx))
-dat.err = np.ones((n, ny, nx))
-dat.dq = np.ones((n, ny, nx))
-dat.wave = np.ones((n, ny, nx))
-dat.v0 = np.ones((n, ny, nx))
+data.data = np.ones((n, ny, nx))
+data.err = np.ones((n, ny, nx))
+data.dq = np.ones((n, ny, nx))
+data.wave = np.ones((n, ny, nx))
+data.v0 = np.ones((n, ny, nx))
 
 
 def test_b2f():
@@ -36,10 +36,10 @@ def test_b2f():
     trim_y0 = 2
     trim_y1 = 14
 
-    md.ywindow = [trim_y0,trim_y1]
-    md.xwindow = [trim_x0,trim_x1]
+    meta.ywindow = [trim_y0,trim_y1]
+    meta.xwindow = [trim_x0,trim_x1]
 
-    res_dat, res_md = util.trim(dat, md)
+    res_dat, res_md = util.trim(data, meta)
 
     #Let's check if the dimensions agree
     assert res_dat.subdata.shape == (n, (trim_y1 - trim_y0), (trim_x1 - trim_x0))
