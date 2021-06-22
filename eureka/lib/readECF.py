@@ -209,16 +209,16 @@ def read_ecf(file):
         i += 1
       return ecf
 
-def store_ecf(ev, ecf):
+def store_ecf(meta, ecf):
     '''
-    Store values from Eureka control file as parameters in Event object.
+    Store values from Eureka control file as parameters in Meta object.
     '''
     for key in ecf.__dict__.keys():
         try:
-            exec('ev.' + key + ' = ecf.'+key+'.get(0)', locals())
+            exec('meta.' + key + ' = ecf.'+key+'.get(0)', locals())
         except:
             try:
-                exec('ev.' + key + ' = ecf.'+key+'.getarr(0)', locals())
+                exec('meta.' + key + ' = ecf.'+key+'.getarr(0)', locals())
             except:
                 print("Unable to store parameter: " + key)
     return

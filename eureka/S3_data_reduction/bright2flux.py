@@ -4,7 +4,8 @@ import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
 
-def dn2electrons(dat, md):
+
+def dn2electrons(data, meta):
     """
     This function converts the data, uncertainty, and variance arrays from
     raw units (DN) to electrons.
@@ -39,25 +40,26 @@ def dn2electrons(dat, md):
     Written by Kevin Stevenson      Jun 2021
     """
     # Subarray parameters
-    xstart  = dat.mhdr['SUBSTRT1']
-    ystart  = dat.mhdr['SUBSTRT2']
-    nx      = dat.mhdr['SUBSIZE1']
-    ny      = dat.mhdr['SUBSIZE2']
+    xstart  = data.mhdr['SUBSTRT1']
+    ystart  = data.mhdr['SUBSTRT2']
+    nx      = data.mhdr['SUBSIZE1']
+    ny      = data.mhdr['SUBSIZE2']
 
     # Load gain array in units of e-/ADU
-    gain    = fits.getdata(md.gainfile)[ystart:ystart+ny,xstart:xstart+nx]
+    gain    = fits.getdata(meta.gainfile)[ystart:ystart+ny,xstart:xstart+nx]
 
     # Gain subarray
-    subgain = gain[md.ywindow[0]:md.ywindow[1],md.xwindow[0]:md.xwindow[1]]
+    subgain = gain[meta.ywindow[0]:meta.ywindow[1],meta.xwindow[0]:meta.xwindow[1]]
 
     # Convert to electrons
-    dat.subdata *= subgain
-    dat.suberr  *= subgain
-    dat.subv0   *= (subgain)**2
+    data.subdata *= subgain
+    data.suberr  *= subgain
+    data.subv0   *= (subgain)**2
 
-    return dat
+    return data
 
-def bright2dn(dat, md):
+
+def bright2dn(data, meta):
     """
     This function converts the data, uncertainty, and variance arrays from
     brightness units (MJy/sr) to raw units (DN).
@@ -93,8 +95,8 @@ def bright2dn(dat, md):
     2021-05-28 kbs       Initial version
     """
     # Load response function and wavelength
-    foo = fits.getdata(md.photfile)
-    ind = np.where((foo['filter'] == dat.mhdr['FILTER']) * (foo['pupil'] == dat.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
+    foo = fits.getdata(meta.photfile)
+    ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
     igood = np.where(response_wave > 0)[0]
@@ -102,20 +104,20 @@ def bright2dn(dat, md):
     response_vals = response_vals[igood]
     # Interpolate response at desired wavelengths
     f = spi.interp1d(response_wave, response_vals, 'cubic')
-    response = f(dat.subwave)
+    response = f(data.subwave)
 
-    scalar = dat.shdr['PHOTMJSR']
+    scalar = data.shdr['PHOTMJSR']
     # Convert to DN/sec
-    dat.subdata /= scalar * response
-    dat.suberr  /= scalar * response
-    dat.subv0   /= (scalar * response)**2
+    data.subdata /= scalar * response
+    data.suberr  /= scalar * response
+    data.subv0   /= (scalar * response)**2
     # From DN/sec to DN
-    int_time = dat.mhdr['EFFINTTM']
-    dat.subdata *= int_time
-    dat.suberr  *= int_time
-    dat.subv0   *= int_time
+    int_time = data.mhdr['EFFINTTM']
+    data.subdata *= int_time
+    data.suberr  *= int_time
+    data.subv0   *= int_time
 
-    return dat
+    return data
 
 def bright2flux(data, err, v0, pixel_area):
     """

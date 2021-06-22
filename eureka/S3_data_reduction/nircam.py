@@ -8,13 +8,14 @@ from . import bright2flux as b2f
 reload(b2f)
 
 # Read FITS file from JWST's NIRCam instrument
-def read(filename, dat, returnHdr=True):
+def read(filename, data):
     '''
     Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
     ----------
     filename          : Single filename to read
+    data              : data object in which the fits data will stored
     returnHdr         : Set True to return header files
 
     Returns
@@ -35,45 +36,57 @@ def read(filename, dat, returnHdr=True):
     hdulist = fits.open(filename)
 
     # Load master and science headers
-    dat.mhdr    = hdulist[0].header
-    dat.shdr    = hdulist['SCI',1].header
+    data.mhdr    = hdulist[0].header
+    data.shdr    = hdulist['SCI',1].header
 
-    dat.intstart    = dat.mhdr['INTSTART']
-    dat.intend      = dat.mhdr['INTEND']
+    data.intstart    = data.mhdr['INTSTART']
+    data.intend      = data.mhdr['INTEND']
 
-    dat.data    = hdulist['SCI',1].data
-    dat.err     = hdulist['ERR',1].data
-    dat.dq      = hdulist['DQ',1].data
-    dat.wave    = hdulist['WAVELENGTH',1].data
-    dat.v0      = hdulist['VAR_RNOISE',1].data
-    dat.int_times = hdulist['INT_TIMES',1].data[dat.intstart-1:dat.intend]
+    data.data    = hdulist['SCI',1].data
+    data.err     = hdulist['ERR',1].data
+    data.dq      = hdulist['DQ',1].data
+    data.wave    = hdulist['WAVELENGTH',1].data
+    data.v0      = hdulist['VAR_RNOISE',1].data
+    data.int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
+
+    return data
 
 
-    #if returnHdr:
-    #    return data, err, dq, wave, v0, int_times, mhdr, shdr
-    #else:
-    #    return data, err, dq, wave, v0, int_times
-    return dat
+def unit_convert(data, meta, log):
+    if data.shdr['BUNIT'] == 'MJy/sr':
+        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
+        # log.writelog('Converting from brightness to flux units')
+        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
+        # Convert from brightness units (MJy/sr) to DNs
+        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
+        meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
+        data = b2f.bright2dn(data, meta)
+        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
+        data = b2f.dn2electrons(data, meta)
+    return data, meta
 
-def flag_bg(dat, md):
+
+def flag_bg(data, meta):
     '''
     Outlier rejection of sky background along time axis
     '''
 
-    data, err, mask, y1, y2, bg_thresh = dat.subdata, dat.suberr, dat.submask, md.bg_y1, md.bg_y2, md.bg_thresh
+    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
 
-    bgdata1 = data[:,  :y1]
-    bgmask1 = mask[:,  :y1]
-    bgdata2 = data[:,y2:  ]
-    bgmask2 = mask[:,y2:  ]
-    bgerr1  = np.median(err[:,  :y1])
-    bgerr2  = np.median(err[:,y2:  ])
+    bgdata1 = data.subdata[:,  :y1]
+    bgmask1 = data.submask[:,  :y1]
+    bgdata2 = data.subdata[:,y2:  ]
+    bgmask2 = data.submask[:,y2:  ]
+    bgerr1  = np.median(data.suberr[:,  :y1])
+    bgerr2  = np.median(data.suberr[:,y2:  ])
     estsig1 = [bgerr1 for j in range(len(bg_thresh))]
     estsig2 = [bgerr2 for j in range(len(bg_thresh))]
-    mask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
-    mask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
 
-    return mask
+    data.submask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
+    data.submask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
+
+    return data
+
 
 def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     '''
@@ -83,15 +96,3 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
                              threshold=p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)
 
-def unit_convert(dat, md, log):
-    if dat.shdr['BUNIT'] == 'MJy/sr':
-        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
-        # log.writelog('Converting from brightness to flux units')
-        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
-        # Convert from brightness units (MJy/sr) to DNs
-        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        md.photfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_PHOTOM'][7:]
-        dat = b2f.bright2dn(dat, md)
-        md.gainfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_GAIN'][7:]
-        dat = b2f.dn2electrons(dat, md)
-    return dat, md

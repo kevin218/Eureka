@@ -6,14 +6,18 @@ ALERT: Project Eureka! is currently under heavy development. Use at your own ris
 
 ## Installation
 
-To install ``Eureka!``, click on **Code** and **Download ZIP** on GitHub, followed by unpacking the distribution with ``tar -xvf`` in a terminal.
+You can install ``Eureka!`` directly from source on `GitHub <http://github.com/kevin218/Eureka>`_.
 
-Then run the setup script:
+On GitHub, you can click on **Code** and **Download ZIP** followed by unpacking the distribution by opening up a terminal and typing:
+
+``unzip Eureka-main.zip``
+
+To install ``Eureka!``, run the setup script:
 
 ``sudo python setup.py install``
 
 ## Documentation
 
-Check out the docs at [https://eurekadocs.readthedocs.io/en/](https://eurekadocs.readthedocs.io/en/).
+Check out the docs at [https://eurekadocs.readthedocs.io](https://eurekadocs.readthedocs.io).
 
 

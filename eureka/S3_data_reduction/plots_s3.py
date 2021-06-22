@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def image_and_background(dat, md, n):
+def image_and_background(data, meta, n):
 
-    intstart, subdata, submask, subbg = dat.intstart, dat.subdata, dat.submask, dat.subbg
+    intstart, subdata, submask, subbg = data.intstart, data.subdata, data.submask, data.subbg
 
     plt.figure(3301)
     plt.clf()
@@ -19,12 +19,13 @@ def image_and_background(dat, md, n):
     std = np.std(subbg[n])
     plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median - 3 * std, vmax=median + 3 * std)
     # plt.imshow(submask[n], origin='lower', aspect='auto', vmin=0, vmax=1)
-    plt.savefig(md.workdir + '/figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
+    plt.savefig(meta.workdir + '/figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
     # plt.pause(0.1)
 
-def optimal_spectrum(dat, md, n):
 
-    intstart, subnx, stdspec, optspec, opterr = dat.intstart, md.subnx, dat.stdspec, dat.optspec, dat.opterr
+def optimal_spectrum(data, meta, n):
+
+    intstart, subnx, stdspec, optspec, opterr = data.intstart, meta.subnx, data.stdspec, data.optspec, data.opterr
 
     plt.figure(3302)
     plt.clf()
@@ -33,10 +34,11 @@ def optimal_spectrum(dat, md, n):
     # plt.errorbar(range(subnx), stdspec[n], yerr=np.sqrt(stdvar[n]), fmt='-', color='C1', ecolor='C0', label='Std Spec')
     plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
     plt.legend(loc='best')
-    plt.savefig(md.workdir + '/figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
+    plt.savefig(meta.workdir + '/figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
     # plt.pause(0.1)
 
-def lc_nodriftcorr(md, wave_1d, optspec):
+
+def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.figure(3101, figsize=(8, 8))  # ev.n_files/20.+0.8))
     plt.clf()
     wmin = wave_1d.min()
@@ -62,4 +64,4 @@ def lc_nodriftcorr(md, wave_1d, optspec):
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(md.workdir + '/figs/fig3101-2D_LC.png')
+    plt.savefig(meta.workdir + '/figs/fig3101-2D_LC.png')

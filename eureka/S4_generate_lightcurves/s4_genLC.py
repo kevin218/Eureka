@@ -24,7 +24,7 @@ from ..lib import manageevent as me
 from ..lib import astropytable
 from . import plots_s4
 
-def lcJWST(eventlabel, workdir, md=None):
+def lcJWST(eventlabel, workdir, meta=None):
     #expand=1, smooth_len=None, correctDrift=True
     '''
     Compute photometric flux over specified range of wavelengths
@@ -33,7 +33,7 @@ def lcJWST(eventlabel, workdir, md=None):
     ----------
     eventlabel  : Unique identifier for these data
     workdir     : Location of save file
-    ev          : event object
+    meta          : metadata object
 
     Returns
     -------
@@ -45,32 +45,33 @@ def lcJWST(eventlabel, workdir, md=None):
 
     '''
     #load savefile
-    if md == None:
-        md = me.load(workdir+'/S3_'+eventlabel+'_Meta_Save.dat')
+    if meta == None:
+        meta = me.load(workdir + '/S3_' + eventlabel + '_Meta_Save.dat')
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'
     ecf     = rd.read_ecf(ecffile)
-    rd.store_ecf(md, ecf)
+    rd.store_ecf(meta, ecf)
 
-    # Create directories for Stage 3 processing
+    # Create directories for Stage 4 processing
     datetime= time.strftime('%Y-%m-%d_%H-%M-%S')
-    md.lcdir = md.workdir + '/S4_' + datetime + '_' + str(md.nspecchan) + 'chan'
-    if not os.path.exists(md.lcdir):
-        os.makedirs(md.lcdir)
-    if not os.path.exists(md.lcdir+"/figs"):
-        os.makedirs(md.lcdir+"/figs")
+    meta.lcdir = meta.workdir + '/S4_' + datetime + '_' + str(meta.nspecchan) + 'chan'
+    if not os.path.exists(meta.lcdir):
+        os.makedirs(meta.lcdir)
+    if not os.path.exists(meta.lcdir+"/figs"):
+        os.makedirs(meta.lcdir+"/figs")
 
-    # Copy existing S3 log file
-    md.s4_logname  = './'+md.lcdir + '/S4_' + md.eventlabel + ".log"
+    # Copy existing S4 log file
+    meta.s4_logname  = './' + meta.lcdir + '/S4_' + meta.eventlabel + ".log"
     #shutil.copyfile(ev.logname, ev.s4_logname, follow_symlinks=True)
-    log         = logedit.Logedit(md.s4_logname, read=md.logname)
+    log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
     log.writelog("\nStarting Stage 4: Generate Light Curves\n")
 
-    table = astropytable.readtable(md)
+    table = astropytable.readtable(meta)
 
-    optspec, wave_1d, bjdtdb = np.reshape(table['optspec'].data, (-1, md.subnx)), \
-                               table['wave_1d'].data[0:md.subnx], table['bjdtdb'].data[::md.subnx]
+    # Reverse the reshaping which has been done when saving the astropy table
+    optspec, wave_1d, bjdtdb = np.reshape(table['optspec'].data, (-1, meta.subnx)), \
+                               table['wave_1d'].data[0:meta.subnx], table['bjdtdb'].data[::meta.subnx]
 
     #Replace NaNs with zero
     optspec[np.where(np.isnan(optspec))] = 0
@@ -78,9 +79,9 @@ def lcJWST(eventlabel, workdir, md=None):
 
 
     # Determine wavelength bins
-    binsize     = (md.wave_max - md.wave_min)/md.nspecchan
-    md.wave_low = np.round([i for i in np.linspace(md.wave_min, md.wave_max-binsize, md.nspecchan)],3)
-    md.wave_hi  = np.round([i for i in np.linspace(md.wave_min+binsize, md.wave_max, md.nspecchan)],3)
+    binsize     = (meta.wave_max - meta.wave_min)/meta.nspecchan
+    meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
+    meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
 
     # Apply 1D drift correction
     # if correctDrift == True:
@@ -96,30 +97,33 @@ def lcJWST(eventlabel, workdir, md=None):
 
     log.writelog("Generating light curves")
     n_int, nx   = optspec.shape
-    md.lcdata   = np.zeros((md.nspecchan, n_int))
-    md.lcerr    = np.zeros((md.nspecchan, n_int))
+    meta.lcdata   = np.zeros((meta.nspecchan, n_int))
+    meta.lcerr    = np.zeros((meta.nspecchan, n_int))
     # ev.eventname2 = ev.eventname
-    for i in range(md.nspecchan):
-        log.writelog(f"Bandpass {i} = %.3f - %.3f" % (md.wave_low[i],md.wave_hi[i]))
+    for i in range(meta.nspecchan):
+        log.writelog(f"Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
         # Compute valid indeces within wavelength range
-        index   = np.where((wave_1d >= md.wave_low[i])*(wave_1d <= md.wave_hi[i]))[0]
+        index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d <= meta.wave_hi[i]))[0]
         # Sum flux for each spectroscopic channel
-        md.lcdata[i]    = np.sum(optspec[:,index],axis=1)
+        meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
         # Add uncertainties in quadrature
-        md.lcerr[i]     = np.sqrt(np.sum(optspec[:,index]**2,axis=1))
+        meta.lcerr[i]     = np.sqrt(np.sum(optspec[:,index]**2,axis=1))
 
         # Plot each spectroscopic light curve
-        if md.isplots_S4 >= 3:
-            plots_s4.binned_lightcurve(md, bjdtdb, i)
+        if meta.isplots_S4 >= 3:
+            plots_s4.binned_lightcurve(meta, bjdtdb, i)
 
     # Save results
     log.writelog('Saving results')
-    me.saveevent(md, md.lcdir + '/S4_' + md.eventlabel + "_Meta_Save", save=[])
+    me.saveevent(meta, meta.lcdir + '/S4_' + meta.eventlabel + "_Meta_Save", save=[])
 
     # if (isplots >= 1) and (correctDrift == True):
     #     # Plot Drift
     #     # Plots corrected 2D light curves
 
+    # Copy ecf
+    log.writelog('Copy S4 ecf')
+    shutil.copy(ecffile, meta.lcdir)
 
     log.closelog()
-    return md
+    return meta
