@@ -77,6 +77,8 @@ In order for Eureka! to find the control files, you have to change their names:
 If your data directory contains all 21 simulated Stage 2 NIRCam Data segments, this can take around 25 minutes. For a quick look set ``testing`` in the S3 ecf to ``True``.
 This will only reduce and analyze the last segment (=smallest file) in your Stage 2 Data directory.
 
+Note: If you run into a ``matplotlib`` error, you might want to install ``sudo apt install cm-super`` and try it again.
+
 4.2. The code will run and save data and plots in a new directory in ``demos/S3/``.
 Below you see an example for a simulated spectrum which you should get after running the script and having ``is_plotsS3 = 3``:
 
