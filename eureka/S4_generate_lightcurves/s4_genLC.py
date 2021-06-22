@@ -53,7 +53,7 @@ def lcJWST(eventlabel, workdir, meta=None):
     ecf     = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
 
-    # Create directories for Stage 3 processing
+    # Create directories for Stage 4 processing
     datetime= time.strftime('%Y-%m-%d_%H-%M-%S')
     meta.lcdir = meta.workdir + '/S4_' + datetime + '_' + str(meta.nspecchan) + 'chan'
     if not os.path.exists(meta.lcdir):
@@ -61,7 +61,7 @@ def lcJWST(eventlabel, workdir, meta=None):
     if not os.path.exists(meta.lcdir+"/figs"):
         os.makedirs(meta.lcdir+"/figs")
 
-    # Copy existing S3 log file
+    # Copy existing S4 log file
     meta.s4_logname  = './' + meta.lcdir + '/S4_' + meta.eventlabel + ".log"
     #shutil.copyfile(ev.logname, ev.s4_logname, follow_symlinks=True)
     log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
