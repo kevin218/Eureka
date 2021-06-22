@@ -9,11 +9,15 @@ From source
 
 You can install ``Eureka!`` directly from source on `GitHub <http://github.com/kevin218/Eureka>`_.
 
-On GitHub, you can either click on **Code** and **Download ZIP** followed by unpacking the distribution with ``tar -xvf`` in a terminal.
+On GitHub, you can either click on **Code** and **Download ZIP** followed by unpacking the distribution by opening up a terminal and typing:
+
+``unzip Eureka-main.zip``
 
 OR
 
-Clone the repository using ``git`` by typing: ``git clone https://github.com/kevin218/Eureka.git``.
+Clone the repository using ``git`` by typing:
+
+``git clone https://github.com/kevin218/Eureka.git``.
 
 To install ``Eureka!``, run the setup script:
 

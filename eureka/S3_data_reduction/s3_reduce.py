@@ -254,8 +254,8 @@ def reduceJWST(eventlabel):
     log.writelog('Copy S3 ecf')
     shutil.copy(ecffile, meta.workdir)
 
-    log.writelog('Generating figures')
     if meta.isplots_S3 >= 1:
+        log.writelog('Generating figure')
         # 2D light curve without drift correction
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
