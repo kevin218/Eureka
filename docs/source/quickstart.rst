@@ -45,7 +45,7 @@ If your internet connection is slow, download the `smallest file only <https://s
 
 2.3. Save the `NIRCam calibration data <https://github.com/ers-transit/hackathon-2021-day2/tree/main/ancil_files/NIRCam>`_ in the `ancil` directory.
 
-3. Setup the Eureka! control file (.ecf) and run_script.py
+3. Setup the Eureka! control file (.ecf) and run_eureka.py
 -----------------------------------------------------------------
 
 3.1 Go into the downloaded ``Eureka!`` directory (it is likely called Eureka-main if you downloaded it from GitHub) and open the file ``Eureka-main/demos/S3/S3_template.ecf``.
