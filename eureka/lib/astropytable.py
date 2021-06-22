@@ -4,7 +4,7 @@ from astropy.io import ascii
 import numpy as np
 import os
 
-def savetable(md, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr):
+def savetable_S3(meta, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr):
     """
       Saves data in an event as .txt using astropy
 
@@ -25,7 +25,7 @@ def savetable(md, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr):
 
     """
 
-    filename = md.workdir + '/S3_' + md.eventlabel + "_Table_Save.txt"
+    filename = meta.workdir + '/S3_' + meta.eventlabel + "_Table_Save.txt"
 
     dims = stdspec.shape #tuple (integration, wavelength position)
 
@@ -40,6 +40,6 @@ def savetable(md, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr):
     table = QTable(arr, names=('bjdtdb', 'wave_1d', 'stdspec', 'stdvar', 'optspec', 'opterr'))
     ascii.write(table, filename, format='ecsv', overwrite=True, fast_writer=True)
 
-def readtable(md):
-    t = ascii.read(md.workdir+'/S3_'+md.eventlabel+'_Table_Save.txt', format='ecsv')
+def readtable(meta):
+    t = ascii.read(meta.workdir+'/S3_' + meta.eventlabel+'_Table_Save.txt', format='ecsv')
     return t

@@ -1,4 +1,3 @@
-
 import sys, os, time
 #sys.path.append('../..')
 #sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka')
@@ -14,4 +13,4 @@ reload(s3)
 ev3 = s3.reduceJWST(eventlabel)
 
 reload(s4)
-ev4 = s4.lcJWST(ev3.eventlabel, ev3.workdir, md=ev3)
+ev4 = s4.lcJWST(ev3.eventlabel, ev3.workdir, meta=ev3)

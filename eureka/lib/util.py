@@ -4,22 +4,46 @@ import multiprocessing as mp
 from . import sort_nicely as sn
 import os
 
-def readfiles(ev):
+
+def readfiles(meta):
     """
     Reads in the files saved in topdir + datadir and saves them into a list
 
     Args:
-        ev: metadata object
+        meta: metadata object
 
     Returns:
-        ev: metadata object but adds segment_list to metadata containing the sorted data fits files
+        meta: metadata object but adds segment_list to metadata containing the sorted data fits files
     """
-    ev.segment_list = []
-    for fname in os.listdir(ev.topdir + ev.datadir):
-        if fname.endswith(ev.suffix + '.fits'):
-            ev.segment_list.append(ev.topdir + ev.datadir +'/'+ fname)
-    ev.segment_list = sn.sort_nicely(ev.segment_list)
-    return ev
+    meta.segment_list = []
+    for fname in os.listdir(meta.topdir + meta.datadir):
+        if fname.endswith(meta.suffix + '.fits'):
+            meta.segment_list.append(meta.topdir + meta.datadir +'/'+ fname)
+    meta.segment_list = sn.sort_nicely(meta.segment_list)
+    return meta
+
+
+def trim(data, meta):
+    """
+    Removes the edges of the data arrays
+
+    Args:
+        dat: Data object
+        md: Metadata object
+
+    Returns:
+        subdata arrays with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
+    """
+    data.subdata = data.data[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
+    data.suberr  = data.err[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
+    data.subdq   = data.dq[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
+    data.subwave = data.wave[meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
+    data.subv0   = data.v0[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
+    meta.subny = meta.ywindow[1] - meta.ywindow[0]
+    meta.subnx = meta.xwindow[1] - meta.xwindow[0]
+
+    return data, meta
+
 
 def check_nans(data, mask, log):
     """
@@ -40,30 +64,8 @@ def check_nans(data, mask, log):
         mask[inan]  = 0
     return mask
 
-def trim(dat, md):
-    """
-    Removes the edges of the data arrays
 
-    Args:
-        dat: Data object
-        md: Metadata object
-
-    Returns:
-        subdata arrays with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
-    """
-    dat.subdata = dat.data[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
-    dat.suberr = dat.err[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
-    dat.subdq = dat.dq[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
-    dat.subwave = dat.wave[md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
-    dat.subv0 = dat.v0[:, md.ywindow[0]:md.ywindow[1], md.xwindow[0]:md.xwindow[1]]
-    md.subny = md.ywindow[1] - md.ywindow[0]
-    md.subnx = md.xwindow[1] - md.xwindow[0]
-
-    return dat, md
-
-
-
-def BGsubtraction(dat, md, log, isplots):
+def BGsubtraction(data, meta, log, isplots):
     """
     Does background subtraction using inst.fit_bg & optspex.fitbg
 
@@ -76,10 +78,10 @@ def BGsubtraction(dat, md, log, isplots):
     Returns:
         Corrects subdata with the background
     """
-    n_int, bg_y1, bg_y2, subdata, submask = md.n_int, md.bg_y1, md.bg_y2, dat.subdata, dat.submask
+    n_int, bg_y1, bg_y2, subdata, submask = meta.n_int, meta.bg_y1, meta.bg_y2, data.subdata, data.submask
 
     # Load instrument module
-    exec('from ..S3_data_reduction import ' + md.inst + ' as inst', globals())
+    exec('from ..S3_data_reduction import ' + meta.inst + ' as inst', globals())
     reload(inst)
 
 
@@ -93,17 +95,17 @@ def BGsubtraction(dat, md, log, isplots):
     # Compute background for each integration
     log.writelog('  Performing background subtraction')
     subbg = np.zeros((subdata.shape))
-    if md.ncpu == 1:
+    if meta.ncpu == 1:
         # Only 1 CPU
         for n in range(n_int):
             # Fit sky background with out-of-spectra data
-            writeBG(inst.fit_bg(subdata[n], submask[n], bg_y1, bg_y2, md.bg_deg, md.p3thresh, n, isplots))
+            writeBG(inst.fit_bg(subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
     else:
         # Multiple CPUs
-        pool = mp.Pool(md.ncpu)
+        pool = mp.Pool(meta.ncpu)
         for n in range(n_int):
             res = pool.apply_async(inst.fit_bg,
-                                   args=(subdata[n], submask[n], bg_y1, bg_y2, md.bg_deg, md.p3thresh, n, isplots),
+                                   args=(subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots),
                                    callback=writeBG)
         pool.close()
         pool.join()
@@ -121,6 +123,6 @@ def BGsubtraction(dat, md, log, isplots):
     # Perform background subtraction
     subdata -= subbg
 
-    dat.subbg, dat.submask, dat.subdata = subbg, submask, subdata
+    data.subbg, data.submask, data.subdata = subbg, submask, subdata
 
-    return dat
+    return data
