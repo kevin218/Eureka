@@ -18,6 +18,6 @@ To install ``Eureka!``, run the setup script:
 
 ## Documentation
 
-Check out the docs at [https://eurekadocs.readthedocs.io/en/](https://eurekadocs.readthedocs.io/en/).
+Check out the docs at [https://eurekadocs.readthedocs.io](https://eurekadocs.readthedocs.io).
 
 
