@@ -45,9 +45,13 @@ def read(filename, data):
     data.v0      = hdulist['VAR_RNOISE',1].data
     data.int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
     
-    # MIRI seems to be rotated by 90° compared to NIRCam. There’s a “Dispersion Direction” note in the header.
-    # Sebastian would suggest inst (like miri.py) should check this value (it is axis=2 for MIRI and axis=1 for NIRCam)
-    # when the data is read in. If axis=2, transpose the data so that it works with the current setup of s3_reduce.py.
+    # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
+    if data.shdr['DISPAXIS']==2:
+        data.data    = np.swapaxes(data.data, 1, 2)
+        data.err     = np.swapaxes(data.err , 1, 2)
+        data.dq      = np.swapaxes(data.dq  , 1, 2)
+        data.wave    = np.swapaxes(data.wave, 0, 1)
+        data.v0      = np.swapaxes(data.v0  , 1, 2)
     
     return data
 
