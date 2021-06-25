@@ -27,16 +27,17 @@
 import os, time
 import numpy as np
 import shutil
+from . import optspex
+from . import plots_s3
+from . import background as bg
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
-from . import optspex
-from importlib import reload
 from ..lib import astropytable
 from ..lib import util
-from . import plots_s3
-
+from importlib import reload
 reload(optspex)
+reload(bg)
 
 
 class MetaClass:
@@ -163,7 +164,7 @@ def reduceJWST(eventlabel):
         meta.bg_y2 = int(meta.src_ypos + meta.bg_hw)
         data = inst.flag_bg(data, meta)
 
-        data = util.BGsubtraction(data, meta, log, meta.isplots_S3)
+        data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
         # Calulate drift2D
         # print("Calculating 2D drift...")

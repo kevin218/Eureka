@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal as sps
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from ..lib import gaussian as g
 from . import plots_s4
 
@@ -36,7 +37,7 @@ def spec1D(spectra, meta, log):
         ref_spec-= np.mean(ref_spec[meta.drift_range:-meta.drift_range][np.where(np.isnan(ref_spec[meta.drift_range:-meta.drift_range]) == False)])
     ref_spec[np.where(np.isnan(ref_spec) == True)] = 0
     nx          = len(ref_spec)
-    for n in range(meta.n_int):
+    for n in tqdm(range(meta.n_int)):
         fit_spec    = np.copy(spectra[n,meta.drift_preclip:meta.drift_postclip])
         #Trim data to achieve accurate cross correlation without assumptions over interesting region
         #http://stackoverflow.com/questions/15989384/cross-correlation-of-non-periodic-function-with-numpy
