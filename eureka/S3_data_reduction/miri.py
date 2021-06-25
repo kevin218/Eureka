@@ -23,10 +23,10 @@ def read(filename, data):
     History
     -------
     Written by Kevin Stevenson          November 2012
-    Updated for NIRCam (KBS)            May 2021
-    Updated docs for MIRI (TJB)         Jun 2021
+    Updated for MIRI (TJB)              2021-06-24
 
     '''
+    
     assert isinstance(filename, str)
 
     hdulist = fits.open(filename)
