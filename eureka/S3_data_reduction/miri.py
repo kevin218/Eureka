@@ -1,12 +1,15 @@
 # MIRI specific rountines go here
 import numpy as np
 from astropy.io import fits
+from importlib import reload
 from eureka.S3_data_reduction import sigrej, optspex
 from . import bright2flux as b2f
 from . import nircam
 import numpy as np
 from jwst import datamodels
 from gwcs.wcstools import grid_from_bounding_box
+reload(b2f)
+
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, data):
@@ -64,6 +67,9 @@ def read(filename, data):
 
 
 def wave_MIRI(filename):
+    # This code uses the jwst and gwcs packages to get the wavelength information
+    # out of the WCS for the MIRI data.
+
     tso = datamodels.open(filename)
     x, y = grid_from_bounding_box(tso.meta.wcs.bounding_box)
     ra, dec, lam = tso.meta.wcs(x, y)
