@@ -49,6 +49,9 @@ def read(filename, data):
     data.v0      = hdulist['VAR_RNOISE',1].data
     data.int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
+    # Record integration mid-times in BJD_TDB
+    data.bjdtdb = data.int_times['int_mid_BJD_TDB']
+
     return data
 
 
