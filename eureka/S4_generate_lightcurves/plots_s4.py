@@ -35,3 +35,21 @@ def drift1d(meta):
     plt.xlabel('Frame Number')
     plt.tight_layout()
     plt.savefig(meta.lcdir + '/figs/Fig4101-Drift.png')
+
+def cc_spec(meta, ref_spec, fit_spec, nx, n):
+    plt.figure(4500)
+    plt.clf()
+    plt.title(f'Cross Correlation - Spectrum {n}')
+    plt.plot(range(nx), ref_spec, '-', label='Reference Spectrum')
+    plt.plot(range(meta.drift_range,nx-meta.drift_range), fit_spec, '-', label='Current Spectrum')
+    plt.legend(loc='best')
+    plt.tight_layout()
+    plt.savefig(meta.lcdir + f'/figs/Fig4500-{n}-CC_Spec')
+
+def cc_vals(meta, vals, n):
+    plt.figure(4501)
+    plt.clf()
+    plt.title(f'Cross Correlation - Values {n}')
+    plt.plot(range(-meta.drift_range,meta.drift_range+1), vals, '.')
+    plt.tight_layout()
+    plt.savefig(meta.lcdir + f'/figs/Fig4501-{n}-CC_Vals')
