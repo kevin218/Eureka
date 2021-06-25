@@ -158,7 +158,7 @@ def reduceJWST(eventlabel):
                 data.submask[rowstart:rowend, colstart:colend] = 0
 
         # Perform outlier rejection of sky background along time axis
-        log.writelog('Performing background outlier rejection')
+        log.writelog('  Performing background outlier rejection')
         meta.bg_y1 = int(meta.src_ypos - meta.bg_hw)
         meta.bg_y2 = int(meta.src_ypos + meta.bg_hw)
         data = inst.flag_bg(data, meta)

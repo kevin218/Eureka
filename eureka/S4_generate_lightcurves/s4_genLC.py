@@ -17,12 +17,17 @@
 """
 import sys, os, time, shutil
 import numpy as np
+import scipy.interpolate as spi
 import matplotlib.pyplot as plt
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
 from ..lib import astropytable
 from . import plots_s4
+from . import drift
+from importlib import reload
+reload(drift)
+reload(plots_s4)
 
 def lcJWST(eventlabel, workdir, meta=None):
     #expand=1, smooth_len=None, correctDrift=True
@@ -67,6 +72,7 @@ def lcJWST(eventlabel, workdir, meta=None):
     log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
     log.writelog("\nStarting Stage 4: Generate Light Curves\n")
 
+    log.writelog("Loading S3 save file")
     table = astropytable.readtable(meta)
 
     # Reverse the reshaping which has been done when saving the astropy table
@@ -75,33 +81,34 @@ def lcJWST(eventlabel, workdir, meta=None):
 
     #Replace NaNs with zero
     optspec[np.where(np.isnan(optspec))] = 0
-
-
+    meta.n_int, meta.subnx   = optspec.shape
 
     # Determine wavelength bins
     binsize     = (meta.wave_max - meta.wave_min)/meta.nspecchan
     meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
     meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
 
-    # Apply 1D drift correction
-    # if correctDrift == True:
-    #     #Shift 1D spectra
-    #     #Calculate drift over all frames and non-destructive reads
-    #     log.writelog('Applying drift correction...')
-    #     ev.drift, ev.goodmask = hst.drift_fit2(ev, preclip=0, postclip=None, width=5*expand, deg=2, validRange=11*expand, istart=istart, iref=ev.iref[0])
-    #     # Correct for drift
-    #     for m in range(ev.n_files):
-    #         for n in range(istart,ev.n_reads-1):
-    #             spline            = spi.UnivariateSpline(np.arange(nx), ev.spectra[m,n], k=3, s=0)
-    #             ev.spectra[m,n] = spline(np.arange(nx)+ev.drift[m,n])
+    # Apply 1D drift/jitter correction
+    if meta.correctDrift == True:
+        #Calculate drift over all frames and non-destructive reads
+        log.writelog('Applying drift/jitter correction')
+        # Compute drift/jitter
+        meta = drift.spec1D(optspec, meta, log)
+        # Correct for drift/jitter
+        for n in range(meta.n_int):
+            spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0)
+            optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
+        # Plot Drift
+        if meta.isplots_S4 >= 1:
+            plots_s4.drift1d(meta)
+
 
     log.writelog("Generating light curves")
-    n_int, nx   = optspec.shape
-    meta.lcdata   = np.zeros((meta.nspecchan, n_int))
-    meta.lcerr    = np.zeros((meta.nspecchan, n_int))
+    meta.lcdata   = np.zeros((meta.nspecchan, meta.n_int))
+    meta.lcerr    = np.zeros((meta.nspecchan, meta.n_int))
     # ev.eventname2 = ev.eventname
     for i in range(meta.nspecchan):
-        log.writelog(f"Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
+        log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
         # Compute valid indeces within wavelength range
         index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d <= meta.wave_hi[i]))[0]
         # Sum flux for each spectroscopic channel
