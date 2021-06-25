@@ -129,7 +129,7 @@ def lcJWST(eventlabel, workdir, meta=None):
     #     # Plots corrected 2D light curves
 
     # Copy ecf
-    log.writelog('Copy S4 ecf')
+    log.writelog('Copying S4 control file')
     shutil.copy(ecffile, meta.lcdir)
 
     log.closelog()
