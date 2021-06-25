@@ -1,7 +1,7 @@
 import numpy as np
 #import scipy.ndimage.interpolation as spni
 import matplotlib.pyplot as plt
-import gaussian as g
+from ..lib import gaussian as g
 
 
 # Measure spectrum drift over all frames and all non-destructive reads.
