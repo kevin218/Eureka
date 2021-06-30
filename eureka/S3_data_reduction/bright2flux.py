@@ -165,3 +165,22 @@ def bright2flux(data, err, v0, pixel_area):
     v0   *= srperas * 1e6 * pixel_area
 
     return data, err, v0
+
+
+def convert_to_e(data, meta, log):
+    if data.shdr['BUNIT'] == 'MJy/sr':
+        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
+        # log.writelog('Converting from brightness to flux units')
+        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
+        # Convert from brightness units (MJy/sr) to DNs
+        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
+        meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
+        data = bright2dn(data, meta)
+        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
+        data = dn2electrons(data, meta)
+    if data.shdr['BUNIT'] == 'DN/s':
+        # Convert from DN/s to e/s
+        log.writelog('  Converting from data numbers per second (DN/s) to electrons per second (e/s)')
+        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
+        data = dn2electrons(data, meta)
+    return data, meta

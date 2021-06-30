@@ -7,17 +7,17 @@ from jwst import datamodels
 from jwst import assign_wcs, extract_2d, srctype, photom, flatfield
 
 def process_to_stage2(filename, do_assignwcs=True, do_extract2d=True, do_srctype=True, do_flatfield=False, do_photom=True, delete_files=True):
-	''' 
+	'''
 	Processes a Stage 1, *_rateints.fits to an equivalent of a Stage 2 *_calints.fits file, except the full subarray will be extracted instead of a trimmed 2D image.
 	Options to turn off and on certain steps are available, but are primarily for debugging
-	purposes - there is no guarantee that Eureka will work if you skip some of the steps. 
+	purposes - there is no guarantee that Eureka will work if you skip some of the steps.
 
 	Parameters
 	----------
 	filename			: Single filename to read
 	do_assignwcs		: Boolean to perform the Assign WCS pipeline step
 	do_extract2d		: Boolean to perform the Extract 2D pipeline step
-	do_srctype			: Boolean to perform the Source Type pipeline step	
+	do_srctype			: Boolean to perform the Source Type pipeline step
 	do_flatfield		: Boolean to perform the Flat Field pipeline step
 	do_photom			: Boolean to perform the Photometric correction pipeline step
 	delete_files		: Boolean to delete intermediate files produced by the steps.
@@ -33,17 +33,17 @@ def process_to_stage2(filename, do_assignwcs=True, do_extract2d=True, do_srctype
 
 	# Make sure we have the full directory location of the file
 	current_file = os.path.abspath(filename)
-	
-	# Get the directory the data is saved in, and a prefix for the file itself. 
+
+	# Get the directory the data is saved in, and a prefix for the file itself.
 	file_dir = '/'.join(current_file.split('/')[:-1])
 	file_prefix = current_file.split('/')[-1].split('_rateints.fits')[0]
 
 	# Grab location of config files
 	configs = jwst.__file__.split('__init__.py')[0] + 'pipeline/'
 
-	# Assign World Coordinate System - this is the step where we need to modify values to ensure the full subarray is extracted. 
+	# Assign World Coordinate System - this is the step where we need to modify values to ensure the full subarray is extracted.
 	if do_assignwcs:
-		#Read in the *rateints.fits file so we know what grating/filter we are using. 
+		#Read in the *rateints.fits file so we know what grating/filter we are using.
 		with fits.open(current_file) as hdulist:
 			grating = hdulist[0].header['GRATING']
 			filt = hdulist[0].header['FILTER']
@@ -53,7 +53,7 @@ def process_to_stage2(filename, do_assignwcs=True, do_extract2d=True, do_srctype
 			slit_y_low, slit_y_high = -1, 50 #Controls the cross-dispersion extraction
 			wav_start, wav_end = 6e-08, 6e-06   #Control the dispersion extraction - DOES NOT WORK CURRENTLY
 		else:
-			raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!") 
+			raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!")
 
 		# Modify the existing file to broaden the dispersion extraction - DOES NOT WORK CURRENTLY
 		with datamodels.open(filename) as m:
@@ -61,10 +61,10 @@ def process_to_stage2(filename, do_assignwcs=True, do_extract2d=True, do_srctype
 			m.meta.wcsinfo.waverange_end = wav_end
 			m.save(filename)
 
-		# Run the step, note that the cross-dispersion extraction is input here. 
+		# Run the step, note that the cross-dispersion extraction is input here.
 		stepname = 'assign_wcs'
 		curr_result = assign_wcs.AssignWcsStep.call(current_file, config_file=configs+stepname+'.cfg', slit_y_low=slit_y_low, slit_y_high=slit_y_high, output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
-		# Update the current file we are working with. 
+		# Update the current file we are working with.
 		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
 
 	# Extract 2D spectrum, also does wavelength calibration
@@ -80,7 +80,7 @@ def process_to_stage2(filename, do_assignwcs=True, do_extract2d=True, do_srctype
 		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
 
 	# Perform flat field correction
-	# ***NOTE*** At the time the NIRSpec ERS Hackathon simulated data was created, this step did not work correctly and is by default turned off. 
+	# ***NOTE*** At the time the NIRSpec ERS Hackathon simulated data was created, this step did not work correctly and is by default turned off.
 	if do_flatfield:
 		stepname = 'flat_field'
 		result = flatfield.FlatFieldStep.call(current_file, config_file=configs+stepname+'.cfg', output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
@@ -95,7 +95,7 @@ def process_to_stage2(filename, do_assignwcs=True, do_extract2d=True, do_srctype
 	# Delete any intermediate files that were produced to keep things clean.
 	if delete_files:
 		to_remove = ['_assign_wcs.fits', '_extract_2d.fits', '_srctype.fits', '_flat_field.fits']
-		if do_photom: 
+		if do_photom:
 			to_remove = to_remove
 		elif do_flatfield:
 			to_remove = to_remove[:-1]
@@ -119,17 +119,17 @@ def read(filename, data, stage2_processing=True, do_assignwcs=True, do_extract2d
 
 	Parameters
 	----------
-	filename          : Single filename to read, should be the Stage 1, *_rateints.fits file. 
+	filename          : Single filename to read, should be the Stage 1, *_rateints.fits file.
 	data              : data object in which the fits data will stored
 	returnHdr         : Set True to return header files
-	
+
 	Returns
 	-------
 	data            : Array of data frames
 	err             : Array of uncertainty frames
 	hdr             : List of header files
 	master_hdr      : List of master header files
-	
+
 	History
 	-------
 	Written by Kevin Stevenson          November 2012
@@ -165,15 +165,32 @@ def read(filename, data, stage2_processing=True, do_assignwcs=True, do_extract2d
 	return data
 
 
-def unit_convert(data, meta, log):
-	if data.shdr['BUNIT'] == 'MJy/sr':
-		# Convert from brightness units (MJy/sr) to flux units (uJy/pix)
-		# log.writelog('Converting from brightness to flux units')
-		# subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
-		# Convert from brightness units (MJy/sr) to DNs
-		log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-		meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
-		data = b2f.bright2dn(data, meta)
-		meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
-		data = b2f.dn2electrons(data, meta)
-	return data, meta
+def flag_bg(data, meta):
+    '''
+    Outlier rejection of sky background along time axis
+    '''
+
+    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
+
+    bgdata1 = data.subdata[:,  :y1]
+    bgmask1 = data.submask[:,  :y1]
+    bgdata2 = data.subdata[:,y2:  ]
+    bgmask2 = data.submask[:,y2:  ]
+    bgerr1  = np.median(data.suberr[:,  :y1])
+    bgerr2  = np.median(data.suberr[:,y2:  ])
+    estsig1 = [bgerr1 for j in range(len(bg_thresh))]
+    estsig2 = [bgerr2 for j in range(len(bg_thresh))]
+
+    data.submask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
+    data.submask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
+
+    return data
+
+
+def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
+    '''
+
+    '''
+    bg, mask = optspex.fitbg(data, mask, y1, y2, deg=bg_deg,
+                             threshold=p3thresh, isrotate=2, isplots=isplots)
+    return (bg, mask, n)

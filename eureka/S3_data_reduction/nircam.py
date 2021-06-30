@@ -4,8 +4,6 @@ import numpy as np
 from importlib import reload
 from astropy.io import fits
 from eureka.S3_data_reduction import sigrej, optspex
-from . import bright2flux as b2f
-reload(b2f)
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, data):
@@ -52,20 +50,6 @@ def read(filename, data):
     return data
 
 
-def unit_convert(data, meta, log):
-    if data.shdr['BUNIT'] == 'MJy/sr':
-        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
-        # log.writelog('Converting from brightness to flux units')
-        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
-        # Convert from brightness units (MJy/sr) to DNs
-        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
-        data = b2f.bright2dn(data, meta)
-        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
-        data = b2f.dn2electrons(data, meta)
-    return data, meta
-
-
 def flag_bg(data, meta):
     '''
     Outlier rejection of sky background along time axis
@@ -95,4 +79,3 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     bg, mask = optspex.fitbg(data, mask, y1, y2, deg=bg_deg,
                              threshold=p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)
-
