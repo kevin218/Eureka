@@ -35,7 +35,8 @@ from ..lib import readECF as rd
 from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
-from importlib import reload
+from . import bright2flux as b2f
+reload(b2f)
 reload(optspex)
 reload(bg)
 
@@ -143,8 +144,8 @@ def reduceJWST(eventlabel):
         # FINDME: Will want to use DQ array in the future to flag certain pixels
         data.submask = np.ones(data.subdata.shape)
 
-        # Convert units (eg. for NIRCam: MJy/sr -> DN -> Electrons)
-        data, meta = inst.unit_convert(data, meta, log)
+        # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
+        data, meta = b2f.convert_to_e(data, meta, log)
 
         # Check if arrays have NaNs
         data.submask = util.check_nans(data.subdata, data.submask, log)
