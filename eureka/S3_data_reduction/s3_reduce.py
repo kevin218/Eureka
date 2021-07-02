@@ -27,17 +27,18 @@
 import os, time
 import numpy as np
 import shutil
+from . import optspex
+from . import plots_s3
+from . import background as bg
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
-from . import optspex
-from importlib import reload
 from ..lib import astropytable
 from ..lib import util
-from . import plots_s3
 from . import bright2flux as b2f
 reload(b2f)
 reload(optspex)
+reload(bg)
 
 
 class MetaClass:
@@ -159,12 +160,12 @@ def reduceJWST(eventlabel):
                 data.submask[rowstart:rowend, colstart:colend] = 0
 
         # Perform outlier rejection of sky background along time axis
-        log.writelog('Performing background outlier rejection')
+        log.writelog('  Performing background outlier rejection')
         meta.bg_y1 = int(meta.src_ypos - meta.bg_hw)
         meta.bg_y2 = int(meta.src_ypos + meta.bg_hw)
         data = inst.flag_bg(data, meta)
 
-        data = util.BGsubtraction(data, meta, log, meta.isplots_S3)
+        data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
         # Calulate drift2D
         # print("Calculating 2D drift...")
