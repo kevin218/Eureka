@@ -4,7 +4,7 @@ import numpy as np
 from importlib import reload
 from astropy.io import fits
 from eureka.S3_data_reduction import sigrej
-from eureka.S3_data_reduction import background as bg
+from eureka.S3_data_reduction import background
 from eureka.S3_data_reduction import bright2flux as b2f
 reload(b2f)
 
@@ -79,6 +79,6 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     '''
 
     '''
-    bg, mask = bg.fitbg(data, mask, y1, y2, deg=bg_deg,
+    bg, mask = background.fitbg(data, mask, y1, y2, deg=bg_deg,
                              threshold=p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)
