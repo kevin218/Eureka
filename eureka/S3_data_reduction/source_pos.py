@@ -24,10 +24,12 @@ def source_pos(data, meta, m, header=False):
 def source_pos_max(data, meta, m, plot=True):
 	'''
     A simple function to find the brightest row for source location
+
     Parameters
     ----------
     data              : data object
     meta              : metadata object
+
     Returns
     -------
     y_pos             : The central position of the star
@@ -66,10 +68,12 @@ def source_pos_max(data, meta, m, plot=True):
 def source_pos_FWM(data, meta, m):
 	'''
     An alternative function to find the source location using a flux-weighted mean approach
+
     Parameters
     ----------
     data              : data object
     meta              : metadata object
+
     Returns
     -------
     y_pos             : The central position of the star

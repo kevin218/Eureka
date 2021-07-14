@@ -1,6 +1,7 @@
 # MIRI specific rountines go here
 import numpy as np
 from astropy.io import fits
+
 from importlib import reload
 from eureka.S3_data_reduction import sigrej, optspex
 from . import bright2flux as b2f
@@ -28,10 +29,12 @@ def read(filename, data):
     History
     -------
     Written by Kevin Stevenson          November 2012
+
     Updated for NIRCam (KBS)            May 2021
     Updated docs for MIRI (TJB)         Jun 2021
     Updated for MIRI (SZ)               Jul 2021
     '''
+
     assert isinstance(filename, str)
 
     hdulist = fits.open(filename)
@@ -95,6 +98,7 @@ def wave_MIRI(filename):
     return lam_x_full
 
 
+
 def unit_convert(data, meta, log):
     '''
     Temporary function template that will later convert from MJy/sr to e-
@@ -104,6 +108,7 @@ def unit_convert(data, meta, log):
     # exist in MIRI. Todo: Make that instrument-specific and make it work for miri. (Not really doable right now because
     # the MIRI stage 2 calints files don't include wavelength information and you need that in order to correct for the
     # wavelength-dependent response function).
+
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
         # log.writelog('Converting from brightness to flux units')
@@ -131,6 +136,7 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     '''
     Temporary function template that will later fit for non-uniform background
     '''
+
 
     # Code written for NIRCam and untested for MIRI, but likely to still work (as long as MIRI data gets rotated)
 
