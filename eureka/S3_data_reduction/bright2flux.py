@@ -38,6 +38,7 @@ def dn2electrons(data, meta):
     Modification History:
     ---------------------
     Written by Kevin Stevenson      Jun 2021
+    Added gainfile rotation         Jul 2021
     """
     # Subarray parameters
     xstart  = data.mhdr['SUBSTRT1']
@@ -97,6 +98,7 @@ def bright2dn(data, meta):
     Modification History:
     ---------------------
     2021-05-28 kbs       Initial version
+    2021-07-21 sz        Added functionality for MIRI
     """
     # Load response function and wavelength
     foo = fits.getdata(meta.photfile)

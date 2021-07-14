@@ -29,7 +29,7 @@ def read(filename, data):
     -------
     Written by Kevin Stevenson          November 2012
     Updated for NIRCam (KBS)            May 2021
-
+    Moved bjdtdb into here              July 2021
     '''
     assert isinstance(filename, str)
 
