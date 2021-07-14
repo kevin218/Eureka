@@ -91,15 +91,6 @@ def wave_MIRI(filename):
 
 
 def unit_convert(data, meta, log):
-    '''
-    Temporary function template that will later convert from MJy/sr to e-
-    '''
-
-    # currently: s3_reduce.py -> inst (like nircam.py) -> bright2flux.py -> bright2dn. But: data.mhdr['PUPIL'] doesn't
-    # exist in MIRI. Todo: Make that instrument-specific and make it work for miri. (Not really doable right now because
-    # the MIRI stage 2 calints files don't include wavelength information and you need that in order to correct for the
-    # wavelength-dependent response function).
-
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
         # log.writelog('Converting from brightness to flux units')
