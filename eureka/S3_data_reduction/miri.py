@@ -1,9 +1,7 @@
 # MIRI specific rountines go here
-import numpy as np
-from astropy.io import fits
 
+from astropy.io import fits
 from importlib import reload
-from eureka.S3_data_reduction import sigrej, optspex
 from . import bright2flux as b2f
 from . import nircam
 import numpy as np
@@ -45,18 +43,13 @@ def read(filename, data):
 
     data.intstart    = data.mhdr['INTSTART']
     data.intend      = data.mhdr['INTEND']
-
     data.data = hdulist['SCI', 1].data
-
-    import matplotlib.pyplot as plt
-    plt.imshow(data.data[0], origin='lower', aspect='auto', vmin=0, vmax=np.max(data.data) / 10)
-    plt.show()
-
     data.err = hdulist['ERR', 1].data
     data.dq = hdulist['DQ', 1].data
 
     print('WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
           'because they are not in the .fits files themselves')
+
     data.wave = np.tile(wave_MIRI(filename),(data.data.shape[2],1))    # hdulist['WAVELENGTH', 1].data
     data.v0 = hdulist['VAR_RNOISE', 1].data
     data.int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
@@ -71,8 +64,6 @@ def read(filename, data):
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
     if data.shdr['DISPAXIS']==2:
         data.data    = np.swapaxes(data.data, 1, 2)
-        plt.imshow(data.data[0], origin='lower', aspect='auto', vmin=0, vmax=np.max(data.data) / 10)
-        plt.show()
         data.err     = np.swapaxes(data.err , 1, 2)
         data.dq      = np.swapaxes(data.dq  , 1, 2)
         #data.wave    = np.swapaxes(data.wave, 0, 1)

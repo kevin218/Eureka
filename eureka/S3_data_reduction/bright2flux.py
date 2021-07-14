@@ -48,8 +48,9 @@ def dn2electrons(data, meta):
     # Load gain array in units of e-/ADU
     gain    = fits.getdata(meta.gainfile)[ystart:ystart+ny,xstart:xstart+nx]
 
+    # Like in the case of MIRI data, the gain file data has to be rotated by 90 degrees
     if data.shdr['DISPAXIS']==2:
-        gain = gain.T
+        gain = np.swapaxes(gain, 0, 1)
 
     # Gain subarray
     subgain = gain[meta.ywindow[0]:meta.ywindow[1],meta.xwindow[0]:meta.xwindow[1]]

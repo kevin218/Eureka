@@ -17,7 +17,6 @@ def source_pos(data, meta, m, header=False):
 	else:
 		src_ypos = source_pos_max(data, meta, m) - meta.ywindow[0]
 
-
 	return round(src_ypos)
 
 
@@ -53,6 +52,8 @@ def source_pos_max(data, meta, m, plot=True):
 
 	# Diagnostic plot
 	if meta.isplots_S3 > 0 and plot==True:
+		plt.figure()
+		plt.clf()
 		plt.plot(y_pixels, sum_row, label= 'data')
 		plt.axvline(pos_max, ls='--', label= 'brightest row', c='r')
 		plt.ylabel('row flux')
@@ -61,6 +62,7 @@ def source_pos_max(data, meta, m, plot=True):
 		plt.tight_layout()
 		plt.savefig(meta.workdir + '/figs/fig-file' + str(m+1) + '-source_pos.png')
 		# plt.pause(0.1)
+		plt.close()
 
 	return pos_max
 
@@ -102,6 +104,8 @@ def source_pos_FWM(data, meta, m):
 
 	# Diagnostic plot
 	if meta.isplots_S3 > 0:
+		plt.figure()
+		plt.clf()
 		plt.plot(y_pixels, sum_row, label= 'data')
 		plt.axvline(pos_max, ls='--', label= 'brightest row', c='r')
 		plt.axvline(y_pos, ls='--', label= 'weighted row')
@@ -111,6 +115,7 @@ def source_pos_FWM(data, meta, m):
 		plt.tight_layout()
 		plt.savefig(meta.workdir + '/figs/fig-file' + str(m+1) + '-source_pos.png')
 		# plt.pause(0.1)
+		plt.close()
 
 	return y_pos
 
@@ -153,6 +158,8 @@ def source_pos_gauss(data, meta, m):
 
 	# Diagnostic plot
 	if meta.isplots_S3 > 0:
+		plt.figure()
+		plt.clf()
 		plt.plot(x, y, label= 'data')
 		plt.plot(np.linspace(0,x_dim,500), gauss(np.linspace(0,x_dim,500), *popt), 'r-', label= 'gaussian fit')
 		plt.xlim(pos_max-meta.spec_hw, pos_max+meta.spec_hw)

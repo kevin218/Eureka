@@ -22,6 +22,7 @@ p7thresh    10
 fittype     meddata
 window_len  31
 prof_deg    3
+src_pos_type  weighted  # Options: weighted or gaussian. Otherwise max row is taken
 
 # Diagnostics
 isplots_S3  3

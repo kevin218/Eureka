@@ -61,7 +61,7 @@ def unit_convert(data, meta, log):
         # log.writelog('Converting from brightness to flux units')
         # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
         # Convert from brightness units (MJy/sr) to DNs
-        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
+        log.writelog('Converting from brightness units (MJy/sr) to electrons')
         meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
         data = b2f.bright2dn(data, meta)
         meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
