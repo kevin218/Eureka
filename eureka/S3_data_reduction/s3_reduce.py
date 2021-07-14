@@ -132,13 +132,7 @@ def reduceJWST(eventlabel):
         # Get number of integrations and frame dimensions
         meta.n_int, meta.ny, meta.nx = data.data.shape
         # Locate source postion
-        if 'SRCXPOS' in data.shdr:
-            #source position given in FITS header
-            meta.src_xpos = data.shdr['SRCXPOS'] - meta.xwindow[0]
-            meta.src_ypos = data.shdr['SRCYPOS'] - meta.ywindow[0]
-        else:
-            # Determine source position by finding brightest row
-            meta.src_ypos = source_pos.source_pos(data.data, meta)# - meta.ywindow[0]
+        meta.src_ypos = source_pos.source_pos(data.data, meta, m, header=('SRCYPOS' in data.shdr))
         # Trim data to subarray region of interest
         data, meta = util.trim(data, meta)
         # Create bad pixel mask (1 = good, 0 = bad)

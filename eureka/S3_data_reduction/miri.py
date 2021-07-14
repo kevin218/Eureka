@@ -30,7 +30,7 @@ def read(filename, data):
     Written by Kevin Stevenson          November 2012
     Updated for NIRCam (KBS)            May 2021
     Updated docs for MIRI (TJB)         Jun 2021
-
+    Updated for MIRI (SZ)               Jul 2021
     '''
     assert isinstance(filename, str)
 
@@ -44,20 +44,32 @@ def read(filename, data):
     data.intend      = data.mhdr['INTEND']
 
     data.data = hdulist['SCI', 1].data
+
+    import matplotlib.pyplot as plt
+    plt.imshow(data.data[0], origin='lower', aspect='auto', vmin=0, vmax=np.max(data.data) / 10)
+    plt.show()
+
     data.err = hdulist['ERR', 1].data
     data.dq = hdulist['DQ', 1].data
-    data.wave = np.tile(wave_MIRI(filename),(72,1))    # hdulist['WAVELENGTH', 1].data
+
+    print('WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
+          'because they are not in the .fits files themselves')
+    data.wave = np.tile(wave_MIRI(filename),(data.data.shape[2],1))    # hdulist['WAVELENGTH', 1].data
     data.v0 = hdulist['VAR_RNOISE', 1].data
     data.int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
 
     # Record integration mid-times in BJD_TDB
     # There is no time information in the simulated MIRI data
     # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt
-    data.bjdtdb = np.linspace(0,1.73562874e+04, 1680)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
+    print('WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
+          'because they are not in the .fits files themselves')
+    data.bjdtdb = np.linspace(0, 1.73562874e+04, 1680)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
     if data.shdr['DISPAXIS']==2:
         data.data    = np.swapaxes(data.data, 1, 2)
+        plt.imshow(data.data[0], origin='lower', aspect='auto', vmin=0, vmax=np.max(data.data) / 10)
+        plt.show()
         data.err     = np.swapaxes(data.err , 1, 2)
         data.dq      = np.swapaxes(data.dq  , 1, 2)
         #data.wave    = np.swapaxes(data.wave, 0, 1)
