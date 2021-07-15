@@ -38,6 +38,7 @@ def dn2electrons(data, meta):
     Modification History:
     ---------------------
     Written by Kevin Stevenson      Jun 2021
+    Added gainfile rotation         Jul 2021
     """
     # Subarray parameters
     xstart  = data.mhdr['SUBSTRT1']
@@ -47,6 +48,10 @@ def dn2electrons(data, meta):
 
     # Load gain array in units of e-/ADU
     gain    = fits.getdata(meta.gainfile)[ystart:ystart+ny,xstart:xstart+nx]
+
+    # Like in the case of MIRI data, the gain file data has to be rotated by 90 degrees
+    if data.shdr['DISPAXIS']==2:
+        gain = np.swapaxes(gain, 0, 1)
 
     # Gain subarray
     subgain = gain[meta.ywindow[0]:meta.ywindow[1],meta.xwindow[0]:meta.xwindow[1]]
@@ -93,10 +98,15 @@ def bright2dn(data, meta):
     Modification History:
     ---------------------
     2021-05-28 kbs       Initial version
+    2021-07-21 sz        Added functionality for MIRI
     """
     # Load response function and wavelength
     foo = fits.getdata(meta.photfile)
-    ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
+    if meta.inst == 'nircam':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
+    if meta.inst == 'miri':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['subarray'] == data.mhdr['SUBARRAY']))[0][0]
+
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
     igood = np.where(response_wave > 0)[0]
