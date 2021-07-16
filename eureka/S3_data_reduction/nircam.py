@@ -30,7 +30,7 @@ def read(filename, data):
     -------
     Written by Kevin Stevenson          November 2012
     Updated for NIRCam (KBS)            May 2021
-
+    Moved bjdtdb into here              July 2021
     '''
     assert isinstance(filename, str)
 
@@ -50,8 +50,10 @@ def read(filename, data):
     data.v0      = hdulist['VAR_RNOISE',1].data
     data.int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
-    return data
+    # Record integration mid-times in BJD_TDB
+    data.bjdtdb = data.int_times['int_mid_BJD_TDB']
 
+    return data
 
 def flag_bg(data, meta):
     '''

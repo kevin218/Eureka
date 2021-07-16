@@ -1,5 +1,5 @@
 import sys, os, time
-#sys.path.append('../..')
+sys.path.append('../..')
 #sys.path.append('/Users/stevekb1/Documents/code/Eureka/Eureka')
 #sys.path.append('/Users/kreidberg/Desktop/Projects/OpenSource/Eureka/')
 #sys.path.append('/home/zieba/Desktop/Projects/Open_source/Eureka')
