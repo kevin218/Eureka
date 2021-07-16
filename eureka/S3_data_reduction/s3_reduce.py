@@ -131,7 +131,7 @@ def reduceJWST(eventlabel):
 
         # Read in data frame and header
         log.writelog(f'Reading file {m + 1} of {num_data_files}')
-        data = inst.read(meta.segment_list[m], data)
+        data, meta = inst.read(meta.segment_list[m], data, meta)
         # Get number of integrations and frame dimensions
         meta.n_int, meta.ny, meta.nx = data.data.shape
         # Locate source postion
@@ -174,6 +174,7 @@ def reduceJWST(eventlabel):
         # print("Performing full-frame outlier rejection...")
 
         if meta.isplots_S3 >= 3:
+            log.writelog('  Creating figures from background subtraction')
             for n in range(meta.n_int):
                 # make image+background plots
                 plots_s3.image_and_background(data, meta, n)

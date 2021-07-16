@@ -1,17 +1,17 @@
 # MIRI specific rountines go here
 
+import numpy as np
 from astropy.io import fits
 from importlib import reload
-from . import bright2flux as b2f
-from . import nircam
-import numpy as np
+from eureka.S3_data_reduction import background, nircam
+from eureka.S3_data_reduction import bright2flux as b2f
 from jwst import datamodels
 from gwcs.wcstools import grid_from_bounding_box
 reload(b2f)
 
 
 # Read FITS file from JWST's NIRCam instrument
-def read(filename, data):
+def read(filename, data, meta):
     '''
     Reads single FITS file from JWST's MIRI instrument.
 
@@ -68,8 +68,11 @@ def read(filename, data):
         data.dq      = np.swapaxes(data.dq  , 1, 2)
         #data.wave    = np.swapaxes(data.wave, 0, 1)
         data.v0      = np.swapaxes(data.v0  , 1, 2)
+        temp         = np.copy(meta.ywindow)
+        meta.ywindow = meta.xwindow
+        meta.xwindow = temp
 
-    return data
+    return data, meta
 
 
 def wave_MIRI(filename):
@@ -119,7 +122,6 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     Temporary function template that will later fit for non-uniform background
     '''
 
-
-    # Code written for NIRCam and untested for MIRI, but likely to still work (as long as MIRI data gets rotated)
-
-    return nircam.fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots)
+    bg, mask = background.fitbg(data, mask, y1, y2, deg=bg_deg,
+                             threshold=p3thresh, isrotate=2, isplots=isplots)
+    return (bg, mask, n)

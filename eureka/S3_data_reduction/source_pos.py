@@ -51,8 +51,8 @@ def source_pos_max(data, meta, m, plot=True):
 	y_pixels = np.arange(0, x_dim)
 
 	# Diagnostic plot
-	if meta.isplots_S3 > 0 and plot==True:
-		plt.figure()
+	if meta.isplots_S3 >= 3 and plot==True:
+		plt.figure(3303)
 		plt.clf()
 		plt.plot(y_pixels, sum_row, label= 'data')
 		plt.axvline(pos_max, ls='--', label= 'brightest row', c='r')
@@ -60,7 +60,7 @@ def source_pos_max(data, meta, m, plot=True):
 		plt.xlabel('row pixel position')
 		plt.legend()
 		plt.tight_layout()
-		plt.savefig(meta.workdir + '/figs/fig-file' + str(m+1) + '-source_pos.png')
+		plt.savefig(meta.workdir + '/figs/fig3303-file' + str(m+1) + '-source_pos.png')
 		# plt.pause(0.1)
 		plt.close()
 
@@ -104,7 +104,7 @@ def source_pos_FWM(data, meta, m):
 
 	# Diagnostic plot
 	if meta.isplots_S3 > 0:
-		plt.figure()
+		plt.figure(3303)
 		plt.clf()
 		plt.plot(y_pixels, sum_row, label= 'data')
 		plt.axvline(pos_max, ls='--', label= 'brightest row', c='r')
@@ -113,7 +113,7 @@ def source_pos_FWM(data, meta, m):
 		plt.xlabel('row pixel position')
 		plt.legend()
 		plt.tight_layout()
-		plt.savefig(meta.workdir + '/figs/fig-file' + str(m+1) + '-source_pos.png')
+		plt.savefig(meta.workdir + '/figs/fig3303-file' + str(m+1) + '-source_pos.png')
 		# plt.pause(0.1)
 		plt.close()
 
@@ -158,7 +158,7 @@ def source_pos_gauss(data, meta, m):
 
 	# Diagnostic plot
 	if meta.isplots_S3 > 0:
-		plt.figure()
+		plt.figure(3303)
 		plt.clf()
 		plt.plot(x, y, label= 'data')
 		plt.plot(np.linspace(0,x_dim,500), gauss(np.linspace(0,x_dim,500), *popt), 'r-', label= 'gaussian fit')
@@ -168,7 +168,7 @@ def source_pos_gauss(data, meta, m):
 		plt.xlabel('row pixel position')
 		plt.legend()
 		plt.tight_layout()
-		plt.savefig(meta.workdir + '/figs/fig-file' + str(m+1) + '-source_pos.png')
+		plt.savefig(meta.workdir + '/figs/fig3303-file' + str(m+1) + '-source_pos.png')
 		# plt.pause(0.1)
 
 	return popt[1]
