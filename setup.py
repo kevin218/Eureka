@@ -9,7 +9,12 @@ REQUIRES = ['batman-package',
             'numpy>=1.20.0',
             'pytest',
             'pyyaml',
-            'scipy']
+            'scipy',
+            'jwst',
+            'pandas',
+            'bokeh',
+            'lmfit',
+            'svo_filters']
 
 DEPENDENCY_LINKS = ['git+https://github.com/spacetelescope/jwst_gtvt.git@cd6bc76f66f478eafbcc71834d3e735c73e03ed5']
 

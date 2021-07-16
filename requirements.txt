@@ -19,3 +19,4 @@ astroquery>=0.4.2
 asdf
 gwcs
 jwst
+tqdm
