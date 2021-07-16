@@ -36,6 +36,7 @@ from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
 from . import bright2flux as b2f
+from importlib import reload
 reload(b2f)
 reload(optspex)
 reload(bg)
