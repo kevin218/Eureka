@@ -40,6 +40,7 @@ from importlib import reload
 reload(b2f)
 reload(optspex)
 reload(bg)
+reload(source_pos)
 
 
 class MetaClass:
