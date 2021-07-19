@@ -34,19 +34,25 @@ def image_and_background(data, meta, n):
 
     intstart, subdata, submask, subbg = data.intstart, data.subdata, data.submask, data.subbg
 
-    plt.figure(3301)
+    plt.figure(3301, figsize=(8,8))
     plt.clf()
-    plt.suptitle(str(intstart + n))
+    plt.suptitle(f'Integration {intstart + n}')
     plt.subplot(211)
+    plt.title('Background-Subtracted Flux')
     max = np.max(subdata[n] * submask[n])
     plt.imshow(subdata[n] * submask[n], origin='lower', aspect='auto', vmin=0, vmax=max / 10)
     # plt.imshow(subdata[n], origin='lower', aspect='auto', vmin=0, vmax=10000)
+    plt.ylabel('Pixel Position')
     plt.subplot(212)
+    plt.title('Subtracted Background')
     # plt.imshow(submask[i], origin='lower', aspect='auto', vmax=1)
     median = np.median(subbg[n])
     std = np.std(subbg[n])
     plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median - 3 * std, vmax=median + 3 * std)
     # plt.imshow(submask[n], origin='lower', aspect='auto', vmin=0, vmax=1)
+    plt.ylabel('Pixel Position')
+    plt.xlabel('Pixel Position')
+    plt.tight_layout()
     plt.savefig(meta.workdir + '/figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
     # plt.pause(0.1)
 
@@ -57,11 +63,14 @@ def optimal_spectrum(data, meta, n):
 
     plt.figure(3302)
     plt.clf()
-    plt.suptitle(str(intstart + n))
-    plt.plot(range(subnx), stdspec[n], '-', color='C1', label='Std Spec')
+    plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
+    plt.semilogy(range(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
     # plt.errorbar(range(subnx), stdspec[n], yerr=np.sqrt(stdvar[n]), fmt='-', color='C1', ecolor='C0', label='Std Spec')
     plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
+    plt.ylabel('Flux')
+    plt.xlabel('Pixel Position')
     plt.legend(loc='best')
+    plt.tight_layout()
     plt.savefig(meta.workdir + '/figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
     # plt.pause(0.1)
 
@@ -90,3 +99,18 @@ def source_position(meta, x_dim, pos_max, m, ismax=False,
     plt.legend()
     plt.tight_layout()
     plt.savefig(meta.workdir + '/figs/fig3303-file' + str(m+1) + '-source_pos.png')
+
+def profile(eventdir, profile, submask, n):
+    '''
+    Plot weighting profile from optimal spectral extraction routine
+    '''
+    vmax = 0.05*np.max(profile*submask)
+    plt.figure(3305)
+    plt.clf()
+    plt.suptitle(f"Profile - Integration {n}")
+    plt.imshow(profile*submask, aspect='auto', origin='lower',vmax=vmax)
+    plt.ylabel('Pixel Postion')
+    plt.xlabel('Pixel Position')
+    plt.tight_layout()
+    plt.savefig(eventdir+'/figs/fig3305-'+str(n)+'-Profile.png')
+    #plt.pause(0.2)

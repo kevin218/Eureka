@@ -175,8 +175,8 @@ def reduceJWST(eventlabel):
         # print("Performing full-frame outlier rejection...")
 
         if meta.isplots_S3 >= 3:
-            log.writelog('  Creating figures from background subtraction')
-            for n in range(meta.n_int):
+            log.writelog('  Creating figures for background subtraction')
+            for n in range(2):#meta.n_int):
                 # make image+background plots
                 plots_s3.image_and_background(data, meta, n)
 
@@ -217,7 +217,8 @@ def reduceJWST(eventlabel):
 
         # Plotting results
         if meta.isplots_S3 >= 3:
-            for n in range(meta.n_int):
+            log.writelog('  Creating figures for optical spectral extraction')
+            for n in range(2):#meta.n_int):
                 # make optimal spectrum plot
                 plots_s3.optimal_spectrum(data, meta, n)
 
