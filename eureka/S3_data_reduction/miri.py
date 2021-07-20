@@ -50,7 +50,7 @@ def read(filename, data, meta):
     print('WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
           'because they are not in the .fits files themselves')
 
-    data.wave = np.tile(wave_MIRI(filename),(data.data.shape[2],1))    # hdulist['WAVELENGTH', 1].data
+    data.wave = np.tile(wave_MIRI(filename),(data.data.shape[2],1))[:,::-1]    # hdulist['WAVELENGTH', 1].data
     data.v0 = hdulist['VAR_RNOISE', 1].data
     data.int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
 
@@ -62,15 +62,16 @@ def read(filename, data, meta):
     data.bjdtdb = np.linspace(0, 1.73562874e+04, 1680)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
+    # Having wavelengths increase from left to right on the rotated frame makes life easier
     if data.shdr['DISPAXIS']==2:
-        data.data    = np.swapaxes(data.data, 1, 2)
-        data.err     = np.swapaxes(data.err , 1, 2)
-        data.dq      = np.swapaxes(data.dq  , 1, 2)
-        #data.wave    = np.swapaxes(data.wave, 0, 1)
-        data.v0      = np.swapaxes(data.v0  , 1, 2)
+        data.data    = np.swapaxes(data.data, 1, 2)[:,:,::-1]
+        data.err     = np.swapaxes(data.err , 1, 2)[:,:,::-1]
+        data.dq      = np.swapaxes(data.dq  , 1, 2)[:,:,::-1]
+        #data.wave    = np.swapaxes(data.wave, 0, 1)[:,:,::-1]
+        data.v0      = np.swapaxes(data.v0  , 1, 2)[:,:,::-1]
         temp         = np.copy(meta.ywindow)
         meta.ywindow = meta.xwindow
-        meta.xwindow = temp
+        meta.xwindow = data.data.shape[2] - temp[::-1]
 
     return data, meta
 
