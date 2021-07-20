@@ -263,4 +263,4 @@ def reduceJWST(eventlabel):
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
     log.closelog()
-    return meta
+    return data, meta
