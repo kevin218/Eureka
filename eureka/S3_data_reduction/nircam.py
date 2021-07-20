@@ -4,7 +4,7 @@ import numpy as np
 from importlib import reload
 from astropy.io import fits
 from eureka.S3_data_reduction import sigrej
-from eureka.S3_data_reduction import background as bg
+from eureka.S3_data_reduction import background
 from eureka.S3_data_reduction import bright2flux as b2f
 reload(b2f)
 
@@ -30,7 +30,7 @@ def read(filename, data):
     -------
     Written by Kevin Stevenson          November 2012
     Updated for NIRCam (KBS)            May 2021
-
+    Moved bjdtdb into here              July 2021
     '''
     assert isinstance(filename, str)
 
@@ -50,8 +50,10 @@ def read(filename, data):
     data.v0      = hdulist['VAR_RNOISE',1].data
     data.int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
-    return data
+    # Record integration mid-times in BJD_TDB
+    data.bjdtdb = data.int_times['int_mid_BJD_TDB']
 
+    return data
 
 def flag_bg(data, meta):
     '''
@@ -79,6 +81,6 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     '''
 
     '''
-    bg, mask = bg.fitbg(data, mask, y1, y2, deg=bg_deg,
+    bg, mask = background.fitbg(data, mask, y1, y2, deg=bg_deg,
                              threshold=p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)

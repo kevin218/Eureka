@@ -28,7 +28,7 @@ import os, time
 import numpy as np
 import shutil
 from . import optspex
-from . import plots_s3
+from . import plots_s3, source_pos
 from . import background as bg
 from ..lib import logedit
 from ..lib import readECF as rd
@@ -40,6 +40,7 @@ from importlib import reload
 reload(b2f)
 reload(optspex)
 reload(bg)
+reload(source_pos)
 
 
 class MetaClass:
@@ -131,14 +132,11 @@ def reduceJWST(eventlabel):
 
         # Read in data frame and header
         log.writelog(f'Reading file {m + 1} of {num_data_files}')
-        data = inst.read(meta.segment_list[m], data)
+        data, meta = inst.read(meta.segment_list[m], data, meta)
         # Get number of integrations and frame dimensions
         meta.n_int, meta.ny, meta.nx = data.data.shape
         # Locate source postion
-        meta.src_xpos = data.shdr['SRCXPOS'] - meta.xwindow[0]
-        meta.src_ypos = data.shdr['SRCYPOS'] - meta.ywindow[0]
-        # Record integration mid-times in BJD_TDB
-        data.bjdtdb = data.int_times['int_mid_BJD_TDB']
+        meta.src_ypos = source_pos.source_pos(data.data, meta, m, header=('SRCYPOS' in data.shdr))
         # Trim data to subarray region of interest
         data, meta = util.trim(data, meta)
         # Create bad pixel mask (1 = good, 0 = bad)
@@ -177,7 +175,8 @@ def reduceJWST(eventlabel):
         # print("Performing full-frame outlier rejection...")
 
         if meta.isplots_S3 >= 3:
-            for n in range(meta.n_int):
+            log.writelog('  Creating figures for background subtraction')
+            for n in range(2):#meta.n_int):
                 # make image+background plots
                 plots_s3.image_and_background(data, meta, n)
 
@@ -218,7 +217,8 @@ def reduceJWST(eventlabel):
 
         # Plotting results
         if meta.isplots_S3 >= 3:
-            for n in range(meta.n_int):
+            log.writelog('  Creating figures for optical spectral extraction')
+            for n in range(2):#meta.n_int):
                 # make optimal spectrum plot
                 plots_s3.optimal_spectrum(data, meta, n)
 
@@ -263,4 +263,4 @@ def reduceJWST(eventlabel):
         plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
     log.closelog()
-    return meta
+    return data, meta

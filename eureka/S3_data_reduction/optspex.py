@@ -1,8 +1,11 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from ..lib import gaussian as g
-from ..lib import smooth
+from eureka.lib import gaussian as g
+from eureka.lib import smooth
+from eureka.S3_data_reduction import plots_s3
+from importlib import reload
+reload(plots_s3)
 
 # Construct normalized spatial profile using polynomial fits along the wavelength direction
 def profile_poly(subdata, mask, deg=3, threshold=10, isplots=False):
@@ -119,7 +122,7 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanni
     return profile
 
 #Construct normalized spatial profile using median of all data frames
-def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
+def profile_meddata(data, mask, meddata, threshold=10, isplots=False):
     '''
 
     '''
@@ -329,16 +332,11 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
             profile = profile_poly(subdata, submask, deg=deg, threshold=p5thresh)
         #
         if isplots >= 3:
-            try:
-                plt.figure(3305)
-                plt.clf()
-                plt.suptitle("Profile - " + str(n))
-                plt.imshow(profile*submask, aspect='auto', origin='lower',vmax=0.01)
-                #print(profile.min(),profile.max())
-                plt.savefig(eventdir+'/figs/fig3305-'+str(n)+'-Profile.png')
-                #plt.pause(0.2)
-            except:
-                pass
+            plots_s3.profile(eventdir, profile, submask, n)
+            # try:
+            #     plots_s3.profile(eventdir, profile, submask)
+            # except:
+            #     pass
 
         isnewprofile = False
         isoutliers   = True
@@ -384,7 +382,8 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
                         if isplots >= 5:
                             plt.figure(3501)
                             plt.clf()
-                            plt.suptitle(str(n) + ", " + str(i) + "/" + str(nx))
+                            plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
+                            #plt.suptitle(str(n) + ", " + str(i) + "/" + str(nx))
                             #print(np.where(submask[:,i])[0])
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')

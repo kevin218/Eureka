@@ -87,7 +87,7 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
     elif isrotate == 2:
         dataim = dataim.T
         mask   = mask.T
-
+    
     #Convert x1 and x2 to array, if need be
     ny, nx   = np.shape(dataim)
     if type(x1) == int or type(x1) == np.int64:
@@ -122,6 +122,7 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
                 try:
                     goodxvals = xvals[np.where(mask[j,xvals])]
                 except:
+                    print("****Warning: Background subtraction failed!****")
                     print(j)
                     print(xvals)
                     print(np.where(mask[j,xvals]))
