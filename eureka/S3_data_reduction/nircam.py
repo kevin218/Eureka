@@ -9,7 +9,7 @@ from eureka.S3_data_reduction import bright2flux as b2f
 reload(b2f)
 
 # Read FITS file from JWST's NIRCam instrument
-def read(filename, data):
+def read(filename, data, meta):
     '''
     Reads single FITS file from JWST's NIRCam instrument.
 
@@ -53,7 +53,7 @@ def read(filename, data):
     # Record integration mid-times in BJD_TDB
     data.bjdtdb = data.int_times['int_mid_BJD_TDB']
 
-    return data
+    return data, meta
 
 def flag_bg(data, meta):
     '''
