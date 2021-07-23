@@ -11,13 +11,13 @@ def source_pos(data, meta, m, header=False):
         src_ypos = data.shdr['SRCYPOS'] - meta.ywindow[0]
     # find the source location using a flux-weighted mean approach
     elif meta.src_pos_type == 'weighted':
-        src_ypos = source_pos_FWM(data, meta, m) - meta.ywindow[0]
+        src_ypos = source_pos_FWM(data.data, meta, m) - meta.ywindow[0]
     # find the source location using a gaussian fit
     elif meta.src_pos_type == 'gaussian':
-        src_ypos = source_pos_gauss(data, meta, m) - meta.ywindow[0]
+        src_ypos = source_pos_gauss(data.data, meta, m) - meta.ywindow[0]
     # brightest row for source location
     else:
-        src_ypos = source_pos_max(data, meta, m) - meta.ywindow[0]
+        src_ypos = source_pos_max(data.data, meta, m) - meta.ywindow[0]
 
     return round(src_ypos)
 
