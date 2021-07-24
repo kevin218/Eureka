@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# Generic Stage 3 reduction pipeline
+# Eureka! Stage 3 reduction pipeline
 
 """
 # Proposed Steps
