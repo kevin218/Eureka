@@ -1,9 +1,9 @@
-# WASP-43b NIRCam Simulated data
+# Eureka! Control File for Stage 4: Generate Lightcurves
 
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan   10
-wave_min    2.5
-wave_max    4.0
+nspecchan   10          # Number of spectroscopic channels
+wave_min    2.5         # Minimum wavelength
+wave_max    4.0         # Maximum wavelength
 
 # Parameters for drift correction of 1D spectra
 correctDrift    True    # Set True to correct drift/jitter in 1D spectra
@@ -15,4 +15,4 @@ drift_iref      -1      # Index of reference spectrum used for cross correlation
 sub_mean        True    # Set True to subtract spectrum mean during cross correlation
 
 # Diagnostics
-isplots_S4  3
+isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

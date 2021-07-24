@@ -129,14 +129,19 @@ def reduceJWST(eventlabel):
         istart = 0
     for m in range(istart, num_data_files):
         # Report progress
-
-        # Read in data frame and header
         log.writelog(f'Reading file {m + 1} of {num_data_files}')
+        # Read in data frame and header
         data, meta = inst.read(meta.segment_list[m], data, meta)
         # Get number of integrations and frame dimensions
         meta.n_int, meta.ny, meta.nx = data.data.shape
+        if meta.testing_S3:
+            # Only process the last 5 integrations when testing
+            meta.int_start = np.max((0,meta.n_int-5))
+        else:
+            meta.int_start = 0
         # Locate source postion
         meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
+        log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
         # Trim data to subarray region of interest
         data, meta = util.trim(data, meta)
         # Create bad pixel mask (1 = good, 0 = bad)
@@ -147,9 +152,9 @@ def reduceJWST(eventlabel):
         data, meta = b2f.convert_to_e(data, meta, log)
 
         # Check if arrays have NaNs
-        data.submask = util.check_nans(data.subdata, data.submask, log)
-        data.submask = util.check_nans(data.suberr, data.submask, log)
-        data.submask = util.check_nans(data.subv0, data.submask, log)
+        data.submask = util.check_nans(data.subdata, data.submask, log, name='SUBDATA')
+        data.submask = util.check_nans(data.suberr, data.submask, log, name='SUBERR')
+        data.submask = util.check_nans(data.subv0, data.submask, log, name='SUBV0')
 
         # Manually mask regions [colstart, colend, rowstart, rowend]
         if hasattr(meta, 'manmask'):
@@ -176,7 +181,7 @@ def reduceJWST(eventlabel):
 
         if meta.isplots_S3 >= 3:
             log.writelog('  Creating figures for background subtraction')
-            for n in range(2):#meta.n_int):
+            for n in range(meta.int_start,meta.n_int):
                 # make image+background plots
                 plots_s3.image_and_background(data, meta, n)
 
@@ -206,7 +211,7 @@ def reduceJWST(eventlabel):
         data.optspec = np.zeros(data.stdspec.shape)
         data.opterr  = np.zeros(data.stdspec.shape)
         gain = 1  # FINDME: need to determine correct gain
-        for n in range(meta.n_int):
+        for n in range(meta.int_start,meta.n_int):
             data.optspec[n], data.opterr[n], mask = optspex.optimize(data.apdata[n], data.apmask[n], data.apbg[n],
                                                                      data.stdspec[n], gain, data.apv0[n],
                                                                      p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
@@ -218,7 +223,7 @@ def reduceJWST(eventlabel):
         # Plotting results
         if meta.isplots_S3 >= 3:
             log.writelog('  Creating figures for optical spectral extraction')
-            for n in range(2):#meta.n_int):
+            for n in range(meta.int_start,meta.n_int):
                 # make optimal spectrum plot
                 plots_s3.optimal_spectrum(data, meta, n)
 
@@ -250,8 +255,9 @@ def reduceJWST(eventlabel):
     #log.writelog('Saving results')
     #me.saveevent(data, meta.workdir + '/S3_' + meta.eventlabel + "_Data_Save", save=[])
 
-    log.writelog('Saving results as astropy table')
-    astropytable.savetable_S3(meta, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
+    if meta.testing_S3 == False:
+        log.writelog('Saving results as astropy table')
+        astropytable.savetable_S3(meta, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
     # Copy ecf
     log.writelog('Copy S3 ecf')

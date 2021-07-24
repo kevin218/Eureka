@@ -44,7 +44,7 @@ def trim(data, meta):
     return data, meta
 
 
-def check_nans(data, mask, log):
+def check_nans(data, mask, log, name=''):
     """
     Checks where the data array has NaNs
 
@@ -56,8 +56,9 @@ def check_nans(data, mask, log):
     Returns:
         mask: output mask where 0 will be written where the input data array has NaNs
     """
-    if np.sum(np.isnan(data)) > 0:
-        log.writelog("  WARNING: array has NaNs.  Your subregion is probably off the edge of the detector subarray. Masking NaN region and continuing, but you should probably stop and reconsider your choices.")
+    num_nans = np.sum(np.isnan(data))
+    if num_nans > 0:
+        log.writelog(f"  WARNING: {name} has {num_nans} NaNs.  Your subregion may be off the edge of the detector subarray. Masking NaN region and continuing, but you should really stop and reconsider your choices.")
         inan = np.where(np.isnan(data))
         #subdata[inan]  = 0
         mask[inan]  = 0

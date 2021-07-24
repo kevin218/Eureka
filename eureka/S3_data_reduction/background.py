@@ -37,13 +37,13 @@ def BGsubtraction(data, meta, log, isplots):
     subbg = np.zeros((subdata.shape))
     if meta.ncpu == 1:
         # Only 1 CPU
-        for n in tqdm(range(n_int)):
+        for n in tqdm(range(meta.int_start,n_int)):
             # Fit sky background with out-of-spectra data
             writeBG(inst.fit_bg(subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        for n in tqdm(range(n_int)):
+        for n in tqdm(range(meta.int_start,n_int)):
             res = pool.apply_async(inst.fit_bg,
                                    args=(subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots),
                                    callback=writeBG)
@@ -87,7 +87,7 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
     elif isrotate == 2:
         dataim = dataim.T
         mask   = mask.T
-    
+
     #Convert x1 and x2 to array, if need be
     ny, nx   = np.shape(dataim)
     if type(x1) == int or type(x1) == np.int64:
