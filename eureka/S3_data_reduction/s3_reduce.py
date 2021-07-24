@@ -141,7 +141,7 @@ def reduceJWST(eventlabel):
             meta.int_start = 0
         # Locate source postion
         meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
-        log.writelog(f'Source position on detector is row {meta.src_ypos}.')
+        log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
         # Trim data to subarray region of interest
         data, meta = util.trim(data, meta)
         # Create bad pixel mask (1 = good, 0 = bad)
@@ -255,8 +255,9 @@ def reduceJWST(eventlabel):
     #log.writelog('Saving results')
     #me.saveevent(data, meta.workdir + '/S3_' + meta.eventlabel + "_Data_Save", save=[])
 
-    log.writelog('Saving results as astropy table')
-    astropytable.savetable_S3(meta, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
+    if meta.testing_S3 == False:
+        log.writelog('Saving results as astropy table')
+        astropytable.savetable_S3(meta, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
     # Copy ecf
     log.writelog('Copy S3 ecf')

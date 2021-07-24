@@ -328,8 +328,11 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
             profile = profile_wavelet(subdata, submask, wavelet='bior5.5', numlvls=3, isplots=isplots)
         elif fittype == 'gauss':
             profile = profile_gauss(subdata, submask, threshold=p5thresh, guess=None, isplots=isplots)
-        else:
+        elif fittype == 'poly':
             profile = profile_poly(subdata, submask, deg=deg, threshold=p5thresh)
+        else:
+            print("Unknown normalized spatial profile method.")
+            return
         #
         if isplots >= 3:
             plots_s3.profile(eventdir, profile, submask, n)
