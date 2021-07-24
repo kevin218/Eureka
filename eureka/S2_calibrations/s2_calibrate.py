@@ -1,54 +1,29 @@
 #! /usr/bin/env python
 
-# Generic Stage 3 reduction pipeline
+# Eureka! Stage 2 calibration pipeline
 
-"""
-# Proposed Steps
-# -------- -----
-
-"""
 import os
 import numpy as np
 from astropy.io import fits
 import jwst
 from jwst import datamodels, assign_wcs, extract_2d, srctype, photom, flatfield
 
+# class MetaClass:
+#     def __init__(self):
+#         # initialize Univ
+#         # Univ.__init__(self)
+#         # self.initpars(ecf)
+#         # self.foo = 2
+#         return
+# 
 #
-# import os, time
-# import numpy as np
-# import shutil
-# from . import optspex
-# from . import plots_s3, source_pos
-# from . import background as bg
-# from ..lib import logedit
-# from ..lib import readECF as rd
-# from ..lib import manageevent as me
-# from ..lib import astropytable
-# from ..lib import util
-# from . import bright2flux as b2f
-# from importlib import reload
-# reload(b2f)
-# reload(optspex)
-# reload(bg)
-# reload(source_pos)
-
-
-class MetaClass:
-    def __init__(self):
-        # initialize Univ
-        # Univ.__init__(self)
-        # self.initpars(ecf)
-        # self.foo = 2
-        return
-
-
-class DataClass:
-    def __init__(self):
-        # initialize Univ
-        # Univ.__init__(self)
-        # self.initpars(ecf)
-        # self.foo = 2
-        return
+# class DataClass:
+#     def __init__(self):
+#         # initialize Univ
+#         # Univ.__init__(self)
+#         # self.initpars(ecf)
+#         # self.foo = 2
+#         return
 
 
 def calibrate_JWST(filename, do_assignwcs=True, do_extract2d=True, do_srctype=True, do_flatfield=False, do_photom=True, delete_files=True):
