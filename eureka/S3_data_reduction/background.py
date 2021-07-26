@@ -43,13 +43,13 @@ def BGsubtraction(data, meta, log, isplots):
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        for n in tqdm(range(meta.int_start,n_int)):
-            res = pool.apply_async(inst.fit_bg,
-                                   args=(subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots),
-                                   callback=writeBG)
+        args_list = []
+        for n in range(meta.int_start,n_int):
+            args_list.append((subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
+        jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
         pool.close()
-        pool.join()
-        res.wait()
+        for job in tqdm(jobs):
+            res = job.get()
 
     # Calculate variance
     # bgerr       = np.std(bg, axis=1)/np.sqrt(np.sum(mask, axis=1))

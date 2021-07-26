@@ -210,7 +210,7 @@ def reduceJWST(eventlabel):
         log.writelog("  Performing optimal spectral extraction")
         data.optspec = np.zeros(data.stdspec.shape)
         data.opterr  = np.zeros(data.stdspec.shape)
-        gain = 1  # FINDME: need to determine correct gain
+        gain = 1  # Already converted DN to electrons, so gain = 1 for optspex
         for n in range(meta.int_start,meta.n_int):
             data.optspec[n], data.opterr[n], mask = optspex.optimize(data.apdata[n], data.apmask[n], data.apbg[n],
                                                                      data.stdspec[n], gain, data.apv0[n],
@@ -220,9 +220,9 @@ def reduceJWST(eventlabel):
                                                                      isplots=meta.isplots_S3, eventdir=meta.workdir,
                                                                      meddata=data.medapdata)
 
-        # Plotting results
+        # Plot results
         if meta.isplots_S3 >= 3:
-            log.writelog('  Creating figures for optical spectral extraction')
+            log.writelog('  Creating figures for optimal spectral extraction')
             for n in range(meta.int_start,meta.n_int):
                 # make optimal spectrum plot
                 plots_s3.optimal_spectrum(data, meta, n)
@@ -248,8 +248,9 @@ def reduceJWST(eventlabel):
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     # Save results
-    log.writelog('Saving Metadata')
-    me.saveevent(meta, meta.workdir + '/S3_' + meta.eventlabel + "_Meta_Save", save=[])
+    if meta.testing_S3 == False:
+        log.writelog('Saving Metadata')
+        me.saveevent(meta, meta.workdir + '/S3_' + meta.eventlabel + "_Meta_Save", save=[])
 
     # Save results
     #log.writelog('Saving results')
@@ -257,10 +258,11 @@ def reduceJWST(eventlabel):
 
     if meta.testing_S3 == False:
         log.writelog('Saving results as astropy table')
-        astropytable.savetable_S3(meta, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
+        tab_filename = meta.workdir + '/S3_' + meta.eventlabel + "_Table_Save.txt"
+        astropytable.savetable_S3(tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
     # Copy ecf
-    log.writelog('Copy S3 ecf')
+    log.writelog('Copying S3 control file')
     shutil.copy(ecffile, meta.workdir)
 
     if meta.isplots_S3 >= 1:
