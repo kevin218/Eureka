@@ -101,13 +101,13 @@ def reduceJWST(eventlabel):
 
     # check for range of spectral apertures
     if isinstance(meta.spec_hw, list):
-        spec_hw_range = range(meta.spec_hw[0], meta.spec_hw[1], meta.spec_hw[2])
+        spec_hw_range = range(meta.spec_hw[0], meta.spec_hw[1]+meta.spec_hw[2], meta.spec_hw[2])
     else:
         spec_hw_range = [meta.spec_hw]
 
     #check for range of background apertures
     if isinstance(meta.bg_hw, list):
-        bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1], meta.bg_hw[2])
+        bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1]+meta.spec_hw[2], meta.bg_hw[2])
     else:
         bg_hw_range = [meta.bg_hw]
 
