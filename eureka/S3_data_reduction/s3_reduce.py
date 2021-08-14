@@ -119,14 +119,7 @@ def reduceJWST(eventlabel):
 
             meta.eventlabel = eventlabel
 
-            # Create directories for Stage 3 processing
-            datetime = time.strftime('%Y-%m-%d_%H-%M')
-            meta.workdir = 'S3_' + datetime + '_' + 'ap='+ str(spec_hw_val) + \
-                           '_bg=' + str(bg_hw_val) + '_' + meta.eventlabel
-            if not os.path.exists(meta.workdir):
-                os.makedirs(meta.workdir)
-            if not os.path.exists(meta.workdir + "/figs"):
-                os.makedirs(meta.workdir + "/figs")
+            util.makedirectory(meta, 'S3', ap=spec_hw_val, bg=bg_hw_val)
 
             # Open new log file
             meta.logname = './' + meta.workdir + '/S3_' + meta.eventlabel + ".log"
