@@ -76,7 +76,7 @@ def makedirectory(meta, stage, **kwargs):
         **kwargs
 
     Returns:
-        None
+        run number
     """
 
     t0 = time.time()
@@ -103,4 +103,35 @@ def makedirectory(meta, stage, **kwargs):
     if not os.path.exists(meta.workdir + "/figs"):
         os.makedirs(meta.workdir + "/figs")
 
-    return None
+    return counter
+
+def pathdirectory(meta, stage, run, **kwargs):
+    """
+    Creates file directory
+
+    Args:
+        meta: metadata object
+        stage : 'S#' string denoting stage number (i.e. 'S3', 'S4')
+        run : run #, output from makedirectory function
+        **kwargs
+
+    Returns:
+        directory path for given parameters
+    """
+
+    t0 = time.time()
+
+    # Create directories for Stage 3 processing
+    datetime = time.strftime('%Y-%m-%d')
+
+    workdir = stage + '_' + datetime + '_' + meta.eventlabel +'_'
+
+    for key, value in kwargs.items():
+
+        workdir += key+str(value)+'_'
+
+    workdir += 'run'
+
+    path = workdir+str(run)
+
+    return path

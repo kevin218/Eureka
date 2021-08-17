@@ -111,6 +111,7 @@ def reduceJWST(eventlabel):
     else:
         bg_hw_range = [meta.bg_hw]
 
+    # create directories to store data
     for spec_hw_val in spec_hw_range:
 
         for bg_hw_val in bg_hw_range:
@@ -119,7 +120,15 @@ def reduceJWST(eventlabel):
 
             meta.eventlabel = eventlabel
 
-            util.makedirectory(meta, 'S3', ap=spec_hw_val, bg=bg_hw_val)
+            run = util.makedirectory(meta, 'S3', ap=spec_hw_val, bg=bg_hw_val)
+
+    # begin process
+
+    for spec_hw_val in spec_hw_range:
+
+        for bg_hw_val in bg_hw_range:
+
+            meta.workdir = util.pathdirectory(meta, 'S3', run, ap=spec_hw_val, bg=bg_hw_val)
 
             # Open new log file
             meta.logname = './' + meta.workdir + '/S3_' + meta.eventlabel + ".log"
