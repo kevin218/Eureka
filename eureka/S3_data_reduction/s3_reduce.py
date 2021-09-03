@@ -128,6 +128,10 @@ def reduceJWST(eventlabel):
 
         for bg_hw_val in bg_hw_range:
 
+            meta.spec_hw = spec_hw_val
+
+            meta.bg_hw = bg_hw_val
+
             meta.workdir = util.pathdirectory(meta, 'S3', run, ap=spec_hw_val, bg=bg_hw_val)
 
             event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
