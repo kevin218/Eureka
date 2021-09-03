@@ -130,8 +130,10 @@ def reduceJWST(eventlabel):
 
             meta.workdir = util.pathdirectory(meta, 'S3', run, ap=spec_hw_val, bg=bg_hw_val)
 
+            event_ap_bg = meta.eventlabel + "_ap" + spec_hw_val + '_bg' + bg_hw_val
+
             # Open new log file
-            meta.logname = './' + meta.workdir + '/S3_' + meta.eventlabel + ".log"
+            meta.logname = './' + meta.workdir + '/S3_' + event_ap_bg + ".log"
             log = logedit.Logedit(meta.logname)
             log.writelog("\nStarting Stage 3 Reduction")
 
@@ -263,10 +265,14 @@ def reduceJWST(eventlabel):
                     opterr  = np.append(opterr, data.opterr, axis=0)
                     bjdtdb  = np.append(bjdtdb, data.bjdtdb, axis=0)
 
+            # Calculate total time
+            total = (time.time() - t0) / 60.
+            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+
             # Save results
             if meta.testing_S3 == False:
                 log.writelog('Saving Metadata')
-                me.saveevent(meta, meta.workdir + '/S3_' + meta.eventlabel + "_Meta_Save", save=[])
+                me.saveevent(meta, meta.workdir + '/S3_' + event_ap_bg + "_Meta_Save", save=[])
 
             # Save results
             #log.writelog('Saving results')
@@ -274,7 +280,7 @@ def reduceJWST(eventlabel):
 
             if meta.testing_S3 == False:
                 log.writelog('Saving results as astropy table')
-                tab_filename = meta.workdir + '/S3_' + meta.eventlabel + "_Table_Save.txt"
+                tab_filename = meta.workdir + '/S3_' + event_ap_bg + "_Table_Save.txt"
                 astropytable.savetable_S3(tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
             # Copy ecf
@@ -287,9 +293,5 @@ def reduceJWST(eventlabel):
                 plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
             log.closelog()
-
-        # Calculate total time
-        total = (time.time() - t0) / 60.
-        log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     return data, meta
