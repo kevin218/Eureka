@@ -1,7 +1,8 @@
 import numpy as np
 from importlib import reload
 from . import sort_nicely as sn
-import os
+import os, time
+import re
 
 
 def readfiles(meta):
@@ -63,3 +64,70 @@ def check_nans(data, mask, log, name=''):
         #subdata[inan]  = 0
         mask[inan]  = 0
     return mask
+
+
+def makedirectory(meta, stage, **kwargs):
+    """
+    Creates file directory
+
+    Args:
+        meta: metadata object
+        stage : 'S#' string denoting stage number (i.e. 'S3', 'S4')
+        **kwargs
+
+    Returns:
+        run number
+    """
+
+    # Create directories for Stage 3 processing
+    datetime = time.strftime('%Y-%m-%d')
+
+    workdir = stage + '_' + datetime + '_' + meta.eventlabel +'_'
+
+    for key, value in kwargs.items():
+
+        workdir += key+str(value)+'_'
+
+    workdir += 'run'
+
+    counter=1
+
+    while os.path.exists(workdir+str(counter)):
+        counter += 1
+
+    meta.workdir = workdir+str(counter)
+    if not os.path.exists(meta.workdir):
+        os.makedirs(meta.workdir)
+    if not os.path.exists(meta.workdir + "/figs"):
+        os.makedirs(meta.workdir + "/figs")
+
+    return counter
+
+def pathdirectory(meta, stage, run, **kwargs):
+    """
+    Creates file directory
+
+    Args:
+        meta: metadata object
+        stage : 'S#' string denoting stage number (i.e. 'S3', 'S4')
+        run : run #, output from makedirectory function
+        **kwargs
+
+    Returns:
+        directory path for given parameters
+    """
+
+    # Create directories for Stage 3 processing
+    datetime = time.strftime('%Y-%m-%d')
+
+    workdir = stage + '_' + datetime + '_' + meta.eventlabel +'_'
+
+    for key, value in kwargs.items():
+
+        workdir += key+str(value)+'_'
+
+    workdir += 'run'
+
+    path = workdir+str(run)
+
+    return path
