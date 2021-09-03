@@ -84,6 +84,8 @@ def reduceJWST(eventlabel):
 
     '''
 
+    t0 = time.time()
+
     # Initialize metadata object
     meta = MetaClass()
 
@@ -115,8 +117,6 @@ def reduceJWST(eventlabel):
     for spec_hw_val in spec_hw_range:
 
         for bg_hw_val in bg_hw_range:
-
-            t0 = time.time()
 
             meta.eventlabel = eventlabel
 
@@ -263,10 +263,6 @@ def reduceJWST(eventlabel):
                     opterr  = np.append(opterr, data.opterr, axis=0)
                     bjdtdb  = np.append(bjdtdb, data.bjdtdb, axis=0)
 
-            # Calculate total time
-            total = (time.time() - t0) / 60.
-            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
             # Save results
             if meta.testing_S3 == False:
                 log.writelog('Saving Metadata')
@@ -291,4 +287,9 @@ def reduceJWST(eventlabel):
                 plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
             log.closelog()
+
+        # Calculate total time
+        total = (time.time() - t0) / 60.
+        log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+
     return data, meta
