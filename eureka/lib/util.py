@@ -79,8 +79,6 @@ def makedirectory(meta, stage, **kwargs):
         run number
     """
 
-    t0 = time.time()
-
     # Create directories for Stage 3 processing
     datetime = time.strftime('%Y-%m-%d')
 
@@ -118,8 +116,6 @@ def pathdirectory(meta, stage, run, **kwargs):
     Returns:
         directory path for given parameters
     """
-
-    t0 = time.time()
 
     # Create directories for Stage 3 processing
     datetime = time.strftime('%Y-%m-%d')
