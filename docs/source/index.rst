@@ -30,6 +30,7 @@ The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin21
    ecf
    contribute
    api
+   faq
 
 
 
