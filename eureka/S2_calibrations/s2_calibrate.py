@@ -121,7 +121,7 @@ def calibrate_JWST(filename, do_assignwcs=True, do_extract2d=True, do_srctype=Tr
 			to_remove = to_remove[:-1]
 		elif do_srctype:
 			to_remove = to_remove[:-2]
-		elif do_extact2d:
+		elif do_extract2d:
 			to_remove = to_remove[:-3]
 		else:
 			to_remove = []
