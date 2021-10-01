@@ -45,6 +45,9 @@ def read_niriss(filename, data, meta):
     data.shdr = hdu['SCI'][1].header
 
     data.intend = hdu[0].header['NINTS'] + 0.0
+    data.bjdtbd = np.linspace(data.mhdr['EXPSTART'], 
+                              data.mhdr['EXPEND'], 
+                              data.intend)
 
     # loads all the data into the data object
     data.data = hdu['SCI',1].data
