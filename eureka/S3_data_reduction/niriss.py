@@ -56,6 +56,10 @@ def read_niriss(filename, data, meta):
 
     meta = hdu['ASDF_METADATA',1].data
 
+    # removes NaNs from the data & error arrays
+    data.data[np.isnan(data.data)==True] = 0
+    data.err[ np.isnan(data.err) ==True] = 0
+
     return data, meta
 
 
