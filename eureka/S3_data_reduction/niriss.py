@@ -1,13 +1,21 @@
 # NIRISS specific rountines go here
+#
+#
+# Written by: Adina Feinstein
+# Last updated by: Adina Feinstein
+# Last updated date: October 1, 2021
+#
+#
+
 import numpy as np
 from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
-__all__ = ['create_order_mask']
+__all__ = ['create_niriss_mask']
 
 
-def create_order_mask(imgs, anchors1=None, anchors2=None, plot=False):
+def create_niriss_mask(imgs, anchors1=None, anchors2=None, plot=False):
     """
     This routine takes the output S2 processed images and creates
     a mask for each order. This routine creates a single image from
@@ -41,7 +49,7 @@ def create_order_mask(imgs, anchors1=None, anchors2=None, plot=False):
         poly = np.polyfit(x,y,deg=deg)
         return np.poly1d(poly)
 
-    perc = np.nanpercentile(imgs, percentile=99, axis=0)
+    perc = np.nanpercentile(imgs, q=99, axis=0)
 
     # masks most (not all) cosmic ray outliers
     mask = filters.rank.maximum(perc/np.nanmax(perc),
@@ -59,15 +67,16 @@ def create_order_mask(imgs, anchors1=None, anchors2=None, plot=False):
     edges = (edges-np.nanmax(edges)) * -1
     z = feature.canny(edges)
 
+    x_true = np.arange(0,z.shape[1],1)
     # fits lines to the top and bottom of each order
     y, x = np.indices(z.shape)
     valid_z = z.ravel() == True
     
     # if things go wrong, check here!!
     argsort = np.argsort(x.ravel()[valid_z])
-    valid_x = x.ravel()[valid_z][argsort]
-    valid_y = y.ravel()[valid_z][argsort]
-    valid_z = z.ravel()[valid_z][argsort]
+    x_valid = x.ravel()[valid_z][argsort]
+    y_valid = y.ravel()[valid_z][argsort]
+    z_valid = z.ravel()[valid_z][argsort]
 
     if anchors1 is None:
         anchors1 = [ [0, 1500, z.shape[1]], [80, 35, 70]]
@@ -98,8 +107,8 @@ def create_order_mask(imgs, anchors1=None, anchors2=None, plot=False):
     diff1 = np.nanmax(fits[1]-fits[0])
     
     for i in range(z.shape[1]):
-        img_mask[fits[0][i]:fits[0][i]+diff1,i] = 1
-        img_mask[fits[2][i]:fits[2][i]+diff2,i] = 2
+        img_mask[fits[0][i]:fits[0][i]+diff1,i] += 1
+        img_mask[fits[2][i]:fits[2][i]+diff2,i] += 2
         
 
     return img_mask
