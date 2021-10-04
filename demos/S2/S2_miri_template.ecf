@@ -1,0 +1,19 @@
+# Input and output locations
+filename 			/home/taylor/Downloads/miri_big_file/miri_big_file_1_rateints.fits	# Provide the fully qualified filename
+
+# Controls the cross-dispersion extraction
+slit_y_low			-1
+slit_y_high			50
+
+# Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
+waverange_start		6e-08
+waverange_end		6e-06
+
+# Note: different instruments and modes will use different steps by default
+skip_assign_wcs		False
+skip_extract_2d		False
+skip_srctype		False
+skip_flat_field		True
+skip_photom			False
+skip_extract_1d		False
+save_results		True

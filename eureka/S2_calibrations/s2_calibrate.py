@@ -2,28 +2,57 @@
 
 # Eureka! Stage 2 calibration pipeline
 
-import os, sys
+import os, sys, shutil, time
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import jwst
 from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
+from ..lib import logedit
+from ..lib import util
+
+from ..lib import readECF as rd
+
+class MetaClass:
+    def __init__(self):
+        return
 
 class EurekaS2Pipeline(Spec2Pipeline):
 
-  def run_eureka(self, filename, skip_assign_wcs=False, skip_extract_2d=False, skip_srctype=False,
-                 skip_flat_field=True, skip_photom=False, skip_extract_1d=False, output_dir=None, save_results=True):
+  def run_eurekaS2(self, eventlabel):
 
-    if output_dir==None or len(output_dir)==0:
-      # If there was no output_dir provided, output into the same folder as the input files were in
-      output_dir = '/'.join(filename.split('/')[:-1])
-      if len(output_dir)>0:
-        # Only add a trailing slash if the input file wasn't in the current working directory
-        # (otherwise it'll try to save in the root directory)
-        output_dir += '/'
+    # Initialize metadata object
+    meta = MetaClass()
+    meta.eventlabel = eventlabel
 
-    with fits.open(filename) as hdulist:
+    # Load Eureka! control file and store values in Event object
+    ecffile = 'S2_' + eventlabel + '.ecf'
+    ecf     = rd.read_ecf(ecffile)
+    rd.store_ecf(meta, ecf)
+
+    # Create directories for Stage 2 processing
+    datetime = time.strftime('%Y-%m-%d_%H-%M-%S')
+    run = util.makedirectory(meta, 'S2')
+    meta.workdir = util.pathdirectory(meta, 'S2', run)
+    meta.workdir = './'+meta.workdir+'/'
+    # meta.workdir = os.path.abspath(os.path.expanduser(os.path.expandvars(meta.workdir)))
+    # meta.workdir = '/home/taylor/Downloads/'+meta.workdir
+    # meta.workdir = '/home/taylor/Downloads/'
+    print(meta.workdir)
+    if not os.path.exists(meta.workdir+'figs'):
+        os.makedirs(meta.workdir+'figs')
+
+    # Output S2 log file
+    meta.logname = meta.workdir + 'S2_' + meta.eventlabel + ".log"
+    log = logedit.Logedit(meta.logname)
+    log.writelog("\nStarting Stage 2 Reduction")
+
+    # Copy ecf
+    log.writelog('Copying S2 control file')
+    shutil.copy(ecffile, meta.workdir)
+
+    with fits.open(meta.filename) as hdulist:
       # Figure out which instrument we are using
       inst = hdulist[0].header['INSTRUME']
       if inst == 'NIRSPEC':
@@ -34,29 +63,29 @@ class EurekaS2Pipeline(Spec2Pipeline):
 
     if inst == 'NIRSPEC' and grating == 'PRISM':
       #Controls the cross-dispersion extraction
-      self.assign_wcs.slit_y_low = -1
-      self.assign_wcs.slit_y_high = 50
+      self.assign_wcs.slit_y_low = meta.slit_y_low
+      self.assign_wcs.slit_y_high = meta.slit_y_high
       # Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
-      with datamodels.open(filename) as m:
+      with datamodels.open(meta.filename) as m:
         #Control the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
-        m.meta.wcsinfo.waverange_start = 6e-08
-        m.meta.wcsinfo.waverange_end = 6e-06
-        m.save(filename)
+        m.meta.wcsinfo.waverange_start = meta.waverange_start
+        m.meta.wcsinfo.waverange_end = meta.waverange_end
+        m.save(meta.filename)
     elif inst == 'NIRSPEC':
       raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!")
 
     # FIX: This will likely overwritten by the cfg file later on
-    self.assign_wcs.skip = skip_assign_wcs
-    self.extract_2d.skip = skip_extract_2d
-    self.srctype.skip = skip_srctype
-    self.flat_field.skip = skip_flat_field
-    self.photom.skip = skip_photom
-    self.extract_1d.skip = skip_extract_1d
+    self.assign_wcs.skip = meta.skip_assign_wcs
+    self.extract_2d.skip = meta.skip_extract_2d
+    self.srctype.skip = meta.skip_srctype
+    self.flat_field.skip = meta.skip_flat_field
+    self.photom.skip = meta.skip_photom
+    self.extract_1d.skip = meta.skip_extract_1d
 
-    self.call(filename, output_dir=output_dir, save_results=save_results)
+    self.call(meta.filename, output_dir=meta.workdir, save_results=True)
 
-    if save_results:
-      with datamodels.open(output_dir+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints.fits') as sp1d:
+    if meta.save_results:
+      with datamodels.open(meta.workdir+'_'.join(meta.filename.split('/')[-1].split('_')[:-1])+'_x1dints.fits') as sp1d:
         fig, ax = plt.subplots(1,1, figsize=[15,5])
         
         for i in range(len(sp1d.spec)):
@@ -65,18 +94,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
         plt.title('Time Series Observation: Extracted spectra')
         plt.xlabel('Wavelenth (micron)')
         plt.ylabel('Flux')
-        plt.savefig(output_dir+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints.png', bbox_inches='tight', dpi=300)
+        plt.savefig(meta.workdir+'figs/'+'_'.join(meta.filename.split('/')[-1].split('_')[:-1])+'_x1dints.png', bbox_inches='tight', dpi=300)
         plt.close()
 
-def main(filename):
-  pipeline = EurekaS2Pipeline()
-  # FIX: Check ecf file to get skip booleans and enter them here
-  pipeline.run_eureka(filename)
-
-if __name__ == "__main__":
-    args = sys.argv[1:]
-    if len(args)==1:
-      filename = args
-    else:
-      raise ValueError('You must enter the science filename! (expected 1 arg, got {})'.format(len(args)))
-    main(filename)
+    return meta
