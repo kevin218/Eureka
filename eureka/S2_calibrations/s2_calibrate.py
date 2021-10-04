@@ -114,7 +114,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
         inst = hdulist[0].header['INSTRUME']
         if inst == 'NIRSPEC':
           # Figure out what grating and filter we're using
-          # Needed to change the aperture used for NIRSpec outputs
+          # (needed to change the aperture used for NIRSpec outputs)
           grating = hdulist[0].header['GRATING']
           filt = hdulist[0].header['FILTER']
 
@@ -134,12 +134,23 @@ class EurekaS2Pipeline(Spec2Pipeline):
 
       # FIX: This may be overwritten by a cfg file or similar later on
       self.assign_wcs.skip = meta.skip_assign_wcs
+      self.bkg_subtract.skip = meta.skip_bkg_subtract
+      self.imprint_subtract.skip = meta.skip_imprint_subtract
+      self.msa_flagging.skip = meta.skip_msa_flagging
       self.extract_2d.skip = meta.skip_extract_2d
       self.srctype.skip = meta.skip_srctype
+      self.master_background.skip = meta.skip_master_background
+      self.wavecorr.skip = meta.skip_wavecorr
       self.flat_field.skip = meta.skip_flat_field
+      self.straylight.skip = meta.skip_straylight
+      self.fringe.skip = meta.skip_fringe
+      self.pathloss.skip = meta.skip_pathloss
+      self.barshadow.skip = meta.skip_barshadow
       self.photom.skip = meta.skip_photom
+      self.resample_spec.skip = meta.skip_resample_spec
+      self.cube_build.skip = meta.skip_cube_build
       self.extract_1d.skip = meta.skip_extract_1d
-
+      
       # Call the main Spec2Pipeline function (defined in the parent class)
       log.writelog('Running the Spec2Pipeline')
       self.call(filename, output_dir=meta.workdir, save_results=(not meta.testing_S2))

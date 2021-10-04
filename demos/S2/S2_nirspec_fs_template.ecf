@@ -1,0 +1,36 @@
+# Controls the cross-dispersion extraction
+slit_y_low			-1
+slit_y_high			50
+
+# Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
+waverange_start		6e-08
+waverange_end		6e-06
+
+# Note: different instruments and modes will use different steps by default
+skip_assign_wcs			False	# Pipeline cannot be run without this step
+skip_bkg_subtract		False
+skip_imprint_subtract	True	# Not run for NIRSpec Fixed Slit
+skip_msa_flagging		True	# Not run for NIRSpec Fixed Slit
+skip_extract_2d			False
+skip_srctype			False
+skip_master_background	True	# Not run for NIRSpec Fixed Slit
+skip_wavecorr			False
+skip_flat_field			False
+skip_straylight			True	# Not run for NIRSpec Fixed Slit
+skip_fringe				True	# Not run for NIRSpec Fixed Slit
+skip_pathloss			False
+skip_barshadow			True	# Not run for NIRSpec Fixed Slit
+skip_photom				False
+skip_resample_spec		False
+skip_cube_build			True	# Not run for NIRSpec Fixed Slit
+skip_extract_1d			False
+
+# Diagnostics
+testing_S2 			False
+
+# Project directory
+topdir      /home/taylor/Documents/Research/JWST/ERS
+
+# Directories relative to project dir
+datadir     /NIRSpec/Stage1_Output
+outputdir	/NIRSpec/Stage2_Output
