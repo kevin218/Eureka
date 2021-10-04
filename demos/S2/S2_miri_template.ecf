@@ -1,6 +1,3 @@
-# Input and output locations
-filename 			/home/taylor/Downloads/miri_big_file/miri_big_file_1_rateints.fits	# Provide the fully qualified filename
-
 # Controls the cross-dispersion extraction
 slit_y_low			-1
 slit_y_high			50
@@ -16,4 +13,13 @@ skip_srctype		False
 skip_flat_field		True
 skip_photom			False
 skip_extract_1d		False
-save_results		True
+
+# Diagnostics
+testing_S2 			True
+
+# Project directory
+topdir      /home/taylor/Documents/Research/JWST/ERS
+
+# Directories relative to project dir
+datadir     /MIRI/Stage1_Output
+outputdir	/MIRI/Stage2_Output
