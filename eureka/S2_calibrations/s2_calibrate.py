@@ -132,7 +132,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
       elif inst == 'NIRSPEC':
         raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!")
 
-      # FIX: This may be overwritten by a cfg file or similar later on
+      # FIX: This is overwritten by a cfg file or something similar later on!
       self.assign_wcs.skip = meta.skip_assign_wcs
       self.bkg_subtract.skip = meta.skip_bkg_subtract
       self.imprint_subtract.skip = meta.skip_imprint_subtract
