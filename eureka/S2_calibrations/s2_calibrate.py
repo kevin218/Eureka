@@ -64,19 +64,12 @@ class EurekaS2Pipeline(Spec2Pipeline):
     rd.store_ecf(meta, ecf)
 
     # Create directories for Stage 2 processing outputs
-    # This tempdir code allows the input and output files to be stored outside of the Eureka! folder
-    tempdir = meta.topdir
-    # Do some annoying stuff to make sure we end up with a valid path
-    if tempdir[-1]=='/':
-      tempdir = tempdir[:-1]
-    if meta.outputdir[0]=='/':
-      tempdir += meta.outputdir
-    else:
-      tempdir += '/'+meta.outputdir
-    if tempdir[-1]!='/':
-      tempdir += '/'
-    run = util.makedirectory(meta, tempdir+'S2')
-    meta.workdir = util.pathdirectory(meta, tempdir+'S2', run)
+    # This code allows the input and output files to be stored outside of the Eureka! folder
+    outputdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
+    if outputdir[-1]!='/':
+      outputdir += '/'
+    run = util.makedirectory(meta, outputdir+'S2')
+    meta.workdir = util.pathdirectory(meta, outputdir+'S2', run)
     # Add a trailing slash so we don't need to add it everywhere below
     meta.workdir += '/'
     # Make a separate folder for plot outputs
