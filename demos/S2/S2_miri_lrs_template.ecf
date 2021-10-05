@@ -31,5 +31,5 @@ testing_S2 			False
 topdir      /home/taylor/Documents/Research/JWST/ERS
 
 # Directories relative to project dir
-datadir     /miri_big_file/Stage1_Output
-outputdir	/miri_big_file/Stage2_Output
+datadir     /MIRI/Stage1_Output
+outputdir	/MIRI/Stage2_Output
