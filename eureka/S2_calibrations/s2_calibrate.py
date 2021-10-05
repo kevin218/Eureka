@@ -152,6 +152,8 @@ class EurekaS2Pipeline(Spec2Pipeline):
       # Save outputs if requested to the folder specified in the ecf
       self.save_results = (not meta.testing_S2)
       self.output_dir = meta.workdir
+      # This needs to be reset to None to permit the pipeline to be run on multiple files
+      self.suffix = None
 
       # Call the main Spec2Pipeline function (defined in the parent class)
       log.writelog('Running the Spec2Pipeline')
