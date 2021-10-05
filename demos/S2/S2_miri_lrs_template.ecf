@@ -7,7 +7,6 @@ waverange_start		None
 waverange_end		None
 
 # Note: different instruments and modes will use different steps by default
-skip_assign_wcs			False	# Pipeline cannot be run without this step
 skip_bkg_subtract		True	# Not run for MIRI LRS Slitless
 skip_imprint_subtract	True	# Not run for MIRI LRS Slitless
 skip_msa_flagging		True	# Not run for MIRI LRS Slitless
@@ -32,5 +31,5 @@ testing_S2 			False
 topdir      /home/taylor/Documents/Research/JWST/ERS
 
 # Directories relative to project dir
-datadir     /MIRI/Stage1_Output
-outputdir	/MIRI/Stage2_Output
+datadir     /miri_big_file/Stage1_Output
+outputdir	/miri_big_file/Stage2_Output

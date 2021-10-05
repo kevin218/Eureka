@@ -119,12 +119,12 @@ class EurekaS2Pipeline(Spec2Pipeline):
           filt = hdulist[0].header['FILTER']
 
       if inst == 'NIRSPEC' and grating == 'PRISM':
-        #Controls the cross-dispersion extraction
+        #Controls the cross-dispersion extraction - FIX: check if this is overridden
         self.assign_wcs.slit_y_low = meta.slit_y_low
         self.assign_wcs.slit_y_high = meta.slit_y_high
-        # Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
+        # Modify the existing file to broaden the dispersion extraction
         with datamodels.open(filename) as m:
-          #Control the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
+          #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
           log.writelog('Editing (in place) the waverange in the input file')
           m.meta.wcsinfo.waverange_start = meta.waverange_start
           m.meta.wcsinfo.waverange_end = meta.waverange_end
@@ -132,8 +132,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
       elif inst == 'NIRSPEC':
         raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!")
 
-      # FIX: This is overwritten by a cfg file or something similar later on!
-      self.assign_wcs.skip = meta.skip_assign_wcs
+      # Skip steps according to input ecf file
       self.bkg_subtract.skip = meta.skip_bkg_subtract
       self.imprint_subtract.skip = meta.skip_imprint_subtract
       self.msa_flagging.skip = meta.skip_msa_flagging
@@ -150,13 +149,17 @@ class EurekaS2Pipeline(Spec2Pipeline):
       self.resample_spec.skip = meta.skip_resample_spec
       self.cube_build.skip = meta.skip_cube_build
       self.extract_1d.skip = meta.skip_extract_1d
-      
+      # Save outputs if requested to the folder specified in the ecf
+      self.save_results = (not meta.testing_S2)
+      self.output_dir = meta.workdir
+
       # Call the main Spec2Pipeline function (defined in the parent class)
       log.writelog('Running the Spec2Pipeline')
-      self.call(filename, output_dir=meta.workdir, save_results=(not meta.testing_S2))
+      # Must call the pipeline in this way to ensure the skip booleans are respected
+      self(filename)
 
       # Produce some summary plots if requested
-      if not meta.testing_S2:
+      if not meta.testing_S2 and not self.extract_1d.skip:
         log.writelog('Generating x1dints figure')
         with datamodels.open(meta.workdir+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints.fits') as sp1d:
           fig, ax = plt.subplots(1,1, figsize=[15,5])

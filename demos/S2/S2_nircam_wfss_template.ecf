@@ -7,8 +7,7 @@ waverange_start		None
 waverange_end		None
 
 # Note: different instruments and modes will use different steps by default
-skip_assign_wcs			False	# Pipeline cannot be run without this step
-skip_bkg_subtract		False
+skip_bkg_subtract		False	# Not run for TSO observations
 skip_imprint_subtract	True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_msa_flagging		True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_extract_2d			False
