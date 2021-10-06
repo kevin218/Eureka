@@ -3,6 +3,7 @@
 __all__ = ["lib", "S3_data_reduction", "S4_generate_lightcurves", "S5_lightcurve_fitting"]
 
 from . import lib
+from . import S1_detector_processing
 from . import S3_data_reduction
 from . import S4_generate_lightcurves
 from . import S5_lightcurve_fitting    
