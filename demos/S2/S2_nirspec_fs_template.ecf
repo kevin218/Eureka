@@ -1,3 +1,5 @@
+# Eureka! Control File for Stage 2: Data Reduction
+
 # Controls the cross-dispersion extraction
 slit_y_low			-1
 slit_y_high			50
