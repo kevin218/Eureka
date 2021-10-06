@@ -30,8 +30,8 @@ skip_extract_1d			False
 testing_S2 			False
 
 # Project directory
-topdir      /home/taylor/Documents/Research/JWST/ERS
+topdir      /home/User/
 
 # Directories relative to project dir
-datadir     /MIRI/Stage1_Output
-outputdir	/MIRI/Stage2_Output
+datadir     /Data/JWST-Sim/MIRI/Stage1
+outputdir	/Data/JWST-Sim/MIRI/Stage2

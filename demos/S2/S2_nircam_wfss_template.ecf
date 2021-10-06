@@ -30,8 +30,8 @@ skip_extract_1d			False
 testing_S2 			False
 
 # Project directory
-topdir      /home/taylor/Documents/Research/JWST/ERS
+topdir      /home/User/
 
 # Directories relative to project dir
-datadir     /NIRCam/Stage1_Output
-outputdir	/NIRCam/Stage2_Output
+datadir     /Data/JWST-Sim/NIRCam/Stage1
+outputdir	/Data/JWST-Sim/NIRCam/Stage2
