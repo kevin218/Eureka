@@ -24,55 +24,43 @@
 # 17. Produce plots DONE
 """
 
-import os, time
+import os, time, shutil
 import numpy as np
-import shutil
+from importlib import reload
+from astropy.io import fits
 from . import optspex
 from . import plots_s3, source_pos
 from . import background as bg
+from . import bright2flux as b2f
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
-from . import bright2flux as b2f
-from importlib import reload
-reload(b2f)
-reload(optspex)
-reload(bg)
-reload(source_pos)
 
 
 class MetaClass:
     def __init__(self):
-        # initialize Univ
-        # Univ.__init__(self)
-        # self.initpars(ecf)
-        # self.foo = 2
         return
 
 
 class DataClass:
     def __init__(self):
-        # initialize Univ
-        # Univ.__init__(self)
-        # self.initpars(ecf)
-        # self.foo = 2
         return
 
 
-def reduceJWST(eventlabel):
+def reduceJWST(eventlabel, s2_meta=None):
     '''
     Reduces data images and calculated optimal spectra.
 
     Parameters
     ----------
-    eventlabel  : str, Unique label for this dataset
+    eventlabel  : Unique identifier for these data
+    s2_meta     : Metadata object from Eureka!'s S2 step
 
     Returns
     -------
-    meta          : Metadata object
-    data         : Data object
+    meta        : Metadata object
 
     Remarks
     -------
@@ -86,20 +74,50 @@ def reduceJWST(eventlabel):
 
     t0 = time.time()
 
-    # Initialize metadata object
-    meta = MetaClass()
-
     # Initialize data object
     data = DataClass()
+
+    # Initialize a new metadata object
+    meta = MetaClass()
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
+    
+    # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
+    if s2_meta == None:
+        # FIX - add use_s2 boolean to s3 ecf file
 
-    # Load instrument module
-    exec('from . import ' + meta.inst + ' as inst', globals())
-    reload(inst)
+        # FIX - do some kind of glob to search for the S2 output after loading in the ecf
+        fname = None
+
+        if os.path.isfile(fname):
+            s2_meta = me.load(fname)
+        else:
+            raise AssertionError("Unable to find an output metadata file from Eureka!'s S2 step!")
+    
+    # Locate the exact output folder from the previous S2 run (since there is a procedurally generated subdirectory for each run)
+    if s2_meta != None:
+        # Need to remove the topdir from the workdir
+        if os.path.isdir(s2_meta.workdir):
+            tempdir = s2_meta.workdir[len(s2_meta.topdir):]
+            if tempdir[0]=='/':
+                tempdir = tempdir[1:]
+
+            meta = s2_meta
+
+            # Load Eureka! control file and store values in the S2 metadata object
+            ecffile = 'S3_' + eventlabel + '.ecf'
+            ecf = rd.read_ecf(ecffile)
+            rd.store_ecf(meta, ecf)
+
+            # Overwrite the datadir with the exact output directory from S2
+            meta.datadir = tempdir
+            # FIX - overwrite the datadir line in the ecf that gets copied into meta.workdir
+        else:
+            raise AssertionError("Unable to find a output data files from Eureka!'s S2 step!\n"
+                                 + "Looked in folder {}".format(s2_meta.workdir))
 
     # check for range of spectral apertures
     if isinstance(meta.spec_hw, list):
@@ -114,16 +132,17 @@ def reduceJWST(eventlabel):
         bg_hw_range = [meta.bg_hw]
 
     # create directories to store data
+    runs = [] # Used to make sure we're always looking at the right run for each aperture/annulus pair
     for spec_hw_val in spec_hw_range:
 
         for bg_hw_val in bg_hw_range:
 
             meta.eventlabel = eventlabel
 
-            run = util.makedirectory(meta, 'S3', ap=spec_hw_val, bg=bg_hw_val)
+            runs.append(util.makedirectory(meta, 'S3', ap=spec_hw_val, bg=bg_hw_val))
 
     # begin process
-
+    run_i = 0
     for spec_hw_val in spec_hw_range:
 
         for bg_hw_val in bg_hw_range:
@@ -132,19 +151,52 @@ def reduceJWST(eventlabel):
 
             meta.bg_hw = bg_hw_val
 
-            meta.workdir = util.pathdirectory(meta, 'S3', run, ap=spec_hw_val, bg=bg_hw_val)
+            meta.workdir = util.pathdirectory(meta, 'S3', runs[run_i], ap=spec_hw_val, bg=bg_hw_val)
+            run_i += 1
 
             event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
 
             # Open new log file
-            meta.logname = './' + meta.workdir + '/S3_' + event_ap_bg + ".log"
+            meta.logname = meta.workdir + 'S3_' + event_ap_bg + ".log"
             log = logedit.Logedit(meta.logname)
             log.writelog("\nStarting Stage 3 Reduction")
+            log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
+
+            # Copy ecf (and update datadir in case S3 is being called sequentially with S2)
+            log.writelog('Copying S3 control file')
+            # shutil.copy(ecffile, meta.workdir)
+            new_ecfname = meta.workdir + ecffile.split('/')[-1]
+            with open(new_ecfname, 'w') as new_file:
+                with open(ecffile, 'r') as file:
+                    for line in file.readlines():
+                        if len(line.strip())==0 or line.strip()[0]=='#':
+                            new_file.write(line)
+                        else:
+                            line_segs = line.strip().split()
+                            if line_segs[0]=='datadir':
+                                new_file.write(line_segs[0]+'\t\t/'+meta.datadir+'\t'+' '.join(line_segs[2:])+'\n')
+                            else:
+                                new_file.write(line)
 
             # Create list of file segments
             meta = util.readfiles(meta)
             num_data_files = len(meta.segment_list)
             log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
+
+            with fits.open(meta.segment_list[-1]) as hdulist:
+                # Figure out which instrument we are using
+                meta.inst = hdulist[0].header['INSTRUME'].lower()
+            # Load instrument module
+            if meta.inst == 'miri':
+                from . import miri as inst
+            elif meta.inst == 'nircam':
+                from . import nircam as inst
+            elif meta.inst == 'nirspec':
+                from . import nirspec as inst
+            elif meta.inst == 'niriss':
+                raise ValueError('NIRISS observations are currently unsupported!')
+            else:
+                raise ValueError('Unknown instrument {}'.format(meta.inst))
 
             stdspec = np.array([])
             # Loop over each segment
@@ -154,6 +206,11 @@ def reduceJWST(eventlabel):
             else:
                 istart = 0
             for m in range(istart, num_data_files):
+                # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
+                if m==istart:
+                    meta.firstFile = True
+                else:
+                    meta.firstFile = False
                 # Report progress
                 log.writelog(f'Reading file {m + 1} of {num_data_files}')
                 # Read in data frame and header
@@ -276,20 +333,12 @@ def reduceJWST(eventlabel):
             # Save results
             if meta.testing_S3 == False:
                 log.writelog('Saving Metadata')
-                me.saveevent(meta, meta.workdir + '/S3_' + event_ap_bg + "_Meta_Save", save=[])
-
-            # Save results
-            #log.writelog('Saving results')
-            #me.saveevent(data, meta.workdir + '/S3_' + meta.eventlabel + "_Data_Save", save=[])
+                me.saveevent(meta, meta.workdir + 'S3_' + event_ap_bg + "_Meta_Save", save=[])
 
             if meta.testing_S3 == False:
                 log.writelog('Saving results as astropy table')
-                tab_filename = meta.workdir + '/S3_' + event_ap_bg + "_Table_Save.txt"
+                tab_filename = meta.workdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
                 astropytable.savetable_S3(tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
-
-            # Copy ecf
-            log.writelog('Copying S3 control file')
-            shutil.copy(ecffile, meta.workdir)
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
@@ -298,4 +347,4 @@ def reduceJWST(eventlabel):
 
             log.closelog()
 
-    return data, meta
+    return meta
