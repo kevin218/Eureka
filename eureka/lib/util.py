@@ -84,7 +84,6 @@ def makedirectory(meta, stage, **kwargs):
         run number
     """
 
-    # Create directories for Stage 3 processing
     datetime = time.strftime('%Y-%m-%d')
 
     # This code allows the input and output files to be stored outside of the Eureka! folder
@@ -127,7 +126,6 @@ def pathdirectory(meta, stage, run, **kwargs):
         directory path for given parameters
     """
 
-    # Create directories for Stage 3 processing
     datetime = time.strftime('%Y-%m-%d')
 
     # This code allows the input and output files to be stored outside of the Eureka! folder

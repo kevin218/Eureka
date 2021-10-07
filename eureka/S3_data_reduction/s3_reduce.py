@@ -24,9 +24,8 @@
 # 17. Produce plots DONE
 """
 
-import os, time, shutil
+import os, time, glob
 import numpy as np
-from importlib import reload
 from astropy.io import fits
 from . import optspex
 from . import plots_s3, source_pos
@@ -69,6 +68,7 @@ def reduceJWST(eventlabel, s2_meta=None):
     History
     -------
     Written by Kevin Stevenson      May 2021
+    Updated by Taylor Bell          October 2021
 
     '''
 
@@ -87,15 +87,23 @@ def reduceJWST(eventlabel, s2_meta=None):
     
     # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
-        # FIX - add use_s2 boolean to s3 ecf file
+        # Search for the S2 output metadata in the datadir provided in 
+        fnames = glob.glob(meta.datadir+'**/S2_'+meta.eventlabel+'_Meta_Save.dat', recursive=True)
 
-        # FIX - do some kind of glob to search for the S2 output after loading in the ecf
-        fname = None
-
-        if os.path.isfile(fname):
-            s2_meta = me.load(fname)
+        if len(fnames)==0:
+            # There may be no metafiles in the datadir - raise an error and give a helpful message
+            print('WARNING: Unable to find an output metadata file from Eureka!\'s S2 step'
+                 +'in the datadir {}!'.format(meta.datadir))
+            print('Assuming this S2 data was produced by the JWST pipeline instead.')
         else:
-            raise AssertionError("Unable to find an output metadata file from Eureka!'s S2 step!")
+            if len(fnames)>1:
+                # There may be multiple runs - use the most recent but warn the user
+                print('WARNING: There are multiple metadata save files in your datadir {}\n'.format(meta.datadir)
+                    +'         Using the metadata file {}'.format(fnames[-1]))
+        
+            fname = fnames[-1]
+
+            s2_meta = me.load(fname)
     
     # Locate the exact output folder from the previous S2 run (since there is a procedurally generated subdirectory for each run)
     if s2_meta != None:
@@ -114,9 +122,8 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Overwrite the datadir with the exact output directory from S2
             meta.datadir = tempdir
-            # FIX - overwrite the datadir line in the ecf that gets copied into meta.workdir
         else:
-            raise AssertionError("Unable to find a output data files from Eureka!'s S2 step!\n"
+            raise AssertionError("Unable to find output data files from Eureka!'s S2 step!\n"
                                  + "Looked in folder {}".format(s2_meta.workdir))
 
     # check for range of spectral apertures
@@ -164,7 +171,6 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Copy ecf (and update datadir in case S3 is being called sequentially with S2)
             log.writelog('Copying S3 control file')
-            # shutil.copy(ecffile, meta.workdir)
             new_ecfname = meta.workdir + ecffile.split('/')[-1]
             with open(new_ecfname, 'w') as new_file:
                 with open(ecffile, 'r') as file:
@@ -337,8 +343,8 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             if meta.testing_S3 == False:
                 log.writelog('Saving results as astropy table')
-                tab_filename = meta.workdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
-                astropytable.savetable_S3(tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
+                meta.tab_filename = meta.workdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
+                astropytable.savetable_S3(meta.tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
