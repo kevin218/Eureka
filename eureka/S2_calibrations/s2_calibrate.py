@@ -104,11 +104,11 @@ class EurekaS2Pipeline(Spec2Pipeline):
           filt = hdulist[0].header['FILTER']
 
       if meta.slit_y_low != None:
-        #Controls the cross-dispersion extraction - FIX: check if this is overridden
+        #Controls the cross-dispersion extraction
         self.assign_wcs.slit_y_low = meta.slit_y_low
 
       if meta.slit_y_high != None:
-        #Controls the cross-dispersion extraction - FIX: check if this is overridden
+        #Controls the cross-dispersion extraction
         self.assign_wcs.slit_y_high = meta.slit_y_high
 
       if meta.waverange_start != None:
