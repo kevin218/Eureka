@@ -15,10 +15,15 @@ def readfiles(meta):
     Returns:
         meta: metadata object but adds segment_list to metadata containing the sorted data fits files
     """
+
+    rootdir = os.path.join(meta.topdir, *meta.datadir.split(os.sep))
+    if rootdir[-1]!='/':
+      rootdir += '/'
+
     meta.segment_list = []
-    for fname in os.listdir(meta.topdir + meta.datadir):
+    for fname in os.listdir(rootdir):
         if fname.endswith(meta.suffix + '.fits'):
-            meta.segment_list.append(meta.topdir + meta.datadir +'/'+ fname)
+            meta.segment_list.append(rootdir + fname)
     meta.segment_list = sn.sort_nicely(meta.segment_list)
     return meta
 
@@ -82,7 +87,12 @@ def makedirectory(meta, stage, **kwargs):
     # Create directories for Stage 3 processing
     datetime = time.strftime('%Y-%m-%d')
 
-    workdir = stage + '_' + datetime + '_' + meta.eventlabel +'_'
+    # This code allows the input and output files to be stored outside of the Eureka! folder
+    rootdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
+    if rootdir[-1]!='/':
+      rootdir += '/'
+
+    workdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_'
 
     for key, value in kwargs.items():
 
@@ -95,11 +105,11 @@ def makedirectory(meta, stage, **kwargs):
     while os.path.exists(workdir+str(counter)):
         counter += 1
 
-    meta.workdir = workdir+str(counter)
+    meta.workdir = workdir+str(counter)+'/'
     if not os.path.exists(meta.workdir):
         os.makedirs(meta.workdir)
-    if not os.path.exists(meta.workdir + "/figs"):
-        os.makedirs(meta.workdir + "/figs")
+    if not os.path.exists(meta.workdir + "figs"):
+        os.makedirs(meta.workdir + "figs")
 
     return counter
 
@@ -120,7 +130,12 @@ def pathdirectory(meta, stage, run, **kwargs):
     # Create directories for Stage 3 processing
     datetime = time.strftime('%Y-%m-%d')
 
-    workdir = stage + '_' + datetime + '_' + meta.eventlabel +'_'
+    # This code allows the input and output files to be stored outside of the Eureka! folder
+    rootdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
+    if rootdir[-1]!='/':
+      rootdir += '/'
+
+    workdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_'
 
     for key, value in kwargs.items():
 
@@ -128,6 +143,6 @@ def pathdirectory(meta, stage, run, **kwargs):
 
     workdir += 'run'
 
-    path = workdir+str(run)
+    path = workdir+str(run)+'/'
 
     return path

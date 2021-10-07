@@ -22,9 +22,11 @@ from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 
+
 class MetaClass:
     def __init__(self):
         return
+
 
 class EurekaS2Pipeline(Spec2Pipeline):
 
@@ -56,7 +58,6 @@ class EurekaS2Pipeline(Spec2Pipeline):
     # Initialize metadata object
     meta = MetaClass()
     meta.eventlabel = eventlabel
-    meta.suffix = 'rateints'  # This will break for any instruments/observations that do not result in rateints
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S2_' + eventlabel + '.ecf'
@@ -64,17 +65,8 @@ class EurekaS2Pipeline(Spec2Pipeline):
     rd.store_ecf(meta, ecf)
 
     # Create directories for Stage 2 processing outputs
-    # This code allows the input and output files to be stored outside of the Eureka! folder
-    outputdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
-    if outputdir[-1]!='/':
-      outputdir += '/'
-    run = util.makedirectory(meta, outputdir+'S2')
-    meta.workdir = util.pathdirectory(meta, outputdir+'S2', run)
-    # Add a trailing slash so we don't need to add it everywhere below
-    meta.workdir += '/'
-    # Make a separate folder for plot outputs
-    if not os.path.exists(meta.workdir+'figs'):
-        os.makedirs(meta.workdir+'figs')
+    run = util.makedirectory(meta, 'S2')
+    meta.workdir = util.pathdirectory(meta, 'S2', run)
 
     # Output S2 log file
     meta.logname = meta.workdir + 'S2_' + meta.eventlabel + ".log"
@@ -111,20 +103,30 @@ class EurekaS2Pipeline(Spec2Pipeline):
           grating = hdulist[0].header['GRATING']
           filt = hdulist[0].header['FILTER']
 
-      if inst == 'NIRSPEC' and grating == 'PRISM':
+      if meta.slit_y_low != None:
         #Controls the cross-dispersion extraction - FIX: check if this is overridden
         self.assign_wcs.slit_y_low = meta.slit_y_low
+
+      if meta.slit_y_high != None:
+        #Controls the cross-dispersion extraction - FIX: check if this is overridden
         self.assign_wcs.slit_y_high = meta.slit_y_high
-        # Modify the existing file to broaden the dispersion extraction
+
+      if meta.waverange_start != None:
+        #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
+        log.writelog('Editing (in place) the waverange in the input file')
         with datamodels.open(filename) as m:
-          #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
-          log.writelog('Editing (in place) the waverange in the input file')
           m.meta.wcsinfo.waverange_start = meta.waverange_start
+          m.save(filename)
+
+      if meta.waverange_end != None:
+        #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
+        if meta.waverange_start == None:
+          # Only log this once
+          log.writelog('Editing (in place) the waverange in the input file')
+        with datamodels.open(filename) as m:
           m.meta.wcsinfo.waverange_end = meta.waverange_end
           m.save(filename)
-      elif inst == 'NIRSPEC':
-        raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!")
-
+      
       # Skip steps according to input ecf file
       self.bkg_subtract.skip = meta.skip_bkg_subtract
       self.imprint_subtract.skip = meta.skip_imprint_subtract
@@ -155,7 +157,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
 
       # Produce some summary plots if requested
       if not meta.testing_S2 and not self.extract_1d.skip:
-        log.writelog('Generating x1dints figure')
+        log.writelog('\nGenerating x1dints figure')
         with datamodels.open(meta.workdir+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints.fits') as sp1d:
           fig, ax = plt.subplots(1,1, figsize=[15,5])
           

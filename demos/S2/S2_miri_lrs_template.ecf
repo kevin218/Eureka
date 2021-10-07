@@ -1,12 +1,14 @@
 # Eureka! Control File for Stage 2: Data Reduction
 
+suffix      rateints     # Data file suffix
+
 # Controls the cross-dispersion extraction
-slit_y_low			None
-slit_y_high			None
+slit_y_low			None	# Use None to rely on the default parameters
+slit_y_high			None	# Use None to rely on the default parameters
 
 # Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
-waverange_start		None
-waverange_end		None
+waverange_start		None	# Use None to rely on the default parameters
+waverange_end		None	# Use None to rely on the default parameters
 
 # Note: different instruments and modes will use different steps by default
 skip_bkg_subtract		True	# Not run for MIRI LRS Slitless
