@@ -2,7 +2,7 @@
 
 ncpu        1           # Number of CPUs
 suffix      calints     # Data file suffix
-use_s2		Faslse		# Boolean; whether or not you want to use the outputs from Eureka!'s S2 step (otherwise use S2 outputs in datadir)
+use_s2		False		# Boolean; whether or not you want to use the outputs from Eureka!'s S2 step (otherwise use S2 outputs in datadir)
 
 # Subarray region of interest
 ywindow     [5,64]      # Vertical axis as seen in DS9
