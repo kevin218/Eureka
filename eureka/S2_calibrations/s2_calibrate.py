@@ -158,7 +158,8 @@ class EurekaS2Pipeline(Spec2Pipeline):
       # Produce some summary plots if requested
       if not meta.testing_S2 and not self.extract_1d.skip:
         log.writelog('\nGenerating x1dints figure')
-        with datamodels.open(meta.workdir+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints.fits') as sp1d:
+        fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
+        with datamodels.open(meta.workdir+fname+'.fits') as sp1d:
           fig, ax = plt.subplots(1,1, figsize=[15,5])
           
           for i in range(len(sp1d.spec)):
@@ -167,7 +168,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
           plt.title('Time Series Observation: Extracted spectra')
           plt.xlabel('Wavelenth (micron)')
           plt.ylabel('Flux')
-          plt.savefig(meta.workdir+'figs/'+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints.png', bbox_inches='tight', dpi=300)
+          plt.savefig(meta.workdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
           plt.close()
 
     # Calculate total run time
