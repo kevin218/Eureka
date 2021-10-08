@@ -2,133 +2,182 @@
 
 # Eureka! Stage 2 calibration pipeline
 
-import os
+"""
+# Proposed Steps
+# -------- -----
+# 1.  Read in Stage 1 data products
+# 2.  Change default trimming if needed
+# 3.  Run the JWST pipeline with any requested modifications
+# 4.  Save Stage 2 data products
+# 5.  Produce plots
+"""
+
+import os, sys, shutil, time
 import numpy as np
+import matplotlib.pyplot as plt
 from astropy.io import fits
-import jwst
-from jwst import datamodels, assign_wcs, extract_2d, srctype, photom, flatfield
-
-# class MetaClass:
-#     def __init__(self):
-#         # initialize Univ
-#         # Univ.__init__(self)
-#         # self.initpars(ecf)
-#         # self.foo = 2
-#         return
-# 
-#
-# class DataClass:
-#     def __init__(self):
-#         # initialize Univ
-#         # Univ.__init__(self)
-#         # self.initpars(ecf)
-#         # self.foo = 2
-#         return
+from jwst import datamodels
+from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
+from ..lib import logedit, util
+from ..lib import manageevent as me
+from ..lib import readECF as rd
 
 
-def calibrate_JWST(filename, do_assignwcs=True, do_extract2d=True, do_srctype=True, do_flatfield=False, do_photom=True, delete_files=True):
-	'''
-	Processes a Stage 1, *_rateints.fits to an equivalent of a Stage 2 *_calints.fits file, except the full subarray will be extracted instead of a trimmed 2D image.
-	Options to turn off and on certain steps are available, but are primarily for debugging
-	purposes - there is no guarantee that Eureka will work if you skip some of the steps.
+class MetaClass:
+    def __init__(self):
+        return
 
-	Parameters
-	----------
-	filename			: Single filename to read
-	do_assignwcs		: Boolean to perform the Assign WCS pipeline step
-	do_extract2d		: Boolean to perform the Extract 2D pipeline step
-	do_srctype			: Boolean to perform the Source Type pipeline step
-	do_flatfield		: Boolean to perform the Flat Field pipeline step
-	do_photom			: Boolean to perform the Photometric correction pipeline step
-	delete_files		: Boolean to delete intermediate files produced by the steps.
 
-	Returns
-	-------
-	current_file		: Array of data frames
+class EurekaS2Pipeline(Spec2Pipeline):
 
-	History
-	-------
-	Written by Aarynn Carter / Eva-Maria Ahrer  June 2021
-	'''
+  def run_eurekaS2(self, eventlabel):
+    '''
+    Reduces rateints files ouput from Stage 1 of the JWST pipeline into calints and x1dints.
 
-	# Make sure we have the full directory location of the file
-	current_file = os.path.abspath(filename)
+    Parameters
+    ----------
+    eventlabel  : str, Unique label for this dataset
 
-	# Get the directory the data is saved in, and a prefix for the file itself.
-	file_dir = '/'.join(current_file.split('/')[:-1])
-	file_prefix = current_file.split('/')[-1].split('_rateints.fits')[0]
+    Returns
+    -------
+    meta        : Metadata object
 
-	# Grab location of config files
-	configs = jwst.__file__.split('__init__.py')[0] + 'pipeline/'
+    Remarks
+    -------
 
-	# Assign World Coordinate System - this is the step where we need to modify values to ensure the full subarray is extracted.
-	if do_assignwcs:
-		#Read in the *rateints.fits file so we know what grating/filter we are using.
-		with fits.open(current_file) as hdulist:
-			grating = hdulist[0].header['GRATING']
-			filt = hdulist[0].header['FILTER']
 
-		# Set extraction values based on the grating/filter.
-		if grating == 'PRISM':
-			slit_y_low, slit_y_high = -1, 50 #Controls the cross-dispersion extraction
-			wav_start, wav_end = 6e-08, 6e-06   #Control the dispersion extraction - DOES NOT WORK CURRENTLY
-		else:
-			raise ValueError("I don't understand how to adjust the extraction aperture for this grating/filter yet!")
+    History
+    -------
+    Code fragments written by Eva-Maria Ahrer and Aarynn Carter   June 2021
+    Written by Taylor Bell      October 2021
 
-		# Modify the existing file to broaden the dispersion extraction - DOES NOT WORK CURRENTLY
-		with datamodels.open(filename) as m:
-			m.meta.wcsinfo.waverange_start = wav_start
-			m.meta.wcsinfo.waverange_end = wav_end
-			m.save(filename)
+    '''
 
-		# Run the step, note that the cross-dispersion extraction is input here.
-		stepname = 'assign_wcs'
-		curr_result = assign_wcs.AssignWcsStep.call(current_file, config_file=configs+stepname+'.cfg', slit_y_low=slit_y_low, slit_y_high=slit_y_high, output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
-		# Update the current file we are working with.
-		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
+    t0 = time.time()
 
-	# Extract 2D spectrum, also does wavelength calibration
-	if do_extract2d:
-		stepname = 'extract_2d'
-		result = extract_2d.Extract2dStep.call(curr_result, config_file=configs+stepname+'.cfg', output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
-		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
+    # Initialize metadata object
+    meta = MetaClass()
+    meta.eventlabel = eventlabel
 
-	# Identify source type
-	if do_srctype:
-		stepname = 'srctype'
-		result = srctype.SourceTypeStep.call(current_file, config_file=configs+stepname+'.cfg', output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
-		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
+    # Load Eureka! control file and store values in Event object
+    ecffile = 'S2_' + eventlabel + '.ecf'
+    ecf     = rd.read_ecf(ecffile)
+    rd.store_ecf(meta, ecf)
 
-	# Perform flat field correction
-	# ***NOTE*** At the time the NIRSpec ERS Hackathon simulated data was created, this step did not work correctly and is by default turned off.
-	if do_flatfield:
-		stepname = 'flat_field'
-		result = flatfield.FlatFieldStep.call(current_file, config_file=configs+stepname+'.cfg', output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
-		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
+    # Create directories for Stage 2 processing outputs
+    run = util.makedirectory(meta, 'S2')
+    meta.workdir = util.pathdirectory(meta, 'S2', run)
 
-	# Perform photometric correction to pixel count values.
-	if do_photom:
-		stepname = 'photom'
-		result = photom.PhotomStep.call(current_file, config_file=configs+stepname+'.cfg', output_dir=file_dir, output_file=file_prefix+'_{}.fits'.format(stepname))
-		current_file = file_dir + '/' + file_prefix+'_{}.fits'.format(stepname)
+    # Output S2 log file
+    meta.logname = meta.workdir + 'S2_' + meta.eventlabel + ".log"
+    log = logedit.Logedit(meta.logname)
+    log.writelog("\nStarting Stage 2 Reduction")
 
-	# Delete any intermediate files that were produced to keep things clean.
-	if delete_files:
-		to_remove = ['_assign_wcs.fits', '_extract_2d.fits', '_srctype.fits', '_flat_field.fits']
-		if do_photom:
-			to_remove = to_remove
-		elif do_flatfield:
-			to_remove = to_remove[:-1]
-		elif do_srctype:
-			to_remove = to_remove[:-2]
-		elif do_extact2d:
-			to_remove = to_remove[:-3]
-		else:
-			to_remove = []
+    # Copy ecf
+    log.writelog('Copying S2 control file')
+    shutil.copy(ecffile, meta.workdir)
 
-		for file_suffix in to_remove:
-			del_file = file_dir + '/' + file_prefix + file_suffix
-			if os.path.exists(del_file):
-				os.remove(del_file)
+    # Create list of file segments
+    meta = util.readfiles(meta)
+    num_data_files = len(meta.segment_list)
+    log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
 
-	return current_file
+    # If testing, only run the last file
+    if meta.testing_S2:
+        istart = num_data_files - 1
+    else:
+        istart = 0
+
+    # Run the pipeline on each file sequentially
+    for m in range(istart, num_data_files):
+      # Report progress
+      log.writelog(f'Starting file {m + 1} of {num_data_files}')
+      filename = meta.segment_list[m]
+
+      with fits.open(filename) as hdulist:
+        # Figure out which instrument we are using
+        inst = hdulist[0].header['INSTRUME']
+        if inst == 'NIRSPEC':
+          # Figure out what grating and filter we're using
+          # (needed to change the aperture used for NIRSpec outputs)
+          grating = hdulist[0].header['GRATING']
+          filt = hdulist[0].header['FILTER']
+
+      if meta.slit_y_low != None:
+        #Controls the cross-dispersion extraction
+        self.assign_wcs.slit_y_low = meta.slit_y_low
+
+      if meta.slit_y_high != None:
+        #Controls the cross-dispersion extraction
+        self.assign_wcs.slit_y_high = meta.slit_y_high
+
+      if meta.waverange_start != None:
+        #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
+        log.writelog('Editing (in place) the waverange in the input file')
+        with datamodels.open(filename) as m:
+          m.meta.wcsinfo.waverange_start = meta.waverange_start
+          m.save(filename)
+
+      if meta.waverange_end != None:
+        #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
+        if meta.waverange_start == None:
+          # Only log this once
+          log.writelog('Editing (in place) the waverange in the input file')
+        with datamodels.open(filename) as m:
+          m.meta.wcsinfo.waverange_end = meta.waverange_end
+          m.save(filename)
+      
+      # Skip steps according to input ecf file
+      self.bkg_subtract.skip = meta.skip_bkg_subtract
+      self.imprint_subtract.skip = meta.skip_imprint_subtract
+      self.msa_flagging.skip = meta.skip_msa_flagging
+      self.extract_2d.skip = meta.skip_extract_2d
+      self.srctype.skip = meta.skip_srctype
+      self.master_background.skip = meta.skip_master_background
+      self.wavecorr.skip = meta.skip_wavecorr
+      self.flat_field.skip = meta.skip_flat_field
+      self.straylight.skip = meta.skip_straylight
+      self.fringe.skip = meta.skip_fringe
+      self.pathloss.skip = meta.skip_pathloss
+      self.barshadow.skip = meta.skip_barshadow
+      self.photom.skip = meta.skip_photom
+      self.resample_spec.skip = meta.skip_resample_spec
+      self.cube_build.skip = meta.skip_cube_build
+      self.extract_1d.skip = meta.skip_extract_1d
+      # Save outputs if requested to the folder specified in the ecf
+      self.save_results = (not meta.testing_S2)
+      self.output_dir = meta.workdir
+      # This needs to be reset to None to permit the pipeline to be run on multiple files
+      self.suffix = None
+
+      # Call the main Spec2Pipeline function (defined in the parent class)
+      log.writelog('Running the Spec2Pipeline')
+      # Must call the pipeline in this way to ensure the skip booleans are respected
+      self(filename)
+
+      # Produce some summary plots if requested
+      if not meta.testing_S2 and not self.extract_1d.skip:
+        log.writelog('\nGenerating x1dints figure')
+        fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
+        with datamodels.open(meta.workdir+fname+'.fits') as sp1d:
+          fig, ax = plt.subplots(1,1, figsize=[15,5])
+          
+          for i in range(len(sp1d.spec)):
+              plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'], sp1d.spec[i].spec_table['FLUX'])
+
+          plt.title('Time Series Observation: Extracted spectra')
+          plt.xlabel('Wavelenth (micron)')
+          plt.ylabel('Flux')
+          plt.savefig(meta.workdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
+          plt.close()
+
+    # Calculate total run time
+    total = (time.time() - t0) / 60.
+    log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+
+    # Save results
+    if not meta.testing_S2:
+      log.writelog('Saving Metadata')
+      me.saveevent(meta, meta.workdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
+
+    return meta

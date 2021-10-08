@@ -69,9 +69,11 @@ def read(filename, data, meta):
         data.dq      = np.swapaxes(data.dq  , 1, 2)[:,:,::-1]
         #data.wave    = np.swapaxes(data.wave, 0, 1)[:,:,::-1]
         data.v0      = np.swapaxes(data.v0  , 1, 2)[:,:,::-1]
-        temp         = np.copy(meta.ywindow)
-        meta.ywindow = meta.xwindow
-        meta.xwindow = data.data.shape[2] - temp[::-1]
+        if meta.firstFile:
+            # If not, we've already done this and don't want to switch it back
+            temp         = np.copy(meta.ywindow)
+            meta.ywindow = meta.xwindow
+            meta.xwindow = data.data.shape[2] - temp[::-1]
 
     return data, meta
 
