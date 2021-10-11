@@ -7,6 +7,7 @@ from importlib import reload
 #from hotsoss import plotting as plt
 sys.path.append('../..')
 import eureka
+import pdb
 
 
 # Get the orbital parameters
@@ -32,6 +33,12 @@ wasp107b_time, wasp107b_flux, wasp107b_unc, wasp107b_par = simulate_lightcurve('
 import eureka.S5_lightcurve_fitting.lightcurve as lc
 reload(lc)
 wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
+
+from eureka.lib import readECF as rd
+reload(rd)
+ecf = rd.read_ecf('s5.ecf')
+#pdb.set_trace()
+
 
 # Set the intial parameters
 import eureka.S5_lightcurve_fitting.parameters as p
