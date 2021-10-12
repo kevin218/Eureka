@@ -2,17 +2,19 @@
 #
 # Written by: Adina Feinstein
 # Last updated by: Adina Feinstein
-# Last updated date: October 1, 2021
+# Last updated date: October 12, 2021
 #
 ####################################
 
 import numpy as np
 from astropy.io import fits
+import matplotlib.pyplot as plt
 from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
-__all__ = ['read_niriss', 'create_niriss_mask']
+
+__all__ = ['read_niriss', 'create_niriss_mask', 'image_filtering']
 
 
 def read_niriss(filename, data, meta):
@@ -65,8 +67,73 @@ def read_niriss(filename, data, meta):
 
     return data, meta
 
+def image_filtering(img, radius=1, gf=4):
+    """
+    Does some simple image processing to isolate where the
+    spectra are located on the detector. This routine is 
+    optimized for NIRISS S2 processed data and the F277W filter.
 
-def create_niriss_mask(imgs, anchors1=None, anchors2=None, plot=False):
+    Parameters
+    ----------
+    img : np.ndarray
+       2D image array. 
+    radius : np.float, optional
+       Default is 1.
+    gf : np.float, optional
+       The standard deviation by which to Gaussian
+       smooth the image. Default is 4.
+
+    Returns
+    -------
+    img_mask : np.ndarray
+       A mask for the image that isolates where the spectral 
+       orders are.
+    """
+    mask = filters.rank.maximum(img/np.nanmax(img),
+                                disk(radius=radius))
+    mask = np.array(mask, dtype=bool)
+
+    # applies the mask to the main frame
+    data = img*~mask
+    g = gaussian_filter(data, gf)
+    g[g>6] = 200
+    edges = filters.sobel(g)
+    edges[edges>0] = 1
+
+    # turns edge array into a boolean array
+    edges = (edges-np.nanmax(edges)) * -1
+    z = feature.canny(edges)
+
+    return z, g
+
+def f277_mask(img):
+    """        
+    Marks the overlap region in the f277w filter image.                                                       
+    
+    Parameters
+    ----------
+    img : np.ndarray
+       2D image of the f277w filter.
+    
+    Returns
+    -------
+    mask : np.ndarray
+       2D mask for the f277w filter.
+    mid : np.ndarray
+       (x,y) anchors for where the overlap region is located.
+    """
+    mask, _ = image_filtering(img[:150,:500])
+    mid = np.zeros((img.shape[1], 2),dtype=int)
+    mask = np.zeros(img.shape)
+    
+    for i in range(mask.shape[1]):
+        inds = np.where(mask[:,i]==True)[0]
+        if len(inds) > 1:
+            mask[inds[1]:inds[-2], i] = True
+            mid[i] np.array([i, (inds[1]+inds[-2])/2])
+    return mask, mid
+
+def create_niriss_mask(imgs, f277, anchors1=None, anchors2=None, plot=False):
     """
     This routine takes the output S2 processed images and creates
     a mask for each order. This routine creates a single image from
@@ -78,6 +145,9 @@ def create_niriss_mask(imgs, anchors1=None, anchors2=None, plot=False):
     ----------
     imgs : np.ndarray
        The output `SCI` extension files for NIRISS observations.
+    f277 : np.ndarray
+       The F277W filtered image. Necessary for identifying the 
+       overlap between spectral orders 1 and 2.
     plot : bool, optional
        An option to plot the data and intermediate steps to 
        retrieve the mask per each order. Default is False.
@@ -95,28 +165,17 @@ def create_niriss_mask(imgs, anchors1=None, anchors2=None, plot=False):
        orders for NIRISS observations. The first order is marked
        with value = 1; the second order is marked with value = 2.
     """
-
     def poly_fit(x,y,deg):
         poly = np.polyfit(x,y,deg=deg)
         return np.poly1d(poly)
 
-    perc = np.nanpercentile(imgs, q=99, axis=0)
+    perc = np.nanmax(imgs, axis=0)
 
-    # masks most (not all) cosmic ray outliers
-    mask = filters.rank.maximum(perc/np.nanmax(perc),
-                                disk(radius=1))
-    mask = np.array(mask, dtype=bool)
-    
-    # applies the mask to the main frame
-    data = perc*~mask
-    g = gaussian_filter(data, 4)
-    g[g>6] = 200
-    edges = filters.sobel(g)
-    edges[edges>0] = 1
-    
-    # turns edge array into a boolean array
-    edges = (edges-np.nanmax(edges)) * -1
-    z = feature.canny(edges)
+    # creates data img mask
+    z,g = image_filtering(perc)
+
+    # creates mask for f277w image and anchors
+    fmask, fmid = f277_mask(f277)
 
     x_true = np.arange(0,z.shape[1],1)
     # fits lines to the top and bottom of each order
@@ -161,8 +220,7 @@ def create_niriss_mask(imgs, anchors1=None, anchors2=None, plot=False):
     for i in range(z.shape[1]):
         img_mask[fits[0][i]:fits[0][i]+diff1,i] += 1
         img_mask[fits[2][i]:fits[2][i]+diff2,i] += 2
-        
-        
+                
     # plots some of the intermediate and final steps
     if plot:
         fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, figsize=(14,8))
