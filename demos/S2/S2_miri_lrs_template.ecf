@@ -35,5 +35,5 @@ testing_S2 			False
 topdir      /home/User/
 
 # Directories relative to project dir
-datadir     /Data/JWST-Sim/MIRI/Stage1
+inputdir    /Data/JWST-Sim/MIRI/Stage1
 outputdir	/Data/JWST-Sim/MIRI/Stage2

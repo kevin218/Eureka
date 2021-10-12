@@ -16,14 +16,14 @@ def readfiles(meta):
         meta: metadata object but adds segment_list to metadata containing the sorted data fits files
     """
 
-    rootdir = os.path.join(meta.topdir, *meta.datadir.split(os.sep))
-    if rootdir[-1]!='/':
-      rootdir += '/'
+    meta.inputdir = os.path.join(meta.topdir, *meta.inputdir_raw.split(os.sep))
+    if meta.inputdir[-1]!='/':
+      meta.inputdir += '/'
 
     meta.segment_list = []
-    for fname in os.listdir(rootdir):
+    for fname in os.listdir(meta.inputdir):
         if fname.endswith(meta.suffix + '.fits'):
-            meta.segment_list.append(rootdir + fname)
+            meta.segment_list.append(meta.inputdir + fname)
     meta.segment_list = sn.sort_nicely(meta.segment_list)
     return meta
 
@@ -84,35 +84,37 @@ def makedirectory(meta, stage, **kwargs):
         run number
     """
 
-    datetime = time.strftime('%Y-%m-%d')
+    if not hasattr(meta, 'datetime') or meta.datetime is None:
+        meta.datetime = time.strftime('%Y-%m-%d')
+    datetime = meta.datetime
 
     # This code allows the input and output files to be stored outside of the Eureka! folder
-    rootdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
+    rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
     if rootdir[-1]!='/':
       rootdir += '/'
 
-    workdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_'
+    outputdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_'
 
     for key, value in kwargs.items():
 
-        workdir += key+str(value)+'_'
+        outputdir += key+str(value)+'_'
 
-    workdir += 'run'
+    outputdir += 'run'
 
     counter=1
 
-    while os.path.exists(workdir+str(counter)):
+    while os.path.exists(outputdir+str(counter)):
         counter += 1
 
-    meta.workdir = workdir+str(counter)+'/'
-    if not os.path.exists(meta.workdir):
-        os.makedirs(meta.workdir)
-    if not os.path.exists(meta.workdir + "figs"):
-        os.makedirs(meta.workdir + "figs")
+    meta.outputdir = outputdir+str(counter)+'/'
+    if not os.path.exists(meta.outputdir):
+        os.makedirs(meta.outputdir)
+    if not os.path.exists(meta.outputdir + "figs"):
+        os.makedirs(meta.outputdir + "figs")
 
     return counter
 
-def pathdirectory(meta, stage, run, **kwargs):
+def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     """
     Creates file directory
 
@@ -120,27 +122,33 @@ def pathdirectory(meta, stage, run, **kwargs):
         meta: metadata object
         stage : 'S#' string denoting stage number (i.e. 'S3', 'S4')
         run : run #, output from makedirectory function
+        old_datetime: The date that a previous run was made (for looking up old data)
         **kwargs
 
     Returns:
         directory path for given parameters
     """
 
-    datetime = time.strftime('%Y-%m-%d')
+    if old_datetime is not None:
+        datetime = old_datetime
+    else:
+        if not hasattr(meta, 'datetime') or meta.datetime is None:
+            meta.datetime = time.strftime('%Y-%m-%d')
+        datetime = meta.datetime
 
     # This code allows the input and output files to be stored outside of the Eureka! folder
-    rootdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
+    rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
     if rootdir[-1]!='/':
       rootdir += '/'
 
-    workdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_'
+    outputdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_'
 
     for key, value in kwargs.items():
 
-        workdir += key+str(value)+'_'
+        outputdir += key+str(value)+'_'
 
-    workdir += 'run'
+    outputdir += 'run'
 
-    path = workdir+str(run)+'/'
+    path = outputdir+str(run)+'/'
 
     return path

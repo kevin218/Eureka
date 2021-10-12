@@ -65,22 +65,30 @@ class EurekaS2Pipeline(Spec2Pipeline):
     rd.store_ecf(meta, ecf)
 
     # Create directories for Stage 2 processing outputs
+    meta.inputdir_raw = meta.inputdir
+    meta.outputdir_raw = meta.outputdir
     run = util.makedirectory(meta, 'S2')
-    meta.workdir = util.pathdirectory(meta, 'S2', run)
+    meta.outputdir = util.pathdirectory(meta, 'S2', run)
 
     # Output S2 log file
-    meta.logname = meta.workdir + 'S2_' + meta.eventlabel + ".log"
+    meta.logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
     log = logedit.Logedit(meta.logname)
     log.writelog("\nStarting Stage 2 Reduction")
 
     # Copy ecf
     log.writelog('Copying S2 control file')
-    shutil.copy(ecffile, meta.workdir)
+    shutil.copy(ecffile, meta.outputdir)
 
     # Create list of file segments
     meta = util.readfiles(meta)
     num_data_files = len(meta.segment_list)
-    log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
+    if num_data_files==0:
+      rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
+      if rootdir[-1]!='/':
+        rootdir += '/'
+      raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
+    else:
+      log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
 
     # If testing, only run the last file
     if meta.testing_S2:
@@ -146,12 +154,12 @@ class EurekaS2Pipeline(Spec2Pipeline):
       self.extract_1d.skip = meta.skip_extract_1d
       # Save outputs if requested to the folder specified in the ecf
       self.save_results = (not meta.testing_S2)
-      self.output_dir = meta.workdir
+      self.output_dir = meta.outputdir
       # This needs to be reset to None to permit the pipeline to be run on multiple files
       self.suffix = None
 
       # Call the main Spec2Pipeline function (defined in the parent class)
-      log.writelog('Running the Spec2Pipeline')
+      log.writelog('Running the Spec2Pipeline\n')
       # Must call the pipeline in this way to ensure the skip booleans are respected
       self(filename)
 
@@ -159,7 +167,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
       if not meta.testing_S2 and not self.extract_1d.skip:
         log.writelog('\nGenerating x1dints figure')
         fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
-        with datamodels.open(meta.workdir+fname+'.fits') as sp1d:
+        with datamodels.open(meta.outputdir+fname+'.fits') as sp1d:
           fig, ax = plt.subplots(1,1, figsize=[15,5])
           
           for i in range(len(sp1d.spec)):
@@ -168,7 +176,7 @@ class EurekaS2Pipeline(Spec2Pipeline):
           plt.title('Time Series Observation: Extracted spectra')
           plt.xlabel('Wavelenth (micron)')
           plt.ylabel('Flux')
-          plt.savefig(meta.workdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
+          plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
           plt.close()
 
     # Calculate total run time
@@ -178,6 +186,6 @@ class EurekaS2Pipeline(Spec2Pipeline):
     # Save results
     if not meta.testing_S2:
       log.writelog('Saving Metadata')
-      me.saveevent(meta, meta.workdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
+      me.saveevent(meta, meta.outputdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
 
     return meta
