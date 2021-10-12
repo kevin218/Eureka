@@ -8,4 +8,4 @@ eventlabel = 'template'
 
 s3_meta = s3.reduceJWST(eventlabel)
 
-# s4_meta = s4.lcJWST(s3_meta.eventlabel, s3_meta.workdir, meta=s3_meta)
+s4_meta = s4.lcJWST(eventlabel, s3_meta=s3_meta)
