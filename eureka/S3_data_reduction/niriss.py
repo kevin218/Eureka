@@ -14,7 +14,8 @@ from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
 
-__all__ = ['read_niriss', 'create_niriss_mask', 'image_filtering']
+__all__ = ['read_niriss', 'create_niriss_mask', 'image_filtering',
+           'f277_mask']
 
 
 def read_niriss(filename, data, meta):
@@ -123,17 +124,20 @@ def f277_mask(img):
        (x,y) anchors for where the overlap region is located.
     """
     mask, _ = image_filtering(img[:150,:500])
-    mid = np.zeros((img.shape[1], 2),dtype=int)
-    mask = np.zeros(img.shape)
+    mid = np.zeros((mask.shape[1], 2),dtype=int)
+    new_mask = np.zeros(img.shape)
     
     for i in range(mask.shape[1]):
         inds = np.where(mask[:,i]==True)[0]
         if len(inds) > 1:
-            mask[inds[1]:inds[-2], i] = True
-            mid[i] np.array([i, (inds[1]+inds[-2])/2])
-    return mask, mid
+            new_mask[inds[1]:inds[-2], i] = True
+            mid[i] = np.array([i, (inds[1]+inds[-2])/2])
 
-def create_niriss_mask(imgs, f277, anchors1=None, anchors2=None, plot=False):
+    q = ((mid[:,0]<420) & (mid[:,1]>0) & (mid[:,0] > 0))
+    return new_mask, mid[q]
+
+
+def create_niriss_mask(imgs, f277, plot=False):
     """
     This routine takes the output S2 processed images and creates
     a mask for each order. This routine creates a single image from
@@ -151,12 +155,6 @@ def create_niriss_mask(imgs, f277, anchors1=None, anchors2=None, plot=False):
     plot : bool, optional
        An option to plot the data and intermediate steps to 
        retrieve the mask per each order. Default is False.
-    anchors1 : np.array
-       (x,y) anchors (in pixel space) for fitting the 1st order. 
-       Default is None.
-    anchors2 : np.array
-       (x,y) anchors (in pixel space) for fitting the 2nd order.
-       Default is None.
 
     Returns
     -------
@@ -169,57 +167,64 @@ def create_niriss_mask(imgs, f277, anchors1=None, anchors2=None, plot=False):
         poly = np.polyfit(x,y,deg=deg)
         return np.poly1d(poly)
 
-    perc = np.nanmax(imgs, axis=0)
+    perc  = np.nanmax(imgs, axis=0)
+    fperc = np.nanmax(f277, axis=(0,1))
 
     # creates data img mask
     z,g = image_filtering(perc)
 
     # creates mask for f277w image and anchors
-    fmask, fmid = f277_mask(f277)
+    fmask, fmid = f277_mask(fperc)
 
-    x_true = np.arange(0,z.shape[1],1)
-    # fits lines to the top and bottom of each order
-    y, x = np.indices(z.shape)
-    valid_z = z.ravel() == True
-    
-    # if things go wrong, check here!!
-    argsort = np.argsort(x.ravel()[valid_z])
-    x_valid = x.ravel()[valid_z][argsort]
-    y_valid = y.ravel()[valid_z][argsort]
-    z_valid = z.ravel()[valid_z][argsort]
+    # Identify the center of the 1st and 2nd
+    # spectral orders
+    zmask = np.zeros(z.shape)
+    start = 800
+    mid1 = np.zeros((z[:,start:].shape[1],2),dtype=int)
+    mid2 = np.zeros((z[:,start:].shape[1],2),dtype=int)
 
-    if anchors1 is None:
-        anchors1 = [ [0, 1500, z.shape[1]], [80, 35, 70]]
-    if anchors2 is None:
-        anchors2 = [ [750, 1500, 1800], [88, 150, 210]]
+    for y in np.arange(start,z.shape[1]-1,1,dtype=int):
+        inds = np.where(z[:,y]==True)[0]
         
-    l1 = poly_fit(anchors1[0], anchors1[1], deg=4)
-    l2 = poly_fit(anchors2[0], anchors2[1], deg=4)
+        if len(inds)>=4:
+            zmask[inds[0]:inds[1],y] = True
+            zmask[inds[2]:inds[-1],y] = True
+            
+            mid1[y-start] = np.array([y, (inds[0]+inds[1])/2])
+            mid2[y-start] = np.array([y, (inds[2]+inds[-1])/2])
+            
+        if y > 1900:
+            zmask[inds[0]:inds[-1],y] = True
+            mid1[y-start] = np.array([y, (inds[0]+inds[-1])/2])
 
-    # masks for each order based on the above fitted lines
-    # probably want to get rid of hard coded numbers at some point... maybe?
-    o1t = y_valid < l1(x_valid)
-    o1b = (y_valid > l1(x_valid)) & (y_valid < l1(x_valid)+30)
+    # Clean 1st order of outliers
+    mid1 = mid1[np.argsort(mid1[:,0])]
+    tempfit = poly_fit(mid1[:,0], mid1[:,1], 3)
+    q1 = ((np.abs(tempfit(mid1[:,0])-mid1[:,1]) <2) &
+          (mid1[:,0] > start))
+    mid1 = mid1[q1]
 
-    o2t = ((y_valid < l2(x_valid)) & (x_valid>750) & 
-           (y_valid > l1(x_valid)+29) & (y_valid <220))
-    o2b = (y_valid > l2(x_valid)) & (y_valid < l2(x_valid)+30) & (y_valid >90)
+    # Clean 2nd order of outliers
+    mid2 = mid2[np.argsort(mid2[:,0])]
+    tempfit = poly_fit(mid2[:,0], mid2[:,1], 3)
+    q2 = (( np.abs(tempfit(mid2[:,0])-mid2[:,1]) <2) &
+          (mid2[:,0] > start) )
+    mid2 = mid2[q2]
 
-    masks = [o1t,o1b,o2t,o2b]
-    fits = np.zeros((len(masks),z.shape[1]),dtype=int)
-    for i,m in enumerate(masks):
-        fit = poly_fit(x_valid[m], y_valid[m], deg=4)
-        fits[i] = fit(x_true) + 0.0
+    # Append overlap region to non-overlap regions
+    x1, y1 = np.append(fmid[:,0], mid1[:,0]), np.append(fmid[:,1], mid1[:,1])
+    x2, y2 = np.append(fmid[:,0], mid2[:,0]), np.append(fmid[:,1], mid2[:,1])
 
-    # fills in a mask for the 1st and 2nd NIRISS orders
-    # currently preserves the width of each order
-    img_mask = np.zeros(z.shape)
-    diff2 = np.nanmax(fits[3]-fits[2])
-    diff1 = np.nanmax(fits[1]-fits[0])
-    
-    for i in range(z.shape[1]):
-        img_mask[fits[0][i]:fits[0][i]+diff1,i] += 1
-        img_mask[fits[2][i]:fits[2][i]+diff2,i] += 2
+    fit1 = poly_fit(x1,y1,4)
+    fit2 = poly_fit(x2,y2,4)
+
+    img_mask = np.zeros(perc.shape)
+    order_width = 14 ## THIS WILL PROBABLY NEED TO CHANGE
+    for i in range(perc.shape[1]):
+        img_mask[int(fit1(i)-order_width):
+                     int(fit1(i)+order_width),i] += 1
+        img_mask[int(fit2(i)-order_width):
+                     int(fit2(i)+order_width),i] += 2
                 
     # plots some of the intermediate and final steps
     if plot:
@@ -233,3 +238,9 @@ def create_niriss_mask(imgs, f277, anchors1=None, anchors2=None, plot=False):
         plt.show()
 
     return img_mask
+
+
+def bkg_sub():
+    """
+    Subtracts background from non-spectral regions.
+    """
