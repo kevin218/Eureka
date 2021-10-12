@@ -391,8 +391,9 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')
                             plt.plot((loc[i]), (subdata[loc[i],i]), 'ro')
-                            plt.savefig(eventdir + "/figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
-                            plt.pause(0.1)
+                            plt.savefig(eventdir + "figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
+                            # plt.pause(0.1)
+                            plt.close()
                         # Check for insufficient number of good points
                         if sum(submask[:,i]) < ny/2.:
                             submask[:,i] = 0

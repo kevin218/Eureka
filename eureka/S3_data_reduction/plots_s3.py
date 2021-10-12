@@ -28,7 +28,8 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(meta.workdir + '/figs/fig3101-2D_LC.png')
+    plt.savefig(meta.outputdir + 'figs/fig3101-2D_LC.png')
+    plt.close()
 
 def image_and_background(data, meta, n):
 
@@ -53,8 +54,9 @@ def image_and_background(data, meta, n):
     plt.ylabel('Pixel Position')
     plt.xlabel('Pixel Position')
     plt.tight_layout()
-    plt.savefig(meta.workdir + '/figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
+    plt.savefig(meta.outputdir + 'figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
     # plt.pause(0.1)
+    plt.close()
 
 
 def optimal_spectrum(data, meta, n):
@@ -71,8 +73,9 @@ def optimal_spectrum(data, meta, n):
     plt.xlabel('Pixel Position')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.savefig(meta.workdir + '/figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
+    plt.savefig(meta.outputdir + 'figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
     # plt.pause(0.1)
+    plt.close()
 
 
 def source_position(meta, x_dim, pos_max, m, ismax=False,
@@ -98,7 +101,8 @@ def source_position(meta, x_dim, pos_max, m, ismax=False,
     plt.xlabel('Row Pixel Position')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(meta.workdir + '/figs/fig3303-file' + str(m+1) + '-source_pos.png')
+    plt.savefig(meta.outputdir + 'figs/fig3303-file' + str(m+1) + '-source_pos.png')
+    plt.close()
 
 def profile(eventdir, profile, submask, n):
     '''
@@ -112,5 +116,6 @@ def profile(eventdir, profile, submask, n):
     plt.ylabel('Pixel Postion')
     plt.xlabel('Pixel Position')
     plt.tight_layout()
-    plt.savefig(eventdir+'/figs/fig3305-'+str(n)+'-Profile.png')
+    plt.savefig(eventdir+'figs/fig3305-'+str(n)+'-Profile.png')
     #plt.pause(0.2)
+    plt.close()
