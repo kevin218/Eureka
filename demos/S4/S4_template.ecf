@@ -22,5 +22,5 @@ isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Optio
 topdir      /home/User/
 
 # Directories relative to project dir
-datadir     /Data/JWST-Sim/NIRCam/Stage3/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+inputdir    /Data/JWST-Sim/NIRCam/Stage3/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
 outputdir	/Data/JWST-Sim/NIRCam/Stage4/
