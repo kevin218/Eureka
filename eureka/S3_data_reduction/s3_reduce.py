@@ -323,7 +323,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                                                                              fittype=meta.fittype, window_len=meta.window_len,
                                                                              deg=meta.prof_deg, n=data.intstart + n,
                                                                              isplots=meta.isplots_S3, eventdir=meta.outputdir,
-                                                                             meddata=data.medapdata)
+                                                                             meddata=data.medapdata, hide_plots=meta.hide_plots)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:

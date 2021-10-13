@@ -19,7 +19,10 @@ def binned_lightcurve(meta, bjdtdb, i):
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     plt.savefig(meta.outputdir + 'figs/Fig' + str(4300 + i) + '-' + meta.eventlabel + '-1D_LC.png')
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def drift1d(meta):
     plt.figure(4101, figsize=(8,4))
@@ -36,7 +39,10 @@ def drift1d(meta):
     plt.xlabel('Frame Number')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/Fig4101-Drift.png')
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def cc_spec(meta, ref_spec, fit_spec, nx, n):
     plt.figure(4500)
@@ -47,7 +53,10 @@ def cc_spec(meta, ref_spec, fit_spec, nx, n):
     plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig(meta.outputdir + f'figs/Fig4500-{n}-CC_Spec')
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def cc_vals(meta, vals, n):
     plt.figure(4501)
@@ -56,4 +65,7 @@ def cc_vals(meta, vals, n):
     plt.plot(range(-meta.drift_range,meta.drift_range+1), vals, '.')
     plt.tight_layout()
     plt.savefig(meta.outputdir + f'figs/Fig4501-{n}-CC_Vals')
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)

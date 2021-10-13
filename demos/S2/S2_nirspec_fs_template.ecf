@@ -29,7 +29,8 @@ skip_cube_build			True	# Not run for NIRSpec Fixed Slit
 skip_extract_1d			False
 
 # Diagnostics
-testing_S2 			False
+testing_S2 	False
+hide_plots	False	# If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir      /home/User/

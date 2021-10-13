@@ -177,7 +177,10 @@ class EurekaS2Pipeline(Spec2Pipeline):
           plt.xlabel('Wavelenth (micron)')
           plt.ylabel('Flux')
           plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
-          plt.close()
+          if meta.hide_plots:
+              plt.close()
+          else:
+              plt.pause(0.1)
 
     # Calculate total run time
     total = (time.time() - t0) / 60.

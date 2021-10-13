@@ -29,7 +29,10 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3101-2D_LC.png')
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def image_and_background(data, meta, n):
 
@@ -55,8 +58,10 @@ def image_and_background(data, meta, n):
     plt.xlabel('Pixel Position')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
-    # plt.pause(0.1)
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 
 def optimal_spectrum(data, meta, n):
@@ -74,8 +79,10 @@ def optimal_spectrum(data, meta, n):
     plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
-    # plt.pause(0.1)
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 
 def source_position(meta, x_dim, pos_max, m, ismax=False,
@@ -102,9 +109,12 @@ def source_position(meta, x_dim, pos_max, m, ismax=False,
     plt.legend()
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3303-file' + str(m+1) + '-source_pos.png')
-    plt.close()
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
-def profile(eventdir, profile, submask, n):
+def profile(eventdir, profile, submask, n, hide_plots=False):
     '''
     Plot weighting profile from optimal spectral extraction routine
     '''
@@ -117,5 +127,7 @@ def profile(eventdir, profile, submask, n):
     plt.xlabel('Pixel Position')
     plt.tight_layout()
     plt.savefig(eventdir+'figs/fig3305-'+str(n)+'-Profile.png')
-    #plt.pause(0.2)
-    plt.close()
+    if hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
