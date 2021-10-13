@@ -174,13 +174,13 @@ class EurekaS2Pipeline(Spec2Pipeline):
               plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'], sp1d.spec[i].spec_table['FLUX'])
 
           plt.title('Time Series Observation: Extracted spectra')
-          plt.xlabel('Wavelenth (micron)')
+          plt.xlabel('Wavelength (micron)')
           plt.ylabel('Flux')
           plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
           if meta.hide_plots:
               plt.close()
           else:
-              plt.pause(0.1)
+              plt.pause(2)
 
     # Calculate total run time
     total = (time.time() - t0) / 60.
