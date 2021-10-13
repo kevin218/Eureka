@@ -27,6 +27,7 @@
 import os, time, glob
 import numpy as np
 from astropy.io import fits
+from tqdm import tqdm
 from . import optspex
 from . import plots_s3, source_pos
 from . import background as bg
@@ -286,7 +287,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for background subtraction')
-                    for n in range(meta.int_start,meta.n_int):
+                    for n in tqdm(range(meta.int_start,meta.n_int)):
                         # make image+background plots
                         plots_s3.image_and_background(data, meta, n)
 
@@ -316,7 +317,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                 data.optspec = np.zeros(data.stdspec.shape)
                 data.opterr  = np.zeros(data.stdspec.shape)
                 gain = 1  # Already converted DN to electrons, so gain = 1 for optspex
-                for n in range(meta.int_start,meta.n_int):
+                for n in tqdm(range(meta.int_start,meta.n_int)):
                     data.optspec[n], data.opterr[n], mask = optspex.optimize(data.apdata[n], data.apmask[n], data.apbg[n],
                                                                              data.stdspec[n], gain, data.apv0[n],
                                                                              p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
@@ -328,7 +329,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                 # Plot results
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for optimal spectral extraction')
-                    for n in range(meta.int_start,meta.n_int):
+                    for n in tqdm(range(meta.int_start,meta.n_int)):
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n)
 
