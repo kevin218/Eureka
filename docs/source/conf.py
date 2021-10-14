@@ -12,17 +12,17 @@
 #
 import os
 import sys
-
-sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../../'))
 
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
 project = 'Eureka!'
-copyright = '2021, Kevin Stevenson, Laura Kreidberg, Giannina Guzman, Sebastian Zieba'
-author = 'Kevin Stevenson, Laura Kreidberg, Giannina Guzman, Sebastian Zieba'
+copyright = '2021, Eureka! pipeline developers'
+author = 'Eureka! pipeline developers'
 
 # The full version, including alpha/beta/rc tags
 release = ''
@@ -62,7 +62,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 
 from recommonmark.parser import CommonMarkParser
