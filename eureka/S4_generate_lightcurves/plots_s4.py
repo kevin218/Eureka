@@ -18,7 +18,11 @@ def binned_lightcurve(meta, bjdtdb, i):
     plt.xlabel(f'Time [MJD + {mjd}]')
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
-    plt.savefig(meta.lcdir + '/figs/Fig' + str(4300 + i) + '-' + meta.eventlabel + '-1D_LC.png')
+    plt.savefig(meta.outputdir + 'figs/Fig' + str(4300 + i) + '-' + meta.eventlabel + '-1D_LC.png')
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def drift1d(meta):
     plt.figure(4101, figsize=(8,4))
@@ -34,7 +38,11 @@ def drift1d(meta):
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    plt.savefig(meta.lcdir + '/figs/Fig4101-Drift.png')
+    plt.savefig(meta.outputdir + 'figs/Fig4101-Drift.png')
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def cc_spec(meta, ref_spec, fit_spec, nx, n):
     plt.figure(4500)
@@ -44,7 +52,11 @@ def cc_spec(meta, ref_spec, fit_spec, nx, n):
     plt.plot(range(meta.drift_range,nx-meta.drift_range), fit_spec, '-', label='Current Spectrum')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.savefig(meta.lcdir + f'/figs/Fig4500-{n}-CC_Spec')
+    plt.savefig(meta.outputdir + f'figs/Fig4500-{n}-CC_Spec')
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
 
 def cc_vals(meta, vals, n):
     plt.figure(4501)
@@ -52,4 +64,8 @@ def cc_vals(meta, vals, n):
     plt.title(f'Cross Correlation - Values {n}')
     plt.plot(range(-meta.drift_range,meta.drift_range+1), vals, '.')
     plt.tight_layout()
-    plt.savefig(meta.lcdir + f'/figs/Fig4501-{n}-CC_Vals')
+    plt.savefig(meta.outputdir + f'figs/Fig4501-{n}-CC_Vals')
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)

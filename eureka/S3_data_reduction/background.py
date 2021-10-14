@@ -21,7 +21,16 @@ def BGsubtraction(data, meta, log, isplots):
     n_int, bg_y1, bg_y2, subdata, submask = meta.n_int, meta.bg_y1, meta.bg_y2, data.subdata, data.submask
 
     # Load instrument module
-    exec('from eureka.S3_data_reduction import ' + meta.inst + ' as inst', globals())
+    if meta.inst == 'miri':
+        from . import miri as inst
+    elif meta.inst == 'nircam':
+        from . import nircam as inst
+    elif meta.inst == 'nirspec':
+        from . import nirspec as inst
+    elif meta.inst == 'niriss':
+        raise ValueError('NIRISS observations are currently unsupported!')
+    else:
+        raise ValueError('Unknown instrument {}'.format(meta.inst))
     reload(inst)
 
 
@@ -218,7 +227,7 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=Fal
     mask2   = mask*bgmask
     if deg < 0:
         # Calculate median background of entire frame
-        bg  += np.median(data[np.where(mask2)])
+        bg  += np.median(dataim[np.where(mask2)])
     elif deg == None :
         # No background subtraction
         pass

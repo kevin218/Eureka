@@ -29,11 +29,12 @@ skip_cube_build			True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_extract_1d			False
 
 # Diagnostics
-testing_S2 			False
+testing_S2 	False
+hide_plots	False	# If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir      /home/User/
 
 # Directories relative to project dir
-datadir     /Data/JWST-Sim/NIRCam/Stage1
+inputdir    /Data/JWST-Sim/NIRCam/Stage1
 outputdir	/Data/JWST-Sim/NIRCam/Stage2

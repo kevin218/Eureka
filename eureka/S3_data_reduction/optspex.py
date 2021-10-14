@@ -308,7 +308,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=False):
     return profile
 
 # Extract optimal spectrum with uncertainties
-def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=False, eventdir='.',meddata=None):
+def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=False, eventdir='.',meddata=None, hide_plots=False):
     '''
 
     '''
@@ -335,7 +335,7 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
             return
         #
         if isplots >= 3:
-            plots_s3.profile(eventdir, profile, submask, n)
+            plots_s3.profile(eventdir, profile, submask, n, hide_plots=hide_plots)
             # try:
             #     plots_s3.profile(eventdir, profile, submask)
             # except:
@@ -391,8 +391,11 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')
                             plt.plot((loc[i]), (subdata[loc[i],i]), 'ro')
-                            plt.savefig(eventdir + "/figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
-                            plt.pause(0.1)
+                            plt.savefig(eventdir + "figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
+                            if hide_plots:
+                                plt.close()
+                            else:
+                                plt.pause(0.1)
                         # Check for insufficient number of good points
                         if sum(submask[:,i]) < ny/2.:
                             submask[:,i] = 0
