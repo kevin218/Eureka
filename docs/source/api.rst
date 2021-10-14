@@ -1,7 +1,6 @@
-.. _api:
 
-The Code
-==============
+The Code (API)
+===============
 
 lib
 ''''''''''''''''''''
@@ -161,9 +160,24 @@ lib.util
     :show-inheritance:
 
 
+S2_calibrations
+''''''''''''''''''''
+
+S2_calibrations.s2_calibrate.EurekaS2Pipeline
+--------------------------------
+.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaS2Pipeline
+    :members:
+
 
 S3_data_reduction
 ''''''''''''''''''''
+
+S3_data_reduction.background
+--------------------------------
+.. automodule:: eureka.S3_data_reduction.background
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 S3_data_reduction.bright2flux
 --------------------------------
