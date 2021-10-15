@@ -6,7 +6,7 @@
 
 
 import numpy as np
-#import medstddev as msd
+from ..lib import medstddev as msd
 
 def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
            fmean=False, fstddev=False, fmedian=False, fmedstddev=False):
