@@ -14,8 +14,8 @@ def dn2electrons(data, meta):
     meta:   MetaClass
         The metadata object.
 
-    Return
-    ------
+    Returns
+    -------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of electrons.
 
@@ -64,8 +64,8 @@ def bright2dn(data, meta):
     meta:   MetaClass
         The metadata object.
 
-    Return
-    ------
+    Returns
+    -------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of DN.
 
@@ -123,8 +123,8 @@ def bright2flux(data, err, v0, pixel_area):
     pixel_area:  ndarray
             Pixel area (arcsec/pix)
 
-    Return
-    ------
+    Returns
+    -------
     data:   ndarray
             data array of shape ([nx, ny, nimpos, npos]) in units of Jy/pix.
     err:    ndarray
@@ -180,8 +180,8 @@ def convert_to_e(data, meta, log):
     log:    logedit.Logedit
         The open log in which notes from this step can be added.
 
-    Return
-    ------
+    Returns
+    -------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of electrons.
 

@@ -17,8 +17,8 @@ def BGsubtraction(data, meta, log, isplots):
     isplots:    int
         The amount of plots saved; set in ecf.
 
-    Return
-    ------
+    Returns
+    -------
     data:   DataClass
         Data object containing background subtracted data.
     """
