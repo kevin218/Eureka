@@ -41,11 +41,17 @@ from ..lib import util
 
 
 class MetaClass:
+    '''A class to hold Eureka! metadata.
+    '''
+
     def __init__(self):
         return
 
 
 class DataClass:
+    '''A class to hold Eureka! image data.
+    '''
+
     def __init__(self):
         return
 
