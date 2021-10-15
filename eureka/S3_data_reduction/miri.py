@@ -1,4 +1,4 @@
-`import os
+import os
 import numpy as np
 from astropy.io import fits
 from . import background, nircam
@@ -132,4 +132,3 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     Uses the code written for NIRCam and untested for MIRI, but likely to still work (as long as MIRI data gets rotated)
     '''
     return nircam.fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=isplots)
-`
