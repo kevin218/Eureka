@@ -82,9 +82,9 @@ lib.manageevent
     :undoc-members:
     :show-inheritance:
 
-lib.medstddata
+lib.medstddev
 ---------------
-.. automodule:: eureka.lib.medstddata
+.. automodule:: eureka.lib.medstddev
     :members:
     :undoc-members:
     :show-inheritance:
