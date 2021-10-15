@@ -12,6 +12,13 @@ lib.astropytable
     :undoc-members:
     :show-inheritance:
 
+lib.centroid
+---------------
+.. automodule:: eureka.lib.centroid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.correlated_noise
 ---------------------
 .. automodule:: eureka.lib.correlated_noise
@@ -75,6 +82,13 @@ lib.manageevent
     :undoc-members:
     :show-inheritance:
 
+lib.medstddata
+---------------
+.. automodule:: eureka.lib.medstddata
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.modelsPOET
 ---------------
 .. automodule:: eureka.lib.modelsPOET
@@ -131,6 +145,13 @@ lib.sort_nicely
     :undoc-members:
     :show-inheritance:
 
+lib.suntimecorr
+---------------
+.. automodule:: eureka.lib.suntimecorr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.time2phase2
 ---------------------
 .. automodule:: eureka.lib.time2phase2
@@ -148,6 +169,13 @@ lib.timer
 lib.univ
 ---------------
 .. automodule:: eureka.lib.univ
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.utc_tt
+---------------
+.. automodule:: eureka.lib.utc_tt
     :members:
     :undoc-members:
     :show-inheritance:
