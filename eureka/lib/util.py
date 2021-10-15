@@ -1,5 +1,4 @@
 import numpy as np
-from importlib import reload
 from . import sort_nicely as sn
 import os, time
 import re

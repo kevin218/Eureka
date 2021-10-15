@@ -8,7 +8,7 @@ import os
 import re
 import time
 #from univ import c
-#from splinterp import splinterp
+from .splinterp import splinterp
 import scipy.interpolate as si
 ftpurl  = 'ftp://ftp.nist.gov/pub/time/leap-seconds.list'
 ftpurl2 = 'ftp://ftp.boulder.nist.gov/pub/time/leap-seconds.list'

@@ -6,7 +6,7 @@
 
 import sys
 import numpy as np
-import gaussian as g
+from . import gaussian as g
 import matplotlib.pyplot as plt
 
 '''
