@@ -1,12 +1,9 @@
 
 # NIRCam specific rountines go here
 import numpy as np
-from importlib import reload
 from astropy.io import fits
-from eureka.S3_data_reduction import sigrej
-from eureka.S3_data_reduction import background
-from eureka.S3_data_reduction import bright2flux as b2f
-reload(b2f)
+from . import sigrej, background
+from . import bright2flux as b2f
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, data, meta):

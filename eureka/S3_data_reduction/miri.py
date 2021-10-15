@@ -1,9 +1,8 @@
 import os
 import numpy as np
 from astropy.io import fits
-from importlib import reload
-from eureka.S3_data_reduction import background, nircam
-from eureka.S3_data_reduction import bright2flux as b2f
+from . import background, nircam
+from . import bright2flux as b2f
 from jwst import datamodels
 from gwcs.wcstools import grid_from_bounding_box
 

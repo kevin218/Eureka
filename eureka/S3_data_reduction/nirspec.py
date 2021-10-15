@@ -2,9 +2,8 @@
 import os
 import numpy as np
 from astropy.io import fits
-from eureka.S3_data_reduction import sigrej
-from eureka.S3_data_reduction import background, nircam
-from eureka.S3_data_reduction import bright2flux as b2f
+from . import sigrej, background, nircam
+from . import bright2flux as b2f
 
 def read(filename, data, meta):
     '''Reads single FITS file from JWST's NIRCam instrument.

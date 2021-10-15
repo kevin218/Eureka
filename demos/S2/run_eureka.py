@@ -1,8 +1,6 @@
-import sys
-sys.path.append('../..')
-from eureka.S2_calibrations.s2_calibrate import EurekaS2Pipeline
-import eureka.S3_data_reduction.s3_reduce as s3
-import eureka.S4_generate_lightcurves.s4_genLC as s4
+from ....S2_calibrations.s2_calibrate import EurekaS2Pipeline
+from ....S3_data_reduction import s3_reduce as s3
+from ....S4_generate_lightcurves import s4_genLC as s4
 
 # eventlabel = 'miri_lrs_template'
 # eventlabel = 'nirspec_fs_template'
