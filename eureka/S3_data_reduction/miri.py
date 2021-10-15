@@ -1,4 +1,4 @@
-import os
+`import os
 import numpy as np
 from astropy.io import fits
 from . import background, nircam
@@ -13,14 +13,14 @@ def read(filename, data, meta):
     ----------
     filename:   str
         Single filename to read
-    data:   DataObject
+    data:   DataClass
         The data object in which the fits data will stored
-    meta:   MetaObject
+    meta:   MetaData
         The metadata object
 
     Returns
     -------
-    data: DataObject
+    data: DataClass
         The updated data object with the fits data stored inside
 
     Notes
@@ -113,14 +113,14 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data:   DataObject
+    data:   DataClass
         The data object in which the fits data will stored
-    meta:   MetaObject
+    meta:   MetaData
         The metadata object
 
     Returns
     -------
-    data:   DataObject
+    data:   DataClass
         The updated data object with outlier background pixels flagged.
     '''
     return nircam.flag_bg(data, meta)
@@ -132,3 +132,4 @@ def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
     Uses the code written for NIRCam and untested for MIRI, but likely to still work (as long as MIRI data gets rotated)
     '''
     return nircam.fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=isplots)
+`

@@ -12,14 +12,14 @@ def read(filename, data, meta):
     ----------
     filename:   str
         Single filename to read
-    data:   DataObject
+    data:   DataClass
         The data object in which the fits data will stored
-    meta:   MetaObject
+    meta:   MetaClass
         The metadata object
 
     Returns
     -------
-    data: DataObject
+    data: DataClass
         The updated data object with the fits data stored inside
 
     Notes
@@ -82,14 +82,14 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data:   DataObject
+    data:   DataClass
         The data object in which the fits data will stored
-    meta:   MetaObject
+    meta:   MetaClass
         The metadata object
 
     Returns
     -------
-    data:   DataObject
+    data:   DataClass
         The updated data object with outlier background pixels flagged.
     '''
     return nircam.flag_bg(data, meta)
