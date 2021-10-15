@@ -2,15 +2,15 @@
 
 # Eureka! Stage 2 calibration pipeline
 
-"""
+
 # Proposed Steps
-# -------- -----
+# --------------
 # 1.  Read in Stage 1 data products
 # 2.  Change default trimming if needed
 # 3.  Run the JWST pipeline with any requested modifications
 # 4.  Save Stage 2 data products
 # 5.  Produce plots
-"""
+
 
 import os, sys, shutil, time
 import numpy as np

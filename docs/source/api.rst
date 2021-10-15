@@ -270,9 +270,30 @@ S3_data_reduction.s3_reduce
     :undoc-members:
     :show-inheritance:
 
+S3_data_reduction.sigrej
+----------------------------
+.. automodule:: eureka.S3_data_reduction.sigrej
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.source_pos
+----------------------------
+.. automodule:: eureka.S3_data_reduction.source_pos
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 S4_generate_lightcurves
 ''''''''''''''''''''''''''
+
+S4_generate_lightcurves.drift
+----------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.drift
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 S4_generate_lightcurves.plots_s4
 ----------------------------------

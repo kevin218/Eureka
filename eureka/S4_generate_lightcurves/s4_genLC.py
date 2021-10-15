@@ -2,7 +2,7 @@
 
 # Generic Stage 4 light curve generation pipeline
 
-"""
+
 # Proposed Steps
 # -------- -----
 # 1.  Read in Stage 3 data products
@@ -14,7 +14,7 @@
 # 7.  Generate light curves
 # 8.  Save Stage 4 data products
 # 9.  Produce plots
-"""
+
 
 import sys, os, time, shutil, glob
 import numpy as np
@@ -31,31 +31,37 @@ from ..lib import util
 
 
 class MetaClass:
+    '''A class to hold Eureka! metadata.
+    '''
+
     def __init__(self):
         return
 
 
 def lcJWST(eventlabel, s3_meta=None):
-    #expand=1, smooth_len=None, correctDrift=True
-    '''
-    Compute photometric flux over specified range of wavelengths
+    '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
     ----------
-    eventlabel  : Unique identifier for these data
-    s3_meta     : Metadata object from Eureka!'s S3 step
+    eventlabel: str
+        The unique identifier for these data.
+    s3_meta:    MetaClass
+        The metadata object from Eureka!'s S3 step (if running S3 and S4 sequentially).
 
     Returns
     -------
-    event object
+    meta:   MetaClass
+        The metadata object with attributes added by S4.
 
-    History
-    -------
-    Written by Kevin Stevenson      June 2021
-    Updated by Taylor Bell          October 2021
-
+    Notes
+    -----
+    History:
+    
+    - June 2021 Kevin Stevenson
+        Initial version
+    - October 2021 Taylor Bell
+        Updated to allow for inputs from new S3
     '''
-
     # Initialize a new metadata object
     meta = MetaClass()
     meta.eventlabel = eventlabel
