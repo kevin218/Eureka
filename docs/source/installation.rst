@@ -29,7 +29,7 @@ From source
 
 .. code-block:: bash
 
-	python install -r requirements.txt
+	pip install -r requirements.txt
 
 
 For the JWST ERS Pre-Launch Data Hackathon

@@ -28,7 +28,7 @@ ALERT: Project Eureka! is currently under heavy development. Use at your own ris
 3. Install additional **requirements** for the package by typing:
 
 	```bash
-	python install -r requirements.txt
+	pip install -r requirements.txt
 	```
 
 
