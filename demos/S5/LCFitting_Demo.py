@@ -4,7 +4,8 @@ import numpy as np
 #from bokeh.io import output_notebook
 #from bokeh.plotting import show
 #from hotsoss import plotting as plt
-from .... import eureka
+sys.path.append('../../')
+import eureka
 
 
 # Get the orbital parameters
