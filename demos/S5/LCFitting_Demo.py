@@ -34,19 +34,21 @@ import eureka.S5_lightcurve_fitting.lightcurve as lc
 reload(lc)
 wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
 
-from eureka.lib import readECF as rd
-reload(rd)
-ecf = rd.read_ecf('s5.ecf')
-#pdb.set_trace()
+# from eureka.lib import readECF as rd
+# reload(rd)
+# ecf = rd.read_ecf('s5.ecf')
 
 
 # Set the intial parameters
 import eureka.S5_lightcurve_fitting.parameters as p
 reload(p)
-params = p.Parameters()
-params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
-params.per = wasp107b_par['orbital_period'], 'fixed'
+#FINDME: this is where I was working on adding fit parameters
+params = p.Parameters(param_file='s5_fit_par.ecf')
+# params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
+# params.per = wasp107b_par['orbital_period'], 'fixed'
+pdb.set_trace()
 params.t0 = wasp107b_par['transit_time']-0.01, 'free', wasp107b_par['transit_time']-0.1, wasp107b_par['transit_time']+0.1
+pdb.set_trace()
 params.inc = wasp107b_par['inclination'], 'free', 80., 90.
 params.a = wasp107b_par['a/Rs'], 'free', 10., 25.
 params.ecc = wasp107b_par['eccentricity'], 'fixed'

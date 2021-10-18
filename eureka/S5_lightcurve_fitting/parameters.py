@@ -7,7 +7,7 @@ import os
 import json
 
 import numpy as np
-
+from eureka.lib import readECF as rd
 
 class Parameter:
     """A generic parameter class"""
@@ -106,12 +106,26 @@ class Parameters:
                 # Add the params to a dict
                 data = np.genfromtxt(param_file)
                 params = {i: j for i, j in data}
+                print(params)
 
             # Parse the JSON file
             elif param_file.endswith('.json'):
 
                 with open(param_file) as json_data:
                     params = json.load(json_data)
+
+            # Parse Eureka control file
+            #FINDME: THIS IS NOT WORKING
+            elif param_file.endswith('.ecf'):
+
+                ecf = rd.read_ecf(param_file)
+                paramlist=vars(ecf)
+                keylist=list(paramlist.keys())
+                params={}
+                kwargs={}
+                for i in keylist:
+                    params[i]=list(paramlist[i].getarr())
+
 
         # Add any kwargs to the parameter dict
         params.update(kwargs)
