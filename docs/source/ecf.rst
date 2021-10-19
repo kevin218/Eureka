@@ -80,7 +80,7 @@ Currently, the only parallelized part of the code is the **background subtractio
 
 suffix
 '''''''
-If your data directory (``topdir + datadir``, see below) contains files with different data formats, you want to consider setting this variable.
+If your data directory (``topdir + inputdir``, see below) contains files with different data formats, you want to consider setting this variable.
 
 
 E.g.: Simulated NIRCam Data:
@@ -237,7 +237,7 @@ Sets how many plots should be saved when running Stage 3.
 
 testing_S3
 '''''''''''
-If set to ``True`` only the last segment (which is usually the smallest) in the ``datadir`` will be run.
+If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run.
 
 
 hide_plots
