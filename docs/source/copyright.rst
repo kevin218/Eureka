@@ -8,7 +8,10 @@ Copyright
 The current main developers of Eureka! are:
 
 - Kevin Stevenson
+- Laura Kreidberg
 - Sebastian Zieba
 - Giannina Guzman
-- Laura Kreidberg
+- Megan Mansfield
+- Eva-Maria Ahrer
 - Taylor Bell
+- Aarynn Carter
