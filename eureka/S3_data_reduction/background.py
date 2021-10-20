@@ -4,7 +4,7 @@ import multiprocessing as mp
 from tqdm import tqdm
 from importlib import reload
 
-__all__ = ['BGSubtraction', 'fitbg', 'fitbg2', 'fitbg3']
+__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
 def BGsubtraction(data, meta, log, isplots):
     """
@@ -405,7 +405,7 @@ def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
         crs = np.zeros(bgmask.shape)
         for i in range(data.shape[0]):
             d = np.abs(data[i]) + 0.0
-            outliers = d > np.nanmedian(d)+np.nanstd(d)*threshold*2
+            outliers = d > np.nanmedian(d)+np.nanstd(d)*threshold*1.5
             crs[i,outliers] = 1
 
         flipped = np.ones(omask.shape)

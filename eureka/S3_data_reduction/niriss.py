@@ -20,7 +20,7 @@ __all__ = ['read', 'create_niriss_mask', 'image_filtering',
            'f277_mask', 'fit_bg']
 
 
-def read(filename, data, meta):
+def read(filename, f277_filename, data, meta):
     """
     Reads a single FITS file from JWST's NIRISS instrument.
     This takes in the Stage 2 processed files.
@@ -44,6 +44,7 @@ def read(filename, data, meta):
     assert(filename, str)
 
     hdu = fits.open(filename)
+    f277= fits.open(f277_filename)
 
     # loads in all the header data
     data.mhdr = hdu[0].header
@@ -55,12 +56,14 @@ def read(filename, data, meta):
                               data.intend)
 
     # loads all the data into the data object
-    data.data = hdu['SCI',1].data
-    data.err  = hdu['ERR',1].data
-    data.dq   = hdu['DQ' ,1].data
+    data.data = hdu['SCI',1].data + 0.0
+    data.err  = hdu['ERR',1].data + 0.0
+    data.dq   = hdu['DQ' ,1].data + 0.0
 
-    data.var  = hdu['VAR_POISSON',1].data
-    data.v0   = hdu['VAR_RNOISE' ,1].data
+    data.f277 = f277[1].data + 0.0
+
+    data.var  = hdu['VAR_POISSON',1].data + 0.0
+    data.v0   = hdu['VAR_RNOISE' ,1].data + 0.0
 
     meta = hdu['ASDF_METADATA',1].data
 
@@ -139,7 +142,7 @@ def f277_mask(img):
     return new_mask, mid[q]
 
 
-def create_niriss_mask(imgs, f277, order_width=14, plot=False):
+def create_niriss_mask(data, meta, isplots=False):
     """
     This routine takes the output S2 processed images and creates
     a mask for each order. This routine creates a single image from
@@ -175,8 +178,8 @@ def create_niriss_mask(imgs, f277, order_width=14, plot=False):
         poly = np.polyfit(x,y,deg=deg)
         return np.poly1d(poly)
 
-    perc  = np.nanmax(imgs, axis=0)
-    fperc = np.nanmax(f277, axis=(0,1))
+    perc  = np.nanmax(data.data, axis=0)
+    fperc = np.nanmax(data.f277, axis=(0,1))
 
     # creates data img mask
     z,g = image_filtering(perc)
@@ -231,20 +234,20 @@ def create_niriss_mask(imgs, f277, order_width=14, plot=False):
 
     bkg_width = 30
     for i in range(perc.shape[1]):
-        img_mask[int(fit1(i)-order_width):
-                     int(fit1(i)+order_width),i] += 1
+        img_mask[int(fit1(i)-meta.order_width):
+                     int(fit1(i)+meta.order_width),i] += 1
         bkg_mask[int(fit1(i)-bkg_width):
                      int(fit1(i)+bkg_width),i] = np.nan
 
         if i < x2[-1]:
-            img_mask[int(fit2(i)-order_width):
-                         int(fit2(i)+order_width),i] += 2
+            img_mask[int(fit2(i)-meta.order_width):
+                         int(fit2(i)+meta.order_width),i] += 2
             bkg_mask[int(fit2(i)-bkg_width):
                          int(fit2(i)+bkg_width),i] = np.nan
 
                 
     # plots some of the intermediate and final steps
-    if plot:
+    if isplots:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, 
                                                  figsize=(14,10))
         ax1.imshow(g)
@@ -257,17 +260,21 @@ def create_niriss_mask(imgs, f277, order_width=14, plot=False):
         ax4.set_title('Background mask')
         plt.show()
 
+    data.order_mask = img_mask
+    data.bkg_mask  = bkg_mask
+
     return img_mask, bkg_mask
 
 
-def fit_bg(img, order_mask, bkg_mask, meta):
+def fit_bg(data, meta):
     """
     Subtracts background from non-spectral regions.
 
     # want to create some background mask to pass in to 
       background.fitbg2
     """
-    bg = fitbg3(img, order_mask, bkg_mask,
-                deg=meta.deg, threshold=meta.threshold)
+    bg = fitbg3(data.data, data.order_mask, 
+                data.bkg_mask,
+                deg=meta.bg_deg, threshold=meta.bg_thresh)
 
     return bg
