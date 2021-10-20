@@ -330,9 +330,8 @@ def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
     Fit sky background with out-of-spectra data. Hopefully this is a faster
     routine than fitbg2. (optimized to fit across the x-direction)
 
-                                                                                                                                
-    Parameters                                                                                                                  
-    ----------                                                                                                                  
+    Parameters
+    ----------
     dataim : np.ndarray                                          
        Data image to fit the background to.                      
     omask : np.ndarray                                            
@@ -357,6 +356,7 @@ def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
        Background model.
     """
     bg = np.zeros(bgmask.shape)
+    data = np.nanmedian(data, axis=0)
 
     # Takes a median background model
     if deg <= 0:
