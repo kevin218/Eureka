@@ -13,9 +13,11 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
+from .background import fitbg3
+
 
 __all__ = ['read', 'create_niriss_mask', 'image_filtering',
-           'f277_mask']
+           'f277_mask', 'fit_bg']
 
 
 def read(filename, data, meta):
@@ -227,18 +229,19 @@ def create_niriss_mask(imgs, f277, order_width=14, plot=False):
     img_mask = np.zeros(perc.shape)
     bkg_mask = np.ones(perc.shape)
 
+    bkg_width = 30
     for i in range(perc.shape[1]):
         img_mask[int(fit1(i)-order_width):
                      int(fit1(i)+order_width),i] += 1
-        img_mask[int(fit2(i)-order_width):
-                     int(fit2(i)+order_width),i] += 2
+        bkg_mask[int(fit1(i)-bkg_width):
+                     int(fit1(i)+bkg_width),i] = np.nan
 
-        # background mask creates orders that are twice the specified 
-        # width, to ensure they are not included in the background removal
-        bkg_mask[int(fit1(i)-order_width):
-                     int(fit1(i)+order_width),i] = np.nan
-        bkg_mask[int(fit2(i)-order_width):
-                     int(fit2(i)+order_width),i] = np.nan
+        if i < x2[-1]:
+            img_mask[int(fit2(i)-order_width):
+                         int(fit2(i)+order_width),i] += 2
+            bkg_mask[int(fit2(i)-bkg_width):
+                         int(fit2(i)+bkg_width),i] = np.nan
+
                 
     # plots some of the intermediate and final steps
     if plot:
@@ -257,12 +260,14 @@ def create_niriss_mask(imgs, f277, order_width=14, plot=False):
     return img_mask, bkg_mask
 
 
-def bkg_sub():
+def fit_bg(img, order_mask, bkg_mask, meta):
     """
     Subtracts background from non-spectral regions.
 
     # want to create some background mask to pass in to 
       background.fitbg2
     """
+    bg = fitbg3(img, order_mask, bkg_mask,
+                deg=meta.deg, threshold=meta.threshold)
 
-
+    return bg

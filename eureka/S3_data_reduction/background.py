@@ -1,9 +1,10 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 from tqdm import tqdm
 from importlib import reload
+
+__all__ = ['BGSubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
 def BGsubtraction(data, meta, log, isplots):
     """
@@ -194,7 +195,8 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
 # STEP 3: Fit sky background with out-of-spectra data
 def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
     '''
-    Fit sky background with out-of-spectra data.
+    Fit sky background with out-of-spectra data. Fits background model in
+    the y-direction by default.
 
     Parameters
     ----------
@@ -221,8 +223,7 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
 
     HISTORY
     -------
-    Written by Kevin Stevenson      September 2016
-    Edited by Adina Feinstein       October 2021
+    Written by Kevin Stevenson                 September 2016
     '''
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
@@ -249,7 +250,7 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
     else:
         degs = np.ones(ny)*deg
         # Fit polynomial to each column
-        for j in range(ny):
+        for j in tqdm(range(ny)):
             nobadpixels = False
             # Create x indices for background sections of frame
             xvals   = np.where(bgmask[j] == 1)[0]
@@ -258,50 +259,54 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
                 degs[j] = 0
             while (nobadpixels == False):
                 try:
-                    goodxvals = xvals[np.where(mask[j,xvals])]
+                    goodxvals = xvals[np.where(bgmask[j,xvals])]
                 except:
-                    print(j)
-                    print(xvals)
+                    print('column: ', j, 'xvals: ', xvals)
                     print(np.where(mask[j,xvals]))
                     return
                 dataslice = dataim[j,goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
-                    #print(j,ny)
                     nobadpixels = True      #exit while loop
                     #Use coefficients from previous row
+
                 else:
                     # Fit along spatial direction with a polynomial of degree 'deg'
                     coeffs    = np.polyfit(goodxvals, dataslice, deg=degs[j])
                     # Evaluate model at goodexvals
                     model     = np.polyval(coeffs, goodxvals)
-                    #model = smooth.smooth(dataslice, window_len=window_len, window=windowtype)
-                    #model = sps.medfilt(dataslice, window_len)
-                    if isplots == 6:
+
+                    # Calculate residuals
+                    residuals = dataslice - model
+
+                    # Find worst data point
+                    loc         = np.argmax(np.abs(residuals))
+                    # Calculate standard deviation of points excluding worst point
+                    ind = np.arange(0,len(residuals),1)
+                    ind = np.delete(ind, loc)
+                    stdres = np.std(residuals[ind])
+                    
+                    if stdres == 0:
+                        stdres = np.inf
+                    # Calculate number of sigma from the model
+                    stdevs    = np.abs(residuals) / stdres
+                    #print(stdevs)
+
+                    # Mask data point if > threshold
+                    if stdevs[loc] > threshold:
+                        bgmask[j,goodxvals[loc]] = np.nan#0
+                    else:
+                        nobadpixels = True      #exit while loop
+
+
+                    if isplots == True:
                         plt.figure(3601)
                         plt.clf()
                         plt.title(str(j))
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
                         plt.pause(0.01)
-
-                    # Calculate residuals
-                    residuals   = dataslice - model
-                    # Find worst data point
-                    loc         = np.argmax(np.abs(residuals))
-                    # Calculate standard deviation of points excluding worst point
-                    ind         = range(len(residuals))
-                    ind.remove(loc)
-                    stdres      = np.std(residuals[ind])
-                    if stdres == 0:
-                        stdres = np.inf
-                    # Calculate number of sigma from the model
-                    stdevs    = np.abs(residuals) / stdres
-                    # Mask data point if > threshold
-                    if stdevs[loc] > threshold:
-                        mask[j,goodxvals[loc]] = 0
-                    else:
-                        nobadpixels = True      #exit while loop
+                        plt.show()
 
             # Evaluate background model at all points, write model to background image
             if len(goodxvals) != 0:
@@ -317,4 +322,93 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
         mask    = (mask.T)
         bgmask  = (bgmask.T)
 
-    return bg, mask #,variance
+    return bg*bgmask#, mask #,variance
+
+
+def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
+    """
+    Fit sky background with out-of-spectra data. Hopefully this is a faster
+    routine than fitbg2. (optimized to fit across the x-direction)
+
+                                                                                                                                
+    Parameters                                                                                                                  
+    ----------                                                                                                                  
+    dataim : np.ndarray                                          
+       Data image to fit the background to.                      
+    omask : np.ndarray                                            
+       Mask of shape dataim that marks where the orders are.      
+    bgmask : np.ndarray                                                      
+       Background mask that marks where the background is. The background    
+       pixels should equal 0 in the mask, while non-background regions should
+       equal > 0 (the exact value does not matter).                   
+    deg : int, optional                                               
+       The number of degree polynomial to fit to the background.      
+       Default is 1 (linear fit).                                     
+    threshold : float, optional                                      
+       The standard deviation threshold to remove bad background     
+       pixels. Default is 5.                                       
+    isplots : bool, optional                                      
+       Plots intermediate steps for the background fitting routine.
+       Default is False.                                          
+
+    Returns
+    -------
+    bg : np.ndarray
+       Background model.
+    """
+    bg = np.zeros(bgmask.shape)
+
+    # Takes a median background model
+    if deg <= 0:
+        bg = np.full(bgmask.shape, np.nanmedian(data*bgmask))
+        return bg
+    # No background modeling
+    elif deg == None:
+        return bg
+
+    # Fitting the background model with some degree polynomial
+    else:        
+
+        for i in tqdm(range(bgmask.shape[1])):
+
+            nobadpixels = False
+            goodyvals = np.where((np.isnan(bgmask[:,i])==False) & 
+                                 (np.isnan(data[:,i])==False) )[0]
+            x, y = goodyvals+0.0, data[:,i][goodyvals]+0.0
+
+            while nobadpixels == False:
+
+                coeffs    = np.polyfit(x, y, deg=deg)
+                model     = np.polyval(coeffs, x)
+                
+                residuals = y-model
+                
+                outliers = np.abs(residuals) > np.nanstd(residuals)*threshold
+                
+                if isplots:
+                    plt.plot(x, residuals, '.')
+                    plt.plot(x[outliers], residuals[outliers], '.')
+                    plt.title(i)
+                    plt.show()
+
+                if len(residuals[outliers])==0:
+                    nobadpixels = True
+                else:
+                    x, y = x[~outliers], y[~outliers]
+                    
+            bg[:,i] = np.polyval(coeffs, np.arange(0,bgmask.shape[0],1))
+
+        rx, ry = np.where(np.isnan(bgmask))
+        bgmask[rx,ry]=0
+        
+        # quickly gets rid of cosmic rays I think
+        crs = np.zeros(bgmask.shape)
+        for i in range(data.shape[0]):
+            d = np.abs(data[i]) + 0.0
+            outliers = d > np.nanmedian(d)+np.nanstd(d)*threshold*2
+            crs[i,outliers] = 1
+
+        flipped = np.ones(omask.shape)
+        flipped[omask>0] = 0
+
+        return bg*flipped + data*crs
