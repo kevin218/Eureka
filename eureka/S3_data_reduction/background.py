@@ -192,21 +192,45 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
     return bg, mask #,variance
 
 # STEP 3: Fit sky background with out-of-spectra data
-def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=False):
+def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
     '''
-    Fit sky background with out-of-spectra data
+    Fit sky background with out-of-spectra data.
+
+    Parameters
+    ----------
+    dataim : np.ndarray
+       Data image to fit the background to.
+    mask : np.ndarray
+       Mask of shape dataim that marks where the orders are.
+    bgmask : np.ndarray
+       Background mask that marks where the background is. The background
+       pixels should equal 0 in the mask, while non-background regions should
+       equal > 0 (the exact value does not matter).
+    deg : int, optional
+       The number of degree polynomial to fit to the background.
+       Default is 1 (linear fit).
+    threshold : float, optional
+       The standard deviation threshold to remove bad background
+       pixels. Default is 5.
+    isrotate : int, optional
+       Rotates the image. Default is 0. isrotate=1 rotates the
+       image 270 degrees. isrotate=2 rotates the image 90 degrees.
+    isplots : bool, optional
+       Plots intermediate steps for the background fitting routine.
+       Default is False.
 
     HISTORY
     -------
     Written by Kevin Stevenson      September 2016
+    Edited by Adina Feinstein       October 2021
     '''
-
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
     if isrotate == 1:
         dataim = dataim[::-1].T
         mask   = mask[::-1].T
         bgmask = bgmask[::-1].T
+
     elif isrotate == 2:
         dataim = dataim.T
         mask   = mask.T
@@ -215,10 +239,10 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=Fal
     # Initiate background image with zeros
     ny, nx  = np.shape(dataim)
     bg      = np.zeros((ny,nx))
-    mask2   = mask*bgmask
-    if deg < 0:
+
+    if deg <= 0:
         # Calculate median background of entire frame
-        bg  += np.median(data[np.where(mask2)])
+        bg  += np.nanmedian(dataim*bgmask)
     elif deg == None :
         # No background subtraction
         pass
@@ -230,7 +254,7 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=Fal
             # Create x indices for background sections of frame
             xvals   = np.where(bgmask[j] == 1)[0]
             # If too few good pixels on either half of detector then compute average
-            if (np.sum(mask2[j,:nx/2]) < deg) or (np.sum(mask2[j,nx/2:nx]) < deg):
+            if (np.sum(bgmask[j,:int(nx/2)]) < deg) or (np.sum(bgmask[j,int(nx/2):nx]) < deg):
                 degs[j] = 0
             while (nobadpixels == False):
                 try:

@@ -14,11 +14,11 @@ from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
 
-__all__ = ['read_niriss', 'create_niriss_mask', 'image_filtering',
+__all__ = ['read', 'create_niriss_mask', 'image_filtering',
            'f277_mask']
 
 
-def read_niriss(filename, data, meta):
+def read(filename, data, meta):
     """
     Reads a single FITS file from JWST's NIRISS instrument.
     This takes in the Stage 2 processed files.
@@ -137,7 +137,7 @@ def f277_mask(img):
     return new_mask, mid[q]
 
 
-def create_niriss_mask(imgs, f277, plot=False):
+def create_niriss_mask(imgs, f277, order_width=14, plot=False):
     """
     This routine takes the output S2 processed images and creates
     a mask for each order. This routine creates a single image from
@@ -162,6 +162,12 @@ def create_niriss_mask(imgs, f277, plot=False):
        A mask for the 2D images that marks the first and second
        orders for NIRISS observations. The first order is marked
        with value = 1; the second order is marked with value = 2.
+       Overlap regions are marked with value = 3.
+    bkg_mask : np.ndarray
+       A mask for the 2D images that marks where the background
+       is for NIRISS observations. Background regions are given
+       value = 1. Regions to ignore are given value = 0.
+
     """
     def poly_fit(x,y,deg):
         poly = np.polyfit(x,y,deg=deg)
@@ -219,28 +225,44 @@ def create_niriss_mask(imgs, f277, plot=False):
     fit2 = poly_fit(x2,y2,4)
 
     img_mask = np.zeros(perc.shape)
-    order_width = 14 ## THIS WILL PROBABLY NEED TO CHANGE
+    bkg_mask = np.ones(perc.shape)
+
     for i in range(perc.shape[1]):
         img_mask[int(fit1(i)-order_width):
                      int(fit1(i)+order_width),i] += 1
         img_mask[int(fit2(i)-order_width):
                      int(fit2(i)+order_width),i] += 2
+
+        # background mask creates orders that are twice the specified 
+        # width, to ensure they are not included in the background removal
+        bkg_mask[int(fit1(i)-order_width):
+                     int(fit1(i)+order_width),i] = np.nan
+        bkg_mask[int(fit2(i)-order_width):
+                     int(fit2(i)+order_width),i] = np.nan
                 
     # plots some of the intermediate and final steps
     if plot:
-        fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, figsize=(14,8))
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, 
+                                                 figsize=(14,10))
         ax1.imshow(g)
         ax1.set_title('Gaussian smoothed data')
         ax2.imshow(z)
         ax2.set_title('Canny edge detector')
         ax3.imshow(img_mask, vmin=0, vmax=3)
         ax3.set_title('Final mask')
+        ax4.imshow(bkg_mask, vmin=0, vmax=1)
+        ax4.set_title('Background mask')
         plt.show()
 
-    return img_mask
+    return img_mask, bkg_mask
 
 
 def bkg_sub():
     """
     Subtracts background from non-spectral regions.
+
+    # want to create some background mask to pass in to 
+      background.fitbg2
     """
+
+
