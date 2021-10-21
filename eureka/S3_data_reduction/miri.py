@@ -1,5 +1,6 @@
 # MIRI specific rountines go here
 
+import os
 import numpy as np
 from astropy.io import fits
 from importlib import reload
@@ -69,9 +70,11 @@ def read(filename, data, meta):
         data.dq      = np.swapaxes(data.dq  , 1, 2)[:,:,::-1]
         #data.wave    = np.swapaxes(data.wave, 0, 1)[:,:,::-1]
         data.v0      = np.swapaxes(data.v0  , 1, 2)[:,:,::-1]
-        temp         = np.copy(meta.ywindow)
-        meta.ywindow = meta.xwindow
-        meta.xwindow = data.data.shape[2] - temp[::-1]
+        if meta.firstFile:
+            # If not, we've already done this and don't want to switch it back
+            temp         = np.copy(meta.ywindow)
+            meta.ywindow = meta.xwindow
+            meta.xwindow = data.data.shape[2] - temp[::-1]
 
     return data, meta
 
@@ -101,9 +104,9 @@ def unit_convert(data, meta, log):
         # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
         # Convert from brightness units (MJy/sr) to DNs
         log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
+        meta.photfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_PHOTOM'][7:]
         data = b2f.bright2dn(data, meta)
-        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
+        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
         data = b2f.dn2electrons(data, meta)
     return data, meta
 

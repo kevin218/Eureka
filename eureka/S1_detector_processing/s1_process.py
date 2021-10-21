@@ -120,7 +120,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
 			elif meta.ramp_fit_method == 'differenced':
 				# If we instead want to difference the frames, need to run pipeline, excluding the last
 				# few steps, then perform the ramp fitting manually, then run any remaining steps. 
-				self.ramp_fitting.skip = True
+				self.ramp_fit.skip = True
 				self.gain_scale.skip = True
 				self(filename)
 
@@ -137,9 +137,9 @@ class EurekaS1Pipeline(Detector1Pipeline):
 		log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
 		# Save results
-		if not meta.testing_S2:
+		if not meta.testing_S1:
 		  log.writelog('Saving Metadata')
-		  me.saveevent(meta, meta.workdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
+		  me.saveevent(meta, meta.workdir + 'S1_' + meta.eventlabel + "_Meta_Save", save=[])
 
 		return meta
 
