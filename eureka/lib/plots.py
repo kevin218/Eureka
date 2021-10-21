@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+#PLOT SETTINGS
+def use_tex_fonts(family='sans-serif', font='Helvetica', fontsize=16):
+    rc('font', **{'family': family, family: [font], 'size': fontsize})
+    rc('text', usetex=True)
 
 #SET PLOTTING FORMAT
 ebfmt   = ['bo',  'go',  'ro',  'co',  'mo',  'yo',
