@@ -43,22 +43,22 @@ class EurekaS1Pipeline(Detector1Pipeline):
 		meta.eventlabel = eventlabel
 		meta.suffix = 'uncal'  # This will break for any instruments/observations that do not result in uncal
 
-		# Shouldn't be too relevant for Stage 1, but assign raw input and output directories
-		meta.inputdir_raw = meta.inputdir
-		meta.outputdir_raw = meta.outputdir
-
 		# Load Eureka! control file and store values in Event object
 		ecffile = 'S1_' + eventlabel + '.ecf'
 		ecf     = rd.read_ecf(ecffile)
 		rd.store_ecf(meta, ecf)
+
+		# Shouldn't be too relevant for Stage 1, but assign raw input and output directories
+		meta.inputdir_raw = meta.inputdir
+		meta.outputdir_raw = meta.outputdir
 
 		# Create directories for Stage 1 processing outputs
 		# This code allows the input and output files to be stored outside of the Eureka! folder
 		outputdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
 		if outputdir[-1]!='/':
 		  outputdir += '/'
-		run = util.makedirectory(meta, outputdir+'S1')
-		meta.workdir = util.pathdirectory(meta, outputdir+'S1', run)
+		run = util.makedirectory(meta, 'S1')
+		meta.workdir = util.pathdirectory(meta, 'S1', run)
 		# Add a trailing slash so we don't need to add it everywhere below
 		meta.workdir += '/'
 		# Make a separate folder for plot outputs
@@ -94,6 +94,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
 			with fits.open(filename) as f:
 				instrument = f[0].header['INSTRUME'] 
 
+			# Reset suffix and assign whether to save and the output directory
+			self.suffix = None
+			self.save_results = (not meta.testing_S1)
+			self.output_dir = meta.outputdir
+			
 			# Skip steps according to input ecf file
 			self.group_scale.skip = meta.skip_group_scale
 			self.dq_init.skip = meta.skip_dq_init
@@ -142,7 +147,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
 
 		# Save results
 		if not meta.testing_S1:
-		  log.writelog('Saving Metadata')
-		  me.saveevent(meta, meta.workdir + 'S1_' + meta.eventlabel + "_Meta_Save", save=[])
+			log.writelog('Saving Metadata')
+			me.saveevent(meta, meta.workdir + 'S1_' + meta.eventlabel + "_Meta_Save", save=[])
 
 		return meta
