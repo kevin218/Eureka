@@ -43,6 +43,10 @@ class EurekaS1Pipeline(Detector1Pipeline):
 		meta.eventlabel = eventlabel
 		meta.suffix = 'uncal'  # This will break for any instruments/observations that do not result in uncal
 
+		# Shouldn't be too relevant for Stage 1, but assign raw input and output directories
+		meta.inputdir_raw = meta.inputdir
+		meta.outputdir_raw = meta.outputdir
+
 		# Load Eureka! control file and store values in Event object
 		ecffile = 'S1_' + eventlabel + '.ecf'
 		ecf     = rd.read_ecf(ecffile)
