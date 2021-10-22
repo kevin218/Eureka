@@ -1,10 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc, rcdefaults
 
 #PLOT SETTINGS
-def use_tex_fonts(family='sans-serif', font='Helvetica', fontsize=16):
-    rc('font', **{'family': family, family: [font], 'size': fontsize})
-    rc('text', usetex=True)
+def use_tex_fonts(toggle, family='sans-serif', font='Helvetica', fontsize=16):
+    if toggle == True:
+        rc('font', **{'family': family, family: [font], 'size': fontsize})
+        rc('text', usetex=True)
+    elif toggle == False:
+        rcdefaults()
+    else: 
+        raise ValueError('TeX font toggle must be a boolean.')
 
 #SET PLOTTING FORMAT
 ebfmt   = ['bo',  'go',  'ro',  'co',  'mo',  'yo',
