@@ -46,17 +46,17 @@ reload(p)
 params = p.Parameters(param_file='s5_fit_par.ecf')
 # params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
 # params.per = wasp107b_par['orbital_period'], 'fixed'
-pdb.set_trace()
-params.t0 = wasp107b_par['transit_time']-0.01, 'free', wasp107b_par['transit_time']-0.1, wasp107b_par['transit_time']+0.1
-pdb.set_trace()
-params.inc = wasp107b_par['inclination'], 'free', 80., 90.
-params.a = wasp107b_par['a/Rs'], 'free', 10., 25.
-params.ecc = wasp107b_par['eccentricity'], 'fixed'
-params.w = 90, 'fixed'    #wasp107b_par['omega'], 'fixed'
+# pdb.set_trace()
+# params.t0 = wasp107b_par['transit_time']-0.01, 'free', wasp107b_par['transit_time']-0.1, wasp107b_par['transit_time']+0.1
+# pdb.set_trace()
+# params.inc = wasp107b_par['inclination'], 'free', 80., 90.
+# params.a = wasp107b_par['a/Rs'], 'free', 10., 25.
+# params.ecc = wasp107b_par['eccentricity'], 'fixed'
+# params.w = 90, 'fixed'    #wasp107b_par['omega'], 'fixed'
 params.limb_dark = 'quadratic', 'independent'
 params.transittype = 'primary', 'independent'
-params.u1 = 0.1, 'free', 0., 0.3
-params.u2 = 0.1, 'free', 0., 0.3
+# params.u1 = 0.1, 'free', 0., 0.3
+# params.u2 = 0.1, 'free', 0., 0.3
 
 # Make the transit model
 import eureka.S5_lightcurve_fitting.models as m
