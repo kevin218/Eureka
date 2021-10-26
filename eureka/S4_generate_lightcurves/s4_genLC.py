@@ -200,7 +200,7 @@ def lcJWST(eventlabel, s3_meta=None):
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
                 # Compute valid indeces within wavelength range
-                index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d <= meta.wave_hi[i]))[0]
+                index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d < meta.wave_hi[i]))[0]
                 # Sum flux for each spectroscopic channel
                 meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
                 # Add uncertainties in quadrature
