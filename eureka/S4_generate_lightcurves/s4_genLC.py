@@ -204,7 +204,7 @@ def lcJWST(eventlabel, s3_meta=None):
                 # Sum flux for each spectroscopic channel
                 meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
                 # Add uncertainties in quadrature
-                meta.lcerr[i]     = np.sqrt(np.sum(optspec[:,index]**2,axis=1))
+                meta.lcerr[i]     = np.sqrt(np.sum(optspec[:,index],axis=1))
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
