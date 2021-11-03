@@ -24,7 +24,7 @@ skip_fringe				True	# Not run for MIRI LRS Slitless
 skip_pathloss			True	# Not run for MIRI LRS Slitless
 skip_barshadow			True	# Not run for MIRI LRS Slitless
 skip_photom				False
-skip_resample_spec		True	# Not run for MIRI LRS Slitless
+skip_resample			True	# Not run for MIRI LRS Slitless
 skip_cube_build			True	# Not run for MIRI LRS Slitless
 skip_extract_1d			False
 

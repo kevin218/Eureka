@@ -24,7 +24,7 @@ skip_fringe				True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_pathloss			True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_barshadow			True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_photom				False
-skip_resample_spec		True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
+skip_resample			True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_cube_build			True	# Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_extract_1d			False
 
