@@ -175,20 +175,20 @@ class EurekaS2Pipeline(Spec2Pipeline):
             if not meta.testing_S2 and not self.extract_1d.skip:
                 log.writelog('\nGenerating x1dints figure')
                 fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
-            with datamodels.open(meta.outputdir+fname+'.fits') as sp1d:
-                fig, ax = plt.subplots(1,1, figsize=[15,5])
-                
-                for i in range(len(sp1d.spec)):
-                    plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'], sp1d.spec[i].spec_table['FLUX'])
+                with datamodels.open(meta.outputdir+fname+'.fits') as sp1d:
+                    fig, ax = plt.subplots(1,1, figsize=[15,5])
 
-                plt.title('Time Series Observation: Extracted spectra')
-                plt.xlabel('Wavelength (micron)')
-                plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
-                if meta.hide_plots:
-                    plt.close()
-                else:
-                    plt.pause(2)
+                    for i in range(len(sp1d.spec)):
+                        plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'], sp1d.spec[i].spec_table['FLUX'])
+
+                    plt.title('Time Series Observation: Extracted spectra')
+                    plt.xlabel('Wavelength (micron)')
+                    plt.ylabel('Flux')
+                    plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
+                    if meta.hide_plots:
+                        plt.close()
+                    else:
+                        plt.pause(2)
 
         # Calculate total run time
         total = (time.time() - t0) / 60.
