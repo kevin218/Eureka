@@ -2,15 +2,35 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc, rcdefaults
 
-#PLOT SETTINGS
-def use_tex_fonts(toggle, family='sans-serif', font='Helvetica', fontsize=16):
-    if toggle == True:
-        rc('font', **{'family': family, family: [font], 'size': fontsize})
-        rc('text', usetex=True)
-    elif toggle == False:
+# Function to adjust matplotlib rcParams for plotting procedures.
+def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
+    if not (isinstance(usetex, bool) and isinstance(from_scratch, bool)):
+        raise ValueError('"usetex" and "from_scratch" arguments must be boolean.')
+
+    if from_scratch:
+        # Reset all rcParams prior to making changes. 
         rcdefaults()
-    else: 
-        raise ValueError('TeX font toggle must be a boolean.')
+
+    # Apply the desired style...
+    if style == 'custom':
+        # Custom user font, kwargs must be from the 'font' rcParams group at the moment. 
+        # https://matplotlib.org/stable/api/matplotlib_configuration_api.html#matplotlib.rcParams
+        rc('font', **kwargs)
+    elif style == 'eureka':
+        # Apply default Eureka! font settings.
+        family='sans-serif'
+        font='Helvetica'
+        fontsize=16
+        rc('font', **{'family': family, family: [font], 'size': fontsize})
+    elif style == 'default':
+        # Use default matplotlib settings
+        rcdefaults()
+    elif style == 'preserve':
+        pass
+    else:
+        raise ValueError('Input style must be one of: "custom", "eureka", "preserve", or "default".')
+
+    rc('text', usetex=usetex) # TeX fonts may not work on all machines. 
 
 #SET PLOTTING FORMAT
 ebfmt   = ['bo',  'go',  'ro',  'co',  'mo',  'yo',
