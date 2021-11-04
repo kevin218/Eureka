@@ -166,11 +166,13 @@ def lcJWST(eventlabel, s3_meta=None):
 
             # Reverse the reshaping which has been done when saving the astropy table
             optspec = np.reshape(table['optspec'].data, (-1, meta.subnx))
+            opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
             wave_1d = table['wave_1d'].data[0:meta.subnx]
             bjdtdb = table['bjdtdb'].data[::meta.subnx]
 
             #Replace NaNs with zero
             optspec[np.where(np.isnan(optspec))] = 0
+            opterr[np.where(np.isnan(opterr))] = 0
             meta.n_int, meta.subnx   = optspec.shape
 
             # Determine wavelength bins
@@ -187,7 +189,9 @@ def lcJWST(eventlabel, s3_meta=None):
                 # Correct for drift/jitter
                 for n in range(meta.n_int):
                     spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0)
+                    spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0)
                     optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
+                    opterr[n]  = spline2(np.arange(meta.subnx)+meta.drift1d[n])
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta)
@@ -200,11 +204,11 @@ def lcJWST(eventlabel, s3_meta=None):
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
                 # Compute valid indeces within wavelength range
-                index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d <= meta.wave_hi[i]))[0]
+                index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d < meta.wave_hi[i]))[0]
                 # Sum flux for each spectroscopic channel
                 meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
                 # Add uncertainties in quadrature
-                meta.lcerr[i]     = np.sqrt(np.sum(optspec[:,index]**2,axis=1))
+                meta.lcerr[i]     = np.sqrt(np.sum(opterr[:,index]**2,axis=1))
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
