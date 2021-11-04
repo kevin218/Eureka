@@ -5,6 +5,8 @@ from astropy.io import fits
 from jwst import datamodels
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
+from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
+
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF as rd
@@ -99,7 +101,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
 			self.save_results = (not meta.testing_S1)
 			self.output_dir = meta.outputdir
 			
-			# Skip steps according to input ecf file
+			# Instrument Non-Specific Steps
 			self.group_scale.skip = meta.skip_group_scale
 			self.dq_init.skip = meta.skip_dq_init
 			self.saturation.skip = meta.skip_saturation
@@ -108,6 +110,9 @@ class EurekaS1Pipeline(Detector1Pipeline):
 			self.linearity.skip = meta.skip_linearity
 			self.dark_current.skip = meta.skip_dark_current
 			self.jump.skip = meta.skip_jump
+			self.gain_scale.skip = meta.skip_gain_scale
+
+			# Instrument Specific Steps
 			if instrument in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
 				self.persistence.skip = meta.skip_persistence
 				self.superbias.skip = meta.skip_superbias
@@ -116,30 +121,21 @@ class EurekaS1Pipeline(Detector1Pipeline):
 				self.lastframe.skip = meta.skip_lastframe
 				self.rscd.skip = meta.skip_rscd
 
+			# Define ramp fitting procedure
 			if meta.ramp_fit_method == 'default':
-				# For default, we can assign the remaining steps and run through normal pipeline. 
-				self.ramp_fit.skip = meta.skip_ramp_fitting
-				self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
-				self.gain_scale.skip = meta.skip_gain_scale
-	  
-				# Call the main Spec2Pipeline function (defined in the parent class)
-				log.writelog('Running the Detector1Pipeline')
-				# Must call the pipeline in this way to ensure the skip booleans are respected
-				self(filename)
+				pass
 			elif meta.ramp_fit_method == 'differenced':
-				# If we instead want to difference the frames, need to run pipeline, excluding the last
-				# few steps, then perform the ramp fitting manually, then run any remaining steps. 
-				self.ramp_fit.skip = True
-				self.gain_scale.skip = True
-				self(filename)
-
-				#### Magic code to difference the frames
-				new_filename = 'differenced_file.fits'
-
-				self.gain_scale = meta.skip_gain_scale
-				self(new_filename)
+				self.ramp_fit = Eureka_RampFitStep()
+				self.ramp_fit.algorithm = 'differenced'
 			else:
 				raise ValueError('Only "default" or "differenced" are currently available ramp fitting procedures')
+
+			# Ramp fitting settings
+			self.ramp_fit.skip = meta.skip_ramp_fitting
+			self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
+
+			# Run Stage 1
+			self(filename)
 
 		# Calculate total run time
 		total = (time.time() - t0) / 60.
