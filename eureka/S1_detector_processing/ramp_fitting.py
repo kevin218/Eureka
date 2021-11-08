@@ -88,8 +88,8 @@ class Eureka_RampFitStep(Step):
                                                                         gain_2d, self.algorithm, self.weighting,\
                                                                         self.maximum_cores, dqflags.pixel)           
 		#image_info, integ_info, opt_info, gls_opt_model = ramp_fit.ramp_fit(input_model, buffsize, self.save_opt, readnoise_2d,\
-                                                                                    gain_2d, self.algorithm, self.weighting,\
-                                                                                    self.maximum_cores, dqflags.pixel)
+                                                                                    #gain_2d, self.algorithm, self.weighting,\
+                                                                                    #self.maximum_cores, dqflags.pixel)
         if image_info is not None:
             out_model = create_image_model(input_model, image_info)
             out_model.meta.bunit_data = 'DN/s'
