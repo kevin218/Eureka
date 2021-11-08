@@ -147,3 +147,10 @@ class EurekaS1Pipeline(Detector1Pipeline):
 			me.saveevent(meta, meta.workdir + 'S1_' + meta.eventlabel + "_Meta_Save", save=[])
 
 		return meta
+
+
+def x(x):
+	return y(x)
+
+def y(x):
+	return x**2

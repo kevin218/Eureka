@@ -40,8 +40,7 @@ class Eureka_RampFitStep(Step):
         opt_name = string(default='')
         maximum_cores = option('none', 'quarter', 'half', 'all', default='none') # max number of processes to create
     """
-    
-    
+
     algorithm = 'differenced' #default
     weighting = 'optimal'  # Only weighting allowed for Build 7.1
     maximum_cores = 1 #default
@@ -66,7 +65,7 @@ class Eureka_RampFitStep(Step):
                 if gain_model.meta.exposure.gain_factor is not None:
                     input_model.meta.exposure.gain_factor = gain_model.meta.exposure.gain_factor
 
-                # Get gain arrays, subrrays if desired.
+                # Get gain arrays, subarrays if desired.
                 frames_per_group = input_model.meta.exposure.nframes
                 readnoise_2d, gain_2d = get_reference_file_subarrays(
                     input_model, readnoise_model, gain_model, frames_per_group)
@@ -82,6 +81,9 @@ class Eureka_RampFitStep(Step):
             
             if self.algorithm =='differenced':
                 #replace this by differenced ramp fit
+
+
+                # 
                 image_info, integ_info, opt_info, gls_opt_model = ramp_fit.ramp_fit(input_model, buffsize, self.save_opt, readnoise_2d,\
                                                                                     gain_2d, self.algorithm, self.weighting,\
                                                                                     self.maximum_cores, dqflags.pixel)
@@ -90,11 +92,6 @@ class Eureka_RampFitStep(Step):
             out_model.meta.bunit_data = 'DN/s'
             out_model.meta.bunit_err = 'DN/s'
             out_model.meta.cal_step.ramp_fit = 'COMPLETE'
-        if (input_model.meta.exposure.type in ['NRS_IFU', 'MIR_MRS']) or (
-            input_model.meta.exposure.type in ['NRS_AUTOWAVE', 'NRS_LAMP'] and
-                input_model.meta.instrument.lamp_mode == 'IFU'):
-
-            out_model = datamodels.IFUImageModel(out_model)
 
         if integ_info is not None:
             int_model = create_integration_model(input_model, integ_info)
@@ -105,6 +102,25 @@ class Eureka_RampFitStep(Step):
          
         return out_model, int_model
 
+
+#### NOTE FOR FUTURE (11/05/2021)####
+'''
+Space telescope is currently changing the ramp fitting structure on Github
+# The following functions:
+
+
+create_optional_results_model()
+
+Will *not* need to be directly included in this file, we can instead simply
+import them from ramp_fitting.ramp_fit_step 
+
+i.e. 
+
+from ramp_fitting.ramp_fit_step import xxx
+
+However, this has yet incorporated in the pypi repository, so can't do things straight away. 
+
+'''
 
 def get_reference_file_subarrays(model, readnoise_model, gain_model, nframes):
     """
@@ -208,3 +224,23 @@ def create_integration_model(input_model, integ_info):
     int_model.int_times = int_times
 
     return int_model
+
+############################################################
+######## SEE NOTE ON LINE ~110 FOR ABOVE FUNCTIONS #########
+############################################################
+
+
+#######################################
+######### CUSTOM FUNCTIONS ############
+#######################################
+"""
+To adjust the pipeline to our needs, we can write functions to
+replace specific functions from the massive ols_fit.py file
+in the stcal package
+
+OR
+
+We can write entirely new files to replace ols_fit.py in it's
+entirety. 
+
+"""
