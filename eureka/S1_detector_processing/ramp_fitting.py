@@ -14,6 +14,8 @@ from jwst.datamodels import dqflags
 from jwst.lib import reffile_utils  
 from jwst.lib import pipe_utils
 
+from eureka.S1_detector_processing.Eureka_ramp_fitting import mean_ramp_fit_single
+
 #wanted to call the first three functions from ramp_fit_step but are not initialised with the jwst pipeline
 #from jwst.ramp_fitting import ramp_fit_step
 
@@ -82,9 +84,12 @@ class Eureka_RampFitStep(Step):
             
             if self.algorithm =='differenced':
                 #replace this by differenced ramp fit
-                image_info, integ_info, opt_info, gls_opt_model = ramp_fit.ramp_fit(input_model, buffsize, self.save_opt, readnoise_2d,\
-                                                                                    gain_2d, self.algorithm, self.weighting,\
-                                                                                    self.maximum_cores, dqflags.pixel)
+ 		image_info, integ_info, opt_info = mean_ramp_fit_single(input_model, buffsize, self.save_opt, readnoise_2d,\
+                                                                        gain_2d, self.algorithm, self.weighting,\
+                                                                        self.maximum_cores, dqflags.pixel)           
+		#image_info, integ_info, opt_info, gls_opt_model = ramp_fit.ramp_fit(input_model, buffsize, self.save_opt, readnoise_2d,\
+                                                                                    #gain_2d, self.algorithm, self.weighting,\
+                                                                                    #self.maximum_cores, dqflags.pixel)
         if image_info is not None:
             out_model = create_image_model(input_model, image_info)
             out_model.meta.bunit_data = 'DN/s'
