@@ -154,7 +154,8 @@ e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed
 
 bg_deg
 '''''''
-Sets the degree of the background subtraction.
+Sets the degree of the column-by-column background subtraction. If bg_deg is negative, use the median background of entire frame. Set to None for no background subtraction.
+Also, best to emphasize that we're performing column-by-column BG subtraction
 
 The function is defined in :func:`S3_data_reduction.optspex.fitbg<eureka.S3_data_reduction.optspex.fitbg>`
 
@@ -174,32 +175,32 @@ Possible values:
 
 p3thresh
 '''''''''
-Only important if ``bg_deg => 0``: X-sigma threshold for interactive outlier rejection during background subtraction (see above).
+Only important if ``bg_deg => 0`` (see above). # sigma threshold for outlier rejection during background subtraction which corresponds to step 3 of optimal spectral extraction, as defined by Horne (1986).
 
 
 p5thresh
 '''''''''
-Used during Optimal Extraction. Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+Used during Optimal Extraction. # sigma threshold for outlier rejection during step 5 of optimal spectral extraction, as defined by Horne (1986). Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 
 p7thresh
 '''''''''
-Used during Optimal Extraction. Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+Used during Optimal Extraction. # sigma threshold for outlier rejection during step 7 of optimal spectral extraction, as defined by Horne (1986). Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 
 fittype
 ''''''''
-Used during Optimal Extraction. Default is meddata. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+Used during Optimal Extraction. fittype defines how to construct the normalized spatial profile for optimal spectral extraction. Options are: 'smooth', 'meddata', 'wavelet', 'wavelet2D', 'gauss', or 'poly'. Using the median frame (meddata) should work well with JWST. Otherwise, using a smoothing function (smooth) is the most robust and versatile option. Default is meddata. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 
 window_len
 '''''''''''
-Used during Optimal Extraction. Default is 31. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+Used during Optimal Extraction. window_len is only used when fittype = 'smooth'. It sets the length scale over which the data are smoothed. Default is 31. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 
 prof_deg
 '''''''''
-Used during Optimal Extraction. Default is 3. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It sets the polynomial degree when constructing the spatial profile. Default is 3. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 
 isplots_S3
@@ -237,7 +238,7 @@ Sets how many plots should be saved when running Stage 3.
 
 testing_S3
 '''''''''''
-If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run.
+If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run. Also, only five integrations from the last segment will be reduced.
 
 
 hide_plots
@@ -286,7 +287,7 @@ Start and End of the wavelength range being considered
 
 allapers
 '''''''''
-If True, run S4 on all of the apertures considered in S3. Otherwise will use the only or newest S3 outputs found in the inputdir
+If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
 
 
 correctDrift
