@@ -22,9 +22,6 @@ from bokeh.models.widgets import Panel, Tabs
 from . import utils
 from . import modelgrid
 
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 16})
-rc('text', usetex=True)
-
 warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', category=FutureWarning)
 

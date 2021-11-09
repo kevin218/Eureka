@@ -1,6 +1,5 @@
 import sys
-sys.path.append('../..')
-from importlib import reload
+sys.path.append('../../')
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 
 eventlabel = 'template'

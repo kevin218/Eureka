@@ -83,7 +83,6 @@ def spec1D(spectra, meta, log):
         # correlate.py sometimes performs better when the mean is subtracted
         ref_spec-= np.mean(ref_spec[meta.drift_range:-meta.drift_range][np.where(np.isnan(ref_spec[meta.drift_range:-meta.drift_range]) == False)])
     ref_spec[np.where(np.isnan(ref_spec) == True)] = 0
-    nx          = len(ref_spec)
     for n in tqdm(range(meta.n_int)):
         fit_spec    = np.copy(spectra[n,meta.drift_preclip:meta.drift_postclip])
         #Trim data to achieve accurate cross correlation without assumptions over interesting region
@@ -100,7 +99,7 @@ def spec1D(spectra, meta, log):
         try:
             vals = sps.correlate(ref_spec, fit_spec, mode='valid', method='fft')
             if meta.isplots_S4 >= 5:
-                plots_s4.cc_spec(meta, ref_spec, fit_spec, nx, n)
+                plots_s4.cc_spec(meta, ref_spec, fit_spec, n)
                 plots_s4.cc_vals(meta, vals, n)
             argmax      = np.argmax(vals)
             subvals     = vals[argmax-meta.drift_hw:argmax+meta.drift_hw+1]
