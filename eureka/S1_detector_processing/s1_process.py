@@ -122,17 +122,20 @@ class EurekaS1Pipeline(Detector1Pipeline):
 				self.rscd.skip = meta.skip_rscd
 
 			# Define ramp fitting procedure
-			if meta.ramp_fit_method == 'default':
-				pass
-			elif meta.ramp_fit_method == 'differenced':
-				self.ramp_fit = Eureka_RampFitStep()
-				self.ramp_fit.algorithm = 'differenced'
-			else:
-				raise ValueError('Only "default" or "differenced" are currently available ramp fitting procedures')
-
-			# Ramp fitting settings
-			self.ramp_fit.skip = meta.skip_ramp_fitting
+			self.ramp_fit = Eureka_RampFitStep()
+			self.ramp_fit.algorithm = meta.ramp_fit_algorithm
 			self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
+			self.ramp_fit.skip = meta.skip_ramp_fitting
+
+			# Default ramp fitting settings
+			if self.ramp_fit.algorithm == 'default':
+				self.ramp_fit.weighting = meta.default_ramp_fit_weighting
+				# Some weighting methods need additional parameters
+				if self.ramp_fit.weighting == 'fixed':
+					self.ramp_fit.fixed_exponent = meta.default_ramp_fit_fixed_exponent
+				elif self.ramp_fit.weighting == 'custom':
+					self.ramp_fit.custom_snr_bounds = meta.default_ramp_fit_custom_snr_bounds
+					self.ramp_fit.custom_exponents = meta.default_ramp_fit_custom_exponents
 
 			# Run Stage 1
 			self(filename)
@@ -147,10 +150,3 @@ class EurekaS1Pipeline(Detector1Pipeline):
 			me.saveevent(meta, meta.workdir + 'S1_' + meta.eventlabel + "_Meta_Save", save=[])
 
 		return meta
-
-
-def x(x):
-	return y(x)
-
-def y(x):
-	return x**2
