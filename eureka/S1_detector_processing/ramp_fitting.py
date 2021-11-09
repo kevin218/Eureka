@@ -120,7 +120,7 @@ class Eureka_RampFitStep(Step):
                     jwst.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents)
                     stcal.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents)
                 else:
-                    raise ValueError('Could not interpret weighting "{}".'.format(self.weighting))
+                    raise ValueError('Could not interpret weighting "{}".'.format(self.weighting)) 
 
                 # Important! Must set the weighting to 'optimal' for the actual
                 # ramp_fit() function, previous if statements will have changed
