@@ -174,7 +174,7 @@ def lcJWST(eventlabel, s3_meta=None):
             optspec = np.reshape(table['optspec'].data, (-1, meta.subnx))
             opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
             wave_1d = table['wave_1d'].data[0:meta.subnx]
-            bjdtdb = table['bjdtdb'].data[::meta.subnx]
+            meta.bjdtdb = table['bjdtdb'].data[::meta.subnx]
 
             #Replace NaNs with zero
             optspec[np.where(np.isnan(optspec))] = 0
@@ -218,7 +218,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, bjdtdb, i)
+                    plots_s4.binned_lightcurve(meta, meta.bjdtdb, i)
 
             # Calculate total time
             total = (time.time() - t0) / 60.
