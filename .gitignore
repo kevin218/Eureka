@@ -134,3 +134,4 @@ dmypy.json
 
 # VS Code workspaces
 *.code-workspace
+.vscode/settings.json

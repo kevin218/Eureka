@@ -2,9 +2,8 @@
 
 # Eureka! Stage 3 reduction pipeline
 
-"""
 # Proposed Steps
-# -------- -----
+# --------------
 # 1.  Read in all data frames and header info from Stage 2 data products DONE
 # 2.  Record JD and other relevant header information DONE
 # 3.  Apply light-time correction (if necessary) DONE
@@ -22,7 +21,7 @@
 # 15. Optimal spectral extraction DONE
 # 16. Save Stage 3 data products
 # 17. Produce plots DONE
-"""
+
 
 import os, time, glob
 import numpy as np
@@ -41,37 +40,44 @@ from ..lib import util
 
 
 class MetaClass:
+    '''A class to hold Eureka! metadata.
+    '''
+
     def __init__(self):
         return
 
 
 class DataClass:
+    '''A class to hold Eureka! image data.
+    '''
+
     def __init__(self):
         return
 
 
 def reduceJWST(eventlabel, s2_meta=None):
-    '''
-    Reduces data images and calculated optimal spectra.
+    '''Reduces data images and calculates optimal spectra.
 
     Parameters
     ----------
-    eventlabel  : Unique identifier for these data
-    s2_meta     : Metadata object from Eureka!'s S2 step
+    eventlabel: str
+        The unique identifier for these data.
+    s2_meta:    MetaClass
+        The metadata object from Eureka!'s S2 step (if running S2 and S3 sequentially).
 
     Returns
     -------
-    meta        : Metadata object
+    meta:   MetaClass
+        The metadata object with attributes added by S3.
 
-    Remarks
+    Notes
     -------
-
-
-    History
-    -------
-    Written by Kevin Stevenson      May 2021
-    Updated by Taylor Bell          October 2021
-
+    History:
+    
+    - May 2021 Kevin Stevenson
+        Initial version
+    - October 2021 Taylor Bell
+        Updated to allow for inputs from S2
     '''
 
     # Initialize data object

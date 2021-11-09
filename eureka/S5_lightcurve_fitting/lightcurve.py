@@ -7,11 +7,9 @@ import numpy as np
 import pandas as pd
 #from bokeh.plotting import figure, show
 import matplotlib.pyplot as plt
-from importlib import reload
 
 from . import models as m
 from . import fitters as f
-reload(f)
 from .utils import COLORS
 
 

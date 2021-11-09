@@ -6,10 +6,7 @@ Email: jfilippazzo@stsci.edu
 import numpy as np
 import lmfit
 import copy
-from importlib import reload
 from ..lib import lsq
-reload(lsq)
-
 from .parameters import Parameters
 
 

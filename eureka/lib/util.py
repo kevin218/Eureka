@@ -1,5 +1,4 @@
 import numpy as np
-from importlib import reload
 from . import sort_nicely as sn
 import os, time
 import re
@@ -7,7 +6,7 @@ import re
 
 def readfiles(meta):
     """
-    Reads in the files saved in topdir + datadir and saves them into a list
+    Reads in the files saved in topdir + inputdir and saves them into a list
 
     Args:
         meta: metadata object

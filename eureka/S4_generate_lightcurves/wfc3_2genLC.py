@@ -3,9 +3,9 @@
 import numpy as np
 import scipy.interpolate as spi
 import matplotlib.pyplot as plt
-import eureka.lib.manageevent as me
+from ..lib import manageevent as me
 import sys, time
-import eureka.lib.smooth
+from ..lib import smooth
 #import hst_scan as hst
 import scipy.ndimage.interpolation as spni
 #import imp

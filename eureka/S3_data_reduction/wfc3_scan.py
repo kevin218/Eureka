@@ -2,15 +2,15 @@ import numpy as np
 from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage.interpolation as spni
-import gaussian as g
+from ..lib import gaussian as g
+from ..lib import smooth, smoothing, centroid
 import matplotlib.pyplot as plt
 from . import optspex
 from . import julday
-import sys, smooth, centroid
+import sys
 #import hst_scan as hst
 from ..lib import sort_nicely as sn
 import astropy.io.fits as pf
-import smoothing
 
 try:
     basestring

@@ -5,26 +5,34 @@ from tqdm import tqdm
 from ..lib import gaussian as g
 from . import plots_s4
 
-
 # Measure spectrum drift over all frames and all non-destructive reads.
 def spec1D(spectra, meta, log):
-    '''
-    Measures the 1D spectrum drift over all integrations.
+    '''Measures the 1D spectrum drift over all integrations.
 
     Parameters
     ----------
-    spectra     : 2D array of flux values (nint, nx)
-    meta        : MetaData object
+    spectra:    ndarray
+        2D array of flux values (nint, nx).
+    meta:   MetaClass
+        The metadata object.
+    log:    logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
-    meta        : Updated MetaData object
+    meta:   MetaClass
+        The updated metadata object.
 
-    History
-    -------
-    Written for HST by KBS          Dec 2013
-    Updated for JWST by KBS         Jun 2021
+    Notes
+    -----
+    History:
 
+    - Dec 2013 KBS
+        Written for HST.
+    - Jun 2021 KBS
+        Updated for JWST.
+    - Oct 18, 2021 Taylor Bell
+        Minor tweak to cc_spec inputs.
     '''
     if meta.drift_postclip != None:
         meta.drift_postclip = -meta.drift_postclip
@@ -36,7 +44,6 @@ def spec1D(spectra, meta, log):
         #Zero-mean for cross correlation
         ref_spec-= np.mean(ref_spec[meta.drift_range:-meta.drift_range][np.where(np.isnan(ref_spec[meta.drift_range:-meta.drift_range]) == False)])
     ref_spec[np.where(np.isnan(ref_spec) == True)] = 0
-    nx          = len(ref_spec)
     for n in tqdm(range(meta.n_int)):
         fit_spec    = np.copy(spectra[n,meta.drift_preclip:meta.drift_postclip])
         #Trim data to achieve accurate cross correlation without assumptions over interesting region
@@ -50,7 +57,7 @@ def spec1D(spectra, meta, log):
             #vals = np.correlate(ref_spec, fit_spec, mode='valid')
             vals = sps.correlate(ref_spec, fit_spec, mode='valid', method='fft')
             if meta.isplots_S4 >= 5:
-                plots_s4.cc_spec(meta, ref_spec, fit_spec, nx, n)
+                plots_s4.cc_spec(meta, ref_spec, fit_spec, n)
                 plots_s4.cc_vals(meta, vals, n)
             argmax      = np.argmax(vals)
             subvals     = vals[argmax-meta.drift_hw:argmax+meta.drift_hw+1]
