@@ -107,12 +107,12 @@ class Eureka_RampFitStep(Step):
                     # Overwrite the exponent calculation function from ols_fit
                     jwst.ramp_fitting.ols_fit.calc_power = interpolate_power #Current pipeline version (Nov 2021)
                     stcal.ramp_fitting.ols_fit.calc_power = interpolate_power #Future pipeline version (TBD)
-                elif self.weighting == 'flat':
+                elif self.weighting == 'uniform':
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    jwst.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_flat_weight #Current pipeline version (Nov 2021)
-                    stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_flat_weight #Future pipeline version (TBD)
+                    jwst.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Current pipeline version (Nov 2021)
+                    stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Future pipeline version (TBD)
                 elif self.weighting == 'custom':
                     # Want to manually assign snr bounds for exponent changes
 
@@ -241,7 +241,7 @@ def custom_power(snr, snr_bounds, exponents):
 
     return pow_wt.ravel()
 
-def calc_opt_sums_flat_weight(rn_sect, gain_sect, data_masked, mask_2d, xvalues, good_pix):
+def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d, xvalues, good_pix):
     """
     Adjusted version of the calc_opt_sums() function from stcal ramp fitting. Now 
     weights are all equal to 1, except for those that correspond to NaN or inf's
