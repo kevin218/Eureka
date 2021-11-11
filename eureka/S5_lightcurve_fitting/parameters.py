@@ -115,7 +115,6 @@ class Parameters:
                     params = json.load(json_data)
 
             # Parse Eureka control file
-            #FINDME: THIS IS NOT WORKING
             elif param_file.endswith('.ecf'):
 
                 ecf = rd.read_ecf(param_file)
@@ -124,7 +123,10 @@ class Parameters:
                 params={}
                 kwargs={}
                 for i in keylist:
-                    params[i]=list(paramlist[i].getarr())
+                    if len(paramlist[i].getarr())==1:
+                        params[i]=paramlist[i].get()
+                    else:
+                        params[i]=list(paramlist[i].getarr())
 
 
         # Add any kwargs to the parameter dict
@@ -178,7 +180,7 @@ class Parameters:
 
         if not isinstance(value, list):
             raise TypeError("Cannot set {}={}.".format(item, value))
-
+            
         # Set the attribute
         self.__dict__[item] = Parameter(item, *value)
 

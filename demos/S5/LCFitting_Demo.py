@@ -9,10 +9,14 @@ sys.path.append('../..')
 import eureka
 import pdb
 
-
 # Get the orbital parameters
 from eureka.S5_lightcurve_fitting.utils import get_target_data
 wasp107b_params, url = get_target_data('WASP-107b')
+
+#load in run parameters from ecf file
+def make_dict(table):
+    return {x['parameter']: x['value'] for x in table}
+
 
 # Generate the simulated light curve
 from eureka.S5_lightcurve_fitting.simulations import simulate_lightcurve
@@ -42,21 +46,10 @@ wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0]
 # Set the intial parameters
 import eureka.S5_lightcurve_fitting.parameters as p
 reload(p)
-#FINDME: this is where I was working on adding fit parameters
+
 params = p.Parameters(param_file='s5_fit_par.ecf')
-# params.rp = wasp107b_par['Rp/Rs']+0.02, 'free', 0.1, 0.2
-# params.per = wasp107b_par['orbital_period'], 'fixed'
-# pdb.set_trace()
-# params.t0 = wasp107b_par['transit_time']-0.01, 'free', wasp107b_par['transit_time']-0.1, wasp107b_par['transit_time']+0.1
-# pdb.set_trace()
-# params.inc = wasp107b_par['inclination'], 'free', 80., 90.
-# params.a = wasp107b_par['a/Rs'], 'free', 10., 25.
-# params.ecc = wasp107b_par['eccentricity'], 'fixed'
-# params.w = 90, 'fixed'    #wasp107b_par['omega'], 'fixed'
 params.limb_dark = 'quadratic', 'independent'
 params.transittype = 'primary', 'independent'
-# params.u1 = 0.1, 'free', 0., 0.3
-# params.u2 = 0.1, 'free', 0., 0.3
 
 # Make the transit model
 import eureka.S5_lightcurve_fitting.models as m
@@ -67,6 +60,9 @@ model = m.CompositeModel([t_model])
 wasp107b_lc.fit(model, fitter='lsq')
 
 wasp107b_lc.plot(draw=True)
+
+#FINDME: getting this to work
+params2=p.Parameters(param_file='s5.ecf')
 # Plot it
 #t_model.plot(wasp107b_time, draw=True)
 '''
