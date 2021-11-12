@@ -128,6 +128,16 @@ class LightCurve(m.Model):
             fit_model = f.lsqfitter(self, model, **kwargs)
             #fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
 
+        elif fitter == 'emcee':
+
+            # Run the fit
+            fit_model = f.emceefitter(self, model, **kwargs)
+
+        elif fitter == 'dynesty':
+
+            # Run the fit
+            fit_model = f.dynestyfitter(self, model, **kwargs)
+
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 
