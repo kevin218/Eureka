@@ -88,7 +88,7 @@ def calibrateJWST(eventlabel):
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
             rootdir += '/'
-            raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
+        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
     else:
         log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
 
