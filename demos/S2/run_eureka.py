@@ -4,7 +4,7 @@ import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 
-# eventlabel = 'imaging'
+# eventlabel = 'imaging_template'
 # eventlabel = 'miri_lrs_template'
 # eventlabel = 'nirspec_fs_template'
 eventlabel = 'nircam_wfss_template'
