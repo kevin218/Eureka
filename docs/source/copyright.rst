@@ -5,13 +5,15 @@ Copyright
 
 |copy| Copyright 2021, `Eureka! pipeline developers <https://github.com/kevin218/Eureka/graphs/contributors>`_
 
-The current main developers of Eureka! are:
+The current main developers of Eureka! are (ordered alphabetically by first name):
 
+- Aarynn Carter
+- Adina Feinstein
+- Eva-Maria Ahrer
+- Giannina Guzman
 - Kevin Stevenson
 - Laura Kreidberg
-- Sebastian Zieba
-- Giannina Guzman
 - Megan Mansfield
-- Eva-Maria Ahrer
+- Sebastian Zieba
 - Taylor Bell
-- Aarynn Carter
+

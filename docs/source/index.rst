@@ -11,9 +11,9 @@ The code is not officially associated with JWST or the ERS team.
 
 The code is separated into five parts or "Stages":
 
-- Stage 1: An optional step which calibrates Raw data (converts ramps to slopes). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 1 outputs.
+- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 1 outputs.
 - Stage 2: An optional step which calibrates Stage 1 data (performs flatfielding, unit conversion, etc.). This step can be skipped if you'd rather use STScI's JWST pipeline's  Stage 2 outputs.
-- Stage 3: Starts with Stage 2 data and reduces the data (performs background subtraction, etc.) in order to convert 2D spectra into 1D information
+- Stage 3: Starts with Stage 2 data and reduces the data (performs background subtraction, etc.) in order to convert 2D spectra into a time-series of 1D spectra
 - Stage 4: Bins the 1D Spectra and generates light curves
 - Stage 5: Fits the light curves (under development)
 
