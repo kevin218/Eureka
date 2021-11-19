@@ -1,0 +1,36 @@
+##Stage 5
+toffset  59694 #to be subtracted from the time array to avoid floating point precision problems when fitting for t0
+
+fix_ld   False #use limb darkening file?
+ld_file  /home/zieba/Desktop/Projects/Open_source/wfc3-pipeline/wfc3_reduction/limb-darkening/results/ld_outputfile.txt #location of limb darkening file
+
+run_verbose		True
+run_output          False
+run_show_plot       True
+run_mcmc            False
+run_nested          True
+run_lsq             False
+run_plot_raw_data   True
+run_fit_white       False
+run_divide_white    False
+#run_files           ['/home/zieba/Desktop/Projects/Open_source/wfc3-pipeline/run/run_2021-09-15_04-17-52_L-98-59_Hubble15856/extracted_sp/bins12_2021-09-15_05-36-57']
+run_myfuncs	['transit']
+#run_myfuncs         ['constant','upstream_downstream','model_ramp','polynomial1','transit']
+
+save_allan_plot     True
+
+#mcmc
+run_nsteps          4000
+run_nwalkers	    25
+run_nburn           2000
+
+#dynesty
+run_nlive	1024
+run_bound	'multi'
+run_ndims	6
+run_sample	'unif'
+run_tol		0.1
+
+run_clipsigma       0 #remove outliers
+run_clipiters       0
+

@@ -5,7 +5,6 @@ import glob, os
 from ..lib import sort_nicely as sn
 import matplotlib.pyplot as plt
 from importlib import reload
-import pdb
 
 
 def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
@@ -17,7 +16,6 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
     import eureka.S5_lightcurve_fitting.parameters as p
     reload(p)
     run_par=p.Parameters(param_file=run_par_file)
-    #pdb.set_trace()
     # Create directories for Stage 4 processing
     files = glob.glob(os.path.join(speclc_dir + "/speclc", "*.txt"))
     files = sn.sort_nicely(files)
@@ -52,8 +50,6 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
         # params.transittype = 'primary', 'independent'
         # params.u1 = 0.7, 'free', 0., 1
         # params.u2 = 0.25, 'free', 0., 1
-        #pdb.set_trace()
-        #params=params.__add__(run_par)
         if run_par.run_verbose.value:
             print(params)
         #params.c0 = np.median(flux[:200]), 'free', np.median(flux[:200])*0.5, np.median(flux[:200])*1.5
@@ -67,10 +63,10 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
         #model = m.CompositeModel([t_model, t_polynom])
         model = m.CompositeModel([t_model])
         if run_par.run_lsq.value:
-            wasp43b_lc.fit(model, fitter='lsq')
+            wasp43b_lc.fit(model, fitter='lsq', **run_par.dict)
         elif run_par.run_mcmc.value:
-            wasp43b_lc.fit(model, fitter='emcee')
+            wasp43b_lc.fit(model, fitter='emcee', **run_par.dict)
         elif run_par.run_nested.value:
-            wasp43b_lc.fit(model, fitter='dynesty')
+            wasp43b_lc.fit(model, fitter='dynesty', **run_par.dict)
         if run_par.run_show_plot.value:
             wasp43b_lc.plot(draw=True)

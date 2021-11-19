@@ -23,7 +23,7 @@ import matplotlib as mpl
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-def lsqfitter(lc, model, verbose=True, **kwargs):
+def lsqfitter(lc, model, **kwargs):
     """Perform least-squares fit
 
     Parameters
@@ -92,7 +92,7 @@ def lsqfitter(lc, model, verbose=True, **kwargs):
 
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
-    if verbose:
+    if kwargs['run_verbose'][0]:
         print(results)
 
     # Get the best fit params
@@ -115,34 +115,38 @@ def lsqfitter(lc, model, verbose=True, **kwargs):
 
     model.update(fit_params, freenames)
     model_lc = model.eval()
-    model.plot(time=lc.time, draw=True)
-    print()
-
-    fig, ax = plt.subplots(2,1)
-    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-    ax[0].plot(lc.time, model_lc, zorder = 10)
-
     residuals = (lc.flux - model_lc) #/ lc.unc
-    ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-    plt.savefig('lc_lsq.png', dpi=300)
-    plt.show()
+    if kwargs['run_show_plot'][0]:
+        model.plot(time=lc.time, draw=True)
+        print()
+
+        fig, ax = plt.subplots(2,1)
+        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
+        ax[0].plot(lc.time, model_lc, zorder = 10)
+
+        
+        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
+        plt.savefig('lc_lsq.png', dpi=300)
+        plt.show()
 
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc) - len(freenames))
 
-    print('red. Chi2: ', chi2red)
+    if kwargs['run_verbose'][0]:
+        print('red. Chi2: ', chi2red)
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
-    print('\nLSQ RESULTS:\n')
-    for freenames_i, fit_params_i in zip(freenames, fit_params):
-        print('{0}: {1}'.format(freenames_i, fit_params_i))
-    print('\n')
-    rmsplot(lc, model_lc, figname='allanplot_lsq.png')
+        print('\nLSQ RESULTS:\n')
+        for freenames_i, fit_params_i in zip(freenames, fit_params):
+            print('{0}: {1}'.format(freenames_i, fit_params_i))
+        print('\n')
+    if kwargs['run_show_plot'][0]:
+        rmsplot(lc, model_lc, figname='allanplot_lsq.png')
 
     return best_model#, chi2red, fit_params
 
-def demcfitter(time, data, model, uncertainty=None, verbose=True, **kwargs):
+def demcfitter(time, data, model, uncertainty=None, **kwargs):
     """Use Differential Evolution Markov Chain
 
     Parameters
@@ -170,7 +174,7 @@ def demcfitter(time, data, model, uncertainty=None, verbose=True, **kwargs):
 
 
 
-def emceefitter(lc, model, verbose=True, **kwargs):
+def emceefitter(lc, model, **kwargs):
     """Perform sampling using emcee
 
     Parameters
@@ -197,11 +201,11 @@ def emceefitter(lc, model, verbose=True, **kwargs):
     #all_keys   = [i for j in [model.components[n].parameters.dict.keys()
     #              for n in range(len(model.components))] for i in j]
 
-    lsq_sol = lsqfitter(lc, model)
+    lsq_sol = lsqfitter(lc, model, **kwargs)
 
     print(lsq_sol)
 
-    lc.unc *= np.sqrt(lsq_sol[1])
+    lc.unc *= np.sqrt(lsq_sol[1]) #Getting an error here: 'CompositeModel' object is not subscriptable
 
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
@@ -277,7 +281,10 @@ def emceefitter(lc, model, verbose=True, **kwargs):
         return ln_like_val + lp
 
     step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
-    ndim, nwalkers, run_nsteps, burn_in = len(step_size), 100, 12000, 6000
+    ndim = len(step_size)
+    nwalkers = kwargs['run_nwalkers'][0]
+    run_nsteps = kwargs['run_nsteps'][0]
+    burn_in = kwargs['run_nburn'][0]
 
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
 
@@ -290,9 +297,10 @@ def emceefitter(lc, model, verbose=True, **kwargs):
 
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
-    fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
-    figname = "corner_emcee.png"
-    fig.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+    if kwargs['run_show_plot'][0]:
+        fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
+        figname = "corner_emcee.png"
+        fig.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=250)
 
 
     def quantile(x, q):
@@ -325,17 +333,19 @@ def emceefitter(lc, model, verbose=True, **kwargs):
 
     model.update(fit_params, freenames)
     model_lc = model.eval()
-    model.plot(time=lc.time, draw=True)
-
-    fig, ax = plt.subplots(2,1)
-    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-    ax[0].plot(lc.time, model_lc, zorder = 10)
-
-
     residuals = (lc.flux - model_lc) #/ lc.unc
-    ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-    plt.savefig('lc_emcee.png', dpi=300)
-    plt.show()
+
+    if kwargs['run_show_plot'][0]:
+        model.plot(time=lc.time, draw=True)
+
+        fig, ax = plt.subplots(2,1)
+        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
+        ax[0].plot(lc.time, model_lc, zorder = 10)
+
+
+        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
+        plt.savefig('lc_emcee.png', dpi=300)
+        plt.show()
 
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
     chi2 = np.sum((residuals / lc.unc) ** 2)
@@ -346,15 +356,17 @@ def emceefitter(lc, model, verbose=True, **kwargs):
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
-    for freenames_i, fit_params_i in zip(freenames, fit_params):
-        print('{0}: {1}'.format(freenames_i, fit_params_i))
+    if kwargs['run_verbose'][0]:
+        for freenames_i, fit_params_i in zip(freenames, fit_params):
+            print('{0}: {1}'.format(freenames_i, fit_params_i))
 
-    rmsplot(lc, model_lc, figname='allanplot_emcee.png')
+    if kwargs['run_show_plot'][0]:
+        rmsplot(lc, model_lc, figname='allanplot_emcee.png')
 
     return best_model
 
 
-def dynestyfitter(lc, model, verbose=True, **kwargs):
+def dynestyfitter(lc, model, **kwargs):
     """Perform sampling using emcee
 
     Parameters
@@ -382,9 +394,8 @@ def dynestyfitter(lc, model, verbose=True, **kwargs):
     #              for n in range(len(model.components))] for i in j]
 
     # RUN LEAST SQUARES
-    lsq_sol = lsqfitter(lc, model)
+    lsq_sol = lsqfitter(lc, model, **kwargs)
     print(lsq_sol)
-
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
     lc.unc *= np.sqrt(lsq_sol[1])
 
@@ -481,13 +492,12 @@ def dynestyfitter(lc, model, verbose=True, **kwargs):
         return ln_like_val + lp
 
 
-    # TODO: MOVE THAT INTO CONFIG FILE
-    nlive = 1024  # number of live points
-    bound = 'multi'  # use MutliNest algorithm for bounds
-    ndims = 6  # two parameters
-    sample = 'unif'  # uniform sampling
-    tol = 0.1  # the stopping criterion
 
+    nlive = kwargs['run_nlive'][0] # number of live points
+    bound = kwargs['run_bound'][0]  # use MutliNest algorithm for bounds
+    ndims = kwargs['run_ndims'][0]  # two parameters
+    sample = kwargs['run_sample'][0]  # uniform sampling
+    tol = kwargs['run_tol'][0]  # the stopping criterion
 
     # START DYNESTY
     l_args = [lc, model, pmin, pmax]
@@ -499,19 +509,23 @@ def dynestyfitter(lc, model, verbose=True, **kwargs):
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
-    print("log(Z) = {} ± {}".format(logZdynesty, logZerrdynesty))
-    print(res.summary())
+    if kwargs['run_verbose'][0]:
+        print("log(Z) = {} ± {}".format(logZdynesty, logZerrdynesty))
+        print(res.summary())
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples_dynesty = resample_equal(res.samples, weights)
-    print('Number of posterior samples is {}'.format(len(samples_dynesty)))
+    if kwargs['run_verbose'][0]:
+        print('Number of posterior samples is {}'.format(len(samples_dynesty)))
 
     # plot using corner.py
-    fig = corner.corner(samples_dynesty, labels=freenames, show_titles=True, quantiles=[0.16, 0.5, 0.84],title_fmt='.4')
-    figname = "corner_dynesty.png"
-    fig.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+    if kwargs['run_show_plot'][0]:
+        fig = corner.corner(samples_dynesty, labels=freenames, show_titles=True, quantiles=[0.16, 0.5, 0.84],title_fmt='.4')
+        figname = "corner_dynesty.png"
+        if kwargs['run_output'][0]:
+            fig.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=250)
 
 
     # PLOT MEDIAN OF THE SAMPLES
@@ -543,24 +557,27 @@ def dynestyfitter(lc, model, verbose=True, **kwargs):
 
     model.update(fit_params, freenames)
     model_lc = model.eval()
-    model.plot(time=lc.time, draw=True)
-
-    fig, ax = plt.subplots(2,1)
-    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-    ax[0].plot(lc.time, model_lc, zorder = 10)
-
-
     residuals = (lc.flux - model_lc) #/ lc.unc
-    ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-    plt.savefig('lc_dynesty.png', dpi=300)
-    plt.show()
+
+    if kwargs['run_show_plot'][0]:
+        model.plot(time=lc.time, draw=True)
+
+        fig, ax = plt.subplots(2,1)
+        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
+        ax[0].plot(lc.time, model_lc, zorder = 10)
+
+
+        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
+        plt.savefig('lc_dynesty.png', dpi=300)
+        plt.show()
 
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc))
-    print(len(lc.unc))
-    print(chi2)
-    print(chi2red)
+    if kwargs['run_verbose'][0]:
+        print(len(lc.unc))
+        print(chi2)
+        print(chi2red)
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
     # Plot RMS vs. bin size looking for time-correlated noise
@@ -570,14 +587,15 @@ def dynestyfitter(lc, model, verbose=True, **kwargs):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
 
     # PLOT ALLAN PLOT
-    rmsplot(lc,model_lc, figname='allanplot_dynesty.png')
+    if kwargs['run_show_plot'][0]:
+        rmsplot(lc,model_lc, figname='allanplot_dynesty.png')
 
     return best_model
 
 
 
 
-def lmfitter(time, data, model, uncertainty=None, verbose=True, **kwargs):
+def lmfitter(time, data, model, uncertainty=None, **kwargs):
     """Use lmfit
 
     Parameters
@@ -641,7 +659,7 @@ def lmfitter(time, data, model, uncertainty=None, verbose=True, **kwargs):
     result = lcmodel.fit(data, weights=1/uncertainty, params=initialParams,
                          **indep_vars, **kwargs)
 
-    if verbose:
+    if kwargs['run_verbose'][0]:
         print(result.fit_report())
 
     # Get the best fit params
