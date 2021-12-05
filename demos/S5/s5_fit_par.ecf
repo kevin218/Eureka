@@ -1,5 +1,5 @@
 #Name	Value	Free?	LoLim	HiLim
-rp	0.179282	'free'	0.1	0.2
+rp	0.179282	'free'	0.05	0.3
 per	0.813475	'fixed'	3	7
 t0	0.15	'free'	0.12	0.18
 inc	82.149	'free'	80.	90.

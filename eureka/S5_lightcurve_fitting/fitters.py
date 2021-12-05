@@ -143,7 +143,8 @@ def lsqfitter(lc, model, **kwargs):
         print('\n')
     if kwargs['run_show_plot'][0]:
         rmsplot(lc, model_lc, figname='allanplot_lsq.png')
-
+    best_model.__setattr__('chi2red',chi2red)
+    best_model.__setattr__('fit_params',fit_params)
     return best_model#, chi2red, fit_params
 
 def demcfitter(time, data, model, uncertainty=None, **kwargs):
@@ -204,8 +205,9 @@ def emceefitter(lc, model, **kwargs):
     lsq_sol = lsqfitter(lc, model, **kwargs)
 
     print(lsq_sol)
+    
 
-    lc.unc *= np.sqrt(lsq_sol[1]) #Getting an error here: 'CompositeModel' object is not subscriptable
+    lc.unc *= np.sqrt(lsq_sol.chi2red) #Getting an error here: 'CompositeModel' object is not subscriptable
 
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
@@ -240,7 +242,7 @@ def emceefitter(lc, model, **kwargs):
     pmax = np.array(pmax)
     print('before update: ', freepars)
 
-    model.update(lsq_sol[2], freenames)
+    model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
 
     # Set the uncertainty
@@ -294,7 +296,6 @@ def emceefitter(lc, model, **kwargs):
     print(sum(out_of_range))
     nwalkers = sum(out_of_range)
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax))
-
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
     if kwargs['run_show_plot'][0]:
@@ -397,7 +398,7 @@ def dynestyfitter(lc, model, **kwargs):
     lsq_sol = lsqfitter(lc, model, **kwargs)
     print(lsq_sol)
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
-    lc.unc *= np.sqrt(lsq_sol[1])
+    lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
@@ -433,7 +434,7 @@ def dynestyfitter(lc, model, **kwargs):
     print('before update: ', freepars)
 
     # UPDATE MODEL PARAMETERS WITH LSQ BEST FIT
-    model.update(lsq_sol[2], freenames)
+    model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
 
     # Set the uncertainty

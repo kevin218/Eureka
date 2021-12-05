@@ -6,7 +6,6 @@ from ..lib import sort_nicely as sn
 import matplotlib.pyplot as plt
 from importlib import reload
 
-
 def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
     # load savefile
     if meta == None:
@@ -58,15 +57,20 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
         # Make the transit model
         import eureka.S5_lightcurve_fitting.models as m
         reload(m)
-        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
-        #t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
-        #model = m.CompositeModel([t_model, t_polynom])
-        model = m.CompositeModel([t_model])
-        if run_par.run_lsq.value:
+        modellist=[]
+        if 'transit' in run_par.run_myfuncs.value:
+            t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
+            modellist.append(t_model)
+        if 'polynomial' in run_par.run_myfuncs.value:
+            t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
+            modellist.append(t_polynom)
+        model = m.CompositeModel(modellist)
+        #model = m.CompositeModel([t_model])
+        if 'lsq' in run_par.fit_method.value:
             wasp43b_lc.fit(model, fitter='lsq', **run_par.dict)
-        elif run_par.run_mcmc.value:
+        if 'mcmc' in run_par.fit_method.value:
             wasp43b_lc.fit(model, fitter='emcee', **run_par.dict)
-        elif run_par.run_nested.value:
+        if 'nested' in run_par.fit_method.value:
             wasp43b_lc.fit(model, fitter='dynesty', **run_par.dict)
         if run_par.run_show_plot.value:
             wasp43b_lc.plot(draw=True)
