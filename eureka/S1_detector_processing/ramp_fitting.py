@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #This is based on the RampFitStep from the JWST pipeline, accessed Oct 2021
-#adapted by Eva-Maria Ahrer & Aarynn Carter, Oct 2021
+#adapted by Eva-Maria Ahrer & Aarynn Carter, Oct 2021-Dec 2021
 
 import numpy as np
 from functools import partial
@@ -9,7 +9,7 @@ import time
 import warnings
 
 from stcal.ramp_fitting import ramp_fit, utils, ramp_fit_class
-import jwst.ramp_fitting.ols_fit 
+#import jwst.ramp_fitting.ols_fit 
 import stcal.ramp_fitting.ols_fit
 
 from jwst.stpipe import Step
@@ -99,26 +99,26 @@ class Eureka_RampFitStep(Step):
                         raise ValueError('Weighting exponent must be of type "int" or "float" for "default_fixed" weighting')
 
                     # Overwrite the exponent calculation function from ols_fit
-                    jwst.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Current pipeline version (Nov 2021)
-                    stcal.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Future pipeline version (TBD)
+                    #jwst.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Former pipeline version (Nov 2021)
+                    stcal.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Current pipeline version (Dec 2021)
                 elif self.weighting == 'interpolated':
                     # Want to use an interpolated version of the default weighting. 
 
                     # Overwrite the exponent calculation function from ols_fit
-                    jwst.ramp_fitting.ols_fit.calc_power = interpolate_power #Current pipeline version (Nov 2021)
-                    stcal.ramp_fitting.ols_fit.calc_power = interpolate_power #Future pipeline version (TBD)
+                    #jwst.ramp_fitting.ols_fit.calc_power = interpolate_power #Former pipeline version (Nov 2021)
+                    stcal.ramp_fitting.ols_fit.calc_power = interpolate_power #Current pipeline version (Dec 2021)
                 elif self.weighting == 'uniform':
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    jwst.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Current pipeline version (Nov 2021)
-                    stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Future pipeline version (TBD)
+                    #jwst.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Former pipeline version (Nov 2021)
+                    stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Current pipeline version (Dec 2021)
                 elif self.weighting == 'custom':
                     # Want to manually assign snr bounds for exponent changes
 
                     # Overwrite the exponent calculation function from ols_fit
-                    jwst.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents)
-                    stcal.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents)
+                    #jwst.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents) #Former pipeline version (Nov 2021)
+                    stcal.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents) #Current pipeline version (Dec 2021)
                 else:
                     raise ValueError('Could not interpret weighting "{}".'.format(self.weighting)) 
 
