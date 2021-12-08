@@ -33,7 +33,7 @@ testing_S1						False
 #####
 
 # "Default" ramp fitting settings
-default_ramp_fit_weighting  			default		#Options are "default", "fixed", "interpolated", "flat", or "custom"
+default_ramp_fit_weighting  			default		#Options are "default", "fixed", "interpolated", "uniform", or "custom"
 default_ramp_fit_fixed_exponent 		10			#Only used for "fixed" weighting
 default_ramp_fit_custom_snr_bounds		[5,10,20,50,100]	# Only used for "custom" weighting, array no spaces
 default_ramp_fit_custom_exponents		[0.4,1,3,6,10]		# Only used for "custom" weighting, array no spaces
