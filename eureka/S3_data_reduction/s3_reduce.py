@@ -203,14 +203,14 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Create list of file segments
             meta = util.readfiles(meta)
-            num_data_files = len(meta.segment_list)
-            if num_data_files==0:
+            meta.num_data_files = len(meta.segment_list)
+            if meta.num_data_files==0:
                 rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
                 if rootdir[-1]!='/':
                     rootdir += '/'
                 raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
             else:
-                log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
+                log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 
             with fits.open(meta.segment_list[-1]) as hdulist:
                 # Figure out which instrument we are using
@@ -231,17 +231,17 @@ def reduceJWST(eventlabel, s2_meta=None):
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to True in ecf
             if meta.testing_S3:
-                istart = num_data_files - 1
+                istart = meta.num_data_files - 1
             else:
                 istart = 0
-            for m in range(istart, num_data_files):
+            for m in range(istart, meta.num_data_files):
                 # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
                 if m==istart:
                     meta.firstFile = True
                 else:
                     meta.firstFile = False
                 # Report progress
-                log.writelog(f'Reading file {m + 1} of {num_data_files}')
+                log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
                 # Get number of integrations and frame dimensions
