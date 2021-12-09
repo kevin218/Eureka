@@ -58,10 +58,10 @@ def read(filename, data, meta):
     data.dq 		= hdulist['DQ',1].data
     data.wave 		= hdulist['WAVELENGTH',1].data
     data.v0 		= hdulist['VAR_RNOISE',1].data
-    data.int_times	= hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
+    int_times	    = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
     # Record integration mid-times in BJD_TDB
-    # data.bjdtdb = data.int_times['int_mid_BJD_TDB']
+    # data.bjdtdb = int_times['int_mid_BJD_TDB']
     # There is no time information in the simulated NIRSpec data
     print('  WARNING: The timestamps for the simulated NIRSpec data are currently '
           'hardcoded because they are not in the .fits files themselves')
