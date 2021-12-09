@@ -242,8 +242,10 @@ def reduceJWST(eventlabel, s2_meta=None):
                     meta.firstFile = False
                 # Report progress
                 log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
+                
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
+                
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.data.shape
                 if meta.testing_S3:
@@ -251,17 +253,20 @@ def reduceJWST(eventlabel, s2_meta=None):
                     meta.int_start = np.max((0,meta.n_int-5))
                 else:
                     meta.int_start = 0
+                
                 # Locate source postion
                 meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
                 log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
+                
                 # Trim data to subarray region of interest
                 data, meta = util.trim(data, meta)
+                
+                # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
+                data, meta = b2f.convert_to_e(data, meta, log)
+
                 # Create bad pixel mask (1 = good, 0 = bad)
                 # FINDME: Will want to use DQ array in the future to flag certain pixels
                 data.submask = np.ones(data.subdata.shape)
-
-                # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
-                data, meta = b2f.convert_to_e(data, meta, log)
 
                 # Check if arrays have NaNs
                 data.submask = util.check_nans(data.subdata, data.submask, log, name='SUBDATA')
