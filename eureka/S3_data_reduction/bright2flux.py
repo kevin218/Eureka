@@ -156,13 +156,15 @@ def bright2flux(data, err, v0, pixel_area):
         Documented, and incorporated scipy.constants.
     - 2021-05-28 kbs
         Updated for JWST
+    - 2021-12-09 TJB
+        Updated to account for the new DataClass object
     """
     # steradians per square arcsecond
     srperas = arcsec**2.0
 
-    data *= srperas * 1e6 * pixel_area
-    err  *= srperas * 1e6 * pixel_area
-    v0   *= srperas * 1e6 * pixel_area
+    data.subdata *= srperas * 1e6 * pixel_area
+    data.suberr  *= srperas * 1e6 * pixel_area
+    data.subv0   *= srperas * 1e6 * pixel_area
 
     return data, err, v0
 
