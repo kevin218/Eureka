@@ -21,9 +21,15 @@ def BGsubtraction(data, meta, log, isplots):
     -------
     data:   DataClass
         Data object containing background subtracted data.
-    """
-    n_int, bg_y1, bg_y2, subdata, submask = meta.n_int, meta.bg_y1, meta.bg_y2, data.subdata, data.submask
 
+    Notes
+    ------
+    History:
+
+    - Dec 10, 2021 Taylor Bell
+        Edited to pass the full DataClass object into inst.fit_bg
+    """
+    
     # Load instrument module
     if meta.inst == 'miri':
         from . import miri as inst
@@ -39,24 +45,24 @@ def BGsubtraction(data, meta, log, isplots):
     # Write background
     def writeBG(arg):
         bg_data, bg_mask, n = arg
-        subbg[n] = bg_data
-        submask[n] = bg_mask
+        data.subbg[n] = bg_data
+        data.submask[n] = bg_mask
         return
 
     # Compute background for each integration
     log.writelog('  Performing background subtraction')
-    subbg = np.zeros((subdata.shape))
+    data.subbg = np.zeros((data.subdata.shape))
     if meta.ncpu == 1:
         # Only 1 CPU
-        for n in tqdm(range(meta.int_start,n_int)):
+        for n in tqdm(range(meta.int_start,meta.n_int)):
             # Fit sky background with out-of-spectra data
-            writeBG(inst.fit_bg(subdata[n], meta, submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
+            writeBG(inst.fit_bg(data, meta, n, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         args_list = []
-        for n in range(meta.int_start,n_int):
-            args_list.append((subdata[n], meta, submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
+        for n in range(meta.int_start,meta.n_int):
+            args_list.append((data, meta, n, isplots))
         jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
         pool.close()
         for job in tqdm(jobs):
@@ -64,9 +70,7 @@ def BGsubtraction(data, meta, log, isplots):
 
     # 9.  Background subtraction
     # Perform background subtraction
-    subdata -= subbg
-
-    data.subbg, data.submask, data.subdata = subbg, submask, subdata
+    data.subdata -= data.subbg
 
     return data
 
