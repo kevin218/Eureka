@@ -2,13 +2,12 @@ import numpy as np
 from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage.interpolation as spni
-import gaussian as g
 import matplotlib.pyplot as plt
-import os, sys, optspex, smooth, julday, centroid
-import hst_scan as hst
-import sort_nicely as sn
-import astropy.io.fits as pf
-import smoothing
+from astropy.io import fits
+import os, sys
+from . import gaussian as g
+from . import sort_nicely as sn
+from . import optspex, julday, smooth, centroid, smoothing
 
 try:
     basestring
@@ -78,7 +77,7 @@ def read(filenames, returnHdr=True):
     else:
         return data, err
 
-def imageCentroid(filenames, guess, trim, ny, scifile):
+def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1, POSTARG2):
     '''
     Calculate centroid for a list of direct images.
 
@@ -87,6 +86,11 @@ def imageCentroid(filenames, guess, trim, ny, scifile):
     filenames     : List of direct image filenames
     guess         : Paired list, centroid guess
     trim        : Trim image when calculating centroid
+    ny          : The value of NAXIS2
+    CRPIX1: The value of CRPIX1 in the main FITS header
+    CRPIX2:  The value of CRPIX2 in the main FITS header
+    POSTARG1:    The value of POSTARG1 in the science FITS header
+    POSTARG2:   The value of POSTARG2 in the science FITS header
 
     Returns
     -------
@@ -96,22 +100,23 @@ def imageCentroid(filenames, guess, trim, ny, scifile):
     -------
     Written by Kevin Stevenson        November 2013
     Added IRSUB256                    March 2016
+    Updated for Eureka by Taylor Bell   December 8, 2021
     '''
     nfiles = len(filenames)
     centers     = []
-    image         = []
-    scihdr0 = fits.getheader(scifile,0)
-    scihdr1 = fits.getheader(scifile,1)
+    #images         = []
     for i in range(nfiles):
-        image.append(fits.getdata(filenames[i].rstrip()))
+        #images.append(fits.getdata(filenames[i].rstrip()))
+        image = fits.getdata(filenames[i].rstrip())
         #hdr0 = fits.getheader(filenames[i],0)
         #hdr1 = fits.getheader(filenames[i],1)
         calhdr0 = fits.getheader(filenames[i].rstrip(),0)
         calhdr1 = fits.getheader(filenames[i].rstrip(),1)
         #Calculate centroid, correct for difference in image size, if any
-        centers.append(centroid.ctrgauss(image[i], guess=guess, trim=trim) - (image[i].shape[0]-ny)/2.)
-        xoffset    = scihdr1['CRPIX1'] - calhdr1['CRPIX1'] + (scihdr0['POSTARG1'] - calhdr0['POSTARG1'])/0.135
-        yoffset    = scihdr1['CRPIX2'] - calhdr1['CRPIX2'] + (scihdr0['POSTARG2'] - calhdr0['POSTARG2'])/0.121
+        #centers.append(centroid.ctrgauss(images[i], guess=guess, trim=trim) - (images[i].shape[0]-ny)/2.)
+        centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) - (image.shape[0]-ny)/2.)
+        xoffset    = CRPIX1 - calhdr1['CRPIX1'] + (POSTARG1 - calhdr0['POSTARG1'])/0.135
+        yoffset    = CRPIX2 - calhdr1['CRPIX2'] + (POSTARG2 - calhdr0['POSTARG2'])/0.121
         centers[i][0] += yoffset
         centers[i][1] += xoffset
         print("Adding "+str(xoffset)+','+str(yoffset)+" pixels to x,y centroid position.")
@@ -135,7 +140,7 @@ def imageCentroid(filenames, guess, trim, ny, scifile):
             centers[i][1] += xoffset
             print("****WARNING: Direct image uses IRSUB512, adding "+str(xoffset)+','+str(yoffset)+" pixels to x,y position.")
         """
-    return centers, image
+    return centers#, images
 
 def groupFrames(dates):
     '''
@@ -424,7 +429,7 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5, ispl
     Removed wavelength dependence   February 2018
     '''
     # Read in flat frames
-    hdulist     = pf.open(flatfile)
+    hdulist     = fits.open(flatfile)
     #flat_mhdr   = hdulist[0].header
     #wmin        = float(flat_mhdr['wmin'])/1e4
     #wmax        = float(flat_mhdr['wmax'])/1e4
@@ -700,7 +705,7 @@ def calcSpectrum(filename, mask, bias_master, flat_master, slitshift, xwindow, y
     sys.stdout.write('\r'+str(m+1))
     sys.stdout.flush()
     #Read file
-    frame, frameerr = hst.read(filename, returnHdr=False)
+    frame, frameerr = read(filename, returnHdr=False)
     # Calculate reduced image
     reddata    = ((frame - bias_master)/flat_master)[0]     #.squeeze()
     nreads     = reddata.shape[0]
@@ -738,7 +743,7 @@ def calcSpectrum(filename, mask, bias_master, flat_master, slitshift, xwindow, y
             interpdata        = spni.zoom(diffdata[i], expand)
             interpmask        = np.round(spni.zoom(1.*diffmask[i], expand)).astype(int)
             interpslitshift = spni.zoom(slitshift, expand)*expand
-            cordata[i], cormask[i]    = hst.correct_slitshift2(interpdata, interpslitshift, mask=interpmask, isreverse=False)
+            cordata[i], cormask[i]    = correct_slitshift2(interpdata, interpslitshift, mask=interpmask, isreverse=False)
             '''
             # test plot
             if isplots >= 3:
@@ -754,7 +759,7 @@ def calcSpectrum(filename, mask, bias_master, flat_master, slitshift, xwindow, y
     # Do not apply shift
     else:
         #for i in range(nreads-1):
-        #    cordata[i], cormask[i]    = hst.correct_slitshift2(diffdata[i], slitshift, mask=diffmask[i])
+        #    cordata[i], cormask[i]    = correct_slitshift2(diffdata[i], slitshift, mask=diffmask[i])
         cordata = diffdata
         cormask = diffmask
 
@@ -1233,7 +1238,7 @@ def checkDates(directory):
     rootname = []
     for fname in obj_list:
         hdr = fits.getheader(fname)
-        jd.append(hst.date_obs(hdr))
+        jd.append(date_obs(hdr))
         rootname.append(hdr['ROOTNAME'])
     one = np.ones(len(jd))
     mjd = np.array(jd) - 2456600    #np.floor(jd[0])
