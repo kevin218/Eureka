@@ -288,6 +288,12 @@ def reduceJWST(eventlabel, s2_meta=None):
 
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
+                if meta.isplots_S3 >= 3:
+                    log.writelog('  Creating figures for background subtraction')
+                    for n in tqdm(range(meta.int_start,meta.n_int)):
+                        # make image+background plots
+                        plots_s3.image_and_background(data, meta, n)
+
                 # Calulate drift2D
                 # print("Calculating 2D drift...")
 
@@ -295,12 +301,6 @@ def reduceJWST(eventlabel, s2_meta=None):
 
                 # Outlier rejection of full frame along time axis
                 # print("Performing full-frame outlier rejection...")
-
-                if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for background subtraction')
-                    for n in tqdm(range(meta.int_start,meta.n_int)):
-                        # make image+background plots
-                        plots_s3.image_and_background(data, meta, n)
 
                 # print("Performing sub-pixel drift correction...")
 
