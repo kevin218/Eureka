@@ -12,7 +12,7 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
         meta = me.load(speclc_dir + '/S4_' + eventlabel + '_Meta_Save.dat')
 
     #read in run params
-    import eureka.S5_lightcurve_fitting.parameters as p
+    from . import parameters as p
     reload(p)
     run_par=p.Parameters(param_file=run_par_file)
     # Create directories for Stage 4 processing
@@ -27,35 +27,21 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
         flux = flux / np.median(flux[:200])
         flux_err = flux_err/800000000/3
 
-        import eureka.S5_lightcurve_fitting.lightcurve as lc
+        from . import lightcurve as lc
         reload(lc)
         wasp43b_lc = lc.LightCurve(t_bjdtdb, flux, unc=flux_err, name='WASP-43b')
 
         # Get the orbital parameters
-        from eureka.S5_lightcurve_fitting.utils import get_target_data
+        from .utils import get_target_data
         wasp43b_params, url = get_target_data('WASP-43b')
 
         # Set the intial parameters
         params = p.Parameters(param_file=fit_par)
-        # params.rp = wasp43b_params['Rp/Rs'] + 0.02, 'free', 0.1, 0.2
-        # params.per = wasp43b_params['orbital_period'], 'fixed'
-        # params.t0 = 59694.15-t0_offset, 'free', 59694.12-t0_offset, 59694.18-t0_offset
-        # print(params.t0)
-        # params.inc = wasp43b_params['inclination'], 'free', 80., 90.
-        # params.a = wasp43b_params['a/Rs'], 'free', 2., 15.
-        # params.ecc = wasp43b_params['eccentricity'], 'fixed'
-        # params.w = 90, 'fixed'  # wasp43b_par['omega'], 'fixed'
-        # params.limb_dark = 'quadratic', 'independent'
-        # params.transittype = 'primary', 'independent'
-        # params.u1 = 0.7, 'free', 0., 1
-        # params.u2 = 0.25, 'free', 0., 1
         if run_par.run_verbose.value:
             print(params)
-        #params.c0 = np.median(flux[:200]), 'free', np.median(flux[:200])*0.5, np.median(flux[:200])*1.5
-        #params.c1 = 0., 'fixed'
-        #params.c2 = 0., 'fixed'
+
         # Make the transit model
-        import eureka.S5_lightcurve_fitting.models as m
+        from . import models as m
         reload(m)
         modellist=[]
         if 'transit' in run_par.run_myfuncs.value:
@@ -65,7 +51,7 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
             t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
             modellist.append(t_polynom)
         model = m.CompositeModel(modellist)
-        #model = m.CompositeModel([t_model])
+
         if 'lsq' in run_par.fit_method.value:
             wasp43b_lc.fit(model, fitter='lsq', **run_par.dict)
         if 'mcmc' in run_par.fit_method.value:

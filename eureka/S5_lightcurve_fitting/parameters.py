@@ -7,7 +7,7 @@ import os
 import json
 
 import numpy as np
-from eureka.lib import readECF as rd
+from ..lib import readECF as rd
 
 class Parameter:
     """A generic parameter class"""

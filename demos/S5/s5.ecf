@@ -1,5 +1,7 @@
 ##Stage 5
 toffset  59694 #to be subtracted from the time array to avoid floating point precision problems when fitting for t0
+workdir	'/Users/megan/Documents/Code/Eureka/Eureka/demos/'
+speclc_dir	'/Users/megan/Documents/Code/Eureka/Eureka/demos/S3/S3_2021-10-11_15-10-58_wasp43b/S4_2021-10-11_15-23-10_6chan'
 
 #fix_ld   False #use limb darkening file?
 #ld_file  /home/zieba/Desktop/Projects/Open_source/wfc3-pipeline/wfc3_reduction/limb-darkening/results/ld_outputfile.txt #location of limb darkening file
@@ -7,12 +9,11 @@ toffset  59694 #to be subtracted from the time array to avoid floating point pre
 run_verbose		True
 run_output          False
 run_show_plot       False
-fit_method	[lsq,mcmc,nested]	#options are: lsq, mcmc, nested
+fit_method	[lsq]	#options are: lsq, mcmc, nested (can list multiple types separated by commas)
 #run_plot_raw_data   True
 #run_fit_white       False
 #run_divide_white    False
 run_myfuncs	[transit] #other functions not available yet
-#run_myfuncs         [constant,upstream_downstream,model_ramp,polynomial1,transit]
 
 save_allan_plot     True
 

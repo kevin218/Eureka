@@ -95,15 +95,8 @@ class Ecf:
 
   # :::: And now, Chris' code ::::
   # load all parameters
-    #parlist=[]
     for i, parname in enumerate(params):
       exec("self.{pname} = Param(parname[1:])".format(pname  = parname[0]))
-      #parlist.append(parname[0])
-    #self.parlist=parlist
-
-  #def __iter__(self):
-  #  for attr, value in self.__dict__.iteritems():
-  #    yield attr, value
 
   def make_file(self, name):
 
