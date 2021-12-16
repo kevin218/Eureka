@@ -5,9 +5,10 @@ import scipy.ndimage.interpolation as spni
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import os, sys
-from . import gaussian as g
-from . import sort_nicely as sn
-from . import optspex, julday, smooth, centroid, smoothing
+from . import optspex
+from ..lib import gaussian as g
+from ..lib import sort_nicely as sn
+from ..lib import julday, smooth, centroid, smoothing
 
 try:
     basestring
@@ -115,8 +116,8 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1, POSTARG2
         #Calculate centroid, correct for difference in image size, if any
         #centers.append(centroid.ctrgauss(images[i], guess=guess, trim=trim) - (images[i].shape[0]-ny)/2.)
         centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) - (image.shape[0]-ny)/2.)
-        xoffset    = CRPIX1 - calhdr1['CRPIX1'] + (POSTARG1 - calhdr0['POSTARG1'])/0.135
-        yoffset    = CRPIX2 - calhdr1['CRPIX2'] + (POSTARG2 - calhdr0['POSTARG2'])/0.121
+        xoffset    = CRPIX1 - calhdr1['CRPIX1'] + (POSTARG1[i] - calhdr0['POSTARG1'])/0.135
+        yoffset    = CRPIX2 - calhdr1['CRPIX2'] + (POSTARG2[i] - calhdr0['POSTARG2'])/0.121
         centers[i][0] += yoffset
         centers[i][1] += xoffset
         print("Adding "+str(xoffset)+','+str(yoffset)+" pixels to x,y centroid position.")
@@ -634,11 +635,11 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
 # Calulate drift2D
 from ..image_registration import image_registration as imr
 def calcDrift2D(im1, im2, m, n, n_files):
-    try:
-        sys.stdout.write('\r'+str(m+1)+'/'+str(n_files))
-        sys.stdout.flush()
-    except:
-        pass
+    # try:
+    #     sys.stdout.write('\r'+str(m+1)+'/'+str(n_files))
+    #     sys.stdout.flush()
+    # except:
+    #     pass
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
     return (drift2D, m, n)
