@@ -102,15 +102,18 @@ def calibrateJWST(eventlabel):
     with fits.open(meta.segment_list[0]) as hdulist:
         # Figure out which observatory and observation mode we are using
         telescope = hdulist[0].header['TELESCOP']
+    if telescope=='JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
-    if telescope=='JWST' and 'image' in exp_type.lower():
-        # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
-        pipeline = EurekaImage2Pipeline()
-    elif telescope=='JWST':
-        # EXP_TYPE doesn't say image, so it should be a spectrum (or someone is putting weird files into Eureka!)
-        pipeline = EurekaSpec2Pipeline()
+        if 'image' in exp_type.lower():
+            # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+            pipeline = EurekaImage2Pipeline()
+        else:
+            # EXP_TYPE doesn't say image, so it should be a spectrum (or someone is putting weird files into Eureka!)
+            pipeline = EurekaSpec2Pipeline()
     elif telescope=='HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
+        shutil.rmtree(os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))) # Clean up temporary folder
+        meta.outputdir = meta.inputdir
         return meta
     else:
         raise AssertionError(f'Telescope "{telescope}" detected in FITS header is not JWST or HST and is unsupported!')
