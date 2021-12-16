@@ -39,6 +39,8 @@ def BGsubtraction(data, meta, log, isplots):
         from . import nirspec as inst
     elif meta.inst == 'niriss':
         raise ValueError('NIRISS observations are currently unsupported!')
+    elif meta.inst == 'wfc3':
+        from . import wfc3 as inst
     else:
         raise ValueError('Unknown instrument {}'.format(meta.inst))
 
