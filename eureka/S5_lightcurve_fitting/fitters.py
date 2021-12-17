@@ -20,7 +20,7 @@ import matplotlib as mpl
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-def lsqfitter(lc, model, **kwargs):
+def lsqfitter(lc, model, meta, **kwargs):
     """Perform least-squares fit
 
     Parameters
@@ -113,7 +113,7 @@ def lsqfitter(lc, model, **kwargs):
     model.update(fit_params, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-    if kwargs['run_show_plot'][0]:
+    if meta.isplots_S5 > 1:
         model.plot(time=lc.time, draw=True)
         print()
 
@@ -121,9 +121,9 @@ def lsqfitter(lc, model, **kwargs):
         ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
         ax[0].plot(lc.time, model_lc, zorder = 10)
 
-        
         ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-        plt.savefig('lc_lsq.png', dpi=300)
+
+        plt.savefig(meta.outputdir + 'figs/lc_lsq.png', dpi=300)
         plt.show()
 
     chi2 = np.sum((residuals / lc.unc) ** 2)
@@ -138,13 +138,13 @@ def lsqfitter(lc, model, **kwargs):
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
         print('\n')
-    if kwargs['run_show_plot'][0]:
-        rmsplot(lc, model_lc, figname='allanplot_lsq.png')
+    if meta.isplots_S5 > 3:
+        rmsplot(lc, model_lc, meta, figname='allanplot_lsq.png')
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
     return best_model#, chi2red, fit_params
 
-def demcfitter(time, data, model, uncertainty=None, **kwargs):
+def demcfitter(time, data, model, meta, uncertainty=None, **kwargs):
     """Use Differential Evolution Markov Chain
 
     Parameters
@@ -172,7 +172,7 @@ def demcfitter(time, data, model, uncertainty=None, **kwargs):
 
 
 
-def emceefitter(lc, model, **kwargs):
+def emceefitter(lc, model, meta, **kwargs):
     """Perform sampling using emcee
 
     Parameters
@@ -295,10 +295,9 @@ def emceefitter(lc, model, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
-    if kwargs['run_show_plot'][0]:
+    if meta.isplots_S5 > 5:
         fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
-        figname = "corner_emcee.png"
-        fig.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+        fig.savefig(meta.outputdir+'figs/corner_emcee.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
 
 
     def quantile(x, q):
@@ -333,16 +332,16 @@ def emceefitter(lc, model, **kwargs):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
-    if kwargs['run_show_plot'][0]:
+    if meta.isplots_S5 > 1:
         model.plot(time=lc.time, draw=True)
 
         fig, ax = plt.subplots(2,1)
         ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
         ax[0].plot(lc.time, model_lc, zorder = 10)
-
-
+        
         ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-        plt.savefig('lc_emcee.png', dpi=300)
+        
+        plt.savefig(meta.outputdir + 'figs/lc_emcee.png', dpi=300)
         plt.show()
 
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
@@ -358,13 +357,13 @@ def emceefitter(lc, model, **kwargs):
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
 
-    if kwargs['run_show_plot'][0]:
-        rmsplot(lc, model_lc, figname='allanplot_emcee.png')
+    if meta.isplots_S5 > 3:
+        rmsplot(lc, model_lc, meta, figname='allanplot_emcee.png')
 
     return best_model
 
 
-def dynestyfitter(lc, model, **kwargs):
+def dynestyfitter(lc, model, meta, **kwargs):
     """Perform sampling using emcee
 
     Parameters
@@ -519,11 +518,10 @@ def dynestyfitter(lc, model, **kwargs):
         print('Number of posterior samples is {}'.format(len(samples_dynesty)))
 
     # plot using corner.py
-    if kwargs['run_show_plot'][0]:
+    if meta.isplots_S5 > 5:
         fig = corner.corner(samples_dynesty, labels=freenames, show_titles=True, quantiles=[0.16, 0.5, 0.84],title_fmt='.4')
-        figname = "corner_dynesty.png"
         if kwargs['run_output'][0]:
-            fig.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+            fig.savefig(meta.outputdir + 'figs/corner_dynesty.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
 
 
     # PLOT MEDIAN OF THE SAMPLES
@@ -557,7 +555,7 @@ def dynestyfitter(lc, model, **kwargs):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
-    if kwargs['run_show_plot'][0]:
+    if meta.isplots_S5 > 1:
         model.plot(time=lc.time, draw=True)
 
         fig, ax = plt.subplots(2,1)
@@ -566,7 +564,7 @@ def dynestyfitter(lc, model, **kwargs):
 
 
         ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-        plt.savefig('lc_dynesty.png', dpi=300)
+        plt.savefig(meta.outputdir + 'figs/lc_dynesty.png', dpi=300)
         plt.show()
 
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
@@ -585,15 +583,15 @@ def dynestyfitter(lc, model, **kwargs):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
 
     # PLOT ALLAN PLOT
-    if kwargs['run_show_plot'][0]:
-        rmsplot(lc,model_lc, figname='allanplot_dynesty.png')
+    if meta.isplots_S5 > 3:
+        rmsplot(lc,model_lc, meta, figname='allanplot_dynesty.png')
 
     return best_model
 
 
 
 
-def lmfitter(time, data, model, uncertainty=None, **kwargs):
+def lmfitter(time, data, model, meta, uncertainty=None, **kwargs):
     """Use lmfit
 
     Parameters
@@ -714,7 +712,7 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     else:
         return rms, stderr, binsz
 
-def rmsplot(lc,model_lc, figname='allanplot.png'):
+def rmsplot(lc, model_lc, meta, figname='allanplot.png'):
     time = lc.time
     residuals = lc.flux - model_lc
     residuals = residuals[np.argsort(time)]
@@ -734,6 +732,10 @@ def rmsplot(lc,model_lc, figname='allanplot.png'):
     plt.xticks(size=12)
     plt.yticks(size=12)
     plt.legend()
-    # if savefile != None:
-    plt.savefig(figname)
-    plt.close()
+    plt.savefig(meta.outputdir + 'figs/'+figname, dpi=300)
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.1)
+
+    return
