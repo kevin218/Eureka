@@ -7,16 +7,18 @@ import scipy.interpolate as spi
 import scipy.ndimage.interpolation as spni
 from . import background, nircam
 from . import bright2flux as b2f
-from ..lib import hst_scan as hst
+from . import hst_scan as hst
 from ..lib import suntimecorr, utc_tt
 
 def preparation_step(meta, log):
 
-    obstimes, CRPIX1, CRPIX2, postarg1, postarg2 = separate_direct(meta, log)
-    separate_scan_direction(obstimes, postarg2, meta, log)
+    meta.gain = 1
+
+    obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log = separate_direct(meta, log)
+    meta, log = separate_scan_direction(obstimes, postarg2, meta, log)
     
     # Calculate centroid of direct image(s)
-    meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess, meta.centroidtrim, meta.ny, CRPIX1, CRPIX2, postarg1, postarg2)
+    meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess, meta.centroidtrim, ny, CRPIX1, CRPIX2, postarg1, postarg2)
     
     # Initialize listto hold centroid positions from later steps in this stage
     meta.centroids = []
@@ -24,12 +26,13 @@ def preparation_step(meta, log):
     meta.flatmask = []
     meta.scanHeight = []
     meta.diffmask = []
+    meta.subdiffmask = []
     meta.drift2D = []
     meta.drift2D_int = []
     meta.subdata_ref = []
     meta.diffmask_ref = []
 
-    return
+    return meta, log
 
 def conclusion_step(meta, log):
     # Convert these lists to arrays
@@ -38,12 +41,13 @@ def conclusion_step(meta, log):
     meta.flatmask = np.array(meta.flatmask)
     meta.scanHeight = np.array(meta.scanHeight)
     meta.diffmask = np.array(meta.diffmask)
+    meta.subdiffmask = np.array(meta.subdiffmask)
     meta.drift2D = np.array(meta.drift2D)
     meta.drift2D_int = np.array(meta.drift2D_int)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.diffmask_ref = np.array(meta.diffmask_ref)
 
-    return
+    return meta, log
 
 def separate_direct(meta, log):
 
@@ -61,8 +65,9 @@ def separate_direct(meta, log):
             # Get the POSTARG2 parameter so we can later separate scan directions
             postarg1.append(file[0].header['POSTARG1'])
             postarg2.append(file[0].header['POSTARG2'])
-            CRPIX1.append(file[0].header['CRPIX1'])
-            CRPIX2.append(file[0].header['CRPIX2'])
+            CRPIX1.append(file[1].header['CRPIX1'])
+            CRPIX2.append(file[1].header['CRPIX2'])
+            ny = file[1].header['NAXIS2']
     obstypes = np.array(obstypes)
     obstimes = np.array(obstimes)
     postarg1 = np.array(postarg1)
@@ -111,32 +116,42 @@ def separate_direct(meta, log):
         # If there are multiple direct images, this will use the most recent one
         direct_times = obstimes[obstypes=='IMAGING']
         science_times = obstimes[obstypes=='SPECTROSCOPIC']
-        meta.direct_index = np.zeros(meta.segment_list.shape)
+        meta.direct_index = np.zeros(meta.segment_list.shape, dtype=int)
         for i in range(len(science_times)):
             meta.direct_index[i] = np.where(science_times[i]>direct_times)[0][-1]
 
-    return obstimes, CRPIX1, CRPIX2, postarg1, postarg2
+    return obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log
 
 def separate_scan_direction(obstimes, postarg2, meta, log):
-    # Assign scan direction
-    meta.scandir = np.zeros(meta.num_data_files, dtype=int)
-    meta.n_scan0 = 0
-    meta.n_scan1 = 0
-    scan0 = postarg2[0]
-    scan1 = postarg2[1]
-    for m in range(meta.num_data_files):
-        if postarg2[m] == scan0:
-            meta.n_scan0 += 1
-        elif postarg2[m] == scan1:
-            meta.scandir[m] = 1
-            meta.n_scan1 += 1
-        else:
-            log.writelog('WARNING: Unknown scan direction for file ' + str(m) + '.')
+
+    if meta.num_data_files==1:
+        # There is only one image
+        meta.scandir = np.zeros(meta.num_data_files, dtype=int)
+        meta.n_scan0 = 1
+        meta.n_scan1 = 0
+    else:
+        # Assign scan direction
+        meta.scandir = np.zeros(meta.num_data_files, dtype=int)
+        meta.n_scan0 = 0
+        meta.n_scan1 = 0
+        scan0 = postarg2[0]
+        scan1 = postarg2[1]
+        for m in range(meta.num_data_files):
+            if postarg2[m] == scan0:
+                meta.n_scan0 += 1
+            elif postarg2[m] == scan1:
+                meta.scandir[m] = 1
+                meta.n_scan1 += 1
+            else:
+                log.writelog('WARNING: Unknown scan direction for file ' + str(m) + '.')
+    
     log.writelog("# of files in scan direction 0: " + str(meta.n_scan0))
     log.writelog("# of files in scan direction 1: " + str(meta.n_scan1))
 
     # Group frames into frame, batch, and orbit number
     meta.framenum, meta.batchnum, meta.orbitnum = hst.groupFrames(obstimes)
+
+    return meta, log
 
 def read(filename, data, meta):
     '''Reads single FITS file from HST's WFC3 instrument.
@@ -168,10 +183,11 @@ def read(filename, data, meta):
 
     #Determine image size and filter/grism
     with fits.open(filename) as hdulist:
+        data.filename   = filename
         data.mhdr       = hdulist[0].header
         data.shdr       = hdulist[1].header
-        meta.nx              = data.shdr['NAXIS1']
-        meta.ny              = data.shdr['NAXIS2']
+        meta.nx         = data.shdr['NAXIS1']
+        meta.ny         = data.shdr['NAXIS2']
         meta.grism      = data.mhdr['FILTER']
         meta.detector   = data.mhdr['DETECTOR']
         meta.flatoffset = [[-1*data.shdr['LTV2'], -1*data.shdr['LTV1']]]
@@ -190,11 +206,24 @@ def read(filename, data, meta):
         else:
             samptime = 1
 
-        data.data = hdulist[1].data*samptime
-        data.err  = hdulist[2].data*samptime
-        data.dq  = hdulist[3].data
+        data.data = np.zeros((meta.nreads,meta.ny,meta.nx))    #Flux
+        data.err = np.zeros((meta.nreads,meta.ny,meta.nx))    #Flux
+        data.dq = np.zeros((meta.nreads,meta.ny,meta.nx))    #Flux
+        jd = []
+        j = 0
+        for rd in range(meta.nreads,0,-1):
+            data.data[j] = hdulist['SCI',rd].data*samptime
+            data.err[j]  = hdulist['ERR',rd].data*samptime
+            data.dq[j]   = hdulist['DQ', rd].data
+            jd.append(2400000.5 + hdulist['SCI',rd].header['ROUTTIME']-0.5*hdulist['SCI',rd].header['DELTATIM']/3600/24)
+            j += 1
+        jd = np.array(jd)
+
+        # data.data = hdulist[1].data*samptime
+        # data.err  = hdulist[2].data*samptime
+        # data.dq  = hdulist[3].data
     
-    jd  = 2400000.5 + 0.5*(data.mhdr['EXPSTART'] + data.mhdr['EXPEND'])
+    # jd  = np.array([2400000.5 + 0.5*(data.mhdr['EXPSTART'] + data.mhdr['EXPEND'])])
     ra  = data.mhdr['RA_TARG']*np.pi/180
     dec = data.mhdr['DEC_TARG']*np.pi/180
     if meta.horizonsfile != None:
@@ -202,7 +231,8 @@ def read(filename, data, meta):
         # Horizons file created for HST around time of observations
         bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, meta.horizonsfile)
         bjdutc      = jd + bjd_corr/86400.
-        data.bjdtdb   = utc_tt.utc_tt(bjdutc,meta.leapdir)   # FIX: should this be utc_tdb instead?
+        data.bjdtdb = bjdutc # FINDME: Update to the lines below after I have the leapdir files
+        #data.bjdtdb   = utc_tt.utc_tt(bjdutc,meta.leapdir)   # FIX: should this be utc_tdb instead?
     elif meta.firstFile:
         print("WARNING: No Horizons file found. Using JD rather than BJD_TDB.")
         data.bjdtdb   = jd
@@ -214,48 +244,37 @@ def read(filename, data, meta):
                             data.mhdr['READNSEB'],
                             data.mhdr['READNSEC'],
                             data.mhdr['READNSED']))
-    data.v0 = readNoise**2   #Units of electrons
-
-    
+    data.v0 = readNoise**2*np.ones_like(data.data)   #Units of electrons
     
     # Calculate centroids for each frame
     centroids = np.zeros((meta.nreads-1,2))
     # Figure out which direct image is the relevant one for this observation
-    image_number = np.where(meta.segment_list==filename)[0]
+    image_number = np.where(meta.segment_list==filename)[0][0]
     centroid_index = meta.direct_index[image_number]
     # Use the same centroid for each read
     centroids[:,0] = meta.centroid[centroid_index][0]
     centroids[:,1] = meta.centroid[centroid_index][1]
     meta.centroids.append(centroids)
-
+    
     # Calculate trace
     print("Calculating wavelength assuming " + meta.grism + " filter/grism...")
     xrange   = np.arange(0,meta.nx)
     data.wave  = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4   #wavelength in microns
-
+    data.wave = data.wave*np.ones((meta.ny,1)) # Assume no skew over the detector
+    
     # Figure out which read this file starts and ends with
     data.intstart = image_number*(meta.nreads-1)
     data.intend = (image_number+1)*(meta.nreads-1)
-
-    # Must define the following in data object
-    '''
-    x	mhdr
-    x	shdr
-    x	intstart (what integration this file starts with from the whole collection)
-    x   intend (what integration this file ends with)
-    x	data
-    x	err
-    x	dq
-    x	wave (need to use OBSTYPE=IMAGING observation to determine wavelength solution)
-    x	v0
-    x	bjdtdb
-    '''
-
+    
     if meta.flatfile == None:
         print('No flat frames found.')
     else:
         data, meta = flatfield(data, meta)
-
+    
+    data, meta = difference_frames(data,meta)
+    
+    data.variance = np.zeros_like(data.data)
+    
     return data, meta
 
 def flatfield(data, meta):
@@ -269,29 +288,33 @@ def flatfield(data, meta):
     
     meta.subflat.append(subflat)
     meta.flatmask.append(flatmask)
-
+    
     # Calculate reduced image
-    data.data /= subflat[:,np.newaxis]
-
+    subflat[np.where(flatmask==0)] = 1
+    subflat[np.where(subflat==0)] = 1
+    data.data /= subflat
+    
     return data, meta
 
 def difference_frames(data, meta):
 
-    if meta.n_reads > 1:
+    import matplotlib.pyplot as plt
+
+    if meta.nreads > 1:
         # Subtract pairs of subframes
-        diffdata = np.zeros((meta.n_reads-1,meta.ny,meta.nx))
-        differr  = np.zeros((meta.n_reads-1,meta.ny,meta.nx))
-        for n in range(meta.n_reads-1):
+        diffdata = np.zeros((meta.nreads-1,meta.ny,meta.nx))
+        differr  = np.zeros((meta.nreads-1,meta.ny,meta.nx))
+        for n in range(meta.nreads-1):
             diffdata[n] = data.data[n+1]-data.data[n]
-            differr [n] = np.sqrt(data.err[n+1]**2+data.err[n]**2)
+            differr [n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
     else:
         # FLT data has already been differenced
         diffdata    = data.data
         differr     = data.err
-
-    diffmask = np.zeros((meta.n_reads-1,meta.ny,meta.nx))
-    data.guess    = np.zeros((meta.n_reads-1),dtype=int)
-    for n in range(meta.n_reads-1):
+    
+    diffmask = np.zeros((meta.nreads-1,meta.ny,meta.nx))
+    data.guess    = np.zeros((meta.nreads-1),dtype=int)
+    for n in range(meta.nreads-1):
         diffmask[n] = np.copy(meta.flatmask[-1][0])
         try:
             diffmask[n][ np.where(differr[n] > meta.diffthresh*
@@ -299,13 +322,13 @@ def difference_frames(data, meta):
         except:
             # May fail for FLT files
             print("Diffthresh failed - this may happen for FLT files.")
-
+        
         masked_data = diffdata[n]*diffmask[n]
-        data.uess[n]  = np.median(np.where(masked_data > np.mean(masked_data))[0]).astype(int)
+        data.guess[n]  = np.median(np.where(masked_data > np.mean(masked_data))[0]).astype(int)
     # Guess may be skewed if first read is zeros
     if data.guess[0] < 0 or data.guess[0] > meta.ny:
         data.guess[0] = data.guess[1]
-
+    
     # Compute full scan length
     scannedData = np.sum(data.data[-1], axis=1)
     xmin        = np.min(data.guess)
@@ -323,8 +346,11 @@ def difference_frames(data, meta):
     meta.diffmask.append(diffmask)
     # Save the non-differenced frame data in case it is useful
     data.raw_data = np.copy(data.data)
+    data.raw_err = np.copy(data.err)
     # Overwrite the data array with the differenced data since that's what we'll use for the other steps
     data.data = diffdata
+    data.err = differr
+    data.bjdtdb = data.bjdtdb[1:]
 
     return data, meta
 
@@ -347,18 +373,18 @@ def flag_bg(data, meta):
     '''
     return nircam.flag_bg(data, meta)
 
-def fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
+def fit_bg(data, meta, n, isplots=False):
     '''Fit for a non-uniform background.
 
     Uses the code written for NIRCam, but adds on some extra steps 
     '''
-    bg, mask, n = nircam.fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=isplots)
+    bg, mask, n = nircam.fit_bg(data, meta, n, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than read noise dominated
-    bgerr       = np.std(bg, axis=2)/np.sqrt(np.sum(meta.diffmask, axis=2))
-    bgerr[np.where(np.isnan(bgerr))] = 0.
+    bgerr       = np.std(bg[n], axis=0)/np.sqrt(np.sum(meta.subdiffmask[-1][n], axis=0))
+    bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
     data.subv0[n]      += np.mean(bgerr**2)
-    data.variance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
+    data.subvariance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
     #variance    = abs(data.subdata*submask) / gain + v0
 
     return (bg, mask, n)
@@ -389,47 +415,46 @@ def correct_drift2D(data, meta, m):
         # Using other files as the reference files will require loading in all of the frames at once
         # This will still work for observations with only one scan direction, since the second ref file will never be used
         meta.subdata_ref.append(data.subdata)
-        meta.diffmask_ref.append(data.diffmask)
+        meta.diffmask_ref.append(meta.diffmask[-1])
 
     print("Calculating 2D drift...")
     #FINDME: instead of calculating scanHeight, consider fitting stretch factor
-    drift2D  = np.zeros((meta.n_reads-1, 2))
+    drift2D  = np.zeros((meta.nreads-1, 2))
     meta.drift2D.append(drift2D)
     if meta.ncpu == 1:
         # Only 1 CPU
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p   = meta.scandir[m]
-        for n in range(meta.n_reads-1):
-            writeDrift2D(hst.calcDrift2D(meta.subdata_ref[p][n]*meta.diffmask[p][n],
-                                         data.subdata[n]*meta.diffmask[n], m, n, meta.num_data_files))
+        for n in range(meta.nreads-1):
+            writeDrift2D(hst.calcDrift2D(meta.subdata_ref[p][0]*meta.subdiffmask[p][0],
+                                         data.subdata[n]*meta.subdiffmask[-1][n], m, n, meta.num_data_files))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p   = meta.scandir[m]
-        for n in range(meta.n_reads-1):
-            res = pool.apply_async(hst.calcDrift2D, args=(meta.subdata_ref[p][n]*meta.diffmask[p][n],
-                                                          data.subdata[n]*meta.diffmask[n],
+        for n in range(meta.nreads-1):
+            res = pool.apply_async(hst.calcDrift2D, args=(meta.subdata_ref[p][0]*meta.subdiffmask[p][0],
+                                                          data.subdata[n]*meta.subdiffmask[-1][n],
                                                           m, n, meta.num_data_files), callback=writeDrift2D)
         pool.close()
         pool.join()
         res.wait()
-    print(" Done.")
-
+    
     print("Performing rough, pixel-scale drift correction...")
     meta.drift2D_int.append(np.round(meta.drift2D[-1],0))
     # Correct for drift by integer pixel numbers, no interpolation
-    for n in range(meta.n_reads-1):
-        data.subdata[n]  = spni.shift(data.subdata[n],  -1*meta.drift2D_int[-1][n,::-1], order=0,
-                                      mode='constant', cval=0)
-        data.submask[n]  = spni.shift(data.submask[n],  -1*meta.drift2D_int[-1][n,::-1], order=0,
-                                      mode='constant', cval=0)
-        data.variance[n] = spni.shift(data.variance[n], -1*meta.drift2D_int[-1][n,::-1], order=0,
-                                      mode='constant', cval=0)
-        data.subbg[n]    = spni.shift(data.subbg[n],    -1*meta.drift2D_int[-1][n,::-1], order=0,
-                                      mode='constant', cval=0)
+    for n in range(meta.nreads-1):
+        data.subdata[n]     = spni.shift(data.subdata[n],  -1*meta.drift2D_int[-1][n,::-1], order=0,
+                                         mode='constant', cval=0)
+        data.submask[n]     = spni.shift(data.submask[n],  -1*meta.drift2D_int[-1][n,::-1], order=0,
+                                         mode='constant', cval=0)
+        data.subvariance[n] = spni.shift(data.subvariance[n], -1*meta.drift2D_int[-1][n,::-1], order=0,
+                                         mode='constant', cval=0)
+        data.subbg[n]       = spni.shift(data.subbg[n],    -1*meta.drift2D_int[-1][n,::-1], order=0,
+                                         mode='constant', cval=0)
 
     # FINDME: The following cannot be run since we don't have the full time axis
     # Outlier rejection of full frame along time axis
@@ -437,7 +462,7 @@ def correct_drift2D(data, meta, m):
     # for p in range(2):
     #     iscan   = np.where(ev.scandir == p)[0]
     #     if len(iscan) > 0:
-    #         for n in range(meta.n_reads-1):
+    #         for n in range(meta.nreads-1):
     #             #y1  = data.guess[ev.iref,n] - meta.spec_hw
     #             #y2  = data.guess[ev.iref,n] + meta.spec_hw
     #             #estsig      = [differr[ev.iref,n,y1:y2] for j in range(len(ev.sigthresh))]
@@ -450,7 +475,7 @@ def correct_drift2D(data, meta, m):
     # Define the degrees of the bivariate spline
     kx, ky  = (1,1) #FINDME: should be using (3,3)
     # Correct for drift
-    for n in range(meta.n_reads-1):
+    for n in range(meta.nreads-1):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p   = meta.scandir[m]
@@ -463,9 +488,9 @@ def correct_drift2D(data, meta, m):
         spline = spi.RectBivariateSpline(iy, ix, data.submask[n], kx=kx, ky=ky, s=0)
         data.submask[n]  = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
                                   (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
-        spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx, ky=ky, s=0)
-        data.variance[n] = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
-                                  (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
+        spline = spi.RectBivariateSpline(iy, ix, data.subvariance[n], kx=kx, ky=ky, s=0)
+        data.subvariance[n] = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
+                                     (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
         spline = spi.RectBivariateSpline(iy, ix, data.subbg[n], kx=kx, ky=ky, s=0)
         data.subbg[n]    = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
                                   (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
