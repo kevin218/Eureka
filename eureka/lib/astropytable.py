@@ -38,6 +38,6 @@ def savetable_S3(filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr):
     table = QTable(arr, names=('bjdtdb', 'wave_1d', 'stdspec', 'stdvar', 'optspec', 'opterr'))
     ascii.write(table, filename, format='ecsv', overwrite=True, fast_writer=True)
 
-def readtable(meta):
-    t = ascii.read(meta.workdir+'/S3_' + meta.eventlabel+'_Table_Save.txt', format='ecsv')
+def readtable(filename):
+    t = ascii.read(filename, format='ecsv')
     return t

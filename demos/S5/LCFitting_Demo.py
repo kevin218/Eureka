@@ -3,9 +3,8 @@ import os, sys
 import numpy as np
 #from bokeh.io import output_notebook
 #from bokeh.plotting import show
-from importlib import reload
 #from hotsoss import plotting as plt
-sys.path.append('../..')
+sys.path.append('../../')
 import eureka
 import pdb
 
@@ -35,7 +34,6 @@ wasp107b_time, wasp107b_flux, wasp107b_unc, wasp107b_par = simulate_lightcurve('
 #show(wasp107b_spec)
 
 import eureka.S5_lightcurve_fitting.lightcurve as lc
-reload(lc)
 wasp107b_lc = lc.LightCurve(wasp107b_time, wasp107b_flux[0], unc=wasp107b_unc[0], name='WASP-107b')
 
 # from eureka.lib import readECF as rd
@@ -53,7 +51,6 @@ params.transittype = 'primary', 'independent'
 
 # Make the transit model
 import eureka.S5_lightcurve_fitting.models as m
-reload(m)
 t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
 model = m.CompositeModel([t_model])
 
