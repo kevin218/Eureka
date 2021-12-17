@@ -32,8 +32,8 @@ skip_extract_1d			False
 testing_S2 			False
 
 # Project directory
-topdir      /home/User/
+topdir      /Users/megan/Documents/Code
 
 # Directories relative to project dir
-datadir     /Data/JWST-Sim/NIRCam/Stage1
-outputdir	/Data/JWST-Sim/NIRCam/Stage2
+datadir     /EurekaFakeData/JWST-Sim/NIRCam/Stage1
+outputdir	/EurekaFakeData/JWST-Sim/NIRCam/Stage2

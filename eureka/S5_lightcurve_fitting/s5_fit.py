@@ -11,17 +11,21 @@ def fitJWST(eventlabel, workdir, speclc_dir, fit_par, run_par_file, meta):
     if meta == None:
         meta = me.load(speclc_dir + '/S4_' + eventlabel + '_Meta_Save.dat')
 
+    #Load Eureka! control files and stire values in Event object
+    #FINDME: FINISH THIS. ONCE S4 RUNS, CONNECT S5 TO S4.
+
     #read in run params
     from . import parameters as p
     reload(p)
     run_par=p.Parameters(param_file=run_par_file)
+
     # Create directories for Stage 4 processing
-    files = glob.glob(os.path.join(speclc_dir + "/speclc", "*.txt"))
+    files = glob.glob(os.path.join(speclc_dir + "/speclc", "*.txt")) #FINDME: REPLACE THIS PART TO ACCEPT STAGE 4 OUTPUT
     files = sn.sort_nicely(files)
     if run_par.run_verbose.value:
         print(files)
-    t0_offset = run_par.toffset.value#59694
-    for f in [files[0]]:
+    t0_offset = run_par.toffset.value
+    for f in [files[0]]: #FINDME: REPLACE
         t_bjdtdb, flux, flux_err = np.loadtxt(f, skiprows=1).T
         t_bjdtdb = t_bjdtdb - t0_offset
         flux = flux / np.median(flux[:200])
