@@ -224,6 +224,9 @@ def reduceJWST(eventlabel, s2_meta=None):
                 from . import nirspec as inst
             elif meta.inst == 'niriss':
                 raise ValueError('NIRISS observations are currently unsupported!')
+            elif meta.inst == 'wfc3':
+                from . import wfc3 as inst
+                meta, log = inst.preparation_step(meta, log)
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
 
@@ -272,37 +275,32 @@ def reduceJWST(eventlabel, s2_meta=None):
                 data.submask = util.check_nans(data.subdata, data.submask, log, name='SUBDATA')
                 data.submask = util.check_nans(data.suberr, data.submask, log, name='SUBERR')
                 data.submask = util.check_nans(data.subv0, data.submask, log, name='SUBV0')
-
+                
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
                     log.writelog("  Masking manually identified bad pixels")
                     for i in range(len(meta.manmask)):
                         ind, colstart, colend, rowstart, rowend = meta.manmask[i]
                         data.submask[rowstart:rowend, colstart:colend] = 0
-
+                
                 # Perform outlier rejection of sky background along time axis
                 log.writelog('  Performing background outlier rejection')
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
                 data = inst.flag_bg(data, meta)
-
+                
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
-
+                
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for background subtraction')
                     for n in tqdm(range(meta.int_start,meta.n_int)):
                         # make image+background plots
                         plots_s3.image_and_background(data, meta, n)
 
-                # Calulate drift2D
-                # print("Calculating 2D drift...")
-
-                # print("Performing rough, pixel-scale drift correction...")
-
-                # Outlier rejection of full frame along time axis
-                # print("Performing full-frame outlier rejection...")
-
-                # print("Performing sub-pixel drift correction...")
+                # Calulate and correct for 2D drift
+                if hasattr(inst, 'correct_drift2D'):
+                    log.writelog('  Correcting for 2D drift')
+                    inst.correct_drift2D(data, meta, m)
 
                 # Select only aperture region
                 ap_y1 = int(meta.src_ypos - spec_hw_val)
@@ -318,7 +316,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                 # Compute fraction of masked pixels within regular spectral extraction window
                 # numpixels   = 2.*meta.spec_width*subnx
                 # fracMaskReg = (numpixels - np.sum(apmask,axis=(2,3)))/numpixels
-
+                
                 # Compute median frame
                 data.medsubdata = np.median(data.subdata, axis=0)
                 data.medapdata  = np.median(data.apdata, axis=0)
@@ -359,6 +357,10 @@ def reduceJWST(eventlabel, s2_meta=None):
                     optspec = np.append(optspec, data.optspec, axis=0)
                     opterr  = np.append(opterr, data.opterr, axis=0)
                     bjdtdb  = np.append(bjdtdb, data.bjdtdb, axis=0)
+
+            if meta.inst == 'wfc3':
+                # WFC3 needs a conclusion step to convert lists into arrays before saving
+                meta, log = inst.conclusion_step(meta, log)
 
             # Calculate total time
             total = (time.time() - t0) / 60.
