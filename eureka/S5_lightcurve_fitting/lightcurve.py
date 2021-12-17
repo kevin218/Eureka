@@ -88,7 +88,7 @@ class LightCurve(m.Model):
         # Place to save the fit results
         self.results = []
 
-    def fit(self, model, fitter='lsq', **kwargs):
+    def fit(self, model, meta, fitter='lsq', **kwargs):
         """Fit the model to the lightcurve
 
         Parameters
@@ -113,28 +113,28 @@ class LightCurve(m.Model):
         if fitter == 'lmfit':
 
             # Run the fit
-            fit_model = f.lmfitter(self.time, self.flux, model, self.unc, **kwargs)
+            fit_model = f.lmfitter(self.time, self.flux, model, meta, self.unc, **kwargs)
 
         elif fitter == 'demc':
 
             # Run the fit
-            fit_model = f.demcfitter(self.time, self.flux, model, self.unc, **kwargs)
+            fit_model = f.demcfitter(self.time, self.flux, model, meta, self.unc, **kwargs)
 
         elif fitter == 'lsq':
 
             # Run the fit
-            fit_model = f.lsqfitter(self, model, **kwargs)
+            fit_model = f.lsqfitter(self, self.flux, model, meta, **kwargs)
             #fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
 
         elif fitter == 'emcee':
 
             # Run the fit
-            fit_model = f.emceefitter(self, model, **kwargs)
+            fit_model = f.emceefitter(self, model, meta, **kwargs)
 
         elif fitter == 'dynesty':
 
             # Run the fit
-            fit_model = f.dynestyfitter(self, model, **kwargs)
+            fit_model = f.dynestyfitter(self, model, meta, **kwargs)
 
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
@@ -143,7 +143,7 @@ class LightCurve(m.Model):
         if fit_model is not None:
             self.results.append(fit_model)
 
-    def plot(self, fits=True, draw=True):
+    def plot(self, meta, fits=True, draw=True):
         """Plot the light curve with all available fits
 
         Parameters
@@ -183,11 +183,13 @@ class LightCurve(m.Model):
         ax.set_ylabel('Flux')
         fig.tight_layout()
 
-        # Draw or return
-        if draw:
-            fig.show()
+        fig.savefig(meta.outputdir + 'figs/all_fits.png', dpi=300)
+        if meta.hide_plots:
+            plt.close()
         else:
-            return
+            plt.pause(0.1)
+
+        return
 
     def reset(self):
         """Reset the results"""
