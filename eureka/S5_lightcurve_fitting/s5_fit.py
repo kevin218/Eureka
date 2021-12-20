@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import glob, os
+import glob, os, time
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 from ..lib import sort_nicely as sn
-from ..lib import util
+from ..lib import util, logedit
 from . import parameters as p
 from . import lightcurve as lc
 from . import models as m
@@ -20,25 +20,25 @@ class MetaClass:
 def fitJWST(eventlabel, s4_meta=None):
     
     # Initialize a new metadata object
-    s5_meta = MetaClass()
-    s5_meta.eventlabel = eventlabel
+    meta = MetaClass()
+    meta.eventlabel = eventlabel
     
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
     ecf = rd.read_ecf(ecffile)
-    rd.store_ecf(s5_meta, ecf)
+    rd.store_ecf(meta, ecf)
     
     # load savefile
     if s4_meta == None:
         # Search for the S2 output metadata in the inputdir provided in 
         # First just check the specific inputdir folder
-        rootdir = os.path.join(s5_meta.topdir, *s5_meta.inputdir.split(os.sep))
+        rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
             rootdir += '/'
-        files = glob.glob(rootdir+'S4_'+s5_meta.eventlabel+'*_Meta_Save.dat')
+        files = glob.glob(rootdir+'S4_'+meta.eventlabel+'*_Meta_Save.dat')
         if len(files)==0:
             # There were no metadata files in that folder, so let's see if there are in children folders
-            files = glob.glob(rootdir+'**/S4_'+s5_meta.eventlabel+'*_Meta_Save.dat', recursive=True)
+            files = glob.glob(rootdir+'**/S4_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
             files = sn.sort_nicely(files)
 
         if len(files)==0:
@@ -57,58 +57,113 @@ def fitJWST(eventlabel, s4_meta=None):
         fname = fname[:-4] # Strip off the .dat ending
 
         s4_meta = me.loadevent(fname)
-        
+    
+    # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
     if s4_outputdir[0]=='/':
         s4_outputdir = s4_outputdir[1:]
+    s4_allapers = s4_meta.allapers
+
+    # Overwrite the temporary meta object made above to be able to find s4_meta
+    meta = s4_meta
+
+    # Load Eureka! control file and store values in the S4 metadata object
+    ecffile = 'S5_' + eventlabel + '.ecf'
+    ecf     = rd.read_ecf(ecffile)
+    rd.store_ecf(meta, ecf)
+
     # Overwrite the inputdir with the exact output directory from S4
-    s5_meta.inputdir = s4_outputdir
-    s5_meta.old_datetime = s4_meta.datetime
-    s5_meta.datetime = None
-    s5_meta.inputdir_raw = s5_meta.inputdir
-    s5_meta.outputdir_raw = s5_meta.outputdir
-    # Create directories for Stage 5 processing outputs
-    tempfolder = s5_meta.outputdir_raw
-    s5_meta.outputdir_raw = s5_meta.inputdir_raw
-    s5_meta.inputdir = util.pathdirectory(s4_meta, 'S4', s4_meta.runs[0], old_datetime=s5_meta.old_datetime)
-    s5_meta.outputdir_raw = tempfolder
-    run = util.makedirectory(s5_meta, 'S5')
-    s5_meta.outputdir = util.pathdirectory(s5_meta, 'S5', run)
+    meta.inputdir = s4_outputdir
+    meta.old_datetime = s4_meta.datetime # Capture the date that the 
+    meta.datetime = None # Reset the datetime in case we're running this on a different day
+    meta.inputdir_raw = meta.inputdir
+    meta.outputdir_raw = meta.outputdir
+
+    if (not s4_allapers) or (not meta.allapers):
+        # The user indicated in the ecf that they only want to consider one aperture
+        # in which case the code will consider only the one which made s4_meta.
+        # Alternatively, S4 was run without allapers, so S5's allapers will only conside that one
+        meta.spec_hw_range = [meta.spec_hw,]
+        meta.bg_hw_range = [meta.bg_hw,]
+
+    run_i = 0
+    for spec_hw_val in meta.spec_hw_range:
+
+        for bg_hw_val in meta.bg_hw_range:
+
+            t0 = time.time()
+
+            meta.spec_hw = spec_hw_val
+
+            meta.bg_hw = bg_hw_val
+            
+            # Do some folder swapping to be able to reuse this function to find S4 outputs
+            tempfolder = meta.outputdir_raw
+            meta.outputdir_raw = meta.inputdir_raw
+            meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
+            meta.outputdir_raw = tempfolder
+            run_i += 1
+            
+            for channel in range(meta.nspecchan):
+                # Create directories for Stage 5 processing outputs
+                run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
+                meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val)
+
+                # Copy existing S4 log file and resume log
+                meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
+                log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
+                log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
+
+                # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
+                log.writelog('Copying S5 control file')
+                # shutil.copy(ecffile, meta.outputdir)
+                new_ecfname = meta.outputdir + ecffile.split('/')[-1]
+                with open(new_ecfname, 'w') as new_file:
+                    with open(ecffile, 'r') as file:
+                        for line in file.readlines():
+                            if len(line.strip())==0 or line.strip()[0]=='#':
+                                new_file.write(line)
+                            else:
+                                line_segs = line.strip().split()
+                                if line_segs[0]=='inputdir':
+                                    new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
+                                else:
+                                    new_file.write(line)
     
-    t0_offset = s5_meta.toffset
-    t_bjdtdb=s4_meta.bjdtdb - t0_offset
-    for channel in range(s4_meta.nspecchan):
-        flux = s4_meta.lcdata[channel,:]
-        flux_err = s4_meta.lcerr[channel,:]
-        
-        #FINDME: these two lines are because we don't have a constant offset model implemented yet. Will remove later
-        flux = flux / np.median(flux[:200])
-        flux_err = flux_err/800000000/3
-        
-        lc_model = lc.LightCurve(t_bjdtdb, flux, unc=flux_err, name=eventlabel)
-        
-        # Set the intial parameters
-        params = p.Parameters(param_file=s5_meta.fit_par)
-        if s5_meta.run_verbose:
-            print(params)
-        
-        # Make the transit model
-        modellist=[]
-        if 'transit' in s5_meta.run_myfuncs:
-            t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
-            modellist.append(t_model)
-        if 'polynomial' in s5_meta.run_myfuncs:
-            t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
-            modellist.append(t_polynom)
-        model = m.CompositeModel(modellist)
-        
-        if 'lsq' in s5_meta.fit_method:
-            lc_model.fit(model, s5_meta, fitter='lsq')
-        if 'mcmc' in s5_meta.fit_method:
-            lc_model.fit(model, s5_meta, fitter='emcee')
-        if 'nested' in s5_meta.fit_method:
-            lc_model.fit(model, s5_meta, fitter='dynesty')
-        if s5_meta.isplots_S5 > 1:
-            lc_model.plot(s5_meta, draw=True)
+                t0_offset = meta.toffset
+                t_bjdtdb=meta.bjdtdb - t0_offset
+
+                flux = meta.lcdata[channel,:]
+                flux_err = meta.lcerr[channel,:]
+                
+                #FINDME: these two lines are because we don't have a constant offset model implemented yet. Will remove later
+                flux = flux / np.median(flux[:200])
+                flux_err = flux_err/800000000/3
+                
+                lc_model = lc.LightCurve(t_bjdtdb, flux, unc=flux_err, name=eventlabel)
+                
+                # Set the intial parameters
+                params = p.Parameters(param_file=meta.fit_par)
+                if meta.run_verbose:
+                    print(params)
+                
+                # Make the transit model
+                modellist=[]
+                if 'transit' in meta.run_myfuncs:
+                    t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
+                    modellist.append(t_model)
+                if 'polynomial' in meta.run_myfuncs:
+                    t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
+                    modellist.append(t_polynom)
+                model = m.CompositeModel(modellist)
+                
+                if 'lsq' in meta.fit_method:
+                    lc_model.fit(model, meta, fitter='lsq')
+                if 'mcmc' in meta.fit_method:
+                    lc_model.fit(model, meta, fitter='emcee')
+                if 'nested' in meta.fit_method:
+                    lc_model.fit(model, meta, fitter='dynesty')
+                if meta.isplots_S5 > 1:
+                    lc_model.plot(meta, draw=True)
     
     return
