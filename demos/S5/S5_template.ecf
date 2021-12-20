@@ -2,8 +2,6 @@
 
 allapers	True		# Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 
-toffset  59694 #to be subtracted from the time array to avoid floating point precision problems when fitting for t0
-
 fit_par ./s5_fit_par.ecf
 
 #fix_ld   False #use limb darkening file?

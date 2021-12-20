@@ -130,9 +130,17 @@ def fitJWST(eventlabel, s4_meta=None):
                                 else:
                                     new_file.write(line)
     
-                t0_offset = meta.toffset
-                t_bjdtdb=meta.bjdtdb - t0_offset
+                # Set the intial fitting parameters
+                params = p.Parameters(param_file=meta.fit_par)
+                if meta.run_verbose:
+                    print(params)
 
+                # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
+                t_offset = np.floor(meta.bjdtdb[0])
+                t_bjdtdb = meta.bjdtdb - t_offset
+                params.t0.value -= t_offset
+
+                # Get the flux and error measurements for the current channel
                 flux = meta.lcdata[channel,:]
                 flux_err = meta.lcerr[channel,:]
                 
@@ -140,14 +148,10 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux = flux / np.median(flux[:200])
                 flux_err = flux_err/800000000/3
                 
+                # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_bjdtdb, flux, unc=flux_err, name=eventlabel)
                 
-                # Set the intial parameters
-                params = p.Parameters(param_file=meta.fit_par)
-                if meta.run_verbose:
-                    print(params)
-                
-                # Make the transit model
+                # Make the astrophysical and detector models
                 modellist=[]
                 if 'transit' in meta.run_myfuncs:
                     t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
@@ -157,12 +161,15 @@ def fitJWST(eventlabel, s4_meta=None):
                     modellist.append(t_polynom)
                 model = m.CompositeModel(modellist)
                 
+                # Fit the models using one or more fitters
                 if 'lsq' in meta.fit_method:
                     lc_model.fit(model, meta, fitter='lsq')
                 if 'mcmc' in meta.fit_method:
                     lc_model.fit(model, meta, fitter='emcee')
                 if 'nested' in meta.fit_method:
                     lc_model.fit(model, meta, fitter='dynesty')
+
+                # Plot the results from the fit(s)
                 if meta.isplots_S5 > 1:
                     lc_model.plot(meta, draw=True)
     
