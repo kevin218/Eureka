@@ -89,7 +89,7 @@ def lsqfitter(lc, model, meta, **kwargs):
 
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
-    if kwargs['run_verbose'][0]:
+    if meta.run_verbose:
         print(results)
 
     # Get the best fit params
@@ -129,7 +129,7 @@ def lsqfitter(lc, model, meta, **kwargs):
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc) - len(freenames))
 
-    if kwargs['run_verbose'][0]:
+    if meta.run_verbose:
         print('red. Chi2: ', chi2red)
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
@@ -199,7 +199,7 @@ def emceefitter(lc, model, meta, **kwargs):
     #all_keys   = [i for j in [model.components[n].parameters.dict.keys()
     #              for n in range(len(model.components))] for i in j]
 
-    lsq_sol = lsqfitter(lc, model, **kwargs)
+    lsq_sol = lsqfitter(lc, model, meta, **kwargs)
 
     print(lsq_sol)
     
@@ -281,9 +281,9 @@ def emceefitter(lc, model, meta, **kwargs):
 
     step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
     ndim = len(step_size)
-    nwalkers = kwargs['run_nwalkers'][0]
-    run_nsteps = kwargs['run_nsteps'][0]
-    burn_in = kwargs['run_nburn'][0]
+    nwalkers = meta.run_nwalkers
+    run_nsteps = meta.run_nsteps
+    burn_in = meta.run_nburn
 
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
 
@@ -353,7 +353,7 @@ def emceefitter(lc, model, meta, **kwargs):
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
-    if kwargs['run_verbose'][0]:
+    if meta.run_verbose:
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
 
@@ -391,7 +391,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     #              for n in range(len(model.components))] for i in j]
 
     # RUN LEAST SQUARES
-    lsq_sol = lsqfitter(lc, model, **kwargs)
+    lsq_sol = lsqfitter(lc, model, meta, **kwargs)
     print(lsq_sol)
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
     lc.unc *= np.sqrt(lsq_sol.chi2red)
@@ -490,11 +490,11 @@ def dynestyfitter(lc, model, meta, **kwargs):
 
 
 
-    nlive = kwargs['run_nlive'][0] # number of live points
-    bound = kwargs['run_bound'][0]  # use MutliNest algorithm for bounds
-    ndims = kwargs['run_ndims'][0]  # two parameters
-    sample = kwargs['run_sample'][0]  # uniform sampling
-    tol = kwargs['run_tol'][0]  # the stopping criterion
+    nlive = meta.run_nlive # number of live points
+    bound = meta.run_bound  # use MutliNest algorithm for bounds
+    ndims = meta.run_ndims  # two parameters
+    sample = meta.run_sample  # uniform sampling
+    tol = meta.run_tol  # the stopping criterion
 
     # START DYNESTY
     l_args = [lc, model, pmin, pmax]
@@ -506,7 +506,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
-    if kwargs['run_verbose'][0]:
+    if meta.run_verbose:
         print("log(Z) = {} ± {}".format(logZdynesty, logZerrdynesty))
         print(res.summary())
 
@@ -514,13 +514,13 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples_dynesty = resample_equal(res.samples, weights)
-    if kwargs['run_verbose'][0]:
+    if meta.run_verbose:
         print('Number of posterior samples is {}'.format(len(samples_dynesty)))
 
     # plot using corner.py
     if meta.isplots_S5 > 5:
         fig = corner.corner(samples_dynesty, labels=freenames, show_titles=True, quantiles=[0.16, 0.5, 0.84],title_fmt='.4')
-        if kwargs['run_output'][0]:
+        if meta.run_output:
             fig.savefig(meta.outputdir + 'figs/corner_dynesty.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
 
 
@@ -570,7 +570,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc))
-    if kwargs['run_verbose'][0]:
+    if meta.run_verbose:
         print(len(lc.unc))
         print(chi2)
         print(chi2red)

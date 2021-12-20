@@ -109,7 +109,7 @@ class LightCurve(m.Model):
         # else:
         #     for n in range(len(model.components)):
         #         model.components[n].time = self.time
-
+        
         if fitter == 'lmfit':
 
             # Run the fit
@@ -123,7 +123,7 @@ class LightCurve(m.Model):
         elif fitter == 'lsq':
 
             # Run the fit
-            fit_model = f.lsqfitter(self, self.flux, model, meta, **kwargs)
+            fit_model = f.lsqfitter(self, model, meta, **kwargs)
             #fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
 
         elif fitter == 'emcee':

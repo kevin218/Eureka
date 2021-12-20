@@ -134,14 +134,14 @@ def lcJWST(eventlabel, s3_meta=None):
             meta.spec_hw = spec_hw_val
 
             meta.bg_hw = bg_hw_val
-
+            
             # Do some folder swapping to be able to reuse this function
             tempfolder = meta.outputdir_raw
             meta.outputdir_raw = meta.inputdir_raw
             meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ts=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
-
+            
             # Create directories for Stage 4 processing outputs
             run = util.makedirectory(meta, 'S4')
             meta.outputdir = util.pathdirectory(meta, 'S4', run)

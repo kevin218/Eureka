@@ -22,8 +22,8 @@ isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Optio
 hide_plots	False		# If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir      /home/User/
+topdir      /Users/megan/Documents/Code/
 
 # Directories relative to project dir
-inputdir    /Data/JWST-Sim/NIRCam/Stage3/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
-outputdir	/Data/JWST-Sim/NIRCam/Stage4/
+inputdir    /EurekaFakeData/JWST-Sim/NIRCam/Stage3/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir	/EurekaFakeData/JWST-Sim/NIRCam/Stage4/
