@@ -149,7 +149,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux_err = flux_err/800000000/3
                 
                 # Load the relevant values into the LightCurve model object
-                lc_model = lc.LightCurve(t_mjdtdb, flux, unc=flux_err, name=eventlabel)
+                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
                 
                 # Make the astrophysical and detector models
                 modellist=[]

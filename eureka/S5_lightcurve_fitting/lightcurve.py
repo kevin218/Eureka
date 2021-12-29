@@ -40,7 +40,7 @@ class LightCurveFitter:
 
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
+    def __init__(self, time, flux, channel, nchannel, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
         """
         A class to store the actual light curve
 
@@ -50,6 +50,10 @@ class LightCurve(m.Model):
             The time axis in days, [MJD or BJD]
         flux: sequence
             The flux in electrons (not ADU)
+        channel: int
+            The channel number.
+        nChannel: int
+            The total number of channels.
         unc: sequence
             The uncertainty on the flux
         parameters: str, object (optional)
@@ -69,7 +73,8 @@ class LightCurve(m.Model):
 
         History:
         - Dec 29, 2021 Taylor Bell
-            Allowing for a constant uncertainty to be input with just a float
+            Allowing for a constant uncertainty to be input with just a float.
+            Added a channel number.
         """
         # Initialize the model
         super().__init__()
@@ -100,6 +105,9 @@ class LightCurve(m.Model):
 
         # Place to save the fit results
         self.results = []
+
+        self.channel = channel
+        self.nchannel = nchannel
 
         return
 
@@ -198,7 +206,8 @@ class LightCurve(m.Model):
         ax.set_ylabel('Flux')
         fig.tight_layout()
 
-        fig.savefig(meta.outputdir + 'figs/all_fits.png', dpi=300)
+        fname = 'figs/fig54{}_all_fits.png'.format(str(self.channel).zfill(len(str(self.nchannel))))
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
         else:
@@ -209,5 +218,5 @@ class LightCurve(m.Model):
     def reset(self):
         """Reset the results"""
         self.results = []
-        
+
         return
