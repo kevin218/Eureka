@@ -59,6 +59,17 @@ class LightCurve(m.Model):
             The time units
         name: str
             A name for the object
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        History:
+        - Dec 29, 2021 Taylor Bell
+            Allowing for a constant uncertainty to be input with just a float
         """
         # Initialize the model
         super().__init__()
@@ -69,7 +80,9 @@ class LightCurve(m.Model):
 
         # Set the data arrays
         if unc is not None:
-            if len(unc) != len(time):
+            if type(unc) == float or type(unc) == np.float64:
+                print('Warning: Only one uncertainty input, assuming constant uncertainty.')
+            elif len(unc) != len(time):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
@@ -88,15 +101,32 @@ class LightCurve(m.Model):
         # Place to save the fit results
         self.results = []
 
+        return
+
     def fit(self, model, meta, fitter='lsq', **kwargs):
         """Fit the model to the lightcurve
 
         Parameters
         ----------
-        model: ExoCTK.lightcurve_fitter.models.Model
+        model: eureka.S5_lightcurve_fitting.models.CompositeModel
             The model to fit to the data
+        meta: MetaClass
+            The metadata object
         fitter: str
             The name of the fitter to use
+        **kwargs:
+            Arbitrary keyword arguments.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        History:
+        - Dec 29, 2021 Taylor Bell
+            Updated documentation and reduced repeated code
         """
         # Empty default fit
         fit_model = None
@@ -106,42 +136,28 @@ class LightCurve(m.Model):
         if not isinstance(model, m.CompositeModel):
             model = m.CompositeModel([model])
             model.time = self.time
-        # else:
-        #     for n in range(len(model.components)):
-        #         model.components[n].time = self.time
         
         if fitter == 'lmfit':
-
-            # Run the fit
-            fit_model = f.lmfitter(self.time, self.flux, model, meta, self.unc, **kwargs)
-
+            self.fitter_func = f.lmfitter
         elif fitter == 'demc':
-
-            # Run the fit
-            fit_model = f.demcfitter(self.time, self.flux, model, meta, self.unc, **kwargs)
-
+            self.fitter_func = f.demcfitter
         elif fitter == 'lsq':
-
-            # Run the fit
-            fit_model = f.lsqfitter(self, model, meta, **kwargs)
-            #fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
-
+            self.fitter_func = f.lsqfitter
         elif fitter == 'emcee':
-
-            # Run the fit
-            fit_model = f.emceefitter(self, model, meta, **kwargs)
-
+            self.fitter_func = f.emceefitter
         elif fitter == 'dynesty':
-
-            # Run the fit
-            fit_model = f.dynestyfitter(self, model, meta, **kwargs)
-
+            self.fitter_func = f.dynestyfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
-
+        
+        # Run the fit
+        self.fitter_func(self, model, meta, **kwargs)
+        
         # Store it
         if fit_model is not None:
             self.results.append(fit_model)
+
+        return
 
     def plot(self, meta, fits=True, draw=True):
         """Plot the light curve with all available fits
@@ -155,8 +171,7 @@ class LightCurve(m.Model):
 
         Returns
         -------
-        bokeh.plotting.figure
-            The figure
+        None
         """
         # Make the figure
         fig = plt.figure(figsize=(8,6))
@@ -194,3 +209,5 @@ class LightCurve(m.Model):
     def reset(self):
         """Reset the results"""
         self.results = []
+        
+        return

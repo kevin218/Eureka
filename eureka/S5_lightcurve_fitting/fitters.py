@@ -23,32 +23,34 @@ from dynesty.utils import resample_equal
 def lsqfitter(lc, model, meta, **kwargs):
     """Perform least-squares fit
 
+    This is an empty placeholder function to be filled later.
+
     Parameters
     ----------
-    data: sequence
-        The observational data
-    model: ExoCTK.lightcurve_fitting.models.Model
-        The model to fit
-    uncertainty: np.ndarray (optional)
-        The uncertainty on the (same shape) data
-    method: str
-        The name of the method to use
-    name: str
-        A name for the best fit model
-    verbose: bool
-        Print some stuff
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta: MetaClass
+        The metadata object
+    **kwargs:
+        Arbitrary keyword arguments.
 
     Returns
     -------
-    lsq.Model.fit.fit_report
-        The results of the fit
+    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model after fitting
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Updated documentation and arguments
     """
-    # Concatenate the lists of parameters
-    #all_keys   = [i for j in [model.components[n].parameters.dict.keys()
-    #              for n in range(len(model.components))] for i in j]
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
-    #print(all_params)
+    
     # Group the different variable types
     freenames = []
     freepars = []
@@ -76,44 +78,38 @@ def lsqfitter(lc, model, meta, **kwargs):
     freepars = np.array(freepars)
     pmin = np.array(pmin)
     pmax = np.array(pmax)
-
-
-
-
+    
     # Set the uncertainty
     if lc.unc is None:
         lc.unc = np.sqrt(lc.flux)
-
-    #lc.etc = {}
-    #lc.etc['time'] = lc.time
-
+    
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
-
+    
     if meta.run_verbose:
         print(results)
-
+    
     # Get the best fit params
     fit_params = results[0]
     # new_params = [(fit_params.get(i).name, fit_params.get(i).value,
     #                fit_params.get(i).vary, fit_params.get(i).min,
     #                fit_params.get(i).max) for i in fit_params]
-
+    
     # Create new model with best fit parameters
     # params = Parameters()
-
+    
     # Try to store each as an attribute
     # for param in new_params:
     #     setattr(params, param[0], param[1:])
-
+    
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-
-
+    
+    
     model.update(fit_params, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-    if meta.isplots_S5 > 1:
+    if meta.isplots_S5 >= 1:
         model.plot(time=lc.time, draw=True)
         print()
 
@@ -138,78 +134,80 @@ def lsqfitter(lc, model, meta, **kwargs):
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
         print('\n')
-    if meta.isplots_S5 > 3:
+    if meta.isplots_S5 >= 3:
         rmsplot(lc, model_lc, meta, figname='allanplot_lsq.png')
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-    return best_model#, chi2red, fit_params
 
-def demcfitter(time, data, model, meta, uncertainty=None, **kwargs):
-    """Use Differential Evolution Markov Chain
+    return best_model
+
+def demcfitter(lc, model, meta, **kwargs):
+    """Perform sampling using Differential Evolution Markov Chain.
+
+    This is an empty placeholder function to be filled later.
 
     Parameters
     ----------
-    data: sequence
-        The observational data
-    model: ExoCTK.lightcurve_fitting.models.Model
-        The model to fit
-    uncertainty: np.ndarray (optional)
-        The uncertainty on the (same shape) data
-    method: str
-        The name of the method to use
-    name: str
-        A name for the best fit model
-    verbose: bool
-        Print some stuff
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta: MetaClass
+        The metadata object
+    **kwargs:
+        Arbitrary keyword arguments.
 
     Returns
     -------
-    demc.Model.fit.fit_report
-        The results of the fit
+    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model after fitting
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Updated documentation and arguments
     """
     best_model = None
     return best_model
 
-
-
 def emceefitter(lc, model, meta, **kwargs):
-    """Perform sampling using emcee
+    """Perform sampling using emcee.
 
     Parameters
     ----------
-    data: sequence
-        The observational data
-    model: ExoCTK.lightcurve_fitting.models.Model
-        The model to fit
-    uncertainty: np.ndarray (optional)
-        The uncertainty on the (same shape) data
-    method: str
-        The name of the method to use
-    name: str
-        A name for the best fit model
-    verbose: bool
-        Print some stuff
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta: MetaClass
+        The metadata object
+    **kwargs:
+        Arbitrary keyword arguments.
 
     Returns
     -------
-    lsq.Model.fit.fit_report
-        The results of the fit
-    """
-    # Concatenate the lists of parameters
-    #all_keys   = [i for j in [model.components[n].parameters.dict.keys()
-    #              for n in range(len(model.components))] for i in j]
+    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model after fitting
 
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Updated documentation
+    """
     lsq_sol = lsqfitter(lc, model, meta, **kwargs)
 
     print(lsq_sol)
     
 
-    lc.unc *= np.sqrt(lsq_sol.chi2red) #Getting an error here: 'CompositeModel' object is not subscriptable
+    lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
 
-    #print(all_params)
     # Group the different variable types
     freenames = []
     freepars = []
@@ -218,7 +216,6 @@ def emceefitter(lc, model, meta, **kwargs):
     indep_vars = {}
     for ii, item in enumerate(all_params):
         name, param = item
-        #param = list(param)
         if param[1] == 'free':
             freenames.append(name)
             freepars.append(param[0])
@@ -246,10 +243,6 @@ def emceefitter(lc, model, meta, **kwargs):
     if lc.unc is None:
         lc.unc = np.sqrt(lc.flux)
 
-    #lc.etc = {}
-    #lc.etc['time'] = lc.time
-    import time
-
     def ln_like(theta, lc, model, pmin, pmax):
         # params[ifreepars] = freepars
         ilow = np.where(theta < pmin)
@@ -257,10 +250,7 @@ def emceefitter(lc, model, meta, **kwargs):
         theta[ilow] = pmin[ilow]
         theta[ihi] = pmax[ihi]
         model.update(theta, freenames)
-        # model.time = time
-        # model.components[0].time = time
         model_lc = model.eval()
-        #model.plot(lc.time,draw=True)
         residuals = (lc.flux - model_lc) #/ lc.unc
         ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
         if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
@@ -295,10 +285,9 @@ def emceefitter(lc, model, meta, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
-    if meta.isplots_S5 > 5:
+    if meta.isplots_S5 >= 5:
         fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
         fig.savefig(meta.outputdir+'figs/corner_emcee.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
-
 
     def quantile(x, q):
         return np.percentile(x, [100. * qi for qi in q])
@@ -326,13 +315,11 @@ def emceefitter(lc, model, meta, **kwargs):
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
-    import matplotlib.pyplot as plt
-
     model.update(fit_params, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
-    if meta.isplots_S5 > 1:
+    if meta.isplots_S5 >= 1:
         model.plot(time=lc.time, draw=True)
 
         fig, ax = plt.subplots(2,1)
@@ -357,49 +344,47 @@ def emceefitter(lc, model, meta, **kwargs):
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
 
-    if meta.isplots_S5 > 3:
+    if meta.isplots_S5 >= 3:
         rmsplot(lc, model_lc, meta, figname='allanplot_emcee.png')
 
     return best_model
 
-
 def dynestyfitter(lc, model, meta, **kwargs):
-    """Perform sampling using emcee
+    """Perform sampling using dynesty.
 
     Parameters
     ----------
-    data: sequence
-        The observational data
-    model: ExoCTK.lightcurve_fitting.models.Model
-        The model to fit
-    uncertainty: np.ndarray (optional)
-        The uncertainty on the (same shape) data
-    method: str
-        The name of the method to use
-    name: str
-        A name for the best fit model
-    verbose: bool
-        Print some stuff
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta: MetaClass
+        The metadata object
+    **kwargs:
+        Arbitrary keyword arguments.
 
     Returns
     -------
-    lsq.Model.fit.fit_report
-        The results of the fit
-    """
-    # Concatenate the lists of parameters
-    #all_keys   = [i for j in [model.components[n].parameters.dict.keys()
-    #              for n in range(len(model.components))] for i in j]
+    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model after fitting
 
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Updated documentation
+    """
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, **kwargs)
     print(lsq_sol)
+    
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
     lc.unc *= np.sqrt(lsq_sol.chi2red)
-
+    
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
-
-    #print(all_params)
+    
     # Group the different variable types
     freenames = []
     freepars = []
@@ -437,28 +422,22 @@ def dynestyfitter(lc, model, meta, **kwargs):
     if lc.unc is None:
         lc.unc = np.sqrt(lc.flux)
 
-    #lc.etc = {}
-    #lc.etc['time'] = lc.time
-    import time
-
-
     # DYNESTY
 
     #PRIOR TRANSFORMATION TODO: ADD GAUSSIAN PRIORS
     def transform_uniform(x, a, b):
         return a + (b - a) * x
-
+    
     def transform_normal(x, mu, sigma):
         return norm.ppf(x, loc=mu, scale=sigma)
-
+    
     def ptform(theta):
         p = np.zeros_like(theta)
         n = len(theta)
         for i in range(n):
             p[i] = transform_uniform(theta[i], pmin[i], pmax[i])
         return p
-
-
+    
     def ln_like(theta, lc, model, pmin, pmax):
         # params[ifreepars] = freepars
         ilow = np.where(theta < pmin)
@@ -466,15 +445,12 @@ def dynestyfitter(lc, model, meta, **kwargs):
         theta[ilow] = pmin[ilow]
         theta[ihi] = pmax[ihi]
         model.update(theta, freenames)
-        # model.time = time
-        # model.components[0].time = time
         model_lc = model.eval()
-        #model.plot(lc.time,draw=True)
         residuals = (lc.flux - model_lc) #/ lc.unc
         ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
         if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
         return ln_like_val
-
+    
     def lnprior(theta, pmin, pmax):
         lnprior_prob = 0.
         n = len(theta)
@@ -482,20 +458,18 @@ def dynestyfitter(lc, model, meta, **kwargs):
             if np.logical_or(theta[i] < pmin[i],
                                  theta[i] > pmax[i]): lnprior_prob += - np.inf
         return lnprior_prob
-
+    
     def lnprob(theta, lc, model, pmin, pmax):
         ln_like_val = ln_like(theta, lc, model, pmin, pmax)
         lp = lnprior(theta, pmin, pmax)
         return ln_like_val + lp
-
-
-
+    
     nlive = meta.run_nlive # number of live points
     bound = meta.run_bound  # use MutliNest algorithm for bounds
     ndims = meta.run_ndims  # two parameters
     sample = meta.run_sample  # uniform sampling
     tol = meta.run_tol  # the stopping criterion
-
+    
     # START DYNESTY
     l_args = [lc, model, pmin, pmax]
     sampler = NestedSampler(lnprob, ptform, ndims,
@@ -518,55 +492,53 @@ def dynestyfitter(lc, model, meta, **kwargs):
         print('Number of posterior samples is {}'.format(len(samples_dynesty)))
 
     # plot using corner.py
-    if meta.isplots_S5 > 5:
+    if meta.isplots_S5 >= 5:
         fig = corner.corner(samples_dynesty, labels=freenames, show_titles=True, quantiles=[0.16, 0.5, 0.84],title_fmt='.4')
         if meta.run_output:
             fig.savefig(meta.outputdir + 'figs/corner_dynesty.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
-
-
+    
     # PLOT MEDIAN OF THE SAMPLES
     def quantile(x, q):
         return np.percentile(x, [100. * qi for qi in q])
-
+    
     medians = []
     for i in range(len(freenames)):
             q = quantile(samples_dynesty[:, i], [0.16, 0.5, 0.84])
             medians.append(q[1])
     fit_params = np.array(medians)
-
+    
     # new_params = [(fit_params.get(i).name, fit_params.get(i).value,
     #                fit_params.get(i).vary, fit_params.get(i).min,
     #                fit_params.get(i).max) for i in fit_params]
-
+    
     # Create new model with best fit parameters
     # params = Parameters()
-
+    
     # Try to store each as an attribute
     # for param in new_params:
     #     setattr(params, param[0], param[1:])
-
+    
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-
+    
     model.update(fit_params, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-
-    if meta.isplots_S5 > 1:
+    
+    if meta.isplots_S5 >= 1:
         model.plot(time=lc.time, draw=True)
-
+        
         fig, ax = plt.subplots(2,1)
         ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
         ax[0].plot(lc.time, model_lc, zorder = 10)
-
-
+        
         ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
         plt.savefig(meta.outputdir + 'figs/lc_dynesty.png', dpi=300)
         plt.show()
-
+    
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc))
@@ -577,42 +549,42 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
     # Plot RMS vs. bin size looking for time-correlated noise
-
+    
     print('\nDYNESTY RESULTS:\n')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
-
+    
     # PLOT ALLAN PLOT
-    if meta.isplots_S5 > 3:
+    if meta.isplots_S5 >= 3:
         rmsplot(lc,model_lc, meta, figname='allanplot_dynesty.png')
-
+    
     return best_model
 
-
-
-
-def lmfitter(time, data, model, meta, uncertainty=None, **kwargs):
-    """Use lmfit
+def lmfitter(lc, model, meta, **kwargs):
+    """Perform a fit using lmfit.
 
     Parameters
     ----------
-    data: sequence
-        The observational data
-    model: ExoCTK.lightcurve_fitting.models.Model
-        The model to fit
-    uncertainty: np.ndarray (optional)
-        The uncertainty on the (same shape) data
-    method: str
-        The name of the method to use
-    name: str
-        A name for the best fit model
-    verbose: bool
-        Print some stuff
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta: MetaClass
+        The metadata object
+    **kwargs:
+        Arbitrary keyword arguments.
 
     Returns
     -------
-    lmfit.Model.fit.fit_report
-        The results of the fit
+    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model after fitting
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Updated documentation
     """
     # Initialize lmfit Params object
     initialParams = lmfit.Parameters()
@@ -638,7 +610,7 @@ def lmfitter(time, data, model, meta, uncertainty=None, **kwargs):
             indep_vars[param[0]] = param[1]
 
     # Add the time as an independent variable
-    indep_vars['time'] = time
+    indep_vars['time'] = lc.time
 
     # Get values from input parameters.Parameters instances
     initialParams.add_many(*param_list)
@@ -648,11 +620,11 @@ def lmfitter(time, data, model, meta, uncertainty=None, **kwargs):
     lcmodel.independent_vars = indep_vars.keys()
 
     # Set the uncertainty
-    if uncertainty is None:
-        uncertainty = np.ones(len(data))
+    if lc.unc is None:
+        uncertainty = np.ones(len(lc.flux))
 
     # Fit light curve model to the simulated data
-    result = lcmodel.fit(data, weights=1/uncertainty, params=initialParams,
+    result = lcmodel.fit(lc.flux, weights=1/uncertainty, params=initialParams,
                          **indep_vars, **kwargs)
 
     if kwargs['run_verbose'][0]:
