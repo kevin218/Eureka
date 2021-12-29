@@ -170,7 +170,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     lc_model.fit(model, meta, fitter='dynesty')
 
                 # Plot the results from the fit(s)
-                if meta.isplots_S5 > 1:
+                if meta.isplots_S5 >= 1:
                     lc_model.plot(meta, draw=True)
     
     return
