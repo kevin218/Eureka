@@ -33,7 +33,7 @@ testing_S2 	False
 hide_plots	False	# If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir      /Users/megan/Documents/Code
+topdir      /home/User/
 
 # Directories relative to project dir
 inputdir    /Data/JWST-Sim/NIRCam/Stage1
