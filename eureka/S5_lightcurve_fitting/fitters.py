@@ -1,27 +1,20 @@
-"""Functions used to fit models to light curve data
-
-Author: Joe Filippazzo
-Email: jfilippazzo@stsci.edu
-"""
 import numpy as np
-import lmfit
 import copy
-from ..lib import lsq
-from .parameters import Parameters
 
-import matplotlib.pyplot as plt
-import scipy.optimize as op
+import lmfit
 import emcee
-import corner
 
-import dynesty
-from scipy.stats import norm
-import matplotlib as mpl
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
+from scipy.stats import norm
+
+from ..lib import lsq
+from .parameters import Parameters
+from .plots_s5 import plot_fit, plot_rms, plot_corner
+from .likelihood import computeRedChiSq
 
 def lsqfitter(lc, model, meta, **kwargs):
-    """Perform least-squares fit
+    """Perform least-squares fit.
 
     This is an empty placeholder function to be filled later.
 
@@ -46,42 +39,10 @@ def lsqfitter(lc, model, meta, **kwargs):
 
     History:
     - December 29, 2021 Taylor Bell
-        Updated documentation and arguments
+        Updated documentation and arguments. Reduced repeated code.
     """
-    all_params = [i for j in [model.components[n].parameters.dict.items()
-                  for n in range(len(model.components))] for i in j]
-    
     # Group the different variable types
-    freenames = []
-    freepars = []
-    pmin = []
-    pmax = []
-    indep_vars = {}
-    for ii, item in enumerate(all_params):
-        name, param = item
-        #param = list(param)
-        if param[1] == 'free':
-            freenames.append(name)
-            freepars.append(param[0])
-            if len(param) > 3:
-                pmin.append(param[2])
-                pmax.append(param[3])
-            else:
-                pmin.append(-np.inf)
-                pmax.append(np.inf)
-        # elif param[1] == 'fixed':
-        #     pinitial.append(param[0])
-        #     pmin.append(param[0])
-        #     pmax.append(param[0])
-        elif param[1] == 'independent':
-            indep_vars[name] = param[0]
-    freepars = np.array(freepars)
-    pmin = np.array(pmin)
-    pmax = np.array(pmax)
-    
-    # Set the uncertainty
-    if lc.unc is None:
-        lc.unc = np.sqrt(lc.flux)
+    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
     
@@ -90,52 +51,30 @@ def lsqfitter(lc, model, meta, **kwargs):
     
     # Get the best fit params
     fit_params = results[0]
-    # new_params = [(fit_params.get(i).name, fit_params.get(i).value,
-    #                fit_params.get(i).vary, fit_params.get(i).min,
-    #                fit_params.get(i).max) for i in fit_params]
-    
-    # Create new model with best fit parameters
-    # params = Parameters()
-    
-    # Try to store each as an attribute
-    # for param in new_params:
-    #     setattr(params, param[0], param[1:])
     
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
     
-    
     model.update(fit_params, freenames)
-    model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    
+    # Plot fit
     if meta.isplots_S5 >= 1:
-        model.plot(time=lc.time, draw=True)
-        print()
+        plot_fit(lc, model, meta, fitter='lsq')
 
-        fig, ax = plt.subplots(2,1)
-        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-        ax[0].plot(lc.time, model_lc, zorder = 10)
-
-        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-
-        plt.savefig(meta.outputdir + 'figs/lc_lsq.png', dpi=300)
-        plt.show()
-
-    chi2 = np.sum((residuals / lc.unc) ** 2)
-    chi2red = chi2 / (len(lc.unc) - len(freenames))
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, model, meta, freenames)
 
     if meta.run_verbose:
-        print('red. Chi2: ', chi2red)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-
         print('\nLSQ RESULTS:\n')
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
         print('\n')
+    
+    # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        rmsplot(lc, model_lc, meta, figname='allanplot_lsq.png')
+        plot_rms(lc, model, meta, fitter='lsq')
+    
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -196,53 +135,21 @@ def emceefitter(lc, model, meta, **kwargs):
 
     History:
     - December 29, 2021 Taylor Bell
-        Updated documentation
+        Updated documentation. Reduced repeated code.
     """
     lsq_sol = lsqfitter(lc, model, meta, **kwargs)
-
+    
     print(lsq_sol)
     
-
     lc.unc *= np.sqrt(lsq_sol.chi2red)
-
-    all_params = [i for j in [model.components[n].parameters.dict.items()
-                  for n in range(len(model.components))] for i in j]
-
+    
     # Group the different variable types
-    freenames = []
-    freepars = []
-    pmin = []
-    pmax = []
-    indep_vars = {}
-    for ii, item in enumerate(all_params):
-        name, param = item
-        if param[1] == 'free':
-            freenames.append(name)
-            freepars.append(param[0])
-            if len(param) > 3:
-                pmin.append(param[2])
-                pmax.append(param[3])
-            else:
-                pmin.append(-np.inf)
-                pmax.append(np.inf)
-        # elif param[1] == 'fixed':
-        #     pinitial.append(param[0])
-        #     pmin.append(param[0])
-        #     pmax.append(param[0])
-        elif param[1] == 'independent':
-            indep_vars[name] = param[0]
-    freepars = np.array(freepars)
-    pmin = np.array(pmin)
-    pmax = np.array(pmax)
+    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    
     print('before update: ', freepars)
-
     model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
-
-    # Set the uncertainty
-    if lc.unc is None:
-        lc.unc = np.sqrt(lc.flux)
-
+    
     def ln_like(theta, lc, model, pmin, pmax):
         # params[ifreepars] = freepars
         ilow = np.where(theta < pmin)
@@ -255,7 +162,7 @@ def emceefitter(lc, model, meta, **kwargs):
         ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
         if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
         return ln_like_val
-
+    
     def lnprior(theta, pmin, pmax):
         lnprior_prob = 0.
         n = len(theta)
@@ -263,20 +170,20 @@ def emceefitter(lc, model, meta, **kwargs):
             if np.logical_or(theta[i] < pmin[i],
                                  theta[i] > pmax[i]): lnprior_prob += - np.inf
         return lnprior_prob
-
+    
     def lnprob(theta, lc, model, pmin, pmax):
         ln_like_val = ln_like(theta, lc, model, pmin, pmax)
         lp = lnprior(theta, pmin, pmax)
         return ln_like_val + lp
-
+    
     step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
     run_nsteps = meta.run_nsteps
     burn_in = meta.run_nburn
-
+    
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
-
+    
     out_of_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     print(out_of_range)
     pos = pos[out_of_range]
@@ -286,67 +193,41 @@ def emceefitter(lc, model, meta, **kwargs):
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
     if meta.isplots_S5 >= 5:
-        fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
-        fig.savefig(meta.outputdir+'figs/corner_emcee.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
-
+        plot_corner(samples, lc, meta, freenames, fitter='emcee')
+    
     def quantile(x, q):
         return np.percentile(x, [100. * qi for qi in q])
-
+    
     medians = []
     for i in range(len(step_size)):
             q = quantile(samples[:, i], [0.16, 0.5, 0.84])
             medians.append(q[1])
     fit_params = np.array(medians)
-
-    # new_params = [(fit_params.get(i).name, fit_params.get(i).value,
-    #                fit_params.get(i).vary, fit_params.get(i).min,
-    #                fit_params.get(i).max) for i in fit_params]
-
-    # Create new model with best fit parameters
-    # params = Parameters()
-
-    # Try to store each as an attribute
-    # for param in new_params:
-    #     setattr(params, param[0], param[1:])
-
+    
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-
+    
     model.update(fit_params, freenames)
-    model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
-
+    
+    # Plot fit
     if meta.isplots_S5 >= 1:
-        model.plot(time=lc.time, draw=True)
-
-        fig, ax = plt.subplots(2,1)
-        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-        ax[0].plot(lc.time, model_lc, zorder = 10)
-        
-        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-        
-        plt.savefig(meta.outputdir + 'figs/lc_emcee.png', dpi=300)
-        plt.show()
-
-    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
-    chi2 = np.sum((residuals / lc.unc) ** 2)
-    chi2red = chi2 / (len(lc.unc))
-    print(len(lc.unc))
-    print(chi2)
-    print(chi2red)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-
+        plot_fit(lc, model, meta, fitter='emcee')
+    
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    
     if meta.run_verbose:
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
-
+    
+    # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        rmsplot(lc, model_lc, meta, figname='allanplot_emcee.png')
-
+        plot_rms(lc, model, meta, fitter='emcee')
+    
+    best_model.__setattr__('chi2red',chi2red)
+    best_model.__setattr__('fit_params',fit_params)
+    
     return best_model
 
 def dynestyfitter(lc, model, meta, **kwargs):
@@ -373,7 +254,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
 
     History:
     - December 29, 2021 Taylor Bell
-        Updated documentation
+        Updated documentation. Reduced repeated code.
     """
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, **kwargs)
@@ -382,48 +263,16 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
     lc.unc *= np.sqrt(lsq_sol.chi2red)
     
-    all_params = [i for j in [model.components[n].parameters.dict.items()
-                  for n in range(len(model.components))] for i in j]
-    
     # Group the different variable types
-    freenames = []
-    freepars = []
-    pmin = []
-    pmax = []
-    indep_vars = {}
-    for ii, item in enumerate(all_params):
-        name, param = item
-        #param = list(param)
-        if param[1] == 'free':
-            freenames.append(name)
-            freepars.append(param[0])
-            if len(param) > 3:
-                pmin.append(param[2])
-                pmax.append(param[3])
-            else:
-                pmin.append(-np.inf)
-                pmax.append(np.inf)
-        # elif param[1] == 'fixed':
-        #     pinitial.append(param[0])
-        #     pmin.append(param[0])
-        #     pmax.append(param[0])
-        elif param[1] == 'independent':
-            indep_vars[name] = param[0]
-    freepars = np.array(freepars)
-    pmin = np.array(pmin)
-    pmax = np.array(pmax)
+    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    
     print('before update: ', freepars)
-
     # UPDATE MODEL PARAMETERS WITH LSQ BEST FIT
     model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
-
-    # Set the uncertainty
-    if lc.unc is None:
-        lc.unc = np.sqrt(lc.flux)
-
+    
     # DYNESTY
-
+    
     #PRIOR TRANSFORMATION TODO: ADD GAUSSIAN PRIORS
     def transform_uniform(x, a, b):
         return a + (b - a) * x
@@ -476,26 +325,24 @@ def dynestyfitter(lc, model, meta, **kwargs):
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
-
+    
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
-
+    
     if meta.run_verbose:
         print("log(Z) = {} ± {}".format(logZdynesty, logZerrdynesty))
         print(res.summary())
-
+    
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
-    samples_dynesty = resample_equal(res.samples, weights)
+    samples = resample_equal(res.samples, weights)
     if meta.run_verbose:
-        print('Number of posterior samples is {}'.format(len(samples_dynesty)))
-
+        print('Number of posterior samples is {}'.format(len(samples)))
+    
     # plot using corner.py
     if meta.isplots_S5 >= 5:
-        fig = corner.corner(samples_dynesty, labels=freenames, show_titles=True, quantiles=[0.16, 0.5, 0.84],title_fmt='.4')
-        if meta.run_output:
-            fig.savefig(meta.outputdir + 'figs/corner_dynesty.png', bbox_inches='tight', pad_inches=0.05, dpi=250)
+        plot_corner(samples, lc, meta, freenames, fitter='dynesty')
     
     # PLOT MEDIAN OF THE SAMPLES
     def quantile(x, q):
@@ -503,61 +350,36 @@ def dynestyfitter(lc, model, meta, **kwargs):
     
     medians = []
     for i in range(len(freenames)):
-            q = quantile(samples_dynesty[:, i], [0.16, 0.5, 0.84])
+            q = quantile(samples[:, i], [0.16, 0.5, 0.84])
             medians.append(q[1])
     fit_params = np.array(medians)
-    
-    # new_params = [(fit_params.get(i).name, fit_params.get(i).value,
-    #                fit_params.get(i).vary, fit_params.get(i).min,
-    #                fit_params.get(i).max) for i in fit_params]
-    
-    # Create new model with best fit parameters
-    # params = Parameters()
-    
-    # Try to store each as an attribute
-    # for param in new_params:
-    #     setattr(params, param[0], param[1:])
     
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
     
     model.update(fit_params, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     
+    # Plot fit
     if meta.isplots_S5 >= 1:
-        model.plot(time=lc.time, draw=True)
-        
-        fig, ax = plt.subplots(2,1)
-        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-        ax[0].plot(lc.time, model_lc, zorder = 10)
-        
-        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
-        plt.savefig(meta.outputdir + 'figs/lc_dynesty.png', dpi=300)
-        plt.show()
+        plot_fit(lc, model, meta, fitter='dynesty')
     
-    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2 + np.log(2.0 * np.pi * (lc.unc) ** 2))))
-    chi2 = np.sum((residuals / lc.unc) ** 2)
-    chi2red = chi2 / (len(lc.unc))
-    if meta.run_verbose:
-        print(len(lc.unc))
-        print(chi2)
-        print(chi2red)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-    # Plot RMS vs. bin size looking for time-correlated noise
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, model, meta, freenames)
     
     print('\nDYNESTY RESULTS:\n')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
     
-    # PLOT ALLAN PLOT
+    # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        rmsplot(lc,model_lc, meta, figname='allanplot_dynesty.png')
+        plot_rms(lc, model, meta, fitter='dynesty')
     
+    best_model.__setattr__('chi2red',chi2red)
+    best_model.__setattr__('fit_params',fit_params)
+
     return best_model
 
 def lmfitter(lc, model, meta, **kwargs):
@@ -584,23 +406,164 @@ def lmfitter(lc, model, meta, **kwargs):
 
     History:
     - December 29, 2021 Taylor Bell
-        Updated documentation
+        Updated documentation. Reduced repeated code.
     """
-    # Initialize lmfit Params object
-    initialParams = lmfit.Parameters()
-
-    #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
-
-    # Concatenate the lists of parameters
-    all_params = [i for j in [model.components[n].parameters.list
-                  for n in range(len(model.components))] for i in j]
+        #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
 
     # Group the different variable types
+    param_list, freenames, indep_vars = group_variables_lmfit(model)
+    
+    # Add the time as an independent variable
+    indep_vars['time'] = lc.time
+    
+    # Initialize lmfit Params object
+    initialParams = lmfit.Parameters()
+    # Insert parameters
+    initialParams.add_many(*param_list)
+    
+    # Create the lmfit lightcurve model
+    lcmodel = lmfit.Model(model.eval)
+    lcmodel.independent_vars = indep_vars.keys()
+    
+    # Fit light curve model to the simulated data
+    result = lcmodel.fit(lc.flux, weights=1/lc.unc, params=initialParams,
+                         **indep_vars, **kwargs)
+    
+    if meta.run_verbose:
+        print(result.fit_report())
+    
+    # Get the best fit params
+    fit_params = result.__dict__['params']
+    new_params = [(fit_params.get(i).name, fit_params.get(i).value,
+                   fit_params.get(i).vary, fit_params.get(i).min,
+                   fit_params.get(i).max) for i in fit_params]
+    
+    # Create new model with best fit parameters
+    params = Parameters()
+    # Store each as an attribute
+    for param in new_params:
+        setattr(params, param[0], param[1:])
+    
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
+    # best_model.parameters = params
+    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
+    
+    model.update(fit_params, freenames)
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plot_fit(lc, model, meta, fitter='dynesty')
+    
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    
+    # Plot Allan plot
+    if meta.isplots_S5 >= 3:
+        plot_rms(lc, model, meta, fitter='dynesty')
+    
+    best_model.__setattr__('chi2red',chi2red)
+    best_model.__setattr__('fit_params',fit_params)
+    
+    return best_model
+
+def group_variables(model):
+    """Group variables into fitted and frozen.
+
+    Parameters
+    ----------
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    
+    Returns
+    -------
+    freenames: np.array
+        The names of fitted variables.
+    freepars: np.array
+        The fitted variables.
+    pmin: np.array
+        The lower bound for constrained variables.
+    pmax: np.array
+        The upper bound for constrained variables.
+    indep_vars: dict
+        The frozen variables.
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved code to separate function to reduce repeated code.
+    """
+    all_params = [i for j in [model.components[n].parameters.dict.items()
+                  for n in range(len(model.components))] for i in j]
+    
+    # Group the different variable types
+    freenames = []
+    freepars = []
+    pmin = []
+    pmax = []
+    indep_vars = {}
+    for ii, item in enumerate(all_params):
+        name, param = item
+        #param = list(param)
+        if param[1] == 'free':
+            freenames.append(name)
+            freepars.append(param[0])
+            if len(param) > 3:
+                pmin.append(param[2])
+                pmax.append(param[3])
+            else:
+                pmin.append(-np.inf)
+                pmax.append(np.inf)
+        # elif param[1] == 'fixed':
+        #     pinitial.append(param[0])
+        #     pmin.append(param[0])
+        #     pmax.append(param[0])
+        elif param[1] == 'independent':
+            indep_vars[name] = param[0]
+    freenames = np.array(freenames)
+    freepars = np.array(freepars)
+    pmin = np.array(pmin)
+    pmax = np.array(pmax)
+    
+    return freenames, freepars, pmin, pmax, indep_vars
+
+def group_variables_lmfit(model):
+    """Group variables into fitted and frozen for lmfit fitter.
+
+    Parameters
+    ----------
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    
+    Returns
+    -------
+    paramlist: list
+        The fitted variables.
+    freenames: np.array
+        The names of fitted variables.
+    indep_vars: dict
+        The frozen variables.
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved code to separate function to look similar to other fitters.
+    """
+    all_params = [i for j in [model.components[n].parameters.dict.items()
+                  for n in range(len(model.components))] for i in j]
+    
+    # Group the different variable types
     param_list = []
+    freenames = []
     indep_vars = {}
     for param in all_params:
         param = list(param)
         if param[2] == 'free':
+            freenames.append(param[0])
             param[2] = True
             param_list.append(tuple(param))
         elif param[2] == 'fixed':
@@ -608,106 +571,6 @@ def lmfitter(lc, model, meta, **kwargs):
             param_list.append(tuple(param))
         else:
             indep_vars[param[0]] = param[1]
-
-    # Add the time as an independent variable
-    indep_vars['time'] = lc.time
-
-    # Get values from input parameters.Parameters instances
-    initialParams.add_many(*param_list)
-
-    # Create the lightcurve model
-    lcmodel = lmfit.Model(model.eval)
-    lcmodel.independent_vars = indep_vars.keys()
-
-    # Set the uncertainty
-    if lc.unc is None:
-        uncertainty = np.ones(len(lc.flux))
-
-    # Fit light curve model to the simulated data
-    result = lcmodel.fit(lc.flux, weights=1/uncertainty, params=initialParams,
-                         **indep_vars, **kwargs)
-
-    if kwargs['run_verbose'][0]:
-        print(result.fit_report())
-
-    # Get the best fit params
-    fit_params = result.__dict__['params']
-    new_params = [(fit_params.get(i).name, fit_params.get(i).value,
-                   fit_params.get(i).vary, fit_params.get(i).min,
-                   fit_params.get(i).max) for i in fit_params]
-
-    # Create new model with best fit parameters
-    params = Parameters()
-
-    # Try to store each as an attribute
-    for param in new_params:
-        setattr(params, param[0], param[1:])
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.parameters = params
-    best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-
-    return best_model
-
-
-
-
-# COMPUTE ROOT-MEAN-SQUARE AND STANDARD ERROR OF DATA FOR VARIOUS BIN SIZES
-def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
-    # data    = fit.normresiduals
-    # maxnbin = maximum # of bins
-    # binstep = Bin step size
-
-    # bin data into multiple bin sizes
-    npts = data.size
-    if maxnbins is None:
-        maxnbins = npts / 10.
-    binsz = np.arange(1, maxnbins + binstep, step=binstep, dtype=int)
-    nbins = np.zeros(binsz.size, dtype=int)
-    rms = np.zeros(binsz.size)
-    rmserr = np.zeros(binsz.size)
-    for i in range(binsz.size):
-        nbins[i] = int(np.floor(data.size / binsz[i]))
-        bindata = np.zeros(nbins[i], dtype=float)
-        # bin data
-        # ADDED INTEGER CONVERSION, mh 01/21/12
-        for j in range(nbins[i]):
-            bindata[j] = data[j * binsz[i]:(j + 1) * binsz[i]].mean()
-        # get rms
-        rms[i] = np.sqrt(np.mean(bindata ** 2))
-        rmserr[i] = rms[i] / np.sqrt(2. * nbins[i])
-    # expected for white noise (WINN 2008, PONT 2006)
-    stderr = (data.std() / np.sqrt(binsz)) * np.sqrt(nbins / (nbins - 1.))
-    if isrmserr is True:
-        return rms, stderr, binsz, rmserr
-    else:
-        return rms, stderr, binsz
-
-def rmsplot(lc, model_lc, meta, figname='allanplot.png'):
-    time = lc.time
-    residuals = lc.flux - model_lc
-    residuals = residuals[np.argsort(time)]
-
-    rms, stderr, binsz = computeRMS(residuals, binstep=1)
-    normfactor = 1e-6
-    plt.rcParams.update({'legend.fontsize': 11})
-    plt.figure(1111, figsize=(8, 6))
-    plt.clf()
-    plt.suptitle(' Correlated Noise', size=16)
-    plt.loglog(binsz, rms / normfactor, color='black', lw=1.5, label='Fit RMS', zorder=3)  # our noise
-    plt.loglog(binsz, stderr / normfactor, color='red', ls='-', lw=2, label='Std. Err.', zorder=1)  # expected noise
-    plt.xlim(0.95, binsz[-1] * 2)
-    plt.ylim(stderr[-1] / normfactor / 2., stderr[0] / normfactor * 2.)
-    plt.xlabel("Bin Size", fontsize=14)
-    plt.ylabel("RMS (ppm)", fontsize=14)
-    plt.xticks(size=12)
-    plt.yticks(size=12)
-    plt.legend()
-    plt.savefig(meta.outputdir + 'figs/'+figname, dpi=300)
-    if meta.hide_plots:
-        plt.close()
-    else:
-        plt.pause(0.1)
-
-    return
+    freenames = np.array(freenames)
+    
+    return param_list, freenames, indep_vars
