@@ -6,12 +6,11 @@ import emcee
 
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
-from scipy.stats import norm
 
 from ..lib import lsq
 from .parameters import Parameters
 from .plots_s5 import plot_fit, plot_rms, plot_corner
-from .likelihood import computeRedChiSq
+from .likelihood import computeRedChiSq, lnprob, ptform
 
 def lsqfitter(lc, model, meta, **kwargs):
     """Perform least-squares fit.
@@ -150,32 +149,6 @@ def emceefitter(lc, model, meta, **kwargs):
     model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
     
-    def ln_like(theta, lc, model, pmin, pmax):
-        # params[ifreepars] = freepars
-        ilow = np.where(theta < pmin)
-        ihi = np.where(theta > pmax)
-        theta[ilow] = pmin[ilow]
-        theta[ihi] = pmax[ihi]
-        model.update(theta, freenames)
-        model_lc = model.eval()
-        residuals = (lc.flux - model_lc) #/ lc.unc
-        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
-        if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
-        return ln_like_val
-    
-    def lnprior(theta, pmin, pmax):
-        lnprior_prob = 0.
-        n = len(theta)
-        for i in range(n):
-            if np.logical_or(theta[i] < pmin[i],
-                                 theta[i] > pmax[i]): lnprior_prob += - np.inf
-        return lnprior_prob
-    
-    def lnprob(theta, lc, model, pmin, pmax):
-        ln_like_val = ln_like(theta, lc, model, pmin, pmax)
-        lp = lnprior(theta, pmin, pmax)
-        return ln_like_val + lp
-    
     step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
@@ -189,18 +162,15 @@ def emceefitter(lc, model, meta, **kwargs):
     pos = pos[out_of_range]
     print(sum(out_of_range))
     nwalkers = sum(out_of_range)
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax))
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
     if meta.isplots_S5 >= 5:
         plot_corner(samples, lc, meta, freenames, fitter='emcee')
     
-    def quantile(x, q):
-        return np.percentile(x, [100. * qi for qi in q])
-    
     medians = []
     for i in range(len(step_size)):
-            q = quantile(samples[:, i], [0.16, 0.5, 0.84])
+            q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
     
@@ -273,46 +243,6 @@ def dynestyfitter(lc, model, meta, **kwargs):
     
     # DYNESTY
     
-    #PRIOR TRANSFORMATION TODO: ADD GAUSSIAN PRIORS
-    def transform_uniform(x, a, b):
-        return a + (b - a) * x
-    
-    def transform_normal(x, mu, sigma):
-        return norm.ppf(x, loc=mu, scale=sigma)
-    
-    def ptform(theta):
-        p = np.zeros_like(theta)
-        n = len(theta)
-        for i in range(n):
-            p[i] = transform_uniform(theta[i], pmin[i], pmax[i])
-        return p
-    
-    def ln_like(theta, lc, model, pmin, pmax):
-        # params[ifreepars] = freepars
-        ilow = np.where(theta < pmin)
-        ihi = np.where(theta > pmax)
-        theta[ilow] = pmin[ilow]
-        theta[ihi] = pmax[ihi]
-        model.update(theta, freenames)
-        model_lc = model.eval()
-        residuals = (lc.flux - model_lc) #/ lc.unc
-        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
-        if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
-        return ln_like_val
-    
-    def lnprior(theta, pmin, pmax):
-        lnprior_prob = 0.
-        n = len(theta)
-        for i in range(n):
-            if np.logical_or(theta[i] < pmin[i],
-                                 theta[i] > pmax[i]): lnprior_prob += - np.inf
-        return lnprior_prob
-    
-    def lnprob(theta, lc, model, pmin, pmax):
-        ln_like_val = ln_like(theta, lc, model, pmin, pmax)
-        lp = lnprior(theta, pmin, pmax)
-        return ln_like_val + lp
-    
     nlive = meta.run_nlive # number of live points
     bound = meta.run_bound  # use MutliNest algorithm for bounds
     ndims = meta.run_ndims  # two parameters
@@ -320,7 +250,11 @@ def dynestyfitter(lc, model, meta, **kwargs):
     tol = meta.run_tol  # the stopping criterion
     
     # START DYNESTY
-    l_args = [lc, model, pmin, pmax]
+    l_args = [lc, model, pmin, pmax, freenames]
+
+    # the prior_transform function for dynesty requires there only be one argument
+    ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
+
     sampler = NestedSampler(lnprob, ptform, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
@@ -344,13 +278,9 @@ def dynestyfitter(lc, model, meta, **kwargs):
     if meta.isplots_S5 >= 5:
         plot_corner(samples, lc, meta, freenames, fitter='dynesty')
     
-    # PLOT MEDIAN OF THE SAMPLES
-    def quantile(x, q):
-        return np.percentile(x, [100. * qi for qi in q])
-    
     medians = []
     for i in range(len(freenames)):
-            q = quantile(samples[:, i], [0.16, 0.5, 0.84])
+            q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
     
