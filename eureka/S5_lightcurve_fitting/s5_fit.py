@@ -18,7 +18,31 @@ class MetaClass:
         return
 
 def fitJWST(eventlabel, s4_meta=None):
+    '''Fits 1D spectra with various models and fitters.
+
+    Parameters
+    ----------
+    eventlabel: str
+        The unique identifier for these data.
+    s4_meta:    MetaClass
+        The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
+
+    Returns
+    -------
+    meta:   MetaClass
+        The metadata object with attributes added by S5.
+
+    Notes
+    -------
+    History:
     
+    - November 12-December 15, 2021 Megan Mansfield
+        Original version
+    - December 17-20, 2021 Megan Mansfield
+        Connecting S5 to S4 outputs
+    - December 17-20, 2021 Taylor Bell
+        Increasing connectedness of S5 and S4
+    '''
     # Initialize a new metadata object
     meta = MetaClass()
     meta.eventlabel = eventlabel

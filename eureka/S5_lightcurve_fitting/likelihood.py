@@ -2,6 +2,35 @@ import numpy as np
 from scipy.stats import norm
 
 def ln_like(theta, lc, model, pmin, pmax, freenames):
+    """Compute the log-likelihood.
+
+    Parameters
+    ----------
+    theta: ndarray
+        The current estimate of the fitted parameters
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    pmin: ndarray
+        The lower-bound for uniform priors.
+    pmax: ndarray
+        The upper-bound for uniform priors.
+    freenames: iterable
+        The names of the fitted parameters.
+
+    Returns
+    -------
+    ln_like_val: ndarray
+        The log-likelihood value at the position theta.
+
+    Notes
+    -----
+    History:
+
+    - December 29-30, 2021 Taylor Bell
+        Moved code to separate file, added documentation.
+    """
     # params[ifreepars] = freepars
     ilow = np.where(theta < pmin)
     ihi = np.where(theta > pmax)
@@ -15,6 +44,29 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     return ln_like_val
 
 def lnprior(theta, pmin, pmax):
+    """Compute the log-prior.
+
+    Parameters
+    ----------
+    theta: ndarray
+        The current estimate of the fitted parameters
+    pmin: ndarray
+        The lower-bound for uniform priors.
+    pmax: ndarray
+        The upper-bound for uniform priors.
+
+    Returns
+    -------
+    lnprior_prob: ndarray
+        The log-prior probability value at the position theta.
+
+    Notes
+    -----
+    History:
+
+    - December 29-30, 2021 Taylor Bell
+        Moved code to separate file, added documentation.
+    """
     lnprior_prob = 0.
     n = len(theta)
     for i in range(n):
@@ -23,6 +75,35 @@ def lnprior(theta, pmin, pmax):
     return lnprior_prob
 
 def lnprob(theta, lc, model, pmin, pmax, freenames):
+    """Compute the log-probability.
+
+    Parameters
+    ----------
+    theta: ndarray
+        The current estimate of the fitted parameters
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    pmin: ndarray
+        The lower-bound for uniform priors.
+    pmax: ndarray
+        The upper-bound for uniform priors.
+    freenames:
+        The names of the fitted parameters.
+
+    Returns
+    -------
+    ln_prob_val: ndarray
+        The log-probability value at the position theta.
+
+    Notes
+    -----
+    History:
+
+    - December 29-30, 2021 Taylor Bell
+        Moved code to separate file, added documentation.
+    """
     ln_like_val = ln_like(theta, lc, model, pmin, pmax, freenames)
     lp = lnprior(theta, pmin, pmax)
     return ln_like_val + lp
@@ -42,22 +123,73 @@ def ptform(theta, pmin, pmax):
     return p
 
 def computeRedChiSq(lc, model, meta, freenames):
-	model_lc = model.eval()
-	residuals = (lc.flux - model_lc) #/ lc.unc
-	chi2 = np.sum((residuals / lc.unc) ** 2)
-	chi2red = chi2 / (len(lc.unc) - len(freenames))
-	
-	if meta.run_verbose:
-		print('red. Chi2: ', chi2red)
+    """Compute the reduced chi-squared value.
 
-	return chi2red
+    Parameters
+    ----------
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta: MetaObject
+        The metadata object.
+    freenames: iterable
+        The names of the fitted parameters.
 
-# COMPUTE ROOT-MEAN-SQUARE AND STANDARD ERROR OF DATA FOR VARIOUS BIN SIZES
+    Returns
+    -------
+    chi2red: float
+        The reduced chi-squared value.
+
+    Notes
+    -----
+    History:
+
+    - December 29-30, 2021 Taylor Bell
+        Moved code to separate file, added documentation.
+    """
+    model_lc = model.eval()
+    residuals = (lc.flux - model_lc) #/ lc.unc
+    chi2 = np.sum((residuals / lc.unc) ** 2)
+    chi2red = chi2 / (len(lc.unc) - len(freenames))
+
+    if meta.run_verbose:
+        print('red. Chi2: ', chi2red)
+
+    return chi2red
+
 def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
-    # data    = fit.normresiduals
-    # maxnbin = maximum # of bins
-    # binstep = Bin step size
+    """Compute the root-mean-squared and standard error of data for various bin sizes.
 
+    Parameters
+    ----------
+    data: ndarray
+        The residuals after fitting.
+    maxnbins: int, optional
+        The maximum number of bins. Use None to default to 10 points per bin.
+    binstep: int, optional
+        Bin step size.
+    isrmserr: bool
+        True if return rmserr, else False.
+
+    Returns
+    -------
+    rms: ndarray
+        The RMS for each bin size.
+    stderr: ndarray
+        The standard error for each bin size.
+    binsz: ndarray
+        The different bin sizes.
+    rmserr: ndarray, optional
+        The uncertainty in the RMS.
+
+    Notes
+    -----
+    History:
+
+    - December 29-30, 2021 Taylor Bell
+        Moved code to separate file, added documentation.
+    """
     # bin data into multiple bin sizes
     npts = data.size
     if maxnbins is None:

@@ -5,6 +5,30 @@ import corner
 from .likelihood import computeRMS
 
 def plot_fit(lc, model, meta, fitter):
+    """Plot the fitted model over the data.
+
+    Parameters
+    ----------
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved plotting code to a separate function.
+    """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
     
@@ -31,6 +55,30 @@ def plot_fit(lc, model, meta, fitter):
     return
 
 def plot_rms(lc, model, meta, fitter):
+    """Plot an Allan plot to look for red noise.
+
+    Parameters
+    ----------
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved plotting code to a separate function.
+    """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
     time = lc.time
@@ -63,6 +111,32 @@ def plot_rms(lc, model, meta, fitter):
     return
     
 def plot_corner(samples, lc, meta, freenames, fitter):
+    """Plot a corner plot.
+
+    Parameters
+    ----------
+    samples: ndarray
+        The samples produced by the sampling algorithm
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    freenames: iterable
+        The names of the fitted parameters
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved plotting code to a separate function.
+    """
     fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
