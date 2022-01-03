@@ -56,7 +56,7 @@ def lcJWST(eventlabel, s3_meta=None):
     Notes
     -----
     History:
-    
+
     - June 2021 Kevin Stevenson
         Initial version
     - October 2021 Taylor Bell
@@ -73,7 +73,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
     #load savefile
     if s3_meta == None:
-        # Search for the S2 output metadata in the inputdir provided in 
+        # Search for the S2 output metadata in the inputdir provided in
         # First just check the specific inputdir folder
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
@@ -94,12 +94,12 @@ def lcJWST(eventlabel, s3_meta=None):
                  +'Using the metadata file: \n{}\n'.format(fnames[-1])
                  +'and will consider aperture ranges listed there. If this metadata file is not a part,\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
-    
+
         fname = fnames[-1] # Pick the last file name (should be the most recent or only file)
         fname = fname[:-4] # Strip off the .dat ending
 
         s3_meta = me.loadevent(fname)
-    
+
     # Need to remove the topdir from the outputdir
     s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
     if s3_outputdir[0]=='/':
@@ -114,11 +114,11 @@ def lcJWST(eventlabel, s3_meta=None):
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
-    meta.old_datetime = meta.datetime # Capture the date that the 
+    meta.old_datetime = meta.datetime # Capture the date that the
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
-    
+
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one aperture
         meta.spec_hw_range = [meta.spec_hw,]
@@ -145,11 +145,13 @@ def lcJWST(eventlabel, s3_meta=None):
             # Create directories for Stage 4 processing outputs
             run = util.makedirectory(meta, 'S4')
             meta.outputdir = util.pathdirectory(meta, 'S4', run)
-            
+
             # Copy existing S4 log file
             meta.s4_logname  = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
+            log.writelog(f"Input directory: {s3_outputdir}")
+            log.writelog(f"Output directory: {meta.outputdir}")
 
             # Copy ecf (and update outputdir in case S4 is being called sequentially with S3)
             log.writelog('Copying S4 control file')

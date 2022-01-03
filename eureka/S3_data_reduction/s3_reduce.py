@@ -73,7 +73,7 @@ def reduceJWST(eventlabel, s2_meta=None):
     Notes
     -------
     History:
-    
+
     - May 2021 Kevin Stevenson
         Initial version
     - October 2021 Taylor Bell
@@ -91,13 +91,13 @@ def reduceJWST(eventlabel, s2_meta=None):
     ecffile = 'S3_' + eventlabel + '.ecf'
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
-    
+
     # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
         # Search for the S2 output metadata in the inputdir provided in
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
-            rootdir += '/' 
+            rootdir += '/'
         fnames = glob.glob(rootdir+'**/S2_'+meta.eventlabel+'_Meta_Save.dat', recursive=True)
         fnames = sn.sort_nicely(fnames)
 
@@ -111,12 +111,12 @@ def reduceJWST(eventlabel, s2_meta=None):
                 # There may be multiple runs - use the most recent but warn the user
                 print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(meta.inputdir)
                      +'Using the metadata file: \n"{}"'.format(fnames[-1]))
-        
+
             fname = fnames[-1] # Pick the last file name
             fname = fname[:-4] # Strip off the .dat ending
 
             s2_meta = me.loadevent(fname)
-    
+
     # Locate the exact output folder from the previous S2 run (since there is a procedurally generated subdirectory for each run)
     if s2_meta != None:
         # Need to remove the topdir from the outputdir
@@ -140,7 +140,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
-    
+
     # check for range of spectral apertures
     if isinstance(meta.spec_hw, list):
         meta.spec_hw_range = range(meta.spec_hw[0], meta.spec_hw[1]+meta.spec_hw[2], meta.spec_hw[2])
@@ -184,6 +184,8 @@ def reduceJWST(eventlabel, s2_meta=None):
             meta.logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
             log = logedit.Logedit(meta.logname)
             log.writelog("\nStarting Stage 3 Reduction")
+            log.writelog(f"Input directory: {meta.inputdir}")
+            log.writelog(f"Output directory: {meta.outputdir}")
             log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
 
             # Copy ecf (and update inputdir in case S3 is being called sequentially with S2)
