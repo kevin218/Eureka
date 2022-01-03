@@ -15,8 +15,6 @@ from .likelihood import computeRedChiSq, lnprob, ptform
 def lsqfitter(lc, model, meta, **kwargs):
     """Perform least-squares fit.
 
-    This is an empty placeholder function to be filled later.
-
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -35,10 +33,11 @@ def lsqfitter(lc, model, meta, **kwargs):
 
     Notes
     -----
-
     History:
-    - December 29, 2021 Taylor Bell
+
+    - December 29-30, 2021 Taylor Bell
         Updated documentation and arguments. Reduced repeated code.
+        Also saving covariance matrix for later estimation of sampler step size.
     """
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
@@ -57,6 +56,12 @@ def lsqfitter(lc, model, meta, **kwargs):
     
     model.update(fit_params, freenames)
     
+    # Save the covariance matrix in case it's needed to estimate step size for a sampler
+    model_lc = model.eval()
+    residuals = (lc.flux - model_lc)
+    cov_mat = results[1]*np.var(residuals)
+    best_model.__setattr__('cov_mat',cov_mat)
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plot_fit(lc, model, meta, fitter='lsq')
@@ -102,8 +107,8 @@ def demcfitter(lc, model, meta, **kwargs):
 
     Notes
     -----
-
     History:
+
     - December 29, 2021 Taylor Bell
         Updated documentation and arguments
     """
@@ -131,8 +136,8 @@ def emceefitter(lc, model, meta, **kwargs):
 
     Notes
     -----
-
     History:
+
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
@@ -149,7 +154,8 @@ def emceefitter(lc, model, meta, **kwargs):
     model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
     
-    step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
+    step_size = np.diag(lsq_sol.cov_mat)
+    #step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
     run_nsteps = meta.run_nsteps
@@ -221,8 +227,8 @@ def dynestyfitter(lc, model, meta, **kwargs):
 
     Notes
     -----
-
     History:
+
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
@@ -333,8 +339,8 @@ def lmfitter(lc, model, meta, **kwargs):
 
     Notes
     -----
-
     History:
+
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
@@ -420,8 +426,8 @@ def group_variables(model):
 
     Notes
     -----
-
     History:
+
     - December 29, 2021 Taylor Bell
         Moved code to separate function to reduce repeated code.
     """
@@ -478,8 +484,8 @@ def group_variables_lmfit(model):
 
     Notes
     -----
-
     History:
+    
     - December 29, 2021 Taylor Bell
         Moved code to separate function to look similar to other fitters.
     """
