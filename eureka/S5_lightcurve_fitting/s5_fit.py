@@ -137,6 +137,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
                 log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
                 log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
+                log.writelog("\nChannel {} of {}\n".format(channel+1, meta.nspecchan))
 
                 # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
                 log.writelog('Copying S5 control file')
@@ -169,9 +170,10 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux_err = meta.lcerr[channel,:]
                 
                 #FINDME: these two lines are because we don't have a constant offset model implemented yet. Will remove later
-                flux = flux / np.median(flux[:200])
-                flux_err = flux_err/800000000/3
-                
+                flux_err = flux_err/ np.median(flux[-200:])
+                flux = flux / np.median(flux[-200:])
+                flux += (1-np.min(flux))
+
                 # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
                 
@@ -188,13 +190,15 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Fit the models using one or more fitters
                 if 'lsq' in meta.fit_method:
                     lc_model.fit(model, meta, fitter='lsq')
-                if 'mcmc' in meta.fit_method:
+                if 'emcee' in meta.fit_method:
                     lc_model.fit(model, meta, fitter='emcee')
-                if 'nested' in meta.fit_method:
+                if 'dynesty' in meta.fit_method:
                     lc_model.fit(model, meta, fitter='dynesty')
+                if 'lmfit' in meta.fit_method:
+                    lc_model.fit(model, meta, fitter='lmfit')
 
                 # Plot the results from the fit(s)
                 if meta.isplots_S5 >= 1:
-                    lc_model.plot(meta, draw=True)
+                    lc_model.plot(meta)
     
     return

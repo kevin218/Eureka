@@ -159,7 +159,7 @@ class LightCurve(m.Model):
             raise ValueError("{} is not a valid fitter.".format(fitter))
         
         # Run the fit
-        self.fitter_func(self, model, meta, **kwargs)
+        fit_model = self.fitter_func(self, model, meta, **kwargs)
         
         # Store it
         if fit_model is not None:
@@ -167,7 +167,7 @@ class LightCurve(m.Model):
 
         return
 
-    def plot(self, meta, fits=True, draw=True):
+    def plot(self, meta, fits=True):
         """Plot the light curve with all available fits
 
         Parameters
@@ -182,25 +182,16 @@ class LightCurve(m.Model):
         None
         """
         # Make the figure
-        fig = plt.figure(figsize=(8,6))
+        fig = plt.figure(int('54{}'.format(str(self.channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+        fig.clf()
         # Draw the data
-        ax = fig.add_subplot(111)
+        ax = fig.gca()
         ax.errorbar(self.time, self.flux, self.unc, fmt='.', color=next(COLORS), zorder=0)
         # Draw best-fit model
         if fits and len(self.results) > 0:
             for model in self.results:
-                model.plot(self.time, ax=ax, color=next(COLORS), zorder=1)
+                model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf)
 
-        # fig = figure(width=800, height=400)
-        #
-        # # Draw the data
-        # fig.circle(self.time, self.flux, legend=self.name)
-        #
-        # # Plot fit models
-        # if fits and len(self.results) > 0:
-        #     for model in self.results:
-        #         model.plot(self.time, fig=fig, color=next(COLORS))
-        #
         # Format axes
         ax.set_xlabel(str(self.time_units))
         ax.set_ylabel('Flux')
@@ -211,7 +202,7 @@ class LightCurve(m.Model):
         if meta.hide_plots:
             plt.close()
         else:
-            plt.pause(0.1)
+            plt.pause(0.2)
 
         return
 
