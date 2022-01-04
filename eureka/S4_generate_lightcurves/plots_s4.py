@@ -37,7 +37,7 @@ def binned_lightcurve(meta, bjdtdb, i):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 def drift1d(meta):
     '''Plot the 1D drift/jitter results.
@@ -68,7 +68,7 @@ def drift1d(meta):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 def cc_spec(meta, ref_spec, fit_spec, n):
     '''Compare the spectrum used for cross-correlation with the current spectrum.
@@ -100,7 +100,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 def cc_vals(meta, vals, n):
     '''Make the cross-correlation strength plot.
@@ -127,4 +127,4 @@ def cc_vals(meta, vals, n):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)

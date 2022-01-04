@@ -29,6 +29,7 @@ class Model:
         """
         # Set up model attributes
         self.name = 'New Model'
+        self.fitter = None
         self._time = None
         self._flux = None
         self._units = q.day
@@ -122,7 +123,7 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue', **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, **kwargs):
         """Plot the model
 
         Parameters
@@ -142,18 +143,20 @@ class Model:
         # Make the figure
         if ax is None:
             fig = plt.figure(figsize=(8,6))
-            ax = fig.add_subplot(111)
+            ax = fig.gca()
 
         # Set the time
         self.time = time
 
         # Plot the model
-        ax.plot(self.time, self.eval(**kwargs), '-', label=self.name, color=color)
-        #fig.line(self.time, self.eval(**kwargs), legend=self.name, color=color)
+        label = self.fitter
+        if self.name!='New Model':
+            label += ': '+self.name
+        ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
 
         if components and self.components is not None:
             for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), **kwargs)
+                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))

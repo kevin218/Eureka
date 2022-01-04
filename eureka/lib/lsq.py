@@ -44,9 +44,6 @@ def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     return residuals
 
 def minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars):
-    #modelfunc = lambda freepars, params, uncertainty: callmodelfunc(freepars, params, uncertainty)
     return op.leastsq(modelfunc, freepars,
                       args=(lc, model, pmin, pmax, freenames, indep_vars),
-                      factor=100, ftol=1e-16, xtol=1e-16, gtol=1e-16)#, diag=1./stepsize[ifreepars])
-
-#params, pmin, pmax, uncertainty, ifreepars, numevents, fit[j].nobj, cummodels, functype, fit[j].etc, myfuncs, iparams, funcx, flux
+                      factor=100, ftol=1e-16, xtol=1e-15, gtol=1e-16, full_output=True)#, diag=1./stepsize[ifreepars])

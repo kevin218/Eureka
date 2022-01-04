@@ -1,46 +1,36 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
-toffset  59694 #to be subtracted from the time array to avoid floating point precision problems when fitting for t0
+allapers        True # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 
-fit_par ./s5_fit_par.ecf
+fit_par         ./s5_fit_par.ecf # What fitting ecf do you want to use?
+run_verbose     True
+fit_method      [lsq,emcee,dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
+run_myfuncs     transit #other functions not available yet
 
-#fix_ld   False #use limb darkening file?
-#ld_file  /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
-
-run_verbose		True
-run_output          False
-run_show_plot       False
-fit_method	[lsq]	#options are: lsq, mcmc, nested (can list multiple types separated by commas)
-#run_plot_raw_data   True
-#run_fit_white       False
-#run_divide_white    False
-run_myfuncs	[transit] #other functions not available yet
-
-save_allan_plot     True
+# Limb darkening controls (not yet implemented)
+#fix_ld          False #use limb darkening file?
+#ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
 
 #mcmc
-run_nsteps          4000
-run_nwalkers	50
-run_nburn           2000
+run_nsteps      4000
+run_nwalkers    50
+run_nburn       2000
+max_pos_iters   10 # How many times should the initial walkers be regenerated to fit within priors before giving up and using fewer walkers than desired?
 
 #dynesty
-run_nlive	1024
-run_bound	'multi'
-run_ndims	6
-run_sample	'unif'
-run_tol		0.1
-
-#run_clipsigma       0 #remove outliers
-#run_clipiters       0
+run_nlive       1024
+run_bound       'multi'
+run_sample      'unif'
+run_tol         0.1
 
 # Diagnostics
-isplots_S5  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-hide_plots	False		# If True, plots will automatically be closed rather than popping up
+isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+hide_plots      False # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir      /Users/megan/Documents/Code/
+topdir          /home/User/
 
 # Directories relative to project dir
-inputdir    /EurekaFakeData/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-outputdir	/EurekaFakeData/JWST-Sim/NIRCam/Stage5/
+inputdir        /Data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
+outputdir       /Data/JWST-Sim/NIRCam/Stage5/
 
