@@ -285,7 +285,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
-    sampler = NestedSampler(lnprob, ptform, ndims,
+    sampler = NestedSampler(lnprob, ptform_lambda, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
