@@ -58,8 +58,17 @@ def lsqfitter(lc, model, meta, **kwargs):
     
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
+
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plot_fit(lc, model, meta, fitter='lsq')
+
     residuals = (lc.flux - model_lc)
-    cov_mat = results[1]*np.var(residuals)
+    if results[1] is not None:
+        cov_mat = results[1]*np.var(residuals)
+    else:
+        # Sometimes lsq will fail to converge and will return a None covariance matrix
+        cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
 
     # Plot fit
@@ -143,8 +152,6 @@ def emceefitter(lc, model, meta, **kwargs):
     """
     lsq_sol = lsqfitter(lc, model, meta, **kwargs)
     
-    print(lsq_sol)
-    
     lc.unc *= np.sqrt(lsq_sol.chi2red)
     
     # Group the different variable types
@@ -154,20 +161,36 @@ def emceefitter(lc, model, meta, **kwargs):
     model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
     
-    step_size = np.diag(lsq_sol.cov_mat)
-    #step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
+    if lsq_sol.cov_mat is not None:
+        step_size = np.diag(lsq_sol.cov_mat)
+    else:
+        # Sometimes the lsq fitter won't converge and will give None as the covariance matrix
+        # In that case, we need to establish the step size in another way. A fractional step compared
+        # to the value can work okay, but it may fail if the step size is larger than the bounds
+        # which is not uncommon for precisely known values like t0 and period
+        print('LSQ did not converge - falling back on a 0.1% step size')
+        step_size = 0.001*freepars
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
     run_nsteps = meta.run_nsteps
     burn_in = meta.run_nburn
     
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
+    in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
+    n_loops = 0
+    while not np.all(in_range) and n_loops<meta.max_pos_iters:
+        pos = pos[in_range]
+        step_size /= 2 # Make the proposal size a bit smaller to reduce odds of rejection
+        pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers-len(pos))]))
+        in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
+    if not np.any(in_range):
+        raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
+                             'Check your stating position, decrease your step size, or increase the bounds on your parameters')
+    elif not np.all(in_range):
+        print('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
+        print('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
+        nwalkers = np.sum(in_range)
     
-    out_of_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
-    print(out_of_range)
-    pos = pos[out_of_range]
-    print(sum(out_of_range))
-    nwalkers = sum(out_of_range)
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
@@ -194,8 +217,10 @@ def emceefitter(lc, model, meta, **kwargs):
     chi2red = computeRedChiSq(lc, model, meta, freenames)
     
     if meta.run_verbose:
+        print('\nEMCEE RESULTS:\n')
         for freenames_i, fit_params_i in zip(freenames, fit_params):
             print('{0}: {1}'.format(freenames_i, fit_params_i))
+        print('\n')
     
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -234,7 +259,6 @@ def dynestyfitter(lc, model, meta, **kwargs):
     """
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, **kwargs)
-    print(lsq_sol)
     
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
     lc.unc *= np.sqrt(lsq_sol.chi2red)
