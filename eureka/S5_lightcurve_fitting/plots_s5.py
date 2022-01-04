@@ -34,23 +34,21 @@ def plot_fit(lc, model, meta, fitter):
     
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-    if meta.isplots_S5 >= 1:
-        model.plot(time=lc.time, draw=True)
         
-        plt.figure(int('51{}_'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
-        plt.clf()
-        fig, ax = plt.subplots(2,1)
-        ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-        ax[0].plot(lc.time, model_lc, zorder = 10)
+    fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    plt.clf()
+    ax = fig.subplots(2,1)
+    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
+    ax[0].plot(lc.time, model_lc, zorder = 10)
 
-        ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
+    ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
 
-        fname = 'figs/fig51{}_lc_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
-        plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if meta.hide_plots:
-            plt.close()
-        else:
-            plt.pause(0.1)
+    fname = 'figs/fig51{}_lc_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.2)
     
     return
 
@@ -89,7 +87,7 @@ def plot_rms(lc, model, meta, fitter):
     rms, stderr, binsz = computeRMS(residuals, binstep=1)
     normfactor = 1e-6
     plt.rcParams.update({'legend.fontsize': 11}) # FINDME: this should not be done here but where the rcparams are defined for Eureka
-    plt.figure(int('52{}_'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    plt.figure(int('52{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
     plt.clf()
     plt.suptitle(' Correlated Noise', size=16)
     plt.loglog(binsz, rms / normfactor, color='black', lw=1.5, label='Fit RMS', zorder=3)  # our noise
@@ -106,7 +104,7 @@ def plot_rms(lc, model, meta, fitter):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
     return
     
@@ -137,12 +135,13 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    fig = corner.corner(samples, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
+    fig = plt.figure(int('53{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
     return
