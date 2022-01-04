@@ -4,7 +4,7 @@ allapers	    True # Run S5 on all of the apertures considered in S4? Otherwise w
 
 fit_par         ./s5_fit_par.ecf # What fitting ecf do you want to use?
 run_verbose		True
-fit_method      [lsq] #options are: lsq, emcee, dynesty, and lmfit (can list multiple types separated by commas)
+fit_method      [lsq] #options are: lsq, mcmc, or nested (can list multiple types separated by commas)
 run_myfuncs	    [transit] #other functions not available yet
 
 # Limb darkening controls (not yet implemented)

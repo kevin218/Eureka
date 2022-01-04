@@ -46,4 +46,4 @@ def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
 def minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars):
     return op.leastsq(modelfunc, freepars,
                       args=(lc, model, pmin, pmax, freenames, indep_vars),
-                      factor=100, ftol=1e-16, xtol=1e-16, gtol=1e-16, full_output=True)#, diag=1./stepsize[ifreepars])
+                      factor=100, ftol=1e-16, xtol=1e-15, gtol=1e-16, full_output=True)#, diag=1./stepsize[ifreepars])

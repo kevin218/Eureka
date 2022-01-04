@@ -281,7 +281,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     
     # START DYNESTY
     l_args = [lc, model, pmin, pmax, freenames]
-
+    
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
