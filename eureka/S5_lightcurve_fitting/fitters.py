@@ -10,7 +10,7 @@ from dynesty.utils import resample_equal
 from ..lib import lsq
 from .parameters import Parameters
 from .plots_s5 import plot_fit, plot_rms, plot_corner
-from .likelihood import computeRedChiSq, lnprob, ptform
+from .likelihood import computeRedChiSq, lnprob, ptforms
 
 def lsqfitter(lc, model, meta, **kwargs):
     """Perform least-squares fit.
@@ -59,8 +59,10 @@ def lsqfitter(lc, model, meta, **kwargs):
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
     residuals = (lc.flux - model_lc)
-    cov_mat = results[1]*np.var(residuals)
-    best_model.__setattr__('cov_mat',cov_mat)
+    #FINDME: error here if scipy.optimize.leastsq gives "None" for covariance estimate; to be fixed later
+    if results[1]!=None:
+        cov_mat = results[1]*np.var(residuals)
+        best_model.__setattr__('cov_mat',cov_mat)
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -154,8 +156,12 @@ def emceefitter(lc, model, meta, **kwargs):
     model.update(lsq_sol.fit_params, freenames)
     print('after update: ', freepars)
     
-    step_size = np.diag(lsq_sol.cov_mat)
-    #step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
+    #FINDME: Workaround for if scipy.optimize.leastsq didn't produce covariance; to be removed later.
+    if hasattr(lsq_sol,'cov_mat'):
+        step_size = np.diag(lsq_sol.cov_mat)
+    else:
+        step_size = np.array([5e-3, 5e-3, 1e-1, 5e-3, 1e-2, 1e-2])
+
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
     run_nsteps = meta.run_nsteps
@@ -257,11 +263,11 @@ def dynestyfitter(lc, model, meta, **kwargs):
     
     # START DYNESTY
     l_args = [lc, model, pmin, pmax, freenames]
-
+    
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
-    sampler = NestedSampler(lnprob, ptform, ndims,
+    sampler = NestedSampler(lnprob, ptform_lambda, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
@@ -498,12 +504,12 @@ def group_variables_lmfit(model):
     indep_vars = {}
     for param in all_params:
         param = list(param)
-        if param[2] == 'free':
+        if param[1][1] == 'free':
             freenames.append(param[0])
-            param[2] = True
+            param[1] = True
             param_list.append(tuple(param))
-        elif param[2] == 'fixed':
-            param[2] = False
+        elif param[1][1] == 'fixed':
+            param[1] = False
             param_list.append(tuple(param))
         else:
             indep_vars[param[0]] = param[1]

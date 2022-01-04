@@ -131,7 +131,7 @@ def fitJWST(eventlabel, s4_meta=None):
             for channel in range(meta.nspecchan):
                 # Create directories for Stage 5 processing outputs
                 run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
-                meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val)
+                meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
 
                 # Copy existing S4 log file and resume log
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
