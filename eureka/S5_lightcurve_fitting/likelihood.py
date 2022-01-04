@@ -154,7 +154,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     chi2red = chi2 / (len(lc.unc) - len(freenames))
 
     if meta.run_verbose:
-        print('red. Chi2: ', chi2red)
+        print('Reduced Chi-squared: ', chi2red)
 
     return chi2red
 

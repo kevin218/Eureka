@@ -43,6 +43,8 @@ def fitJWST(eventlabel, s4_meta=None):
     - December 17-20, 2021 Taylor Bell
         Increasing connectedness of S5 and S4
     '''
+    print("\nStarting Stage 5: Light Curve Fitting\n")
+
     # Initialize a new metadata object
     meta = MetaClass()
     meta.eventlabel = eventlabel
@@ -74,7 +76,7 @@ def fitJWST(eventlabel, s4_meta=None):
             # There may be multiple runs - use the most recent but warn the user
             print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
                  +'Using the metadata file: \n{}\n'.format(files[-1])
-                 +'and will consider aperture ranges listed there. If this metadata file is not a part,\n'
+                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
 
         fname = files[-1] # Pick the last file name (should be the most recent or only file)
@@ -136,8 +138,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Copy existing S4 log file and resume log
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
                 log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
-                log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
-                log.writelog("\nChannel {} of {}\n".format(channel+1, meta.nspecchan))
+                log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
 
                 # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
                 log.writelog('Copying S5 control file')
@@ -157,8 +158,6 @@ def fitJWST(eventlabel, s4_meta=None):
     
                 # Set the intial fitting parameters
                 params = p.Parameters(param_file=meta.fit_par)
-                if meta.run_verbose:
-                    print(params)
 
                 # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
                 t_offset = np.floor(meta.bjdtdb[0])
@@ -187,15 +186,31 @@ def fitJWST(eventlabel, s4_meta=None):
                     modellist.append(t_polynom)
                 model = m.CompositeModel(modellist)
                 
+                print(meta.fit_method)
+
                 # Fit the models using one or more fitters
+                log.writelog("=========================")
                 if 'lsq' in meta.fit_method:
+                    log.writelog("Starting lsq fit.")
                     lc_model.fit(model, meta, fitter='lsq')
+                    log.writelog("Completed lsq fit.")
+                    log.writelog("-------------------------")
                 if 'emcee' in meta.fit_method:
+                    log.writelog("Starting emcee fit.")
                     lc_model.fit(model, meta, fitter='emcee')
+                    log.writelog("Completed emcee fit.")
+                    log.writelog("-------------------------")
                 if 'dynesty' in meta.fit_method:
+                    log.writelog("Starting dynesty fit.")
                     lc_model.fit(model, meta, fitter='dynesty')
+                    log.writelog("Completed dynesty fit.")
+                    log.writelog("-------------------------")
                 if 'lmfit' in meta.fit_method:
+                    log.writelog("Starting lmfit fit.")
                     lc_model.fit(model, meta, fitter='lmfit')
+                    log.writelog("Completed lmfit fit.")
+                    log.writelog("-------------------------")
+                log.writelog("=========================")
 
                 # Plot the results from the fit(s)
                 if meta.isplots_S5 >= 1:

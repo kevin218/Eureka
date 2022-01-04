@@ -45,7 +45,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
     
     if meta.run_verbose:
-        print(results)
+        print("\nVerbose lsq results:", results, '\n')
     
     # Get the best fit params
     fit_params = results[0]
@@ -78,12 +78,11 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    if meta.run_verbose:
-        print('\nLSQ RESULTS:\n')
-        for freenames_i, fit_params_i in zip(freenames, fit_params):
-            print('{0}: {1}'.format(freenames_i, fit_params_i))
-        print('\n')
-    
+    print('\nLSQ RESULTS:')
+    for freenames_i, fit_params_i in zip(freenames, fit_params):
+        print('{0}: {1}'.format(freenames_i, fit_params_i))
+    print()
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plot_rms(lc, model, meta, fitter='lsq')
@@ -150,16 +149,13 @@ def emceefitter(lc, model, meta, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
+    print('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
     
     lc.unc *= np.sqrt(lsq_sol.chi2red)
     
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-    
-    print('before update: ', freepars)
-    model.update(lsq_sol.fit_params, freenames)
-    print('after update: ', freepars)
     
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
@@ -191,6 +187,7 @@ def emceefitter(lc, model, meta, **kwargs):
         print('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
         nwalkers = np.sum(in_range)
     
+    print('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
@@ -216,12 +213,11 @@ def emceefitter(lc, model, meta, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
     
-    if meta.run_verbose:
-        print('\nEMCEE RESULTS:\n')
-        for freenames_i, fit_params_i in zip(freenames, fit_params):
-            print('{0}: {1}'.format(freenames_i, fit_params_i))
-        print('\n')
-    
+    print('\nEMCEE RESULTS:')
+    for freenames_i, fit_params_i in zip(freenames, fit_params):
+        print('{0}: {1}'.format(freenames_i, fit_params_i))
+    print()
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plot_rms(lc, model, meta, fitter='emcee')
@@ -257,6 +253,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
+    print('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
     
@@ -266,13 +263,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     
-    print('before update: ', freepars)
-    # UPDATE MODEL PARAMETERS WITH LSQ BEST FIT
-    model.update(lsq_sol.fit_params, freenames)
-    print('after update: ', freepars)
-    
     # DYNESTY
-    
     nlive = meta.run_nlive # number of live points
     bound = meta.run_bound  # use MutliNest algorithm for bounds
     ndims = len(freepars)  # two parameters
@@ -285,6 +276,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
+    print('Running dynesty...')
     sampler = NestedSampler(lnprob, ptform_lambda, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
@@ -294,7 +286,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
     
     if meta.run_verbose:
-        print("log(Z) = {} ± {}".format(logZdynesty, logZerrdynesty))
+        print()
         print(res.summary())
     
     # get function that resamples from the nested samples to give sampler with equal weight
@@ -329,9 +321,10 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
     
-    print('\nDYNESTY RESULTS:\n')
+    print('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
+    print()
     
     # Plot Allan plot
     if meta.isplots_S5 >= 3:

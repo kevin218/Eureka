@@ -92,7 +92,7 @@ def lcJWST(eventlabel, s3_meta=None):
             # There may be multiple runs - use the most recent but warn the user
             print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
                  +'Using the metadata file: \n{}\n'.format(fnames[-1])
-                 +'and will consider aperture ranges listed there. If this metadata file is not a part,\n'
+                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
     
         fname = fnames[-1] # Pick the last file name (should be the most recent or only file)
