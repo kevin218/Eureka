@@ -12,7 +12,7 @@ from .parameters import Parameters
 from .plots_s5 import plot_fit, plot_rms, plot_corner
 from .likelihood import computeRedChiSq, lnprob, ptform
 
-def lsqfitter(lc, model, meta, **kwargs):
+def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
 
     Parameters
@@ -61,7 +61,7 @@ def lsqfitter(lc, model, meta, **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter='lsq')
+        plot_fit(lc, model, meta, fitter=calling_function)
 
     residuals = (lc.flux - model_lc)
     if results[1] is not None:
@@ -150,7 +150,7 @@ def emceefitter(lc, model, meta, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
-    lsq_sol = lsqfitter(lc, model, meta, **kwargs)
+    lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
     
     lc.unc *= np.sqrt(lsq_sol.chi2red)
     
@@ -258,7 +258,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
         Updated documentation. Reduced repeated code.
     """
     # RUN LEAST SQUARES
-    lsq_sol = lsqfitter(lc, model, meta, **kwargs)
+    lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
     
     # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
     lc.unc *= np.sqrt(lsq_sol.chi2red)
@@ -275,7 +275,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     
     nlive = meta.run_nlive # number of live points
     bound = meta.run_bound  # use MutliNest algorithm for bounds
-    ndims = meta.run_ndims  # two parameters
+    ndims = len(freepars)  # two parameters
     sample = meta.run_sample  # uniform sampling
     tol = meta.run_tol  # the stopping criterion
     
@@ -522,12 +522,13 @@ def group_variables_lmfit(model):
     indep_vars = {}
     for param in all_params:
         param = list(param)
-        if param[2] == 'free':
+        print(param)
+        if param[1][1] == 'free':
             freenames.append(param[0])
-            param[2] = True
+            param[1][1] = True
             param_list.append(tuple(param))
-        elif param[2] == 'fixed':
-            param[2] = False
+        elif param[1][1] == 'fixed':
+            param[1][1] = False
             param_list.append(tuple(param))
         else:
             indep_vars[param[0]] = param[1]
