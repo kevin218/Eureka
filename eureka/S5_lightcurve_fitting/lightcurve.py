@@ -195,6 +195,7 @@ class LightCurve(m.Model):
         # Format axes
         ax.set_xlabel(str(self.time_units))
         ax.set_ylabel('Flux')
+        ax.legend(loc='best')
         fig.tight_layout()
 
         fname = 'figs/fig54{}_all_fits.png'.format(str(self.channel).zfill(len(str(self.nchannel))))

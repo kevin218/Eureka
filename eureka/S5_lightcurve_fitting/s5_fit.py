@@ -186,27 +186,29 @@ def fitJWST(eventlabel, s4_meta=None):
                     modellist.append(t_polynom)
                 model = m.CompositeModel(modellist)
                 
-                print(meta.fit_method)
-
                 # Fit the models using one or more fitters
                 log.writelog("=========================")
                 if 'lsq' in meta.fit_method:
                     log.writelog("Starting lsq fit.")
+                    model.fitter = 'lsq'
                     lc_model.fit(model, meta, fitter='lsq')
                     log.writelog("Completed lsq fit.")
                     log.writelog("-------------------------")
                 if 'emcee' in meta.fit_method:
                     log.writelog("Starting emcee fit.")
+                    model.fitter = 'emcee'
                     lc_model.fit(model, meta, fitter='emcee')
                     log.writelog("Completed emcee fit.")
                     log.writelog("-------------------------")
                 if 'dynesty' in meta.fit_method:
                     log.writelog("Starting dynesty fit.")
+                    model.fitter = 'dynesty'
                     lc_model.fit(model, meta, fitter='dynesty')
                     log.writelog("Completed dynesty fit.")
                     log.writelog("-------------------------")
                 if 'lmfit' in meta.fit_method:
                     log.writelog("Starting lmfit fit.")
+                    model.fitter = 'lmfit'
                     lc_model.fit(model, meta, fitter='lmfit')
                     log.writelog("Completed lmfit fit.")
                     log.writelog("-------------------------")
