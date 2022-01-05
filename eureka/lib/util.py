@@ -115,7 +115,7 @@ def makedirectory(meta, stage, **kwargs):
 
 def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     """
-    Creates file directory
+    Reads file directory
 
     Args:
         meta: metadata object
