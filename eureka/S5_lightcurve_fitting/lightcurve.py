@@ -11,7 +11,10 @@ import matplotlib.pyplot as plt
 from . import models as m
 from . import fitters as f
 from .utils import COLORS
-
+#FINDME: Keep reload statements for easy testing
+from importlib import reload
+reload(m)
+reload(f)
 
 class LightCurveFitter:
     def __init__(self, time, flux, model):
@@ -144,7 +147,7 @@ class LightCurve(m.Model):
         if not isinstance(model, m.CompositeModel):
             model = m.CompositeModel([model])
             model.time = self.time
-        
+
         if fitter == 'lmfit':
             self.fitter_func = f.lmfitter
         elif fitter == 'demc':
@@ -157,10 +160,10 @@ class LightCurve(m.Model):
             self.fitter_func = f.dynestyfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
-        
+
         # Run the fit
         fit_model = self.fitter_func(self, model, meta, **kwargs)
-        
+
         # Store it
         if fit_model is not None:
             self.results.append(fit_model)

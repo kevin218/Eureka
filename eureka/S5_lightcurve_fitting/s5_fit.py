@@ -9,6 +9,11 @@ from . import parameters as p
 from . import lightcurve as lc
 from . import models as m
 from .utils import get_target_data
+#FINDME: Keep reload statements for easy testing
+from importlib import reload
+reload(p)
+reload(m)
+reload(lc)
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -35,7 +40,7 @@ def fitJWST(eventlabel, s4_meta=None):
     Notes
     -------
     History:
-    
+
     - November 12-December 15, 2021 Megan Mansfield
         Original version
     - December 17-20, 2021 Megan Mansfield
@@ -48,15 +53,15 @@ def fitJWST(eventlabel, s4_meta=None):
     # Initialize a new metadata object
     meta = MetaClass()
     meta.eventlabel = eventlabel
-    
+
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
-    
+
     # load savefile
     if s4_meta == None:
-        # Search for the S2 output metadata in the inputdir provided in 
+        # Search for the S2 output metadata in the inputdir provided in
         # First just check the specific inputdir folder
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
@@ -83,7 +88,7 @@ def fitJWST(eventlabel, s4_meta=None):
         fname = fname[:-4] # Strip off the .dat ending
 
         s4_meta = me.loadevent(fname)
-    
+
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
     if s4_outputdir[0]=='/':
@@ -100,7 +105,7 @@ def fitJWST(eventlabel, s4_meta=None):
 
     # Overwrite the inputdir with the exact output directory from S4
     meta.inputdir = s4_outputdir
-    meta.old_datetime = s4_meta.datetime # Capture the date that the 
+    meta.old_datetime = s4_meta.datetime # Capture the date that the
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
@@ -122,14 +127,14 @@ def fitJWST(eventlabel, s4_meta=None):
             meta.spec_hw = spec_hw_val
 
             meta.bg_hw = bg_hw_val
-            
+
             # Do some folder swapping to be able to reuse this function to find S4 outputs
             tempfolder = meta.outputdir_raw
             meta.outputdir_raw = meta.inputdir_raw
             meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
-            
+
             for channel in range(meta.nspecchan):
                 # Create directories for Stage 5 processing outputs
                 run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
@@ -155,7 +160,7 @@ def fitJWST(eventlabel, s4_meta=None):
                                     new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
                                 else:
                                     new_file.write(line)
-    
+
                 # Set the intial fitting parameters
                 params = p.Parameters(param_file=meta.fit_par)
 
@@ -167,15 +172,14 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Get the flux and error measurements for the current channel
                 flux = meta.lcdata[channel,:]
                 flux_err = meta.lcerr[channel,:]
-                
-                #FINDME: these two lines are because we don't have a constant offset model implemented yet. Will remove later
-                flux_err = flux_err/ np.median(flux[-200:])
-                flux = flux / np.median(flux[-200:])
-                flux += (1-np.min(flux))
+
+                # Normalize flux and uncertainties to avoid large flux values
+                flux_err = flux_err/ flux.mean()
+                flux = flux / flux.mean()
 
                 # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
-                
+
                 # Make the astrophysical and detector models
                 modellist=[]
                 if 'transit' in meta.run_myfuncs:
@@ -185,7 +189,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
                     modellist.append(t_polynom)
                 model = m.CompositeModel(modellist)
-                
+
                 # Fit the models using one or more fitters
                 log.writelog("=========================")
                 if 'lsq' in meta.fit_method:
@@ -217,5 +221,5 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Plot the results from the fit(s)
                 if meta.isplots_S5 >= 1:
                     lc_model.plot(meta)
-    
-    return
+
+    return lc_model

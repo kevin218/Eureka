@@ -11,6 +11,9 @@ from ..lib import lsq
 from .parameters import Parameters
 from .plots_s5 import plot_fit, plot_rms, plot_corner
 from .likelihood import computeRedChiSq, lnprob, ptform
+#FINDME: Keep reload statements for easy testing
+from importlib import reload
+reload(lsq)
 
 def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -41,34 +44,41 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-    
+
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
-    
+
     if meta.run_verbose:
         print("\nVerbose lsq results:", results, '\n')
-    
+    else:
+        print("Success?:",results.success)
+        print(results.message)
+
     # Get the best fit params
-    fit_params = results[0]
-    
+    fit_params = results.x
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    
+
     model.update(fit_params, freenames)
-    
+
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
 
     # Plot fit
-    if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter=calling_function)
+    # if meta.isplots_S5 >= 1:
+    #     plot_fit(lc, model, meta, fitter=calling_function)
 
     residuals = (lc.flux - model_lc)
-    if results[1] is not None:
-        cov_mat = results[1]*np.var(residuals)
-    else:
-        # Sometimes lsq will fail to converge and will return a None covariance matrix
-        cov_mat = None
+    # FINDME
+    # Commented out for now because op.least_squares() doesn't provide covariance matrix
+    # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
+    # if results[1] is not None:
+    #     cov_mat = results[1]*np.var(residuals)
+    # else:
+    #     # Sometimes lsq will fail to converge and will return a None covariance matrix
+    #     cov_mat = None
+    cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
 
     # Plot fit
@@ -86,7 +96,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plot_rms(lc, model, meta, fitter='lsq')
-    
+
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -151,12 +161,14 @@ def emceefitter(lc, model, meta, **kwargs):
     """
     print('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
-    
-    lc.unc *= np.sqrt(lsq_sol.chi2red)
-    
+
+    # SCALE UNCERTAINTIES WITH REDUCED CHI2
+    if rescale_err:
+        lc.unc *= np.sqrt(lsq_sol.chi2red)
+
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-    
+
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
     else:
@@ -164,13 +176,13 @@ def emceefitter(lc, model, meta, **kwargs):
         # In that case, we need to establish the step size in another way. A fractional step compared
         # to the value can work okay, but it may fail if the step size is larger than the bounds
         # which is not uncommon for precisely known values like t0 and period
-        print('LSQ did not converge - falling back on a 0.1% step size')
+        print('No covariance matrix from LSQ - falling back on a 0.1% step size')
         step_size = 0.001*freepars
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
     run_nsteps = meta.run_nsteps
     burn_in = meta.run_nburn
-    
+
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
     in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     n_loops = 0
@@ -186,33 +198,33 @@ def emceefitter(lc, model, meta, **kwargs):
         print('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
         print('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
         nwalkers = np.sum(in_range)
-    
+
     print('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
     if meta.isplots_S5 >= 5:
         plot_corner(samples, lc, meta, freenames, fitter='emcee')
-    
+
     medians = []
     for i in range(len(step_size)):
             q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
-    
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    
+
     model.update(fit_params, freenames)
-    
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plot_fit(lc, model, meta, fitter='emcee')
-    
+
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
-    
+
     print('\nEMCEE RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
@@ -221,10 +233,10 @@ def emceefitter(lc, model, meta, **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plot_rms(lc, model, meta, fitter='emcee')
-    
+
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-    
+
     return best_model
 
 def dynestyfitter(lc, model, meta, **kwargs):
@@ -256,23 +268,24 @@ def dynestyfitter(lc, model, meta, **kwargs):
     print('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
-    
-    # SCALE UNCERTAINTIES WITH REDUCED CHI2 TODO: put a flag for that into config
-    lc.unc *= np.sqrt(lsq_sol.chi2red)
-    
+
+    # SCALE UNCERTAINTIES WITH REDUCED CHI2
+    if rescale_err:
+        lc.unc *= np.sqrt(lsq_sol.chi2red)
+
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-    
+
     # DYNESTY
     nlive = meta.run_nlive # number of live points
     bound = meta.run_bound  # use MutliNest algorithm for bounds
     ndims = len(freepars)  # two parameters
     sample = meta.run_sample  # uniform sampling
     tol = meta.run_tol  # the stopping criterion
-    
+
     # START DYNESTY
     l_args = [lc, model, pmin, pmax, freenames]
-    
+
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
@@ -281,55 +294,55 @@ def dynestyfitter(lc, model, meta, **kwargs):
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
-    
+
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
-    
+
     if meta.run_verbose:
         print()
         print(res.summary())
-    
+
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples = resample_equal(res.samples, weights)
     if meta.run_verbose:
         print('Number of posterior samples is {}'.format(len(samples)))
-    
+
     # plot using corner.py
     if meta.isplots_S5 >= 5:
         plot_corner(samples, lc, meta, freenames, fitter='dynesty')
-    
+
     medians = []
     for i in range(len(freenames)):
             q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
-    
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    
+
     model.update(fit_params, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-    
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plot_fit(lc, model, meta, fitter='dynesty')
-    
+
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
-    
+
     print('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
     print()
-    
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plot_rms(lc, model, meta, fitter='dynesty')
-    
+
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -365,59 +378,59 @@ def lmfitter(lc, model, meta, **kwargs):
 
     # Group the different variable types
     param_list, freenames, indep_vars = group_variables_lmfit(model)
-    
+
     # Add the time as an independent variable
     indep_vars['time'] = lc.time
-    
+
     # Initialize lmfit Params object
     initialParams = lmfit.Parameters()
     # Insert parameters
     initialParams.add_many(*param_list)
-    
+
     # Create the lmfit lightcurve model
     lcmodel = lmfit.Model(model.eval)
     lcmodel.independent_vars = indep_vars.keys()
-    
+
     # Fit light curve model to the simulated data
     result = lcmodel.fit(lc.flux, weights=1/lc.unc, params=initialParams,
                          **indep_vars, **kwargs)
-    
+
     if meta.run_verbose:
         print(result.fit_report())
-    
+
     # Get the best fit params
     fit_params = result.__dict__['params']
     new_params = [(fit_params.get(i).name, fit_params.get(i).value,
                    fit_params.get(i).vary, fit_params.get(i).min,
                    fit_params.get(i).max) for i in fit_params]
-    
+
     # Create new model with best fit parameters
     params = Parameters()
     # Store each as an attribute
     for param in new_params:
         setattr(params, param[0], param[1:])
-    
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
     # best_model.parameters = params
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
-    
+
     model.update(fit_params, freenames)
     # Plot fit
     if meta.isplots_S5 >= 1:
         plot_fit(lc, model, meta, fitter='dynesty')
-    
+
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
-    
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plot_rms(lc, model, meta, fitter='dynesty')
-    
+
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-    
+
     return best_model
 
 def group_variables(model):
@@ -427,7 +440,7 @@ def group_variables(model):
     ----------
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    
+
     Returns
     -------
     freenames: np.array
@@ -448,9 +461,10 @@ def group_variables(model):
     - December 29, 2021 Taylor Bell
         Moved code to separate function to reduce repeated code.
     """
-    all_params = [i for j in [model.components[n].parameters.dict.items()
-                  for n in range(len(model.components))] for i in j]
-    
+    # all_params = [i for j in [model.components[n].parameters.dict.items()
+    #               for n in range(len(model.components))] for i in j]
+    all_params = list(model.components[0].parameters.dict.items())
+
     # Group the different variable types
     freenames = []
     freepars = []
@@ -479,7 +493,7 @@ def group_variables(model):
     freepars = np.array(freepars)
     pmin = np.array(pmin)
     pmax = np.array(pmax)
-    
+
     return freenames, freepars, pmin, pmax, indep_vars
 
 def group_variables_lmfit(model):
@@ -489,7 +503,7 @@ def group_variables_lmfit(model):
     ----------
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    
+
     Returns
     -------
     paramlist: list
@@ -502,13 +516,13 @@ def group_variables_lmfit(model):
     Notes
     -----
     History:
-    
+
     - December 29, 2021 Taylor Bell
         Moved code to separate function to look similar to other fitters.
     """
     all_params = [i for j in [model.components[n].parameters.dict.items()
                   for n in range(len(model.components))] for i in j]
-    
+
     # Group the different variable types
     param_list = []
     freenames = []
@@ -526,5 +540,5 @@ def group_variables_lmfit(model):
         else:
             indep_vars[param[0]] = param[1]
     freenames = np.array(freenames)
-    
+
     return param_list, freenames, indep_vars
