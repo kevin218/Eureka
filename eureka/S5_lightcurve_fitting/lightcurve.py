@@ -96,7 +96,7 @@ class LightCurve(m.Model):
             self.unc = unc
 
         else:
-            self.unc = np.array([np.nan]*len(self.time))
+            self.unc = np.array([np.nan]*len(time))
 
         # Set the time and flux axes
         self.time = time
