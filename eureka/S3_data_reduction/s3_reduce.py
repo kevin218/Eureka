@@ -91,7 +91,8 @@ def reduceJWST(eventlabel, s2_meta=None):
     ecffile = 'S3_' + eventlabel + '.ecf'
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
-
+    meta.eventlabel=eventlabel
+    
     # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
         # Search for the S2 output metadata in the inputdir provided in
