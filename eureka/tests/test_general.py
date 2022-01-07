@@ -57,7 +57,7 @@ def test_NIRCam(capsys):
     # useful to leave messages for future users who run the tests
     with capsys.disabled():
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
-              "included in demo ecf files and documentation\n")
+              "included in demo ecf files and documentation (docs/source/ecf.rst)\n")
         print("NIRCam test:")
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
@@ -67,8 +67,8 @@ def test_NIRCam(capsys):
     # run S3 and S4
     reload(s3)
     reload(s4)
-    ev3 = s3.reduceJWST(meta.eventlabel)
-    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=ev3)
+    s3_meta = s3.reduceJWST(meta.eventlabel)
+    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
 
     # run assertions for S3
     meta.outputdir_raw='/data/JWST-Sim/NIRCam/Stage3/'
@@ -93,7 +93,7 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     # useful to leave messages for future users who run the tests
     with capsys.disabled():
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
-              "included in demo ecf files and documentation\n")
+              "included in demo ecf files and documentation (docs/source/ecf.rst)\n")
         print("NIRSpec test:")
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
@@ -103,8 +103,8 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     # run stage 3 and 4
     reload(s3)
     reload(s4)
-    ev3 = s3.reduceJWST(meta.eventlabel)
-    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=ev3)
+    s3_meta = s3.reduceJWST(meta.eventlabel)
+    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
 
     # assert stage 3 outputs
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage3/'
@@ -129,7 +129,7 @@ def test_MIRI(capsys): # NOTE:: still not implemented
     # useful to leave messages for future users who run the tests
     with capsys.disabled():
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
-              "included in demo ecf files and documentation\n")
+              "included in demo ecf files and documentation (docs/source/ecf.rst)\n")
         print("MIRI test:")
 
     meta.eventlabel='MIRI'
@@ -138,8 +138,8 @@ def test_MIRI(capsys): # NOTE:: still not implemented
     # run S3 and S4
     reload(s3)
     reload(s4)
-    ev3 = s3.reduceJWST(meta.eventlabel)
-    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=ev3)
+    s3_meta = s3.reduceJWST(meta.eventlabel)
+    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
 
     # assert Stage 3 outputs
     meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage3/'
