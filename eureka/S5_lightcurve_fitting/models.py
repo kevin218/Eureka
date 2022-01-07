@@ -247,6 +247,42 @@ class CompositeModel(Model):
 
         return flux
 
+    def syseval(self, **kwargs):
+        """Evaluate the systematic model components only"""
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Empty flux
+        flux = 1.
+
+        # Evaluate flux at each model
+        for model in self.components:
+            if model.modeltype == 'systematic':
+                if model.time is None:
+                    model.time = self.time
+                flux *= model.eval(**kwargs)
+
+        return flux
+
+    def physeval(self, **kwargs):
+        """Evaluate the physical model components only"""
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Empty flux
+        flux = 1.
+
+        # Evaluate flux at each model
+        for model in self.components:
+            if model.modeltype == 'physical':
+                if model.time is None:
+                    model.time = self.time
+                flux *= model.eval(**kwargs)
+
+        return flux
+
     def update(self, newparams, names, **kwargs):
         """Update parameters in the model components"""
         # Evaluate flux at each model
@@ -263,6 +299,9 @@ class PolynomialModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'systematic'
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
@@ -333,6 +372,9 @@ class TransitModel(Model):
         # Inherit from Model calss
         super().__init__(**kwargs)
 
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'physical'
+
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
 
@@ -395,6 +437,9 @@ class ExpRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'systematic'
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')

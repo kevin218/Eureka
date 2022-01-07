@@ -135,7 +135,12 @@ def fitJWST(eventlabel, s4_meta=None):
             meta.outputdir_raw = tempfolder
             run_i += 1
 
-            for channel in [0]: #FINDME range(meta.nspecchan):
+            if meta.testing_S5:
+                # Only fit a single channel while testing
+                chanrng = [0]
+            else:
+                chanrng = range(meta.nspecchan)
+            for channel in chanrng:
                 # Create directories for Stage 5 processing outputs
                 run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
                 meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
@@ -177,14 +182,15 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux_err /= flux.mean()
                 flux /= flux.mean()
 
-                # FINDME: Add exponential ramp for testing purposes
-                print('****Adding exponential ramp systematic to light curve****')
-                fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
-                fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
-                flux *= fakeramp.eval(time=t_mjdtdb)
+                if meta.testing_S5:
+                    # FINDME: Add exponential ramp while testing
+                    print('****Adding exponential ramp systematic to light curve****')
+                    fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
+                    fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
+                    flux *= fakeramp.eval(time=t_mjdtdb)
 
                 # Load the relevant values into the LightCurve model object
-                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
+                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel, time_units=f'MJD_TDB = BJD_TDB - {t_offset}')
 
                 # Make the astrophysical and detector models
                 modellist=[]
