@@ -73,7 +73,7 @@ def reduceJWST(eventlabel, s2_meta=None):
     Notes
     -------
     History:
-    
+
     - May 2021 Kevin Stevenson
         Initial version
     - October 2021 Taylor Bell
@@ -91,6 +91,7 @@ def reduceJWST(eventlabel, s2_meta=None):
     ecffile = 'S3_' + eventlabel + '.ecf'
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
+    meta.eventlabel=eventlabel
 
     # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
@@ -183,7 +184,9 @@ def reduceJWST(eventlabel, s2_meta=None):
             # Open new log file
             meta.logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
             log = logedit.Logedit(meta.logname)
-            log.writelog("\nStarting Stage 3 Reduction")
+            log.writelog("\nStarting Stage 3 Reduction\n")
+            log.writelog(f"Input directory: {meta.inputdir}")
+            log.writelog(f"Output directory: {meta.outputdir}")
             log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
 
             # Copy ecf (and update inputdir in case S3 is being called sequentially with S2)
