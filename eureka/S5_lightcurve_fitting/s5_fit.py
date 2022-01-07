@@ -135,7 +135,7 @@ def fitJWST(eventlabel, s4_meta=None):
             meta.outputdir_raw = tempfolder
             run_i += 1
 
-            for channel in range(meta.nspecchan):
+            for channel in [0]: #FINDME range(meta.nspecchan):
                 # Create directories for Stage 5 processing outputs
                 run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
                 meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
@@ -174,8 +174,14 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux_err = meta.lcerr[channel,:]
 
                 # Normalize flux and uncertainties to avoid large flux values
-                flux_err = flux_err/ flux.mean()
-                flux = flux / flux.mean()
+                flux_err /= flux.mean()
+                flux /= flux.mean()
+
+                # FINDME: Add exponential ramp for testing purposes
+                print('****Adding exponential ramp systematic to light curve****')
+                fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
+                fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
+                flux *= fakeramp.eval(time=t_mjdtdb)
 
                 # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
@@ -188,6 +194,9 @@ def fitJWST(eventlabel, s4_meta=None):
                 if 'polynomial' in meta.run_myfuncs:
                     t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
                     modellist.append(t_polynom)
+                if 'expramp' in meta.run_myfuncs:
+                    t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
+                    modellist.append(t_ramp)
                 model = m.CompositeModel(modellist)
 
                 # Fit the models using one or more fitters
