@@ -3,28 +3,13 @@ import numpy as np
 import scipy.optimize as op
 
 def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
-    #params[ifreepars] = freepars
     ilow            = np.where(freepars < pmin)
     ihi             = np.where(freepars > pmax)
     freepars[ilow]    = pmin[ilow]
     freepars[ihi]     = pmax[ihi]
     model.update(freepars, freenames)
-    #model.time = time
-    #model.components[0].time = time
     model_lc        = model.eval()
     residuals       = (lc.flux - model_lc)/lc.unc
-    '''
-    residuals       = []
-    for j in range(numevents):
-        fit0 = np.ones(fit[j].nobj)
-        k    = 0
-        for i in range(cummodels[j],cummodels[j+1]):
-            if functype[i] == 'ipmap':
-                fit[j].etc[k] = fit0
-            fit0 *= myfuncs[i](params[iparams[i]], funcx[i], fit[j].etc[k])
-            k    += 1
-        residuals = np.concatenate((residuals,(fit0 - flux[j])/uncertainty[j]),axis=0)
-    '''
     '''
     #Apply priors, if they exist
     if len(fit[j].ipriors) > 0:
@@ -44,9 +29,11 @@ def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     return residuals
 
 def minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars):
-    #modelfunc = lambda freepars, params, uncertainty: callmodelfunc(freepars, params, uncertainty)
-    return op.leastsq(modelfunc, freepars,
-                      args=(lc, model, pmin, pmax, freenames, indep_vars),
-                      factor=100, ftol=1e-16, xtol=1e-16, gtol=1e-16)#, diag=1./stepsize[ifreepars])
-
-#params, pmin, pmax, uncertainty, ifreepars, numevents, fit[j].nobj, cummodels, functype, fit[j].etc, myfuncs, iparams, funcx, flux
+    return op.least_squares(modelfunc, freepars,
+                            args=(lc, model, pmin, pmax, freenames, indep_vars),
+                            ftol=1e-15, xtol=1e-15, gtol=1e-15)
+    # return op.leastsq(modelfunc, freepars,
+    #                   args=(lc, model, pmin, pmax, freenames, indep_vars),
+    #                   ftol=1e-16, xtol=1e-15, gtol=1e-16, full_output=True,
+    #                   factor=100, diag=1000./(freepars), maxfev=1000)
+                      #diag=100./(pmax-pmin))

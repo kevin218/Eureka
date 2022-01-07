@@ -47,7 +47,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 def image_and_background(data, meta, n):
     '''Make image+background plot.
@@ -90,7 +90,7 @@ def image_and_background(data, meta, n):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 
 def optimal_spectrum(data, meta, n):
@@ -125,7 +125,7 @@ def optimal_spectrum(data, meta, n):
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 
 def source_position(meta, x_dim, pos_max, m,
@@ -189,7 +189,7 @@ def source_position(meta, x_dim, pos_max, m,
     if meta.hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 def profile(eventdir, profile, submask, n, hide_plots=False):
     '''
@@ -224,4 +224,4 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
     if hide_plots:
         plt.close()
     else:
-        plt.pause(0.1)
+        plt.pause(0.2)

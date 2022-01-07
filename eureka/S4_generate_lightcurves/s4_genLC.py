@@ -92,7 +92,7 @@ def lcJWST(eventlabel, s3_meta=None):
             # There may be multiple runs - use the most recent but warn the user
             print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
                  +'Using the metadata file: \n{}\n'.format(fnames[-1])
-                 +'and will consider aperture ranges listed there. If this metadata file is not a part,\n'
+                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
     
         fname = fnames[-1] # Pick the last file name (should be the most recent or only file)
@@ -107,7 +107,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
     meta = s3_meta
 
-    # Load Eureka! control file and store values in the S2 metadata object
+    # Load Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + eventlabel + '.ecf'
     ecf     = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
@@ -134,19 +134,19 @@ def lcJWST(eventlabel, s3_meta=None):
             meta.spec_hw = spec_hw_val
 
             meta.bg_hw = bg_hw_val
-
-            # Do some folder swapping to be able to reuse this function
+            
+            # Do some folder swapping to be able to reuse this function to find S3 outputs
             tempfolder = meta.outputdir_raw
             meta.outputdir_raw = meta.inputdir_raw
-            meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ts=spec_hw_val, bg=bg_hw_val)
+            meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
-
-            # Create directories for Stage 4 processing outputs
-            run = util.makedirectory(meta, 'S4')
-            meta.outputdir = util.pathdirectory(meta, 'S4', run)
             
-            # Copy existing S4 log file
+            # Create directories for Stage 4 processing outputs
+            run = util.makedirectory(meta, 'S4', ap=spec_hw_val, bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(meta, 'S4', run, ap=spec_hw_val, bg=bg_hw_val)
+            
+            # Copy existing S3 log file and resume log
             meta.s4_logname  = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
