@@ -91,7 +91,7 @@ class LightCurve(m.Model):
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
-                log.log('Warning: Only one uncertainty input, assuming constant uncertainty.')
+                log.writelog('Warning: Only one uncertainty input, assuming constant uncertainty.')
             elif len(unc) != len(time):
                 raise ValueError('Time and unc axes must be the same length.')
 
