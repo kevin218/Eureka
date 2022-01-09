@@ -50,10 +50,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if meta.run_verbose:
-        log.log("\nVerbose lsq results:", results, '\n')
+        log.writelog("\nVerbose lsq results:", results, '\n')
     else:
-        log.log("Success?:",results.success)
-        log.log(results.message)
+        log.writelog("Success?:",results.success)
+        log.writelog(results.message)
 
     # Get the best fit params
     fit_params = results.x
@@ -86,10 +86,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    log.log('\nLSQ RESULTS:')
+    log.writelog('\nLSQ RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
-        log.log('{0}: {1}'.format(freenames_i, fit_params_i))
-    log.log()
+        log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
+    log.writelog()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -161,7 +161,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
-    log.log('\nCalling lsqfitter first...')
+    log.writelog('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
@@ -178,7 +178,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         # In that case, we need to establish the step size in another way. A fractional step compared
         # to the value can work okay, but it may fail if the step size is larger than the bounds
         # which is not uncommon for precisely known values like t0 and period
-        log.log('No covariance matrix from LSQ - falling back on a 0.1% step size')
+        log.writelog('No covariance matrix from LSQ - falling back on a 0.1% step size')
         step_size = 0.001*freepars
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
@@ -197,11 +197,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
         raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
                              'Check your stating position, decrease your step size, or increase the bounds on your parameters')
     elif not np.all(in_range):
-        log.log('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
-        log.log('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
+        log.writelog('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
+        log.writelog('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
         nwalkers = np.sum(in_range)
 
-    log.log('Running emcee...')
+    log.writelog('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
@@ -227,10 +227,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    log.log('\nEMCEE RESULTS:')
+    log.writelog('\nEMCEE RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
-        log.log('{0}: {1}'.format(freenames_i, fit_params_i))
-    log.log()
+        log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
+    log.writelog()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -269,7 +269,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
-    log.log('\nCalling lsqfitter first...')
+    log.writelog('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
 
@@ -293,7 +293,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
-    log.log('Running dynesty...')
+    log.writelog('Running dynesty...')
     sampler = NestedSampler(lnprob, ptform_lambda, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
@@ -303,15 +303,15 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
     if meta.run_verbose:
-        log.log()
-        log.log(res.summary())
+        log.writelog()
+        log.writelog(res.summary())
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples = resample_equal(res.samples, weights)
     if meta.run_verbose:
-        log.log('Number of posterior samples is {}'.format(len(samples)))
+        log.writelog('Number of posterior samples is {}'.format(len(samples)))
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
@@ -338,10 +338,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    log.log('\nDYNESTY RESULTS:')
+    log.writelog('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
-        log.log('{0}: {1}'.format(freenames_i, fit_params_i))
-    log.log()
+        log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
+    log.writelog()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -402,7 +402,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
                          **indep_vars, **kwargs)
 
     if meta.run_verbose:
-        log.log(result.fit_report())
+        log.writelog(result.fit_report())
 
     # Get the best fit params
     fit_params = result.__dict__['params']
