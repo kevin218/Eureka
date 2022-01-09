@@ -83,18 +83,18 @@ def calibrateJWST(eventlabel):
 
     # Create list of file segments
     meta = util.readfiles(meta)
-    num_data_files = len(meta.segment_list)
-    if num_data_files==0:
+    meta.num_data_files = len(meta.segment_list)
+    if meta.num_data_files==0:
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
             rootdir += '/'
         raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
     else:
-        log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
+        log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 
     # If testing, only run the last file
     if meta.testing_S2:
-        istart = num_data_files - 1
+        istart = meta.num_data_files - 1
     else:
         istart = 0
 
@@ -119,9 +119,9 @@ def calibrateJWST(eventlabel):
         raise AssertionError(f'Telescope "{telescope}" detected in FITS header is not JWST or HST and is unsupported!')
 
     # Run the pipeline on each file sequentially
-    for m in range(istart, num_data_files):
+    for m in range(istart, meta.num_data_files):
         # Report progress
-        log.writelog(f'Starting file {m + 1} of {num_data_files}')
+        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
         filename = meta.segment_list[m]
 
         pipeline.run_eurekaS2(filename, meta, log)
@@ -233,9 +233,14 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         # Produce some summary plots if requested
         if not meta.testing_S2 and not self.extract_1d.skip:
             log.writelog('\nGenerating x1dints figure')
-            fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
-            with datamodels.open(meta.outputdir+fname+'.fits') as sp1d:
-                fig, ax = plt.subplots(1,1, figsize=[15,5])
+            m = np.where(meta.segment_list==filename)[0][0]+1
+            max_m = meta.num_data_files
+            fig_number = '11'+str(m).zfill(np.max([int(np.floor(np.log10(max_m))+1),2]))
+            fname = 'fig{}_'.format(fig_number)+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
+            x1d_fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
+            with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
+                plt.figure(int(fig_number), figsize=[15,5])
+                plt.clf()
                 
                 for i in range(len(sp1d.spec)):
                     plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'], sp1d.spec[i].spec_table['FLUX'])
@@ -247,7 +252,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 if meta.hide_plots:
                     plt.close()
                 else:
-                    plt.pause(2)
+                    plt.pause(0.2)
 
         return
 

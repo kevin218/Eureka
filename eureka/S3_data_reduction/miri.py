@@ -59,10 +59,10 @@ def read(filename, data, meta):
 
     # Record integration mid-times in BJD_TDB
     # There is no time information in the simulated MIRI data
-    # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt
+    # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt converted to days
     print('WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
           'because they are not in the .fits files themselves')
-    data.bjdtdb = np.linspace(0, 1.73562874e+04, 1680)[data.intstart - 1:data.intend] # int_times['int_mid_BJD_TDB']
+    data.bjdtdb = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
     # Having wavelengths increase from left to right on the rotated frame makes life easier
