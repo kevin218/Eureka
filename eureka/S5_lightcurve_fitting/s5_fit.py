@@ -178,7 +178,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux = flux / flux.mean()
 
                 # Load the relevant values into the LightCurve model object
-                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
+                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, log, unc=flux_err, name=eventlabel)
 
                 # Make the astrophysical and detector models
                 modellist=[]
@@ -195,25 +195,25 @@ def fitJWST(eventlabel, s4_meta=None):
                 if 'lsq' in meta.fit_method:
                     log.writelog("Starting lsq fit.")
                     model.fitter = 'lsq'
-                    lc_model.fit(model, meta, fitter='lsq')
+                    lc_model.fit(model, meta, log, fitter='lsq')
                     log.writelog("Completed lsq fit.")
                     log.writelog("-------------------------")
                 if 'emcee' in meta.fit_method:
                     log.writelog("Starting emcee fit.")
                     model.fitter = 'emcee'
-                    lc_model.fit(model, meta, fitter='emcee')
+                    lc_model.fit(model, meta, log, fitter='emcee')
                     log.writelog("Completed emcee fit.")
                     log.writelog("-------------------------")
                 if 'dynesty' in meta.fit_method:
                     log.writelog("Starting dynesty fit.")
                     model.fitter = 'dynesty'
-                    lc_model.fit(model, meta, fitter='dynesty')
+                    lc_model.fit(model, meta, log, fitter='dynesty')
                     log.writelog("Completed dynesty fit.")
                     log.writelog("-------------------------")
                 if 'lmfit' in meta.fit_method:
                     log.writelog("Starting lmfit fit.")
                     model.fitter = 'lmfit'
-                    lc_model.fit(model, meta, fitter='lmfit')
+                    lc_model.fit(model, meta, log, fitter='lmfit')
                     log.writelog("Completed lmfit fit.")
                     log.writelog("-------------------------")
                 log.writelog("=========================")

@@ -15,7 +15,7 @@ from .likelihood import computeRedChiSq, lnprob, ptform
 from importlib import reload
 reload(lsq)
 
-def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
+def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
 
     Parameters
@@ -26,6 +26,8 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
         The composite model to fit
     meta: MetaClass
         The metadata object
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
     **kwargs:
         Arbitrary keyword arguments.
 
@@ -48,10 +50,10 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if meta.run_verbose:
-        print("\nVerbose lsq results:", results, '\n')
+        log.log("\nVerbose lsq results:", results, '\n')
     else:
-        print("Success?:",results.success)
-        print(results.message)
+        log.log("Success?:",results.success)
+        log.log(results.message)
 
     # Get the best fit params
     fit_params = results.x
@@ -64,10 +66,6 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
-
-    # Plot fit
-    # if meta.isplots_S5 >= 1:
-    #     plot_fit(lc, model, meta, fitter=calling_function)
 
     residuals = (lc.flux - model_lc)
     # FINDME
@@ -83,15 +81,15 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter='lsq')
+        plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    print('\nLSQ RESULTS:')
+    log.log('\nLSQ RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
-        print('{0}: {1}'.format(freenames_i, fit_params_i))
-    print()
+        log.log('{0}: {1}'.format(freenames_i, fit_params_i))
+    log.log()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -102,7 +100,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
 
     return best_model
 
-def demcfitter(lc, model, meta, **kwargs):
+def demcfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using Differential Evolution Markov Chain.
 
     This is an empty placeholder function to be filled later.
@@ -115,6 +113,8 @@ def demcfitter(lc, model, meta, **kwargs):
         The composite model to fit
     meta: MetaClass
         The metadata object
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
     **kwargs:
         Arbitrary keyword arguments.
 
@@ -133,7 +133,7 @@ def demcfitter(lc, model, meta, **kwargs):
     best_model = None
     return best_model
 
-def emceefitter(lc, model, meta, **kwargs):
+def emceefitter(lc, model, meta, log, **kwargs):
     """Perform sampling using emcee.
 
     Parameters
@@ -144,6 +144,8 @@ def emceefitter(lc, model, meta, **kwargs):
         The composite model to fit
     meta: MetaClass
         The metadata object
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
     **kwargs:
         Arbitrary keyword arguments.
 
@@ -159,11 +161,11 @@ def emceefitter(lc, model, meta, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
-    print('\nCalling lsqfitter first...')
+    log.log('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if rescale_err:
+    if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
@@ -176,7 +178,7 @@ def emceefitter(lc, model, meta, **kwargs):
         # In that case, we need to establish the step size in another way. A fractional step compared
         # to the value can work okay, but it may fail if the step size is larger than the bounds
         # which is not uncommon for precisely known values like t0 and period
-        print('No covariance matrix from LSQ - falling back on a 0.1% step size')
+        log.log('No covariance matrix from LSQ - falling back on a 0.1% step size')
         step_size = 0.001*freepars
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
@@ -195,11 +197,11 @@ def emceefitter(lc, model, meta, **kwargs):
         raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
                              'Check your stating position, decrease your step size, or increase the bounds on your parameters')
     elif not np.all(in_range):
-        print('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
-        print('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
+        log.log('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
+        log.log('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
         nwalkers = np.sum(in_range)
 
-    print('Running emcee...')
+    log.log('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
@@ -225,10 +227,10 @@ def emceefitter(lc, model, meta, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    print('\nEMCEE RESULTS:')
+    log.log('\nEMCEE RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
-        print('{0}: {1}'.format(freenames_i, fit_params_i))
-    print()
+        log.log('{0}: {1}'.format(freenames_i, fit_params_i))
+    log.log()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -239,7 +241,7 @@ def emceefitter(lc, model, meta, **kwargs):
 
     return best_model
 
-def dynestyfitter(lc, model, meta, **kwargs):
+def dynestyfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using dynesty.
 
     Parameters
@@ -250,6 +252,8 @@ def dynestyfitter(lc, model, meta, **kwargs):
         The composite model to fit
     meta: MetaClass
         The metadata object
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
     **kwargs:
         Arbitrary keyword arguments.
 
@@ -265,12 +269,12 @@ def dynestyfitter(lc, model, meta, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     """
-    print('\nCalling lsqfitter first...')
+    log.log('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
     lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if rescale_err:
+    if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
@@ -289,7 +293,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # the prior_transform function for dynesty requires there only be one argument
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
-    print('Running dynesty...')
+    log.log('Running dynesty...')
     sampler = NestedSampler(lnprob, ptform_lambda, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
@@ -299,15 +303,15 @@ def dynestyfitter(lc, model, meta, **kwargs):
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
     if meta.run_verbose:
-        print()
-        print(res.summary())
+        log.log()
+        log.log(res.summary())
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples = resample_equal(res.samples, weights)
     if meta.run_verbose:
-        print('Number of posterior samples is {}'.format(len(samples)))
+        log.log('Number of posterior samples is {}'.format(len(samples)))
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
@@ -334,10 +338,10 @@ def dynestyfitter(lc, model, meta, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
-    print('\nDYNESTY RESULTS:')
+    log.log('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
-        print('{0}: {1}'.format(freenames_i, fit_params_i))
-    print()
+        log.log('{0}: {1}'.format(freenames_i, fit_params_i))
+    log.log()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -348,7 +352,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
 
     return best_model
 
-def lmfitter(lc, model, meta, **kwargs):
+def lmfitter(lc, model, meta, log, **kwargs):
     """Perform a fit using lmfit.
 
     Parameters
@@ -359,6 +363,8 @@ def lmfitter(lc, model, meta, **kwargs):
         The composite model to fit
     meta: MetaClass
         The metadata object
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
     **kwargs:
         Arbitrary keyword arguments.
 
@@ -396,7 +402,7 @@ def lmfitter(lc, model, meta, **kwargs):
                          **indep_vars, **kwargs)
 
     if meta.run_verbose:
-        print(result.fit_report())
+        log.log(result.fit_report())
 
     # Get the best fit params
     fit_params = result.__dict__['params']
@@ -529,7 +535,6 @@ def group_variables_lmfit(model):
     indep_vars = {}
     for param in all_params:
         param = list(param)
-        print(param)
         if param[1][1] == 'free':
             freenames.append(param[0])
             param[1][1] = True
