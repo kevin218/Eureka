@@ -162,7 +162,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     """
     log.writelog('\nCalling lsqfitter first...')
-    lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
+    lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
     if meta.rescale_err:
@@ -271,7 +271,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     """
     log.writelog('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
-    lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
+    lsq_sol = lsqfitter(lc, model, meta, log, calling_function='dynesty_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
     if meta.rescale_err:
