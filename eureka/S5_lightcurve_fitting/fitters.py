@@ -89,7 +89,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     log.writelog('\nLSQ RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
-    log.writelog()
+    log.writelog('')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -230,7 +230,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     log.writelog('\nEMCEE RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
-    log.writelog()
+    log.writelog('')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -303,7 +303,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
     if meta.run_verbose:
-        log.writelog()
+        log.writelog('')
         log.writelog(res.summary())
 
     # get function that resamples from the nested samples to give sampler with equal weight
@@ -341,7 +341,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     log.writelog('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
-    log.writelog()
+    log.writelog('')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
