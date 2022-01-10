@@ -41,14 +41,13 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
     plt.clf()
     ax = fig.subplots(2,1)
-    color = next(COLORS)
-    ax[0].errorbar(lc.time, lc.flux/model_sys, yerr=lc.unc, fmt='.', color='w', ecolor=color, mec=color)
+    ax[0].errorbar(lc.time, lc.flux/model_sys, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
     ax[0].plot(lc.time, model_phys, color='0.3', zorder = 10)
     if isTitle:
         ax[0].set_title(f'{meta.eventlabel} - Channel {lc.channel}')
     ax[0].set_ylabel('Normalized Flux', size=14)
 
-    ax[1].errorbar(lc.time, residuals*1e6, yerr=lc.unc, fmt='.', color='w', ecolor=color, mec=color)
+    ax[1].errorbar(lc.time, residuals*1e6, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
     ax[1].set_ylabel('Residuals (ppm)', size=14)
     ax[1].set_xlabel(str(lc.time_units), size=14)
 

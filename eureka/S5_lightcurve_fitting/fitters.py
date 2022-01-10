@@ -165,7 +165,7 @@ def emceefitter(lc, model, meta, **kwargs):
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if rescale_err:
+    if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
@@ -272,7 +272,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if rescale_err:
+    if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types

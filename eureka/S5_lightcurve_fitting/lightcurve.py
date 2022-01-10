@@ -112,6 +112,8 @@ class LightCurve(m.Model):
         self.channel = channel
         self.nchannel = nchannel
 
+        self.color = next(COLORS)
+
         return
 
     def fit(self, model, meta, fitter='lsq', **kwargs):
@@ -189,11 +191,12 @@ class LightCurve(m.Model):
         fig.clf()
         # Draw the data
         ax = fig.gca()
-        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color='w', ecolor='0.3', mec='0.3', zorder=0)
+        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color='w', ecolor=self.color, mec=self.color, zorder=0)
         # Draw best-fit model
+        ls = ['-', '--', ':', '-.']
         if fits and len(self.results) > 0:
-            for model in self.results:
-                model.plot(self.time, ax=ax, color=next(COLORS), lw=2, zorder=np.inf)
+            for i, model in enumerate(self.results):
+                model.plot(self.time, ax=ax, color='0.3', lw=2, ls=ls[i], zorder=np.inf)
 
         # Format axes
         ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
