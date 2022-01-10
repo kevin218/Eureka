@@ -163,12 +163,12 @@ def emceefitter(lc, model, meta, **kwargs):
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if rescale_err:
+    if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-
+    
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
     else:
@@ -191,6 +191,7 @@ def emceefitter(lc, model, meta, **kwargs):
         step_size /= 2 # Make the proposal size a bit smaller to reduce odds of rejection
         pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers-len(pos))]))
         in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
+        n_loops+=1
     if not np.any(in_range):
         raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
                              'Check your stating position, decrease your step size, or increase the bounds on your parameters')
@@ -270,7 +271,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     lsq_sol = lsqfitter(lc, model, meta, calling_function='dynesty_lsq', **kwargs)
 
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if rescale_err:
+    if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
