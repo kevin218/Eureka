@@ -50,9 +50,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if meta.run_verbose:
-        log.writelog("\nVerbose lsq results:", results, '\n')
+        log.writelog("\nVerbose lsq results: {}\n".format(results))
     else:
-        log.writelog("Success?:",results.success)
+        log.writelog("Success?: {}".format(results.success))
         log.writelog(results.message)
 
     # Get the best fit params
