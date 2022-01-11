@@ -2,31 +2,34 @@
 import os
 import numpy as np
 from astropy.io import fits
-from eureka.S3_data_reduction import sigrej
-from eureka.S3_data_reduction import background
-from eureka.S3_data_reduction import bright2flux as b2f
+from . import sigrej, background, nircam
+from . import bright2flux as b2f
 
 def read(filename, data, meta):
-    '''
-    Reads single FITS file from JWST's NIRSpec instrument.
+    '''Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
     ----------
-    filename          : Single filename to read, should be the Stage 1, *_rateints.fits file.
-    data              : data object in which the fits data will stored
-    returnHdr         : Set True to return header files
+    filename:   str
+        Single filename to read
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
 
     Returns
     -------
-    data            : Array of data frames
-    err             : Array of uncertainty frames
-    hdr             : List of header files
-    master_hdr      : List of master header files
+    data: DataClass
+        The updated data object with the fits data stored inside
 
-    History
-    -------
-    Written by Kevin Stevenson          November 2012
-    Updated for NIRSpec by Aarynn Carter/Eva-Maria Ahrer  June 2021
+    Notes
+    -----
+    History:
+
+    - November 2012 Kevin Stevenson
+        Initial version
+    - June 2021 Aarynn Carter/Eva-Maria Ahrer
+        Updated for NIRSpec
     '''
 
     assert isinstance(filename, str)
@@ -73,31 +76,28 @@ def read(filename, data, meta):
 
 
 def flag_bg(data, meta):
+    '''Outlier rejection of sky background along time axis.
+
+    Uses the code written for NIRCam and untested for NIRSpec, but likely to still work
+
+    Parameters
+    ----------
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
+
+    Returns
+    -------
+    data:   DataClass
+        The updated data object with outlier background pixels flagged.
     '''
-    Outlier rejection of sky background along time axis
+    return nircam.flag_bg(data, meta)
+
+
+def fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
+    '''Fit for a non-uniform background.
+
+    Uses the code written for NIRCam and untested for NIRSpec, but likely to still work
     '''
-
-    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
-
-    bgdata1 = data.subdata[:,  :y1]
-    bgmask1 = data.submask[:,  :y1]
-    bgdata2 = data.subdata[:,y2:  ]
-    bgmask2 = data.submask[:,y2:  ]
-    bgerr1  = np.median(data.suberr[:,  :y1])
-    bgerr2  = np.median(data.suberr[:,y2:  ])
-    estsig1 = [bgerr1 for j in range(len(bg_thresh))]
-    estsig2 = [bgerr2 for j in range(len(bg_thresh))]
-
-    data.submask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
-    data.submask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
-
-    return data
-
-
-def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
-    '''
-
-    '''
-    bg, mask = background.fitbg(data, mask, y1, y2, deg=bg_deg,
-                             threshold=p3thresh, isrotate=2, isplots=isplots)
-    return (bg, mask, n)
+    return nircam.fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=isplots)

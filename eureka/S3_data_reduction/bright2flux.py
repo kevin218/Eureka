@@ -1,44 +1,34 @@
-
 import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
 
-
 def dn2electrons(data, meta):
-    """
-    This function converts the data, uncertainty, and variance arrays from
-    raw units (DN) to electrons.
+    """This function converts the data, uncertainty, and variance arrays from raw units (DN) to electrons.
 
-    Parameters:
-    -----------
-    data:       ndarray
-                data array of shape ([nx, ny, nimpos, npos]) in units of MJy/sr.
-    err:        ndarray
-                uncertainties of data (same shape and units).
-    v0:         ndarray
-                Read noise variance array
-    gainfile:   str
-                Absolute file name of JWST gain reference file (R_GAIN)
-    mhdr:       Record array
-                JWST master header
-    ywindow:    Tuple
-                Start and end of subarray along Y axis
-    xwindow:    Tuple
-                Start and end of subarray along X axis
+    Parameters
+    ----------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of DN.
 
-    Return:
+    meta:   MetaClass
+        The metadata object.
+
+    Returns
     -------
-    This procedure returns the input arrays in units of electrons.
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of electrons.
 
-    Notes:
-    ------
+    Notes
+    -----
     The gain files can be downloaded from CRDS (https://jwst-crds.stsci.edu/browse_db/)
 
-    Modification History:
-    ---------------------
-    Written by Kevin Stevenson      Jun 2021
-    Added gainfile rotation         Jul 2021
+    History:
+    
+    - Jun 2021 Kevin Stevenson
+        Initial version
+    - Jul 2021
+        Added gainfile rotation
     """
     # Subarray parameters
     xstart  = data.mhdr['SUBSTRT1']
@@ -63,42 +53,32 @@ def dn2electrons(data, meta):
 
     return data
 
-
 def bright2dn(data, meta):
-    """
-    This function converts the data, uncertainty, and variance arrays from
-    brightness units (MJy/sr) to raw units (DN).
+    """This function converts the data, uncertainty, and variance arrays from brightness units (MJy/sr) to raw units (DN).
 
-    Parameters:
-    -----------
-    data:       ndarray
-                data array of shape ([nx, ny, nimpos, npos]) in units of MJy/sr.
-    err:        ndarray
-                uncertainties of data (same shape and units).
-    v0:         ndarray
-                Read noise variance array
-    wave:       ndarray
-                Pixel dependent wavelength values
-    photfile:   str
-                Absolute file name of JWST photometric reference file (R_PHOTOM)
-    mhdr:       Record array
-                JWST master header
-    shdr:       Record array
-                JWST science header
+    Parameters
+    ----------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of MJy/sr.
 
-    Return:
+    meta:   MetaClass
+        The metadata object.
+
+    Returns
     -------
-    This procedure returns the input arrays in units of
-    data numbers (DN)).
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of DN.
 
-    Notes:
-    ------
+    Notes
+    -----
     The photometry files can be downloaded from CRDS (https://jwst-crds.stsci.edu/browse_db/)
 
-    Modification History:
-    ---------------------
-    2021-05-28 kbs       Initial version
-    2021-07-21 sz        Added functionality for MIRI
+    History:
+
+    - 2021-05-28 kbs
+        Initial version
+    - 2021-07-21 sz
+        Added functionality for MIRI
     """
     # Load response function and wavelength
     foo = fits.getdata(meta.photfile)
@@ -130,42 +110,52 @@ def bright2dn(data, meta):
     return data
 
 def bright2flux(data, err, v0, pixel_area):
-    """
-    This function converts the data and uncertainty arrays from
-    brightness units (MJy/sr) to flux units (Jy/pix).
+    """This function converts the data and uncertainty arrays from brightness units (MJy/sr) to flux units (Jy/pix).
 
-    Parameters:
-    -----------
-    data:    ndarray
-             data array of shape ([nx, ny, nimpos, npos]) in units of MJy/sr.
-    uncd:    ndarray
-             uncertainties of data (same shape and units).
+    Parameters
+    ----------
+    data:   ndarray
+            data array of shape ([nx, ny, nimpos, npos]) in units of MJy/sr.
+    err:    ndarray
+            uncertainties of data (same shape and units).
+    v0:     ndarray
+            variance array for data (same shape and units).
     pixel_area:  ndarray
-             Pixel area (arcsec/pix)
+            Pixel area (arcsec/pix)
 
-    Return:
+    Returns
     -------
-    This procedure returns the input arrays Data and Uncd into
-    flux units (Jy/pix), if they are defined in the input.
+    data:   ndarray
+            data array of shape ([nx, ny, nimpos, npos]) in units of Jy/pix.
+    err:    ndarray
+            uncertainties of data (same shape and units).
+    v0:     ndarray
+            variance array for data (same shape and units).
 
-    Notes:
-    ------
+    Notes
+    -----
     The input arrays Data and Uncd are changed in place.
 
-    Modification History:
-    ---------------------
-    2005-06-20 statia    Written by  Statia Luszcz, Cornell.
-                         shl35@cornell.edu
-    2005-10-13 jh        Renamed, modified doc, removed posmed, fixed
-    	         nimpos default bug (was float rather than int).
-    2005-10-28 jh        Updated header to give units being converted
-    	         from/to, made srperas value a calculation
-    	         rather than a constant, added Allen reference.
-    2005-11-24 jh        Eliminated NIMPOS.
-    2008-06-28 jh        Allow npos=1 case.
-    2010-01-29 patricio  Converted to python. pcubillos@fulbrightmail.org
-    2010-11-01 patricio  Documented, and incorporated scipy.constants.
-    2021-05-28 kbs       Updated for JWST
+    History:
+
+    - 2005-06-20 Statia Luszcz, Cornell (shl35@cornell.edu).
+    - 2005-10-13 jh
+        Renamed, modified doc, removed posmed, fixed
+        nimpos default bug (was float rather than int).
+    - 2005-10-28 jh        
+        Updated header to give units being converted
+        from/to, made srperas value a calculation
+        rather than a constant, added Allen reference.
+    - 2005-11-24 jh
+        Eliminated NIMPOS.
+    - 2008-06-28 jh
+        Allow npos=1 case.
+    - 2010-01-29 patricio (pcubillos@fulbrightmail.org)
+        Converted to python. 
+    - 2010-11-01 patricio
+        Documented, and incorporated scipy.constants.
+    - 2021-05-28 kbs
+        Updated for JWST
     """
     # steradians per square arcsecond
     srperas = arcsec**2.0
@@ -176,8 +166,28 @@ def bright2flux(data, err, v0, pixel_area):
 
     return data, err, v0
 
-
 def convert_to_e(data, meta, log):
+    """This function converts the data object to electrons from MJy/sr or DN/s.
+
+    Parameters
+    ----------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of MJy/sr or DN/s.
+
+    meta:   MetaClass
+        The metadata object.
+
+    log:    logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of electrons.
+
+    meta:   MetaClass
+        The metadata object.
+    """
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
         # log.writelog('Converting from brightness to flux units')

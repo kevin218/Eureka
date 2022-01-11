@@ -1,0 +1,27 @@
+# Eureka! Control File for Stage 4: Generate Lightcurves 
+
+# Number of spectroscopic channels spread evenly over given wavelength range
+nspecchan   10          # Number of spectroscopic channels
+wave_min    2.5         # Minimum wavelength
+wave_max    4.0         # Maximum wavelength
+allapers	True		# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
+
+# Parameters for drift correction of 1D spectra
+correctDrift    True    # Set True to correct drift/jitter in 1D spectra
+drift_preclip   0       # Ignore first drift_preclip points of spectrum
+drift_postclip  100     # Ignore last drift_postclip points of spectrum, None = no clipping
+drift_range     11      # Trim spectra by +/-X pixels to compute valid region of cross correlation
+drift_hw        5       # Half-width in pixels used when fitting Gaussian, must be smaller than drift_range
+drift_iref      -1      # Index of reference spectrum used for cross correlation, -1 = last spectrum
+sub_mean        True    # Set True to subtract spectrum mean during cross correlation
+
+# Diagnostics
+isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+hide_plots	False		# If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir      /home/User/
+
+# Directories relative to project dir
+inputdir    /Data/JWST-Sim/NIRCam/Stage3/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir	/Data/JWST-Sim/NIRCam/Stage4/

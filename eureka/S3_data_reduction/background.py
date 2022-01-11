@@ -2,29 +2,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 from tqdm import tqdm
-from importlib import reload
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
 def BGsubtraction(data, meta, log, isplots):
-    """
-    Does background subtraction using inst.fit_bg & optspex.fitbg
+    """Does background subtraction using inst.fit_bg & background.fitbg
 
-    Args:
-        dat: Data object
-        md: Metadata object
-        log: log file
-        isplots: amount of plots saved; set in ecf
+    Parameters
+    ----------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of MJy/sr or DN/s.
+    meta:   MetaClass
+        The metadata object.
+    log:    logedit.Logedit
+        The open log in which notes from this step can be added.
+    isplots:    int
+        The amount of plots saved; set in ecf.
 
-    Returns:
-        Corrects subdata with the background
+    Returns
+    -------
+    data:   DataClass
+        Data object containing background subtracted data.
     """
     n_int, bg_y1, bg_y2, subdata, submask = meta.n_int, meta.bg_y1, meta.bg_y2, data.subdata, data.submask
 
     # Load instrument module
-    exec('from eureka.S3_data_reduction import ' + meta.inst + ' as inst', globals())
-    reload(inst)
-
+    if meta.inst == 'miri':
+        from . import miri as inst
+    elif meta.inst == 'nircam':
+        from . import nircam as inst
+    elif meta.inst == 'nirspec':
+        from . import nirspec as inst
+    elif meta.inst == 'niriss':
+        raise ValueError('NIRISS observations are currently unsupported!')
+    else:
+        raise ValueError('Unknown instrument {}'.format(meta.inst))
 
     # Write background
     def writeBG(arg):
@@ -40,25 +52,17 @@ def BGsubtraction(data, meta, log, isplots):
         # Only 1 CPU
         for n in tqdm(range(meta.int_start,n_int)):
             # Fit sky background with out-of-spectra data
-            writeBG(inst.fit_bg(subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
+            writeBG(inst.fit_bg(subdata[n], meta, submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         args_list = []
         for n in range(meta.int_start,n_int):
-            args_list.append((subdata[n], submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
+            args_list.append((subdata[n], meta, submask[n], bg_y1, bg_y2, meta.bg_deg, meta.p3thresh, n, isplots))
         jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
         pool.close()
         for job in tqdm(jobs):
             res = job.get()
-
-    # Calculate variance
-    # bgerr       = np.std(bg, axis=1)/np.sqrt(np.sum(mask, axis=1))
-    # bgerr[np.where(np.isnan(bgerr))] = 0.
-    # v0[np.where(np.isnan(v0))] = 0.   # FINDME: v0 is all NaNs
-    # v0         += np.mean(bgerr**2)
-    # variance    = abs(data) / gain + ev.v0    # FINDME: Gain reference file: 'crds://jwst_nircam_gain_0056.fits'
-    # variance    = abs(subdata*submask) / gain + v0
 
     # 9.  Background subtraction
     # Perform background subtraction
@@ -69,17 +73,37 @@ def BGsubtraction(data, meta, log, isplots):
     return data
 
 # STEP 3: Fit sky background with out-of-spectra data
-def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=False):
-    '''
-    Fit sky background with out-of-spectra data
+def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=0):
+    '''Fit sky background with out-of-spectra data.
 
-    HISTORY
-    -------
-    Written by Kevin Stevenson
-    Removed [::-1] for LDSS3                May 2013
-    Modified x1 and x2 to allow for arrays  Feb 2014
-    '''
+    Parameters
+    ----------
+    dataim: ndarray
+        The data array
+    meta:   MetaClass
+        The metadata object.
+    mask:   ndarray
+        A mask array
+    x1:     ndarray
+    x2:     ndarray
+    deg:    int
+        Polynomial order for column-by-column background subtraction
+    threshold:  int
+        Sigma threshold for outlier rejection during background subtraction
+    isrotate:   bool
+    isplots:    int
+        The amount of plots saved; set in ecf.
 
+    Notes
+    ------
+    History:
+
+    - May 2013
+        Removed [::-1] for LDSS3
+
+    - Feb 2014
+        Modified x1 and x2 to allow for arrays
+    '''
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
     if isrotate == 1:
@@ -107,8 +131,6 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
         bg      = np.zeros((ny,nx))
     else:
         degs = np.ones(ny)*deg
-        #degs[np.where(np.sum(mask[:,    :x1],axis=1) < deg)] = 0
-        #degs[np.where(np.sum(mask[:,x2+1:nx],axis=1) < deg)] = 0
         # Initiate background image with zeros
         bg      = np.zeros((ny,nx))
         # Fit polynomial to each column
@@ -131,7 +153,6 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
                 dataslice = dataim[j,goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
-                    #print(j,ny)
                     nobadpixels = True      #exit while loop
                     #Use coefficients from previous row
                 else:
@@ -139,18 +160,6 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
                     coeffs    = np.polyfit(goodxvals, dataslice, deg=degs[j])
                     # Evaluate model at goodexvals
                     model     = np.polyval(coeffs, goodxvals)
-                    #model = smooth.smooth(dataslice, window_len=window_len, window=windowtype)
-                    #model = sps.medfilt(dataslice, window_len)
-                    '''
-                    if isplots == 6:
-                        plt.figure(4)
-                        plt.clf()
-                        plt.title(str(j))
-                        plt.plot(goodxvals, dataslice, 'bo')
-                        plt.plot(goodxvals, model, 'g-')
-                        #plt.savefig('Fig6_BG_'+str(j)+'.png')
-                        plt.pause(0.01)
-                    '''
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
                     # Simple standard deviation (faster but prone to missing scanned background stars)
@@ -173,14 +182,13 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
             # Evaluate background model at all points, write model to background image
             if len(goodxvals) != 0:
                 bg[j] = np.polyval(coeffs, range(nx))
-                #bg[j] = np.interp(range(nx), goodxvals, model)
                 if isplots == 6:
                     plt.figure(3601)
                     plt.clf()
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    #plt.savefig('Fig6_BG_'+str(j)+'.png')
+                    plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+'.png')
                     plt.pause(0.01)
 
     if isrotate == 1:
@@ -190,40 +198,40 @@ def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=Fals
         bg   = (bg.T)
         mask = (mask.T)
 
-    return bg, mask #,variance
+    return bg, mask
 
 # STEP 3: Fit sky background with out-of-spectra data
-def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
-    '''
-    Fit sky background with out-of-spectra data. Fits background model in
-    the y-direction by default.
+def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=False):
+    '''Fit sky background with out-of-spectra data.
+
+    fitbg2 uses bgmask, a mask for the background region which enables fitting more complex
+    background regions than simply above or below a given distance from the trace. This will
+    help mask the 2nd and 3rd orders of NIRISS.
 
     Parameters
     ----------
-    dataim : np.ndarray
-       Data image to fit the background to.
-    mask : np.ndarray
-       Mask of shape dataim that marks where the orders are.
-    bgmask : np.ndarray
-       Background mask that marks where the background is. The background
-       pixels should equal 0 in the mask, while non-background regions should
-       equal > 0 (the exact value does not matter).
-    deg : int, optional
-       The number of degree polynomial to fit to the background.
-       Default is 1 (linear fit).
-    threshold : float, optional
-       The standard deviation threshold to remove bad background
-       pixels. Default is 5.
-    isrotate : int, optional
-       Rotates the image. Default is 0. isrotate=1 rotates the
-       image 270 degrees. isrotate=2 rotates the image 90 degrees.
-    isplots : bool, optional
-       Plots intermediate steps for the background fitting routine.
-       Default is False.
+    dataim: ndarray
+        The data array
+    meta:   MetaClass
+        The metadata object.
+    mask:   ndarray
+        A mask array
+    bgmask: ndarray
+        A background mask array.
+    deg:    int
+        Polynomial order for column-by-column background subtraction
+    threshold:  int
+        Sigma threshold for outlier rejection during background subtraction
+    isrotate:   bool
+    isplots:    int
+        The amount of plots saved; set in ecf.
 
-    HISTORY
-    -------
-    Written by Kevin Stevenson                 September 2016
+    Notes
+    ------
+    History:
+
+    - September 2016 Kevin Stevenson
+        Initial version
     '''
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
@@ -243,7 +251,8 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
 
     if deg <= 0:
         # Calculate median background of entire frame
-        bg  += np.nanmedian(dataim*bgmask)
+        bg  += np.median(dataim[np.where(mask2)])
+
     elif deg == None :
         # No background subtraction
         pass
@@ -275,6 +284,17 @@ def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
                     coeffs    = np.polyfit(goodxvals, dataslice, deg=degs[j])
                     # Evaluate model at goodexvals
                     model     = np.polyval(coeffs, goodxvals)
+
+                    #model = smooth.smooth(dataslice, window_len=window_len, window=windowtype)
+                    #model = sps.medfilt(dataslice, window_len)
+                    if isplots == 6:
+                        plt.figure(3601)
+                        plt.clf()
+                        plt.title(str(j))
+                        plt.plot(goodxvals, dataslice, 'bo')
+                        plt.plot(goodxvals, model, 'g-')
+                        plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+'.png')
+                        plt.pause(0.01)
 
                     # Calculate residuals
                     residuals = dataslice - model

@@ -11,6 +11,8 @@ pytest
 pyyaml
 requests
 scipy
+stpipe==0.2.0
+stdatamodels==0.2.3
 svo_filters
 nbsphinx
 recommonmark
@@ -18,5 +20,5 @@ myst_parser
 astroquery>=0.4.2
 asdf
 gwcs
-jwst
+jwst==1.1.0
 tqdm
