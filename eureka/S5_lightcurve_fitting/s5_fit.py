@@ -172,10 +172,10 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Get the flux and error measurements for the current channel
                 flux = meta.lcdata[channel,:]
                 flux_err = meta.lcerr[channel,:]
-
-                # Normalize flux and uncertainties to avoid large flux values
-                flux_err = flux_err/ flux.mean()
-                flux = flux / flux.mean()
+                
+                # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
+                flux_err = flux_err/ np.mean(flux[:200])#flux.mean()
+                flux = flux / np.mean(flux[:200])#flux.mean()
 
                 # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
