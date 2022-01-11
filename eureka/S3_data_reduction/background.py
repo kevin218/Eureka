@@ -355,8 +355,7 @@ def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
     bg : np.ndarray
        Background model.
     """
-    bg = np.zeros(bgmask.shape)
-    data = np.nanmedian(data, axis=0)
+    bg = np.zeros(data.shape)
 
     # Takes a median background model
     if deg <= 0:
@@ -367,48 +366,48 @@ def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
         return bg
 
     # Fitting the background model with some degree polynomial
-    else:        
+    else:
 
-        for i in tqdm(range(bgmask.shape[1])):
+        # quickly masking cosmic rays
+        maxim = np.nanmax(data*bgmask, axis=0)
+        x,y   = np.where(maxim>=np.nanmedian(maxim)+np.nanstd(maxim))
+        bg[:,x,y] = np.nan
 
-            nobadpixels = False
-            goodyvals = np.where((np.isnan(bgmask[:,i])==False) & 
-                                 (np.isnan(data[:,i])==False) )[0]
-            x, y = goodyvals+0.0, data[:,i][goodyvals]+0.0
+        for n in tqdm(range(data.shape[0])):
+            for i in range(data.shape[1]):
 
-            while nobadpixels == False:
-
-                coeffs    = np.polyfit(x, y, deg=deg)
-                model     = np.polyval(coeffs, x)
+                nobadpixels = False
+                goodyvals = np.where((np.isnan(bgmask[n,i])==False) & 
+                                     (np.isnan(data[n,i])==False) )[0]
+                x, y = goodyvals+0.0, data[n,i][goodyvals]+0.0
                 
-                residuals = y-model
-                
-                outliers = np.abs(residuals) > np.nanstd(residuals)*threshold
-                
-                if isplots:
-                    plt.plot(x, residuals, '.')
-                    plt.plot(x[outliers], residuals[outliers], '.')
-                    plt.title(i)
-                    plt.show()
-
-                if len(residuals[outliers])==0:
-                    nobadpixels = True
-                else:
-                    x, y = x[~outliers], y[~outliers]
+                while nobadpixels == False:
                     
-            bg[:,i] = np.polyval(coeffs, np.arange(0,bgmask.shape[0],1))
+                    coeffs    = np.polyfit(x, y, deg=deg)
+                    model     = np.polyval(coeffs, x)
+                    
+                    residuals = y-model
+                    
+                    outliers = np.abs(residuals) > np.nanstd(residuals)*threshold
+                    
+                    if isplots:
+                        plt.plot(x, residuals, '.')
+                        plt.plot(x[outliers], residuals[outliers], '.')
+                        plt.title(i)
+                        plt.show()
+                        
+                    if len(residuals[outliers])==0:
+                        nobadpixels = True
+                    else:
+                        x, y = x[~outliers], y[~outliers]
+                    
+                bg[n,i] = np.polyval(coeffs, np.arange(0,bgmask[n].shape[0],1))
 
-        rx, ry = np.where(np.isnan(bgmask))
-        bgmask[rx,ry]=0
+            rx, ry = np.where(np.isnan(bgmask))
+            bgmask[rx,ry]=0
         
-        # quickly gets rid of cosmic rays I think
-        crs = np.zeros(bgmask.shape)
-        for i in range(data.shape[0]):
-            d = np.abs(data[i]) + 0.0
-            outliers = d > np.nanmedian(d)+np.nanstd(d)*threshold*1.5
-            crs[i,outliers] = 1
 
         flipped = np.ones(omask.shape)
         flipped[omask>0] = 0
 
-        return bg*flipped + data*crs
+        return bg*flipped + data

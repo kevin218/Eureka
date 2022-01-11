@@ -13,11 +13,13 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
+from jwst.datamodels import WaveMapModel, WaveMapSingleModel
+
 from .background import fitbg3
 
 
 __all__ = ['read', 'create_niriss_mask', 'image_filtering',
-           'f277_mask', 'fit_bg']
+           'f277_mask', 'fit_bg', 'wave_NIRISS']
 
 
 def read(filename, f277_filename, data, meta):
@@ -42,6 +44,8 @@ def read(filename, f277_filename, data, meta):
     """
 
     assert(filename, str)
+
+    meta.filename = filename
 
     hdu = fits.open(filename)
     f277= fits.open(f277_filename)
@@ -264,6 +268,19 @@ def create_niriss_mask(data, meta, isplots=False):
     data.bkg_mask  = bkg_mask
 
     return img_mask, bkg_mask
+
+
+def wave_NIRISS(wavefiles, meta):
+    """
+    Creates the wavelength solution using code from `jwst` and `gwcs`.
+    """
+    wavemap = WaveMapModel()
+
+    for fn in wavefiles:
+        wavemap.map.append(WaveMapSingleModel(init=fn))
+
+    meta.wavelength = wavemap
+    return meta
 
 
 def fit_bg(data, meta):
