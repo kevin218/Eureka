@@ -2,21 +2,8 @@
 import os
 from setuptools import setup, find_packages
 
-REQUIRES = ['batman-package',
-            'h5py',
-            'ipython',
-            'matplotlib',
-            'numpy>=1.20.0',
-            'pytest',
-            'pyyaml',
-            'scipy',
-            'jwst==1.1.0',
-            'pandas',
-            'bokeh',
-            'lmfit',
-            'svo_filters',
-            'stpipe==0.2.0',
-            'stdatamodels==0.2.3']
+with open('requirements.txt') as f:
+    REQUIRES = f.read().splitlines()
 
 DEPENDENCY_LINKS = ['git+https://github.com/spacetelescope/jwst_gtvt.git@cd6bc76f66f478eafbcc71834d3e735c73e03ed5']
 

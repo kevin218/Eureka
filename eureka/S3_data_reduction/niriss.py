@@ -13,7 +13,7 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
-from jwst.datamodels import WaveMapModel, WaveMapSingleModel
+#from jwst.datamodels import WaveMapModel, WaveMapSingleModel
 
 from .background import fitbg3
 
