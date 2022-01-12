@@ -149,6 +149,8 @@ def fitJWST(eventlabel, s4_meta=None):
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
                 log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
                 log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
+                log.writelog(f"Input directory: {meta.inputdir}")
+                log.writelog(f"Output directory: {meta.outputdir}")
 
                 # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
                 log.writelog('Copying S5 control file')
@@ -170,7 +172,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 params = p.Parameters(param_file=meta.fit_par)
 
                 # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
-                t_offset = np.floor(meta.bjdtdb[0])
+                t_offset = int(np.floor(meta.bjdtdb[0]))
                 t_mjdtdb = meta.bjdtdb - t_offset
                 params.t0.value -= t_offset
 
@@ -183,8 +185,10 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux /= flux.mean()
 
                 if meta.testing_S5:
-                    # FINDME: Add exponential ramp while testing
-                    print('****Adding exponential ramp systematic to light curve****')
+                    # FINDME: Use this area to add systematics into the data
+                    # when testing new systematics models. In this case, I'm
+                    # introducing an exponential ramp to test m.ExpRampModel().
+                    log.writelog('****Adding exponential ramp systematic to light curve****')
                     fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
                     fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
                     flux *= fakeramp.eval(time=t_mjdtdb)
@@ -237,4 +241,4 @@ def fitJWST(eventlabel, s4_meta=None):
                 if meta.isplots_S5 >= 1:
                     lc_model.plot(meta)
 
-    return lc_model
+    return meta, lc_model

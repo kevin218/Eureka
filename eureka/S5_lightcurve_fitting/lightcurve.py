@@ -196,7 +196,7 @@ class LightCurve(m.Model):
         ls = ['-', '--', ':', '-.']
         if fits and len(self.results) > 0:
             for i, model in enumerate(self.results):
-                model.plot(self.time, ax=ax, color='0.3', lw=2, ls=ls[i], zorder=np.inf)
+                model.plot(self.time, ax=ax, color=str(0.3+0.05*i), lw=2, ls=ls[i%4], zorder=np.inf)
 
         # Format axes
         ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
