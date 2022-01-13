@@ -19,8 +19,8 @@ from scipy.ndimage import gaussian_filter
 from .background import fitbg3
 
 
-__all__ = ['read', 'create_niriss_mask', 'image_filtering',
-           'f277_mask', 'fit_bg', 'wave_NIRISS']
+__all__ = ['read', 'simplify_niriss_img', 'image_filtering',
+           'f277_mask', 'fit_bg', 'wave_NIRISS', 'init_mask_guess']
 
 
 def read(filename, f277_filename, data, meta):
@@ -117,7 +117,7 @@ def image_filtering(img, radius=1, gf=4):
 
     return z, g
 
-def f277_mask(img):
+def f277_mask(data, meta, isplots=False):
     """        
     Marks the overlap region in the f277w filter image.                                                       
     
@@ -133,6 +133,7 @@ def f277_mask(img):
     mid : np.ndarray
        (x,y) anchors for where the overlap region is located.
     """
+    img = np.nanmax(data.f277, axis=(0,1))
     mask, _ = image_filtering(img[:150,:500])
     mid = np.zeros((mask.shape[1], 2),dtype=int)
     new_mask = np.zeros(img.shape)
@@ -144,10 +145,18 @@ def f277_mask(img):
             mid[i] = np.array([i, (inds[1]+inds[-2])/2])
 
     q = ((mid[:,0]<420) & (mid[:,1]>0) & (mid[:,0] > 0))
+
+    data.f277_img = new_mask
+
+    if isplots:
+        plt.imshow(new_mask)
+        plt.title('F277 Mask')
+        plt.show()
+
     return new_mask, mid[q]
 
 
-def init_mask_guess(data, meta, isplots=True, save=True):
+def init_mask_guess(data, meta, isplots=False, save=True):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -206,9 +215,15 @@ def init_mask_guess(data, meta, isplots=True, save=True):
         fit = np.poly1d(poly)
         return fit
 
+    try:
+        g = data.simple_img + 0
+    except:
+        g = simplify_niriss_img(data, meta)
 
-    g = create_niriss_mask(data, meta)
-    f,_ = f277_mask(np.nanmax(data.f277,axis=(0,1)))
+    try:
+        f = data.f277_img
+    except:
+        f,_ = f277_mask(data, meta)
 
     g_centers = find_centers(g,cutends=None)
     f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
@@ -249,125 +264,37 @@ def init_mask_guess(data, meta, isplots=True, save=True):
 
     return x, fit1(x), fit2(x)
 
-def create_niriss_mask(data, meta, isplots=False):
-    """
-    This routine takes the output S2 processed images and creates
-    a mask for each order. This routine creates a single image from
-    all 2D images, applies a Gaussian filter to smooth the image, 
-    and a Sobel edge detection method to identify the outlines of
-    each order. The orders are then fit with 2nd degree polynomials.
 
-    Parameters
-    ----------
-    data : object
-    meta : object
+def simplify_niriss_img(data, meta, isplots=False):
+    """
+    Creates an image to map out where the orders are in
+    the NIRISS data.
+
+    Parameters     
+    ----------     
+    data : object  
+    meta : object 
     isplots : bool, optional
-       An option to plot the data and intermediate steps to 
-       retrieve the mask per each order. Default is False.
-
-    Returns
-    -------
-    img_mask : np.ndarray
-       A mask for the 2D images that marks the first and second
-       orders for NIRISS observations. The first order is marked
-       with value = 1; the second order is marked with value = 2.
-       Overlap regions are marked with value = 3.
-    bkg_mask : np.ndarray
-       A mask for the 2D images that marks where the background
-       is for NIRISS observations. Background regions are given
-       value = 1. Regions to ignore are given value = 0.
-
+       An option to plot the data and intermediate steps to
+       retrieve the mask per each order. Default is False.  
     """
-    def poly_fit(x,y,deg):
-        poly = np.polyfit(x,y,deg=deg)
-        return np.poly1d(poly)
-
     perc  = np.nanmax(data.data, axis=0)
-    fperc = np.nanmax(data.f277, axis=(0,1))
 
     # creates data img mask
     z,g = image_filtering(perc)
-
-    # creates mask for f277w image and anchors
-    fmask, fmid = f277_mask(fperc)
-
-    # Identify the center of the 1st and 2nd
-    # spectral orders
-    zmask = np.zeros(z.shape)
-    start = 800
-    mid1 = np.zeros((z[:,start:].shape[1],2),dtype=int)
-    mid2 = np.zeros((z[:,start:].shape[1],2),dtype=int)
-
-    for y in np.arange(start,z.shape[1]-1,1,dtype=int):
-        inds = np.where(z[:,y]==True)[0]
-        
-        if len(inds)>=4:
-            zmask[inds[0]:inds[1],y] = True
-            zmask[inds[2]:inds[-1],y] = True
-            
-            mid1[y-start] = np.array([y, (inds[0]+inds[1])/2])
-            mid2[y-start] = np.array([y, (inds[2]+inds[-1])/2])
-            
-        if y > 1900:
-            zmask[inds[0]:inds[-1],y] = True
-            mid1[y-start] = np.array([y, (inds[0]+inds[-1])/2])
-
-    # Clean 1st order of outliers
-    mid1 = mid1[np.argsort(mid1[:,0])]
-    tempfit = poly_fit(mid1[:,0], mid1[:,1], 3)
-    q1 = ((np.abs(tempfit(mid1[:,0])-mid1[:,1]) <2) &
-          (mid1[:,0] > start))
-    mid1 = mid1[q1]
-
-    # Clean 2nd order of outliers
-    mid2 = mid2[np.argsort(mid2[:,0])]
-    tempfit = poly_fit(mid2[:,0], mid2[:,1], 3)
-    q2 = (( np.abs(tempfit(mid2[:,0])-mid2[:,1]) <2) &
-          (mid2[:,0] > start) )
-    mid2 = mid2[q2]
-
-    # Append overlap region to non-overlap regions
-    x1, y1 = np.append(fmid[:,0], mid1[:,0]), np.append(fmid[:,1], mid1[:,1])
-    x2, y2 = np.append(fmid[:,0], mid2[:,0]), np.append(fmid[:,1], mid2[:,1])
-
-    fit1 = poly_fit(x1,y1,4)
-    fit2 = poly_fit(x2,y2,4)
-
-    img_mask = np.zeros(perc.shape)
-    bkg_mask = np.ones(perc.shape)
-
-    bkg_width = 30
-    for i in range(perc.shape[1]):
-        img_mask[int(fit1(i)-meta.order_width):
-                     int(fit1(i)+meta.order_width),i] += 1
-        bkg_mask[int(fit1(i)-bkg_width):
-                     int(fit1(i)+bkg_width),i] = np.nan
-
-        if i < x2[-1]:
-            img_mask[int(fit2(i)-meta.order_width):
-                         int(fit2(i)+meta.order_width),i] += 2
-            bkg_mask[int(fit2(i)-bkg_width):
-                         int(fit2(i)+bkg_width),i] = np.nan
-
-                
-    # plots some of the intermediate and final steps
+    
     if isplots:
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, 
-                                                 figsize=(14,10))
-        ax1.imshow(g)
-        ax1.set_title('Gaussian smoothed data')
-        ax2.imshow(z)
-        ax2.set_title('Canny edge detector')
-        ax3.imshow(img_mask, vmin=0, vmax=3)
-        ax3.set_title('Final mask')
-        ax4.imshow(bkg_mask, vmin=0, vmax=1)
-        ax4.set_title('Background mask')
+        plt.close()
+        fig, (ax1,ax2) = plt.subplots(nrows=2,figsize=(14,8),
+                                      sharex=True, sharey=True)
+        ax1.imshow(z)
+        ax1.set_title('Canny Edge')
+        ax2.imshow(g)
+        ax2.set_title('Gaussian Blurred')
         plt.show()
 
-    data.order_mask = img_mask
-    data.bkg_mask  = bkg_mask
-
-    return img_mask, bkg_mask
+    data.simple_img = g
+    return g
 
 
 def wave_NIRISS(wavefiles, meta):
