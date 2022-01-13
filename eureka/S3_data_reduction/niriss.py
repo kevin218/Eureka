@@ -2,13 +2,14 @@
 #
 # Written by: Adina Feinstein
 # Last updated by: Adina Feinstein
-# Last updated date: October 12, 2021
+# Last updated date: January 13, 2022
 #
 ####################################
 
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
+from astropy.table import Table
 from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
@@ -146,6 +147,108 @@ def f277_mask(img):
     return new_mask, mid[q]
 
 
+def init_mask_guess(data, meta, isplots=True, save=True):
+    """
+    There are some hard-coded numbers in here right now. The idea
+    is that once we know what the real data looks like, nobody will
+    have to actually call this function and we'll provide a CSV
+    of a good initial guess for each order.
+
+    Parameters  
+    ----------  
+    data : object
+    meta : object
+    isplots : bool, optional
+       An option to plot the data and intermediate steps to
+       retrieve the mask per each order. Default is False.     
+    save : bool, optional
+       An option to save the polynomial fits to a CSV. Default
+       is True. Output table is saved under `niriss_order_guesses.csv`.
+
+    Returns
+    -------
+    x : np.array
+       x-array for the polynomial fits to each order.
+    y1 : np.array
+       Polynomial fit to the first order.
+    y2 : np.array
+       Polynomial fit to the second order.
+    """
+    def rm_outliers(arr):
+        # removes instantaneous outliers
+        diff = np.diff(arr)
+        outliers = np.where(np.abs(diff)>=np.nanmean(diff)+3*np.nanstd(diff))
+        arr[outliers] = 0
+        return arr
+    
+    def find_centers(img, cutends):
+        """ Finds a running center """
+        centers = np.zeros(len(img[0]), dtype=int)
+        for i in range(len(img[0])):
+            inds = np.where(img[:,i]>0)[0]
+            if len(inds)>0:
+                centers[i] = np.nanmean(inds)
+
+        centers = rm_outliers(centers)
+
+        if cutends is not None:
+            centers[cutends:] = 0
+
+        return centers
+    
+    def clean_and_fit(x1,x2,y1,y2):
+        x1,y1 = x1[y1>0], y1[y1>0]
+        x2,y2 = x2[y2>0], y2[y2>0]
+        
+        poly = np.polyfit(np.append(x1,x2),
+                          np.append(y1,y2),
+                          deg=4) # hard coded deg of polynomial fit
+        fit = np.poly1d(poly)
+        return fit
+
+
+    g = create_niriss_mask(data, meta)
+    f,_ = f277_mask(np.nanmax(data.f277,axis=(0,1)))
+
+    g_centers = find_centers(g,cutends=None)
+    f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
+
+    gcenters_1 = np.zeros(len(g[0]),dtype=int)
+    gcenters_2 = np.zeros(len(g[0]),dtype=int)
+
+    for i in range(len(g[0])):
+        inds = np.where(g[:,i]>100)[0]
+        inds_1 = inds[inds <= 78] # hard coded y-boundary for the first order
+        inds_2 = inds[inds>=80]   # hard coded y-boundary for the second order
+        if len(inds_1)>=1:
+            gcenters_1[i] = np.nanmean(inds_1)
+        if len(inds_2)>=1:
+            gcenters_2[i] = np.nanmean(inds_2)
+
+    gcenters_1 = rm_outliers(gcenters_1)
+    gcenters_2 = rm_outliers(gcenters_2)
+    x = np.arange(0,len(gcenters_1),1)
+
+    fit1 = clean_and_fit(x, x[x>800],
+                         f_centers, gcenters_1[x>800])
+    fit2 = clean_and_fit(x, x[(x>800) & (x<1800)],
+                         f_centers, gcenters_2[(x>800) & (x<1800)])
+    
+    if isplots:
+        plt.imshow(g+f)
+        plt.plot(x, fit1(x), 'k')
+        plt.plot(x, fit2(x), 'r')
+        plt.show()
+
+    if save:
+        tab = Table()
+        tab['x'] = x
+        tab['order_1'] = fit1(x)
+        tab['order_2'] = fit2(x)
+        tab.write('niriss_order_guesses.csv',format='csv')
+
+    return x, fit1(x), fit2(x)
+
 def create_niriss_mask(data, meta, isplots=False):
     """
     This routine takes the output S2 processed images and creates
@@ -156,12 +259,9 @@ def create_niriss_mask(data, meta, isplots=False):
 
     Parameters
     ----------
-    imgs : np.ndarray
-       The output `SCI` extension files for NIRISS observations.
-    f277 : np.ndarray
-       The F277W filtered image. Necessary for identifying the 
-       overlap between spectral orders 1 and 2.
-    plot : bool, optional
+    data : object
+    meta : object
+    isplots : bool, optional
        An option to plot the data and intermediate steps to 
        retrieve the mask per each order. Default is False.
 
