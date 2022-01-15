@@ -14,6 +14,7 @@ from .likelihood import computeRedChiSq, lnprob, ptform
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(lsq)
+import pdb
 
 def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -43,8 +44,8 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
         Also saving covariance matrix for later estimation of sampler step size.
     """
     # Group the different variable types
-    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-
+    freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
+    pdb.set_trace()
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if meta.run_verbose:
@@ -167,7 +168,7 @@ def emceefitter(lc, model, meta, **kwargs):
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
-    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
     
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
@@ -275,7 +276,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
-    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
 
     # DYNESTY
     nlive = meta.run_nlive # number of live points
@@ -448,6 +449,10 @@ def group_variables(model):
         The names of fitted variables.
     freepars: np.array
         The fitted variables.
+    sharenames: np.array
+        The names of variables that are fit to the same value in all channels.
+    sharepars: np.array
+        The shared variables.
     pmin: np.array
         The lower bound for constrained variables.
     pmax: np.array
@@ -461,6 +466,8 @@ def group_variables(model):
 
     - December 29, 2021 Taylor Bell
         Moved code to separate function to reduce repeated code.
+    - January 11, 2022 Megan Mansfield
+        Added ability to have shared parameters
     """
     # all_params = [i for j in [model.components[n].parameters.dict.items()
     #               for n in range(len(model.components))] for i in j]
@@ -469,6 +476,8 @@ def group_variables(model):
     # Group the different variable types
     freenames = []
     freepars = []
+    sharenames = []
+    sharepars = []
     pmin = []
     pmax = []
     indep_vars = {}
@@ -488,6 +497,15 @@ def group_variables(model):
         #     pinitial.append(param[0])
         #     pmin.append(param[0])
         #     pmax.append(param[0])
+        elif param[1] == 'shared':
+            sharenames.append(name)
+            sharepars.append(param[0])
+            if len(param) > 3:
+                pmin.append(param[2])
+                pmax.append(param[3])
+            else:
+                pmin.append(-np.inf)
+                pmax.append(np.inf)
         elif param[1] == 'independent':
             indep_vars[name] = param[0]
     freenames = np.array(freenames)
@@ -495,7 +513,7 @@ def group_variables(model):
     pmin = np.array(pmin)
     pmax = np.array(pmax)
 
-    return freenames, freepars, pmin, pmax, indep_vars
+    return freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars
 
 def group_variables_lmfit(model):
     """Group variables into fitted and frozen for lmfit fitter.

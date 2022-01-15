@@ -14,6 +14,7 @@ from importlib import reload
 reload(p)
 reload(m)
 reload(lc)
+import pdb
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -47,6 +48,8 @@ def fitJWST(eventlabel, s4_meta=None):
         Connecting S5 to S4 outputs
     - December 17-20, 2021 Taylor Bell
         Increasing connectedness of S5 and S4
+    - January 7-15, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
@@ -134,20 +137,26 @@ def fitJWST(eventlabel, s4_meta=None):
             meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
-
-            for channel in range(meta.nspecchan):
-                # Create directories for Stage 5 processing outputs
-                run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
-                meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
-
+            
+            # Set the intial fitting parameters
+            params = p.Parameters(param_file=meta.fit_par)
+            sharedp = False
+            for arg, val in params.dict.items():
+                if 'shared' in val:
+                    sharedp = True
+            
+            #If sharing parameters across channels, only output one file
+            if sharedp:
+                # Create directory for Stage 5 processing outputs
+                run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val)
+                meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val)
                 # Copy existing S4 log file and resume log
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
                 log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
-                log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
+                log.writelog("\nStarting Shared Fit of {}\n Channels".format(meta.nspecchan))
 
                 # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
                 log.writelog('Copying S5 control file')
-                # shutil.copy(ecffile, meta.outputdir)
                 new_ecfname = meta.outputdir + ecffile.split('/')[-1]
                 with open(new_ecfname, 'w') as new_file:
                     with open(ecffile, 'r') as file:
@@ -161,25 +170,23 @@ def fitJWST(eventlabel, s4_meta=None):
                                 else:
                                     new_file.write(line)
 
-                # Set the intial fitting parameters
-                params = p.Parameters(param_file=meta.fit_par)
-
                 # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
                 t_offset = np.floor(meta.bjdtdb[0])
                 t_mjdtdb = meta.bjdtdb - t_offset
                 params.t0.value -= t_offset
-
-                # Get the flux and error measurements for the current channel
-                flux = meta.lcdata[channel,:]
-                flux_err = meta.lcerr[channel,:]
                 
+                # Get the flux and error measurements for the current channel
+                flux = meta.lcdata
+                flux_err = meta.lcerr
+
                 # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
-                flux_err = flux_err/ np.mean(flux[:200])#flux.mean()
-                flux = flux / np.mean(flux[:200])#flux.mean()
-
+                for i in np.arange(np.shape(flux)[0]):
+                    flux_err[i,:] = flux_err[i,:]/ np.mean(flux[i,:200])#flux.mean()
+                    flux[i,:] = flux[i,:] / np.mean(flux[i,:200])#flux.mean()
+                
                 # Load the relevant values into the LightCurve model object
-                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
-
+                lc_model = lc.LightCurve(t_mjdtdb, flux, 0, meta.nspecchan, unc=flux_err, name=eventlabel,share=True)
+                pdb.set_trace()
                 # Make the astrophysical and detector models
                 modellist=[]
                 if 'transit' in meta.run_myfuncs:
@@ -221,5 +228,90 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Plot the results from the fit(s)
                 if meta.isplots_S5 >= 1:
                     lc_model.plot(meta)
+
+            else:
+                for channel in range(meta.nspecchan):
+                    # Create directories for Stage 5 processing outputs
+                    run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
+                    meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
+                    
+                    # Copy existing S4 log file and resume log
+                    meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
+                    log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
+                    log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
+
+                    # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
+                    log.writelog('Copying S5 control file')
+                    # shutil.copy(ecffile, meta.outputdir)
+                    new_ecfname = meta.outputdir + ecffile.split('/')[-1]
+                    with open(new_ecfname, 'w') as new_file:
+                        with open(ecffile, 'r') as file:
+                            for line in file.readlines():
+                                if len(line.strip())==0 or line.strip()[0]=='#':
+                                    new_file.write(line)
+                                else:
+                                    line_segs = line.strip().split()
+                                    if line_segs[0]=='inputdir':
+                                        new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
+                                    else:
+                                        new_file.write(line)
+                    
+                    # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
+                    t_offset = np.floor(meta.bjdtdb[0])
+                    t_mjdtdb = meta.bjdtdb - t_offset
+                    params.t0.value -= t_offset
+
+                    # Get the flux and error measurements for the current channel
+                    flux = meta.lcdata[channel,:]
+                    flux_err = meta.lcerr[channel,:]
+                    
+                    # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
+                    flux_err = flux_err/ np.mean(flux[:200])#flux.mean()
+                    flux = flux / np.mean(flux[:200])#flux.mean()
+
+                    # Load the relevant values into the LightCurve model object
+                    lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, unc=flux_err, name=eventlabel)
+
+                    # Make the astrophysical and detector models
+                    modellist=[]
+                    if 'transit' in meta.run_myfuncs:
+                        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
+                        modellist.append(t_model)
+                    if 'polynomial' in meta.run_myfuncs:
+                        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
+                        modellist.append(t_polynom)
+                    model = m.CompositeModel(modellist)
+
+                    # Fit the models using one or more fitters
+                    log.writelog("=========================")
+                    if 'lsq' in meta.fit_method:
+                        log.writelog("Starting lsq fit.")
+                        model.fitter = 'lsq'
+                        lc_model.fit(model, meta, fitter='lsq')
+                        log.writelog("Completed lsq fit.")
+                        log.writelog("-------------------------")
+                    if 'emcee' in meta.fit_method:
+                        log.writelog("Starting emcee fit.")
+                        model.fitter = 'emcee'
+                        lc_model.fit(model, meta, fitter='emcee')
+                        log.writelog("Completed emcee fit.")
+                        log.writelog("-------------------------")
+                    if 'dynesty' in meta.fit_method:
+                        log.writelog("Starting dynesty fit.")
+                        model.fitter = 'dynesty'
+                        lc_model.fit(model, meta, fitter='dynesty')
+                        log.writelog("Completed dynesty fit.")
+                        log.writelog("-------------------------")
+                    if 'lmfit' in meta.fit_method:
+                        log.writelog("Starting lmfit fit.")
+                        model.fitter = 'lmfit'
+                        lc_model.fit(model, meta, fitter='lmfit')
+                        log.writelog("Completed lmfit fit.")
+                        log.writelog("-------------------------")
+                    log.writelog("=========================")
+
+                    # Plot the results from the fit(s)
+                    if meta.isplots_S5 >= 1:
+                        lc_model.plot(meta)
 
     return lc_model

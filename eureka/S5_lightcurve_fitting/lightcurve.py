@@ -43,7 +43,7 @@ class LightCurveFitter:
 
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
+    def __init__(self, time, flux, channel, nchannel, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
         """
         A class to store the actual light curve
 
@@ -66,6 +66,8 @@ class LightCurve(m.Model):
             The time units
         name: str
             A name for the object
+        share: bool
+            Whether the fit shares parameters between spectral channels
 
         Returns
         -------
@@ -78,19 +80,25 @@ class LightCurve(m.Model):
         - Dec 29, 2021 Taylor Bell
             Allowing for a constant uncertainty to be input with just a float.
             Added a channel number.
+        - Jan. 15, 2022 Megan Mansfield
+            Added ability to share fit between all channels
         """
         # Initialize the model
         super().__init__()
 
         # Check data
-        if len(time) != len(flux):
+        if not share and len(time) != len(flux):
+            raise ValueError('Time and flux axes must be the same length.')
+        elif share and len(time) != np.shape(flux)[1]:
             raise ValueError('Time and flux axes must be the same length.')
 
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
                 print('Warning: Only one uncertainty input, assuming constant uncertainty.')
-            elif len(unc) != len(time):
+            elif not share and len(unc) != len(time):
+                raise ValueError('Time and unc axes must be the same length.')
+            elif share and len(time) != np.shape(unc)[1]:
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
@@ -111,6 +119,8 @@ class LightCurve(m.Model):
 
         self.channel = channel
         self.nchannel = nchannel
+
+        self.share = share
 
         return
 
