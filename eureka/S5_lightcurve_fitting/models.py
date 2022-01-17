@@ -354,25 +354,67 @@ class TransitModel(Model):
         # Generate with batman
         bm_params = batman.TransitParams()
 
+        #check for shared fit
+        # if 'share' in kwargs:
+        #     nchan=kwargs['nchan']
+        #     paramlist=[]
+        #     for param in self.parameters.dict.keys():
+        #         #if 'shared' in self.parameters.dict[param]:
+        #             #for c in np.arange(nchan)-1:
+        #             #    title=param+'_'+str(c+1)
+        #             #    self.parameters.__setattr__(title,self.parameters.dict[param])
+        #             #self.parameters.dict[param]
+        #         if 'free' in self.parameters.dict[param]:
+        #             for c in np.arange(nchan)-1:
+        #                 title=param+'_'+str(c+1)
+        #                 self.parameters.__setattr__(title,self.parameters.dict[param])
+
+                    
+
         # Set all parameters
-        for arg, val in self.parameters.dict.items():
-            setattr(bm_params, arg, val[0])
-        #for p in self.parameters.list:
-        #    setattr(bm_params, p[0], p[1])
+        if 'share' in kwargs:
+            longparamlist=kwargs['longparamlist']
+            nchan=kwargs['nchan']
+            paramtitles=longparamlist[0]
+            lcfinal=np.array([])
+            for c in np.arange(nchan):
+                for index,item in enumerate(longparamlist[c]):
+                    setattr(bm_params,paramtitles[index],self.parameters.dict[item][0])
 
-        # Combine limb darkening coeffs
-        bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
+                # Combine limb darkening coeffs
+                bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
 
-        # Use batman ld_profile name
-        if self.parameters.limb_dark.value == '4-parameter':
-            bm_params.limb_dark = 'nonlinear'
+                # Use batman ld_profile name
+                if self.parameters.limb_dark.value == '4-parameter':
+                    bm_params.limb_dark = 'nonlinear'
 
-        # Make the eclipse
-        tt = self.parameters.transittype.value
-        m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
+                # Make the eclipse
+                tt = self.parameters.transittype.value
+                m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
 
-        # Evaluate the light curve
-        return m_eclipse.light_curve(bm_params)
+                lcfinal = np.concatenate((lcfinal,m_eclipse.light_curve(bm_params)))
+
+            return lcfinal
+
+        else:
+            for arg, val in self.parameters.dict.items():
+                setattr(bm_params, arg, val[0])
+
+            # Combine limb darkening coeffs
+            bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
+
+            # Use batman ld_profile name
+            if self.parameters.limb_dark.value == '4-parameter':
+                bm_params.limb_dark = 'nonlinear'
+
+            # Make the eclipse
+            tt = self.parameters.transittype.value
+            m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
+            
+            # Evaluate the light curve
+            return m_eclipse.light_curve(bm_params)
+
+        #So here I think I basically want to make it a longer array with like all the channels consecutive
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""

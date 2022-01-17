@@ -89,7 +89,7 @@ class LightCurve(m.Model):
         # Check data
         if not share and len(time) != len(flux):
             raise ValueError('Time and flux axes must be the same length.')
-        elif share and len(time) != np.shape(flux)[1]:
+        elif share and len(time)*nchannel != len(flux):
             raise ValueError('Time and flux axes must be the same length.')
 
         # Set the data arrays
@@ -98,7 +98,7 @@ class LightCurve(m.Model):
                 print('Warning: Only one uncertainty input, assuming constant uncertainty.')
             elif not share and len(unc) != len(time):
                 raise ValueError('Time and unc axes must be the same length.')
-            elif share and len(time) != np.shape(unc)[1]:
+            elif share and len(time)*nchannel != len(unc):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
@@ -151,7 +151,7 @@ class LightCurve(m.Model):
         """
         # Empty default fit
         fit_model = None
-
+        
         model.time = self.time
         # Make sure the model is a CompositeModel
         if not isinstance(model, m.CompositeModel):

@@ -8,7 +8,10 @@ def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     freepars[ilow]    = pmin[ilow]
     freepars[ihi]     = pmax[ihi]
     model.update(freepars, freenames)
-    model_lc        = model.eval()
+    if lc.share:
+        model_lc        = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
+    else:
+        model_lc        = model.eval()
     residuals       = (lc.flux - model_lc)/lc.unc
     '''
     #Apply priors, if they exist

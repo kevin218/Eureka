@@ -14,7 +14,6 @@ from .likelihood import computeRedChiSq, lnprob, ptform
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(lsq)
-import pdb
 
 def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -45,7 +44,6 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """
     # Group the different variable types
     freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
-    pdb.set_trace()
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if meta.run_verbose:
@@ -64,7 +62,10 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     model.update(fit_params, freenames)
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    model_lc = model.eval()
+    if lc.share:
+        model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
+    else:
+        model_lc = model.eval()
 
     # Plot fit
     # if meta.isplots_S5 >= 1:
@@ -500,6 +501,8 @@ def group_variables(model):
         elif param[1] == 'shared':
             sharenames.append(name)
             sharepars.append(param[0])
+            freenames.append(name)
+            freepars.append(param[0])
             if len(param) > 3:
                 pmin.append(param[2])
                 pmax.append(param[3])

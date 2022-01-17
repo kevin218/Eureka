@@ -14,7 +14,6 @@ from importlib import reload
 reload(p)
 reload(m)
 reload(lc)
-import pdb
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -176,17 +175,43 @@ def fitJWST(eventlabel, s4_meta=None):
                 params.t0.value -= t_offset
                 
                 # Get the flux and error measurements for the current channel
-                flux = meta.lcdata
-                flux_err = meta.lcerr
+                # flux = meta.lcdata
+                # flux_err = meta.lcerr
 
-                # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
-                for i in np.arange(np.shape(flux)[0]):
-                    flux_err[i,:] = flux_err[i,:]/ np.mean(flux[i,:200])#flux.mean()
-                    flux[i,:] = flux[i,:] / np.mean(flux[i,:200])#flux.mean()
                 
+                # for i in np.arange(np.shape(flux)[0]):
+                #     flux_err[i,:] = flux_err[i,:]/ np.mean(flux[i,:200])#flux.mean()
+                #     flux[i,:] = flux[i,:] / np.mean(flux[i,:200])#flux.mean()
+
+                # Temporary normalization to avoid large flux values (FINDME: replace when constant offset is implemented)
+                flux = meta.lcdata[0,:] / np.mean(meta.lcdata[0,:200])
+                flux_err = meta.lcerr[0,:] / np.mean(meta.lcdata[0,:200])
+                for i in np.arange(meta.nspecchan-1):
+                    flux = np.concatenate((flux,meta.lcdata[i+1,:] / np.mean(meta.lcdata[i+1,:200])))
+                    flux_err = np.concatenate((flux_err,meta.lcerr[i+1,:] / np.mean(meta.lcdata[i+1,:200])))
+
                 # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_mjdtdb, flux, 0, meta.nspecchan, unc=flux_err, name=eventlabel,share=True)
-                pdb.set_trace()
+                
+                #Make a long list of parameters
+                longparamlist=[ [] for i in range(meta.nspecchan)]
+                tlist=list(params.dict.keys())
+                for param in tlist:
+                    if 'free' in params.dict[param]:
+                        longparamlist[0].append(param)
+                        for c in np.arange(meta.nspecchan-1):
+                            title=param+'_'+str(c+1)
+                            params.__setattr__(title,params.dict[param])
+                            longparamlist[c+1].append(title)
+                    elif 'shared' in params.dict[param]:
+                        for c in np.arange(meta.nspecchan):
+                            longparamlist[c].append(param)
+                    else:
+                        for c in np.arange(meta.nspecchan):
+                            longparamlist[c].append(param)
+
+                lc_model.longparamlist=longparamlist
+                
                 # Make the astrophysical and detector models
                 modellist=[]
                 if 'transit' in meta.run_myfuncs:
@@ -196,7 +221,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
                     modellist.append(t_polynom)
                 model = m.CompositeModel(modellist)
-
+                
                 # Fit the models using one or more fitters
                 log.writelog("=========================")
                 if 'lsq' in meta.fit_method:
@@ -208,7 +233,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 if 'emcee' in meta.fit_method:
                     log.writelog("Starting emcee fit.")
                     model.fitter = 'emcee'
-                    lc_model.fit(model, meta, fitter='emcee')
+                    lc_model.fit(model, meta, fitter='emcee') #need to do all other fitters below here (all but lsq)
                     log.writelog("Completed emcee fit.")
                     log.writelog("-------------------------")
                 if 'dynesty' in meta.fit_method:
