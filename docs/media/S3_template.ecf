@@ -1,0 +1,36 @@
+# Eureka! Control File for Stage 3: Data Reduction
+
+ncpu        1           # Number of CPUs
+suffix      calints     # Data file suffix
+
+# Subarray region of interest
+ywindow     [5,64]      # Vertical axis as seen in DS9
+xwindow     [100,1700]  # Horizontal axis as seen in DS9
+src_pos_type gaussian   # Determine source position when not given in header (Options: gaussian, weighted, or max)
+
+# Background parameters
+bg_hw       20          # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_thresh   [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
+bg_deg      1           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
+p3thresh    5           # X-sigma threshold for outlier rejection during background subtraction
+
+# Spectral extraction parameters
+spec_hw     20          # Half-width of aperture region for spectral extraction (relative to source position)
+fittype     meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
+window_len  31          # Smoothing window length, when fittype = smooth
+prof_deg    3           # Polynomial degree, when fittype = poly
+p5thresh    10          # X-sigma threshold for outlier rejection while constructing spatial profile
+p7thresh    10          # X-sigma threshold for outlier rejection during optimal spectral extraction
+
+# Diagnostics
+isplots_S3  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+testing_S3  False       # Boolean, set True to only use last file and generate select figures
+hide_plots	False		# If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir      /home/User/
+
+# Directories relative to project dir
+inputdir    /Data/JWST-Sim/NIRCam/Stage2/	# The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+outputdir	/Data/JWST-Sim/NIRCam/Stage3/
+ancildir    /Data/JWST-Sim/NIRCam/ancil/
