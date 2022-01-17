@@ -56,7 +56,7 @@
 
 import numpy as np
 import scipy.optimize as so
-#import disk as d
+from . import disk as d
 
 def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
   """
@@ -273,10 +273,12 @@ def old_gaussianguess(y, x=None, mask=None):
     2008-12-02 0.3 nlust@physics.ucf.edu Fixed a bug where if an
                    initial guess was not provided, it would error out
     2009-10-25 0.4 jh@physics.ucf.edu    Converted to standard doc header.
+    2021-10-15     taylorbell275@gmail.com  Fixed non-existent ArrayShapeError
+                   issue.
   """
 
   if y.ndim != 1 :
-    raise ArrayShapeError("y must be 1D, for now.")
+    raise AssertionError("ArrayShapeError: y must be 1D, for now.")
 
   if x is None :
     x = np.indices(y.shape)[0]
@@ -285,7 +287,7 @@ def old_gaussianguess(y, x=None, mask=None):
       oldshape = x.shape
       x.shape  = y.shape
     elif x.shape != y.shape :
-      raise ArrayShapeError("x must have same shape as y (and be sorted).")
+      raise AssertionError("ArrayShapeError: x must have same shape as y (and be sorted).")
 
   # Default mask:
   if mask is None:

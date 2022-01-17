@@ -20,5 +20,5 @@ myst_parser
 astroquery>=0.4.2
 asdf
 gwcs
-jwst
+jwst==1.1.0
 tqdm

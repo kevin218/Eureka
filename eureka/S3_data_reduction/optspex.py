@@ -1,16 +1,30 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from eureka.lib import gaussian as g
-from eureka.lib import smooth
-from eureka.S3_data_reduction import plots_s3
-from importlib import reload
-reload(plots_s3)
+from ..lib import gaussian as g
+from ..lib import smooth
+from . import plots_s3
 
-# Construct normalized spatial profile using polynomial fits along the wavelength direction
-def profile_poly(subdata, mask, deg=3, threshold=10, isplots=False):
-    '''
+def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
+    '''Construct normalized spatial profile using polynomial fits along the wavelength direction.
 
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    deg:    int
+        Polynomial degree.
+    threshold:  float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     submask  = np.copy(mask)
     ny, nx   = np.shape(subdata)
@@ -61,10 +75,29 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=False):
 
     return profile
 
-# Construct normalized spatial profile using a smoothing function
-def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanning', isplots=False):
-    '''
 
+def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanning', isplots=False):
+    '''Construct normalized spatial profile using a smoothing function.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    threshold:  float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    window_len: int
+        The dimension of the smoothing window.
+    windowtype: {'flat', 'hanning', 'hamming', 'bartlett', 'blackman'}
+        UNUSED. The type of window. A flat window will produce a moving average smoothing.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     submask  = np.copy(mask)
     ny, nx   = np.shape(subdata)
@@ -121,10 +154,27 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanni
 
     return profile
 
-#Construct normalized spatial profile using median of all data frames
-def profile_meddata(data, mask, meddata, threshold=10, isplots=False):
-    '''
 
+def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
+    '''Construct normalized spatial profile using median of all data frames.
+
+    Parameters
+    ----------
+    data:    ndarray
+        UNUSED. Image data.
+    mask:   ndarray
+        UNUSED. Outlier mask.
+    meddata:    ndarray
+        The median of all data frames.
+    threshold:  float
+        UNUSED. Sigma threshold for outlier rejection while constructing spatial profile.
+    isplots:    int
+        UNUSED. The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     #profile = np.copy(meddata*mask)
     profile = np.copy(meddata)
@@ -137,10 +187,30 @@ def profile_meddata(data, mask, meddata, threshold=10, isplots=False):
 
 
 # Construct normalized spatial profile using wavelets
-def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=False):
-    '''
-    This function performs 1D image denoising using BayesShrink soft thresholding.
-    Ref: Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
+def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
+    '''This function performs 1D image denoising using BayesShrink soft thresholding.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    wavelet:    Wavelet object or name string
+        qWavelet to use
+    numlvls:    int
+        Decomposition levels to consider (must be >= 0).
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
+
+    References
+    ----------
+    Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
     '''
     import pywt
     submask  = np.copy(mask)
@@ -185,10 +255,30 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=False):
     return profile
 
 # Construct normalized spatial profile using wavelets
-def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=False):
-    '''
-    This function performs 2D image denoising using BayesShrink soft thresholding.
-    Ref: Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
+def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
+    '''This function performs 2D image denoising using BayesShrink soft thresholding.
+    
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    wavelet:    Wavelet object or name string
+        qWavelet to use
+    numlvls:    int
+        Decomposition levels to consider (must be >= 0).
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
+
+    References
+    ----------
+    Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
     '''
     import pywt
     submask  = np.copy(mask)
@@ -237,10 +327,27 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=False):
 
     return profile
 
-# Construct normalized spatial profile using a Gaussian smoothing function
-def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=False):
-    '''
 
+def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
+    '''Construct normalized spatial profile using a Gaussian smoothing function.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    threshold:  float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    guess: list
+        UNUSED. The initial guess for the Gaussian parameters.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     submask  = np.copy(mask)
     ny, nx   = np.shape(subdata)
@@ -307,10 +414,55 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=False):
 
     return profile
 
-# Extract optimal spectrum with uncertainties
-def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=False, eventdir='.',meddata=None, hide_plots=False):
-    '''
 
+def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=0, eventdir='.',meddata=None, hide_plots=False):
+    '''Extract optimal spectrum with uncertainties.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    bg: ndarray
+        Background array.
+    spectrum:   ndarray
+        Standard spectrum.
+    Q:  float
+        The gain factor.
+    v0:     ndarray
+        Variance array for data.
+    p5thresh:   float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    p7thresh:   float
+        Sigma threshold for outlier rejection during optimal spectral extraction.
+    fittype:    {'smooth', 'meddata', 'wavelet2D', 'wavelet', 'gauss', 'poly'}
+        The type of profile fitting you want to do.
+    window_len: int
+        The dimension of the smoothing window.
+    deg:    int
+        Polynomial degree.
+    windowtype: {'flat', 'hanning', 'hamming', 'bartlett', 'blackman'}
+        UNUSED. The type of window. A flat window will produce a moving average smoothing.
+    n:  int
+        Integration number.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+    eventdir:   str
+        Directory in which to save outupts.
+    meddata:    ndarray
+        The median of all data frames.
+    hide_plots: 
+        If True, plots will automatically be closed rather than popping up.
+
+    Returns
+    -------
+    spectrum:   ndarray
+        The optimally extracted spectrum.
+    specunc:    ndarray
+        The standard deviation on the spectrum.
+    submask:    ndarray
+        The mask array.
     '''
     submask      = np.copy(mask)
     ny, nx       = subdata.shape

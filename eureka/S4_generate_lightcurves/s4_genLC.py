@@ -2,7 +2,7 @@
 
 # Generic Stage 4 light curve generation pipeline
 
-"""
+
 # Proposed Steps
 # -------- -----
 # 1.  Read in Stage 3 data products
@@ -14,7 +14,7 @@
 # 7.  Generate light curves
 # 8.  Save Stage 4 data products
 # 9.  Produce plots
-"""
+
 
 import sys, os, time, shutil, glob
 import numpy as np
@@ -31,31 +31,37 @@ from ..lib import util
 
 
 class MetaClass:
+    '''A class to hold Eureka! metadata.
+    '''
+
     def __init__(self):
         return
 
 
 def lcJWST(eventlabel, s3_meta=None):
-    #expand=1, smooth_len=None, correctDrift=True
-    '''
-    Compute photometric flux over specified range of wavelengths
+    '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
     ----------
-    eventlabel  : Unique identifier for these data
-    s3_meta     : Metadata object from Eureka!'s S3 step
+    eventlabel: str
+        The unique identifier for these data.
+    s3_meta:    MetaClass
+        The metadata object from Eureka!'s S3 step (if running S3 and S4 sequentially).
 
     Returns
     -------
-    event object
+    meta:   MetaClass
+        The metadata object with attributes added by S4.
 
-    History
-    -------
-    Written by Kevin Stevenson      June 2021
-    Updated by Taylor Bell          October 2021
+    Notes
+    -----
+    History:
 
+    - June 2021 Kevin Stevenson
+        Initial version
+    - October 2021 Taylor Bell
+        Updated to allow for inputs from new S3
     '''
-
     # Initialize a new metadata object
     meta = MetaClass()
     meta.eventlabel = eventlabel
@@ -67,7 +73,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
     #load savefile
     if s3_meta == None:
-        # Search for the S2 output metadata in the inputdir provided in 
+        # Search for the S2 output metadata in the inputdir provided in
         # First just check the specific inputdir folder
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
@@ -86,14 +92,14 @@ def lcJWST(eventlabel, s3_meta=None):
             # There may be multiple runs - use the most recent but warn the user
             print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
                  +'Using the metadata file: \n{}\n'.format(fnames[-1])
-                 +'and will consider aperture ranges listed there. If this metadata file is not a part,\n'
+                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
-    
+
         fname = fnames[-1] # Pick the last file name (should be the most recent or only file)
         fname = fname[:-4] # Strip off the .dat ending
 
         s3_meta = me.loadevent(fname)
-    
+
     # Need to remove the topdir from the outputdir
     s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
     if s3_outputdir[0]=='/':
@@ -101,18 +107,18 @@ def lcJWST(eventlabel, s3_meta=None):
 
     meta = s3_meta
 
-    # Load Eureka! control file and store values in the S2 metadata object
+    # Load Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + eventlabel + '.ecf'
     ecf     = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
-    meta.old_datetime = meta.datetime # Capture the date that the 
+    meta.old_datetime = meta.datetime # Capture the date that the
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
-    
+
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one aperture
         meta.spec_hw_range = [meta.spec_hw,]
@@ -128,26 +134,28 @@ def lcJWST(eventlabel, s3_meta=None):
             meta.spec_hw = spec_hw_val
 
             meta.bg_hw = bg_hw_val
-
-            # Do some folder swapping to be able to reuse this function
+            
+            # Do some folder swapping to be able to reuse this function to find S3 outputs
             tempfolder = meta.outputdir_raw
             meta.outputdir_raw = meta.inputdir_raw
-            meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ts=spec_hw_val, bg=bg_hw_val)
+            meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
-
-            # Create directories for Stage 4 processing outputs
-            run = util.makedirectory(meta, 'S4')
-            meta.outputdir = util.pathdirectory(meta, 'S4', run)
             
-            # Copy existing S4 log file
+            # Create directories for Stage 4 processing outputs
+            run = util.makedirectory(meta, 'S4', ap=spec_hw_val, bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(meta, 'S4', run, ap=spec_hw_val, bg=bg_hw_val)
+            
+            # Copy existing S3 log file and resume log
             meta.s4_logname  = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
+            log.writelog(f"Input directory: {s3_outputdir}")
+            log.writelog(f"Output directory: {meta.outputdir}")
 
-            # Copy ecf (and update workdir in case S4 is being called sequentially with S3)
+            # Copy ecf (and update outputdir in case S4 is being called sequentially with S3)
             log.writelog('Copying S4 control file')
-            # shutil.copy(ecffile, meta.workdir)
+            # shutil.copy(ecffile, meta.outputdir)
             new_ecfname = meta.outputdir + ecffile.split('/')[-1]
             with open(new_ecfname, 'w') as new_file:
                 with open(ecffile, 'r') as file:
@@ -168,7 +176,7 @@ def lcJWST(eventlabel, s3_meta=None):
             optspec = np.reshape(table['optspec'].data, (-1, meta.subnx))
             opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
             wave_1d = table['wave_1d'].data[0:meta.subnx]
-            bjdtdb = table['bjdtdb'].data[::meta.subnx]
+            meta.bjdtdb = table['bjdtdb'].data[::meta.subnx]
 
             #Replace NaNs with zero
             optspec[np.where(np.isnan(optspec))] = 0
@@ -212,7 +220,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, bjdtdb, i)
+                    plots_s4.binned_lightcurve(meta, meta.bjdtdb, i)
 
             # Calculate total time
             total = (time.time() - t0) / 60.

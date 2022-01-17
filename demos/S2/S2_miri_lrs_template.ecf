@@ -6,7 +6,7 @@ suffix      rateints     # Data file suffix
 slit_y_low			None	# Use None to rely on the default parameters
 slit_y_high			None	# Use None to rely on the default parameters
 
-# Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
+# Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
 waverange_start		None	# Use None to rely on the default parameters
 waverange_end		None	# Use None to rely on the default parameters
 
@@ -24,7 +24,7 @@ skip_fringe				True	# Not run for MIRI LRS Slitless
 skip_pathloss			True	# Not run for MIRI LRS Slitless
 skip_barshadow			True	# Not run for MIRI LRS Slitless
 skip_photom				False
-skip_resample_spec		True	# Not run for MIRI LRS Slitless
+skip_resample			True	# Not run for MIRI LRS Slitless
 skip_cube_build			True	# Not run for MIRI LRS Slitless
 skip_extract_1d			False
 

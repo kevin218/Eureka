@@ -1,5 +1,4 @@
 import numpy as np
-from importlib import reload
 from . import sort_nicely as sn
 import os, time
 import re
@@ -7,7 +6,7 @@ import re
 
 def readfiles(meta):
     """
-    Reads in the files saved in topdir + datadir and saves them into a list
+    Reads in the files saved in topdir + inputdir and saves them into a list
 
     Args:
         meta: metadata object
@@ -24,7 +23,7 @@ def readfiles(meta):
     for fname in os.listdir(meta.inputdir):
         if fname.endswith(meta.suffix + '.fits'):
             meta.segment_list.append(meta.inputdir + fname)
-    meta.segment_list = sn.sort_nicely(meta.segment_list)
+    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
     return meta
 
 

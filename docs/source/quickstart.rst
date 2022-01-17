@@ -1,4 +1,3 @@
-.. _quickstart:
 
 Quickstart
 ============
@@ -6,25 +5,7 @@ Quickstart
 1. Installation and requirements
 -----------------------------------
 
-1.1. **Download** the ``Eureka!`` repository from `GitHub <http://github.com/kevin218/Eureka>`_.
-Click on **Code** and **Download ZIP** followed by unpacking the distribution by opening up a terminal and typing:
-
-.. code-block::
-
-	unzip Eureka-main.zip
-
-
-1.2. Navigate into the newly created directory and **install** Eureka! by running ``setup.py``:
-
-.. code-block:: python
-
-	sudo python setup.py install
-
-1.3. Install additional **requirements** for the package by typing:
-
-.. code-block:: python
-
-	python install -r requirements.txt
+Follow the instructions on the :ref:`installation` page.
 
 
 2. Download data
@@ -32,7 +13,7 @@ Click on **Code** and **Download ZIP** followed by unpacking the distribution by
 
 2.1. Make a new directory on your computer to store the **simulated data and ancillary files**. E.g.:
 
-.. code-block:: python
+.. code-block:: bash
 
 	mkdir /User/Data/JWST-Sim/NIRCam/
 	cd /User/Data/JWST-Sim/NIRCam/
@@ -49,7 +30,7 @@ If your internet connection is slow, download the `smallest file only <https://s
 -----------------------------------------------------------------
 
 3.1 Go into the downloaded ``Eureka!`` directory (it is likely called Eureka-main if you downloaded it from GitHub) and open the file ``Eureka-main/demos/S3/S3_template.ecf``.
-Update "topdir + datadir" and "topdir + ancildir" to the location of your Stage2 data and the ancil data, respectively.
+Update "topdir + inputdir" and "topdir + ancildir" to the location of your Stage2 data and the ancil data, respectively.
 
 You can get more information about the ecf (``Eureka!`` control file) :ref:`here<ecf>`.
 
@@ -57,19 +38,19 @@ You can get more information about the ecf (``Eureka!`` control file) :ref:`here
 If you have a look into the ``run_eureka.py`` script, this has been already been set for you (``eventlabel = 'wasp43b'``).
 In order for Eureka! to find the control files, you have to change their names:
 
-.. code-block:: python
+.. code-block::
 
 	S3_template.ecf --> S3_wasp43b.ecf
 	S4_template.ecf --> S4_wasp43b.ecf
 
 
 
-4. Run Eureka!
+1. Run Eureka!
 -----------------------------------------------------------------
 
 4.1. Now execute the ``run_eureka.py`` script by typing:
 
-.. code-block:: python
+.. code-block:: bash
 
 	python run_eureka.py
 
@@ -82,6 +63,6 @@ Note: If you run into a ``matplotlib`` error, you might want to install ``sudo a
 4.2. The code will run and save data and plots in a new directory in ``demos/S3/``.
 Below you see an example for a simulated spectrum which you should get after running the script and having ``is_plotsS3 = 3``:
 
-.. image:: fig3301-1-Image+Background.png
+.. image:: ../media/fig3301-1-Image+Background.png
 
 

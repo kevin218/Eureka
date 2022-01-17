@@ -6,7 +6,7 @@ suffix      rateints     # Data file suffix
 slit_y_low			-1	# Use None to rely on the default parameters
 slit_y_high			50	# Use None to rely on the default parameters
 
-# Modify the existing file to broaden the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
+# Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
 waverange_start		6e-08	# Use None to rely on the default parameters
 waverange_end		6e-06	# Use None to rely on the default parameters
 
@@ -24,7 +24,7 @@ skip_fringe				True	# Not run for NIRSpec Fixed Slit
 skip_pathloss			False	# Not run for TSO observations
 skip_barshadow			True	# Not run for NIRSpec Fixed Slit
 skip_photom				False
-skip_resample_spec		False	# Not run for TSO observations
+skip_resample			False	# Not run for TSO observations
 skip_cube_build			True	# Not run for NIRSpec Fixed Slit
 skip_extract_1d			False
 

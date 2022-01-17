@@ -7,9 +7,10 @@ import scipy.interpolate as spi
 from astropy.io import fits as pf
 import matplotlib.pyplot as plt
 import multiprocessing as mp
-import manageevent as me
+from ..lib import manageevent as me
 from ..lib import sort_nicely as sn
-import time, os, sys, shutil, centroid, suntimecorr, utc_tt
+from ..lib import centroid, suntimecorr, utc_tt
+import time, os, sys, shutil
 #import hst_scan as hst
 from importlib import reload
 #reload(hst)
