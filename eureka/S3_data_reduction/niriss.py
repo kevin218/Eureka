@@ -7,9 +7,13 @@
 ####################################
 
 import numpy as np
+import ccdproc as ccdp
+from astropy import units
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.table import Table
+from astropy.nddata import CCDData
+from scipy.signal import find_peaks
 from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
@@ -20,7 +24,8 @@ from .background import fitbg3
 
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
-           'f277_mask', 'fit_bg', 'wave_NIRISS', 'init_mask_guess']
+           'f277_mask', 'fit_bg', 'wave_NIRISS',
+           'mask_method_one', 'mask_method_two']
 
 
 def read(filename, f277_filename, data, meta):
@@ -119,7 +124,7 @@ def image_filtering(img, radius=1, gf=4):
 
 def f277_mask(data, meta, isplots=False):
     """        
-    Marks the overlap region in the f277w filter image.                                                       
+    Marks the overlap region in the f277w filter image.
     
     Parameters
     ----------
@@ -156,12 +161,14 @@ def f277_mask(data, meta, isplots=False):
     return new_mask, mid[q]
 
 
-def init_mask_guess(data, meta, isplots=False, save=True):
+def mask_method_one(data, meta, isplots=False, save=True):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
     have to actually call this function and we'll provide a CSV
-    of a good initial guess for each order.
+    of a good initial guess for each order. This method uses some fun
+    image processing to identify the boundaries of the orders and fits
+    the edges of the first and second orders with a 4th degree polynomial.
 
     Parameters  
     ----------  
@@ -261,7 +268,108 @@ def init_mask_guess(data, meta, isplots=False, save=True):
     tab['order_2'] = fit2(x)
 
     if save:
-        tab.write('niriss_order_guesses.csv',format='csv')
+        tab.write('niriss_order_fits_method1.csv',format='csv')
+
+    return tab
+
+
+def mask_method_two(data, meta, isplots=False, save=False):
+    """
+    A second method to extract the masks for the first and
+    second orders in NIRISS data. This method uses the vertical
+    profile of a summed image to identify the borders of each
+    order.
+    """
+    def identify_peaks(column, height, distance):
+        p,_ = find_peaks(column, height=height, distance=distance)
+        return p
+
+
+    summed = np.nansum(data.data, axis=0)
+    ccd = CCDData(summed*units.electron)
+
+    new_ccd_no_premask = ccdp.cosmicray_lacosmic(ccd, readnoise=150,
+                                                 sigclip=5, verbose=False)
+    
+    summed_f277 = np.nansum(data.f277, axis=(0,1))
+
+    f277_peaks = np.zeros((summed_f277.shape[1],2))
+    peaks = np.zeros((new_ccd_no_premask.shape[1], 6))
+    double_peaked = [500, 700, 1850] # hard coded numbers to help set height bounds
+    
+
+    for i in range(summed.shape[1]):
+
+        # Identifies peaks in the F277W filtered image
+        fp = identify_peaks(summed_f277[:,i], height=100000, distance=10)
+        if len(fp)==2:
+            f277_peaks[i] = fp
+    
+        if i < double_peaked[0]:
+            height=2000
+        elif i >= double_peaked[0] and i < double_peaked[1]:
+            height = 100
+        elif i >= double_peaked[1]:
+            height = 5000
+            
+        p = identify_peaks(new_ccd_no_premask[:,i].data, height=height, distance=10)
+        if i < 900:
+            p = p[p>40] # sometimes catches an upper edge that doesn't exist
+        
+        peaks[i][:len(p)] = p
+
+    # Removes 0s from the F277W boundaries
+    xf = np.arange(0,summed_f277.shape[1],1)
+    good = f277_peaks[:,0]!=0
+    xf=xf[good]
+    f277_peaks=f277_peaks[good]
+
+    # Fitting a polynomial to the boundary of each order
+    x = np.arange(0,new_ccd_no_premask.shape[1],1)
+    avg = np.zeros((new_ccd_no_premask.shape[1], 6))
+
+    for ind in range(4): # CHANGE THIS TO 6 TO ADD THE THIRD ORDER
+        q = peaks[:,ind] > 0
+        
+        # removes outliers
+        diff = np.diff(peaks[:,ind][q])
+        good = np.where(np.abs(diff)<=np.nanmedian(diff)+2*np.nanstd(diff))
+        good = good[5:-5]
+        y = peaks[:,ind][q][good] + 0
+        y = y[x[q][good]>xf[-1]]
+        
+        # removes some of the F277W points to better fit the 2nd order
+        if ind < 2:
+            cutoff=-1
+        else:
+            cutoff=250
+
+        xtot = np.append(xf[:cutoff], x[q][good][x[q][good]>xf[-1]])
+        if ind == 0 or ind == 2:
+            ytot = np.append(f277_peaks[:,0][:cutoff], y)
+        else:
+            ytot = np.append(f277_peaks[:,1][:cutoff], y)
+        
+        # Fits a 4th degree polynomiall
+        poly= np.polyfit(xtot, ytot, deg=4)
+        fit = np.poly1d(poly)
+            
+        avg[:,ind] = fit(x)
+
+    if isplots:
+        plt.imshow(summed, vmin=0, vmax=2e3)
+        plt.plot(x, np.nanmedian(avg[:,:2],axis=1), 'k', lw=2)
+        plt.plot(x, np.nanmedian(avg[:,2:4],axis=1), 'r', lw=2)
+        plt.show()
+    
+
+    tab = Table()
+    tab['x'] = x
+    tab['order_1'] = np.nanmedian(avg[:,:2],axis=1)
+    tab['order_2'] = np.nanmedian(avg[:,2:4],axis=1)
+
+    if save:
+        tab.write('niriss_order_fits_method2.csv',format='csv')
 
     return tab
 
