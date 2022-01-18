@@ -255,14 +255,15 @@ def init_mask_guess(data, meta, isplots=False, save=True):
         plt.plot(x, fit2(x), 'r')
         plt.show()
 
+    tab = Table()
+    tab['x'] = x
+    tab['order_1'] = fit1(x)
+    tab['order_2'] = fit2(x)
+
     if save:
-        tab = Table()
-        tab['x'] = x
-        tab['order_1'] = fit1(x)
-        tab['order_2'] = fit2(x)
         tab.write('niriss_order_guesses.csv',format='csv')
 
-    return x, fit1(x), fit2(x)
+    return tab
 
 
 def simplify_niriss_img(data, meta, isplots=False):
