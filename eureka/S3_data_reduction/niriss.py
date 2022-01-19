@@ -406,16 +406,18 @@ def simplify_niriss_img(data, meta, isplots=False):
     return g
 
 
-def wave_NIRISS(wavefiles, meta):
+def wave_NIRISS(wavefile, meta):
     """
     Creates the wavelength solution using code from `jwst` and `gwcs`.
     """
-    wavemap = WaveMapModel()
+    hdu = fits.open(wavefile)
 
-    for fn in wavefiles:
-        wavemap.map.append(WaveMapSingleModel(init=fn))
+    meta.wavelength_order1 = hdu[1].data + 0.0
+    meta.wavelength_order2 = hdu[2].data + 0.0
+    meta.wavelength_order3 = hdu[3].data + 0.0
 
-    meta.wavelength = wavemap
+    hdu.close()
+
     return meta
 
 
