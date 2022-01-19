@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 import corner
 
 from .likelihood import computeRMS
+from .utils import COLORS
 
-def plot_fit(lc, model, meta, fitter):
-    """Plot the fitted model over the data.
+def plot_fit(lc, model, meta, fitter, isTitle=True):
+    """Plot the fitted model over the data after removing any systematics.
 
     Parameters
     ----------
@@ -31,17 +32,24 @@ def plot_fit(lc, model, meta, fitter):
     """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
-    
+
+    model_sys = model.syseval()
+    model_phys = model.physeval()
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-        
+
     fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
     plt.clf()
     ax = fig.subplots(2,1)
-    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.')
-    ax[0].plot(lc.time, model_lc, zorder = 10)
+    ax[0].errorbar(lc.time, lc.flux/model_sys, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
+    ax[0].plot(lc.time, model_phys, color='0.3', zorder = 10)
+    if isTitle:
+        ax[0].set_title(f'{meta.eventlabel} - Channel {lc.channel} - {fitter}')
+    ax[0].set_ylabel('Normalized Flux', size=14)
 
-    ax[1].errorbar(lc.time, residuals, yerr=lc.unc, fmt='.')
+    ax[1].errorbar(lc.time, residuals*1e6, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
+    ax[1].set_ylabel('Residuals (ppm)', size=14)
+    ax[1].set_xlabel(str(lc.time_units), size=14)
 
     fname = 'figs/fig51{}_lc_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
@@ -49,7 +57,7 @@ def plot_fit(lc, model, meta, fitter):
         plt.close()
     else:
         plt.pause(0.2)
-    
+
     return
 
 def plot_rms(lc, model, meta, fitter):
@@ -107,7 +115,7 @@ def plot_rms(lc, model, meta, fitter):
         plt.pause(0.2)
 
     return
-    
+
 def plot_corner(samples, lc, meta, freenames, fitter):
     """Plot a corner plot.
 

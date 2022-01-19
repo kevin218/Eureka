@@ -135,7 +135,12 @@ def fitJWST(eventlabel, s4_meta=None):
             meta.outputdir_raw = tempfolder
             run_i += 1
 
-            for channel in range(meta.nspecchan):
+            if meta.testing_S5:
+                # Only fit a single channel while testing
+                chanrng = [0]
+            else:
+                chanrng = range(meta.nspecchan)
+            for channel in chanrng:
                 # Create directories for Stage 5 processing outputs
                 run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
                 meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
@@ -144,6 +149,8 @@ def fitJWST(eventlabel, s4_meta=None):
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
                 log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
                 log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
+                log.writelog(f"Input directory: {meta.inputdir}")
+                log.writelog(f"Output directory: {meta.outputdir}")
 
                 # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
                 log.writelog('Copying S5 control file')
@@ -165,7 +172,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 params = p.Parameters(param_file=meta.fit_par)
 
                 # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
-                t_offset = np.floor(meta.bjdtdb[0])
+                t_offset = int(np.floor(meta.bjdtdb[0]))
                 t_mjdtdb = meta.bjdtdb - t_offset
                 params.t0.value -= t_offset
 
@@ -174,11 +181,20 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux_err = meta.lcerr[channel,:]
 
                 # Normalize flux and uncertainties to avoid large flux values
-                flux_err = flux_err/ flux.mean()
-                flux = flux / flux.mean()
+                flux_err /= flux.mean()
+                flux /= flux.mean()
+
+                if meta.testing_S5:
+                    # FINDME: Use this area to add systematics into the data
+                    # when testing new systematics models. In this case, I'm
+                    # introducing an exponential ramp to test m.ExpRampModel().
+                    log.writelog('****Adding exponential ramp systematic to light curve****')
+                    fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
+                    fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
+                    flux *= fakeramp.eval(time=t_mjdtdb)
 
                 # Load the relevant values into the LightCurve model object
-                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, log, unc=flux_err, name=eventlabel)
+                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, log, unc=flux_err, name=eventlabel, time_units=f'MJD_TDB = BJD_TDB - {t_offset}')
 
                 # Make the astrophysical and detector models
                 modellist=[]
@@ -188,6 +204,9 @@ def fitJWST(eventlabel, s4_meta=None):
                 if 'polynomial' in meta.run_myfuncs:
                     t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
                     modellist.append(t_polynom)
+                if 'expramp' in meta.run_myfuncs:
+                    t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
+                    modellist.append(t_ramp)
                 model = m.CompositeModel(modellist)
 
                 # Fit the models using one or more fitters
@@ -222,4 +241,4 @@ def fitJWST(eventlabel, s4_meta=None):
                 if meta.isplots_S5 >= 1:
                     lc_model.plot(meta)
 
-    return lc_model
+    return meta, lc_model
