@@ -1,6 +1,6 @@
 import numpy as np
 
-from . import Model
+from .Model import Model
 from ..parameters import Parameters
 
 class ExpRampModel(Model):

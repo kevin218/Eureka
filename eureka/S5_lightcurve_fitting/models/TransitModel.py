@@ -5,7 +5,7 @@ except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
 from ..limb_darkening_fit import ld_profile
-from . import Model
+from .Model import Model
 from ..parameters import Parameters
 
 class TransitModel(Model):
