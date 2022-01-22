@@ -82,7 +82,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter=calling_function)
+        plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
