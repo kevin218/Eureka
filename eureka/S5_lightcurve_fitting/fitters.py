@@ -41,9 +41,11 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     - December 29-30, 2021 Taylor Bell
         Updated documentation and arguments. Reduced repeated code.
         Also saving covariance matrix for later estimation of sampler step size.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     # Group the different variable types
-    freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
 
     if meta.run_verbose:
@@ -160,6 +162,8 @@ def emceefitter(lc, model, meta, **kwargs):
 
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     print('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, calling_function='emcee_lsq', **kwargs)
@@ -167,9 +171,9 @@ def emceefitter(lc, model, meta, **kwargs):
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
     if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
-
+    
     # Group the different variable types
-    freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
@@ -267,6 +271,8 @@ def dynestyfitter(lc, model, meta, **kwargs):
 
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     print('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
@@ -277,7 +283,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
-    freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
 
     # DYNESTY
     nlive = meta.run_nlive # number of live points
@@ -327,7 +333,10 @@ def dynestyfitter(lc, model, meta, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-    model_lc = model.eval()
+    if lc.share:
+        model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
+    else:
+        model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
     # Plot fit
@@ -450,10 +459,6 @@ def group_variables(model):
         The names of fitted variables.
     freepars: np.array
         The fitted variables.
-    sharenames: np.array
-        The names of variables that are fit to the same value in all channels.
-    sharepars: np.array
-        The shared variables.
     pmin: np.array
         The lower bound for constrained variables.
     pmax: np.array
@@ -477,8 +482,6 @@ def group_variables(model):
     # Group the different variable types
     freenames = []
     freepars = []
-    sharenames = []
-    sharepars = []
     pmin = []
     pmax = []
     indep_vars = {}
@@ -499,8 +502,6 @@ def group_variables(model):
         #     pmin.append(param[0])
         #     pmax.append(param[0])
         elif param[1] == 'shared':
-            sharenames.append(name)
-            sharepars.append(param[0])
             freenames.append(name)
             freepars.append(param[0])
             if len(param) > 3:
@@ -516,7 +517,7 @@ def group_variables(model):
     pmin = np.array(pmin)
     pmax = np.array(pmax)
 
-    return freenames, freepars, sharenames, sharepars, pmin, pmax, indep_vars
+    return freenames, freepars, pmin, pmax, indep_vars
 
 def group_variables_lmfit(model):
     """Group variables into fitted and frozen for lmfit fitter.

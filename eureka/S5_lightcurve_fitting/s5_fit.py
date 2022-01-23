@@ -14,6 +14,7 @@ from importlib import reload
 reload(p)
 reload(m)
 reload(lc)
+import pdb
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -47,7 +48,7 @@ def fitJWST(eventlabel, s4_meta=None):
         Connecting S5 to S4 outputs
     - December 17-20, 2021 Taylor Bell
         Increasing connectedness of S5 and S4
-    - January 7-15, 2022 Megan Mansfield
+    - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
@@ -136,18 +137,19 @@ def fitJWST(eventlabel, s4_meta=None):
             meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
-            
             # Set the intial fitting parameters
             params = p.Parameters(param_file=meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
                     sharedp = True
-            
+
+            # Create directory for Stage 5 processing outputs
+            run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val)
+
             #If sharing parameters across channels, only output one file
             if sharedp:
                 # Create directory for Stage 5 processing outputs
-                run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val)
                 meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val)
                 # Copy existing S4 log file and resume log
                 meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
@@ -173,15 +175,6 @@ def fitJWST(eventlabel, s4_meta=None):
                 t_offset = np.floor(meta.bjdtdb[0])
                 t_mjdtdb = meta.bjdtdb - t_offset
                 params.t0.value -= t_offset
-                
-                # Get the flux and error measurements for the current channel
-                # flux = meta.lcdata
-                # flux_err = meta.lcerr
-
-                
-                # for i in np.arange(np.shape(flux)[0]):
-                #     flux_err[i,:] = flux_err[i,:]/ np.mean(flux[i,:200])#flux.mean()
-                #     flux[i,:] = flux[i,:] / np.mean(flux[i,:200])#flux.mean()
 
                 # Temporary normalization to avoid large flux values (FINDME: replace when constant offset is implemented)
                 flux = meta.lcdata[0,:] / np.mean(meta.lcdata[0,:200])
@@ -255,8 +248,12 @@ def fitJWST(eventlabel, s4_meta=None):
                     lc_model.plot(meta)
 
             else:
+                # Create directories for Stage 5 processing outputs
+                meta.outputdir_raw = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val)
+                meta.outputdir_raw = meta.outputdir_raw.strip(meta.topdir)
+
                 for channel in range(meta.nspecchan):
-                    # Create directories for Stage 5 processing outputs
+                    
                     run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
                     meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
                     
@@ -267,7 +264,7 @@ def fitJWST(eventlabel, s4_meta=None):
 
                     # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
                     log.writelog('Copying S5 control file')
-                    # shutil.copy(ecffile, meta.outputdir)
+                    
                     new_ecfname = meta.outputdir + ecffile.split('/')[-1]
                     with open(new_ecfname, 'w') as new_file:
                         with open(ecffile, 'r') as file:
