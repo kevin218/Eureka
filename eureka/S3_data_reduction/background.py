@@ -345,7 +345,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     return bg*bgmask#, mask #,variance
 
 
-def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
+def fitbg3(data, isplots=False):
     """
     Fit sky background with out-of-spectra data. Hopefully this is a faster
     routine than fitbg2. (optimized to fit across the x-direction)
@@ -375,59 +375,3 @@ def fitbg3(data, omask, bgmask, deg=1, threshold=5, isrotate=0, isplots=False):
     bg : np.ndarray
        Background model.
     """
-    bg = np.zeros(data.shape)
-
-    # Takes a median background model
-    if deg <= 0:
-        bg = np.full(bgmask.shape, np.nanmedian(data*bgmask))
-        return bg
-    # No background modeling
-    elif deg == None:
-        return bg
-
-    # Fitting the background model with some degree polynomial
-    else:
-
-        # quickly masking cosmic rays
-        maxim = np.nanmax(data*bgmask, axis=0)
-        x,y   = np.where(maxim>=np.nanmedian(maxim)+np.nanstd(maxim))
-        bg[:,x,y] = np.nan
-
-        for n in tqdm(range(data.shape[0])):
-            for i in range(data.shape[1]):
-
-                nobadpixels = False
-                goodyvals = np.where((np.isnan(bgmask[n,i])==False) & 
-                                     (np.isnan(data[n,i])==False) )[0]
-                x, y = goodyvals+0.0, data[n,i][goodyvals]+0.0
-                
-                while nobadpixels == False:
-                    
-                    coeffs    = np.polyfit(x, y, deg=deg)
-                    model     = np.polyval(coeffs, x)
-                    
-                    residuals = y-model
-                    
-                    outliers = np.abs(residuals) > np.nanstd(residuals)*threshold
-                    
-                    if isplots:
-                        plt.plot(x, residuals, '.')
-                        plt.plot(x[outliers], residuals[outliers], '.')
-                        plt.title(i)
-                        plt.show()
-                        
-                    if len(residuals[outliers])==0:
-                        nobadpixels = True
-                    else:
-                        x, y = x[~outliers], y[~outliers]
-                    
-                bg[n,i] = np.polyval(coeffs, np.arange(0,bgmask[n].shape[0],1))
-
-            rx, ry = np.where(np.isnan(bgmask))
-            bgmask[rx,ry]=0
-        
-
-        flipped = np.ones(omask.shape)
-        flipped[omask>0] = 0
-
-        return bg*flipped + data
