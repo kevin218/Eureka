@@ -190,6 +190,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     n_loops = 0
     while not np.all(in_range) and n_loops<meta.max_pos_iters:
+        n_loops += 1
         pos = pos[in_range]
         step_size /= 2 # Make the proposal size a bit smaller to reduce odds of rejection
         pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers-len(pos))]))
