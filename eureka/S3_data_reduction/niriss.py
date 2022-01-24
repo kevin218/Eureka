@@ -153,7 +153,7 @@ def f277_mask(data, meta, isplots=False):
 
     data.f277_img = new_mask
 
-    if isplots:
+    if isplots or isplots >= 5:
         plt.imshow(new_mask)
         plt.title('F277 Mask')
         plt.show()
@@ -256,7 +256,7 @@ def mask_method_one(data, meta, isplots=False, save=True):
     fit2 = clean_and_fit(x, x[(x>800) & (x<1800)],
                          f_centers, gcenters_2[(x>800) & (x<1800)])
     
-    if isplots:
+    if isplots or isplots >= 5:
         plt.imshow(g+f)
         plt.plot(x, fit1(x), 'k')
         plt.plot(x, fit2(x), 'r')
@@ -356,7 +356,7 @@ def mask_method_two(data, meta, isplots=False, save=False):
             
         avg[:,ind] = fit(x)
 
-    if isplots:
+    if isplots or isplots >= 5:
         plt.imshow(summed, vmin=0, vmax=2e3)
         plt.plot(x, np.nanmedian(avg[:,:2],axis=1), 'k', lw=2)
         plt.plot(x, np.nanmedian(avg[:,2:4],axis=1), 'r', lw=2)
@@ -392,8 +392,7 @@ def simplify_niriss_img(data, meta, isplots=False):
     # creates data img mask
     z,g = image_filtering(perc)
     
-    if isplots:
-        plt.close()
+    if isplots or isplots >= 5:
         fig, (ax1,ax2) = plt.subplots(nrows=2,figsize=(14,8),
                                       sharex=True, sharey=True)
         ax1.imshow(z)
