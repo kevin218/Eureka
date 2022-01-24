@@ -345,8 +345,6 @@ class PolynomialModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        print(self.coeffs)
-
         # Create the polynomial from the coeffs
         poly = np.poly1d(self.coeffs)
 
