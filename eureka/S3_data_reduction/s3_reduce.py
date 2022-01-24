@@ -92,7 +92,7 @@ def reduceJWST(eventlabel, s2_meta=None):
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
     meta.eventlabel=eventlabel
-    
+
     # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
         # Search for the S2 output metadata in the inputdir provided in
@@ -362,7 +362,7 @@ def reduceJWST(eventlabel, s2_meta=None):
             total = (time.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-            if meta.testing_S3 == False:
+            if meta.save_output == True:
                 log.writelog('Saving results as astropy table')
                 meta.tab_filename = meta.outputdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
                 astropytable.savetable_S3(meta.tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
@@ -373,7 +373,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                 plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
             # Save results
-            if meta.testing_S3 == False:
+            if meta.save_output == True:
                 log.writelog('Saving Metadata')
                 me.saveevent(meta, meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save", save=[])
 

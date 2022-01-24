@@ -1,5 +1,43 @@
 # Contributing to Eureka!
 
+## Page information
+
+Here you will find information on how to contribute to Eureka! Which includes the importance of
+[testing](#Testing-Eureka!) as well as some [GitHub basics](#GitHub-Basics)
+
+## Testing Eureka!
+
+As of now, tests for Stage 3, Stage 4, as well as light curve fitting functionality for NIRCam have been written for
+Eureka!. **It is required for all contributors of Eureka! to run these tests locally before opening a pull request
+with their new code**. By running the tests locally, the contributor will be able to see whether the functionality of
+the main code is still intact. This requirement is common in software development teams and is meant to encourage smooth
+collaboration by helping track small bugs or changes that affect the basic functionality of the code so that colleagues won't have to.
+
+For these tests, the `pytest` package (<a href="https://docs.pytest.org/en/6.2.x/getting-started.html" target="_blank"> link </a>) will be used. Once installed, the user submitting a pull request may navigate to the tests folder in Eureka! (`eureka/tests`) and run
+the following command:
+```bash
+pytest
+```
+
+Which will run the suite of tests found within the folder. To run a specific test, let's use NIRCam tests as an example, then the following command can be used:
+```bash
+pytest -k test_NIRCam
+```
+
+Everything should pass and a result similar to the following picture should be seen.
+
+![testing](../media/testing.png)
+
+If this isn't the case, tracking the error will be necessary. Some common errors regarding basic functionality of the code are:
+
+* Renaming functions or packages with no follow-through in code applications of the function (or in test code)
+* Added ecf file parameters with no follow-through in code applications of the parameter (or test ecf files)
+* Bugs - spelling errors, indentation errors, escape sequence errors
+
+It is therefore the responsibility of the contributor to update the tests and the code until local tests run correctly. Of course,
+there will be times where this might be harder than expected, and in those cases we welcome contributors to speak thoroughly on the
+issues within their pull request so other team members may help them and be aware of the problem.
+
 ## GitHub Basics
 
 This section will go over how to best contribute to the Eureka project utilizing GitHub tools such as forking, and will be dedicated to Eureka-specific examples. If you are a beginner to GitHub, a comprehensive introduction to GitHub can be found on <a href="https://christinahedges.github.io/astronomy_workflow/index.html" target="_blank"> the following page.</a>
@@ -91,7 +129,7 @@ If you need to unstage a file, you can do:
 ```bash
 git reset HEAD file_path/file
 ```
-This will prevent that file from being included in the commit unless you stage it again by doing 
+This will prevent that file from being included in the commit unless you stage it again by doing
 ```bash
 git add
 ```
