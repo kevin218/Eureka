@@ -38,8 +38,6 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
-    print('model_sys', model_sys)
-
     fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 9))
     plt.clf()
     ax = fig.subplots(3,1)
