@@ -186,7 +186,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
             # Evaluate background model at all points, write model to background image
             if len(goodxvals) != 0:
                 bg[j] = np.polyval(coeffs, range(nx))
-                if isplots == 6:
+                if isplots >= 6:
                     plt.figure(3601)
                     plt.clf()
                     plt.title(str(j))

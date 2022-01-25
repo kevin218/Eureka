@@ -11,10 +11,6 @@ from ..lib import lsq
 from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ptform
 from . import plots_s5 as plots
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(lsq)
-reload(plots)
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -82,7 +78,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter=calling_function)
+        plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
@@ -190,6 +186,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     n_loops = 0
     while not np.all(in_range) and n_loops<meta.max_pos_iters:
+        n_loops += 1
         pos = pos[in_range]
         step_size /= 2 # Make the proposal size a bit smaller to reduce odds of rejection
         pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers-len(pos))]))
