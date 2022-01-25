@@ -22,3 +22,8 @@ asdf
 gwcs
 jwst==1.1.0
 tqdm
+dynesty
+photutils<=1.0.2
+ccdproc
+emcee
+corner

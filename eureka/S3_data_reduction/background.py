@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 from tqdm import tqdm
 
+__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
+
 def BGsubtraction(data, meta, log, isplots):
     """Does background subtraction using inst.fit_bg & background.fitbg
 
@@ -84,13 +86,16 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
         A mask array
     x1:     ndarray
     x2:     ndarray
-    deg:    int
+    deg:    int, optional
         Polynomial order for column-by-column background subtraction
-    threshold:  int
-        Sigma threshold for outlier rejection during background subtraction
-    isrotate:   bool
-    isplots:    int
-        The amount of plots saved; set in ecf.
+        Default is 1.
+    threshold:  int, optional
+        Sigma threshold for outlier rejection during background subtraction.
+        Defaullt is 5.
+    isrotate:   bool, optional
+        Default is False.
+    isplots:    int, optional
+        The amount of plots saved; set in ecf. Default is 0.
 
     Notes
     ------
@@ -199,7 +204,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
     return bg, mask
 
 # STEP 3: Fit sky background with out-of-spectra data
-def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=False):
+def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=0):
     '''Fit sky background with out-of-spectra data.
 
     fitbg2 uses bgmask, a mask for the background region which enables fitting more complex
@@ -216,13 +221,16 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
         A mask array
     bgmask: ndarray
         A background mask array.
-    deg:    int
-        Polynomial order for column-by-column background subtraction
-    threshold:  int
-        Sigma threshold for outlier rejection during background subtraction
-    isrotate:   bool
-    isplots:    int
-        The amount of plots saved; set in ecf.
+    deg:    int, optional
+        Polynomial order for column-by-column background subtraction.
+        Default is 1.
+    threshold:  int, optional
+        Sigma threshold for outlier rejection during background subtraction.
+        Default is 5.
+    isrotate:   bool, optional
+        Default is False.
+    isplots:    int, optional
+        The amount of plots saved; set in ecf. Default is 0.
 
     Notes
     ------
@@ -231,13 +239,13 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     - September 2016 Kevin Stevenson
         Initial version
     '''
-
     # Assume x is the spatial direction and y is the wavelength direction
     # Otherwise, rotate array
     if isrotate == 1:
         dataim = dataim[::-1].T
         mask   = mask[::-1].T
         bgmask = bgmask[::-1].T
+
     elif isrotate == 2:
         dataim = dataim.T
         mask   = mask.T
@@ -246,42 +254,43 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     # Initiate background image with zeros
     ny, nx  = np.shape(dataim)
     bg      = np.zeros((ny,nx))
-    mask2   = mask*bgmask
+
     if deg < 0:
         # Calculate median background of entire frame
         bg  += np.median(dataim[np.where(mask2)])
+
     elif deg == None :
         # No background subtraction
         pass
     else:
         degs = np.ones(ny)*deg
         # Fit polynomial to each column
-        for j in range(ny):
+        for j in tqdm(range(ny)):
             nobadpixels = False
             # Create x indices for background sections of frame
             xvals   = np.where(bgmask[j] == 1)[0]
             # If too few good pixels on either half of detector then compute average
-            if (np.sum(mask2[j,:nx/2]) < deg) or (np.sum(mask2[j,nx/2:nx]) < deg):
+            if (np.sum(bgmask[j,:int(nx/2)]) < deg) or (np.sum(bgmask[j,int(nx/2):nx]) < deg):
                 degs[j] = 0
             while (nobadpixels == False):
                 try:
-                    goodxvals = xvals[np.where(mask[j,xvals])]
+                    goodxvals = xvals[np.where(bgmask[j,xvals])]
                 except:
-                    print(j)
-                    print(xvals)
+                    print('column: ', j, 'xvals: ', xvals)
                     print(np.where(mask[j,xvals]))
                     return
                 dataslice = dataim[j,goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
-                    #print(j,ny)
                     nobadpixels = True      #exit while loop
                     #Use coefficients from previous row
+
                 else:
                     # Fit along spatial direction with a polynomial of degree 'deg'
                     coeffs    = np.polyfit(goodxvals, dataslice, deg=degs[j])
                     # Evaluate model at goodexvals
                     model     = np.polyval(coeffs, goodxvals)
+
                     #model = smooth.smooth(dataslice, window_len=window_len, window=windowtype)
                     #model = sps.medfilt(dataslice, window_len)
                     if isplots == 6:
@@ -294,22 +303,36 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                         plt.pause(0.01)
 
                     # Calculate residuals
-                    residuals   = dataslice - model
+                    residuals = dataslice - model
+
                     # Find worst data point
                     loc         = np.argmax(np.abs(residuals))
                     # Calculate standard deviation of points excluding worst point
-                    ind         = range(len(residuals))
-                    ind.remove(loc)
-                    stdres      = np.std(residuals[ind])
+                    ind = np.arange(0,len(residuals),1)
+                    ind = np.delete(ind, loc)
+                    stdres = np.std(residuals[ind])
+                    
                     if stdres == 0:
                         stdres = np.inf
                     # Calculate number of sigma from the model
                     stdevs    = np.abs(residuals) / stdres
+                    #print(stdevs)
+
                     # Mask data point if > threshold
                     if stdevs[loc] > threshold:
-                        mask[j,goodxvals[loc]] = 0
+                        bgmask[j,goodxvals[loc]] = 0
                     else:
                         nobadpixels = True      #exit while loop
+
+
+                    if isplots == 6:
+                        plt.figure(3601)
+                        plt.clf()
+                        plt.title(str(j))
+                        plt.plot(goodxvals, dataslice, 'bo')
+                        plt.plot(goodxvals, model, 'g-')
+                        plt.pause(0.01)
+                        plt.show()
 
             # Evaluate background model at all points, write model to background image
             if len(goodxvals) != 0:
@@ -325,4 +348,23 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
         mask    = (mask.T)
         bgmask  = (bgmask.T)
 
-    return bg, mask #,variance
+    return bg, bgmask#, mask #,variance
+
+
+def fitbg3(data, isplots=0):
+    """
+    Fit sky background with out-of-spectra data. Hopefully this is a faster
+    routine than fitbg2. (optimized to fit across the x-direction)
+
+    Parameters
+    ----------
+    dataim : np.ndarray                                          
+       Data image to fit the background to.                                                            
+    isplots : int, optional                                    
+       The amount of plots saved; set in ecf. Default is 0.                                          
+
+    Returns
+    -------
+    bg : np.ndarray
+       Background model.
+    """
