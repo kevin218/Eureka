@@ -58,8 +58,8 @@ def ld_profile(name='quadratic', latex=False):
 
         # Uniform
         if name == 'uniform':
-            def profile(m, c1):
-                return c1
+            def profile(m):
+                return 1.
 
         # Linear
         if name == 'linear':
