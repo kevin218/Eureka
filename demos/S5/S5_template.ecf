@@ -1,11 +1,11 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
 allapers        True # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
-rescale_err     True    # Rescale uncertainties to have reduced chi-squared of unity
+rescale_err     False    # Rescale uncertainties to have reduced chi-squared of unity
 fit_par         ./s5_fit_par.ecf # What fitting ecf do you want to use?
 run_verbose     True
-fit_method      [lsq,emcee,dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     transit #other functions not available yet
+fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
+run_myfuncs     [transit] #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
