@@ -222,15 +222,15 @@ def mask_method_one(data, meta, isplots=False, save=True):
         fit = np.poly1d(poly)
         return fit
 
-    try:
-        g = data.simple_img + 0
-    except:
-        g = simplify_niriss_img(data, meta)
+#    try:
+#        g = data.simple_img
+#    except:
+    g = simplify_niriss_img(data, meta, isplots)
 
-    try:
-        f = data.f277_img
-    except:
-        f,_ = f277_mask(data, meta)
+#    try:
+#        f = data.f277_img
+#    except:
+    f,_ = f277_mask(data, meta)
 
     g_centers = find_centers(g,cutends=None)
     f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
@@ -257,9 +257,14 @@ def mask_method_one(data, meta, isplots=False, save=True):
                          f_centers, gcenters_2[(x>800) & (x<1800)])
     
     if isplots or isplots >= 5:
+        plt.figure(figsize=(14,4))
+        plt.title('Order Approximation')
         plt.imshow(g+f)
-        plt.plot(x, fit1(x), 'k')
-        plt.plot(x, fit2(x), 'r')
+        plt.plot(x, fit1(x), 'k', label='First Order')
+        plt.plot(x, fit2(x), 'r', label='Second Order')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         plt.show()
 
     tab = Table()
@@ -357,9 +362,14 @@ def mask_method_two(data, meta, isplots=False, save=False):
         avg[:,ind] = fit(x)
 
     if isplots or isplots >= 5:
+        plt.figure(figsize=(14,4))
+        plt.title('Order Approximation')
         plt.imshow(summed, vmin=0, vmax=2e3)
-        plt.plot(x, np.nanmedian(avg[:,:2],axis=1), 'k', lw=2)
-        plt.plot(x, np.nanmedian(avg[:,2:4],axis=1), 'r', lw=2)
+        plt.plot(x, np.nanmedian(avg[:,:2],axis=1), 'k', lw=2,
+                 label='First Order')
+        plt.plot(x, np.nanmedian(avg[:,2:4],axis=1), 'r', lw=2,
+                 label='Second Order')
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         plt.show()
     
 
@@ -392,13 +402,16 @@ def simplify_niriss_img(data, meta, isplots=False):
     # creates data img mask
     z,g = image_filtering(perc)
     
-    if isplots or isplots >= 5:
-        fig, (ax1,ax2) = plt.subplots(nrows=2,figsize=(14,8),
+    if isplots or isplots >= 6:
+        fig, (ax1,ax2) = plt.subplots(nrows=2,figsize=(14,4),
                                       sharex=True, sharey=True)
         ax1.imshow(z)
         ax1.set_title('Canny Edge')
         ax2.imshow(g)
         ax2.set_title('Gaussian Blurred')
+        ax2.set_ylabel('y')
+        ax1.set_ylabel('y')
+        ax2.set_xlabel('x')
         plt.show()
 
     data.simple_img = g
@@ -407,7 +420,7 @@ def simplify_niriss_img(data, meta, isplots=False):
 
 def wave_NIRISS(wavefile, meta):
     """
-    Creates the wavelength solution using code from `jwst` and `gwcs`.
+    Adds the 2D wavelength solutions to the meta object.
     """
     hdu = fits.open(wavefile)
 
@@ -427,8 +440,6 @@ def fit_bg(data, meta):
     # want to create some background mask to pass in to 
       background.fitbg2
     """
-    bg = fitbg3(data.data, data.order_mask, 
-                data.bkg_mask,
-                deg=meta.bg_deg, threshold=meta.bg_thresh)
+    bg = fitbg3(data)
 
     return bg
