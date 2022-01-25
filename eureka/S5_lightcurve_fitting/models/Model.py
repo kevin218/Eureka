@@ -7,20 +7,12 @@ Email: jfilippazzo@stsci.edu
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
-import inspect
 import os
 
 import astropy.units as q
-try:
-    import batman
-except ImportError:
-    print("Could not import batman. Functionality may be limited.")
-#from bokeh.plotting import figure, show
 
-from .parameters import Parameters
-from .utils import COLORS
-from .limb_darkening_fit import ld_profile
-
+from ..parameters import Parameters
+from ..utils import COLORS
 
 class Model:
     def __init__(self, **kwargs):
@@ -112,7 +104,7 @@ class Model:
     def parameters(self, params):
         """A setter for the parameters"""
         # Process if it is a parameters file
-        if isinstance(params, str) and os.file.exists(params):
+        if isinstance(params, str) and os.path.isfile(params):
             params = Parameters(params)
 
         # Or a Parameters instance
@@ -213,7 +205,6 @@ class Model:
 
         self._units = units
 
-
 class CompositeModel(Model):
     """A class to create composite models"""
     def __init__(self, models, **kwargs):
@@ -289,218 +280,4 @@ class CompositeModel(Model):
         for model in self.components:
             model.update(newparams, names, **kwargs)
 
-        return
-
-
-class PolynomialModel(Model):
-    """Polynomial Model"""
-    def __init__(self, **kwargs):
-        """Initialize the polynomial model
-        """
-        # Inherit from Model class
-        super().__init__(**kwargs)
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'systematic'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            coeff_dict = kwargs.get('coeff_dict')
-            params = {cN: coeff for cN, coeff in coeff_dict.items()
-                      if cN.startswith('c') and cN[1:].isdigit()}
-            self.parameters = Parameters(**params)
-
-        # Update coefficients
-        self._parse_coeffs()
-
-    def _parse_coeffs(self, **kwargs):
-        """Convert dict of 'c#' coefficients into a list
-        of coefficients in decreasing order, i.e. ['c2','c1','c0']
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        np.ndarray
-            The sequence of coefficient values
-        """
-
-        # Parse 'c#' keyword arguments as coefficients
-        coeffs = np.zeros(10)
-        for k, v in self.parameters.dict.items():
-            if k.lower().startswith('c') and k[1:].isdigit():
-                coeffs[int(k[1:])] = v[0]
-
-        # Trim zeros and reverse
-        self.coeffs = np.trim_zeros(coeffs)[::-1]
-
-    def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Create the polynomial from the coeffs
-        poly = np.poly1d(self.coeffs)
-
-        # Convert to local time
-        time_local = self.time - self.time.mean()
-
-        # Evaluate the polynomial
-        return poly(time_local)
-
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
-        return
-
-class TransitModel(Model):
-    """Transit Model"""
-    def __init__(self, **kwargs):
-        """Initialize the transit model
-        """
-        # Inherit from Model calss
-        super().__init__(**kwargs)
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Store the ld_profile
-        self.ld_func = ld_profile(self.parameters.limb_dark.value)
-        len_params = len(inspect.signature(self.ld_func).parameters)
-        self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
-
-    def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Generate with batman
-        bm_params = batman.TransitParams()
-
-        # Set all parameters
-        for arg, val in self.parameters.dict.items():
-            setattr(bm_params, arg, val[0])
-        #for p in self.parameters.list:
-        #    setattr(bm_params, p[0], p[1])
-
-        # Combine limb darkening coeffs
-        bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
-
-        # Use batman ld_profile name
-        if self.parameters.limb_dark.value == '4-parameter':
-            bm_params.limb_dark = 'nonlinear'
-
-        # Make the eclipse
-        tt = self.parameters.transittype.value
-        m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
-
-        # Evaluate the light curve
-        return m_eclipse.light_curve(bm_params)
-
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        # ii = 0
-        # for arg, val in self.parameters.dict.items():
-        #     val[0] = newparams[ii]
-        #     setattr(self.parameters, arg, val)
-        #     ii += 1
-        return
-
-class ExpRampModel(Model):
-    """Model for single or double exponential ramps"""
-    def __init__(self, **kwargs):
-        """Initialize the exponential ramp model
-        """
-        # Inherit from Model class
-        super().__init__(**kwargs)
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'systematic'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            coeff_dict = kwargs.get('coeff_dict')
-            params = {rN: coeff for rN, coeff in coeff_dict.items()
-                      if rN.startswith('r') and rN[1:].isdigit()}
-            self.parameters = Parameters(**params)
-
-        # Update coefficients
-        self._parse_coeffs()
-
-    def _parse_coeffs(self):
-        """Convert dict of 'r#' coefficients into a list
-        of coefficients in increasing order, i.e. ['r0','r1','r2']
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        np.ndarray
-            The sequence of coefficient values
-        """
-        # Parse 'c#' keyword arguments as coefficients
-        self.coeffs = np.zeros(6)
-        for k, v in self.parameters.dict.items():
-            if k.lower().startswith('r') and k[1:].isdigit():
-                self.coeffs[int(k[1:])] = v[0]
-
-    def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Create the individual coeffs
-        r0, r1, r2, r3, r4, r5 = self.coeffs
-        # if len(self.coeffs) == 3:
-        #     r0, r1, r2 = self.coeffs
-        #     r3, r4, r5 = 0, 0, 0
-        # elif len(self.coeffs) == 6:
-        #     r0, r1, r2, r3, r4, r5 = self.coeffs
-        # else:
-        #     raise IndexError('Exponential ramp requires 3 or 6 parameters labelled r#.')
-
-        # Convert to local time
-        time_local = self.time - self.time[0]
-
-        # Evaluate the polynomial
-        return r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
-
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
         return
