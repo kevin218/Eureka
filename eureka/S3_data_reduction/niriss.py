@@ -122,14 +122,18 @@ def image_filtering(img, radius=1, gf=4):
 
     return z, g
 
-def f277_mask(data, meta, isplots=False):
+def f277_mask(data, meta, isplots=0):
     """        
     Marks the overlap region in the f277w filter image.
     
     Parameters
     ----------
-    img : np.ndarray
-       2D image of the f277w filter.
+    data : object
+    meta : object
+    isplots : int, optional
+       Level of plots that should be created in the S3 stage.
+       This is set in the .ecf control files. Default is 0.
+       This stage will plot if isplots >= 5.
     
     Returns
     -------
@@ -153,7 +157,7 @@ def f277_mask(data, meta, isplots=False):
 
     data.f277_img = new_mask
 
-    if isplots or isplots >= 5:
+    if isplots >= 5:
         plt.imshow(new_mask)
         plt.title('F277 Mask')
         plt.show()
@@ -161,7 +165,7 @@ def f277_mask(data, meta, isplots=False):
     return new_mask, mid[q]
 
 
-def mask_method_one(data, meta, isplots=False, save=True):
+def mask_method_one(data, meta, isplots=0, save=True):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -174,9 +178,10 @@ def mask_method_one(data, meta, isplots=False, save=True):
     ----------  
     data : object
     meta : object
-    isplots : bool, optional
-       An option to plot the data and intermediate steps to
-       retrieve the mask per each order. Default is False.     
+    isplots : int, optional
+       Level of plots that should be created in the S3 stage.
+       This is set in the .ecf control files. Default is 0.
+       This stage will plot if isplots >= 5.
     save : bool, optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
@@ -256,7 +261,7 @@ def mask_method_one(data, meta, isplots=False, save=True):
     fit2 = clean_and_fit(x, x[(x>800) & (x<1800)],
                          f_centers, gcenters_2[(x>800) & (x<1800)])
     
-    if isplots or isplots >= 5:
+    if isplots >= 5:
         plt.figure(figsize=(14,4))
         plt.title('Order Approximation')
         plt.imshow(g+f)
@@ -278,12 +283,26 @@ def mask_method_one(data, meta, isplots=False, save=True):
     return tab
 
 
-def mask_method_two(data, meta, isplots=False, save=False):
+def mask_method_two(data, meta, isplots=0, save=False):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
     profile of a summed image to identify the borders of each
     order.
+    
+    ""
+    Parameters
+    -----------
+    data : object
+    meta : object
+    isplots : int, optional
+       Level of plots that should be created in the S3 stage.
+       This is set in the .ecf control files. Default is 0.
+       This stage will plot if isplots >= 5.
+    save : bool, optional
+       Has the option to save the initial guesses for the location
+       of the NIRISS orders. This is set in the .ecf control files.
+       Default is False.
     """
     def identify_peaks(column, height, distance):
         p,_ = find_peaks(column, height=height, distance=distance)
@@ -361,7 +380,7 @@ def mask_method_two(data, meta, isplots=False, save=False):
             
         avg[:,ind] = fit(x)
 
-    if isplots or isplots >= 5:
+    if isplots >= 5:
         plt.figure(figsize=(14,4))
         plt.title('Order Approximation')
         plt.imshow(summed, vmin=0, vmax=2e3)
@@ -393,16 +412,16 @@ def simplify_niriss_img(data, meta, isplots=False):
     ----------     
     data : object  
     meta : object 
-    isplots : bool, optional
-       An option to plot the data and intermediate steps to
-       retrieve the mask per each order. Default is False.  
+    isplots : int, optional
+       Level of plots that should be created in the S3 stage.
+       This is set in the .ecf control files. Default is 0.  
     """
     perc  = np.nanmax(data.data, axis=0)
 
     # creates data img mask
     z,g = image_filtering(perc)
     
-    if isplots or isplots >= 6:
+    if isplots >= 6:
         fig, (ax1,ax2) = plt.subplots(nrows=2,figsize=(14,4),
                                       sharex=True, sharey=True)
         ax1.imshow(z)
@@ -421,6 +440,13 @@ def simplify_niriss_img(data, meta, isplots=False):
 def wave_NIRISS(wavefile, meta):
     """
     Adds the 2D wavelength solutions to the meta object.
+    
+    Parameters
+    ----------
+    wavefile : str
+       The name of the .FITS file with the wavelength
+       solution.
+    meta : object
     """
     hdu = fits.open(wavefile)
 
