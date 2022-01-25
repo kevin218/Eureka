@@ -249,7 +249,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     ny, nx  = np.shape(dataim)
     bg      = np.zeros((ny,nx))
 
-    if deg <= 0:
+    if deg < 0:
         # Calculate median background of entire frame
         bg  += np.median(dataim[np.where(mask2)])
 
@@ -342,7 +342,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
         mask    = (mask.T)
         bgmask  = (bgmask.T)
 
-    return bg*bgmask#, mask #,variance
+    return bg, bgmask#, mask #,variance
 
 
 def fitbg3(data, isplots=False):
