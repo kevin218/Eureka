@@ -11,10 +11,6 @@ from ..lib import lsq
 from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ptform
 from . import plots_s5 as plots
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(lsq)
-reload(plots)
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
