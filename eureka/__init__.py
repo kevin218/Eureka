@@ -1,6 +1,11 @@
 # !/usr/bin/python
+import os
+
+PACAKGEDIR = os.path.abspath(os.path.dirname(__file__))
 
 __all__ = ["lib", "S2_calibrations", "S3_data_reduction", "S4_generate_lightcurves", "S5_lightcurve_fitting"]
+
+from .version import __version__
 
 from . import lib
 from . import S2_calibrations
