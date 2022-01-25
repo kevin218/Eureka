@@ -9,11 +9,12 @@ from dynesty.utils import resample_equal
 
 from ..lib import lsq
 from .parameters import Parameters
-from .plots_s5 import plot_fit, plot_rms, plot_corner
 from .likelihood import computeRedChiSq, lnprob, ptform
+from . import plots_s5 as plots
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(lsq)
+reload(plots)
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -93,7 +94,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plot_rms(lc, model, meta, fitter='lsq')
+        plots.plot_rms(lc, model, meta, fitter='lsq')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
@@ -206,7 +207,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
     if meta.isplots_S5 >= 5:
-        plot_corner(samples, lc, meta, freenames, fitter='emcee')
+        plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     medians = []
     for i in range(len(step_size)):
@@ -222,7 +223,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter='emcee')
+        plots.plot_fit(lc, model, meta, fitter='emcee')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
@@ -234,7 +235,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plot_rms(lc, model, meta, fitter='emcee')
+        plots.plot_rms(lc, model, meta, fitter='emcee')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
@@ -315,7 +316,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
-        plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
 
     medians = []
     for i in range(len(freenames)):
@@ -333,7 +334,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter='dynesty')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
@@ -345,7 +346,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter='dynesty')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
@@ -425,14 +426,14 @@ def lmfitter(lc, model, meta, log, **kwargs):
     model.update(fit_params, freenames)
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter='dynesty')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter='dynesty')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)

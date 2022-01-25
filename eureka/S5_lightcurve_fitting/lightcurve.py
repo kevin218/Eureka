@@ -98,7 +98,7 @@ class LightCurve(m.Model):
             self.unc = unc
 
         else:
-            self.unc = np.array([np.nan]*len(self.time))
+            self.unc = np.array([np.nan]*len(time))
 
         # Set the time and flux axes
         self.time = time
@@ -114,6 +114,8 @@ class LightCurve(m.Model):
         self.channel = channel
         self.nchannel = nchannel
         self.log = log
+
+        self.color = next(COLORS)
 
         return
 
@@ -190,23 +192,25 @@ class LightCurve(m.Model):
         None
         """
         # Make the figure
-        fig = plt.figure(int('54{}'.format(str(self.channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+        fig = plt.figure(int('50{}'.format(str(self.channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
         fig.clf()
         # Draw the data
         ax = fig.gca()
-        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color=next(COLORS), zorder=0)
+        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color='w', ecolor=self.color, mec=self.color, zorder=0)
         # Draw best-fit model
+        ls = ['-', '--', ':', '-.']
         if fits and len(self.results) > 0:
-            for model in self.results:
-                model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf)
+            for i, model in enumerate(self.results):
+                model.plot(self.time, ax=ax, color=str(0.3+0.05*i), lw=2, ls=ls[i%4], zorder=np.inf)
 
         # Format axes
-        ax.set_xlabel(str(self.time_units))
-        ax.set_ylabel('Flux')
+        ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
+        ax.set_xlabel(str(self.time_units), size=14)
+        ax.set_ylabel('Normalized Flux', size=14)
         ax.legend(loc='best')
         fig.tight_layout()
 
-        fname = 'figs/fig54{}_all_fits.png'.format(str(self.channel).zfill(len(str(self.nchannel))))
+        fname = 'figs/fig50{}_all_fits.png'.format(str(self.channel).zfill(len(str(self.nchannel))))
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
