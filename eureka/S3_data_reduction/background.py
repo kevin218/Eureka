@@ -353,19 +353,7 @@ def fitbg3(data, isplots=False):
     Parameters
     ----------
     dataim : np.ndarray                                          
-       Data image to fit the background to.                      
-    omask : np.ndarray                                            
-       Mask of shape dataim that marks where the orders are.      
-    bgmask : np.ndarray                                                      
-       Background mask that marks where the background is. The background    
-       pixels should equal 0 in the mask, while non-background regions should
-       equal > 0 (the exact value does not matter).                   
-    deg : int, optional                                               
-       The number of degree polynomial to fit to the background.      
-       Default is 1 (linear fit).                                     
-    threshold : float, optional                                      
-       The standard deviation threshold to remove bad background     
-       pixels. Default is 5.                                       
+       Data image to fit the background to.                                                            
     isplots : bool, optional                                      
        Plots intermediate steps for the background fitting routine.
        Default is False.                                          
