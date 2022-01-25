@@ -86,13 +86,16 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
         A mask array
     x1:     ndarray
     x2:     ndarray
-    deg:    int
+    deg:    int, optional
         Polynomial order for column-by-column background subtraction
-    threshold:  int
-        Sigma threshold for outlier rejection during background subtraction
-    isrotate:   bool
-    isplots:    int
-        The amount of plots saved; set in ecf.
+        Default is 1.
+    threshold:  int, optional
+        Sigma threshold for outlier rejection during background subtraction.
+        Defaullt is 5.
+    isrotate:   bool, optional
+        Default is False.
+    isplots:    int, optional
+        The amount of plots saved; set in ecf. Default is 0.
 
     Notes
     ------
@@ -201,7 +204,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
     return bg, mask
 
 # STEP 3: Fit sky background with out-of-spectra data
-def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=False):
+def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=0):
     '''Fit sky background with out-of-spectra data.
 
     fitbg2 uses bgmask, a mask for the background region which enables fitting more complex
@@ -218,13 +221,16 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
         A mask array
     bgmask: ndarray
         A background mask array.
-    deg:    int
-        Polynomial order for column-by-column background subtraction
-    threshold:  int
-        Sigma threshold for outlier rejection during background subtraction
-    isrotate:   bool
-    isplots:    int
-        The amount of plots saved; set in ecf.
+    deg:    int, optional
+        Polynomial order for column-by-column background subtraction.
+        Default is 1.
+    threshold:  int, optional
+        Sigma threshold for outlier rejection during background subtraction.
+        Default is 5.
+    isrotate:   bool, optional
+        Default is False.
+    isplots:    int, optional
+        The amount of plots saved; set in ecf. Default is 0.
 
     Notes
     ------
@@ -319,7 +325,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                         nobadpixels = True      #exit while loop
 
 
-                    if isplots == True:
+                    if isplots == 6:
                         plt.figure(3601)
                         plt.clf()
                         plt.title(str(j))
@@ -345,7 +351,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     return bg, bgmask#, mask #,variance
 
 
-def fitbg3(data, isplots=False):
+def fitbg3(data, isplots=0):
     """
     Fit sky background with out-of-spectra data. Hopefully this is a faster
     routine than fitbg2. (optimized to fit across the x-direction)
@@ -354,9 +360,8 @@ def fitbg3(data, isplots=False):
     ----------
     dataim : np.ndarray                                          
        Data image to fit the background to.                                                            
-    isplots : bool, optional                                      
-       Plots intermediate steps for the background fitting routine.
-       Default is False.                                          
+    isplots : int, optional                                    
+       The amount of plots saved; set in ecf. Default is 0.                                          
 
     Returns
     -------
