@@ -182,8 +182,11 @@ def reduceJWST(eventlabel, s2_meta=None):
             event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
 
             # Open new log file
-            meta.logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
-            log = logedit.Logedit(meta.logname)
+            meta.s3_logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
+            if s2_meta != None:
+                log = logedit.Logedit(meta.s3_logname, read=s2_meta.s2_logname)
+            else:
+                log = logedit.Logedit(meta.s3_logname)
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
