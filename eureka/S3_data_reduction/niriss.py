@@ -466,6 +466,5 @@ def fit_bg(data, meta):
     # want to create some background mask to pass in to 
       background.fitbg2
     """
-    bg = fitbg3(data)
 
-    return bg
+    return 
