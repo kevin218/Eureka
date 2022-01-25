@@ -26,3 +26,8 @@ stdatamodels==0.2.4
 stpipe==0.2.0
 svo_filters
 tqdm
+dynesty
+photutils<=1.0.2
+ccdproc
+emcee
+corner
