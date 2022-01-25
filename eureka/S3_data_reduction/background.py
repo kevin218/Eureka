@@ -314,7 +314,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
 
                     # Mask data point if > threshold
                     if stdevs[loc] > threshold:
-                        bgmask[j,goodxvals[loc]] = np.nan#0
+                        bgmask[j,goodxvals[loc]] = 0
                     else:
                         nobadpixels = True      #exit while loop
 
