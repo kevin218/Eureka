@@ -3,6 +3,7 @@ astropy
 astroquery>=0
 batman-package
 bokeh
+ccdproc
 corner
 dynesty
 emcee
@@ -16,7 +17,7 @@ myst_parser
 nbsphinx
 numpy>=1.20.0
 pandas
-photutils==1.1.0
+photutils<=1.0.2
 pytest
 pyyaml
 recommonmark
@@ -26,8 +27,3 @@ stdatamodels==0.2.4
 stpipe==0.2.0
 svo_filters
 tqdm
-dynesty
-photutils<=1.0.2
-ccdproc
-emcee
-corner
