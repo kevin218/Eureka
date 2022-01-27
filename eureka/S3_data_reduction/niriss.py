@@ -458,8 +458,27 @@ def wave_NIRISS(wavefile, meta):
 
     return meta
 
+def flag_bg(data, meta):
+    '''Outlier rejection of sky background along time axis.
 
-def fit_bg(data, meta):
+    Parameters
+    ----------
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
+
+    Returns
+    -------
+    data:   DataClass
+        The updated data object with outlier background pixels flagged.
+    '''
+
+    print('WARNING, niriss.flag_bg is not yet implemented!')
+
+    return
+
+def fit_bg(data, meta, n, isplots=False):
     """
     Subtracts background from non-spectral regions.
 
@@ -467,4 +486,6 @@ def fit_bg(data, meta):
       background.fitbg2
     """
 
-    return 
+    print('WARNING, niriss.fit_bg is not yet implemented!')
+
+    return
