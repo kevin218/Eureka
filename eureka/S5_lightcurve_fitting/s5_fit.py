@@ -66,15 +66,15 @@ def fitJWST(eventlabel, s4_meta=None):
             # There were no metadata files in that folder, so let's see if there are in children folders
             fnames = glob.glob(rootdir+'**/S4_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
         
-        if len(files)>=1:
+        if len(fnames)>=1:
             # get the folder with the latest modified time
-            fname = max(fnames, key=os.path.getmtime)]
+            fname = max(fnames, key=os.path.getmtime)
 
-        if len(files)==0:
+        if len(fnames)==0:
             # There may be no metafiles in the inputdir - raise an error and give a helpful message
             raise AssertionError('Unable to find an output metadata file from Eureka!\'s S4 step '
                                 +'in the inputdir: \n"{}"!'.format(rootdir))
-        elif len(files)>1:
+        elif len(fnames)>1:
             # There may be multiple runs - use the most recent but warn the user
             print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
                  +'Using the metadata file: \n{}\n'.format(fname)
