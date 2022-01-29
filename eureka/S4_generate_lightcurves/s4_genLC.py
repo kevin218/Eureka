@@ -99,8 +99,8 @@ def lcJWST(eventlabel, s3_meta=None):
                  +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
         
-        fname = fname[:-4] # Strip off the .dat ending
-        s3_meta = me.loadevent(fname)
+            fname = fname[:-4] # Strip off the .dat ending
+            s3_meta = me.loadevent(fname)
 
     # Need to remove the topdir from the outputdir
     s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]

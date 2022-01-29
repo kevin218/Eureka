@@ -61,28 +61,28 @@ def fitJWST(eventlabel, s4_meta=None):
         rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
         if rootdir[-1]!='/':
             rootdir += '/'
-        files = glob.glob(rootdir+'S4_'+meta.eventlabel+'*_Meta_Save.dat')
-        if len(files)==0:
+        fnames = glob.glob(rootdir+'S4_'+meta.eventlabel+'*_Meta_Save.dat')
+        if len(fnames)==0:
             # There were no metadata files in that folder, so let's see if there are in children folders
-            files = glob.glob(rootdir+'**/S4_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
-            files = sn.sort_nicely(files)
+            fnames = glob.glob(rootdir+'**/S4_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
+        
+        if len(files)>=1:
+            # get the folder with the latest modified time
+            fname = max(fnames, key=os.path.getmtime)]
 
         if len(files)==0:
             # There may be no metafiles in the inputdir - raise an error and give a helpful message
             raise AssertionError('Unable to find an output metadata file from Eureka!\'s S4 step '
                                 +'in the inputdir: \n"{}"!'.format(rootdir))
-
         elif len(files)>1:
             # There may be multiple runs - use the most recent but warn the user
             print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
-                 +'Using the metadata file: \n{}\n'.format(files[-1])
+                 +'Using the metadata file: \n{}\n'.format(fname)
                  +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                  +'of the run you intended, please provide a more precise folder for the metadata file.')
 
-        fname = files[-1] # Pick the last file name (should be the most recent or only file)
-        fname = fname[:-4] # Strip off the .dat ending
-
-        s4_meta = me.loadevent(fname)
+            fname = fname[:-4] # Strip off the .dat ending
+            s4_meta = me.loadevent(fname)
 
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]

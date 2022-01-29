@@ -100,7 +100,10 @@ def reduceJWST(eventlabel, s2_meta=None):
         if rootdir[-1]!='/':
             rootdir += '/'
         fnames = glob.glob(rootdir+'**/S2_'+meta.eventlabel+'_Meta_Save.dat', recursive=True)
-        fnames = sn.sort_nicely(fnames)
+        
+        if len(fnames)>=1:
+            # get the folder with the latest modified time
+            fname = max(fnames, key=os.path.getmtime)
 
         if len(fnames)==0:
             # There may be no metafiles in the inputdir - raise an error and give a helpful message
@@ -111,11 +114,9 @@ def reduceJWST(eventlabel, s2_meta=None):
             if len(fnames)>1:
                 # There may be multiple runs - use the most recent but warn the user
                 print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(meta.inputdir)
-                     +'Using the metadata file: \n"{}"'.format(fnames[-1]))
+                     +'Using the metadata file: \n"{}"'.format(fname))
 
-            fname = fnames[-1] # Pick the last file name
             fname = fname[:-4] # Strip off the .dat ending
-
             s2_meta = me.loadevent(fname)
 
     # Locate the exact output folder from the previous S2 run (since there is a procedurally generated subdirectory for each run)
