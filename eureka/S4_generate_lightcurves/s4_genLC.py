@@ -20,8 +20,7 @@ import sys, os, time, shutil, glob
 import numpy as np
 import scipy.interpolate as spi
 import matplotlib.pyplot as plt
-from . import plots_s4
-from . import drift
+from . import plots_s4, drift, clipping
 from ..lib import sort_nicely as sn
 from ..lib import logedit
 from ..lib import readECF as rd
@@ -188,8 +187,18 @@ def lcJWST(eventlabel, s3_meta=None):
             meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
             meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
 
+            # Do 1D sigma clipping
+            if meta.sigma_clip:
+                log.writelog('Sigma clipping spectral time series')
+                outliers = 0
+                for l in range(meta.subnx):
+                    optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=meta.verbose)
+                    outliers += nout
+                if not meta.verbose:
+                    log.writelog('Identified a total of {} outliers in time series, or an average of {} outliers per wavelength'.format(outliers, np.round(outliers/meta.subnx, 1)))
+
             # Apply 1D drift/jitter correction
-            if meta.correctDrift == True:
+            if meta.correctDrift:
                 #Calculate drift over all frames and non-destructive reads
                 log.writelog('Applying drift/jitter correction')
                 # Compute drift/jitter
