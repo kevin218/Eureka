@@ -73,8 +73,8 @@ def calibrateJWST(eventlabel):
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
 
     # Output S2 log file
-    meta.logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
-    log = logedit.Logedit(meta.logname)
+    meta.s2_logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
+    log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
 
     # Copy ecf

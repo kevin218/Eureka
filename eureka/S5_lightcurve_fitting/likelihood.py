@@ -40,7 +40,8 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
-    if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
+    if len(ilow[0]) + len(ihi[0]) > 0:
+        ln_like_val = -np.inf
     return ln_like_val
 
 def lnprior(theta, pmin, pmax):
@@ -106,7 +107,10 @@ def lnprob(theta, lc, model, pmin, pmax, freenames):
     """
     ln_like_val = ln_like(theta, lc, model, pmin, pmax, freenames)
     lp = lnprior(theta, pmin, pmax)
-    return ln_like_val + lp
+    lnprob = ln_like_val + lp
+    if not np.isfinite(lnprob):
+        lnprob = -np.inf
+    return lnprob
 
 #PRIOR TRANSFORMATION TODO: ADD GAUSSIAN PRIORS
 def transform_uniform(x, a, b):
