@@ -115,6 +115,12 @@ def calibrateJWST(eventlabel):
         log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
         filename = meta.segment_list[m]
 
+        with fits.open(filename, mode='update') as hdulist:
+            if hdulist[0].header['INSTRUME']=='NIRCam':
+                # jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers rather than the strings that they are in the old simulated NIRCam data
+                hdulist[0].header['NDITHPTS'] = 1
+                hdulist[0].header['NRIMDTPT'] = 1
+
         pipeline.run_eurekaS2(filename, meta, log)
 
     # Calculate total run time
