@@ -20,7 +20,7 @@ except ImportError:
 from .parameters import Parameters
 from .utils import COLORS
 from .limb_darkening_fit import ld_profile
-
+import pdb
 
 class Model:
     def __init__(self, **kwargs):
@@ -123,7 +123,7 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, share=False, nchan=0, **kwargs):
         """Plot the model
 
         Parameters
@@ -141,31 +141,59 @@ class Model:
             The figure
         """
         # Make the figure
-        if ax is None:
-            fig = plt.figure(figsize=(8,6))
-            ax = fig.gca()
 
-        # Set the time
-        self.time = time
+        if share:
+            for channel in np.arange(nchan):
+                if ax is None:
+                    fig = plt.figure(figsize=(8,6))
+                    ax = fig.gca()
 
-        # Plot the model
-        label = self.fitter
-        if self.name!='New Model':
-            label += ': '+self.name
-        ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
+                # Set the time
+                self.time = time
 
-        if components and self.components is not None:
-            for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
+                # Plot the model
+                label = self.fitter
+                if self.name!='New Model':
+                    label += ': '+self.name
+                ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
 
-        # Format axes
-        ax.set_xlabel(str(self.time_units))
-        ax.set_ylabel('Flux')
+                if components and self.components is not None:
+                    for comp in self.components:
+                        comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
 
-        if draw:
-            fig.show()
-        else:
+                # Format axes
+                ax.set_xlabel(str(self.time_units))
+                ax.set_ylabel('Flux')
+
+                if draw:
+                    fig.show()
             return
+        else:
+            if ax is None:
+                fig = plt.figure(figsize=(8,6))
+                ax = fig.gca()
+
+            # Set the time
+            self.time = time
+
+            # Plot the model
+            label = self.fitter
+            if self.name!='New Model':
+                label += ': '+self.name
+            ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
+
+            if components and self.components is not None:
+                for comp in self.components:
+                    comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
+
+            # Format axes
+            ax.set_xlabel(str(self.time_units))
+            ax.set_ylabel('Flux')
+
+            if draw:
+                fig.show()
+            else:
+                return
 
     @property
     def time(self):
@@ -339,6 +367,14 @@ class TransitModel(Model):
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
             self.parameters = Parameters(**kwargs)
+        
+        # Set whether the fit is shared or not
+        self.share = kwargs.get('share')
+        if self.share is None:
+            self.share = False
+        if self.share:
+            self.longparamlist = kwargs.get('longparamlist')
+            self.nchan = kwargs.get('nchan')
 
         # Store the ld_profile
         self.ld_func = ld_profile(self.parameters.limb_dark.value)
@@ -353,28 +389,11 @@ class TransitModel(Model):
 
         # Generate with batman
         bm_params = batman.TransitParams()
-
-        #check for shared fit
-        # if 'share' in kwargs:
-        #     nchan=kwargs['nchan']
-        #     paramlist=[]
-        #     for param in self.parameters.dict.keys():
-        #         #if 'shared' in self.parameters.dict[param]:
-        #             #for c in np.arange(nchan)-1:
-        #             #    title=param+'_'+str(c+1)
-        #             #    self.parameters.__setattr__(title,self.parameters.dict[param])
-        #             #self.parameters.dict[param]
-        #         if 'free' in self.parameters.dict[param]:
-        #             for c in np.arange(nchan)-1:
-        #                 title=param+'_'+str(c+1)
-        #                 self.parameters.__setattr__(title,self.parameters.dict[param])
-
                     
-
         # Set all parameters
-        if 'share' in kwargs:
-            longparamlist=kwargs['longparamlist']
-            nchan=kwargs['nchan']
+        if self.share:
+            longparamlist=self.longparamlist
+            nchan=self.nchan
             paramtitles=longparamlist[0]
             lcfinal=np.array([])
             for c in np.arange(nchan):
@@ -392,7 +411,7 @@ class TransitModel(Model):
                 tt = self.parameters.transittype.value
                 m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
 
-                lcfinal = np.concatenate((lcfinal,m_eclipse.light_curve(bm_params)))
+                lcfinal = np.append(lcfinal,m_eclipse.light_curve(bm_params))
 
             return lcfinal
 

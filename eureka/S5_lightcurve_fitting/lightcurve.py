@@ -207,7 +207,7 @@ class LightCurve(m.Model):
                 # Draw best-fit model
                 if fits and len(self.results) > 0:
                     for model in self.results:
-                        model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf)
+                        model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf,share=self.share)
 
                 # Format axes
                 ax.set_xlabel(str(self.time_units))

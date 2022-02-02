@@ -64,10 +64,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     model.update(fit_params, freenames)
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    if lc.share:
-        model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
-    else:
-        model_lc = model.eval()
+    model_lc = model.eval()
 
     # Plot fit
     # if meta.isplots_S5 >= 1:
@@ -333,10 +330,7 @@ def dynestyfitter(lc, model, meta, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-    if lc.share:
-        model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
-    else:
-        model_lc = model.eval()
+    model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
     # Plot fit
@@ -488,20 +482,7 @@ def group_variables(model):
     for ii, item in enumerate(all_params):
         name, param = item
         #param = list(param)
-        if param[1] == 'free':
-            freenames.append(name)
-            freepars.append(param[0])
-            if len(param) > 3:
-                pmin.append(param[2])
-                pmax.append(param[3])
-            else:
-                pmin.append(-np.inf)
-                pmax.append(np.inf)
-        # elif param[1] == 'fixed':
-        #     pinitial.append(param[0])
-        #     pmin.append(param[0])
-        #     pmax.append(param[0])
-        elif param[1] == 'shared':
+        if (param[1] == 'free') or (param[1] == 'shared'):
             freenames.append(name)
             freepars.append(param[0])
             if len(param) > 3:

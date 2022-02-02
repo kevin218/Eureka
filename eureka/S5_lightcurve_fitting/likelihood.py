@@ -39,10 +39,7 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     theta[ilow] = pmin[ilow]
     theta[ihi] = pmax[ihi]
     model.update(theta, freenames)
-    if lc.share:
-        model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
-    else:
-        model_lc = model.eval()
+    model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
     if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
@@ -153,10 +150,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
     """
-    if lc.share:
-        model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
-    else:
-        model_lc = model.eval()
+    model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc) - len(freenames))

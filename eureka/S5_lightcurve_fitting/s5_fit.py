@@ -177,11 +177,11 @@ def fitJWST(eventlabel, s4_meta=None):
                 params.t0.value -= t_offset
 
                 # Temporary normalization to avoid large flux values (FINDME: replace when constant offset is implemented)
-                flux = meta.lcdata[0,:] / np.mean(meta.lcdata[0,:200])
-                flux_err = meta.lcerr[0,:] / np.mean(meta.lcdata[0,:200])
-                for i in np.arange(meta.nspecchan-1):
-                    flux = np.concatenate((flux,meta.lcdata[i+1,:] / np.mean(meta.lcdata[i+1,:200])))
-                    flux_err = np.concatenate((flux_err,meta.lcerr[i+1,:] / np.mean(meta.lcdata[i+1,:200])))
+                flux = np.array([])
+                flux_err = np.array([])
+                for i in np.arange(meta.nspecchan):
+                    flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:200]))
+                    flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:200]))
 
                 # Load the relevant values into the LightCurve model object
                 lc_model = lc.LightCurve(t_mjdtdb, flux, 0, meta.nspecchan, unc=flux_err, name=eventlabel,share=True)
@@ -208,11 +208,11 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Make the astrophysical and detector models
                 modellist=[]
                 if 'transit' in meta.run_myfuncs:
-                    t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
+                    t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', share=lc_model.share, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel)
                     modellist.append(t_model)
-                if 'polynomial' in meta.run_myfuncs:
-                    t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
-                    modellist.append(t_polynom)
+                # if 'polynomial' in meta.run_myfuncs:
+                #     t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
+                #     modellist.append(t_polynom)
                 model = m.CompositeModel(modellist)
                 
                 # Fit the models using one or more fitters
@@ -226,7 +226,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 if 'emcee' in meta.fit_method:
                     log.writelog("Starting emcee fit.")
                     model.fitter = 'emcee'
-                    lc_model.fit(model, meta, fitter='emcee') #need to do all other fitters below here (all but lsq)
+                    lc_model.fit(model, meta, fitter='emcee')
                     log.writelog("Completed emcee fit.")
                     log.writelog("-------------------------")
                 if 'dynesty' in meta.fit_method:
