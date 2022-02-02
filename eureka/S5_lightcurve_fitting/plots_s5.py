@@ -1,4 +1,4 @@
-import numpy as np
+dimport numpy as np
 import matplotlib.pyplot as plt
 import corner
 
