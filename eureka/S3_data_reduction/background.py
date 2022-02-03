@@ -1,7 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import multiprocessing as mp
 from tqdm import tqdm
+import ccdproc as ccdp
+from astropy import units
+import multiprocessing as mp
+import matplotlib.pyplot as plt
+from astropy.nddata import CCDData
+from astropy.stats import SigmaClip, sigma_clip
+from photutils import MMMBackground, MedianBackground, Background2D
+
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
@@ -324,7 +330,6 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                     else:
                         nobadpixels = True      #exit while loop
 
-
                     if isplots == 6:
                         plt.figure(3601)
                         plt.clf()
@@ -351,20 +356,53 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     return bg, bgmask#, mask #,variance
 
 
+
 def fitbg3(data, isplots=0):
     """
-    Fit sky background with out-of-spectra data. Hopefully this is a faster
-    routine than fitbg2. (optimized to fit across the x-direction)
+    Fit sky background with out-of-spectra data. Optimized to remove
+    the 1/f noise in the NIRISS spectra (works in the y-direction).
 
     Parameters
     ----------
-    dataim : np.ndarray                                          
-       Data image to fit the background to.                                                            
-    isplots : int, optional                                    
-       The amount of plots saved; set in ecf. Default is 0.                                          
+    isplots : bool, optional                                      
+       Plots intermediate steps for the background fitting routine.
+       Default is False.                                          
 
     Returns
     -------
     bg : np.ndarray
        Background model.
     """
+    # Removes cosmic rays
+    # Loops through niters cycles to make sure all pesky
+    #    cosmic rays are trashed
+    rm_crs = np.zeros(data.data.shape)
+    for i in range(len(data.data)):
+        ccd = CCDData((data.data[i])*units.electron)
+
+        for n in range(niters):
+            m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip)
+            ccd = CCDData(m1.data*units.electron)
+        rm_crs[i] = m1.data + 0.0
+
+    # Models the background
+    sigma_clip = SigmaClip(sigma=sigclip)
+    if bkgtype.lower() == 'median':
+        bkg = MedianBackground()
+    elif bkgtype.lower() == 'mmmbackground':
+        bkg = MMMBackground()
+    else:
+        print('Background model not implemented.')
+        return
+
+    b = Background2D(data.data, 
+                     box_size=box_size,
+                     filter_size=filter_size,
+                     bkg_estimator=bkg,
+                     sigma_clip=sigma_clip,
+                     fill_value=0.0,
+                     mask=mask)
+
+        
+    if isplots or isplots>=5:
+        fig,(ax1,ax2,ax3) = plt.subplots(nrows=3, figsize=(14,8))
