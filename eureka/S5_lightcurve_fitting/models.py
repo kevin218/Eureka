@@ -22,6 +22,12 @@ from .utils import COLORS
 from .limb_darkening_fit import ld_profile
 
 
+#for GP models
+import george
+from george import kernels
+##update to tinygp
+from tinygp import GaussianProcess, kernels, transforms
+
 class Model:
     def __init__(self, **kwargs):
         """
@@ -494,6 +500,154 @@ class ExpRampModel(Model):
 
         # Evaluate the polynomial
         return r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
+
+    def update(self, newparams, names, **kwargs):
+        """Update parameter values"""
+        for ii,arg in enumerate(names):
+            if hasattr(self.parameters,arg):
+                val = getattr(self.parameters,arg).values[1:]
+                val[0] = newparams[ii]
+                setattr(self.parameters, arg, val)
+        self._parse_coeffs()
+        return
+
+    
+class GPModel(Model):
+    """Model for Gaussian Process (GP)"""
+    def __init__(self, **kwargs):
+        """Initialize the GP model
+        """
+        # Inherit from Model class
+        super().__init__(**kwargs)
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'systematic'
+
+        # Check for Parameters instance
+        self.parameters = kwargs.get('parameters')
+
+        # Generate parameters from kwargs if necessary
+        if self.parameters is None:
+            coeff_dict = kwargs.get('coeff_dict')
+            ## think about how to get coeff_dict ... 
+            #params = {rN: coeff for rN, coeff in coeff_dict.items()
+                      #if rN.startswith('r') and rN[1:].isdigit()}
+            self.parameters = Parameters(**params)
+
+        # Update coefficients
+        self._parse_coeffs()
+
+    def _parse_coeffs(self):
+        """Convert dict of coefficients into a list
+        of coefficients in increasing order
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        dictionary of coefficients for GP kernels
+        """
+        # Parse 'c#' keyword arguments as coefficients
+        self.coeffs = {}
+        for k, v in self.parameters.dict.items():
+            if k.lower().startswith('r') and k[1:].isdigit():
+                self.coeffs[self.kernel_types] = v[0]
+                
+    def setup_GP(self, **kwargs):
+        """Set up GP kernels and GP object.
+        
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        GP object
+
+        """
+        
+        for i in range(self.nkernels):
+            if i == 0:
+                kernel = get_kernel(kernel_types[i],i)
+            else:
+                kernel += get_kernel(kernel_types[i],i)
+        kernel = kernels.ConstantKernel(self.coeff['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
+        
+        gp = george.GP(kernel, white_noise=self.coeff['WN'],fit_white_noise=self.add_white_noise, mean=0, fit_mean=False)
+        
+        
+        return gp
+        
+        
+    def loglikelihood(self, y, y_err):
+        """Compute log likelihood of GP
+        Parameters 
+        ----------
+        None
+
+        Returns
+        -------
+        log likelihood of the GP evaluated by george/tinygp
+
+        """
+        gp = self.setup_GP()
+        gp_evaluated = self.eval(gp, y, y_err)
+        #loglike = gp_evaluated.condition(flux) #update to tinygp
+        loglike = gp.lnlikelihood(y - gp_evaluated)
+        
+        return loglike
+        
+
+    def eval(self, y, y_err, model, gp=None,**kwargs):
+        """Compute GP with the given parameters
+        Parameters 
+        ----------
+        y values (i.e. flux) and corresponding errors
+        current model (i.e. transit model)
+
+        Returns
+        -------
+        predicted systematics model (mean and standard deviation)
+
+        """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Create the GP object with current parameters
+        if gp==None:
+            gp = self.setup_GP()       
+
+        # Convert to local time
+        time_local = self.time - self.time[0]
+        
+        
+        if self.nkernels > 1:
+            gp.compute(self.kernel_inputs.T,y_err)
+            mu,cov = gp.predict(y-model,self.kernel_inputs.T)
+        else:
+            gp.compute(self.kernel_inputs[0],y_err)
+            mu,cov = gp.predict(y-model,self.kernel_inputs[0])
+        std = np.sqrt(np.diag(cov))
+        
+        #gp.evaluate() #tinygp           
+        return mu, std
+    
+    def get_kernel(self, kernel_name, i):
+        """get individual kernels"""
+        metric = self.coeff[kernel_name]
+        if kernel_name == 'Matern32':
+            kernel = kernels.Matern32Kernel(metric,ndim=self.nkernels,axes=i)
+        if self.kernel_classes[i] == 'ExpSquared':
+            kernel = kernels.ExpSquaredKernel(metric,ndim=self.nkernels,axes=i)
+        if self.kernel_classes[i] == 'RationalQuadratic':
+            kernel = kernels.RationalQuadraticKernel(log_alpha=1,metric=metric,ndim=self.nkernels,axes=i)
+        if self.kernel_classes[i] == 'Exp':
+            kernel = kernels.ExpKernel(metric,ndim=self.nkernels,axes=i)           
+        return kernel
+            
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""
