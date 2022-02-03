@@ -14,10 +14,6 @@ import astropy.units as q
 from ..parameters import Parameters
 from ..utils import COLORS
 
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(Parameters)
-
 class Model:
     def __init__(self, **kwargs):
         """
