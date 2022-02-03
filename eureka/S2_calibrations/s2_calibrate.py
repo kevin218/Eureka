@@ -135,6 +135,8 @@ def calibrateJWST(eventlabel):
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
 
+    log.closelog()
+    
     return meta
 
 
