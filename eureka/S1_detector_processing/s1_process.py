@@ -136,7 +136,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
 				elif self.ramp_fit.weighting == 'custom':
 					self.ramp_fit.custom_snr_bounds = meta.default_ramp_fit_custom_snr_bounds
 					self.ramp_fit.custom_exponents = meta.default_ramp_fit_custom_exponents
-
+			with fits.open(filename, mode='update') as hdulist:
+				if hdulist[0].header['INSTRUME']=='NIRCam':
+				# jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers rather than the strings that they are in the old simulated NIRCam data, code from Stage 2 calibration
+					hdulist[0].header['NDITHPTS'] = 1
+					hdulist[0].header['NRIMDTPT'] = 1
 			# Run Stage 1
 			self(filename)
 
