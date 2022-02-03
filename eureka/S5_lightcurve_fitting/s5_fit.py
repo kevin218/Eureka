@@ -10,6 +10,12 @@ from . import lightcurve as lc
 from . import models as m
 from .utils import get_target_data
 
+#FINDME: Keep reload statements for easy testing
+from importlib import reload
+reload(p)
+reload(m)
+reload(lc)
+
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
