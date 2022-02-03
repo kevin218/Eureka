@@ -1,24 +1,20 @@
 #! /usr/bin env python
 #Converts UTC Julian dates to Terrestrial Time and Barycentric Dynamical Time Julian dates
 #Author: Ryan A. Hardy, hardy.r@gmail.com
-#Last update: 2018-12
+#Last update: 2011-03-17
 import numpy as np
 import urllib
 import os
 import re
 import time
-#from univ import c
-from .splinterp import splinterp
 import scipy.interpolate as si
-ftpurl  = 'ftp://ftp.nist.gov/pub/time/leap-seconds.list'
-ftpurl2 = 'ftp://ftp.boulder.nist.gov/pub/time/leap-seconds.list'
 
 def leapdates(rundir):
 	'''Generates an array of leap second dates which
-	are automatically updated every six months.
-	Uses local leap second file, but retrieves a leap
+	are automatically updated every six months.	
+	Uses local leap second file, but retrieves a leap 
 	second file from NIST if the current file is out of date.
-	'''
+	Last update: 2011-03-17'''
 	try:
 		files = os.listdir(rundir)
 		recent = np.sort(files)[-1]
@@ -30,22 +26,15 @@ def leapdates(rundir):
 		ntpepoch = 2208988800
 		if time.time()+ ntpepoch > expiration:
 			print("Leap-second file expired.	Retrieving new file.")
-			try:
-				nist = urllib.request.urlopen(ftpurl)
-				#print('Leap-second ftp 1 worked')
-			except:
-				try:
-					nist = urllib.request.urlopen(ftpurl2)
-					#print('Leap-second ftp 2 worked')
-				except:
-					print('NIST leap-second file not available.	Using stored table.')
-			doc = nist.read().decode('utf-8')
+			#nist = urllib.urlopen('ftp://utcnist.colorado.edu/pub/leap-seconds.list')
+			nist = urllib.request.urlopen('ftp://ftp.boulder.nist.gov/pub/time/leap-seconds.list')
+			doc = nist.read()
 			nist.close()
-			newexp = doc.split('#@')[1].split('\r\n')[0][1:]
+			newexp = doc.split('#@')[1].split('\n')[0][1:]
 			newfile = open(rundir+"leap-seconds."+newexp, 'w')
 			newfile.write(doc)
 			newfile.close()
-			table = doc.split('#@')[1].split('\r\n#\r\n')[1].split('\r\n')
+			table = doc.split('#@')[1].split('\n#\n')[1].split('\n')
 			print("Leap second file updated.")
 		else:
 			print("Local leap second file retrieved.")
@@ -54,10 +43,10 @@ def leapdates(rundir):
 		for i in range(len(table)):
 			ls[i] = np.float(table[i].split('\t')[0])
 		jd = ls/86400+2415020.5
-		return jd
+		return jd 
 	except:
 		print('NIST leap-second file not available.	Using stored table.')
-
+		
 		return np.array([2441316.5,
 		2441682.5,
 		2442047.5,
@@ -84,32 +73,32 @@ def leapdates(rundir):
 		2454831.5])+1
 
 def leapseconds(jd_utc, dates):
-		'''Computes the difference between UTC and TT for a given date.
-		jd_utc	=	 (float) UTC Julian date
+	'''Computes the difference between UTC and TT for a given date.
+	jd_utc	=	 (float) UTC Julian date
 	dates	=	(array_like) an array of Julian dates on which leap seconds occur'''
-		utc_tai = len(np.where(jd_utc > dates)[0])+10-1
-		tt_tai = 32.184
-		return tt_tai + utc_tai
+	utc_tai = len(np.where(jd_utc > dates)[0])+10-1
+	tt_tai = 32.184
+	return tt_tai + utc_tai
 
-def utc_tt(jd_utc,rundir):
-		'''Converts UTC Julian dates to Terrestrial Time (TT).
-		jd_utc	=	 (array-like) UTC Julian date'''
-		dates = leapdates(rundir)
-		if len(jd_utc) > 1:
-				dt = np.zeros(len(jd_utc))
-				for i in range(len(jd_utc)):
-						 dt[i]	= leapseconds(jd_utc[i], dates)
-		else:
-				dt = leapseconds(jd_utc, dates)
-		return jd_utc+dt/86400.
+def utc_tt(jd_utc, leapdir):
+	'''Converts UTC Julian dates to Terrestrial Time (TT).
+	jd_utc	=	 (array-like) UTC Julian date'''
+	dates = leapdates(leapdir)
+	if len(jd_utc) > 1:
+		dt = np.zeros(len(jd_utc))
+		for i in range(len(jd_utc)):
+			dt[i]	= leapseconds(jd_utc[i], dates)
+	else:
+		dt = leapseconds(jd_utc, dates)
+	return jd_utc+dt/86400.
 
-def utc_tdb(jd_utc,rundir):
+def utc_tdb(jd_utc):
 	'''Converts UTC Julian dates to Barycentric Dynamical Time (TDB).
 	Formula taken from USNO Circular 179, based on that found in Fairhead and Bretagnon (1990).	Accurate to 10 microseconds.
 	jd_utc	=	 (array-like) UTC Julian date
-
+	
 	'''
-	jd_tt = utc_tt(jd_utc,rundir)
+	jd_tt = utc_tt(jd_utc)
 	T =	(jd_tt-2451545.)/36525
 	jd_tdb = jd_tt + (0.001657*np.sin(628.3076*T + 6.2401)
 	+ 0.000022*np.sin(575.3385*T 	+	 4.2970)
@@ -141,7 +130,7 @@ def dms_rad(params):
     degree, minute, second = params
     #Converts declination from dd:mm:ss to radians
     return (np.abs(degree) + minute/60. + second/3600.)*np.sign(degree)*np.pi/180
-
+	
 
 def suntimecorr(ra, dec, obst,	coordtable, verbose=False):
 	#+
@@ -349,7 +338,7 @@ def suntimecorr(ra, dec, obst,	coordtable, verbose=False):
 	for i in np.arange(n_entries):
 		line = data[i*4+1]
 		x[i] = np.double(line[xstart: xstart + leng])
-		y[i] = np.double(line[ystart: ystart + leng])
+		y[i] = np.double(line[ystart: ystart + leng]) 
 		z[i] = np.double(line[zstart: zstart + leng])
 
 
@@ -381,9 +370,9 @@ def suntimecorr(ra, dec, obst,	coordtable, verbose=False):
 		print( 'X, Y, Z = ', obsx, obsy, obsz)
 
 	# Change ra and dec into unit vector n_hat
-	object_unit_x = np.cos(dec) * np.cos(ra)
-	object_unit_y = np.cos(dec) * np.sin(ra)
-	object_unit_z = np.sin(dec)
+	object_unit_x = np.cos(dec) * np.cos(ra) 
+	object_unit_y = np.cos(dec) * np.sin(ra) 
+	object_unit_z = np.sin(dec)						
 
 	# Dot product the vectors with n_hat
 	rdotnhat = ( obsx * object_unit_x +
@@ -413,8 +402,8 @@ def splinterp(x2, x, y):
 	X, Y: array_like
 		The data points defining a curve y = f(x).
 
-	Returns
-	-------
+	Returns 
+	------- 
 	an array of values representing the spline function or curve.
 	If tck was returned from splrep, then this is a list of arrays
 	representing the curve in N-dimensional space.
@@ -425,7 +414,7 @@ def splinterp(x2, x, y):
 	>>> import numpy as np
 	>>> import matplotlib.pyplot as plt
 
-	>>> x = np.arange(21)/20.0 * 2.0 * np.pi
+	>>> x = np.arange(21)/20.0 * 2.0 * np.pi 
 	>>> y = np.sin(x)
 	>>> x2 = np.arange(41)/40.0 *2.0 * np.pi
 
@@ -438,4 +427,3 @@ def splinterp(x2, x, y):
 	tck = si.splrep(x, y)
 	y2  = si.splev(x2, tck)
 	return y2
-	
