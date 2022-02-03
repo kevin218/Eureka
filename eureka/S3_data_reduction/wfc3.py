@@ -231,10 +231,11 @@ def read(filename, data, meta):
         # Horizons file created for HST around time of observations
         bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, meta.horizonsfile)
         bjdutc      = jd + bjd_corr/86400.
-        data.bjdtdb = bjdutc # FINDME: Update to the lines below after I have the leapdir files
-        #data.bjdtdb   = utc_tt.utc_tt(bjdutc,meta.leapdir)   # FIX: should this be utc_tdb instead?
+        data.bjdtdb   = utc_tt.utc_tdb(bjdutc, meta.leapdir)   # FINDME: this was utc_tt, but I believe it should have been utc_tdb instead
     elif meta.firstFile:
         print("WARNING: No Horizons file found. Using JD rather than BJD_TDB.")
+        data.bjdtdb   = jd
+    else:
         data.bjdtdb   = jd
 
     data.exptime = data.mhdr['EXPTIME']

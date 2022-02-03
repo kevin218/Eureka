@@ -92,13 +92,13 @@ def utc_tt(jd_utc, leapdir):
 		dt = leapseconds(jd_utc, dates)
 	return jd_utc+dt/86400.
 
-def utc_tdb(jd_utc):
+def utc_tdb(jd_utc, leapdir):
 	'''Converts UTC Julian dates to Barycentric Dynamical Time (TDB).
 	Formula taken from USNO Circular 179, based on that found in Fairhead and Bretagnon (1990).	Accurate to 10 microseconds.
 	jd_utc	=	 (array-like) UTC Julian date
 	
 	'''
-	jd_tt = utc_tt(jd_utc)
+	jd_tt = utc_tt(jd_utc, leapdir)
 	T =	(jd_tt-2451545.)/36525
 	jd_tdb = jd_tt + (0.001657*np.sin(628.3076*T + 6.2401)
 	+ 0.000022*np.sin(575.3385*T 	+	 4.2970)
