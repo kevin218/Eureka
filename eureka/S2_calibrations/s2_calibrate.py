@@ -73,8 +73,8 @@ def calibrateJWST(eventlabel):
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
 
     # Output S2 log file
-    meta.logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
-    log = logedit.Logedit(meta.logname)
+    meta.s2_logname = meta.outputdir + 'S2_' + meta.eventlabel + ".log"
+    log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
 
     # Copy ecf
@@ -114,6 +114,12 @@ def calibrateJWST(eventlabel):
         # Report progress
         log.writelog(f'Starting file {m + 1} of {meta.num_data_files}')
         filename = meta.segment_list[m]
+
+        with fits.open(filename, mode='update') as hdulist:
+            if hdulist[0].header['INSTRUME']=='NIRCam':
+                # jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers rather than the strings that they are in the old simulated NIRCam data
+                hdulist[0].header['NDITHPTS'] = 1
+                hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
 

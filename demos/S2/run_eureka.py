@@ -10,10 +10,11 @@ import eureka.S5_lightcurve_fitting.s5_fit as s5
 # eventlabel = 'nirspec_fs_template'
 eventlabel = 'nircam_wfss_template'
 
-s2_meta = s2.calibrateJWST(eventlabel)
+if __name__ == '__main__':
+	s2_meta = s2.calibrateJWST(eventlabel)
 
-s3_meta = s3.reduceJWST(eventlabel, s2_meta=s2_meta)
+	s3_meta = s3.reduceJWST(eventlabel, s2_meta=s2_meta)
 
-s4_meta = s4.lcJWST(eventlabel, s3_meta=s3_meta)
+	s4_meta = s4.lcJWST(eventlabel, s3_meta=s3_meta)
 
-s5_meta = s5.fitJWST(eventlabel, s4_meta=s4_meta)
+	s5_meta = s5.fitJWST(eventlabel, s4_meta=s4_meta)

@@ -13,7 +13,7 @@ Stage 2
 .. include:: ../media/S2_template.ecf
    :literal:
 
-suffix  
+suffix
 '''''''
 Data file suffix (e.g. rateints).
 
@@ -105,7 +105,7 @@ Can be set if one wants to remove edge effects (e.g.: many nans at the edges).
 Below an example with the following setting:
 
 .. code-block:: python
-    
+
     ywindow     [5,64]
     xwindow     [100,1700]
 
@@ -125,14 +125,14 @@ bg_hw & spec_hw
 Let's looks at an **example** with the following settings:
 
 .. code-block:: python
-    
+
     bg_hw    = 23
     spec_hw  = 18
 
 Looking at the fits file science header, we can determine the source position:
 
 .. code-block:: python
-    
+
     src_xpos = hdulist['SCI',1].header['SRCXPOS']-xwindow[0]
     src_ypos = hdulist['SCI',1].header['SRCYPOS']-ywindow[0]
 
@@ -148,7 +148,7 @@ The plot below shows you which parts will be used for the background calculation
 bg_thresh
 ''''''''''
 Double-iteration X-sigma threshold for outlier rejection along time axis.
-The flux of every background pixel will be considered over time for the current data segment. 
+The flux of every background pixel will be considered over time for the current data segment.
 e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed in time for every background pixel. Outliers will be masked and not considered in the background flux calculation.
 
 
@@ -240,6 +240,9 @@ testing_S3
 '''''''''''
 If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run. Also, only five integrations from the last segment will be reduced.
 
+save_output
+'''''''''''
+If set to ``True`` output will be saved as files for use in S4. Setting this to ``False`` is useful for quick testing
 
 hide_plots
 '''''''''''
@@ -249,7 +252,6 @@ If True, plots will automatically be closed rather than popping up on the screen
 topdir + inputdir
 ''''''''''''''''''
 The path to the directory containing the Stage 2 JWST data.
-
 
 topdir + outputdir
 '''''''''''''''''''

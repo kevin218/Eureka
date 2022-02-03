@@ -92,7 +92,7 @@ def reduceJWST(eventlabel, s2_meta=None):
     ecf = rd.read_ecf(ecffile)
     rd.store_ecf(meta, ecf)
     meta.eventlabel=eventlabel
-    
+
     # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
         # Search for the S2 output metadata in the inputdir provided in
@@ -182,8 +182,11 @@ def reduceJWST(eventlabel, s2_meta=None):
             event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
 
             # Open new log file
-            meta.logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
-            log = logedit.Logedit(meta.logname)
+            meta.s3_logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
+            if s2_meta != None:
+                log = logedit.Logedit(meta.s3_logname, read=s2_meta.s2_logname)
+            else:
+                log = logedit.Logedit(meta.s3_logname)
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
@@ -362,7 +365,7 @@ def reduceJWST(eventlabel, s2_meta=None):
             total = (time.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-            if meta.testing_S3 == False:
+            if meta.save_output == True:
                 log.writelog('Saving results as astropy table')
                 meta.tab_filename = meta.outputdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
                 astropytable.savetable_S3(meta.tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
@@ -373,7 +376,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                 plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
             # Save results
-            if meta.testing_S3 == False:
+            if meta.save_output == True:
                 log.writelog('Saving Metadata')
                 me.saveevent(meta, meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save", save=[])
 

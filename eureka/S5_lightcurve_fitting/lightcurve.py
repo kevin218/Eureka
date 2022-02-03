@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from . import models as m
 from . import fitters as f
 from .utils import COLORS
+
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(m)
@@ -43,7 +44,7 @@ class LightCurveFitter:
 
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
+    def __init__(self, time, flux, channel, nchannel, log, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
         """
         A class to store the actual light curve
 
@@ -57,6 +58,8 @@ class LightCurve(m.Model):
             The channel number.
         nChannel: int
             The total number of channels.
+        log: logedit.Logedit
+            The open log in which notes from this step can be added.
         unc: sequence
             The uncertainty on the flux
         parameters: str, object (optional)
@@ -89,14 +92,14 @@ class LightCurve(m.Model):
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
-                print('Warning: Only one uncertainty input, assuming constant uncertainty.')
+                log.writelog('Warning: Only one uncertainty input, assuming constant uncertainty.')
             elif len(unc) != len(time):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
 
         else:
-            self.unc = np.array([np.nan]*len(self.time))
+            self.unc = np.array([np.nan]*len(time))
 
         # Set the time and flux axes
         self.time = time
@@ -111,12 +114,13 @@ class LightCurve(m.Model):
 
         self.channel = channel
         self.nchannel = nchannel
+        self.log = log
 
         self.color = next(COLORS)
 
         return
 
-    def fit(self, model, meta, fitter='lsq', **kwargs):
+    def fit(self, model, meta, log, fitter='lsq', **kwargs):
         """Fit the model to the lightcurve
 
         Parameters
@@ -125,6 +129,8 @@ class LightCurve(m.Model):
             The model to fit to the data
         meta: MetaClass
             The metadata object
+        log: logedit.Logedit
+            The open log in which notes from this step can be added.
         fitter: str
             The name of the fitter to use
         **kwargs:
@@ -164,7 +170,7 @@ class LightCurve(m.Model):
             raise ValueError("{} is not a valid fitter.".format(fitter))
 
         # Run the fit
-        fit_model = self.fitter_func(self, model, meta, **kwargs)
+        fit_model = self.fitter_func(self, model, meta, log, **kwargs)
 
         # Store it
         if fit_model is not None:
