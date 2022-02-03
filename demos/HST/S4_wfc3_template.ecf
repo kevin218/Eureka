@@ -1,7 +1,7 @@
 # Eureka! Control File for Stage 4: Generate Lightcurves 
 
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan   1           # Number of spectroscopic channels
+nspecchan   6           # Number of spectroscopic channels
 wave_min    0.8         # Minimum wavelength
 wave_max    1.15        # Maximum wavelength
 allapers	True		# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
@@ -25,5 +25,5 @@ hide_plots	True		# If True, plots will automatically be closed rather than poppi
 topdir      /home/User/
 
 # Directories relative to project dir
-inputdir    /Data/HST/WFC3/Stage3	# The folder containing the outputs from Eureka!'s S3 (will be overwritten if calling S3 and S4 sequentially)
-outputdir	/Data/HST/WFC3/Stage4
+inputdir    /Data/TargetName/WFC3/Stage3	# The folder containing the outputs from Eureka!'s S3 (will be overwritten if calling S3 and S4 sequentially)
+outputdir	/Data/TargetName/WFC3/Stage4

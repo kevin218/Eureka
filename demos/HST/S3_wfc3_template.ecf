@@ -4,7 +4,7 @@ ncpu        1           # Number of CPUs
 suffix      ima         # Data file suffix
 
 # Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
-horizonsfile /home/taylor/Documents/Research/WFC3/horizons/2014_02.vec
+horizonsfile /home/User/Data/HST_Calibrations/horizons/2014_02.vec
 
 # Subarray region for direct images used for wavelength calibration
 centroidtrim  5
@@ -13,9 +13,9 @@ centroidguess [154,29]
 # Flatfield parameters
 flatoffset  [[374, 374]]  #[[379, 379]]
 flatsigma   3
-flatfile    /home/taylor/Documents/Research/WFC3/G102_Calibration/WFC3.IR.G102.flat.2.fits
-# flatfile    /home/taylor/Documents/Research/WFC3/G141_Calibration/WFC3.IR.G141.flat.2.fits
-# flatfile    /home/taylor/Documents/Research/WFC3/G141_Calibration/sedFFcube-both.fits
+flatfile    /home/User/Data/HST_Calibrations/G102_Calibration/WFC3.IR.G102.flat.2.fits
+# flatfile    /home/User/Data/HST_Calibrations/G141_Calibration/WFC3.IR.G141.flat.2.fits
+# flatfile    /home/User/Data/HST_Calibrations/G141_Calibration/sedFFcube-both.fits
 
 # Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs)
 diffthresh 10                
@@ -49,5 +49,5 @@ save_output True        # Save outputs for use in S4
 topdir      /home/User/
 
 # Directories relative to project dir
-inputdir    /Data/HST/WFC3/IMA	# The folder containing the data files from HST
-outputdir   /Data/HST/WFC3/Stage3
+inputdir    /Data/TargetName/WFC3/IMA	# The folder containing the data files from HST
+outputdir   /Data/TargetName/WFC3/Stage3
