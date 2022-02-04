@@ -2,7 +2,7 @@ import numpy as np
 from astropy.convolution import Box1DKernel, convolve
 from astropy.stats import sigma_clip
  
-def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill_value='boxcar', verbose=False):
+def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill_value='mask', verbose=False):
     '''Find outliers in 1D time series.
   
     Be careful when using this function on a time-series with known astrophysical variations. The variable
@@ -24,7 +24,7 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill
     maxiters: int
         The number of iterations of sigma clipping that should be performed.
     fill_value: string or float
-        Either the string 'boxcar' to replace data with the mean from the box-car filter or a constant float-type fill value.
+        Either the string 'mask' to mask the outlier values, 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
   
     Returns
     -------
@@ -51,7 +51,9 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill
         log.writelog('Identified {} outliers for wavelength {}'.format(np.sum(outliers), wavelength))
   
     # Replace clipped data
-    if fill_value=='boxcar':
+    if fill_value=='mask':
+        data = np.ma.masked_array(data, outliers)
+    elif fill_value=='boxcar':
         data = replace_moving_mean(data, outliers, kernel)
     else:
         data[outliers] = fill_value
