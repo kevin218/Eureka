@@ -147,7 +147,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
             # Copy existing S3 log file and resume log
             meta.s4_logname  = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
-            log         = logedit.Logedit(meta.s4_logname, read=meta.logname)
+            log         = logedit.Logedit(meta.s4_logname, read=meta.s3_logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
             log.writelog(f"Input directory: {s3_outputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")

@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from . import models as m
 from . import fitters as f
 from .utils import COLORS
+
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(m)
