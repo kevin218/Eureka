@@ -9,7 +9,6 @@ import time
 import warnings
 
 from stcal.ramp_fitting import ramp_fit, utils, ramp_fit_class
-import jwst.ramp_fitting.ols_fit 
 import stcal.ramp_fitting.ols_fit
 
 from jwst.stpipe import Step
@@ -99,25 +98,21 @@ class Eureka_RampFitStep(Step):
                         raise ValueError('Weighting exponent must be of type "int" or "float" for "default_fixed" weighting')
 
                     # Overwrite the exponent calculation function from ols_fit
-                    #jwst.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Past pipeline version (Nov 2021)
                     stcal.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Pipeline version 1.3.3 
                 elif self.weighting == 'interpolated':
                     # Want to use an interpolated version of the default weighting. 
 
                     # Overwrite the exponent calculation function from ols_fit
-                    #jwst.ramp_fitting.ols_fit.calc_power = interpolate_power #Current pipeline version (Nov 2021)
                     stcal.ramp_fitting.ols_fit.calc_power = interpolate_power #Pipeline version 1.3.3 
                 elif self.weighting == 'uniform':
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    #jwst.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Current pipeline version (Nov 2021)
                     stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Pipeline version 1.3.3 
                 elif self.weighting == 'custom':
                     # Want to manually assign snr bounds for exponent changes
 
                     # Overwrite the exponent calculation function from ols_fit
-                    #jwst.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents)
                     stcal.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents) #Pipeline version 1.3.3 
                 else:
                     raise ValueError('Could not interpret weighting "{}".'.format(self.weighting)) 
