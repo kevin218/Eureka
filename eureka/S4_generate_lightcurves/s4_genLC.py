@@ -222,8 +222,8 @@ def lcJWST(eventlabel, s3_meta=None):
 
 
             log.writelog("Generating light curves")
-            meta.lcdata   = np.ma.masked_array(np.zeros((meta.nspecchan, meta.n_int)))
-            meta.lcerr    = np.ma.masked_array(np.zeros((meta.nspecchan, meta.n_int)))
+            meta.lcdata   = np.ma.zeros((meta.nspecchan, meta.n_int))
+            meta.lcerr    = np.ma.zeros((meta.nspecchan, meta.n_int))
             # ev.eventname2 = ev.eventname
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
