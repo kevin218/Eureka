@@ -14,10 +14,6 @@ import astropy.units as q
 from ..parameters import Parameters
 from ..utils import COLORS
 
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(Parameters)
-
 class Model:
     def __init__(self, **kwargs):
         """
@@ -112,7 +108,7 @@ class Model:
             params = Parameters(params)
 
         # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ != type(Parameters).__name):
+        if (params is not None) and (type(params).__name__ != Parameters.__name__):
             raise TypeError("'params' argument must be a JSON file, ascii\
                              file, or parameters.Parameters instance.")
 
