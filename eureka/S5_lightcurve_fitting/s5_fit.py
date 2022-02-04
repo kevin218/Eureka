@@ -182,8 +182,8 @@ def fitJWST(eventlabel, s4_meta=None):
                 flux_err = meta.lcerr[channel,:]
 
                 # Normalize flux and uncertainties to avoid large flux values
-                flux_err /= flux.mean()
-                flux /= flux.mean()
+                flux_err /= np.ma.mean(flux)
+                flux /= np.ma.mean(flux)
 
                 if meta.testing_S5:
                     # FINDME: Use this area to add systematics into the data

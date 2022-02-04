@@ -75,7 +75,7 @@ class Model:
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
-        self._flux = np.array(flux_array)
+        self._flux = np.ma.masked_array(flux_array)
 
     def interp(self, new_time):
         """Interpolate the flux to a new time axis
