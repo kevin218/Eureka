@@ -1,10 +1,10 @@
 import sys
-sys.path.append('../..')
-from eureka.S1_detector_processing.s1_process import EurekaS1Pipeline
+sys.path.append('../../')
+
+import eureka.S1_detector_processing.s1_process as s1
 
 eventlabel = 'nirx_template'
 # eventlabel = 'miri_template'
 
 if __name__ == '__main__':
-s1 = EurekaS1Pipeline()
-ev2 = s1.run_eurekaS1(eventlabel)
+	s1_meta = s1.rampfitJWST(eventlabel)

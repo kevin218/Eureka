@@ -33,9 +33,9 @@ def rampfitJWST(eventlabel):
 
 		History
 		-------
-		Code fragments from Taylor Bell					October 2021
-		Written by Aarynn Carter and Eva-Maria Ahrer   	October 2021
-		Updated for JWST version 1.3.3 					February 2022
+		Code fragments from Taylor Bell						October 2021
+		Written by Aarynn Carter and Eva-Maria Ahrer   		October 2021
+		Updated for JWST version 1.3.3, code restructure	February 2022
 	'''
 
 	t0 = time.time()
@@ -99,7 +99,7 @@ def rampfitJWST(eventlabel):
 				hdulist[0].header['NDITHPTS'] = 1
 				hdulist[0].header['NRIMDTPT'] = 1
 
-			EurekaS1Pipeline.run_eurekaS1()
+			EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
 	# Calculate total run time
 	total = (time.time() - t0) / 60.
@@ -123,12 +123,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
     History:
     - October 2021 Aarynn Carter /  Eva-Maria Ahrer
         Initial version
+    - February 2022 Aarynn Carter /  Eva-Maria Ahrer
+    	Updated for JWST version 1.3.3, code restructure
     '''
 
 	def run_eurekaS1(self, filename, meta, log):
 		# Run the pipeline
-		self.__init__()
-
 		with fits.open(filename) as f:
 			instrument = f[0].header['INSTRUME'] 
 
@@ -176,4 +176,4 @@ class EurekaS1Pipeline(Detector1Pipeline):
 		# Run Stage 1
 		self(filename)
 
-	return
+		return
