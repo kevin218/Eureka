@@ -187,9 +187,10 @@ def lcJWST(eventlabel, s3_meta=None):
             meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
             meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
 
-            # Do 1D sigma clipping
+            # Do 1D sigma clipping (along time axis) on unbinned spectra
+            optspec = np.ma.masked_array(optspec)
             if meta.sigma_clip:
-                log.writelog('Sigma clipping spectral time series')
+                log.writelog('Sigma clipping unbinned spectral time series')
                 outliers = 0
                 for l in range(meta.subnx):
                     optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=meta.verbose)
@@ -205,8 +206,10 @@ def lcJWST(eventlabel, s3_meta=None):
                 meta = drift.spec1D(optspec, meta, log)
                 # Correct for drift/jitter
                 for n in range(meta.n_int):
-                    spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0)
-                    spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0)
+                    # Need to zero-out the weights of masked data
+                    weights = (~optspec[n].mask).astype(int)
+                    spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0, w=weights)
+                    spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0, w=weights)
                     optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
                     opterr[n]  = spline2(np.arange(meta.subnx)+meta.drift1d[n])
                 # Plot Drift
@@ -215,8 +218,8 @@ def lcJWST(eventlabel, s3_meta=None):
 
 
             log.writelog("Generating light curves")
-            meta.lcdata   = np.zeros((meta.nspecchan, meta.n_int))
-            meta.lcerr    = np.zeros((meta.nspecchan, meta.n_int))
+            meta.lcdata   = np.ma.masked_array(np.zeros((meta.nspecchan, meta.n_int)))
+            meta.lcerr    = np.ma.masked_array(np.zeros((meta.nspecchan, meta.n_int)))
             # ev.eventname2 = ev.eventname
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
@@ -226,6 +229,11 @@ def lcJWST(eventlabel, s3_meta=None):
                 meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
                 # Add uncertainties in quadrature
                 meta.lcerr[i]     = np.sqrt(np.sum(opterr[:,index]**2,axis=1))
+
+                # Do 1D sigma clipping (along time axis) on binned spectra
+                if meta.sigma_clip:
+                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=False)
+                    log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:

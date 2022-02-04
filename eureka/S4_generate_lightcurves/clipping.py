@@ -44,7 +44,7 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill
     # Compare data to the moving mean (to remove astrophysical signals)
     residuals = data-smoothed_data
     # Sigma clip residuals to find bad points in data
-    residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters)
+    residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, cenfunc=np.ma.median)
     outliers = np.ma.getmaskarray(residuals)
   
     if np.any(outliers) and verbose:
@@ -52,7 +52,7 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill
   
     # Replace clipped data
     if fill_value=='mask':
-        data = np.ma.masked_array(data, outliers)
+        data = np.ma.masked_where(outliers, data)
     elif fill_value=='boxcar':
         data = replace_moving_mean(data, outliers, kernel)
     else:
