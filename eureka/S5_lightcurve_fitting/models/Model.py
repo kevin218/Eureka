@@ -108,7 +108,7 @@ class Model:
             params = Parameters(params)
 
         # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ != type(Parameters).__name):
+        if (params is not None) and (type(params).__name__ != Parameters.__name):
             raise TypeError("'params' argument must be a JSON file, ascii\
                              file, or parameters.Parameters instance.")
 
