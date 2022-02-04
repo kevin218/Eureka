@@ -94,6 +94,8 @@ def fitJWST(eventlabel, s4_meta=None):
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
     if s4_outputdir[0]=='/':
         s4_outputdir = s4_outputdir[1:]
+    if s4_outputdir[-1]!='/':
+        s4_outputdir += '/'
     s4_allapers = s4_meta.allapers
 
     # Overwrite the temporary meta object made above to be able to find s4_meta
@@ -118,6 +120,7 @@ def fitJWST(eventlabel, s4_meta=None):
         meta.spec_hw_range = [meta.spec_hw,]
         meta.bg_hw_range = [meta.bg_hw,]
 
+    meta.runs_s5 = []
     run_i = 0
     for spec_hw_val in meta.spec_hw_range:
 
@@ -131,8 +134,8 @@ def fitJWST(eventlabel, s4_meta=None):
 
             # Do some folder swapping to be able to reuse this function to find S4 outputs
             tempfolder = meta.outputdir_raw
-            meta.outputdir_raw = meta.inputdir_raw
-            meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
+            meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
+            meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs_s4[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
 
@@ -144,6 +147,7 @@ def fitJWST(eventlabel, s4_meta=None):
             for channel in chanrng:
                 # Create directories for Stage 5 processing outputs
                 run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val, ch=channel)
+                meta.runs_s5.append(run)
                 meta.outputdir = util.pathdirectory(meta, 'S5', run, ap=spec_hw_val, bg=bg_hw_val, ch=channel)
 
                 # Copy existing S4 log file and resume log

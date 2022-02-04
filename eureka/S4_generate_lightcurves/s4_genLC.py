@@ -103,6 +103,8 @@ def lcJWST(eventlabel, s3_meta=None):
     s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
     if s3_outputdir[0]=='/':
         s3_outputdir = s3_outputdir[1:]
+    if s3_outputdir[-1]!='/':
+        s3_outputdir += '/'
 
     meta = s3_meta
 
@@ -123,6 +125,7 @@ def lcJWST(eventlabel, s3_meta=None):
         meta.spec_hw_range = [meta.spec_hw,]
         meta.bg_hw_range = [meta.bg_hw,]
 
+    meta.runs_s4 = []
     run_i = 0
     for spec_hw_val in meta.spec_hw_range:
 
@@ -136,20 +139,21 @@ def lcJWST(eventlabel, s3_meta=None):
 
             # Do some folder swapping to be able to reuse this function to find S3 outputs
             tempfolder = meta.outputdir_raw
-            meta.outputdir_raw = meta.inputdir_raw
+            meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
             meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
             meta.outputdir_raw = tempfolder
             run_i += 1
 
             # Create directories for Stage 4 processing outputs
             run = util.makedirectory(meta, 'S4', ap=spec_hw_val, bg=bg_hw_val)
+            meta.runs_s4.append(run)
             meta.outputdir = util.pathdirectory(meta, 'S4', run, ap=spec_hw_val, bg=bg_hw_val)
 
             # Copy existing S3 log file and resume log
             meta.s4_logname  = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s4_logname, read=meta.s3_logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
-            log.writelog(f"Input directory: {s3_outputdir}")
+            log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
             # Copy ecf (and update outputdir in case S4 is being called sequentially with S3)
