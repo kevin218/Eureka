@@ -357,7 +357,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
 
 
 
-def fitbg3(data, isplots=0):
+def fitbg3(data, order_mask, niters=2, readnoise=5, sigclip=[4,2], isplots=0):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
@@ -373,36 +373,57 @@ def fitbg3(data, isplots=0):
     bg : np.ndarray
        Background model.
     """
+    def bkg_sub(data, mask, sigma=5,
+                bkg_estimator='median', 
+                box=(10,2), filter_size=(1,1)):
+        """ 
+        Completes a step for fitting and removing
+        the background
+        """
+        sigma_clip = SigmaClip(sigma=sigma)
+        if bkg_estimator.lower()=='mmmbackground':
+            bkg = MMMBackground()
+        elif bkg_estimator.lower()=='median':
+            bkg = MedianBackground()
+        b = Background2D(data, box, 
+                         filter_size=filter_size,
+                         bkg_estimator=bkg,#bkg,
+                         sigma_clip=sigma_clip, fill_value=0.0,
+                         mask=mask)
+        return b.background
+
     # Removes cosmic rays
     # Loops through niters cycles to make sure all pesky
     #    cosmic rays are trashed
     rm_crs = np.zeros(data.data.shape)
-    for i in range(len(data.data)):
+    bkg_subbed = np.zeros(data.data.shape)
+
+    for i in tqdm(range(len(data.data))):
+
         ccd = CCDData((data.data[i])*units.electron)
+        mask = np.zeros(data.data[i].shape)
 
         for n in range(niters):
-            m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip)
+            m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip[n])
             ccd = CCDData(m1.data*units.electron)
-        rm_crs[i] = m1.data + 0.0
+            mask[m1.mask==True]+=1
 
-    # Models the background
-    sigma_clip = SigmaClip(sigma=sigclip)
-    if bkgtype.lower() == 'median':
-        bkg = MedianBackground()
-    elif bkgtype.lower() == 'mmmbackground':
-        bkg = MMMBackground()
-    else:
-        print('Background model not implemented.')
-        return
+        rm_crs[i] = m1.data
+        rm_crs[i][mask>=1] = np.nan
 
-    b = Background2D(data.data, 
-                     box_size=box_size,
-                     filter_size=filter_size,
-                     bkg_estimator=bkg,
-                     sigma_clip=sigma_clip,
-                     fill_value=0.0,
-                     mask=mask)
+        b1 = bkg_sub(rm_crs[i], 
+                     np.array(order_mask-1,dtype=bool),
+                     bkg_estimator='median', sigma=4, box=(10,5), filter_size=(2,2))
+        b2 = bkg_sub(rm_crs[i]-b1, 
+                     np.array(order_mask-1,dtype=bool),
+                     sigma=3,
+                     bkg_estimator='median')
+        
+        bkg_subbed[i] = (rm_crs[i]-b1)-b2
 
         
     if isplots or isplots>=5:
         fig,(ax1,ax2,ax3) = plt.subplots(nrows=3, figsize=(14,8))
+
+
+    return bkg_subbed
