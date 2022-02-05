@@ -425,5 +425,6 @@ def fitbg3(data, order_mask, niters=2, readnoise=5, sigclip=[4,2], isplots=0):
     if isplots or isplots>=5:
         fig,(ax1,ax2,ax3) = plt.subplots(nrows=3, figsize=(14,8))
 
+    data.bkg_removed = bkg_subbed
 
-    return bkg_subbed
+    return data
