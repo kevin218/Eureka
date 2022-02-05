@@ -227,14 +227,8 @@ def mask_method_one(data, meta, isplots=0, save=True):
         fit = np.poly1d(poly)
         return fit
 
-#    try:
-#        g = data.simple_img
-#    except:
     g = simplify_niriss_img(data, meta, isplots)
 
-#    try:
-#        f = data.f277_img
-#    except:
     f,_ = f277_mask(data, meta)
 
     g_centers = find_centers(g,cutends=None)
@@ -280,7 +274,9 @@ def mask_method_one(data, meta, isplots=0, save=True):
     if save:
         tab.write('niriss_order_fits_method1.csv',format='csv')
 
-    return tab
+    meta.tab1 = tab
+
+    return meta
 
 
 def mask_method_two(data, meta, isplots=0, save=False):
@@ -400,7 +396,9 @@ def mask_method_two(data, meta, isplots=0, save=False):
     if save:
         tab.write('niriss_order_fits_method2.csv',format='csv')
 
-    return tab
+    meta.tab2 = tab
+
+    return meta
 
 
 def simplify_niriss_img(data, meta, isplots=False):
@@ -458,13 +456,34 @@ def wave_NIRISS(wavefile, meta):
 
     return meta
 
-
 def fit_bg(data, meta):
     """
     Subtracts background from non-spectral regions.
 
     # want to create some background mask to pass in to 
-      background.fitbg2
+      background.fitbg3
     """
+    def dirty_mask(img, boxsize1=70, boxsize2=60):
+        """Really dirty box mask for background purposes."""
+        order1 = np.zeros((boxsize1, len(img[0])))
+        order2 = np.zeros((boxsize2, len(img[0])))
+        mask = np.ones(img.shape)
+        
+        for i in range(img.shape[1]):
+            s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
+            order1[:,i] = img[s:e,i]
+            mask[s:e,i] = 0
 
-    return 
+            s,e = int(meta.tab2['order_2'][i]-boxsize2/2), int(meta.tab2['order_2'][i]+boxsize2/2)
+            try:
+                order2[:,i] = img[s:e,i]
+                mask[s:e,i] = 0
+            except:
+                pass
+
+        return mask
+
+    box_mask = dirty_mask(np.nanmedian(data.data,axis=0))
+    subbed = fitbg3(data, box_mask)
+    data.bkg_removed = subbed + 0.0
+    return data
