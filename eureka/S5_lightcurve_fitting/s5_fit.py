@@ -275,9 +275,6 @@ def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
     new_meta = read_s4_meta(meta)
     meta.inputdir = tempfolder
 
-    print(new_meta.outputdir_raw)
-    print(new_meta.outputdir)
-
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
     ecf     = rd.read_ecf(ecffile)
