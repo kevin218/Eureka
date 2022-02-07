@@ -2,7 +2,7 @@
 #
 # Written by: Adina Feinstein
 # Last updated by: Adina Feinstein
-# Last updated date: January 13, 2022
+# Last updated date: February 7, 2022
 #
 ####################################
 
@@ -18,10 +18,8 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
-#from jwst.datamodels import WaveMapModel, WaveMapSingleModel
-
 from .background import fitbg3
-
+from .niriss_profiles import *
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
            'f277_mask', 'fit_bg', 'wave_NIRISS',
@@ -467,7 +465,7 @@ def wave_NIRISS(wavefile, meta):
     return meta
 
 
-def fit_bg(data, meta):
+def fit_bg(data, meta, n_iters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
     """
     Subtracts background from non-spectral regions.
 
@@ -475,6 +473,19 @@ def fit_bg(data, meta):
     ----------
     data : object
     meta : object
+    n_iters : int, optional
+       The number of iterations to go over and remove cosmic
+       rays. Default is 3.
+    readnoise : float, optional
+       An estimation of the readnoise of the detector.
+       Default is 5.
+    sigclip : list, array, optional
+       A list or array of len(n_iiters) corresponding to the
+       sigma-level which should be clipped in the cosmic
+       ray removal routine. Default is [4,2,3].
+    isplots : int, optional
+       The level of output plots to display. Default is 0 
+       (no plots).
 
     Returns
     -------
@@ -501,7 +512,7 @@ def fit_bg(data, meta):
         return mask
 
     box_mask = dirty_mask(np.nanmedian(data.data,axis=0))
-    data = fitbg3(data, box_mask)
+    data = fitbg3(data, box_mask, n_iters, readnoise, sigclip, isplots)
     return data
 
 
