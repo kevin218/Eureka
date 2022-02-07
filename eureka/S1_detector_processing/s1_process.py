@@ -116,7 +116,7 @@ def rampfitJWST(eventlabel):
 class EurekaS1Pipeline(Detector1Pipeline):
 	'''
 	A wrapper class for the jwst.pipeline.calwebb_detector1.Detector1Pipeline
-    This wrapper class can allow non-standard changes to Stage 2 steps for Eureka!.
+    This wrapper class can allow non-standard changes to Stage 1 steps for Eureka!.
 
 	Notes
     ------
