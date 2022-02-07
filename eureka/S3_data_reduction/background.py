@@ -357,7 +357,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
 
 
 
-def fitbg3(data, order_mask, niters=2, readnoise=5, sigclip=[4,2], isplots=0):
+def fitbg3(data, order_mask, niters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).

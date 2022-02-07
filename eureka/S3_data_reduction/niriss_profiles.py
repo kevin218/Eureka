@@ -65,6 +65,7 @@ def moffat_2poly_piecewise(args, x):
                         )
     return model
 
+
 def moffat_1poly_piecewise(args, x):
     """
     A piece-wise function consisting of 2 Moffat profiles
@@ -90,6 +91,7 @@ def moffat_1poly_piecewise(args, x):
                         )
     return model
 
+
 def gaussian_1poly_piecewise(args, x):
     """
     A piece-wise function consisting of 2 generalized
@@ -112,6 +114,7 @@ def gaussian_1poly_piecewise(args, x):
                           lambda x: generalized_normal(x, mu2,std2,beta2,scale2)]
                         )
     return model
+
 
 def gaussian_2poly_piecewise(args, x):
     """
