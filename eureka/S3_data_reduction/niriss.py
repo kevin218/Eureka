@@ -484,6 +484,5 @@ def fit_bg(data, meta):
         return mask
 
     box_mask = dirty_mask(np.nanmedian(data.data,axis=0))
-    subbed = fitbg3(data, box_mask)
-    data.bkg_removed = subbed + 0.0
+    data = fitbg3(data, box_mask)
     return data
