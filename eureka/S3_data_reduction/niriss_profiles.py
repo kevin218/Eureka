@@ -56,9 +56,12 @@ def moffat_2poly_piecewise(args, x):
     x0,x1,mu1,alpha1,gamma1,f1,a,b,c,mu2,alpha2,gamma2,f2 = args
     model = np.piecewise(x, [((x<x0)), 
                              ((x>=x0) & (x<x1))],
-                         [lambda x: Moffat1D(x, mu1, alpha1, gamma1, f1),
+                         [lambda x: Moffat1D(x, x_0=mu1, alpha=alpha1, 
+                                             gamma=gamma1, amplitude=f1),
                           lambda x: a*x**2+b*x+c,
-                          lambda x: Moffat1D(x, mu2, alpha2, gamma2, f2)]
+                          lambda x: Moffat1D(x, x_0=mu2, alpha=alpha2, 
+                                             gamma=gamma2, 
+                                             amplitude=f2)]
                         )
     return model
 
@@ -75,13 +78,15 @@ def moffat_1poly_piecewise(args, x):
     x : np.ndarray  
        X values to evaluate the shape over.
     """
-       The x locations of the profile.
     x0,x1,mu1,alpha1,gamma1,f1,m,b,mu2,alpha2,gamma2,f2 = args
     model = np.piecewise(x, [((x<x0)), 
                              ((x>=x0) & (x<x1))],
-                         [lambda x: Moffat1D(x, mu1, alpha1, gamma1, f1),
+                         [lambda x: Moffat1D(x, x_0=mu1, alpha=alpha1,
+                                             gamma=gamma1, amplitude=f1),
                           lambda x: m*x+b,
-                          lambda x: Moffat1D(x, mu2, alpha2, gamma2, f2)]
+                          lambda x: Moffat1D(x, x_0=mu2, alpha=alpha2,
+                                             gamma=gamma2,
+                                             amplitude=f2)]
                         )
     return model
 
