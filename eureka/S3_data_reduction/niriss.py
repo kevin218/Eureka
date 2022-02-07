@@ -83,6 +83,7 @@ def read(filename, f277_filename, data, meta):
 
     return data, meta
 
+
 def image_filtering(img, radius=1, gf=4):
     """
     Does some simple image processing to isolate where the
@@ -188,12 +189,7 @@ def mask_method_one(data, meta, isplots=0, save=True):
 
     Returns
     -------
-    x : np.array
-       x-array for the polynomial fits to each order.
-    y1 : np.array
-       Polynomial fit to the first order.
-    y2 : np.array
-       Polynomial fit to the second order.
+    meta : object
     """
     def rm_outliers(arr):
         # removes instantaneous outliers
@@ -299,6 +295,10 @@ def mask_method_two(data, meta, isplots=0, save=False):
        Has the option to save the initial guesses for the location
        of the NIRISS orders. This is set in the .ecf control files.
        Default is False.
+
+    Returns
+    -------
+    meta : object
     """
     def identify_peaks(column, height, distance):
         p,_ = find_peaks(column, height=height, distance=distance)
@@ -413,6 +413,12 @@ def simplify_niriss_img(data, meta, isplots=False):
     isplots : int, optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.  
+
+    Returns
+    -------
+    g : np.ndarray
+       A 2D array that marks where the NIRISS first
+       and second orders are.
     """
     perc  = np.nanmax(data.data, axis=0)
 
@@ -445,6 +451,10 @@ def wave_NIRISS(wavefile, meta):
        The name of the .FITS file with the wavelength
        solution.
     meta : object
+
+    Returns
+    -------
+    meta : object
     """
     hdu = fits.open(wavefile)
 
@@ -456,12 +466,19 @@ def wave_NIRISS(wavefile, meta):
 
     return meta
 
+
 def fit_bg(data, meta):
     """
     Subtracts background from non-spectral regions.
 
-    # want to create some background mask to pass in to 
-      background.fitbg3
+    Parameters
+    ----------
+    data : object
+    meta : object
+
+    Returns
+    -------
+    data : object
     """
     def dirty_mask(img, boxsize1=70, boxsize2=60):
         """Really dirty box mask for background purposes."""
@@ -486,3 +503,18 @@ def fit_bg(data, meta):
     box_mask = dirty_mask(np.nanmedian(data.data,axis=0))
     data = fitbg3(data, box_mask)
     return data
+
+
+def build_aperture_library(meta):
+    """
+    Creates a suite of profiles to fit to the
+    NIRISS orders. The profiles take on the typical
+    "bat-shape" that is known for NIRISS.
+
+    Parameters
+    ----------
+    meta : object
+    """
+
+
+    return
