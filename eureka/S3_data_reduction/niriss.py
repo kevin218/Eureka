@@ -520,7 +520,7 @@ def fit_bg(data, meta, n_iters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
         return mask
 
     box_mask = dirty_mask(data.median)
-    data = fitbg3(data, np.array(box_mask, dtype=bool), 
+    data = fitbg3(data, np.array(box_mask-1, dtype=bool), 
                   n_iters, readnoise, sigclip, isplots)
     return data
 

@@ -515,10 +515,10 @@ def fitbg3(data, order_mask, niters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
         
 
         b1 = bkg_sub(rm_crs[i], 
-                     np.array(order_mask-1,dtype=bool),
+                     order_mask,
                      bkg_estimator='median', sigma=4, box=(10,5), filter_size=(2,2))
         b2 = bkg_sub(rm_crs[i]-b1, 
-                     np.array(order_mask-1,dtype=bool),
+                     order_mask,
                      sigma=3,
                      bkg_estimator='median')
         
