@@ -5,7 +5,7 @@
 # Last updated date: February 7, 2022
 #
 ####################################
-
+import itertools
 import numpy as np
 import ccdproc as ccdp
 from astropy import units
@@ -20,6 +20,12 @@ from scipy.ndimage import gaussian_filter
 
 from .background import fitbg3
 from .niriss_profiles import *
+
+# some cute cython code
+import pyximport
+pyximport.install()
+from . import niriss_cython
+
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
            'f277_mask', 'fit_bg', 'wave_NIRISS',
@@ -78,6 +84,8 @@ def read(filename, f277_filename, data, meta):
     # removes NaNs from the data & error arrays
     data.data[np.isnan(data.data)==True] = 0
     data.err[ np.isnan(data.err) ==True] = 0
+
+    data.median = np.nanmedian(data.data, axis=0)
 
     return data, meta
 
@@ -511,21 +519,73 @@ def fit_bg(data, meta, n_iters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
 
         return mask
 
-    box_mask = dirty_mask(np.nanmedian(data.data,axis=0))
-    data = fitbg3(data, box_mask, n_iters, readnoise, sigclip, isplots)
+    box_mask = dirty_mask(data.median)
+    data = fitbg3(data, np.array(box_mask, dtype=bool), 
+                  n_iters, readnoise, sigclip, isplots)
     return data
 
 
-def build_aperture_library(meta):
+def fit_orders(data, meta):
     """
-    Creates a suite of profiles to fit to the
-    NIRISS orders. The profiles take on the typical
-    "bat-shape" that is known for NIRISS.
+    Creates a 2D image optimized to fit the data. Currently
+    runs with a Gaussian profile, but will look into other
+    more realistic profiles at some point. This routine
+    is a bit slow, but fortunately, you only need to run it
+    once per observations.
 
     Parameters
     ----------
+    data : object
     meta : object
+
+    Returns
+    -------
+    meta : object
+       Adds two new attributes: `order1_mask` and `order2_mask`.
     """
+    print("Go grab some food. This routing could take up to 30 minutes.")
+
+    def construct_guesses(A, B, sig, length=10):
+        As   = np.linspace(A[0],   A[1],   length)
+        Bs   = np.linspace(B[0],   B[1],   length)
+        sigs = np.linspace(sig[0], sig[1], length)
+        combos = np.array(list(itertools.product(*[As,Bs,sigs])))
+        return combos
+    
+    # Good initial guesses
+    combos = construct_guesses([0.1,30],
+                               [0.1,30],
+                               [1,40])
+    
+    combos = np.array(list(itertools.product(*[As,Bs,sig1])))
+    
+    img1, sigout1 = niriss_cython.build_image_models(data.median,
+                                                     combos[:,0], combos[:,1], 
+                                                     combos[:,2], 
+                                                     tab2['order_1'], tab2['order_2'])
+
+    # Iterates on a smaller region around the best guess
+    best_guess = combos[np.argmin(sigout1)]
+    combos = construct_guesses( [best_guess[0]-0.5, best_guess[0]+0.5],
+                                [best_guess[1]-0.5, best_guess[1]+0.5],
+                                [best_guess[2]-0.5, best_guess[2]+0.5] )
+
+    img2, sigout2 = niriss_cython.build_image_models(data.median, 
+                                                     combos[:,0], combos[:,1],
+                                                     combos[:,2],
+                                                     tab2['order_1'], tab2['order_2'])
+
+    final_guess = combos[np.argmin(sigout2)]
+    ord1, ord2, _ = niriss_cython.build_image_models(data.median,
+                                                     [final_guess[0]],
+                                                     [final_guess[1]],
+                                                     [final_guess[2]],
+                                                     tab2['order_1'], tab2['order_2'],
+                                                     return_together=False)
+    meta.order1_mask = ord1
+    meta.order2_mask = ord2
+
+    return meta
+    
 
 
-    return
