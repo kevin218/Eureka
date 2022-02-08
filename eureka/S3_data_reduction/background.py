@@ -6,8 +6,10 @@ import multiprocessing as mp
 from scipy.special import erf
 import matplotlib.pyplot as plt
 from astropy.nddata import CCDData
+from astropy.modeling.models import Gaussian1D
 from astropy.stats import SigmaClip, sigma_clip
 from astropy.modeling.models import custom_model
+from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import MMMBackground, MedianBackground, Background2D
 
 
@@ -509,7 +511,7 @@ def fitbg3(data, order_mask, niters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
         rm_crs[i] = gauss_removal(rm_crs[i], ~order_mask,
                                   linspace=[-200,200]) # removal from background
         rm_crs[i] = gauss_removal(rm_crs[i], order_mask,
-                                  liinspace=[-10,10], where='order') # removal from order
+                                  linspace=[-10,10], where='order') # removal from order
         
 
         b1 = bkg_sub(rm_crs[i], 
