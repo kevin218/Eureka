@@ -34,7 +34,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
 
     model_sys = model.syseval()
-    model_phys = model.physeval()
+    model_phys = model.physeval(interp=meta.interp)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
@@ -43,7 +43,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     ax = fig.subplots(3,1)
 
     ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
-    ax[0].plot(lc.time, model_lc, color='0.3', zorder = 10)
+    ax[0].plot(lc.time, model_lc, '.', ls='', color='0.3', zorder = 10)
     if isTitle:
         ax[0].set_title(f'{meta.eventlabel} - Channel {lc.channel} - {fitter}')
     ax[0].set_ylabel('Normalized Flux', size=14)

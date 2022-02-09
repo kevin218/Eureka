@@ -77,8 +77,8 @@ class Model:
         # Set the array
         self._flux = np.array(flux_array)
 
-    def interp(self, new_time):
-        """Interpolate the flux to a new time axis
+    def interp(self, new_time, **kwargs):
+        """Evaluate the model over a different time array
 
         Parameters
         ----------
@@ -88,12 +88,18 @@ class Model:
         # Check the type
         if not isinstance(new_time, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array")
-
-        # Calculate the new flux
-        self.flux = np.interp(new_time, self.time, self.flux)
-
-        # Set the new time axis
+        
+        # Save the current time array
+        old_time = copy.deepcopy(self.time)
+        
+        # Evaluate the model on the new time array
         self.time = new_time
+        interp_flux = self.eval(**kwargs)
+
+        # Reset the time array
+        self.time = old_time
+
+        return interp_flux
 
     @property
     def parameters(self):
@@ -226,16 +232,14 @@ class CompositeModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
-        # Empty flux
-        flux = 1.
-
+        
         # Evaluate flux at each model
+        flux = 1.
         for model in self.components:
             if model.time is None:
                 model.time = self.time
             flux *= model.eval(**kwargs)
-
+        
         return flux
 
     def syseval(self, **kwargs):
@@ -243,11 +247,9 @@ class CompositeModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
-        # Empty flux
-        flux = 1.
-
+        
         # Evaluate flux at each model
+        flux = 1.
         for model in self.components:
             if model.modeltype == 'systematic':
                 if model.time is None:
@@ -256,22 +258,28 @@ class CompositeModel(Model):
 
         return flux
 
-    def physeval(self, **kwargs):
+    def physeval(self, interp=False, **kwargs):
         """Evaluate the physical model components only"""
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
-        # Empty flux
-        flux = 1.
+        
+        if interp:
+            dt = self.time[1]-self.time[0]
+            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
+            new_time = np.linspace(self.time[0], self.time[-1], steps, endpoint=True)
 
         # Evaluate flux at each model
+        flux = 1.
         for model in self.components:
             if model.modeltype == 'physical':
                 if model.time is None:
                     model.time = self.time
-                flux *= model.eval(**kwargs)
-
+                if interp:
+                    flux *= model.interp(new_time, **kwargs)
+                else:
+                    flux *= model.eval(**kwargs)
+        
         return flux
 
     def update(self, newparams, names, **kwargs):
