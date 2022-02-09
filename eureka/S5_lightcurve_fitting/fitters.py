@@ -14,6 +14,7 @@ from .likelihood import computeRedChiSq, lnprob, ptform
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(lsq)
+import pdb
 
 def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -45,9 +46,10 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     """
     # Group the different variable types
+    # pdb.set_trace()
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
-
+    # pdb.set_trace()
     if meta.run_verbose:
         print("\nVerbose lsq results:", results, '\n')
     else:
@@ -88,11 +90,17 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
-
+    # pdb.set_trace()
     print('\nLSQ RESULTS:')
+    # if lc.share:
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
-    print()
+    # else:
+    #     numpars=int(len(freenames)/lc.nchannel)
+
+    #     for freenames_i, fit_params_i in zip(freenames[lc.channel*numpars:(lc.channel+1)*numpars], fit_params[lc.channel*numpars:(lc.channel+1)*numpars]):
+    #         print('{0}: {1}'.format(freenames_i, fit_params_i))
+    # print()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -471,8 +479,16 @@ def group_variables(model):
     """
     # all_params = [i for j in [model.components[n].parameters.dict.items()
     #               for n in range(len(model.components))] for i in j]
-    all_params = list(model.components[0].parameters.dict.items())
+    if model.components[0].share:
+        all_params = list(model.components[0].parameters.dict.items())
+    else:
+        all_params = []
+        temp=model.components[0].longparamlist[model.components[0].chan]
+        for p in list(model.components[0].parameters.dict.items()):
+            if p[0] in temp:
+                all_params.append(p)
 
+    # pdb.set_trace()
     # Group the different variable types
     freenames = []
     freepars = []

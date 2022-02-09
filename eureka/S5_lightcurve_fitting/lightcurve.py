@@ -43,7 +43,7 @@ class LightCurveFitter:
 
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
+    def __init__(self, time, flux, channel, nchannel, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
         """
         A class to store the actual light curve
 
@@ -121,6 +121,7 @@ class LightCurve(m.Model):
         self.nchannel = nchannel
 
         self.share = share
+        self.longparamlist = longparamlist
 
         return
 

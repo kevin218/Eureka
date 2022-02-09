@@ -370,11 +370,12 @@ class TransitModel(Model):
         
         # Set whether the fit is shared or not
         self.share = kwargs.get('share')
+        self.longparamlist = kwargs.get('longparamlist')
+        self.nchan = kwargs.get('nchan')
+        self.chan = kwargs.get('chan')
+
         if self.share is None:
             self.share = False
-        if self.share:
-            self.longparamlist = kwargs.get('longparamlist')
-            self.nchan = kwargs.get('nchan')
 
         # Store the ld_profile
         self.ld_func = ld_profile(self.parameters.limb_dark.value)
@@ -386,54 +387,39 @@ class TransitModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
+              
+        longparamlist=self.longparamlist
+        nchan=self.nchan
+        paramtitles=longparamlist[0]
 
-        # Generate with batman
-        bm_params = batman.TransitParams()
-                    
         # Set all parameters
         if self.share:
-            longparamlist=self.longparamlist
-            nchan=self.nchan
-            paramtitles=longparamlist[0]
             lcfinal=np.array([])
             for c in np.arange(nchan):
-                for index,item in enumerate(longparamlist[c]):
-                    setattr(bm_params,paramtitles[index],self.parameters.dict[item][0])
-
-                # Combine limb darkening coeffs
-                bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
-
-                # Use batman ld_profile name
-                if self.parameters.limb_dark.value == '4-parameter':
-                    bm_params.limb_dark = 'nonlinear'
-
-                # Make the eclipse
-                tt = self.parameters.transittype.value
-                m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
-
-                lcfinal = np.append(lcfinal,m_eclipse.light_curve(bm_params))
+                m_eclipse = batman_lc(self.time,paramtitles,longparamlist[c],self.parameters,self.coeffs)
+                lcfinal = np.append(lcfinal,m_eclipse)
 
             return lcfinal
 
         else:
-            for arg, val in self.parameters.dict.items():
-                setattr(bm_params, arg, val[0])
+            # for arg, val in self.parameters.dict.items():
+            #     setattr(bm_params, arg, val[0])
 
-            # Combine limb darkening coeffs
-            bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
+            # # Combine limb darkening coeffs
+            # bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
 
-            # Use batman ld_profile name
-            if self.parameters.limb_dark.value == '4-parameter':
-                bm_params.limb_dark = 'nonlinear'
+            # # Use batman ld_profile name
+            # if self.parameters.limb_dark.value == '4-parameter':
+            #     bm_params.limb_dark = 'nonlinear'
 
-            # Make the eclipse
-            tt = self.parameters.transittype.value
-            m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
+            # # Make the eclipse
+            # tt = self.parameters.transittype.value
+            # m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
             
             # Evaluate the light curve
-            return m_eclipse.light_curve(bm_params)
-
-        #So here I think I basically want to make it a longer array with like all the channels consecutive
+            # pdb.set_trace()
+            m_eclipse = batman_lc(self.time,paramtitles,longparamlist[self.chan],self.parameters,self.coeffs)
+            return m_eclipse
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""
@@ -519,3 +505,26 @@ class ExponentialModel(Model):
             val[0] = newparams[ii]
             setattr(self.parameters, arg, val)
         return
+
+def batman_lc(time,paramtitles,paramvals,parameters,coeffs):
+    #Initialize model
+    bm_params = batman.TransitParams()
+
+    # Set all parameters
+    for index,item in enumerate(paramvals):
+        setattr(bm_params,paramtitles[index],parameters.dict[item][0])
+
+    # Combine limb darkening coeffs
+    bm_params.u = [getattr(parameters, u).value for u in coeffs]
+
+    # Use batman ld_profile name
+    if parameters.limb_dark.value == '4-parameter':
+        bm_params.limb_dark = 'nonlinear'
+
+    # Make the eclipse
+    tt = parameters.transittype.value
+    m_eclipse = batman.TransitModel(bm_params, time, transittype=tt)
+
+    return m_eclipse.light_curve(bm_params)
+
+
