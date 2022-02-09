@@ -268,6 +268,8 @@ class CompositeModel(Model):
             dt = self.time[1]-self.time[0]
             steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
             new_time = np.linspace(self.time[0], self.time[-1], steps, endpoint=True)
+        else:
+            new_time = self.time
 
         # Evaluate flux at each model
         flux = 1.
@@ -280,7 +282,7 @@ class CompositeModel(Model):
                 else:
                     flux *= model.eval(**kwargs)
         
-        return flux
+        return flux, new_time
 
     def update(self, newparams, names, **kwargs):
         """Update parameters in the model components"""

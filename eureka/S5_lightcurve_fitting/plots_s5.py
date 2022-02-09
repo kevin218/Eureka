@@ -34,9 +34,9 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
 
     model_sys = model.syseval()
-    model_phys = model.physeval(interp=meta.interp)
+    model_phys, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    residuals = (lc.flux - model_lc)
 
     fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 9))
     plt.clf()
@@ -49,10 +49,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     ax[0].set_ylabel('Normalized Flux', size=14)
 
     ax[1].errorbar(lc.time, lc.flux/model_sys, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
-    ax[1].plot(lc.time, model_phys, color='0.3', zorder = 10)
+    ax[1].plot(new_time, model_phys, color='0.3', zorder = 10)
     ax[1].set_ylabel('Calibrated Flux', size=14)
 
     ax[2].errorbar(lc.time, residuals*1e6, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
+    ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
     ax[2].set_ylabel('Residuals (ppm)', size=14)
     ax[2].set_xlabel(str(lc.time_units), size=14)
 
