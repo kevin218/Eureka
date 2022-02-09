@@ -126,7 +126,7 @@ class TestModels(unittest.TestCase):
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
-        self.exp_model = models.ExponentialModel(r0=1., r1=0.05, r2=0.01, name='single exponential')
+        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01})
 
         # Evaluate and test output
         self.exp_model.time = self.time
@@ -134,8 +134,8 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
         # Create the model
-        self.exp_model = models.ExponentialModel(r0=1., r1=0.05, r2=0.01,
-                                                 r3=1., r4=0.05, r5=0.01, name='double exponential')
+        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01,
+                                                           'r3':1., 'r4':0.05, 'r5':0.01})
 
         # Evaluate and test output
         self.exp_model.time = self.time
