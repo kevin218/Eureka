@@ -302,9 +302,18 @@ class PolynomialModel(Model):
                       if cN.startswith('c') and cN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
+        # Set whether the fit is shared or not
+        self.share = kwargs.get('share')
+        self.longparamlist = kwargs.get('longparamlist')
+        self.nchan = kwargs.get('nchan')
+        self.chan = kwargs.get('chan')
+
+        if self.share is None:
+            self.share = False
+        
         # Update coefficients
         self._parse_coeffs()
-
+        
     def _parse_coeffs(self, **kwargs):
         """Convert dict of 'c#' coefficients into a list
         of coefficients in decreasing order, i.e. ['c2','c1','c0']
@@ -320,13 +329,20 @@ class PolynomialModel(Model):
         """
 
         # Parse 'c#' keyword arguments as coefficients
-        coeffs = np.zeros(10)
+        coeffs = np.zeros((self.nchan,9))
         for k, v in self.parameters.dict.items():
+            remvisnum=k.split('_')
             if k.lower().startswith('c') and k[1:].isdigit():
-                coeffs[int(k[1:])] = v[0]
+                coeffs[0,int(k[1:])] = v[0]
+            elif len(remvisnum)>1:
+                if remvisnum[0].lower().startswith('c') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
+                    coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
 
         # Trim zeros and reverse
-        self.coeffs = np.trim_zeros(coeffs)[::-1]
+        coeffs=coeffs[:,~np.all(coeffs==0,axis=0)]
+        coeffs=np.flip(coeffs,axis=1)
+        self.coeffs=coeffs
+        # self.coeffs = np.trim_zeros(coeffs)[::-1]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -334,14 +350,25 @@ class PolynomialModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Create the polynomial from the coeffs
-        poly = np.poly1d(self.coeffs)
+        longparamlist=self.longparamlist
+        nchan=self.nchan
+        paramtitles=longparamlist[0]
 
         # Convert to local time
         time_local = self.time - self.time.mean()
 
-        # Evaluate the polynomial
-        return np.polyval(poly, time_local)
+        # Create the polynomial from the coeffs
+        if self.share:
+            lcfinal=np.array([])
+            for c in np.arange(nchan):
+                poly = np.poly1d(self.coeffs[c])
+                lcpiece = np.polyval(poly, time_local)
+                lcfinal = np.append(lcfinal, lcpiece)
+            return lcfinal
+
+        else:
+            poly = np.poly1d(self.coeffs[self.chan])
+            return np.polyval(poly, time_local)
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""
@@ -402,22 +429,6 @@ class TransitModel(Model):
             return lcfinal
 
         else:
-            # for arg, val in self.parameters.dict.items():
-            #     setattr(bm_params, arg, val[0])
-
-            # # Combine limb darkening coeffs
-            # bm_params.u = [getattr(self.parameters, u).value for u in self.coeffs]
-
-            # # Use batman ld_profile name
-            # if self.parameters.limb_dark.value == '4-parameter':
-            #     bm_params.limb_dark = 'nonlinear'
-
-            # # Make the eclipse
-            # tt = self.parameters.transittype.value
-            # m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
-            
-            # Evaluate the light curve
-            # pdb.set_trace()
             m_eclipse = batman_lc(self.time,paramtitles,longparamlist[self.chan],self.parameters,self.coeffs)
             return m_eclipse
 
@@ -428,11 +439,6 @@ class TransitModel(Model):
                 val = getattr(self.parameters,arg).values[1:]
                 val[0] = newparams[ii]
                 setattr(self.parameters, arg, val)
-        # ii = 0
-        # for arg, val in self.parameters.dict.items():
-        #     val[0] = newparams[ii]
-        #     setattr(self.parameters, arg, val)
-        #     ii += 1
         return
 
 class ExponentialModel(Model):

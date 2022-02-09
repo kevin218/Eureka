@@ -194,12 +194,11 @@ def fitJWST(eventlabel, s4_meta=None):
             if sharedp:
                 log.writelog("\nStarting Shared Fit of {}\n Channels".format(meta.nspecchan))
 
-                # Temporary normalization to avoid large flux values (FINDME: replace when constant offset is implemented)
                 flux = np.array([])
                 flux_err = np.array([])
                 for i in np.arange(meta.nspecchan):
-                    flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:200]))
-                    flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:200]))
+                    flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
+                    flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
 
                 lc_model = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist)
 
@@ -213,8 +212,8 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux_err = meta.lcerr[channel,:]
                     
                     # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
-                    flux_err = flux_err/ np.mean(flux[:200])#flux.mean()
-                    flux = flux / np.mean(flux[:200])#flux.mean()
+                    flux_err = flux_err/ flux.mean()
+                    flux = flux / flux.mean()
 
                     lc_model = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist)
 
@@ -223,21 +222,17 @@ def fitJWST(eventlabel, s4_meta=None):
 def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log, longparamlist):
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, longparamlist, unc=flux_err, name=eventlabel,share=sharedp)
-    # pdb.set_trace()
+
     # Make the astrophysical and detector models
     modellist=[]
     if 'transit' in meta.run_myfuncs:
         t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', share=sharedp, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel, chan=chan)
-        # if sharedp:
-        #     t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', share=lc_model.share, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel)
-        # else:
-        #     t_model = m.TransitModel(parameters=params, name='transit', fmt='r--')
         modellist.append(t_model)
-    # if 'polynomial' in meta.run_myfuncs:
-    #     t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--')
-    #     modellist.append(t_polynom)
+    if 'polynomial' in meta.run_myfuncs:
+        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', share=sharedp, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel, chan=chan)
+        modellist.append(t_polynom)
     model = m.CompositeModel(modellist)
-    # pdb.set_trace()
+
     # Fit the models using one or more fitters
     log.writelog("=========================")
     if 'lsq' in meta.fit_method:
