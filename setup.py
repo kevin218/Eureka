@@ -5,8 +5,6 @@ from setuptools import setup, find_packages
 with open('requirements.txt') as f:
     REQUIRES = f.read().splitlines()
 
-#DEPENDENCY_LINKS = ['git+https://github.com/spacetelescope/jwst_gtvt.git@cd6bc76f66f478eafbcc71834d3e735c73e03ed5']
-
 FILES = []
 for root, _, files in os.walk("Eureka"):
     FILES += [os.path.join(root.replace("Eureka/", ""), fname) \
@@ -18,7 +16,6 @@ setup(name='Eureka',
       packages=find_packages(".", exclude=["*.tests"]),
       package_data={'Eureka': FILES},
       install_requires=REQUIRES,
-#      dependency_links=DEPENDENCY_LINKS,
       author='Section 5',
       author_email='kbstevenson@gmail.com',
       license='MIT',
