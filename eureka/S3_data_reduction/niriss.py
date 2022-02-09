@@ -29,7 +29,7 @@ from . import niriss_cython
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
            'f277_mask', 'fit_bg', 'wave_NIRISS',
-           'mask_method_one', 'mask_method_two']
+           'mask_method_one', 'mask_method_two', 'fit_orders']
 
 
 def read(filename, f277_filename, data, meta):
@@ -557,12 +557,11 @@ def fit_orders(data, meta):
                                [0.1,30],
                                [1,40])
     
-    combos = np.array(list(itertools.product(*[As,Bs,sig1])))
-    
     img1, sigout1 = niriss_cython.build_image_models(data.median,
                                                      combos[:,0], combos[:,1], 
                                                      combos[:,2], 
-                                                     tab2['order_1'], tab2['order_2'])
+                                                     meta.tab2['order_1'], 
+                                                     meta.tab2['order_2'])
 
     # Iterates on a smaller region around the best guess
     best_guess = combos[np.argmin(sigout1)]
@@ -573,14 +572,16 @@ def fit_orders(data, meta):
     img2, sigout2 = niriss_cython.build_image_models(data.median, 
                                                      combos[:,0], combos[:,1],
                                                      combos[:,2],
-                                                     tab2['order_1'], tab2['order_2'])
+                                                     meta.tab2['order_1'],
+                                                     meta.tab2['order_2'])
 
     final_guess = combos[np.argmin(sigout2)]
     ord1, ord2, _ = niriss_cython.build_image_models(data.median,
                                                      [final_guess[0]],
                                                      [final_guess[1]],
                                                      [final_guess[2]],
-                                                     tab2['order_1'], tab2['order_2'],
+                                                     meta.tab2['order_1'],
+                                                     meta.tab2['order_2'],
                                                      return_together=False)
     meta.order1_mask = ord1
     meta.order2_mask = ord2
