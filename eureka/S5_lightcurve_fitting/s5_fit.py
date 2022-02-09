@@ -14,7 +14,6 @@ from importlib import reload
 reload(p)
 reload(m)
 reload(lc)
-import pdb
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -190,7 +189,6 @@ def fitJWST(eventlabel, s4_meta=None):
                     for c in np.arange(meta.nspecchan):
                         longparamlist[c].append(param)
 
-            # pdb.set_trace()
             if sharedp:
                 log.writelog("\nStarting Shared Fit of {}\n Channels".format(meta.nspecchan))
 

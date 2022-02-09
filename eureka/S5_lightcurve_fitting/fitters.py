@@ -14,7 +14,6 @@ from .likelihood import computeRedChiSq, lnprob, ptform
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(lsq)
-import pdb
 
 def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -46,10 +45,9 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     """
     # Group the different variable types
-    # pdb.set_trace()
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
-    # pdb.set_trace()
+    
     if meta.run_verbose:
         print("\nVerbose lsq results:", results, '\n')
     else:
@@ -90,7 +88,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
-    # pdb.set_trace()
+    
     print('\nLSQ RESULTS:')
     # if lc.share:
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -488,7 +486,6 @@ def group_variables(model):
             if p[0] in temp:
                 all_params.append(p)
 
-    # pdb.set_trace()
     # Group the different variable types
     freenames = []
     freepars = []

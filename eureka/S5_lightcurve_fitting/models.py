@@ -20,7 +20,6 @@ except ImportError:
 from .parameters import Parameters
 from .utils import COLORS
 from .limb_darkening_fit import ld_profile
-import pdb
 
 class Model:
     def __init__(self, **kwargs):
@@ -123,7 +122,7 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, share=False, nchan=0, **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model
 
         Parameters
@@ -141,59 +140,35 @@ class Model:
             The figure
         """
         # Make the figure
+        if ax is None:
+            fig = plt.figure(figsize=(8,6))
+            ax = fig.gca()
 
+        # Set the time
+        self.time = time
+
+        # Plot the model
+        label = self.fitter
+        if self.name!='New Model':
+            label += ': '+self.name
         if share:
-            for channel in np.arange(nchan):
-                if ax is None:
-                    fig = plt.figure(figsize=(8,6))
-                    ax = fig.gca()
-
-                # Set the time
-                self.time = time
-
-                # Plot the model
-                label = self.fitter
-                if self.name!='New Model':
-                    label += ': '+self.name
-                ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
-
-                if components and self.components is not None:
-                    for comp in self.components:
-                        comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
-
-                # Format axes
-                ax.set_xlabel(str(self.time_units))
-                ax.set_ylabel('Flux')
-
-                if draw:
-                    fig.show()
-            return
+            onelc=len(self.time)
+            ax.plot(self.time, self.eval(**kwargs)[onelc*chan:onelc*(chan+1)], '-', label=label, color=color, zorder=zorder)
         else:
-            if ax is None:
-                fig = plt.figure(figsize=(8,6))
-                ax = fig.gca()
-
-            # Set the time
-            self.time = time
-
-            # Plot the model
-            label = self.fitter
-            if self.name!='New Model':
-                label += ': '+self.name
             ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
 
-            if components and self.components is not None:
-                for comp in self.components:
-                    comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
+        if components and self.components is not None:
+            for comp in self.components:
+                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
 
-            # Format axes
-            ax.set_xlabel(str(self.time_units))
-            ax.set_ylabel('Flux')
+        # Format axes
+        ax.set_xlabel(str(self.time_units))
+        ax.set_ylabel('Flux')
 
-            if draw:
-                fig.show()
-            else:
-                return
+        if draw:
+            fig.show()
+        else:
+            return
 
     @property
     def time(self):
