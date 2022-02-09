@@ -27,7 +27,7 @@ def binned_lightcurve(meta, bjdtdb, i):
     norm_lcdata = meta.lcdata[i] / meta.lcdata[i, -1]
     norm_lcerr = meta.lcerr[i] / meta.lcdata[i, -1]
     plt.errorbar(bjdtdb - mjd, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec='w')
-    plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
+    plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
     plt.xlabel(f'Time [MJD + {mjd}]')

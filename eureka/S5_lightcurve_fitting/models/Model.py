@@ -75,7 +75,7 @@ class Model:
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
-        self._flux = np.array(flux_array)
+        self._flux = np.ma.masked_array(flux_array)
 
     def interp(self, new_time, **kwargs):
         """Evaluate the model over a different time array
@@ -114,7 +114,7 @@ class Model:
             params = Parameters(params)
 
         # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ != type(Parameters).__name):
+        if (params is not None) and (type(params).__name__ != Parameters.__name__):
             raise TypeError("'params' argument must be a JSON file, ascii\
                              file, or parameters.Parameters instance.")
 
