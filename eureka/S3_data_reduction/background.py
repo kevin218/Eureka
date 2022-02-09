@@ -167,7 +167,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
                     residuals = dataslice - model
                     # Simple standard deviation (faster but prone to missing scanned background stars)
                     #stdres = np.std(residuals)
-                    # Median Absolute Deviation (slower but more robust)
+                   # Median Absolute Deviation (slower but more robust)
                     #stdres  = np.median(np.abs(np.ediff1d(residuals)))
                     # Mean Absolute Deviation (good comprimise)
                     stdres  = np.mean(np.abs(np.ediff1d(residuals)))

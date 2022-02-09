@@ -73,7 +73,7 @@ def flag_bg(data, meta):
         The updated data object with outlier background pixels flagged.
     '''
     y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
-
+    
     bgdata1 = data.subdata[:,  :y1]
     bgmask1 = data.submask[:,  :y1]
     bgdata2 = data.subdata[:,y2:  ]
