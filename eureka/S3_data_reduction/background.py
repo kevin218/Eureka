@@ -472,7 +472,7 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     return img
 
 
-def fitbg3(data, order_mask, niters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
+def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
@@ -500,7 +500,7 @@ def fitbg3(data, order_mask, niters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
         ccd = CCDData((data.data[i])*units.electron)
         mask = np.zeros(data.data[i].shape)
 
-        for n in range(niters):
+        for n in range(len(sigclip)):
             m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip[n])
             ccd = CCDData(m1.data*units.electron)
             mask[m1.mask==True]+=1
