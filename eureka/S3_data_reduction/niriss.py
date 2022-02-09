@@ -546,17 +546,16 @@ def fit_orders(data, meta):
     print("Go grab some food. This routing could take up to 30 minutes.")
 
     def construct_guesses(A, B, sig, length=10):
-        As   = np.linspace(A[0],   A[1],   length)
-        Bs   = np.linspace(B[0],   B[1],   length)
-        sigs = np.linspace(sig[0], sig[1], length)
-        combos = np.array(list(itertools.product(*[As,Bs,sigs])))
+        As   = np.linspace(A[0],   A[1],   length)  # amplitude of gaussian for first order
+        Bs   = np.linspace(B[0],   B[1],   length)  # amplitude of gaussian for second order
+        sigs = np.linspace(sig[0], sig[1], length)  # std of gaussian profile
+        combos = np.array(list(itertools.product(*[As,Bs,sigs]))) # generates all possible combos
         return combos
     
     # Good initial guesses
-    combos = construct_guesses([0.1,30],
-                               [0.1,30],
-                               [1,40])
+    combos = construct_guesses([0.1,30], [0.1,30], [1,40])
     
+    # generates length x length x length number of images and fits to the data
     img1, sigout1 = niriss_cython.build_image_models(data.median,
                                                      combos[:,0], combos[:,1], 
                                                      combos[:,2], 
@@ -569,12 +568,16 @@ def fit_orders(data, meta):
                                 [best_guess[1]-0.5, best_guess[1]+0.5],
                                 [best_guess[2]-0.5, best_guess[2]+0.5] )
 
+    # generates length x length x length number of images centered around the previous
+    #   guess to optimize the image fit
     img2, sigout2 = niriss_cython.build_image_models(data.median, 
                                                      combos[:,0], combos[:,1],
                                                      combos[:,2],
                                                      meta.tab2['order_1'],
                                                      meta.tab2['order_2'])
 
+    # creates a 2D image for the first and second orders with the best-fit gaussian
+    #    profiles
     final_guess = combos[np.argmin(sigout2)]
     ord1, ord2, _ = niriss_cython.build_image_models(data.median,
                                                      [final_guess[0]],
