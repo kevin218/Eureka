@@ -12,6 +12,7 @@ from astropy.modeling.models import custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import MMMBackground, MedianBackground, Background2D
 
+from ..lib import clipping
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
@@ -416,62 +417,6 @@ def skewed_gaussian(x, eta=0, omega=1, alpha=0,scale=1):
     return (psi * Psi)*scale
 
 
-def gauss_removal(img, mask, linspace, where='bkg'):
-    """
-    An additional step to remove cosmic rays. This fits a Gaussian to
-    the background (or a skewed Gaussian to the orders) and masks data
-    points which are above a certain sigma.
-
-    Parameters
-    ----------
-    img : np.ndarray
-       Single exposure image.
-    mask : np.ndarray
-       An approximate mask for the orders.
-    linspace : array
-       Sets the lower and upper bin bounds for the
-       pixel values. Should be of length = 2.
-    where : str, optional
-       Sets where the mask is covering. Default is `bkg`. 
-       Other option is `order`.
-
-    Returns
-    -------
-    img : np.ndarray
-       The same input image, now masked for newly identified
-       outliers.
-    """
-    n, bins, patches = plt.hist((img*mask).flatten(), 
-                                 bins=np.linspace(linspace[0],linspace[1],100))
-    bincenters = (bins[1:]+bins[:-1])/2
-    plt.close() # don't want to actually plot the histogram
-    
-    if where=='bkg':
-        g = Gaussian1D(mean=0,amplitude=100,stddev=10)
-        rmv = np.where(np.abs(bincenters)<=5)[0]
-    elif where=='order':
-        GaussianSkewed = custom_model(skewed_gaussian)
-        g = GaussianSkewed(eta=0,omega=20,alpha=4, scale=100)
-        rmv = np.where(np.abs(bincenters)==0)[0]
-        
-    # finds bin centers and removes bincenter = 0 (because this bin 
-    #   seems to be enormous and we don't want to skew the best-fit
-    bincenters, n = np.delete(bincenters, rmv), np.delete(n,rmv)
-    
-    # fit the model to the histogram bins
-    fitter = LevMarLSQFitter()
-    gfit = fitter(g, bincenters, n)
-    
-    if where=='bkg':
-        xcr, ycr = np.where(np.abs(img*mask)>=gfit.mean+2*gfit.stddev)
-    elif where=='order':
-        xcr, ycr = np.where(img*mask<=gfit.eta-1*gfit.omega)
-        
-    # returns an image that is nan-masked
-    img[xcr,ycr] = np.nan
-    return img
-
-
 def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
@@ -508,10 +453,10 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
         rm_crs[i] = m1.data
         rm_crs[i][mask>=1] = np.nan
 
-        rm_crs[i] = gauss_removal(rm_crs[i], ~order_mask,
-                                  linspace=[-200,200]) # removal from background
-        rm_crs[i] = gauss_removal(rm_crs[i], order_mask,
-                                  linspace=[-10,10], where='order') # removal from order
+        rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
+                                           linspace=[-200,200]) # removal from background
+        rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
+                                           linspace=[-10,10], where='order') # removal from order
         
 
         b1 = bkg_sub(rm_crs[i], 
