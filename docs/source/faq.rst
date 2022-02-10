@@ -7,6 +7,21 @@ In this section you will find frequently asked questions about Eureka! as well a
 **Common Errors**
 -----------------
 
+Missing packages during installation
+''''''''''''''''''''''''''''''''''''
+
+If you are encountering errors when installing Eureka! like missing packages (e.g. extension_helpers), be sure
+that you are following the instructions on the on the :ref:`installation` page. If you are trying to directly
+call setup.py using the ``python setup.py install`` command, you should instead be using ``pip install .`` which
+helps to make sure that all required dependencies are installed in the right order and checks for implicit
+dependencies. If you still encounter issues, you should be sure that you are using a new conda environment as
+other packages you've previously installed could have conflicting requirements with Eureka!.
+
+If you are following the installation instructions and still encounter an error, please open a new Issue on
+`GitHub <https://github.com/kevin218/Eureka/issues>`_ and paste the full error message you are getting along
+with details about which python version and operating system you are using.
+
+
 Matplotlib RuntimeError() whenever Eureka is imported and plt.show() is called
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
