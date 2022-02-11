@@ -205,11 +205,11 @@ class LightCurve(m.Model):
         # Draw best-fit model
         if fits and len(self.results) > 0:
             for i, model in enumerate(self.results):
-                color = next(plot_COLORS)
-                if color==self.color:
+                model_color = next(plot_COLORS)
+                if model_color==self.color:
                     # Make sure we don't reuse the data color
-                    color = next(plot_COLORS)
-                model.plot(self.time, ax=ax, color=color, zorder=np.inf)
+                    model_color = next(plot_COLORS)
+                model.plot(self.time, ax=ax, color=model_color, zorder=np.inf)
 
         # Format axes
         ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
