@@ -2,6 +2,9 @@
 Installation
 =============================
 
+It is recommended that you install Eureka! in a new conda environment as other packages you've previously
+installed could have conflicting requirements with Eureka!.
+
 With pip
 ---------
 
@@ -37,23 +40,13 @@ With Git/GitHub
 
 			git clone https://github.com/kevin218/Eureka.git
 
-2. Navigate into the newly created directory and **install** Eureka! by running ``setup.py``:
+2. Navigate into the newly created directory and **install** Eureka! by running the following:
 
 	.. code-block:: bash
 
-		python setup.py install
-
-3. Install additional **requirements** for the package by typing:
-
-	.. code-block:: bash
-
-		pip install -r requirements.txt
-
+		pip install .
 
 For the JWST ERS Pre-Launch Data Hackathon
 -----------------------------------------------
 
 Check out the install instructions on the `ERS GitHub <https://github.com/ers-transit/hackathon-2021-day2>`_ if you want to use Eureka! during the hackathon.
-
-
-

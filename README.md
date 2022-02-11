@@ -38,18 +38,11 @@ GitHub following the method described below.
 		git clone https://github.com/kevin218/Eureka.git
 		```
 
-2. Navigate into the newly created directory and **install** Eureka! by running ``setup.py``:
+2. Navigate into the newly created directory and **install** Eureka! by running the following:
 
 	```bash
-	python setup.py install
+	pip install .
 	```
-
-3. Install additional **requirements** for the package by typing:
-
-	```bash
-	pip install -r requirements.txt
-	```
-
 
 ## Documentation
 
