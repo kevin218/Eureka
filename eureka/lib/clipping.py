@@ -1,4 +1,7 @@
 import numpy as np
+from scipy.special import erf
+from astropy.modeling.models import Gaussian1D, custom_model
+from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.convolution import Box1DKernel, convolve
 from astropy.stats import sigma_clip
 
@@ -93,6 +96,16 @@ def replace_moving_mean(data, outliers, kernel):
     data[outliers] = smoothed_data[outliers]
   
     return data
+
+
+def skewed_gaussian(x, eta=0, omega=1, alpha=0,scale=1):
+    """                     
+    A skewed gaussian model.
+    """
+    t = alpha * (x - eta) / omega
+    Psi = 0.5 * (1 + erf(t / np.sqrt(2)))
+    psi = 2.0 / (omega * np.sqrt(2 * np.pi)) * np.exp(- (x-eta)**2 / (2.0 * omega**2))
+    return (psi * Psi)*scale
  
 
 def gauss_removal(img, mask, linspace, where='bkg'):
@@ -120,10 +133,9 @@ def gauss_removal(img, mask, linspace, where='bkg'):
        The same input image, now masked for newly identified
        outliers.   
     """
-    n, bins, patches = plt.hist((img*mask).flatten(),
-                                 bins=np.linspace(linspace[0],linspace[1],100))
+    n, bins = np.histogram((img*mask).flatten(),
+                                    bins=np.linspace(linspace[0],linspace[1],100))
     bincenters = (bins[1:]+bins[:-1])/2
-    plt.close() # don't want to actually plot the histogram
 
     if where=='bkg':
         g = Gaussian1D(mean=0,amplitude=100,stddev=10)
