@@ -151,15 +151,16 @@ class Model:
         label = self.fitter
         if self.name!='New Model':
             label += ': '+self.name
+        
+        flux = self.eval(**kwargs)
         if share:
-            onelc=len(self.time)
-            ax.plot(self.time, self.eval(**kwargs)[onelc*chan:onelc*(chan+1)], '-', label=label, color=color, zorder=zorder)
-        else:
-            ax.plot(self.time, self.eval(**kwargs), '-', label=label, color=color, zorder=zorder)
+            flux = flux[chan*len(self.time):(chan+1)*len(self.time)]
+        
+        ax.plot(self.time, flux, '-', label=label, color=color, zorder=zorder)
 
         if components and self.components is not None:
             for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
+                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, hare=share, chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))

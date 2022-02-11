@@ -191,7 +191,7 @@ def fitJWST(eventlabel, s4_meta=None):
             paramtitles=longparamlist[0]
 
             if sharedp:
-                log.writelog("\nStarting Shared Fit of {}\n Channels".format(meta.nspecchan))
+                log.writelog("\nStarting Shared Fit of {} Channels\n".format(meta.nspecchan))
 
                 flux = np.array([])
                 flux_err = np.array([])
@@ -226,10 +226,10 @@ def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,l
     modellist=[]
     
     if 'transit' in meta.run_myfuncs:
-        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel, paramtitles=paramtitles)
+        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_model)
     if 'polynomial' in meta.run_myfuncs:
-        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', nchan=lc_model.nchannel)
+        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', nchan=lc_model.nchannel_fitted)
         modellist.append(t_polynom)
     model = m.CompositeModel(modellist)
     

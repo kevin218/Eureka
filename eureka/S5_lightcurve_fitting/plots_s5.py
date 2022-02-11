@@ -36,12 +36,17 @@ def plot_fit(lc, model, meta, fitter):
     
     model_lc = model.eval()
     
-    for channel in np.arange(lc.nchannel):
-        flux = lc.flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-        unc = lc.unc[channel*len(lc.time):(channel+1)*len(lc.time)]
-        model = model_lc[channel*len(lc.time):(channel+1)*len(lc.time)]
+    for channel in lc.fitted_channels:
+        flux = np.copy(lc.flux)
+        unc = np.copy(lc.unc)
+        model = np.copy(model_lc)
+        if lc.share:
+            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
+            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+        
         residuals = (flux - model) #/ lc.unc
-        fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(meta.nspecchan))))), figsize=(8, 6))
+        fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(2,1)
         ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.')
@@ -49,7 +54,7 @@ def plot_fit(lc, model, meta, fitter):
 
         ax[1].errorbar(lc.time, residuals, yerr=unc, fmt='.')
 
-        fname = 'figs/fig51{}_lc_{}.png'.format(str(channel).zfill(len(str(meta.nspecchan))), fitter)
+        fname = 'figs/fig51{}_lc_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -89,17 +94,24 @@ def plot_rms(lc, model, meta, fitter):
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
     time = lc.time
 
-    model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
-    for channel in np.arange(lc.nchannel):
-        flux = lc.flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-        model = model_lc[channel*len(lc.time):(channel+1)*len(lc.time)]
+    model_lc = model.eval()
+
+    for channel in lc.fitted_channels:
+        flux = np.copy(lc.flux)
+        unc = np.copy(lc.unc)
+        model = np.copy(model_lc)
+        if lc.share:
+            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
+            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+        
         residuals = flux - model
         residuals = residuals[np.argsort(time)]
 
         rms, stderr, binsz = computeRMS(residuals, binstep=1)
         normfactor = 1e-6
         plt.rcParams.update({'legend.fontsize': 11}) # FINDME: this should not be done here but where the rcparams are defined for Eureka
-        plt.figure(int('52{}'.format(str(channel).zfill(len(str(meta.nspecchan))))), figsize=(8, 6))
+        plt.figure(int('52{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         plt.suptitle(' Correlated Noise', size=16)
         plt.loglog(binsz, rms / normfactor, color='black', lw=1.5, label='Fit RMS', zorder=3)  # our noise
@@ -111,7 +123,7 @@ def plot_rms(lc, model, meta, fitter):
         plt.xticks(size=12)
         plt.yticks(size=12)
         plt.legend()
-        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(meta.nspecchan))))+'allanplot_'+fitter+'.png'
+        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'allanplot_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -147,9 +159,9 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    fig = plt.figure(int('53{}'.format(str(lc.channel).zfill(len(str(meta.nspecchan))))), figsize=(8, 6))
+    fig = plt.figure(int('53{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
     fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
-    fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(meta.nspecchan))), fitter)
+    fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
     if meta.hide_plots:
         plt.close()

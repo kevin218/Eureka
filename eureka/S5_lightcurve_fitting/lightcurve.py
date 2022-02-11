@@ -86,23 +86,28 @@ class LightCurve(m.Model):
         # Initialize the model
         super().__init__()
 
+        self.share = share
+        self.channel = channel
+        self.nchannel = nchannel
+        if self.share:
+            self.nchannel_fitted = self.nchannel
+            self.fitted_channels = np.arange(self.nchannel)
+        else:
+            self.nchannel_fitted = 1
+            self.fitted_channels = np.array([self.channel])
+
         # Check data
-        if not share and len(time) != len(flux):
-            raise ValueError('Time and flux axes must be the same length.')
-        elif share and len(time)*nchannel != len(flux):
+        if len(time)*self.nchannel_fitted != len(flux):
             raise ValueError('Time and flux axes must be the same length.')
 
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
                 print('Warning: Only one uncertainty input, assuming constant uncertainty.')
-            elif not share and len(unc) != len(time):
-                raise ValueError('Time and unc axes must be the same length.')
-            elif share and len(time)*nchannel != len(unc):
+            elif len(time)*self.nchannel_fitted != len(unc):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
-
         else:
             self.unc = np.array([np.nan]*len(self.time))
 
@@ -117,13 +122,6 @@ class LightCurve(m.Model):
         # Place to save the fit results
         self.results = []
 
-        self.channel = channel
-        if share:
-            self.nchannel = nchannel
-        else:
-            self.nchannel = 1
-
-        self.share = share
         self.longparamlist = longparamlist
 
         return
@@ -199,10 +197,14 @@ class LightCurve(m.Model):
         None
         """
         # Make the figure
-        for channel in np.arange(self.nchannel):
-            flux = self.flux[channel*len(self.time):(channel+1)*len(self.time)]
-            unc = self.unc[channel*len(self.time):(channel+1)*len(self.time)]
-            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(meta.nspecchan))))), figsize=(8,6))
+        for channel in self.fitted_channels:
+            flux = self.flux
+            unc = self.unc
+            if self.share:
+                flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
+                unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
+            
+            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
@@ -210,7 +212,7 @@ class LightCurve(m.Model):
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf,share=self.share,chan=channel)
+                    model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf,share=self.share, chan=channel)
             
             # Format axes
             ax.set_xlabel(str(self.time_units))
@@ -218,7 +220,7 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(meta.nspecchan))))
+            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()
