@@ -95,6 +95,7 @@ def fitJWST(eventlabel, s4_meta=None):
             t0 = time.time()
 
             meta = load_specific_s4_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
+
             run_i += 1
 
             run_j = 0
