@@ -473,7 +473,7 @@ def wave_NIRISS(wavefile, meta):
     return meta
 
 
-def fit_bg(data, meta, n_iters=3, readnoise=5, sigclip=[4,2,3], isplots=0):
+def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     """
     Subtracts background from non-spectral regions.
 
