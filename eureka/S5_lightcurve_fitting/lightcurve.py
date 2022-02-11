@@ -202,7 +202,7 @@ class LightCurve(m.Model):
         for channel in np.arange(self.nchannel):
             flux = self.flux[channel*len(self.time):(channel+1)*len(self.time)]
             unc = self.unc[channel*len(self.time):(channel+1)*len(self.time)]
-            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(meta.nspecchan))))), figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
@@ -218,7 +218,7 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
+            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(meta.nspecchan))))
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()
