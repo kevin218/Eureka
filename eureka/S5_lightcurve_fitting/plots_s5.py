@@ -34,7 +34,7 @@ def plot_fit(lc, model, meta, fitter):
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
     
-    model_lc = model.eval(share=True,longparamlist=lc.longparamlist,nchan=lc.nchannel)
+    model_lc = model.eval()
     
     for channel in np.arange(lc.nchannel):
         flux = lc.flux[channel*len(lc.time):(channel+1)*len(lc.time)]
