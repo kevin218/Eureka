@@ -60,15 +60,10 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-
     model.update(fit_params, freenames)
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
-
-    # Plot fit
-    # if meta.isplots_S5 >= 1:
-    #     plot_fit(lc, model, meta, fitter=calling_function)
 
     residuals = (lc.flux - model_lc)
     # FINDME
@@ -81,7 +76,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
-
+    
     # Plot fit
     if meta.isplots_S5 >= 1:
         plot_fit(lc, model, meta, fitter='lsq')
@@ -90,15 +85,8 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     chi2red = computeRedChiSq(lc, model, meta, freenames)
     
     print('\nLSQ RESULTS:')
-    # if lc.share:
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
-    # else:
-    #     numpars=int(len(freenames)/lc.nchannel)
-
-    #     for freenames_i, fit_params_i in zip(freenames[lc.channel*numpars:(lc.channel+1)*numpars], fit_params[lc.channel*numpars:(lc.channel+1)*numpars]):
-    #         print('{0}: {1}'.format(freenames_i, fit_params_i))
-    # print()
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -475,13 +463,9 @@ def group_variables(model):
     - January 11, 2022 Megan Mansfield
         Added ability to have shared parameters
     """
-    # all_params = [i for j in [model.components[n].parameters.dict.items()
-    #               for n in range(len(model.components))] for i in j]
-    if model.components[0].share:
-        all_params = list(model.components[0].parameters.dict.items())
-    else:
-        all_params = []
-        temp=model.components[0].longparamlist[model.components[0].chan]
+    all_params = []
+    for chan in np.arange(model.components[0].nchan):
+        temp=model.components[0].longparamlist[chan]
         for p in list(model.components[0].parameters.dict.items()):
             if p[0] in temp:
                 all_params.append(p)

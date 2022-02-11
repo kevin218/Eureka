@@ -277,15 +277,8 @@ class PolynomialModel(Model):
                       if cN.startswith('c') and cN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
-        # Set whether the fit is shared or not
-        self.share = kwargs.get('share')
-        self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
-        self.chan = kwargs.get('chan')
 
-        if self.share is None:
-            self.share = False
-        
         # Update coefficients
         self._parse_coeffs()
         
@@ -304,12 +297,12 @@ class PolynomialModel(Model):
         """
 
         # Parse 'c#' keyword arguments as coefficients
-        coeffs = np.zeros((self.nchan,9))
+        coeffs = np.zeros((self.nchan,10))
         for k, v in self.parameters.dict.items():
             remvisnum=k.split('_')
             if k.lower().startswith('c') and k[1:].isdigit():
                 coeffs[0,int(k[1:])] = v[0]
-            elif len(remvisnum)>1:
+            elif len(remvisnum)>1 and self.nchan>1:
                 if remvisnum[0].lower().startswith('c') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
                     coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
 
@@ -317,7 +310,6 @@ class PolynomialModel(Model):
         coeffs=coeffs[:,~np.all(coeffs==0,axis=0)]
         coeffs=np.flip(coeffs,axis=1)
         self.coeffs=coeffs
-        # self.coeffs = np.trim_zeros(coeffs)[::-1]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -325,25 +317,16 @@ class PolynomialModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        longparamlist=self.longparamlist
-        nchan=self.nchan
-        paramtitles=longparamlist[0]
-
         # Convert to local time
         time_local = self.time - self.time.mean()
 
         # Create the polynomial from the coeffs
-        if self.share:
-            lcfinal=np.array([])
-            for c in np.arange(nchan):
-                poly = np.poly1d(self.coeffs[c])
-                lcpiece = np.polyval(poly, time_local)
-                lcfinal = np.append(lcfinal, lcpiece)
-            return lcfinal
-
-        else:
-            poly = np.poly1d(self.coeffs[self.chan])
-            return np.polyval(poly, time_local)
+        lcfinal=np.array([])
+        for c in np.arange(self.nchan):
+            poly = np.poly1d(self.coeffs[c])
+            lcpiece = np.polyval(poly, time_local)
+            lcfinal = np.append(lcfinal, lcpiece)
+        return lcfinal
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""
@@ -370,14 +353,10 @@ class TransitModel(Model):
         if self.parameters is None:
             self.parameters = Parameters(**kwargs)
         
-        # Set whether the fit is shared or not
-        self.share = kwargs.get('share')
+        # Set parameters for multi-channel fits
         self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
-        self.chan = kwargs.get('chan')
-
-        if self.share is None:
-            self.share = False
+        self.paramtitles = kwargs.get('paramtitles')
 
         # Store the ld_profile
         self.ld_func = ld_profile(self.parameters.limb_dark.value)
@@ -389,23 +368,40 @@ class TransitModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-              
+        
         longparamlist=self.longparamlist
         nchan=self.nchan
-        paramtitles=longparamlist[0]
+        paramtitles=self.paramtitles
 
+        #Initialize model
+        bm_params = batman.TransitParams()
+        
         # Set all parameters
-        if self.share:
-            lcfinal=np.array([])
-            for c in np.arange(nchan):
-                m_eclipse = batman_lc(self.time,paramtitles,longparamlist[c],self.parameters,self.coeffs)
-                lcfinal = np.append(lcfinal,m_eclipse)
+        lcfinal=np.array([])
+        for c in np.arange(nchan):
+            # Set all parameters
+            for index,item in enumerate(longparamlist[c]):
+                setattr(bm_params,paramtitles[index],self.parameters.dict[item][0])
+            
+            #Set limb darkening parameters
+            uarray=[]
+            for u in self.coeffs:
+                index=np.where(np.array(paramtitles)==u)[0]
+                item=longparamlist[c][index[0]]
+                uarray.append(self.parameters.dict[item][0])
+            bm_params.u = uarray
 
-            return lcfinal
+            # Use batman ld_profile name
+            if self.parameters.limb_dark.value == '4-parameter':
+                bm_params.limb_dark = 'nonlinear'
 
-        else:
-            m_eclipse = batman_lc(self.time,paramtitles,longparamlist[self.chan],self.parameters,self.coeffs)
-            return m_eclipse
+            # Make the eclipse
+            tt = self.parameters.transittype.value
+            m_eclipse = batman.TransitModel(bm_params, self.time, transittype=tt)
+
+            lcfinal = np.append(lcfinal,m_eclipse.light_curve(bm_params))
+
+        return lcfinal
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""
@@ -486,26 +482,5 @@ class ExponentialModel(Model):
             val[0] = newparams[ii]
             setattr(self.parameters, arg, val)
         return
-
-def batman_lc(time,paramtitles,paramvals,parameters,coeffs):
-    #Initialize model
-    bm_params = batman.TransitParams()
-
-    # Set all parameters
-    for index,item in enumerate(paramvals):
-        setattr(bm_params,paramtitles[index],parameters.dict[item][0])
-
-    # Combine limb darkening coeffs
-    bm_params.u = [getattr(parameters, u).value for u in coeffs]
-
-    # Use batman ld_profile name
-    if parameters.limb_dark.value == '4-parameter':
-        bm_params.limb_dark = 'nonlinear'
-
-    # Make the eclipse
-    tt = parameters.transittype.value
-    m_eclipse = batman.TransitModel(bm_params, time, transittype=tt)
-
-    return m_eclipse.light_curve(bm_params)
 
 

@@ -118,7 +118,10 @@ class LightCurve(m.Model):
         self.results = []
 
         self.channel = channel
-        self.nchannel = nchannel
+        if share:
+            self.nchannel = nchannel
+        else:
+            self.nchannel = 1
 
         self.share = share
         self.longparamlist = longparamlist
@@ -196,50 +199,26 @@ class LightCurve(m.Model):
         None
         """
         # Make the figure
-        if self.share:
-            for channel in np.arange(self.nchannel):
-                flux = self.flux[channel*len(self.time):(channel+1)*len(self.time)]
-                unc = self.unc[channel*len(self.time):(channel+1)*len(self.time)]
-                fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
-                fig.clf()
-                # Draw the data
-                ax = fig.gca()
-                ax.errorbar(self.time, flux, unc, fmt='.', color=next(COLORS), zorder=0)
-                # Draw best-fit model
-                if fits and len(self.results) > 0:
-                    for model in self.results:
-                        model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf,share=self.share,chan=channel)
-                
-                # Format axes
-                ax.set_xlabel(str(self.time_units))
-                ax.set_ylabel('Flux')
-                ax.legend(loc='best')
-                fig.tight_layout()
-
-                fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
-                fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-                if meta.hide_plots:
-                    plt.close()
-                else:
-                    plt.pause(0.2)
-        else:
-            fig = plt.figure(int('54{}'.format(str(self.channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+        for channel in np.arange(self.nchannel):
+            flux = self.flux[channel*len(self.time):(channel+1)*len(self.time)]
+            unc = self.unc[channel*len(self.time):(channel+1)*len(self.time)]
+            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, self.flux, self.unc, fmt='.', color=next(COLORS), zorder=0)
+            ax.errorbar(self.time, flux, unc, fmt='.', color=next(COLORS), zorder=0)
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf)
-
+                    model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf,share=self.share,chan=channel)
+            
             # Format axes
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Flux')
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig54{}_all_fits.png'.format(str(self.channel).zfill(len(str(self.nchannel))))
+            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()

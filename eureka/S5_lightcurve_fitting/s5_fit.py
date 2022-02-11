@@ -172,7 +172,7 @@ def fitJWST(eventlabel, s4_meta=None):
             t_mjdtdb = meta.bjdtdb - t_offset
             params.t0.value -= t_offset
 
-            #Make a long list of parameters
+            #Make a long list of parameters for each channel
             longparamlist=[ [] for i in range(meta.nspecchan)]
             tlist=list(params.dict.keys())
             for param in tlist:
@@ -188,6 +188,7 @@ def fitJWST(eventlabel, s4_meta=None):
                 else:
                     for c in np.arange(meta.nspecchan):
                         longparamlist[c].append(param)
+            paramtitles=longparamlist[0]
 
             if sharedp:
                 log.writelog("\nStarting Shared Fit of {}\n Channels".format(meta.nspecchan))
@@ -198,7 +199,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
                     flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
 
-                lc_model = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist)
+                lc_model = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles)
 
             else:
                 for channel in range(meta.nspecchan):
@@ -213,24 +214,25 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux_err = flux_err/ flux.mean()
                     flux = flux / flux.mean()
 
-                    lc_model = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist)
+                    lc_model = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,[longparamlist[channel]],paramtitles)
 
     return lc_model
 
-def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log, longparamlist):
+def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles):
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, longparamlist, unc=flux_err, name=eventlabel,share=sharedp)
 
     # Make the astrophysical and detector models
     modellist=[]
+    
     if 'transit' in meta.run_myfuncs:
-        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', share=sharedp, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel, chan=chan)
+        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel, paramtitles=paramtitles)
         modellist.append(t_model)
     if 'polynomial' in meta.run_myfuncs:
-        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', share=sharedp, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel, chan=chan)
+        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', nchan=lc_model.nchannel)
         modellist.append(t_polynom)
     model = m.CompositeModel(modellist)
-
+    
     # Fit the models using one or more fitters
     log.writelog("=========================")
     if 'lsq' in meta.fit_method:
