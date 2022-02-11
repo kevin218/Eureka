@@ -401,20 +401,10 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
         
     b = Background2D(img, box,
                      filter_size=filter_size,
-                     bkg_estimator=bkg,                                                                                                                                               
+                     bkg_estimator=bkg,
                      sigma_clip=sigma_clip, fill_value=0.0,
                      mask=mask)
     return b.background
-
-
-def skewed_gaussian(x, eta=0, omega=1, alpha=0,scale=1):
-    """ 
-    A skewed gaussian model.
-    """
-    t = alpha * (x - eta) / omega
-    Psi = 0.5 * (1 + erf(t / np.sqrt(2)))
-    psi = 2.0 / (omega * np.sqrt(2 * np.pi)) * np.exp(- (x-eta)**2 / (2.0 * omega**2))
-    return (psi * Psi)*scale
 
 
 def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):

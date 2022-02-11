@@ -10,6 +10,7 @@ import numpy as np
 import ccdproc as ccdp
 from astropy import units
 from astropy.io import fits
+import scipy.optimize as so
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy.nddata import CCDData
@@ -29,7 +30,8 @@ from . import niriss_cython
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
            'f277_mask', 'fit_bg', 'wave_NIRISS',
-           'mask_method_one', 'mask_method_two', 'fit_orders']
+           'mask_method_one', 'mask_method_two', 'fit_orders',
+           'fit_orders_fast']
 
 
 def read(filename, f277_filename, data, meta):
@@ -525,7 +527,31 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     return data
 
 
-def fit_orders(data, meta):
+def set_which_table(i, meta):
+    """ 
+    A little routine to return which table to
+    use for the positions of the orders.
+
+    Parameters
+    ----------
+    i : int
+    meta : object
+
+    Returns
+    -------
+    pos1 : np.array
+       Array of locations for first order.
+    pos2 : np.array
+       Array of locations for second order.
+    """
+    if i == 2:
+        pos1, pos2 = meta.tab2['order_1'], meta.tab2['order_2']
+    elif i == 1:
+        pos1, pos2 = meta.tab1['order_1'], meta.tab1['order_2']
+    return pos1, pos2
+
+
+def fit_orders(data, meta, which_table=2):
     """
     Creates a 2D image optimized to fit the data. Currently
     runs with a Gaussian profile, but will look into other
@@ -537,6 +563,9 @@ def fit_orders(data, meta):
     ----------
     data : object
     meta : object
+    which_table : int, optional
+       Sets with table of initial y-positions for the
+       orders to use. Default is 2.
 
     Returns
     -------
@@ -551,6 +580,8 @@ def fit_orders(data, meta):
         sigs = np.linspace(sig[0], sig[1], length)  # std of gaussian profile
         combos = np.array(list(itertools.product(*[As,Bs,sigs]))) # generates all possible combos
         return combos
+
+    pos1, pos2 = set_which_table(which_table, meta)
     
     # Good initial guesses
     combos = construct_guesses([0.1,30], [0.1,30], [1,40])
@@ -559,8 +590,7 @@ def fit_orders(data, meta):
     img1, sigout1 = niriss_cython.build_image_models(data.median,
                                                      combos[:,0], combos[:,1], 
                                                      combos[:,2], 
-                                                     meta.tab2['order_1'], 
-                                                     meta.tab2['order_2'])
+                                                     pos1, pos2)
 
     # Iterates on a smaller region around the best guess
     best_guess = combos[np.argmin(sigout1)]
@@ -573,8 +603,7 @@ def fit_orders(data, meta):
     img2, sigout2 = niriss_cython.build_image_models(data.median, 
                                                      combos[:,0], combos[:,1],
                                                      combos[:,2],
-                                                     meta.tab2['order_1'],
-                                                     meta.tab2['order_2'])
+                                                     pos1, pos2)
 
     # creates a 2D image for the first and second orders with the best-fit gaussian
     #    profiles
@@ -583,13 +612,59 @@ def fit_orders(data, meta):
                                                      [final_guess[0]],
                                                      [final_guess[1]],
                                                      [final_guess[2]],
-                                                     meta.tab2['order_1'],
-                                                     meta.tab2['order_2'],
+                                                     pos1, pos2,
                                                      return_together=False)
-    meta.order1_mask = ord1
-    meta.order2_mask = ord2
+    meta.order1_mask = ord1[0]
+    meta.order2_mask = ord2[0]
 
     return meta
     
 
+def fit_orders_fast(data, meta, which_table=2):
+    """
+    A faster method to fit a 2D mask to the NIRISS data.
+    Very similar to `fit_orders`, but works with 
+    `scipy.optimize.leastsq`.
 
+    Parameters
+    ----------
+    data : object
+    meta : object
+    which_table : int, optional
+       Sets with table of initial y-positions for the
+       orders to use. Default is 2.
+
+    Returns
+    -------
+    meta : object
+    """
+    def residuals(params, data, y1_pos, y2_pos):
+        """ Calcualtes residuals for best-fit profile. """
+        A, B, sig1 = params
+        # Produce the model:   
+        model,_ = niriss_cython.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
+        # Calculate residuals:     
+        res = (model[0] - data)
+        return res.flatten()
+
+    pos1, pos2 = set_which_table(which_table, meta)
+
+    # fits the mask
+    results = so.least_squares( residuals, 
+                                x0=np.array([2,3,30]), 
+                                args=(data.median, pos1, pos2),
+                                xtol=1e-11, ftol=1e-11, max_nfev=1e3
+                               )
+
+    # creates the final mask
+    out_img1,out_img2,_= niriss_cython.build_image_models(data.median, 
+                                                          results.x[0:1], 
+                                                          results.x[1:2], 
+                                                          results.x[2:3], 
+                                                          pos1, 
+                                                          pos2,
+                                                          return_together=False)
+    meta.order1_mask_fast = out_img1[0]
+    meta.order2_mask_fast = out_img2[0]
+
+    return meta
