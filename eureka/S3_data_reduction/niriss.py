@@ -131,14 +131,13 @@ def image_filtering(img, radius=1, gf=4):
 
     return z, g
 
-def f277_mask(data, meta, isplots=0):
+def f277_mask(data, isplots=0):
     """        
     Marks the overlap region in the f277w filter image.
     
     Parameters
     ----------
     data : object
-    meta : object
     isplots : int, optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
@@ -233,7 +232,7 @@ def mask_method_one(data, meta, isplots=0, save=True):
 
     g = simplify_niriss_img(data, meta, isplots)
 
-    f,_ = f277_mask(data, meta)
+    f,_ = f277_mask(data)
 
     g_centers = find_centers(g,cutends=None)
     f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
