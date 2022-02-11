@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from . import models as m
 from . import fitters as f
-from .utils import COLORS
+from .utils import COLORS, color_gen
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
@@ -198,11 +198,18 @@ class LightCurve(m.Model):
         # Draw the data
         ax = fig.gca()
         ax.errorbar(self.time, self.flux, self.unc, fmt='.', color='w', ecolor=self.color, mec=self.color, zorder=0)
+        
+        # Make a new color generator for the models
+        plot_COLORS = color_gen('Category10')
+
         # Draw best-fit model
-        ls = ['-', '--', ':', '-.']
         if fits and len(self.results) > 0:
             for i, model in enumerate(self.results):
-                model.plot(self.time, ax=ax, color=str(0.3+0.05*i), lw=2, ls=ls[i%4], zorder=np.inf)
+                color = next(plot_COLORS)
+                if color==self.color:
+                    # Make sure we don't reuse the data color
+                    color = next(plot_COLORS)
+                model.plot(self.time, ax=ax, color=color, zorder=np.inf)
 
         # Format axes
         ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')

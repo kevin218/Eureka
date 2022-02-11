@@ -23,7 +23,8 @@
 # 17. Produce plots DONE
 
 
-import os, time, glob
+import os, glob
+import time as time_pkg
 import numpy as np
 from astropy.io import fits
 from tqdm import tqdm
@@ -171,7 +172,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
         for bg_hw_val in meta.bg_hw_range:
 
-            t0 = time.time()
+            t0 = time_pkg.time()
 
             meta.spec_hw = spec_hw_val
 
@@ -357,26 +358,26 @@ def reduceJWST(eventlabel, s2_meta=None):
                     stdvar  = data.stdvar
                     optspec = data.optspec
                     opterr  = data.opterr
-                    bjdtdb  = data.bjdtdb
+                    time    = data.time
                 else:
                     stdspec = np.append(stdspec, data.stdspec, axis=0)
                     stdvar  = np.append(stdvar, data.stdvar, axis=0)
                     optspec = np.append(optspec, data.optspec, axis=0)
                     opterr  = np.append(opterr, data.opterr, axis=0)
-                    bjdtdb  = np.append(bjdtdb, data.bjdtdb, axis=0)
+                    time    = np.append(time, data.time, axis=0)
 
             if meta.inst == 'wfc3':
                 # WFC3 needs a conclusion step to convert lists into arrays before saving
                 meta, log = inst.conclusion_step(meta, log)
 
             # Calculate total time
-            total = (time.time() - t0) / 60.
+            total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             if meta.save_output == True:
                 log.writelog('Saving results as astropy table')
                 meta.tab_filename = meta.outputdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
-                astropytable.savetable_S3(meta.tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
+                astropytable.savetable_S3(meta.tab_filename, time, wave_1d, stdspec, stdvar, optspec, opterr)
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')

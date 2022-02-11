@@ -189,12 +189,21 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
     in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
-    n_loops = 0
-    while not np.all(in_range) and n_loops<meta.max_pos_iters:
-        n_loops += 1
+    if not np.all(in_range):
+        log.writelog('Not all walkers were initialized within the priors, using a smaller proposal distribution')
         pos = pos[in_range]
-        step_size /= 2 # Make the proposal size a bit smaller to reduce odds of rejection
-        pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers-len(pos))]))
+        # Make sure the step size is well within the limits
+        step_size = np.min(np.append(step_size.reshape(-1,1), np.append((pmax-freepars).reshape(-1,1)/10, (freepars-pmin).reshape(-1,1)/10, axis=1), axis=1), axis=1).reshape(-1)
+        if pos.shape[0]==0:
+            remove_zeroth = True
+            new_nwalkers = nwalkers-len(pos)
+            pos = np.zeros((1,ndim))
+        else:
+            remove_zeroth = False
+            new_nwalkers = nwalkers-len(pos)
+        pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(new_nwalkers)]).reshape(-1,ndim), axis=0)
+        if remove_zeroth:
+            pos = pos[1:]
         in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     if not np.any(in_range):
         raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
@@ -202,7 +211,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     elif not np.all(in_range):
         log.writelog('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
         log.writelog('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
-        nwalkers = np.sum(in_range)
+        pos = pos[in_range]
+        nwalkers = pos.shape[0]
 
     log.writelog('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))

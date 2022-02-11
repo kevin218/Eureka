@@ -121,7 +121,7 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, ax=None, draw=False, ls='-', color='blue', zorder=np.inf, **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, **kwargs):
         """Plot the model
 
         Parameters
@@ -150,7 +150,7 @@ class Model:
         label = self.fitter
         if self.name!='New Model':
             label += ': '+self.name
-        ax.plot(self.time, self.eval(**kwargs), ls=ls, label=label, color=color, zorder=zorder)
+        ax.plot(self.time, self.eval(**kwargs), '.', ls='', ms=2, label=label, color=color, zorder=zorder)
 
         if components and self.components is not None:
             for comp in self.components:

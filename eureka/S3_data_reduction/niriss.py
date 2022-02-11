@@ -61,9 +61,10 @@ def read(filename, f277_filename, data, meta):
     data.shdr = hdu['SCI',1].header
 
     data.intend = hdu[0].header['NINTS'] + 0.0
-    data.bjdtbd = np.linspace(data.mhdr['EXPSTART'], 
+    data.time = np.linspace(data.mhdr['EXPSTART'], 
                               data.mhdr['EXPEND'], 
                               int(data.intend))
+    meta.time_units = 'BJD_TDB'
 
     # loads all the data into the data object
     data.data = hdu['SCI',1].data + 0.0

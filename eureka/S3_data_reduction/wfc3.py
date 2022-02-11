@@ -231,12 +231,14 @@ def read(filename, data, meta):
         # Horizons file created for HST around time of observations
         bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, meta.horizonsfile)
         bjdutc      = jd + bjd_corr/86400.
-        data.bjdtdb   = utc_tt.utc_tdb(bjdutc, meta.leapdir)   # FINDME: this was utc_tt, but I believe it should have been utc_tdb instead
+        data.time   = utc_tt.utc_tdb(bjdutc, meta.leapdir)   # FINDME: this was utc_tt, but I believe it should have been utc_tdb instead
+        meta.time_units = 'BJD_TDB'
     elif meta.firstFile:
         print("WARNING: No Horizons file found. Using JD rather than BJD_TDB.")
-        data.bjdtdb   = jd
+        data.time   = jd
+        meta.time_units = 'JD'
     else:
-        data.bjdtdb   = jd
+        data.time   = jd
 
     data.exptime = data.mhdr['EXPTIME']
 
@@ -351,7 +353,7 @@ def difference_frames(data, meta):
     # Overwrite the data array with the differenced data since that's what we'll use for the other steps
     data.data = diffdata
     data.err = differr
-    data.bjdtdb = data.bjdtdb[1:]
+    data.time = data.time[1:]
 
     return data, meta
 

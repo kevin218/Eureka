@@ -61,11 +61,13 @@ def read(filename, data, meta):
     int_times	    = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
     # Record integration mid-times in BJD_TDB
-    # data.bjdtdb = int_times['int_mid_BJD_TDB']
+    # data.time = int_times['int_mid_BJD_TDB']
+    # meta.time_units = 'BJD_TDB'
     # There is no time information in the simulated NIRSpec data
     print('  WARNING: The timestamps for the simulated NIRSpec data are currently '
           'hardcoded because they are not in the .fits files themselves')
-    data.bjdtdb = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'], data.intend)
+    data.time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'], data.intend)
+    meta.time_units = 'BJD_TDB'
 
     # NIRSpec CV3 data has a lot of NaNs in the data and err arrays, which is making life difficult.
     print('  WARNING: Manually changing NaNs from DATA and ERR arrays to 0 for the CV3 data')

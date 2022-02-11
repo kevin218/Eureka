@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import glob, os, time
+import glob, os
+import time as time_pkg
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 from ..lib import sort_nicely as sn
@@ -92,7 +93,7 @@ def fitJWST(eventlabel, s4_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
 
-            t0 = time.time()
+            t0 = time_pkg.time()
 
             meta = load_specific_s4_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
             run_i += 1
@@ -130,9 +131,9 @@ def fitJWST(eventlabel, s4_meta=None):
                 params = p.Parameters(param_file=meta.fit_par)
 
                 # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
-                t_offset = int(np.floor(meta.bjdtdb[0]))
-                t_mjdtdb = meta.bjdtdb - t_offset
-                params.t0.value -= t_offset
+                offset = int(np.floor(meta.time[0]))
+                time_offset = meta.time - offset
+                params.t0.value -= offset
 
                 # Get the flux and error measurements for the current channel
                 flux = meta.lcdata[channel,:]
@@ -149,10 +150,10 @@ def fitJWST(eventlabel, s4_meta=None):
                     log.writelog('****Adding exponential ramp systematic to light curve****')
                     fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--')
                     fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
-                    flux *= fakeramp.eval(time=t_mjdtdb)
+                    flux *= fakeramp.eval(time=time_offset)
 
                 # Load the relevant values into the LightCurve model object
-                lc_model = lc.LightCurve(t_mjdtdb, flux, channel, meta.nspecchan, log, unc=flux_err, name=eventlabel, time_units=f'MJD_TDB = BJD_TDB - {t_offset}')
+                lc_model = lc.LightCurve(time_offset, flux, channel, meta.nspecchan, log, unc=flux_err, name=eventlabel, time_units=f'Time = {meta.time_units} - {offset}')
 
                 # Make the astrophysical and detector models
                 modellist=[]
@@ -198,6 +199,12 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Plot the results from the fit(s)
                 if meta.isplots_S5 >= 1:
                     lc_model.plot(meta)
+                
+                log.closelog()
+
+            # Calculate total time
+            total = (time_pkg.time() - t0) / 60.
+            print('\nTotal time (min): ' + str(np.round(total, 2)))
 
     return meta, lc_model
 
