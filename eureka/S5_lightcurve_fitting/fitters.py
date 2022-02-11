@@ -181,7 +181,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         # to the value can work okay, but it may fail if the step size is larger than the bounds
         # which is not uncommon for precisely known values like t0 and period
         log.writelog('No covariance matrix from LSQ - falling back on a 0.1% step size')
-        step_size = 0.001*freepars
+        step_size = 0.001*np.abs(freepars)
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
     run_nsteps = meta.run_nsteps
@@ -193,7 +193,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         log.writelog('Not all walkers were initialized within the priors, using a smaller proposal distribution')
         pos = pos[in_range]
         # Make sure the step size is well within the limits
-        step_size = np.min(np.append(step_size.reshape(-1,1), np.append((pmax-freepars).reshape(-1,1)/10, (freepars-pmin).reshape(-1,1)/10, axis=1), axis=1), axis=1).reshape(-1)
+        step_size_options = np.append(step_size.reshape(-1,1), np.abs(np.append((pmax-freepars).reshape(-1,1)/10, (freepars-pmin).reshape(-1,1)/10, axis=1)), axis=1)
+        step_size = np.min(step_size_options, axis=1)
         if pos.shape[0]==0:
             remove_zeroth = True
             new_nwalkers = nwalkers-len(pos)
