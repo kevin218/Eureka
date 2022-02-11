@@ -79,7 +79,7 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
     
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plot_fit(lc, model, meta, fitter='lsq')
+        plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
@@ -89,8 +89,9 @@ def lsqfitter(lc, model, meta, calling_function='lsq', **kwargs):
         print('{0}: {1}'.format(freenames_i, fit_params_i))
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
-        plot_rms(lc, model, meta, fitter='lsq')
+    if meta.isplots_S5 >= 3 and calling_function=='lsq':
+        # This plot is only really useful if you're actually using the lsq fitter, otherwise don't make it
+        plot_rms(lc, model, meta, fitter=calling_function)
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
