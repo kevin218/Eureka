@@ -59,17 +59,3 @@ class TransitModel(Model):
 
         # Evaluate the light curve
         return m_eclipse.light_curve(bm_params)
-
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        # ii = 0
-        # for arg, val in self.parameters.dict.items():
-        #     val[0] = newparams[ii]
-        #     setattr(self.parameters, arg, val)
-        #     ii += 1
-        return
