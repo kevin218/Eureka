@@ -23,6 +23,9 @@ run_bound       'multi'
 run_sample      'unif'
 run_tol         0.1
 
+# Plotting controls
+interp			False	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
+
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S5      False # Boolean, set True to only use the first spectral channel
