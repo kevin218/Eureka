@@ -42,7 +42,8 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
-    if len(ilow[0]) + len(ihi[0]) > 0: ln_like_val = -np.inf
+    if len(ilow[0]) + len(ihi[0]) > 0:
+        ln_like_val = -np.inf
     return ln_like_val
 
 def lnprior(theta, pmin, pmax):
@@ -108,7 +109,10 @@ def lnprob(theta, lc, model, pmin, pmax, freenames):
     """
     ln_like_val = ln_like(theta, lc, model, pmin, pmax, freenames)
     lp = lnprior(theta, pmin, pmax)
-    return ln_like_val + lp
+    lnprob = ln_like_val + lp
+    if not np.isfinite(lnprob):
+        lnprob = -np.inf
+    return lnprob
 
 #PRIOR TRANSFORMATION TODO: ADD GAUSSIAN PRIORS
 def transform_uniform(x, a, b):
@@ -202,16 +206,16 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     rmserr = np.zeros(binsz.size)
     for i in range(binsz.size):
         nbins[i] = int(np.floor(data.size / binsz[i]))
-        bindata = np.zeros(nbins[i], dtype=float)
+        bindata = np.ma.zeros(nbins[i], dtype=float)
         # bin data
         # ADDED INTEGER CONVERSION, mh 01/21/12
         for j in range(nbins[i]):
-            bindata[j] = data[j * binsz[i]:(j + 1) * binsz[i]].mean()
+            bindata[j] = np.ma.mean(data[j * binsz[i]:(j + 1) * binsz[i]])
         # get rms
-        rms[i] = np.sqrt(np.mean(bindata ** 2))
+        rms[i] = np.sqrt(np.ma.mean(bindata ** 2))
         rmserr[i] = rms[i] / np.sqrt(2. * nbins[i])
     # expected for white noise (WINN 2008, PONT 2006)
-    stderr = (data.std() / np.sqrt(binsz)) * np.sqrt(nbins / (nbins - 1.))
+    stderr = (np.ma.std(data) / np.sqrt(binsz)) * np.sqrt(nbins / (nbins - 1.))
     if isrmserr is True:
         return rms, stderr, binsz, rmserr
     else:

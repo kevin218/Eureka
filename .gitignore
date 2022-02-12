@@ -136,4 +136,5 @@ dmypy.json
 *.code-workspace
 .vscode/settings.json
 
+# Ignore installed packages for wfc3 branch
 image_registration/

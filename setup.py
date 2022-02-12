@@ -2,23 +2,8 @@
 import os
 from setuptools import setup, find_packages
 
-REQUIRES = ['batman-package',
-            'h5py',
-            'ipython',
-            'matplotlib',
-            'numpy>=1.20.0',
-            'pytest',
-            'pyyaml',
-            'scipy',
-            'jwst==1.1.0',
-            'pandas',
-            'bokeh',
-            'lmfit',
-            'svo_filters',
-            'stpipe==0.2.0',
-            'stdatamodels==0.2.3']
-
-DEPENDENCY_LINKS = ['git+https://github.com/spacetelescope/jwst_gtvt.git@cd6bc76f66f478eafbcc71834d3e735c73e03ed5']
+with open('requirements.txt') as f:
+    REQUIRES = f.read().splitlines()
 
 FILES = []
 for root, _, files in os.walk("Eureka"):
@@ -31,7 +16,6 @@ setup(name='Eureka',
       packages=find_packages(".", exclude=["*.tests"]),
       package_data={'Eureka': FILES},
       install_requires=REQUIRES,
-      dependency_links=DEPENDENCY_LINKS,
       author='Section 5',
       author_email='kbstevenson@gmail.com',
       license='MIT',
