@@ -20,13 +20,14 @@ import sys, os, time, shutil, glob
 import numpy as np
 import scipy.interpolate as spi
 import matplotlib.pyplot as plt
-from . import plots_s4, drift, clipping
+from . import plots_s4, drift
 from ..lib import sort_nicely as sn
 from ..lib import logedit
 from ..lib import readECF as rd
 from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
+from ..lib import clipping
 
 
 class MetaClass:
