@@ -173,7 +173,7 @@ def f277_mask(data, isplots=0):
     return new_mask, mid[q]
 
 
-def mask_method_one(data, meta, isplots=0, save=True):
+def mask_method_one(data, meta=None, isplots=0, save=True, class=False):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -277,12 +277,14 @@ def mask_method_one(data, meta, isplots=0, save=True):
     if save:
         tab.write('niriss_order_fits_method1.csv',format='csv')
 
-    meta.tab1 = tab
+    if class==False:
+        meta.tab1 = tab
+        return meta
+    else:
+        return tab
 
-    return meta
 
-
-def mask_method_two(data, meta, isplots=0, save=False):
+def mask_method_two(data, meta=None, isplots=0, save=False, class=False):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
@@ -403,9 +405,11 @@ def mask_method_two(data, meta, isplots=0, save=False):
     if save:
         tab.write('niriss_order_fits_method2.csv',format='csv')
 
-    meta.tab2 = tab
-
-    return meta
+    if class == False:
+        meta.tab2 = tab
+        return meta
+    else:
+        return tab
 
 
 def simplify_niriss_img(data, meta, isplots=False):
