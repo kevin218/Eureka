@@ -5,6 +5,7 @@ batman-package
 bokeh
 ccdproc
 corner
+cython
 dynesty
 emcee
 gwcs
