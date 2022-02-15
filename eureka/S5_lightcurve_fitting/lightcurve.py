@@ -89,6 +89,7 @@ class LightCurve(m.Model):
         # Initialize the model
         super().__init__()
 
+        self.name = name
         self.share = share
         self.channel = channel
         self.nchannel = nchannel
@@ -103,6 +104,12 @@ class LightCurve(m.Model):
         if len(time)*self.nchannel_fitted != len(flux):
             raise ValueError('Time and flux axes must be the same length.')
 
+        # Set the time and flux axes
+        self.flux = flux
+        self.time = time
+        # Set the units
+        self.time_units = time_units
+
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
@@ -114,14 +121,6 @@ class LightCurve(m.Model):
         else:
             self.unc = np.array([np.nan]*len(self.time))
 
-        # Set the time and flux axes
-        self.time = time
-        self.flux = flux
-
-        # Set the units
-        self.time_units = time_units
-        self.name = name
-
         # Place to save the fit results
         self.results = []
 
@@ -129,7 +128,7 @@ class LightCurve(m.Model):
 
         self.log = log
 
-        self.color = next(COLORS)
+        self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
 
         return
 
