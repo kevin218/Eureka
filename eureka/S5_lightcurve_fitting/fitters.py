@@ -50,7 +50,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-
+    
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
     
     if meta.run_verbose:
@@ -61,13 +61,13 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Get the best fit params
     fit_params = results.x
-
+    
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-
+    
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
 
@@ -480,12 +480,18 @@ def group_variables(model):
         Added ability to have shared parameters
     """
     all_params = []
+    alreadylist = []
     for chan in np.arange(model.components[0].nchan):
         temp=model.components[0].longparamlist[chan]
-        for p in list(model.components[0].parameters.dict.items()):
-            if p[0] in temp:
-                all_params.append(p)
-
+        for par in list(model.components[0].parameters.dict.items()):
+            if par[0] in temp:
+                if not all_params:
+                    all_params.append(par)
+                    alreadylist.append(par[0])
+                if par[0] not in alreadylist:
+                    all_params.append(par)
+                    alreadylist.append(par[0])
+                        
     # Group the different variable types
     freenames = []
     freepars = []

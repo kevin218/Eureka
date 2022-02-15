@@ -194,7 +194,7 @@ def fitJWST(eventlabel, s4_meta=None):
 def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles):
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, name=eventlabel,share=sharedp)
-
+    
     if meta.testing_S5:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
@@ -245,7 +245,7 @@ def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,l
         log.writelog("Completed lmfit fit.")
         log.writelog("-------------------------")
     log.writelog("=========================")
-
+    
     # Plot the results from the fit(s)
     if meta.isplots_S5 >= 1:
         lc_model.plot(meta)
