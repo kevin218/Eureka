@@ -300,12 +300,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # START DYNESTY
     l_args = [lc, model, pmin, pmax, freenames]
 
-    # the prior_transform function for dynesty requires there only be one argument
-    ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
-
     log.writelog('Running dynesty...')
-    sampler = NestedSampler(lnprob, ptform_lambda, ndims,
-                            bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
+    sampler = NestedSampler(lnprob, ptform, ndims,
+                            bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
+                            ptform_args=[pmin, pmax])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
 
