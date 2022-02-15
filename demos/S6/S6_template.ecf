@@ -1,4 +1,4 @@
-# Eureka! Control File for Stage 5: Lightcurve Fitting
+# Eureka! Control File for Stage 6: Spectra Plotting
 
 allapers        True # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
 
