@@ -130,23 +130,9 @@ def fitJWST(eventlabel, s4_meta=None):
                 # Set the intial fitting parameters
                 params = p.Parameters(param_file=meta.fit_par)
 
-                # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
-                offset = int(np.floor(meta.time[0]))
+                # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
+                offset = params.time_offset.value
                 time_offset = meta.time - offset
-                if 't0' in params.dict.keys():
-                    params.t0.value -= offset
-                    params.t0.mn -= offset
-                    params.t0.mx -= offset
-                if 't_secondary' in params.dict.keys():
-                    params.t_secondary.value -= offset
-                    params.t_secondary.mn -= offset
-                    params.t_secondary.mx -= offset
-                for i in [0,2,3]:
-                    # Skip col 1 which is the free/fixed/etc. column
-                    if 't0' in params.dict.keys():
-                        params.dict['t0'][i] -= offset
-                    if 't_secondary' in params.dict.keys():
-                        params.dict['t_secondary'][i] -= offset
                 
                 # Get the flux and error measurements for the current channel
                 flux = meta.lcdata[channel,:]
