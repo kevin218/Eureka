@@ -5,7 +5,70 @@ Eureka! Control File (.ecf)
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
 
-In the following, we look at the contents of the ecf for Stages 2, 3, and 4.
+In the following, we look at the contents of the ecf for Stages 1, 2, 3, and 4.
+
+
+Stage 1
+-------
+
+.. include:: ../media/S1_template.ecf
+
+suffix 
+''''''
+Data file suffix (e.g. uncal).
+
+ramp_fit_algorithm
+''''''''''''''''''
+Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently. 
+
+
+ramp_fit_max_cores
+''''''''''''''''''
+Fraction of processor cores to use to compute the ramp fits, options are 'none', quarter', 'half','all'
+
+
+skip_*
+''''''
+
+If True, skip the named step. 
+
+.. note::
+   Note that some instruments and observing modes might skip a step either way! See `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`_ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
+
+topdir + inputdir
+'''''''''''''''''
+The path to the directory containing the Stage 0 JWST data (uncal.fits).
+
+
+topdir + outputdir
+'''''''''''''''''''
+The path to the directory in which to output the Stage 1 JWST data and plots.
+
+testing_S1
+'''''''''''
+If True, only a single file will be used, outputs won't be saved, and plots won't be made. Useful for making sure most of the code can run.
+
+default_ramp_fit_weighting
+''''''''''''''''''''''''''
+Define the method by which individual frame pixels will be weighted during the default ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm == default``. Options are ``default``, ``fixed``, ``interpolated``, ``flat``, or ``custom``.
+
+
+``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`_
+
+In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above). 
+
+
+``fixed``: As with ``default``, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
+
+
+``interpolated``: As with ``default``, except the SNR to :math:`P` lookup table is converted to a smooth interpolation. 
+
+
+``flat``: As with ``default``, except the weighting equation is no longer used, and all pixels are weighted equally. 
+
+
+``custom``: As with ``default``, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
+
 
 Stage 2
 --------
