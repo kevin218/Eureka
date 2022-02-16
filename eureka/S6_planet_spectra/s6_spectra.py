@@ -1,9 +1,12 @@
 import numpy as np
+import pandas as pd
 import os, glob, time
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 from ..lib import util, logedit
 from ..lib import sort_nicely as sn
+
+from . import plots_s6 as plots
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
@@ -49,8 +52,8 @@ def plot_spectra(eventlabel, s5_meta=None):
     rd.store_ecf(meta, ecf)
 
     # load savefile
-    if s4_meta == None:
-        s4_meta = read_s5_meta(meta)
+    if s5_meta == None:
+        s5_meta = read_s5_meta(meta)
 
     meta = load_general_s5_meta_info(meta, s5_meta)
 
@@ -108,7 +111,29 @@ def plot_spectra(eventlabel, s5_meta=None):
                             else:
                                 new_file.write(line)
             
-            # Do S6 stuff
+            # Get the wavelength values
+            wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
+            wave_errs = (meta.wave_hi-meta.wave_low)/2
+
+            fit_methods = meta.fit_method.strip('[').strip(']').strip().split(',')
+
+            # Read in S5 fitted values
+            if meta.sharedp:
+                medians, errs, ylabel = parse_s5_saves(meta, fit_methods, channel_key='shared')
+            else:
+                medians = []
+                errs = []
+                for channel in range(meta.nspecchan):
+                    median, err, ylabel = parse_s5_saves(meta, fit_methods, channel_key=f'ch{channel}')
+                    medians.append(median)
+                    errs.append(err)
+                medians = np.array(medians).reshape(-1)
+                errs = np.array(errs).reshape(-1)
+                if np.all(errs==None):
+                    errs = None
+
+            # Make the spectrum plot
+            plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, ylabel)
             
             # Calculate total time
             total = (time.time() - t0) / 60.
@@ -121,6 +146,42 @@ def plot_spectra(eventlabel, s5_meta=None):
             log.closelog()
     
     return meta
+
+def parse_s5_saves(meta, fit_methods, channel_key='shared'):
+    for fitter in fit_methods:
+        if fitter in ['dynesty', 'emcee']:
+            fname = f'S5_{fitter}_samples_{channel_key}.csv'
+            samples = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
+            # FINDME: kludge to decide between transmission and emission spectra for now
+            if 'fp' in samples.keys():
+                keys = [key for key in samples.keys() if 'fp' in key]
+                ylabel=r'$F_{\rm p}/F_{\rm *}$ (ppm)'
+                scalar = 1e6
+            else:
+                keys = [key for key in samples.keys() if 'rp' in key]
+                ylabel=r'$R_{\rm p}/R_{\rm *}$'
+                scalar = 1
+            spectra_samples = np.array([samples[key] for key in keys])
+            lowers, medians, uppers = np.percentile(spectra_samples, [16,50,84], axis=1)*scalar
+            lowers = np.abs(medians-lowers)
+            uppers = np.abs(uppers-medians)
+            errs = np.array([lowers, uppers])
+        else:
+            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
+            # FINDME: kludge to decide between transmission and emission spectra for now
+            if 'fp' in fitted_values.keys():
+                keys = [key for key in fitted_values.keys() if 'fp' in key]
+                ylabel=r'$F_{\rm p}/F_{\rm *}$ (ppm)'
+                scalar = 1e6
+            else:
+                keys = [key for key in fitted_values.keys() if 'rp' in key]
+                ylabel=r'$R_{\rm p}/R_{\rm *}$'
+                scalar = 1
+            medians = np.array([fitted_values[key] for key in keys])*scalar
+            errs = None
+    
+    return medians, errs, ylabel
 
 def read_s5_meta(meta):
 
