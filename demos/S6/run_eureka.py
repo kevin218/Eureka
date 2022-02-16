@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../..')
-import eureka.S6_planet_spectra as s6
+import eureka.S6_planet_spectra.s6_spectra as s6
 
 eventlabel = 'template'
 
