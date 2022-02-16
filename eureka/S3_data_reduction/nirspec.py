@@ -34,24 +34,20 @@ def read(filename, data, meta):
 
     assert isinstance(filename, str)
 
-    # Decide whether to perform the Stage 2 processing ourselves.
-    # if stage2_processing:
-    # 	# Run pipeline on a *_rateints.fits Stage 1 data product, but avoiding significant subarray trimming.
-    # 	stage2_filename = process_to_stage2(filename, do_assignwcs=do_assignwcs, do_extract2d=do_extract2d, do_srctype=do_srctype, do_flatfield=do_flatfield, do_photom=do_photom, delete_files=delete_files)
-    # else:
-    # 	# Use the input file as is.
-    # 	stage2_filename = filename
-
-
     # Now we can start working with the data.
     hdulist 		= fits.open(filename)
     data.mhdr 		= hdulist[0].header
     data.shdr 		= hdulist['SCI',1].header
 
     data.intstart 	= 1
-    print('  WARNING: Manually setting INTSTART to 1 for NIRSpec CV3 data.')
-    #data.intstart    = data.mhdr['INTSTART']
-    data.intend 	= data.mhdr['NINTS']
+
+    try:
+        data.intstart = data.mhdr['INTSTART']
+        data.intend   = data.mhdr['INTEND']
+    except:
+        print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
+        data.intstart  = 1
+        data.intend    = data.mhdr['NINTS']
 
     data.data 		= hdulist['SCI',1].data
     data.err 		= hdulist['ERR',1].data

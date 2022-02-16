@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+from io import StringIO
+import sys
 
 import lmfit
 import emcee
@@ -50,7 +52,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-
+    
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
     
     if meta.run_verbose:
@@ -61,13 +63,13 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Get the best fit params
     fit_params = results.x
-
+    
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-
+    
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
 
@@ -102,6 +104,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, calling_function, fit_params, freenames)
 
     return best_model
 
@@ -247,6 +251,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
+    save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
+
     return best_model
 
 def dynestyfitter(lc, model, meta, log, **kwargs):
@@ -300,12 +306,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # START DYNESTY
     l_args = [lc, model, pmin, pmax, freenames]
 
-    # the prior_transform function for dynesty requires there only be one argument
-    ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
-
     log.writelog('Running dynesty...')
-    sampler = NestedSampler(lnprob, ptform_lambda, ndims,
-                            bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
+    sampler = NestedSampler(lnprob, ptform, ndims,
+                            bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
+                            ptform_args=[pmin, pmax])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
 
@@ -314,7 +318,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     if meta.run_verbose:
         log.writelog('')
-        log.writelog(res.summary())
+        # Need to temporarily redirect output since res.summar() prints rather than returns a string
+        old_stdout = sys.stdout
+        sys.stdout = mystdout = StringIO()
+        res.summary()
+        sys.stdout = old_stdout
+        log.writelog(mystdout.getvalue())
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
@@ -359,6 +368,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
 
     return best_model
 
@@ -435,17 +446,19 @@ def lmfitter(lc, model, meta, log, **kwargs):
     model.update(fit_params, freenames)
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plots.plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
 
     return best_model
 
@@ -480,12 +493,18 @@ def group_variables(model):
         Added ability to have shared parameters
     """
     all_params = []
+    alreadylist = []
     for chan in np.arange(model.components[0].nchan):
         temp=model.components[0].longparamlist[chan]
-        for p in list(model.components[0].parameters.dict.items()):
-            if p[0] in temp:
-                all_params.append(p)
-
+        for par in list(model.components[0].parameters.dict.items()):
+            if par[0] in temp:
+                if not all_params:
+                    all_params.append(par)
+                    alreadylist.append(par[0])
+                if par[0] not in alreadylist:
+                    all_params.append(par)
+                    alreadylist.append(par[0])
+                        
     # Group the different variable types
     freenames = []
     freepars = []
@@ -558,3 +577,19 @@ def group_variables_lmfit(model):
     freenames = np.array(freenames)
 
     return param_list, freenames, indep_vars
+
+def save_fit(meta, lc, fitter, fit_params, freenames, samples=[]):
+    if lc.share:
+        fname = f'S5_{fitter}_fitparams_shared.csv'
+    else:
+        fname = f'S5_{fitter}_fitparams_ch{lc.channel}.csv'
+    np.savetxt(meta.outputdir+fname, fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+
+    if len(samples)!=0:
+        if lc.share:
+            fname = f'S5_{fitter}_samples.csv'
+        else:
+            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
+        np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
+    
+    return

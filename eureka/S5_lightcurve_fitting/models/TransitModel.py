@@ -61,8 +61,9 @@ class TransitModel(Model):
             uarray=[]
             for u in self.coeffs:
                 index=np.where(np.array(paramtitles)==u)[0]
-                item=longparamlist[c][index[0]]
-                uarray.append(self.parameters.dict[item][0])
+                if len(index)!=0:
+                    item=longparamlist[c][index[0]]
+                    uarray.append(self.parameters.dict[item][0])
             bm_params.u = uarray
 
             # Use batman ld_profile name

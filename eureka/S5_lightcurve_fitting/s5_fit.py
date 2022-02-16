@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import glob, os, time
+import glob, os, time, shutil
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 from ..lib import sort_nicely as sn
@@ -121,6 +121,9 @@ def fitJWST(eventlabel, s4_meta=None):
                                 new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
                             else:
                                 new_file.write(line)
+            # Copy parameter ecf
+            log.writelog('Copying S5 parameter control file')
+            shutil.copy(meta.fit_par, meta.outputdir)
             
             # Set the intial fitting parameters
             params = p.Parameters(param_file=meta.fit_par)
@@ -128,31 +131,18 @@ def fitJWST(eventlabel, s4_meta=None):
             for arg, val in params.dict.items():
                 if 'shared' in val:
                     sharedp = True
+            meta.sharedp = sharedp
             
             # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
             t_offset = int(np.floor(meta.bjdtdb[0]))
             t_mjdtdb = meta.bjdtdb - t_offset
+            time_units = f'MBJD_TDB = BJD_TDB - {t_offset}'
             params.t0.value -= t_offset
             
-            #Make a long list of parameters for each channel
-            longparamlist=[ [] for i in range(meta.nspecchan)]
-            tlist=list(params.dict.keys())
-            for param in tlist:
-                if 'free' in params.dict[param]:
-                    longparamlist[0].append(param)
-                    for c in np.arange(meta.nspecchan-1):
-                        title=param+'_'+str(c+1)
-                        params.__setattr__(title,params.dict[param])
-                        longparamlist[c+1].append(title)
-                elif 'shared' in params.dict[param]:
-                    for c in np.arange(meta.nspecchan):
-                        longparamlist[c].append(param)
-                else:
-                    for c in np.arange(meta.nspecchan):
-                        longparamlist[c].append(param)
-            paramtitles=longparamlist[0]
-            
             if sharedp:
+                #Make a long list of parameters for each channel
+                longparamlist, paramtitles = make_longparamlist(meta, params)
+
                 log.writelog("\nStarting Shared Fit of {} Channels\n".format(meta.nspecchan))
                 
                 flux = np.array([])
@@ -161,9 +151,11 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
                     flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
                 
-                meta = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles)
+                meta = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
             else:
                 for channel in range(meta.nspecchan):
+                    #Make a long list of parameters for each channel
+                    longparamlist, paramtitles = make_longparamlist(meta, params)
                     
                     log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
                     
@@ -175,13 +167,11 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux_err = flux_err/ flux.mean()
                     flux = flux / flux.mean()
                     
-                    meta = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,[longparamlist[channel]],paramtitles)
+                    meta = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
             
             # Calculate total time
             total = (time.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-            
-            # FINDME: Save S5 outputs in an easily accessible format for S6
             
             # Save results
             log.writelog('Saving results')
@@ -191,10 +181,10 @@ def fitJWST(eventlabel, s4_meta=None):
     
     return meta
 
-def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles):
+def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,sparamtitles):
     # Load the relevant values into the LightCurve model object
-    lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, name=eventlabel,share=sharedp)
-
+    lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
+    
     if meta.testing_S5:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
@@ -245,12 +235,37 @@ def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,l
         log.writelog("Completed lmfit fit.")
         log.writelog("-------------------------")
     log.writelog("=========================")
-
+    
     # Plot the results from the fit(s)
     if meta.isplots_S5 >= 1:
         lc_model.plot(meta)
 
     return meta
+
+def make_longparamlist(meta, params):
+    if meta.sharedp:
+        nspecchan = meta.nspecchan
+    else:
+        nspecchan = 1
+    
+    longparamlist=[ [] for i in range(nspecchan)]
+    tlist=list(params.dict.keys())
+    for param in tlist:
+        if 'free' in params.dict[param]:
+            longparamlist[0].append(param)
+            for c in np.arange(nspecchan-1):
+                title=param+'_'+str(c+1)
+                params.__setattr__(title,params.dict[param])
+                longparamlist[c+1].append(title)
+        elif 'shared' in params.dict[param]:
+            for c in np.arange(nspecchan):
+                longparamlist[c].append(param)
+        else:
+            for c in np.arange(nspecchan):
+                longparamlist[c].append(param)
+    paramtitles=longparamlist[0]
+
+    return longparamlist, paramtitles
 
 def read_s4_meta(meta):
 
