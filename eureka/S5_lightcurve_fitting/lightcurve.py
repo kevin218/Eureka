@@ -44,7 +44,7 @@ class LightCurveFitter:
 
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, log, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
+    def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
         """
         A class to store the actual light curve
 
@@ -69,6 +69,8 @@ class LightCurve(m.Model):
             The time units
         name: str
             A name for the object
+        share: bool
+            Whether the fit shares parameters between spectral channels
 
         Returns
         -------
@@ -81,42 +83,52 @@ class LightCurve(m.Model):
         - Dec 29, 2021 Taylor Bell
             Allowing for a constant uncertainty to be input with just a float.
             Added a channel number.
+        - Jan. 15, 2022 Megan Mansfield
+            Added ability to share fit between all channels
         """
         # Initialize the model
         super().__init__()
 
+        self.name = name
+        self.share = share
+        self.channel = channel
+        self.nchannel = nchannel
+        if self.share:
+            self.nchannel_fitted = self.nchannel
+            self.fitted_channels = np.arange(self.nchannel)
+        else:
+            self.nchannel_fitted = 1
+            self.fitted_channels = np.array([self.channel])
+
         # Check data
-        if len(time) != len(flux):
+        if len(time)*self.nchannel_fitted != len(flux):
             raise ValueError('Time and flux axes must be the same length.')
+
+        # Set the time and flux axes
+        self.flux = flux
+        self.time = time
+        # Set the units
+        self.time_units = time_units
 
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
                 log.writelog('Warning: Only one uncertainty input, assuming constant uncertainty.')
-            elif len(unc) != len(time):
+            elif len(time)*self.nchannel_fitted != len(unc):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
-
         else:
-            self.unc = np.array([np.nan]*len(time))
-
-        # Set the time and flux axes
-        self.time = time
-        self.flux = flux
-
-        # Set the units
-        self.time_units = time_units
-        self.name = name
+            self.unc = np.array([np.nan]*len(self.time))
 
         # Place to save the fit results
         self.results = []
 
-        self.channel = channel
-        self.nchannel = nchannel
+        self.longparamlist = longparamlist
+
         self.log = log
 
-        self.color = next(COLORS)
+        self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
 
         return
 
@@ -149,7 +161,7 @@ class LightCurve(m.Model):
         """
         # Empty default fit
         fit_model = None
-
+        
         model.time = self.time
         # Make sure the model is a CompositeModel
         if not isinstance(model, m.CompositeModel):
@@ -193,30 +205,36 @@ class LightCurve(m.Model):
         None
         """
         # Make the figure
-        fig = plt.figure(int('50{}'.format(str(self.channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
-        fig.clf()
-        # Draw the data
-        ax = fig.gca()
-        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color='w', ecolor=self.color, mec=self.color, zorder=0)
-        # Draw best-fit model
-        ls = ['-', '--', ':', '-.']
-        if fits and len(self.results) > 0:
-            for i, model in enumerate(self.results):
-                model.plot(self.time, ax=ax, color=str(0.3+0.05*i), lw=2, ls=ls[i%4], zorder=np.inf)
+        for channel in self.fitted_channels:
+            flux = self.flux
+            unc = self.unc
+            if self.share:
+                flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
+                unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
+            
+            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+            fig.clf()
+            # Draw the data
+            ax = fig.gca()
+            ax.errorbar(self.time, flux, unc, fmt='.', color=next(COLORS), zorder=0)
+            # Draw best-fit model
+            if fits and len(self.results) > 0:
+                for model in self.results:
+                    model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf, share=self.share, chan=channel)
+            
+            # Format axes
+            ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
+            ax.set_xlabel(str(self.time_units))
+            ax.set_ylabel('Normalized Flux', size=14)
+            ax.legend(loc='best')
+            fig.tight_layout()
 
-        # Format axes
-        ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
-        ax.set_xlabel(str(self.time_units), size=14)
-        ax.set_ylabel('Normalized Flux', size=14)
-        ax.legend(loc='best')
-        fig.tight_layout()
-
-        fname = 'figs/fig50{}_all_fits.png'.format(str(self.channel).zfill(len(str(self.nchannel))))
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if meta.hide_plots:
-            plt.close()
-        else:
-            plt.pause(0.2)
+            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
+            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+            if meta.hide_plots:
+                plt.close()
+            else:
+                plt.pause(0.2)
 
         return
 

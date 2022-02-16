@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+from io import StringIO
+import sys
 
 import lmfit
 import emcee
@@ -45,12 +47,14 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     - December 29-30, 2021 Taylor Bell
         Updated documentation and arguments. Reduced repeated code.
         Also saving covariance matrix for later estimation of sampler step size.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-
+    
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
-
+    
     if meta.run_verbose:
         log.writelog("\nVerbose lsq results: {}\n".format(results))
     else:
@@ -59,13 +63,13 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Get the best fit params
     fit_params = results.x
-
+    
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-
+    
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
 
@@ -80,25 +84,28 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
-
+    
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
-
-    log.writelog('\nLSQ RESULTS:')
+    
+    print('\nLSQ RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
     log.writelog('')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
-        plots.plot_rms(lc, model, meta, fitter='lsq')
+    if meta.isplots_S5 >= 3 and calling_function=='lsq':
+        # This plot is only really useful if you're actually using the lsq fitter, otherwise don't make it
+        plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, calling_function, fit_params, freenames)
 
     return best_model
 
@@ -162,6 +169,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     log.writelog('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
@@ -169,10 +178,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # SCALE UNCERTAINTIES WITH REDUCED CHI2
     if meta.rescale_err:
         lc.unc *= np.sqrt(lsq_sol.chi2red)
-
+    
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
-
+    
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
     else:
@@ -242,6 +251,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
+    save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
+
     return best_model
 
 def dynestyfitter(lc, model, meta, log, **kwargs):
@@ -271,6 +282,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     log.writelog('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
@@ -293,12 +306,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # START DYNESTY
     l_args = [lc, model, pmin, pmax, freenames]
 
-    # the prior_transform function for dynesty requires there only be one argument
-    ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
-
     log.writelog('Running dynesty...')
-    sampler = NestedSampler(lnprob, ptform_lambda, ndims,
-                            bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
+    sampler = NestedSampler(lnprob, ptform, ndims,
+                            bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
+                            ptform_args=[pmin, pmax])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
 
@@ -307,7 +318,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     if meta.run_verbose:
         log.writelog('')
-        log.writelog(res.summary())
+        # Need to temporarily redirect output since res.summar() prints rather than returns a string
+        old_stdout = sys.stdout
+        sys.stdout = mystdout = StringIO()
+        res.summary()
+        sys.stdout = old_stdout
+        log.writelog(mystdout.getvalue())
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
@@ -352,6 +368,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
 
     return best_model
 
@@ -428,17 +446,19 @@ def lmfitter(lc, model, meta, log, **kwargs):
     model.update(fit_params, freenames)
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plots.plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
 
     return best_model
 
@@ -469,11 +489,22 @@ def group_variables(model):
 
     - December 29, 2021 Taylor Bell
         Moved code to separate function to reduce repeated code.
+    - January 11, 2022 Megan Mansfield
+        Added ability to have shared parameters
     """
-    # all_params = [i for j in [model.components[n].parameters.dict.items()
-    #               for n in range(len(model.components))] for i in j]
-    all_params = list(model.components[0].parameters.dict.items())
-
+    all_params = []
+    alreadylist = []
+    for chan in np.arange(model.components[0].nchan):
+        temp=model.components[0].longparamlist[chan]
+        for par in list(model.components[0].parameters.dict.items()):
+            if par[0] in temp:
+                if not all_params:
+                    all_params.append(par)
+                    alreadylist.append(par[0])
+                if par[0] not in alreadylist:
+                    all_params.append(par)
+                    alreadylist.append(par[0])
+                        
     # Group the different variable types
     freenames = []
     freepars = []
@@ -483,7 +514,7 @@ def group_variables(model):
     for ii, item in enumerate(all_params):
         name, param = item
         #param = list(param)
-        if param[1] == 'free':
+        if (param[1] == 'free') or (param[1] == 'shared'):
             freenames.append(name)
             freepars.append(param[0])
             if len(param) > 3:
@@ -492,10 +523,6 @@ def group_variables(model):
             else:
                 pmin.append(-np.inf)
                 pmax.append(np.inf)
-        # elif param[1] == 'fixed':
-        #     pinitial.append(param[0])
-        #     pmin.append(param[0])
-        #     pmax.append(param[0])
         elif param[1] == 'independent':
             indep_vars[name] = param[0]
     freenames = np.array(freenames)
@@ -550,3 +577,19 @@ def group_variables_lmfit(model):
     freenames = np.array(freenames)
 
     return param_list, freenames, indep_vars
+
+def save_fit(meta, lc, fitter, fit_params, freenames, samples=[]):
+    if lc.share:
+        fname = f'S5_{fitter}_fitparams_shared.csv'
+    else:
+        fname = f'S5_{fitter}_fitparams_ch{lc.channel}.csv'
+    np.savetxt(meta.outputdir+fname, fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+
+    if len(samples)!=0:
+        if lc.share:
+            fname = f'S5_{fitter}_samples.csv'
+        else:
+            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
+        np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
+    
+    return

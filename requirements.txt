@@ -1,4 +1,6 @@
-astropy
+asdf==2.8.1
+astropy<5.0.0
+astroquery>=0.4.2
 batman-package
 bokeh
 ccdproc
