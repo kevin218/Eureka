@@ -21,7 +21,7 @@ skip_ramp_fitting				False
 skip_gain_scale					False
 
 # Project directory
-topdir							/Users/acarter/Documents/TRANSITS/EUREKA
+topdir							/home/User
 
 # Directories relative to project directory
 inputdir					/Data/JWST-Sim/NIRCam/Uncalibrated
