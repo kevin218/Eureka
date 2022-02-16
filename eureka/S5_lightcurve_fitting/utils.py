@@ -181,7 +181,7 @@ def color_gen(colormap='viridis', key=None, n=10):
     yield from itertools.cycle(palette)
 
 
-COLORS = color_gen('Category10')
+COLORS = color_gen('Category10', 10)
 
 
 def interp_flux(mu, flux, params, values):

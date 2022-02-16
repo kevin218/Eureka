@@ -200,13 +200,12 @@ class LightCurve(m.Model):
         ax.errorbar(self.time, self.flux, self.unc, fmt='.', color='w', ecolor=self.color, mec=self.color, zorder=0)
         
         # Make a new color generator for the models
-        plot_COLORS = color_gen('Greys9')
+        plot_COLORS = color_gen("Greys", 6)
 
         # Draw best-fit model
         if fits and len(self.results) > 0:
-            for i, model in enumerate(self.results):
-                model_color = next(plot_COLORS)
-                model.plot(self.time, ax=ax, color=model_color, zorder=np.inf)
+            for model in self.results:
+                model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf)
 
         # Format axes
         ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
