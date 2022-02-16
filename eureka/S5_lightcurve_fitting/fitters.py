@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+from io import StringIO
+import sys
 
 import lmfit
 import emcee
@@ -102,6 +104,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, calling_function, fit_params, freenames)
 
     return best_model
 
@@ -247,6 +251,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
+    save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
+
     return best_model
 
 def dynestyfitter(lc, model, meta, log, **kwargs):
@@ -312,7 +318,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     if meta.run_verbose:
         log.writelog('')
-        log.writelog(res.summary())
+        # Need to temporarily redirect output since res.summar() prints rather than returns a string
+        old_stdout = sys.stdout
+        sys.stdout = mystdout = StringIO()
+        res.summary()
+        sys.stdout = old_stdout
+        log.writelog(mystdout.getvalue())
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
@@ -357,6 +368,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
 
     return best_model
 
@@ -433,17 +446,19 @@ def lmfitter(lc, model, meta, log, **kwargs):
     model.update(fit_params, freenames)
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, model, meta, freenames)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
-        plots.plot_rms(lc, model, meta, fitter='dynesty')
+        plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+
+    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
 
     return best_model
 
@@ -562,3 +577,19 @@ def group_variables_lmfit(model):
     freenames = np.array(freenames)
 
     return param_list, freenames, indep_vars
+
+def save_fit(meta, lc, fitter, fit_params, freenames, samples=[]):
+    if lc.share:
+        fname = f'S5_{fitter}_fitparams_shared.csv'
+    else:
+        fname = f'S5_{fitter}_fitparams_ch{lc.channel}.csv'
+    np.savetxt(meta.outputdir+fname, fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+
+    if len(samples)!=0:
+        if lc.share:
+            fname = f'S5_{fitter}_samples.csv'
+        else:
+            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
+        np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
+    
+    return
