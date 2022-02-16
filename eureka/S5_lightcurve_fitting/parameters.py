@@ -131,7 +131,7 @@ class Parameters:
 
         # Add any kwargs to the parameter dict
         params.update(kwargs)
-
+        
         # Try to store each as an attribute
         for param, value in params.items():
             setattr(self, param, value)
