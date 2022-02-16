@@ -25,12 +25,11 @@ Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. 
 
 ramp_fit_max_cores
 ''''''''''''''''''
-Fraction of processor cores to use to compute the ramp fits, options are 'none', quarter', 'half','all'
+Fraction of processor cores to use to compute the ramp fits, options are ``none``, ``quarter``, ``half``, ``all``.
 
 
 skip_*
 ''''''
-
 If True, skip the named step. 
 
 .. note::
@@ -39,7 +38,6 @@ If True, skip the named step.
 topdir + inputdir
 '''''''''''''''''
 The path to the directory containing the Stage 0 JWST data (uncal.fits).
-
 
 topdir + outputdir
 '''''''''''''''''''
