@@ -1,7 +1,18 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import multiprocessing as mp
 from tqdm import tqdm
+import ccdproc as ccdp
+from astropy import units
+import multiprocessing as mp
+from scipy.special import erf
+import matplotlib.pyplot as plt
+from astropy.nddata import CCDData
+from astropy.modeling.models import Gaussian1D
+from astropy.stats import SigmaClip, sigma_clip
+from astropy.modeling.models import custom_model
+from astropy.modeling.fitting import LevMarLSQFitter
+from photutils import MMMBackground, MedianBackground, Background2D
+
+from ..lib import clipping
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
@@ -330,7 +341,6 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                     else:
                         nobadpixels = True      #exit while loop
 
-
                     if isplots == 6:
                         plt.figure(3601)
                         plt.clf()
@@ -357,20 +367,105 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
     return bg, bgmask#, mask #,variance
 
 
-def fitbg3(data, isplots=0):
-    """
-    Fit sky background with out-of-spectra data. Hopefully this is a faster
-    routine than fitbg2. (optimized to fit across the x-direction)
 
+def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
+            box=(10,2), filter_size=(1,1)):
+    """
+    Completes a step for fitting a 2D background
+    model.
+    
     Parameters
     ----------
-    dataim : np.ndarray                                          
-       Data image to fit the background to.                                                            
-    isplots : int, optional                                    
-       The amount of plots saved; set in ecf. Default is 0.                                          
+    img : np.ndarray
+       Single exposure frame.
+    mask : np.ndarray
+       Mask to remove the orders.
+    sigma : float, optional
+       Sigma to remove above. Default is 5.
+    bkg_estimator : str, optional
+       Which type of 2D background model to use.
+       Default is `median`.
+    box : tuple, optional
+       Box size by which to smooth over. Default
+       is (10,2) --> prioritizes smoothing by
+       column.
+    filter_size : tuple, optional
+       The window size of the 2D filter to apply to the
+       low-resolution background map. Default is (1,1).
 
     Returns
     -------
-    bg : np.ndarray
-       Background model.
+    background : np.ndarray
+       The modeled background image.
     """
+    sigma_clip = SigmaClip(sigma=sigma)
+    
+    if bkg_estimator.lower()=='mmmbackground':
+        bkg = MMMBackground()
+    elif bkg_estimator.lower()=='median':
+        bkg = MedianBackground()
+        
+    b = Background2D(img, box,
+                     filter_size=filter_size,
+                     bkg_estimator=bkg,
+                     sigma_clip=sigma_clip, fill_value=0.0,
+                     mask=mask)
+    return b.background
+
+
+def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
+    """
+    Fit sky background with out-of-spectra data. Optimized to remove
+    the 1/f noise in the NIRISS spectra (works in the y-direction).
+
+    Parameters
+    ----------
+    isplots : bool, optional                                      
+       Plots intermediate steps for the background fitting routine.
+       Default is False.                                          
+
+    Returns
+    -------
+    data : object
+       data object now contains new attribute `bkg_removed`.
+    """
+
+    # Removes cosmic rays
+    # Loops through niters cycles to make sure all pesky
+    #    cosmic rays are trashed
+    rm_crs = np.zeros(data.data.shape)
+    bkg_subbed = np.zeros(data.data.shape)
+
+    for i in tqdm(range(len(data.data))):
+
+        ccd = CCDData((data.data[i])*units.electron)
+        mask = np.zeros(data.data[i].shape)
+
+        for n in range(len(sigclip)):
+            m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip[n])
+            ccd = CCDData(m1.data*units.electron)
+            mask[m1.mask==True]+=1
+
+        rm_crs[i] = m1.data
+        rm_crs[i][mask>=1] = np.nan
+
+        rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
+                                           linspace=[-200,200]) # removal from background
+        rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
+                                           linspace=[-10,10], where='order') # removal from order
+        
+
+        b1 = bkg_sub(rm_crs[i], 
+                     order_mask,
+                     bkg_estimator='median', sigma=4, box=(10,5), filter_size=(2,2))
+        b2 = bkg_sub(rm_crs[i]-b1, 
+                     order_mask,
+                     sigma=3,
+                     bkg_estimator='median')
+        
+        bkg_subbed[i] = (rm_crs[i]-b1)-b2
+
+        
+    data.bkg_removed = bkg_subbed
+
+    return data

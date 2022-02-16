@@ -135,7 +135,7 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model
 
         Parameters
@@ -164,11 +164,16 @@ class Model:
         label = self.fitter
         if self.name!='New Model':
             label += ': '+self.name
-        ax.plot(self.time, self.eval(**kwargs), '.', ls='', ms=2, label=label, color=color, zorder=zorder)
+        
+        flux = self.eval(**kwargs)
+        if share:
+            flux = flux[chan*len(self.time):(chan+1)*len(self.time)]
+        
+        ax.plot(self.time, flux, '.', ls='', ms=2, label=label, color=color, zorder=zorder)
 
         if components and self.components is not None:
             for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, label=comp.fitter+': '+comp.name, **kwargs)
+                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, share=share, chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))

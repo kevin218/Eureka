@@ -30,6 +30,8 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
 
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
+    - January 22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
     """
     # params[ifreepars] = freepars
     ilow = np.where(theta < pmin)
@@ -155,7 +157,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     chi2 = np.sum((residuals / lc.unc) ** 2)
-    chi2red = chi2 / (len(lc.unc) - len(freenames))
+    chi2red = chi2 / (len(lc.flux) - len(freenames))
 
     if meta.run_verbose:
         print('Reduced Chi-squared: ', chi2red)
