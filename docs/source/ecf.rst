@@ -12,6 +12,7 @@ Stage 1
 -------
 
 .. include:: ../media/S1_template.ecf
+   :literal:
 
 suffix 
 ''''''
@@ -50,24 +51,24 @@ If True, only a single file will be used, outputs won't be saved, and plots won'
 
 default_ramp_fit_weighting
 ''''''''''''''''''''''''''
-Define the method by which individual frame pixels will be weighted during the default ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm == default``. Options are ``default``, ``fixed``, ``interpolated``, ``flat``, or ``custom``.
+Define the method by which individual frame pixels will be weighted during the default ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm`` is ``default``. Options are ``default``, ``fixed``, ``interpolated``, ``flat``, or ``custom``.
 
 
-``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`_
+``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`_.
 
 In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above). 
 
 
-``fixed``: As with ``default``, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
+``fixed``: As with default, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
 
 
-``interpolated``: As with ``default``, except the SNR to :math:`P` lookup table is converted to a smooth interpolation. 
+``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation. 
 
 
-``flat``: As with ``default``, except the weighting equation is no longer used, and all pixels are weighted equally. 
+``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally. 
 
 
-``custom``: As with ``default``, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
+``custom``: As with default, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
 
 
 Stage 2
