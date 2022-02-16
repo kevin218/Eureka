@@ -22,11 +22,11 @@ skip_ramp_fitting			False
 skip_gain_scale				False
 
 # Project directory
-topdir						/Users/acarter/Documents/TRANSITS/EUREKA
+topdir						/home/User
 
 # Directories relative to project directory
-inputdir					/DATA/MIRI/UNCALIBRATED
-outputdir					/DATA/MIRI/STAGE1
+inputdir					/Data/JWST-Sim/MIRI/Uncalibrated
+outputdir					/Data/JWST-Sim/MIRI/Stage1
 
 # Diagnostics
 testing_S1					False

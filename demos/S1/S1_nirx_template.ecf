@@ -24,8 +24,8 @@ skip_gain_scale					False
 topdir							/Users/acarter/Documents/TRANSITS/EUREKA
 
 # Directories relative to project directory
-inputdir						/DATA/NIRSpec/UNCALIBRATED
-outputdir						/DATA/NIRSpec/STAGE1
+inputdir					/Data/JWST-Sim/NIRCam/Uncalibrated
+outputdir					/Data/JWST-Sim/NIRCam/Stage1
 
 # Diagnostics
 testing_S1						False
