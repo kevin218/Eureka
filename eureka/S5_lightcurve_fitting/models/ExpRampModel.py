@@ -42,7 +42,7 @@ class ExpRampModel(Model):
         np.ndarray
             The sequence of coefficient values
         """
-        # Parse 'c#' keyword arguments as coefficients
+        # Parse 'r#' keyword arguments as coefficients
         self.coeffs = np.zeros((self.nchan, 6))
         for k, v in self.parameters.dict.items():
             remvisnum=k.split('_')
