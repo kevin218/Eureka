@@ -136,6 +136,7 @@ def fitJWST(eventlabel, s4_meta=None):
             # Subtract off the zeroth time value to avoid floating point precision problems when fitting for t0
             t_offset = int(np.floor(meta.bjdtdb[0]))
             t_mjdtdb = meta.bjdtdb - t_offset
+            time_units = f'MBJD_TDB = BJD_TDB - {t_offset}'
             params.t0.value -= t_offset
             
             if sharedp:
@@ -150,7 +151,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
                     flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
                 
-                meta = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles)
+                meta = fit_channel(meta,t_mjdtdb,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
             else:
                 for channel in range(meta.nspecchan):
                     #Make a long list of parameters for each channel
@@ -166,7 +167,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux_err = flux_err/ flux.mean()
                     flux = flux / flux.mean()
                     
-                    meta = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles)
+                    meta = fit_channel(meta,t_mjdtdb,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
             
             # Calculate total time
             total = (time.time() - t0) / 60.
@@ -180,9 +181,9 @@ def fitJWST(eventlabel, s4_meta=None):
     
     return meta
 
-def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,paramtitles):
+def fit_channel(meta,t_mjdtdb,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,sparamtitles):
     # Load the relevant values into the LightCurve model object
-    lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, name=eventlabel,share=sharedp)
+    lc_model = lc.LightCurve(t_mjdtdb, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
     
     if meta.testing_S5:
         # FINDME: Use this area to add systematics into the data
