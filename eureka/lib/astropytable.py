@@ -35,6 +35,7 @@ def savetable_S3(filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr):
     opterr = opterr.flatten()
 
     arr = [bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr]
+
     table = QTable(arr, names=('bjdtdb', 'wave_1d', 'stdspec', 'stdvar', 'optspec', 'opterr'))
     ascii.write(table, filename, format='ecsv', overwrite=True, fast_writer=True)
 
