@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
     REQUIRES = f.read().splitlines()
 
 FILES = []
-for root, _, files in os.walk("Eurekac"):
+for root, _, files in os.walk("Eureka"):
     FILES += [os.path.join(root.replace("Eureka/", ""), fname) \
         for fname in files if not fname.endswith(".py") and not fname.endswith(".pyc")]
 
