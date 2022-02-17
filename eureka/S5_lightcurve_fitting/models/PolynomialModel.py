@@ -75,12 +75,3 @@ class PolynomialModel(Model):
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
 
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
-        return

@@ -55,14 +55,15 @@ def read(filename, data, meta):
 
     data.wave = np.tile(wave_MIRI(filename),(data.data.shape[2],1))[:,::-1]    # hdulist['WAVELENGTH', 1].data
     data.v0 = hdulist['VAR_RNOISE', 1].data
-    data.int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
+    int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
 
     # Record integration mid-times in BJD_TDB
     # There is no time information in the simulated MIRI data
     # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt converted to days
     print('WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
           'because they are not in the .fits files themselves')
-    data.bjdtdb = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
+    data.time = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
+    meta.time_units = 'BJD_TDB'
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
     # Having wavelengths increase from left to right on the rotated frame makes life easier
@@ -126,9 +127,9 @@ def flag_bg(data, meta):
     return nircam.flag_bg(data, meta)
 
 
-def fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
+def fit_bg(data, meta, n, isplots=False):
     '''Fit for a non-uniform background.
 
     Uses the code written for NIRCam and untested for MIRI, but likely to still work (as long as MIRI data gets rotated)
     '''
-    return nircam.fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=isplots)
+    return nircam.fit_bg(data, meta, n, isplots=isplots)

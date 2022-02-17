@@ -193,8 +193,8 @@ def source_pos_gauss(data, meta, m):
     sum_row = np.sum(data[0], axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
     # Initial Guesses
-    sigma0 = np.sqrt(sum(sum_row * (y_pixels - pos_max)**2) / sum(sum_row))
-    p0 = [max(sum_row), pos_max, sigma0, np.median(sum_row)]
+    sigma0 = np.sqrt(np.sum(sum_row * (y_pixels - pos_max)**2) / np.sum(sum_row))
+    p0 = [np.max(sum_row), pos_max, sigma0, np.median(sum_row)]
 
     # Fit
     popt, pcov = curve_fit(gauss, y_pixels, sum_row, p0)

@@ -68,13 +68,4 @@ class ExpRampModel(Model):
             lcpiece = r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
-    
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
-        return
+

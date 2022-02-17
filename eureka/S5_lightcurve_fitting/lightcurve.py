@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from . import models as m
 from . import fitters as f
-from .utils import COLORS
+from .utils import COLORS, color_gen
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
@@ -205,7 +205,7 @@ class LightCurve(m.Model):
         None
         """
         # Make the figure
-        for channel in self.fitted_channels:
+        for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
             unc = self.unc
             if self.share:
@@ -216,11 +216,15 @@ class LightCurve(m.Model):
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, flux, unc, fmt='.', color=next(COLORS), zorder=0)
+            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i], zorder=0)
+            
+            # Make a new color generator for the models
+            plot_COLORS = color_gen("Greys", 6)
+            
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(COLORS), zorder=np.inf, share=self.share, chan=channel)
+                    model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf, share=self.share, chan=channel)
             
             # Format axes
             ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')

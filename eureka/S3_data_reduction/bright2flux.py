@@ -109,29 +109,21 @@ def bright2dn(data, meta):
 
     return data
 
-def bright2flux(data, err, v0, pixel_area):
+def bright2flux(data, pixel_area):
     """This function converts the data and uncertainty arrays from brightness units (MJy/sr) to flux units (Jy/pix).
 
     Parameters
     ----------
-    data:   ndarray
-            data array of shape ([nx, ny, nimpos, npos]) in units of MJy/sr.
-    err:    ndarray
-            uncertainties of data (same shape and units).
-    v0:     ndarray
-            variance array for data (same shape and units).
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of MJy/sr.
     pixel_area:  ndarray
             Pixel area (arcsec/pix)
 
     Returns
     -------
-    data:   ndarray
-            data array of shape ([nx, ny, nimpos, npos]) in units of Jy/pix.
-    err:    ndarray
-            uncertainties of data (same shape and units).
-    v0:     ndarray
-            variance array for data (same shape and units).
-
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in units of Jy/pix.
+    
     Notes
     -----
     The input arrays Data and Uncd are changed in place.
@@ -156,15 +148,17 @@ def bright2flux(data, err, v0, pixel_area):
         Documented, and incorporated scipy.constants.
     - 2021-05-28 kbs
         Updated for JWST
+    - 2021-12-09 TJB
+        Updated to account for the new DataClass object
     """
     # steradians per square arcsecond
     srperas = arcsec**2.0
 
-    data *= srperas * 1e6 * pixel_area
-    err  *= srperas * 1e6 * pixel_area
-    v0   *= srperas * 1e6 * pixel_area
+    data.subdata *= srperas * 1e6 * pixel_area
+    data.suberr  *= srperas * 1e6 * pixel_area
+    data.subv0   *= srperas * 1e6 * pixel_area
 
-    return data, err, v0
+    return data
 
 def convert_to_e(data, meta, log):
     """This function converts the data object to electrons from MJy/sr or DN/s.
@@ -191,7 +185,7 @@ def convert_to_e(data, meta, log):
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
         # log.writelog('Converting from brightness to flux units')
-        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
+        # data = b2f.bright2flux(data, data.shdr['PIXAR_A2'])
         # Convert from brightness units (MJy/sr) to DNs
         log.writelog('  Converting from brightness units (MJy/sr) to electrons')
         meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]

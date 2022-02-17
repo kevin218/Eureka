@@ -390,17 +390,17 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
             # Mask data point if > threshold
             if stdevs[loc] > threshold:
                 # Check for bad fit, possibly due to a bad pixel
-                if i > 0 and (err == None or abs(params[0]) < abs(0.2*guess[0])):
+                if i > 0 and (err == None or np.abs(params[0]) < np.abs(0.2*guess[0])):
                     #print(i, params)
                     # Remove brightest pixel within region of fit
                     loc = params[1]-3 + np.argmax(dataslice[params[1]-3:params[1]+4])
                     #print(loc)
                 else:
-                    guess = abs(params)
+                    guess = np.abs(params)
                 submask[loc,i] = 0
             else:
                 nobadpixels = True      #exit while loop
-                guess = abs(params)
+                guess = np.abs(params)
             iternum += 1
 
         profile[:,i] = model
