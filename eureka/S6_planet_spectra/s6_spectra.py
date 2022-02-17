@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-import os, glob, time
+import os, glob
+import time as time_pkg
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 from ..lib import util, logedit
@@ -82,7 +83,7 @@ def plot_spectra(eventlabel, s5_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             
-            t0 = time.time()
+            t0 = time_pkg.time()
             
             meta = load_specific_s5_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
             
@@ -125,18 +126,24 @@ def plot_spectra(eventlabel, s5_meta=None):
                 errs = []
                 for channel in range(meta.nspecchan):
                     median, err, ylabel = parse_s5_saves(meta, fit_methods, channel_key=f'ch{channel}')
-                    medians.append(median)
-                    errs.append(err)
+                    medians.append(median[0])
+                    errs.append(np.array(err).reshape(-1))
                 medians = np.array(medians).reshape(-1)
-                errs = np.array(errs).reshape(-1)
+                errs = np.array(errs).swapaxes(0,1)
                 if np.all(errs==None):
                     errs = None
 
+            if meta.model_spectrum is not None:
+                model_x, model_y = np.loadtxt(os.path.join(meta.topdir, *meta.model_spectrum.split(os.sep)), delimiter=',').T
+            else:
+                model_x = None
+                model_y = None
+
             # Make the spectrum plot
-            plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, ylabel)
+            plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, ylabel)
             
             # Calculate total time
-            total = (time.time() - t0) / 60.
+            total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
             
             # Save results
