@@ -24,4 +24,3 @@ requests
 scipy
 svo_filters
 tqdm
-

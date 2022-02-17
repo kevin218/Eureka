@@ -50,10 +50,11 @@ def read(filename, data, meta):
     data.dq      = hdulist['DQ',1].data
     data.wave    = hdulist['WAVELENGTH',1].data
     data.v0      = hdulist['VAR_RNOISE',1].data
-    data.int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
+    int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
     # Record integration mid-times in BJD_TDB
-    data.bjdtdb = data.int_times['int_mid_BJD_TDB']
+    data.time = int_times['int_mid_BJD_TDB']
+    meta.time_units = 'BJD_TDB'
 
     return data, meta
 
@@ -89,9 +90,10 @@ def flag_bg(data, meta):
     return data
 
 
-def fit_bg(data, meta, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
+def fit_bg(data, meta, n, isplots=False):
     '''Fit for a non-uniform background.
     '''
-    bg, mask = background.fitbg(data, meta, mask, y1, y2, deg=bg_deg,
-                                threshold=p3thresh, isrotate=2, isplots=isplots)
+
+    bg, mask = background.fitbg(data.subdata[n], meta, data.submask[n], meta.bg_y1, meta.bg_y2, deg=meta.bg_deg,
+                                threshold=meta.p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)

@@ -67,9 +67,10 @@ def read(filename, f277_filename, data, meta):
     data.shdr = hdu['SCI',1].header
 
     data.intend = hdu[0].header['NINTS'] + 0.0
-    data.bjdtbd = np.linspace(data.mhdr['EXPSTART'], 
+    data.time = np.linspace(data.mhdr['EXPSTART'], 
                               data.mhdr['EXPEND'], 
                               int(data.intend))
+    meta.time_units = 'BJD_TDB'
 
     # loads all the data into the data object
     data.data = hdu['SCI',1].data + 0.0
@@ -472,6 +473,26 @@ def wave_NIRISS(wavefile, meta):
     hdu.close()
 
     return meta
+
+def flag_bg(data, meta):
+    '''Outlier rejection of sky background along time axis.
+
+    Parameters
+    ----------
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
+
+    Returns
+    -------
+    data:   DataClass
+        The updated data object with outlier background pixels flagged.
+    '''
+
+    print('WARNING, niriss.flag_bg is not yet implemented!')
+
+    return
 
 
 def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):

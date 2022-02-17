@@ -45,6 +45,11 @@ def trim(data, meta):
     data.subv0   = data.v0[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
     meta.subny = meta.ywindow[1] - meta.ywindow[0]
     meta.subnx = meta.xwindow[1] - meta.xwindow[0]
+    if hasattr(meta, 'diffmask'):
+        # Need to crop diffmask and variance from WFC3 as well
+        meta.subdiffmask.append(meta.diffmask[-1][:,meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]])
+        data.subvariance = np.copy(data.variance[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]])
+        delattr(data, 'variance')
 
     return data, meta
 

@@ -157,7 +157,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
     chi2 = np.sum((residuals / lc.unc) ** 2)
-    chi2red = chi2 / (len(lc.unc) - len(freenames))
+    chi2red = chi2 / (len(lc.flux) - len(freenames))
 
     if meta.run_verbose:
         print('Reduced Chi-squared: ', chi2red)
