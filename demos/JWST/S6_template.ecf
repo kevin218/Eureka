@@ -3,11 +3,15 @@
 allapers        True # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
 
 # Diagnostics
-isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+isplots_S6      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+testing_S6		False
 hide_plots      False # If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir          /home/User/
+
+# Model to plot as well (path relative to project dir of a csv with col 1 as wavelength in microns, col 2 in the same units as the plotted spectrum, any headers preceded by a #)
+model_spectrum	None
 
 # Directories relative to project dir
 inputdir        /Data/JWST-Sim/NIRCam/Stage5/	# The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
