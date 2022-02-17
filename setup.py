@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import os
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
+import numpy as np
 
 with open('requirements.txt') as f:
     REQUIRES = f.read().splitlines()
 
 FILES = []
-for root, _, files in os.walk("Eureka"):
+for root, _, files in os.walk("Eurekac"):
     FILES += [os.path.join(root.replace("Eureka/", ""), fname) \
         for fname in files if not fname.endswith(".py") and not fname.endswith(".pyc")]
 
@@ -22,5 +24,7 @@ setup(name='Eureka',
       url='https://github.com/kevin218/Eureka',
       long_description='',
       zip_safe=True,
-      use_2to3=False
+      use_2to3=False,
+      ext_modules = cythonize(["eureka/S3_data_reduction/niriss_cython.pyx"]),
+      include_dirs = np.get_include()
 )
