@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.stats import norm
+import pdb
+from copy import deepcopy
 
 def ln_like(theta, lc, model, pmin, pmax, freenames):
     """Compute the log-likelihood.
@@ -41,7 +43,12 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     model.update(theta, freenames)
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
+    if "scatter_ppm" in freenames:
+        ind = np.where(freenames=="scatter_ppm")
+        lc.unc_fit = theta[ind]*1e-6
+    else:
+        lc.unc_fit = deepcopy(lc.unc)
+    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
     if len(ilow[0]) + len(ihi[0]) > 0:
         ln_like_val = -np.inf
     return ln_like_val
@@ -156,7 +163,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     """
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
-    chi2 = np.sum((residuals / lc.unc) ** 2)
+    chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
     if meta.run_verbose:

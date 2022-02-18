@@ -1,6 +1,7 @@
 
 import numpy as np
 import scipy.optimize as op
+from copy import deepcopy
 
 def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     ilow            = np.where(freepars < pmin)
@@ -9,7 +10,12 @@ def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     freepars[ihi]     = pmax[ihi]
     model.update(freepars, freenames)
     model_lc        = model.eval()
-    residuals       = (lc.flux - model_lc)/lc.unc
+    if "scatter_ppm" in freenames:
+        ind = np.where(freenames=="scatter_ppm")
+        lc.unc_fit = freepars[ind]*1e-6
+    else:
+        lc.unc_fit = deepcopy(lc.unc)
+    residuals       = (lc.flux - model_lc)/lc.unc_fit
     '''
     #Apply priors, if they exist
     if len(fit[j].ipriors) > 0:
