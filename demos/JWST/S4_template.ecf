@@ -26,7 +26,7 @@ fill_value		mask	# Either the string 'mask' to mask the outlier values (recommen
 
 # Diagnostics
 isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-hide_plots	True		# If True, plots will automatically be closed rather than popping up
+hide_plots	False		# If True, plots will automatically be closed rather than popping up
 verbose		False		# If True, more details will be printed about steps in Stage 4
 
 # Project directory
