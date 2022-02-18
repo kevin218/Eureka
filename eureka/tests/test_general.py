@@ -1,3 +1,8 @@
+# Created by: Giannina Guzman-Caloca
+# Last Updated: 2021-02-18
+# Last Updated By: Yoni Brande
+
+
 import numpy as np
 from ..lib import util
 from ..S3_data_reduction import s3_reduce as s3
