@@ -253,7 +253,7 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
         
         # Evaluate flux at each model
-        flux = 1.
+        flux = np.ones_like(self.time)
         for model in self.components:
             if model.time is None:
                 model.time = self.time
@@ -268,7 +268,7 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
         
         # Evaluate flux at each model
-        flux = 1.
+        flux = np.ones_like(self.time)
         for model in self.components:
             if model.modeltype == 'systematic':
                 if model.time is None:
@@ -291,7 +291,7 @@ class CompositeModel(Model):
             new_time = self.time
 
         # Evaluate flux at each model
-        flux = 1.
+        flux = np.ones_like(self.time)
         for model in self.components:
             if model.modeltype == 'physical':
                 if model.time is None:
