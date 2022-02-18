@@ -1,27 +1,37 @@
 # Eureka! Control File for Stage 4: Generate Lightcurves 
 
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan   10          # Number of spectroscopic channels
-wave_min    2.5         # Minimum wavelength
+nspecchan   20          # Number of spectroscopic channels
+wave_min    2.4         # Minimum wavelength
 wave_max    4.0         # Maximum wavelength
 allapers	True		# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Parameters for drift correction of 1D spectra
-correctDrift    True    # Set True to correct drift/jitter in 1D spectra
+correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
 drift_preclip   0       # Ignore first drift_preclip points of spectrum
 drift_postclip  100     # Ignore last drift_postclip points of spectrum, None = no clipping
 drift_range     11      # Trim spectra by +/-X pixels to compute valid region of cross correlation
 drift_hw        5       # Half-width in pixels used when fitting Gaussian, must be smaller than drift_range
 drift_iref      -1      # Index of reference spectrum used for cross correlation, -1 = last spectrum
 sub_mean        True    # Set True to subtract spectrum mean during cross correlation
+sub_continuum	True	# Set True to subtract the continuum from the spectra using a highpass filter
+highpassWidth	10		# The integer width of the highpass filter when subtracting the continuum
+
+# Parameters for sigma clipping
+sigma_clip		False	# Whether or not sigma clipping should be performed on the 1D time series
+sigma			10		# The number of sigmas a point must be from the rolling median to be considered an outlier
+box_width		10		# The width of the box-car filter (used to calculated the rolling median) in units of number of data points
+maxiters		5		# The number of iterations of sigma clipping that should be performed.
+fill_value		mask	# Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
 # Diagnostics
 isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-hide_plots	False		# If True, plots will automatically be closed rather than popping up
+hide_plots	True		# If True, plots will automatically be closed rather than popping up
+verbose		False		# If True, more details will be printed about steps in Stage 4
 
 # Project directory
-topdir      /home/User/
+topdir      /home/User
 
 # Directories relative to project dir
-inputdir    /Data/JWST-Sim/NIRCam/Stage3/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
-outputdir	/Data/JWST-Sim/NIRCam/Stage4/
+inputdir    /Data/JWST-Sim/NIRCam/Stage3	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir	/Data/JWST-Sim/NIRCam/Stage4
