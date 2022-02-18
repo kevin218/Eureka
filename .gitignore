@@ -138,3 +138,6 @@ dmypy.json
 
 # Ignore installed packages for wfc3 branch
 image_registration/
+
+# Compiled niriss_cython file
+niriss_cython.c
