@@ -14,6 +14,7 @@ from .utils import COLORS, color_gen
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
+from copy import deepcopy
 reload(m)
 reload(f)
 
@@ -207,7 +208,10 @@ class LightCurve(m.Model):
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
-            unc = self.unc
+            if "unc_fit" in self.__dict__.keys():
+                unc = deepcopy(self.unc_fit)
+            else:
+                unc = deepcopy(self.unc)
             if self.share:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]

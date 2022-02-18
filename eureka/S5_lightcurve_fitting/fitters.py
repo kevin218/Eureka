@@ -184,6 +184,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
+        ind_zero = np.where(step_size==0.)[0]
+        if len(ind_zero):
+            step_size[ind_zero] = 0.001*np.abs(freepars[ind_zero])
     else:
         # Sometimes the lsq fitter won't converge and will give None as the covariance matrix
         # In that case, we need to establish the step size in another way. A fractional step compared
@@ -196,6 +199,17 @@ def emceefitter(lc, model, meta, log, **kwargs):
     run_nsteps = meta.run_nsteps
     burn_in = meta.run_nburn
 
+    # make it robust to lsq hitting the upper or lower bound of the param space
+    ind_max = np.where(freepars - pmax == 0.)
+    ind_min = np.where(freepars - pmin == 0.)
+    pmid = (pmax+pmin)/2.
+    if len(ind_max[0]):
+        log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. Setting to the middle of the interval.')
+        freepars[ind_max] = pmid[ind_max]
+    if len(ind_min[0]):
+        log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
+        freepars[ind_min] = pmid[ind_min]
+    
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
     in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     if not np.all(in_range):
@@ -242,6 +256,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
+    if "scatter_ppm" in freenames:
+        ind = np.where(freenames == "scatter_ppm")
+        lc.unc_fit = medians[ind[0][0]]*1e-6
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -258,10 +275,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='emcee')
+        
+    # Plot residuals distribution
+    if meta.isplots_S5 >= 3:
+        plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
+    
     save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
 
     return best_model
