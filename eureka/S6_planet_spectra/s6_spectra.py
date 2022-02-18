@@ -20,7 +20,7 @@ class MetaClass:
         return
 
 def plot_spectra(eventlabel, s5_meta=None):
-    '''Gathers together diferent wavelength fits and makes transmission/emission spectra.
+    '''Gathers together different wavelength fits and makes transmission/emission spectra.
 
     Parameters
     ----------
@@ -65,12 +65,6 @@ def plot_spectra(eventlabel, s5_meta=None):
         meta.spec_hw_range = [meta.spec_hw,]
         meta.bg_hw_range = [meta.bg_hw,]
 
-    if meta.testing_S6:
-        # Only fit a single channel while testing
-        chanrng = [0]
-    else:
-        chanrng = range(meta.nspecchan)
-
     # Create directories for Stage 6 outputs
     meta.runs_s6 = []
     for spec_hw_val in meta.spec_hw_range:
@@ -91,7 +85,7 @@ def plot_spectra(eventlabel, s5_meta=None):
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.runs_s6[run_i], ap=spec_hw_val, bg=bg_hw_val)
             run_i += 1
             
-            # Copy existing S4 log file and resume log
+            # Copy existing S5 log file and resume log
             meta.s6_logname  = meta.outputdir + 'S6_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s6_logname, read=meta.s5_logname)
             log.writelog(f"Input directory: {meta.inputdir}")
