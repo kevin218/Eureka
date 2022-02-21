@@ -108,20 +108,9 @@ def fitJWST(eventlabel, s4_meta=None):
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
             
-            # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
+            # Copy ecf
             log.writelog('Copying S5 control file')
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            rd.copy_ecf(meta, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
             shutil.copy(meta.fit_par, meta.outputdir)

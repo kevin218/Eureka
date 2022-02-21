@@ -79,7 +79,7 @@ def calibrateJWST(eventlabel):
 
     # Copy ecf
     log.writelog('Copying S2 control file')
-    shutil.copy(ecffile, meta.outputdir)
+    rd.copy_ecf(meta, ecffile)
 
     # Create list of file segments
     meta = util.readfiles(meta)
