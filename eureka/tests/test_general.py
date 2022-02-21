@@ -7,6 +7,7 @@ import numpy as np
 from ..lib import util
 from ..S3_data_reduction import s3_reduce as s3
 from ..S4_generate_lightcurves import s4_genLC as s4
+from ..S5_lightcurve_fitting import s5_fit as s5
 from ..lib.util import pathdirectory
 import pytest
 
@@ -57,7 +58,7 @@ import sys, os, time
 from importlib import reload
 
 def test_NIRCam(capsys):
-
+    print(os.system("pwd"))
     # is able to display any message without failing a test
     # useful to leave messages for future users who run the tests
     with capsys.disabled():
@@ -74,23 +75,34 @@ def test_NIRCam(capsys):
     reload(s4)
     s3_meta = s3.reduceJWST(meta.eventlabel)
     s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
+    s5_meta = s5.fitJWST(meta.eventlabel, s4_meta=s4_meta)
 
     # run assertions for S3
-    meta.outputdir_raw='/data/JWST-Sim/NIRCam/Stage3/'
+    #outdir_raw = 
+    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage3/'
     name = pathdirectory(meta, 'S3', 1, ap=20, bg=20)
     assert os.path.exists(name)
     assert os.path.exists(name+'/figs')
 
     # run assertions for S4
     # NOTE::  check if we want to include aperture info in S4 file output names''
-    meta.outputdir_raw='/data/JWST-Sim/NIRCam/Stage4/'
+    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage4/'
     name = pathdirectory(meta, 'S4', 1, ap=20, bg=20)
+    assert os.path.exists(name)
+    assert os.path.exists(name+'/figs')
+
+    # run assertions for S5
+    # NOTE::  check if we want to include aperture info in S4 file output names''
+    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage5/'
+    name = pathdirectory(meta, 'S5', 1, ap=20, bg=20)
     assert os.path.exists(name)
     assert os.path.exists(name+'/figs')
 
     # remove temporary files
     os.system("rm -r data/JWST-Sim/NIRCam/Stage3/*")
     os.system("rm -r data/JWST-Sim/NIRCam/Stage4/*")
+    os.system("rm -r data/JWST-Sim/NIRCam/Stage5/*")
+
 '''
 def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mismatch)
 
