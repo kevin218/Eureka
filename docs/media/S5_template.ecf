@@ -12,6 +12,7 @@ run_myfuncs     [transit,polynomial] #other functions not available yet
 #ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
 
 #mcmc
+lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails)
 run_nsteps      4000
 run_nwalkers    50
 run_nburn       2000
