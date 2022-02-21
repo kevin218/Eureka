@@ -120,14 +120,22 @@ def plot_spectra(eventlabel, s5_meta=None):
             
             fit_methods = meta.fit_method.strip('[').strip(']').strip().split(',')
 
+            accepted_y_units = ['Rp/Rs', 'Rp/R*', '(Rp/Rs)^2', '(Rp/R*)^2', 'Fp/Fs', 'Fp/F*']
+            if 'rp' in meta.y_unit.lower():
+                y_param = 'rp'
+            elif 'fp' in meta.y_unit.lower():
+                y_param = 'fp'
+            else:
+                raise AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
+
             # Read in S5 fitted values
             if meta.sharedp:
-                medians, errs, ylabel = parse_s5_saves(meta, fit_methods, channel_key='shared')
+                medians, errs = parse_s5_saves(meta, fit_methods, y_param, 'shared')
             else:
                 medians = []
                 errs = []
                 for channel in range(meta.nspecchan):
-                    median, err, ylabel = parse_s5_saves(meta, fit_methods, channel_key=f'ch{channel}')
+                    median, err = parse_s5_saves(meta, fit_methods, y_param, f'ch{channel}')
                     medians.append(median[0])
                     errs.append(np.array(err).reshape(-1))
                 medians = np.array(medians).reshape(-1)
@@ -136,7 +144,6 @@ def plot_spectra(eventlabel, s5_meta=None):
                     errs = None
 
             # Convert the y-axis unit to the user-provided value if needed
-            accepted_y_units = ['Rp/Rs', 'Rp/R*', '(Rp/Rs)^2', '(Rp/R*)^2', 'Fp/Fs', 'Fp/F*']
             if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
                 if errs is not None:
                     lower = np.abs((medians-errs[0,:])**2-medians**2)
@@ -149,7 +156,7 @@ def plot_spectra(eventlabel, s5_meta=None):
             elif meta.y_unit in ['Fp/Rs', 'Fp/R*']:
                 ylabel = r'$F_{\rm p}/F_{\rm *}$'
             else:
-                AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
+                raise AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
             
             # Convert to percent, ppm, etc. if requested
             if hasattr(meta, 'y_scalar'):
@@ -175,9 +182,9 @@ def plot_spectra(eventlabel, s5_meta=None):
                 elif meta.model_y_unit in ['Rp/Rs', 'Rp/R*'] and meta.model_y_unit!=meta.y_unit:
                     model_y *= model_y
                 elif meta.model_y_unit not in accepted_y_units:
-                    AssertionError(f'Unknown model_y_unit {meta.model_y_unit} is none of ['+', '.join(accepted_y_units)+']')
+                    raise AssertionError(f'Unknown model_y_unit {meta.model_y_unit} is none of ['+', '.join(accepted_y_units)+']')
                 elif meta.model_y_unit != meta.y_unit:
-                    AssertionError(f'Unknown conversion between y_unit {meta.y_unit} and model_y_unit {meta.model_y_unit}')
+                    raise AssertionError(f'Unknown conversion between y_unit {meta.y_unit} and model_y_unit {meta.model_y_unit}')
 
                 if not hasattr(meta, 'model_y_scalar'):
                     meta.model_y_scalar = 1
@@ -204,41 +211,38 @@ def plot_spectra(eventlabel, s5_meta=None):
     
     return meta
 
-def parse_s5_saves(meta, fit_methods, channel_key='shared'):
+def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
     for fitter in fit_methods:
         if fitter in ['dynesty', 'emcee']:
             fname = f'S5_{fitter}_samples_{channel_key}.csv'
             samples = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
-            # FINDME: kludge to decide between transmission and emission spectra for now
-            if 'fp' in samples.keys():
+            if y_param=='fp':
                 keys = [key for key in samples.keys() if 'fp' in key]
-                ylabel=r'$F_{\rm p}/F_{\rm *}$ (ppm)'
-                scalar = 1e6
             else:
                 keys = [key for key in samples.keys() if 'rp' in key]
-                ylabel=r'$R_{\rm p}/R_{\rm *}$'
-                scalar = 1
+            print(keys, len(keys), len(keys)==0, keys is None)
+            if len(keys)==0:
+                raise AssertionError(f'Parameter {y_param} was not in the list of fitted parameters which includes:'
+                                    +', '.join(samples.keys()))
             spectra_samples = np.array([samples[key] for key in keys])
-            lowers, medians, uppers = np.percentile(spectra_samples, [16,50,84], axis=1)*scalar
+            lowers, medians, uppers = np.percentile(spectra_samples, [16,50,84], axis=1)
             lowers = np.abs(medians-lowers)
             uppers = np.abs(uppers-medians)
             errs = np.array([lowers, uppers])
         else:
             fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
             fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
-            # FINDME: kludge to decide between transmission and emission spectra for now
-            if 'fp' in fitted_values.keys():
+            if y_param=='fp':
                 keys = [key for key in fitted_values.keys() if 'fp' in key]
-                ylabel=r'$F_{\rm p}/F_{\rm *}$ (ppm)'
-                scalar = 1e6
             else:
                 keys = [key for key in fitted_values.keys() if 'rp' in key]
-                ylabel=r'$R_{\rm p}/R_{\rm *}$'
-                scalar = 1
-            medians = np.array([fitted_values[key] for key in keys])*scalar
+            if len(keys)==0:
+                raise AssertionError(f'Parameter {y_param} was not in the list of fitted parameters which includes:'
+                                    +', '.join(samples.keys()))
+            medians = np.array([fitted_values[key] for key in keys])
             errs = None
     
-    return medians, errs, ylabel
+    return medians, errs
 
 def read_s5_meta(meta):
 
