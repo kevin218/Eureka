@@ -172,17 +172,22 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     """
-    log.writelog('\nCalling lsqfitter first...')
-    lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
+    if not hasattr(meta, 'lsq_first') or meta.lsq_first:
+        # Only call lsq fitter first if asked or lsq_first option wasn't passed (allowing backwards compatibility)
+        log.writelog('\nCalling lsqfitter first...')
+        # RUN LEAST SQUARES
+        lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
 
-    # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if meta.rescale_err:
-        lc.unc *= np.sqrt(lsq_sol.chi2red)
+        # SCALE UNCERTAINTIES WITH REDUCED CHI2
+        if meta.rescale_err:
+            lc.unc *= np.sqrt(lsq_sol.chi2red)
+    else:
+        lsq_sol = None
     
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
     
-    if lsq_sol.cov_mat is not None:
+    if lsq_sol is not None and lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
         ind_zero = np.where(step_size==0.)[0]
         if len(ind_zero):
@@ -317,14 +322,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     """
-    log.writelog('\nCalling lsqfitter first...')
-    # RUN LEAST SQUARES
-    lsq_sol = lsqfitter(lc, model, meta, log, calling_function='dynesty_lsq', **kwargs)
-
-    # SCALE UNCERTAINTIES WITH REDUCED CHI2
-    if meta.rescale_err:
-        lc.unc *= np.sqrt(lsq_sol.chi2red)
-
     # Group the different variable types
     freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
 
