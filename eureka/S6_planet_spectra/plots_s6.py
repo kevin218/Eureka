@@ -15,7 +15,7 @@ def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_
 			binned_model = []
 			for wav, width in zip(wavelength, wavelength_error):
 				binned_model.append(np.mean(model_y[np.logical_and(model_x>=wav-width, model_x<wav+width)]))
-			ax.plot(wavelength, binned_model, 'o', ms=3, color='r', mec='k', mew=0.2, zorder=0)
+			ax.plot(wavelength, binned_model, 'o', ms=3, color='r', mec='k', mew=0.5, zorder=0)
 	ax.set_ylabel(ylabel)
 	ax.set_xlabel(xlabel)
 

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from astropy import units
 import os, glob
 import time as time_pkg
 from ..lib import manageevent as me
@@ -99,6 +100,24 @@ def plot_spectra(eventlabel, s5_meta=None):
             wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
             wave_errs = (meta.wave_hi-meta.wave_low)/2
 
+            # Convert to the user-provided x-axis unit if needed
+            if hasattr(meta, 'x_unit'):
+                x_unit = getattr(units, meta.x_unit)
+            else:
+                log.writelog('Assuming a wavelength unit of microns')
+                x_unit = units.um
+            # FINDME: For now this is assuming that the data is in units of microns
+            # We should add something to S3 that notes what the units of the wavelength were in the FITS file
+            wavelengths *= units.um.to(x_unit, equivalencies=units.spectral())
+            wave_errs   *= units.um.to(x_unit, equivalencies=units.spectral())
+            physical_type = str(x_unit.physical_type).title()
+            if physical_type=='Length':
+                physical_type = 'Wavelength'
+            label_unit = x_unit.name
+            if label_unit=='um':
+                label_unit = r'$\mu$m'
+            xlabel = physical_type+' ('+label_unit+')'
+            
             fit_methods = meta.fit_method.strip('[').strip(']').strip().split(',')
 
             # Read in S5 fitted values
@@ -116,14 +135,62 @@ def plot_spectra(eventlabel, s5_meta=None):
                 if np.all(errs==None):
                     errs = None
 
+            # Convert the y-axis unit to the user-provided value if needed
+            accepted_y_units = ['Rp/Rs', 'Rp/R*', '(Rp/Rs)^2', '(Rp/R*)^2', 'Fp/Fs', 'Fp/F*']
+            if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
+                if errs is not None:
+                    lower = np.abs((medians-errs[0,:])**2-medians**2)
+                    upper = np.abs((medians+errs[1,:])**2-medians**2)
+                    errs = np.append(lower.reshape(1,-1), upper.reshape(1,-1), axis=0)
+                medians *= medians
+                ylabel = r'$(R_{\rm p}/R_{\rm *})^2$'
+            elif meta.y_unit in ['Rp/Rs', 'Rp/R*']:
+                ylabel = r'$R_{\rm p}/R_{\rm *}$'
+            elif meta.y_unit in ['Fp/Rs', 'Fp/R*']:
+                ylabel = r'$F_{\rm p}/F_{\rm *}$'
+            else:
+                AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
+            
+            # Convert to percent, ppm, etc. if requested
+            if hasattr(meta, 'y_scalar'):
+                medians *= meta.y_scalar
+                if errs is not None:
+                    errs *= meta.y_scalar
+            else:
+                meta.y_scalar = 1
+
+            if meta.y_scalar==1e6:
+                ylabel += ' (ppm)'
+            elif meta.y_scalar==100:
+                ylabel += ' (%)'
+            elif meta.y_scalar!=1:
+                ylabel += f' * {meta.y_scalar}'
+
             if meta.model_spectrum is not None:
                 model_x, model_y = np.loadtxt(os.path.join(meta.topdir, *meta.model_spectrum.split(os.sep)), delimiter=',').T
+                # Convert model_x_unit to x_unit if needed
+                model_x *= getattr(units, meta.model_x_unit).to(x_unit, equivalencies=units.spectral())
+                if meta.model_y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2'] and meta.model_y_unit!=meta.y_unit:
+                    model_y = np.sqrt(model_y)
+                elif meta.model_y_unit in ['Rp/Rs', 'Rp/R*'] and meta.model_y_unit!=meta.y_unit:
+                    model_y *= model_y
+                elif meta.model_y_unit not in accepted_y_units:
+                    AssertionError(f'Unknown model_y_unit {meta.model_y_unit} is none of ['+', '.join(accepted_y_units)+']')
+                elif meta.model_y_unit != meta.y_unit:
+                    AssertionError(f'Unknown conversion between y_unit {meta.y_unit} and model_y_unit {meta.model_y_unit}')
+
+                if not hasattr(meta, 'model_y_scalar'):
+                    meta.model_y_scalar = 1
+                
+                # Convert the model y-units if needed to match the data y-units requested
+                if meta.model_y_scalar!=meta.y_scalar:
+                    model_y *= (meta.y_scalar/meta.model_y_scalar)
             else:
                 model_x = None
                 model_y = None
 
             # Make the spectrum plot
-            plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, ylabel)
+            plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, ylabel, xlabel)
             
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
