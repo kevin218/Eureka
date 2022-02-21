@@ -190,7 +190,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('****Adding exponential ramp systematic to light curve****')
-        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', nchan=lc_model.nchannel_fitted)
+        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
@@ -201,10 +201,10 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_model)
     if 'polynomial' in meta.run_myfuncs:
-        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', nchan=lc_model.nchannel_fitted)
+        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_polynom)
     if 'expramp' in meta.run_myfuncs:
-        t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', nchan=lc_model.nchannel_fitted)
+        t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
     model = m.CompositeModel(modellist)
     

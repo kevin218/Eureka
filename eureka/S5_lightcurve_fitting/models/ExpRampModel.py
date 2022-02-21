@@ -24,7 +24,10 @@ class ExpRampModel(Model):
                       if rN.startswith('r') and rN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
+        # Set parameters for multi-channel fits
+        self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
+        self.paramtitles = kwargs.get('paramtitles')
 
         # Update coefficients
         self._parse_coeffs()
