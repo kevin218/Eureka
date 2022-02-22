@@ -1,7 +1,7 @@
 #Name	Value	Free?	LoLim	HiLim
 rp	0.2	'free'	0.05	0.5
 per	0.813475	'fixed'	0.5	3
-t0	0.15	'shared'	0.12	0.18
+t0	0.15	'free'	0.12	0.18
 time_offset	0 'independent'
 inc	82.149	'free'	80.	90.
 a	4.97	'free'	2.	15.
@@ -11,3 +11,4 @@ u1	0.123	'fixed'	0.	1
 u2	0.187	'fixed'	0.	1
 limb_dark	'quadratic'	'independent'
 transittype	'primary'	'independent'
+c0 1 'free' 0.9 1.5
