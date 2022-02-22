@@ -1,6 +1,8 @@
 import numpy as np
 
-def build_image_models(data, A, B, sig, mu1, mu2, return_together=True):
+__all__ = ['build_gaussian_images', 'build_moffat_images']
+
+def build_gaussian_images(data, A, B, sig, mu1, mu2, return_together=True):
 
     y = np.transpose(np.full((len(A), data.shape[-1], data.shape[0]), 
                          np.arange(0,data.shape[0],1)), axes=(0,2,1))
@@ -24,3 +26,26 @@ def build_image_models(data, A, B, sig, mu1, mu2, return_together=True):
        return model, sigma
     else:
        return f1x, f2x, sigma
+
+def build_moffat_images(data, A, alpha, gamma, mu1, mu2, return_together=True):
+
+    def moffat(x, A, alpha, gamma):
+       frac = 1 + (y - x)**2.0 / gamma**2.0
+       return A * frac**(-alpha)
+
+    y = np.transpose(np.full((len(alpha), data.shape[-1], data.shape[0]),	
+                         np.arange(0,data.shape[0],1)), axes=(0,2,1))
+    
+    A = np.full(y.T.shape, A).T
+    alpha = np.full(y.T.shape, alpha).T
+    gamma = np.full(y.T.shape, gamma).T
+
+    m1 = moffat(mu1, A, alpha, gamma)
+    m2 = moffat(mu2, A, alpha, gamma)
+    
+    if return_together:
+       return m1 + m2
+    else:
+       return m1, m2
+
+			 

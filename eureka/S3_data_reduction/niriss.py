@@ -173,7 +173,7 @@ def f277_mask(data, isplots=0):
     return new_mask, mid[q]
 
 
-def mask_method_one(data, meta=None, isplots=0, save=True, class=False):
+def mask_method_one(data, meta=None, isplots=0, save=True, inclass=False):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -277,14 +277,14 @@ def mask_method_one(data, meta=None, isplots=0, save=True, class=False):
     if save:
         tab.write('niriss_order_fits_method1.csv',format='csv')
 
-    if class==False:
+    if inclass==False:
         meta.tab1 = tab
         return meta
     else:
         return tab
 
 
-def mask_method_two(data, meta=None, isplots=0, save=False, class=False):
+def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
@@ -405,7 +405,7 @@ def mask_method_two(data, meta=None, isplots=0, save=False, class=False):
     if save:
         tab.write('niriss_order_fits_method2.csv',format='csv')
 
-    if class == False:
+    if inclass == False:
         meta.tab2 = tab
         return meta
     else:
@@ -452,7 +452,7 @@ def simplify_niriss_img(data, meta, isplots=False):
     return g
 
 
-def wave_NIRISS(wavefile, meta):
+def wave_NIRISS(wavefile, meta=None, inclass=False):
     """
     Adds the 2D wavelength solutions to the meta object.
     
@@ -468,17 +468,19 @@ def wave_NIRISS(wavefile, meta):
     meta : object
     """
     hdu = fits.open(wavefile)
-
-    meta.wavelength_order1 = hdu[1].data + 0.0
-    meta.wavelength_order2 = hdu[2].data + 0.0
-    meta.wavelength_order3 = hdu[3].data + 0.0
-
+    w1, w2, w3 = hdu[1].data, hdu[2].data, hdu[3].data
     hdu.close()
 
-    return meta
+    if inclass == False:
+        meta.wavelength_order1 = w1 + 0.0
+        meta.wavelength_order2 = w2 + 0.0
+        meta.wavelength_order3 = w3 + 0.0
+        return meta
+    else:
+        return w1, w2, w3
 
 
-def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
+def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0, inclass=False):
     """
     Subtracts background from non-spectral regions.
 
@@ -503,6 +505,7 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     Returns
     -------
     data : object
+    bkg : np.ndarray
     """
     def dirty_mask(img, boxsize1=70, boxsize2=60):
         """Really dirty box mask for background purposes."""
@@ -525,9 +528,12 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
         return mask
 
     box_mask = dirty_mask(data.median)
-    data = fitbg3(data, np.array(box_mask-1, dtype=bool), 
-                  readnoise, sigclip, isplots)
-    return data
+    data, bkg, bkg_var = fitbg3(data, np.array(box_mask-1, dtype=bool), 
+                                readnoise, sigclip, isplots)
+    if inclass==False:
+        return data, bkg, bkg_var
+    else:
+        return data.bkg_subbed, bkg, bkg_var, box_mask
 
 
 def set_which_table(i, meta):

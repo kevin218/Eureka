@@ -1,11 +1,12 @@
 import numpy as np
+from tqdm import tqdm
 from scipy.special import erf
 from astropy.modeling.models import Gaussian1D, custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.convolution import Box1DKernel, convolve
 from astropy.stats import sigma_clip
 
-__all__ = ['clip_outliers', 'gauss_removal']
+__all__ = ['clip_outliers', 'gauss_removal', 'time_removal']
  
 def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill_value='mask', verbose=False):
     '''Find outliers in 1D time series.
@@ -161,3 +162,26 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     # returns an image that is nan-masked  
     img[xcr,ycr] = np.nan
     return img
+
+
+def time_removal(img, sigma=5):
+    """
+    Removing cosmic rays in the time direction. This is meant as a
+    first pass, not a final routine for cosmic ray removal.
+
+    Parameters
+    ----------
+    img : np.ndarray
+       The array of images (e.g. data from the DataClass()).
+    sigma : float, optional
+       The sigma outlier by which to mask pixels. Default=5.
+    """
+    cr_mask = np.zeros(img.shape)
+    
+    for x in tqdm(range(img.shape[1])):
+        for y in range(img.shape[2]):
+            dat = img[:,x,y] + 0.0
+            ind = np.where(dat>=np.nanmedian(dat)+sigma*np.nanstd(dat))[0]
+            if len(ind)>0:
+                cr_mask[ind,x,y] = 1.0
+    return cr_mask

@@ -14,7 +14,7 @@ from photutils import MMMBackground, MedianBackground, Background2D
 
 from ..lib import clipping
 
-__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
+__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3', 'bkg_sub']
 
 def BGsubtraction(data, meta, log, isplots):
     """Does background subtraction using inst.fit_bg & background.fitbg
@@ -391,6 +391,8 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     -------
     background : np.ndarray
        The modeled background image.
+    background_error : np.ndarray
+       Error estimation on the background fitting.
     """
     sigma_clip = SigmaClip(sigma=sigma)
     
@@ -404,10 +406,10 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
                      bkg_estimator=bkg,
                      sigma_clip=sigma_clip, fill_value=0.0,
                      mask=mask)
-    return b.background
+    return b.background, np.sqrt(b.background_rms)
 
 
-def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
+def fitbg3(data, order_mask, readnoise=11, sigclip=[4,4,4], isplots=0):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
@@ -422,6 +424,10 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
     -------
     data : object
        data object now contains new attribute `bkg_removed`.
+    bkg : np.ndarray
+       The fitted background array.
+    bkg_var : np.ndarray
+       Errors on the fitted backgrouns.
     """
 
     # Removes cosmic rays
@@ -429,37 +435,50 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
     #    cosmic rays are trashed
     rm_crs = np.zeros(data.data.shape)
     bkg_subbed = np.zeros(data.data.shape)
+    bkg = np.zeros(data.data.shape)
+    bkg_var = np.zeros(data.data.shape)p.zeros(data.data.shape)
 
+    # Does a first pass at CR removal in the time-direction
+    first_pass = clipping.time_removal(data.data)
+
+    # Loops through and removes more cosimc rays
     for i in tqdm(range(len(data.data))):
 
-        ccd = CCDData((data.data[i])*units.electron)
-        mask = np.zeros(data.data[i].shape)
+        mask = first_pass[i] + 0
+        q1,q2 = np.where(mask==0)
+        ccd = CCDData(data.data[i,q1,q2]*units.electron)
 
+        # Second pass at removing cosmic rays, with ccdproc
         for n in range(len(sigclip)):
             m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip[n])
-            ccd = CCDData(m1.data*units.electron)
-            mask[m1.mask==True]+=1
+            mask[m1.mask==True] += 1
+            q1,q2=np.where(mask==0)
+            ccd = CCDData(data.data[i,q1,q2]*units.electron)
 
         rm_crs[i] = m1.data
         rm_crs[i][mask>=1] = np.nan
 
+        # Third pass at removing cosmic rays
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
                                            linspace=[-200,200]) # removal from background
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
                                            linspace=[-10,10], where='order') # removal from order
         
-
-        b1 = bkg_sub(rm_crs[i], 
-                     order_mask,
-                     bkg_estimator='median', sigma=4, box=(10,5), filter_size=(2,2))
-        b2 = bkg_sub(rm_crs[i]-b1, 
-                     order_mask,
-                     sigma=3,
-                     bkg_estimator='median')
+        # Fits a 2D background (with the orders masked)
+        b1,b1_err = bkg_sub(rm_crs[i], 
+                            order_mask,
+                            bkg_estimator='median', 
+                            sigma=4, box=(10,5), filter_size=(2,2))
+        # Iterates twice to remove 1/f noise well
+        b2,b2_err = bkg_sub(rm_crs[i]-b1, 
+                            order_mask,
+                            sigma=3,
+                            bkg_estimator='median')
         
         bkg_subbed[i] = (rm_crs[i]-b1)-b2
-
+        bkg[i] = b1 + b2
+        bkg_var[i] = np.sqrt(b1_err**2.0 + b2_err**2.0)
         
     data.bkg_removed = bkg_subbed
 
-    return data
+    return data, bkg, bkg_var
