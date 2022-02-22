@@ -3,11 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from .S3_data_reduction import niriss
+from .S3_data_reduction import background
 from .S3_data_reduction.s3_reduce import MetaClass, DataClass
 
-__all__ = ['NIRISS']
+__all__ = ['NIRISS_S3']
 
-class NIRISS(object):
+class NIRISS_S3(object):
 
     def __init__(self, filename, wavefile, f277_filename, 
                  path, outdir='.'):
@@ -161,3 +162,88 @@ class NIRISS(object):
             if diagnose:
                 plot(self.tab2)
             
+        return
+
+    def box_extraction(self, boxsize1=70, boxsize2=60):
+        """
+        Performs a really quick and dirty box mask.
+        
+        Parameters
+        ----------
+        boxsize1 : int, optional
+           The size of the box for the first order.
+           Default is 70 pixels.
+        boxsize2 : int, optional
+           The size of the box for the second order.
+           Default is 60.
+
+        Attributes
+        ----------
+        box_mask : np.ndarray
+           The images for the box masks.
+        box_sizes : tuple
+           Attribute containing the box sizes used
+           to create `box_order1` and `box_order2`.
+           Tuple is (boxsize1, boxsize2).
+        """
+        mask = np.ones(self.median.shape)
+
+        if self.tab2 is not None:
+            t = self.tab2
+        elif self.tab1 is not None:
+            t = self.tab1
+        else:
+            return('Need to run `identify_orders()`.')
+
+        for i in range(self.median.shape[1]):
+            s,e = int(t['order_1'][i]-boxsize1/2), int(t['order_1'][i]+boxsize1/2)
+            mask[s:e,i] = 0
+
+            s,e = int(t['order_2'][i]-boxsize2/2), int(t['order_2'][i]+boxsize2/2)
+            try:
+                mask[s:e,i] = 0
+            except:
+                pass
+
+        self.box_mask = mask
+        self.box_sizes= (boxsize1, boxsize2)
+        return
+
+    def fit_background(self, readnoise=18, sigclip=[4,4,4]):
+        """
+        Fits the sky background of the NIRISS images. This
+        function calls `background.fitbg3`, which completes 
+        an image fit to the sky background.
+
+        Parameters
+        ----------
+        readnoise : int, optional
+           Integer to estimate the read noise of the detector.
+           Default is 18.
+        sigclip : np.array, list, optional
+           The sigma outliers by which to loop over to identify
+           cosmic rays. Default is `[4,4,4]`. Can be of any 
+           length the user wants.
+
+        Attributes
+        ----------
+        data_bkg_subbed : np.ndarray
+           Sky background subtracted images.
+        bkg : np.ndarray
+           Sky background fits for each image.
+        bkg_var : np.ndarray
+           Errors on the sky background fits.
+        """
+        self.box_extraction()
+        
+        bkg_outputs = background.fitbg3(self, 
+                                        np.array(self.box_mask-1, dtype=bool), 
+                                        readnoise=readnoise,
+                                        sigclip=sigclip,
+                                        inclass=True)
+
+        self.data_bkg_subbed = bkg_outputs[0]
+        self.bkg = bkg_ouputs[1]
+        self.bkg_var = bkg_outputs[2]
+
+        return
