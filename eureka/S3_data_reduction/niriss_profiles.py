@@ -12,8 +12,8 @@ import pyximport
 pyximport.install()
 from . import niriss_cython
 
-__all__ ['profile_niriss_median', 'profile_niriss_gaussian',
-         'profile_niriss_moffat']
+__all__ = ['profile_niriss_median', 'profile_niriss_gaussian',
+           'profile_niriss_moffat']
 
 def profile_niriss_median(data, medprof, sigma=50):
     """                         
