@@ -415,7 +415,9 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     return b.background, np.sqrt(b.background_rms)
 
 
-def fitbg3(data, order_mask, readnoise=11, sigclip=[4,4,4], isplots=0):
+def fitbg3(data, order_mask, readnoise=11, 
+           sigclip=[4,4,4], isplots=0,
+           inclass=False):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
@@ -450,16 +452,14 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,4,4], isplots=0):
     # Loops through and removes more cosimc rays
     for i in tqdm(range(len(data.data))):
 
-        mask = first_pass[i] + 0
-        q1,q2 = np.where(mask==0)
-        ccd = CCDData(data.data[i,q1,q2]*units.electron)
+        mask = np.array(first_pass[i],dtype=bool)
+        ccd = CCDData(data.data[i]*~mask*units.electron)
 
         # Second pass at removing cosmic rays, with ccdproc
         for n in range(len(sigclip)):
             m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip[n])
-            mask[m1.mask==True] += 1
-            q1,q2=np.where(mask==0)
-            ccd = CCDData(data.data[i,q1,q2]*units.electron)
+            mask[m1.mask==True] = True
+            ccd = CCDData(data.data[i]*~mask*units.electron)
 
         rm_crs[i] = m1.data
         rm_crs[i][mask>=1] = np.nan
@@ -485,6 +485,9 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,4,4], isplots=0):
         bkg[i] = b1 + b2
         bkg_var[i] = np.sqrt(b1_err**2.0 + b2_err**2.0)
         
-    data.bkg_removed = bkg_subbed
 
-    return data, bkg, bkg_var
+    if inclass == False:
+        data.bkg_removed = bkg_subbed
+        return data, bkg, bkg_var
+    else:
+        return bkg_subbed, bkg, bkg_var
