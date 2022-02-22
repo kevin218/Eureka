@@ -11,7 +11,7 @@ from dynesty.utils import resample_equal
 
 from ..lib import lsq
 from .parameters import Parameters
-from .likelihood import computeRedChiSq, lnprob, ptform
+from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 
 #FINDME: Keep reload statements for easy testing
@@ -336,7 +336,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     l_args = [lc, model, pmin, pmax, freenames]
 
     log.writelog('Running dynesty...')
-    sampler = NestedSampler(lnprob, ptform, ndims,
+    sampler = NestedSampler(ln_like, ptform, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
                             ptform_args=[pmin, pmax])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
