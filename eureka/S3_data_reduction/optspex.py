@@ -257,7 +257,7 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
 # Construct normalized spatial profile using wavelets
 def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
     '''This function performs 2D image denoising using BayesShrink soft thresholding.
-    
+
     Parameters
     ----------
     subdata:    ndarray
@@ -452,7 +452,7 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
         Directory in which to save outupts.
     meddata:    ndarray
         The median of all data frames.
-    hide_plots: 
+    hide_plots:
         If True, plots will automatically be closed rather than popping up.
 
     Returns
