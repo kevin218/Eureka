@@ -23,7 +23,8 @@
 # 17. Produce plots DONE
 
 
-import os, time, glob
+import os, glob
+import time as time_pkg
 import numpy as np
 from astropy.io import fits
 from tqdm import tqdm
@@ -100,7 +101,10 @@ def reduceJWST(eventlabel, s2_meta=None):
         if rootdir[-1]!='/':
             rootdir += '/'
         fnames = glob.glob(rootdir+'**/S2_'+meta.eventlabel+'_Meta_Save.dat', recursive=True)
-        fnames = sn.sort_nicely(fnames)
+        
+        if len(fnames)>=1:
+            # get the folder with the latest modified time
+            fname = max(fnames, key=os.path.getmtime)
 
         if len(fnames)==0:
             # There may be no metafiles in the inputdir - raise an error and give a helpful message
@@ -111,11 +115,9 @@ def reduceJWST(eventlabel, s2_meta=None):
             if len(fnames)>1:
                 # There may be multiple runs - use the most recent but warn the user
                 print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(meta.inputdir)
-                     +'Using the metadata file: \n"{}"'.format(fnames[-1]))
+                     +'Using the metadata file: \n"{}"'.format(fname))
 
-            fname = fnames[-1] # Pick the last file name
             fname = fname[:-4] # Strip off the .dat ending
-
             s2_meta = me.loadevent(fname)
 
     # Locate the exact output folder from the previous S2 run (since there is a procedurally generated subdirectory for each run)
@@ -138,6 +140,10 @@ def reduceJWST(eventlabel, s2_meta=None):
         else:
             raise AssertionError("Unable to find output data files from Eureka!'s S2 step! "
                                  + "Looked in the folder: \n{}".format(s2_meta.outputdir))
+
+    if hasattr(meta, 'datetime'):
+        meta.old_datetime = meta.datetime # Capture the date used by S2
+        meta.datetime = None # Reset the datetime in case we're running this on a different day
 
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
@@ -170,7 +176,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
         for bg_hw_val in meta.bg_hw_range:
 
-            t0 = time.time()
+            t0 = time_pkg.time()
 
             meta.spec_hw = spec_hw_val
 
@@ -209,14 +215,14 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Create list of file segments
             meta = util.readfiles(meta)
-            num_data_files = len(meta.segment_list)
-            if num_data_files==0:
+            meta.num_data_files = len(meta.segment_list)
+            if meta.num_data_files==0:
                 rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
                 if rootdir[-1]!='/':
                     rootdir += '/'
                 raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
             else:
-                log.writelog(f'\nFound {num_data_files} data file(s) ending in {meta.suffix}.fits')
+                log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 
             with fits.open(meta.segment_list[-1]) as hdulist:
                 # Figure out which instrument we are using
@@ -230,6 +236,9 @@ def reduceJWST(eventlabel, s2_meta=None):
                 from . import nirspec as inst
             elif meta.inst == 'niriss':
                 raise ValueError('NIRISS observations are currently unsupported!')
+            elif meta.inst == 'wfc3':
+                from . import wfc3 as inst
+                meta, log = inst.preparation_step(meta, log)
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
 
@@ -237,19 +246,21 @@ def reduceJWST(eventlabel, s2_meta=None):
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to True in ecf
             if meta.testing_S3:
-                istart = num_data_files - 1
+                istart = meta.num_data_files - 1
             else:
                 istart = 0
-            for m in range(istart, num_data_files):
+            for m in range(istart, meta.num_data_files):
                 # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
                 if m==istart:
                     meta.firstFile = True
                 else:
                     meta.firstFile = False
                 # Report progress
-                log.writelog(f'Reading file {m + 1} of {num_data_files}')
+                log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
+                
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
+                
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.data.shape
                 if meta.testing_S3:
@@ -257,53 +268,51 @@ def reduceJWST(eventlabel, s2_meta=None):
                     meta.int_start = np.max((0,meta.n_int-5))
                 else:
                     meta.int_start = 0
+                
                 # Locate source postion
                 meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
                 log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
+                
                 # Trim data to subarray region of interest
                 data, meta = util.trim(data, meta)
+                
+                # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
+                data, meta = b2f.convert_to_e(data, meta, log)
+
                 # Create bad pixel mask (1 = good, 0 = bad)
                 # FINDME: Will want to use DQ array in the future to flag certain pixels
                 data.submask = np.ones(data.subdata.shape)
-
-                # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
-                data, meta = b2f.convert_to_e(data, meta, log)
 
                 # Check if arrays have NaNs
                 data.submask = util.check_nans(data.subdata, data.submask, log, name='SUBDATA')
                 data.submask = util.check_nans(data.suberr, data.submask, log, name='SUBERR')
                 data.submask = util.check_nans(data.subv0, data.submask, log, name='SUBV0')
-
+                
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
                     log.writelog("  Masking manually identified bad pixels")
                     for i in range(len(meta.manmask)):
                         ind, colstart, colend, rowstart, rowend = meta.manmask[i]
                         data.submask[rowstart:rowend, colstart:colend] = 0
-
+                
                 # Perform outlier rejection of sky background along time axis
                 log.writelog('  Performing background outlier rejection')
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
                 data = inst.flag_bg(data, meta)
-
+                
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
-
-                # Calulate drift2D
-                # print("Calculating 2D drift...")
-
-                # print("Performing rough, pixel-scale drift correction...")
-
-                # Outlier rejection of full frame along time axis
-                # print("Performing full-frame outlier rejection...")
-
+                
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for background subtraction')
                     for n in tqdm(range(meta.int_start,meta.n_int)):
                         # make image+background plots
                         plots_s3.image_and_background(data, meta, n)
 
-                # print("Performing sub-pixel drift correction...")
+                # Calulate and correct for 2D drift
+                if hasattr(inst, 'correct_drift2D'):
+                    log.writelog('  Correcting for 2D drift')
+                    inst.correct_drift2D(data, meta, m)
 
                 # Select only aperture region
                 ap_y1 = int(meta.src_ypos - spec_hw_val)
@@ -319,7 +328,7 @@ def reduceJWST(eventlabel, s2_meta=None):
                 # Compute fraction of masked pixels within regular spectral extraction window
                 # numpixels   = 2.*meta.spec_width*subnx
                 # fracMaskReg = (numpixels - np.sum(apmask,axis=(2,3)))/numpixels
-
+                
                 # Compute median frame
                 data.medsubdata = np.median(data.subdata, axis=0)
                 data.medapdata  = np.median(data.apdata, axis=0)
@@ -353,22 +362,26 @@ def reduceJWST(eventlabel, s2_meta=None):
                     stdvar  = data.stdvar
                     optspec = data.optspec
                     opterr  = data.opterr
-                    bjdtdb  = data.bjdtdb
+                    time    = data.time
                 else:
                     stdspec = np.append(stdspec, data.stdspec, axis=0)
                     stdvar  = np.append(stdvar, data.stdvar, axis=0)
                     optspec = np.append(optspec, data.optspec, axis=0)
                     opterr  = np.append(opterr, data.opterr, axis=0)
-                    bjdtdb  = np.append(bjdtdb, data.bjdtdb, axis=0)
+                    time    = np.append(time, data.time, axis=0)
+
+            if meta.inst == 'wfc3':
+                # WFC3 needs a conclusion step to convert lists into arrays before saving
+                meta, log = inst.conclusion_step(meta, log)
 
             # Calculate total time
-            total = (time.time() - t0) / 60.
+            total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             if meta.save_output == True:
                 log.writelog('Saving results as astropy table')
                 meta.tab_filename = meta.outputdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
-                astropytable.savetable_S3(meta.tab_filename, bjdtdb, wave_1d, stdspec, stdvar, optspec, opterr)
+                astropytable.savetable_S3(meta.tab_filename, time, wave_1d, stdspec, stdvar, optspec, opterr)
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')

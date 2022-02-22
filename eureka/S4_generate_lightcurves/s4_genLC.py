@@ -16,7 +16,8 @@
 # 9.  Produce plots
 
 
-import sys, os, time, shutil, glob
+import sys, os, shutil, glob
+import time as time_pkg
 import numpy as np
 import scipy.interpolate as spi
 import matplotlib.pyplot as plt
@@ -94,7 +95,7 @@ def lcJWST(eventlabel, s3_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
 
-            t0 = time.time()
+            t0 = time_pkg.time()
 
             meta = load_specific_s3_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
 
@@ -132,7 +133,7 @@ def lcJWST(eventlabel, s3_meta=None):
             optspec = np.reshape(table['optspec'].data, (-1, meta.subnx))
             opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
             wave_1d = table['wave_1d'].data[0:meta.subnx]
-            meta.bjdtdb = table['bjdtdb'].data[::meta.subnx]
+            meta.time = table['time'].data[::meta.subnx]
 
             #Replace NaNs with zero
             optspec[np.where(np.isnan(optspec))] = 0
@@ -194,10 +195,10 @@ def lcJWST(eventlabel, s3_meta=None):
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, meta.bjdtdb, i)
+                    plots_s4.binned_lightcurve(meta, meta.time, i)
 
             # Calculate total time
-            total = (time.time() - t0) / 60.
+            total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             # Save results
@@ -225,6 +226,10 @@ def read_s3_meta(meta):
         fnames = glob.glob(rootdir+'**/S3_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
         fnames = sn.sort_nicely(fnames)
 
+    if len(fnames)>=1:
+        # get the folder with the latest modified time
+        fname = max(fnames, key=os.path.getmtime)
+
     if len(fnames)==0:
         # There may be no metafiles in the inputdir - raise an error and give a helpful message
         raise AssertionError('Unable to find an output metadata file from Eureka!\'s S3 step '
@@ -232,11 +237,10 @@ def read_s3_meta(meta):
     elif len(fnames)>1:
         # There may be multiple runs - use the most recent but warn the user
         print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
-                +'Using the metadata file: \n{}\n'.format(fnames[-1])
+                +'Using the metadata file: \n{}\n'.format(fname)
                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                 +'of the run you intended, please provide a more precise folder for the metadata file.')
 
-    fname = fnames[-1] # Pick the last file name (should be the most recent or only file)
     fname = fname[:-4] # Strip off the .dat ending
 
     s3_meta = me.loadevent(fname)

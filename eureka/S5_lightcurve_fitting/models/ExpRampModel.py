@@ -24,6 +24,11 @@ class ExpRampModel(Model):
                       if rN.startswith('r') and rN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
+        # Set parameters for multi-channel fits
+        self.longparamlist = kwargs.get('longparamlist')
+        self.nchan = kwargs.get('nchan')
+        self.paramtitles = kwargs.get('paramtitles')
+
         # Update coefficients
         self._parse_coeffs()
 
@@ -40,11 +45,15 @@ class ExpRampModel(Model):
         np.ndarray
             The sequence of coefficient values
         """
-        # Parse 'c#' keyword arguments as coefficients
-        self.coeffs = np.zeros(6)
+        # Parse 'r#' keyword arguments as coefficients
+        self.coeffs = np.zeros((self.nchan, 6))
         for k, v in self.parameters.dict.items():
+            remvisnum=k.split('_')
             if k.lower().startswith('r') and k[1:].isdigit():
-                self.coeffs[int(k[1:])] = v[0]
+                self.coeffs[0,int(k[1:])] = v[0]
+            elif len(remvisnum)>1 and self.nchan>1:
+                if remvisnum[0].lower().startswith('r') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
+                    self.coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -52,28 +61,14 @@ class ExpRampModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Create the individual coeffs
-        r0, r1, r2, r3, r4, r5 = self.coeffs
-        # if len(self.coeffs) == 3:
-        #     r0, r1, r2 = self.coeffs
-        #     r3, r4, r5 = 0, 0, 0
-        # elif len(self.coeffs) == 6:
-        #     r0, r1, r2, r3, r4, r5 = self.coeffs
-        # else:
-        #     raise IndexError('Exponential ramp requires 3 or 6 parameters labelled r#.')
-
         # Convert to local time
         time_local = self.time - self.time[0]
 
-        # Evaluate the polynomial
-        return r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
+        # Create the ramp from the coeffs
+        lcfinal=np.array([])
+        for c in np.arange(self.nchan):
+            r0, r1, r2, r3, r4, r5 = self.coeffs[c]
+            lcpiece = r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
+            lcfinal = np.append(lcfinal, lcpiece)
+        return lcfinal
 
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
-        return

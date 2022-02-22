@@ -5,6 +5,7 @@ from . import julday
 from . import miri
 from . import nircam
 from . import niriss
+from . import niriss_cython
 from . import nirspec
 from . import optspex
 from . import plots_s3

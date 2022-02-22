@@ -24,6 +24,11 @@ class PolynomialModel(Model):
                       if cN.startswith('c') and cN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
+        # Set parameters for multi-channel fits
+        self.longparamlist = kwargs.get('longparamlist')
+        self.nchan = kwargs.get('nchan')
+        self.paramtitles = kwargs.get('paramtitles')
+
         # Update coefficients
         self._parse_coeffs()
 
@@ -42,13 +47,19 @@ class PolynomialModel(Model):
         """
 
         # Parse 'c#' keyword arguments as coefficients
-        coeffs = np.zeros(10)
+        coeffs = np.zeros((self.nchan,10))
         for k, v in self.parameters.dict.items():
+            remvisnum=k.split('_')
             if k.lower().startswith('c') and k[1:].isdigit():
-                coeffs[int(k[1:])] = v[0]
+                coeffs[0,int(k[1:])] = v[0]
+            elif len(remvisnum)>1 and self.nchan>1:
+                if remvisnum[0].lower().startswith('c') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
+                    coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
 
         # Trim zeros and reverse
-        self.coeffs = np.trim_zeros(coeffs)[::-1]
+        coeffs=coeffs[:,~np.all(coeffs==0,axis=0)]
+        coeffs=np.flip(coeffs,axis=1)
+        self.coeffs=coeffs
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -56,21 +67,14 @@ class PolynomialModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Create the polynomial from the coeffs
-        poly = np.poly1d(self.coeffs)
-
         # Convert to local time
         time_local = self.time - self.time.mean()
 
-        # Evaluate the polynomial
-        return np.polyval(poly, time_local)
+        # Create the polynomial from the coeffs
+        lcfinal=np.array([])
+        for c in np.arange(self.nchan):
+            poly = np.poly1d(self.coeffs[c])
+            lcpiece = np.polyval(poly, time_local)
+            lcfinal = np.append(lcfinal, lcpiece)
+        return lcfinal
 
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
-        return

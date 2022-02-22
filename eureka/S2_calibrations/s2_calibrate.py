@@ -100,14 +100,23 @@ def calibrateJWST(eventlabel):
 
     # Figure out which pipeline we need to use (spectra or images)
     with fits.open(meta.segment_list[0]) as hdulist:
-        # Figure out which instrument we are using
+        # Figure out which observatory and observation mode we are using
+        telescope = hdulist[0].header['TELESCOP']
+    if telescope=='JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
-    if 'image' in exp_type.lower():
-        # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
-        pipeline = EurekaImage2Pipeline()
+        if 'image' in exp_type.lower():
+            # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+            pipeline = EurekaImage2Pipeline()
+        else:
+            # EXP_TYPE doesn't say image, so it should be a spectrum (or someone is putting weird files into Eureka!)
+            pipeline = EurekaSpec2Pipeline()
+    elif telescope=='HST':
+        log.writelog('There is no Stage 2 for HST - skipping.')
+        shutil.rmtree(os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))) # Clean up temporary folder
+        meta.outputdir = meta.inputdir
+        return meta
     else:
-        # EXP_TYPE doesn't say image, so it should be a spectrum (or someone is putting weird files into Eureka!)
-        pipeline = EurekaSpec2Pipeline()
+        raise AssertionError(f'Telescope "{telescope}" detected in FITS header is not JWST or HST and is unsupported!')
 
     # Run the pipeline on each file sequentially
     for m in range(istart, meta.num_data_files):
@@ -132,6 +141,8 @@ def calibrateJWST(eventlabel):
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
 
+    log.closelog()
+    
     return meta
 
 
