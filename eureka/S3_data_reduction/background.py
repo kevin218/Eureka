@@ -442,7 +442,7 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,4,4], isplots=0):
     rm_crs = np.zeros(data.data.shape)
     bkg_subbed = np.zeros(data.data.shape)
     bkg = np.zeros(data.data.shape)
-    bkg_var = np.zeros(data.data.shape)p.zeros(data.data.shape)
+    bkg_var = np.zeros(data.data.shape)
 
     # Does a first pass at CR removal in the time-direction
     first_pass = clipping.time_removal(data.data)
