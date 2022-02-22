@@ -20,6 +20,12 @@ class NIRISS(object):
         reassign_attrs(data)
         reassign_attrs(meta)
 
+        # get wavelength solutions
+        w1, w2, w3 = wave_niriss(os.path.join(path, wavefile))
+        self.wavelength_order1 = w1 + 0.0
+        self.wavelength_order2 = w2 + 0.0
+        self.wavelength_order3 = w3 + 0.0
+
 
     def reassign_attrs(self, obj):
         """
