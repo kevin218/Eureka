@@ -1,0 +1,250 @@
+#ASDF 1.0.0
+#ASDF_STANDARD 1.1.0
+%YAML 1.1
+%TAG ! tag:stsci.edu:asdf/
+--- !core/asdf-1.0.0
+asdf_library: !core/software-1.0.0 {author: Space Telescope Science Institute, homepage: 'http://github.com/spacetelescope/asdf',
+  name: asdf, version: 1.2.2.dev845}
+history:
+- !core/history_entry-1.0.0
+  description: New version created from CV3 with updated file structure
+  software: !core/software-1.0.0 {author: N.Dencheva, homepage: 'https://github.com/spacetelescope/jwreftools',
+    name: jwstreftools, version: 0.7.1}
+  time: 2017-07-11 17:02:24.471564
+meta:
+  author: RDM extraction macro chief ray
+  date: '2017-07-11T13:02:24.453'
+  description: Distortion file
+  exposure: {p_exptype: NRS_TACQ|NRS_TASLIT|NRS_TACONFIRM|        NRS_CONFIRM|NRS_FIXEDSLIT|NRS_IFU|NRS_MSASPEC|NRS_IMAGE|NRS_FOCUS|        NRS_MIMF|NRS_BOTA|NRS_LAMP|NRS_BRIGHTOBJ|,
+    type: N/A}
+  instrument: {filter: CLEAR, name: NIRSPEC, p_detector: NRS1|NRS2|}
+  model_type: FOREModel
+  pedigree: GROUND
+  reftype: fore
+  telescope: JWST
+  useafter: '2013-01-03T11:19:40'
+model: !transform/compose-1.0.0
+  forward:
+  - !transform/compose-1.0.0
+    forward:
+    - !transform/compose-1.0.0
+      forward:
+      - !transform/remap_axes-1.0.0
+        inverse: !transform/identity-1.0.0 {n_dims: 2}
+        mapping: [0, 1, 2, 0, 1, 2]
+        name: fore_inmap
+      - !transform/concatenate-1.0.0
+        forward:
+        - !transform/add-1.0.0
+          forward:
+          - !transform/compose-1.0.0
+            forward:
+            - !transform/remap_axes-1.0.0
+              mapping: [0, 1]
+              n_inputs: 3
+            - !transform/polynomial-1.0.0
+              coefficients: !core/ndarray-1.0.0
+                source: 0
+                datatype: float64
+                byteorder: little
+                shape: [6, 6]
+              name: fore_x_forw
+          - !transform/multiply-1.0.0
+            forward:
+            - !transform/compose-1.0.0
+              forward:
+              - !transform/remap_axes-1.0.0
+                mapping: [0, 1]
+                n_inputs: 3
+              - !transform/polynomial-1.0.0
+                coefficients: !core/ndarray-1.0.0
+                  source: 1
+                  datatype: float64
+                  byteorder: little
+                  shape: [6, 6]
+                name: fore_x_forwdist
+            - !transform/compose-1.0.0
+              forward:
+              - !transform/remap_axes-1.0.0
+                mapping: [2]
+              - !transform/identity-1.0.0 {}
+        - !transform/add-1.0.0
+          forward:
+          - !transform/compose-1.0.0
+            forward:
+            - !transform/remap_axes-1.0.0
+              mapping: [0, 1]
+              n_inputs: 3
+            - !transform/polynomial-1.0.0
+              coefficients: !core/ndarray-1.0.0
+                source: 2
+                datatype: float64
+                byteorder: little
+                shape: [6, 6]
+              name: fore_y_forw
+          - !transform/multiply-1.0.0
+            forward:
+            - !transform/compose-1.0.0
+              forward:
+              - !transform/remap_axes-1.0.0
+                mapping: [0, 1]
+                n_inputs: 3
+              - !transform/polynomial-1.0.0
+                coefficients: !core/ndarray-1.0.0
+                  source: 3
+                  datatype: float64
+                  byteorder: little
+                  shape: [6, 6]
+                name: fore_y_forwdist
+            - !transform/compose-1.0.0
+              forward:
+              - !transform/remap_axes-1.0.0
+                mapping: [2]
+              - !transform/identity-1.0.0 {}
+    - !transform/identity-1.0.0
+      inverse: !transform/remap_axes-1.0.0
+        mapping: [0, 1, 2, 0, 1, 2]
+      n_dims: 2
+      name: fore_outmap
+  - !transform/compose-1.0.0
+    forward:
+    - !transform/compose-1.0.0
+      forward:
+      - !transform/concatenate-1.0.0
+        forward:
+        - !transform/shift-1.0.0 {name: fore_xincen_d2s, offset: -5.5268459141299997e-06}
+        - !transform/shift-1.0.0 {name: fore_yincen_d2s, offset: 0.00034602887288100003}
+      - !transform/affine-1.0.0
+        matrix: !core/ndarray-1.0.0
+          source: 4
+          datatype: float64
+          byteorder: little
+          shape: [2, 2]
+        name: fore_affine_d2s
+        translation: !core/ndarray-1.0.0
+          source: 4
+          datatype: float64
+          byteorder: little
+          shape: [2]
+          offset: 32
+    - !transform/concatenate-1.0.0
+      forward:
+      - !transform/shift-1.0.0 {name: fore_xoutcen_d2s, offset: -2.2796199999999999e-07}
+      - !transform/shift-1.0.0 {name: fore_youtcen_d2s, offset: -2.6094000000000001e-07}
+  inverse: !transform/compose-1.0.0
+    forward:
+    - !transform/concatenate-1.0.0
+      forward:
+      - !transform/compose-1.0.0
+        forward:
+        - !transform/concatenate-1.0.0
+          forward:
+          - !transform/shift-1.0.0 {name: fore_xoutcen_d2s, offset: 2.2796199999999999e-07}
+          - !transform/shift-1.0.0 {name: fore_youtcen_d2s, offset: 2.6094000000000001e-07}
+        - !transform/compose-1.0.0
+          forward:
+          - !transform/affine-1.0.0
+            matrix: !core/ndarray-1.0.0
+              source: 5
+              datatype: float64
+              byteorder: little
+              shape: [2, 2]
+            translation: !core/ndarray-1.0.0
+              source: 5
+              datatype: float64
+              byteorder: little
+              shape: [2]
+              offset: 32
+          - !transform/concatenate-1.0.0
+            forward:
+            - !transform/shift-1.0.0 {name: fore_xincen_d2s, offset: 5.5268459141299997e-06}
+            - !transform/shift-1.0.0 {name: fore_yincen_d2s, offset: -0.00034602887288100003}
+      - !transform/identity-1.0.0 {}
+    - !transform/compose-1.0.0
+      forward:
+      - !transform/remap_axes-1.0.0
+        mapping: [0, 1, 2, 0, 1, 2]
+      - !transform/compose-1.0.0
+        forward:
+        - !transform/concatenate-1.0.0
+          forward:
+          - !transform/add-1.0.0
+            forward:
+            - !transform/compose-1.0.0
+              forward:
+              - !transform/remap_axes-1.0.0
+                mapping: [0, 1]
+                n_inputs: 3
+              - !transform/polynomial-1.0.0
+                coefficients: !core/ndarray-1.0.0
+                  source: 6
+                  datatype: float64
+                  byteorder: little
+                  shape: [6, 6]
+                name: fore_x_back
+            - !transform/multiply-1.0.0
+              forward:
+              - !transform/compose-1.0.0
+                forward:
+                - !transform/remap_axes-1.0.0
+                  mapping: [0, 1]
+                  n_inputs: 3
+                - !transform/polynomial-1.0.0
+                  coefficients: !core/ndarray-1.0.0
+                    source: 7
+                    datatype: float64
+                    byteorder: little
+                    shape: [6, 6]
+                  name: fore_x_backdist
+              - !transform/compose-1.0.0
+                forward:
+                - !transform/remap_axes-1.0.0
+                  mapping: [2]
+                - !transform/identity-1.0.0 {}
+          - !transform/add-1.0.0
+            forward:
+            - !transform/compose-1.0.0
+              forward:
+              - !transform/remap_axes-1.0.0
+                mapping: [0, 1]
+                n_inputs: 3
+              - !transform/polynomial-1.0.0
+                coefficients: !core/ndarray-1.0.0
+                  source: 8
+                  datatype: float64
+                  byteorder: little
+                  shape: [6, 6]
+                name: fore_y_back
+            - !transform/multiply-1.0.0
+              forward:
+              - !transform/compose-1.0.0
+                forward:
+                - !transform/remap_axes-1.0.0
+                  mapping: [0, 1]
+                  n_inputs: 3
+                - !transform/polynomial-1.0.0
+                  coefficients: !core/ndarray-1.0.0
+                    source: 9
+                    datatype: float64
+                    byteorder: little
+                    shape: [6, 6]
+                  name: fore_y_backdist
+              - !transform/compose-1.0.0
+                forward:
+                - !transform/remap_axes-1.0.0
+                  mapping: [2]
+                - !transform/identity-1.0.0 {}
+        - !transform/identity-1.0.0 {n_dims: 2}
+...
+ÓBLK 0                             ô$FDÝã¯û!Ùn/$‹…²æçºxh>wh(W	Y?¿Â–2€2¿Ê˜Y%p³D¿gt[šeG?bLMn$<¿ýZ÷¸çþï?³ÃË¢úÀ¿c^êßÀ!à?}Ö>H°q@SâsµÀ        01È«ƒJ¿SÜôæ ½b¿÷.ñƒ?Ûp­Žoöq?                Œ•9yÊôç?ló¿@`ÙéäÜý"À                         ]@ªYƒ‚?Á³AÌóE‡¿                                R¥áÇ÷=À                                        ÓBLK 0                             Xž> &›L„']Ÿ‡BUwja‡…¿OßÀöyƒr?´;=o!˜¿W–”Œð?1zñ
+2Àñ”¼×Z_¤ÀÌŠë•P?@ý?ôÀ’J<–ZßZ@ô®hÝ€Âo@Vpª{Cw¦@        bßÎÇ1Ž¿:ðò<M(ÀÜÈóQ‡@ à}úÙÌ²@                h PT(¥`@ÓØÁ5µ9s@2ÑZ°ò°À                        m×@KÛ:À¹Ž/©xU²@                                ‹æ}óeIœÀ                                        ÓBLK 0                             ßëüŽ’û±ábð’Žàë=½‘R	Ú¾Mv¹3þï?¦a6Ö§Ç¿þÃZ'Ñ?=ÅˆÛ´@§FU½Õ	ÀÆuöRÓ?'=e
+2¿ìRÅ.c¿å¶s]ÄÝv?ÿŠ¬„±‘?        ºLGÒçN´¿ü'éI2à?@
+Ô\	@<1shA À                äs–'&J¿P‘Þç }?µñbQ_b¿                        ¾¸D‘à¾à?;s>PzÀ                                F¿Á[$Ó?                                        ÓBLK 0                             :F¼Â$§Sî.ÂÇkæï¶Øf—@UžçHV@@ZVb›3À´ºH¥¸W@© wj£
+y@‹¨û“Sz‚À»Z¨Ž„?ð¤€¿«ÎÛ<Çµ!ÀøøwÚõ/À+¡ý@Úö¢@        â§‡,À@§Fþ~[@ÞxDs7x@¾!"oØ³À                »¦AÍ3@JÖ|t%Z
+@˜‡Ž›¨@                        5$*ð'ˆT@| Ãt'U’@                                ÿŽæÙšÀ                                        ÓBLK 0               0       0       0Ótóïçh óWÉÆ`kudÜ¯ó?‡g×cäqñ?P®Öš#-ñ¿¢Ü­‡ôÛó?                ÓBLK 0               0       0       0ƒ:‘ùç*m·–ŽO.<ÔðOÝ?
+nbW÷Ù¿n–)‘Ù?úuß ÏÝ?       €       €ÓBLK 0                             ÍX$ô"‘ÉÕMC¶ð(k0ÖpÑLÑ×­h¾Ñ¶g«Z¿/žßÖˆ71?^«:jªJ?0BŒ]Î*¿òùy<©¯j¿°£þŒ ð?ç}uÊQúÀ?Àéý–—Ý¿ÇW78†ÄÀ=³ÍoS@        5‘iÿJ?¿Gog-Øg?ÅÝÓ'‚¿Á·d¨I¡¿                {þ„mê ç¿!2KÀ¾kÕP#!@                        hd‹q)"‡¿ÃâÕvŒã•¿                                ŽaÙÂ/T@                                        ÓBLK 0                             ~lœ+ö‡"•ATÚêiïò¡CÏ?MŠåiŸÿ=¿+8üçÄˆ¿¡‘Èq¹Áõ¿wg8 '5@Ù«UÜ m¥@%OÆ2å?ÀF­¼ÇïHÀbŸmLé;À„wMZ…A@¶8×îÆi¬À        ï§ ¸‚µ¿`2^Æ—a'@,‡Ÿä%Àª¢²Ûw²À                ¯ôŒK}<@À6³€‹Á}2À¾9uH@ã¤@                        \Ó&Èô½9@Ø™<>²À                                x1yu•?Ž@                                        ÓBLK 0                             eä¡Ç›C†ÌÔØ=³žCãy™Ú>Ç’?§è ð?Ë`nõŠªÇ?ÿŸšÉ¿òtce8À*ÓP{3ûß?ßm âÖ¿ ÚÆ Ó.?Ú?°í©åe?`/Ž6xg¿åk½óÓ ¿        E…l%ZO´?T:«ò®1Ý¿ö|ÔÀþ§NqÉú@                }XËÅªP?è÷*Âç%y¿
+š(t$›¿                        K¼Òu å¿_×ñS@                                œ	gw–²•¿                                        ÓBLK 0                             è#§‹¡ ½êOg0A¿ãK¹Õ—#Àö lþ"Â@À¬Ù
+òkƒ@ÕWùžÌ?Àêe2!HêDÀ<ÀæˆIÀuKE]™t¿¼€Ô«9¿¢¿b2…Þy!@¬:ŒÁÌ,@«`Ð±Ò¢À        ’²'¨®å@F:+ö7Àª’K‰$@9Æd]›‚À                mn"Þ“*À"¶Ÿp‘ŒÀˆ„‡¼§À                        `I5U…AÀ™<Ž´2ìŸÀ                                `Þ©¡=×š@                                        #ASDF BLOCK INDEX
+%YAML 1.1
+--- [8438, 8780, 9122, 9464, 9806, 9908, 10010, 10352, 10694, 11036]
+...
