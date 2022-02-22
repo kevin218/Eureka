@@ -336,6 +336,11 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     l_args = [lc, model, pmin, pmax, freenames]
 
     log.writelog('Running dynesty...')
+
+    min_nlive = int(np.ceil(ndims*(ndims+1)//2))
+    if nlive < min_nlive:
+        log.writelog(f'**** WARNING: You should set run_nlive to at least {min_nlive} ****')
+
     sampler = NestedSampler(ln_like, ptform, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
                             ptform_args=[pmin, pmax])
