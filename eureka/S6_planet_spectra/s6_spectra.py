@@ -196,21 +196,22 @@ def plot_spectra(eventlabel, s5_meta=None):
             if meta.isplots_S6>=1:
                 plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel)
 
-            if meta.isplots_S6>=3 and y_param=='rp' and np.all([hasattr(meta, val) for val in ['planet_Teq', 'planet_mu', 'planet_Rad', 'planet_Mass', 'star_Rad']]):
+            if meta.isplots_S6>=3 and y_param=='rp' and np.all([hasattr(meta, val) for val in ['planet_Teq', 'planet_mu', 'planet_Rad', 'planet_Mass', 'star_Rad', 'planet_R0']]):
                 # Make the spectrum plot
                 if meta.planet_Rad is None:
                     meta.planet_Rad = medians
                     if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
                         meta.planet_Rad = np.sqrt(meta.planet_Rad)
                     meta.planet_Rad = np.mean(meta.planet_Rad)
-                    meta.planet_Rad *= meta.star_Rad*constants.R_sun/constants.R_jup
-                    meta.planet_Rad = meta.planet_Rad.si.value
+                    meta.planet_Rad *= (meta.star_Rad*constants.R_sun/constants.R_jup).si.value
+                if meta.planet_R0 is not None:
+                    meta.planet_R0 *= (constants.R_jup/(meta.star_Rad*constants.R_sun)).si.value
                 meta.planet_g = ((constants.G*meta.planet_Mass*constants.M_jup)/(meta.planet_Rad*constants.R_jup)**2).si.value
                 log.writelog(f'Calculated g={np.round(meta.planet_g,2)} m/s^2 with Rp={np.round(meta.planet_Rad, 2)} R_jup and Mp={meta.planet_Mass} M_jup')
                 scaleHeight = (constants.k_B*(meta.planet_Teq*units.K)/((meta.planet_mu*units.u)*(meta.planet_g*units.m/units.s**2))).si.to('km')
                 log.writelog(f'Calculated H={np.round(scaleHeight,2)} with g={np.round(meta.planet_g, 2)} m/s^2, Teq={meta.planet_Teq} K, and mu={meta.planet_mu} u')
                 scaleHeight = (scaleHeight/(meta.star_Rad*constants.R_sun)).si.value
-                plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel, scaleHeight)
+                plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel, scaleHeight, meta.planet_R0)
             
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.

@@ -14,6 +14,7 @@ planet_Teq		1400 # The equilibrium temperature of the planet in units of Kelvin
 planet_Mass		2 # The planet's mass in units of Jupiter radii (used to calculate surface gravity)
 planet_Rad		None # The planet's radius in units of Jupiter radii (used to calculate surface gravity); Set to None to use the average fitted radius
 planet_mu		2.3 # The mean molecular mass of the atmosphere (in atomic mass units)
+planet_R0		None # The reference radius (in Jupiter radii) for the scale height measurement; Set to None to use the mean fitted radius
 
 # Diagnostics
 isplots_S6      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

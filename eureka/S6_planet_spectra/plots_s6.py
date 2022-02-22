@@ -2,7 +2,9 @@ from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_x=None, model_y=None, y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)', scaleHeight=None):
+def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_x=None, model_y=None,
+                  y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)',
+				  scaleHeight=None, planet_R0=None):
 
 	fig = plt.figure('6101', figsize=(8, 4))
 	plt.clf()
@@ -39,7 +41,10 @@ def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_
 		else:
 			expFactor = 1
 
-		H_0 = np.mean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
+		if planet_R0 is None:
+			H_0 = np.mean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
+		else:
+			H_0 = planet_R0/scaleHeight
 
 		def H(r):
 			return (r/y_scalar)**(1/expFactor)/scaleHeight - H_0
