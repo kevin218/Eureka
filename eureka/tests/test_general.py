@@ -5,6 +5,7 @@
 
 import numpy as np
 from ..lib import util
+from ..S2_calibrations import s2_calibrate as s2
 from ..S3_data_reduction import s3_reduce as s3
 from ..S4_generate_lightcurves import s4_genLC as s4
 from ..S5_lightcurve_fitting import s5_fit as s5
@@ -73,12 +74,12 @@ def test_NIRCam(capsys):
     # run S3 and S4
     reload(s3)
     reload(s4)
+    reload(s5)
     s3_meta = s3.reduceJWST(meta.eventlabel)
     s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
     s5_meta = s5.fitJWST(meta.eventlabel, s4_meta=s4_meta)
 
     # run assertions for S3
-    #outdir_raw = 
     meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage3/'
     name = pathdirectory(meta, 'S3', 1, ap=20, bg=20)
     assert os.path.exists(name)
@@ -103,7 +104,6 @@ def test_NIRCam(capsys):
     os.system("rm -r data/JWST-Sim/NIRCam/Stage4/*")
     os.system("rm -r data/JWST-Sim/NIRCam/Stage5/*")
 
-'''
 def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mismatch)
 
     # is able to display any message without failing a test
@@ -118,27 +118,45 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     meta.topdir='../tests'
 
     # run stage 3 and 4
+    reload(s2)
     reload(s3)
     reload(s4)
-    s3_meta = s3.reduceJWST(meta.eventlabel)
+    reload(s5)
+    s2_meta = s2.calibrateJWST(meta.eventlabel)
+    s3_meta = s3.reduceJWST(meta.eventlabel, s2_meta=s2_meta)
     s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
+    s5_meta = s5.fitJWST(meta.eventlabel, s4_meta=s4_meta)
 
+    # assert stage 2 outputs
+    meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
+    name = pathdirectory(meta, 'S2', 1)
+    assert os.path.exists(name)
+    assert os.path.exists(name+'/figs')
+    
     # assert stage 3 outputs
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage3/'
-    name = pathdirectory(meta, 'S3', 1, ap=20, bg=8)
+    name = pathdirectory(meta, 'S3', 1, ap=8, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+'/figs')
-
+    
     # assert stage 4 outputs
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage4/'
-    name = pathdirectory(meta, 'S3', 1, ap=20, bg=8)
+    name = pathdirectory(meta, 'S4', 1, ap=8, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+'/figs')
-
+    
+    # assert stage 4 outputs
+    meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage5/'
+    name = pathdirectory(meta, 'S5', 1, ap=8, bg=10)
+    assert os.path.exists(name)
+    assert os.path.exists(name+'/figs')
+    
     # remove temp files
+    os.system("rm -r data/JWST-Sim/NIRSpec/Stage2/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage3/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage4/*")
-'''
+    os.system("rm -r data/JWST-Sim/NIRSpec/Stage5/*")
+
 '''
 def test_MIRI(capsys): # NOTE:: still not implemented
 
