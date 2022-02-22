@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
-from scipy.interpolate import interp1d
 from ..lib import gaussian as g
 from ..lib import smooth
 from . import plots_s3
@@ -414,62 +412,6 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     profile /= np.sum(profile, axis=0)
 
     return profile
-
-
-def profile_niriss_median(data, medprof, sigma=50):
-    """
-    Builds a median profile for the NIRISS images.
-
-    Parameters
-    ----------
-    data : object
-    medprof : np.ndarray
-       A median image from all NIRISS images. This
-       is a first pass attempt, and optimized in
-       the optimal extraction routine.
-    sigma : float, optional
-       Sigma for which to remove outliers above.
-       Default is 50.
-    """
-
-    for i in range(medprof.shape[1]):
-
-        col = data.median[:,i]+0.0
-        x = np.arange(0,len(col),1)
-
-        # fits the spatial profile with a savitsky-golay filter
-        # window length needs to be quite small for the NIRISS columns
-        filt = savgol_filter(col, window_length=15, polyorder=5)
-        resid = np.abs(col-filt)
-
-        # finds outliers
-        inliers = np.where(resid<=sigma*np.nanstd(resid))[0]
-        outliers = np.delete(x,inliers)
-
-        # removes outliers
-        if len(outliers)>0:
-            filt = savgol_filter(col[inliers], window_length=3, polyorder=2)
-
-            # finds values that are above/below the interpolation range
-            # these need to be masked first, otherwise it will raise an error
-            above = np.where(x[outliers]>x[inliers][-1])[0]
-            below = np.where(x[outliers]<x[inliers][0])[0]
-
-            # fills pixels that are above/below the interpolation range
-            # with 0s
-            if len(above)>0:
-                medprof[:,i][outliers[above]]=0
-                outliers = np.delete(outliers, above)
-            if len(below)>0:
-                medprof[:,i][outliers[below]]=0
-                outliers = np.delete(outliers, below)
-
-            # fills outliers with interpolated values
-            interp = interp1d(x[inliers], filt)
-            if len(outliers)>0:
-                medprof[:,i][outliers] = interp(x[outliers])
-
-    return medprof
 
 
 def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, 

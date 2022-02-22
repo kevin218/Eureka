@@ -243,7 +243,7 @@ class NIRISS_S3(object):
                                         inclass=True)
 
         self.data_bkg_subbed = bkg_outputs[0]
-        self.bkg = bkg_ouputs[1]
+        self.bkg = bkg_outputs[1]
         self.bkg_var = bkg_outputs[2]
 
         return
