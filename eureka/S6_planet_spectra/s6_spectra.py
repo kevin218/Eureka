@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from astropy import units
+from astropy import units, constants
 import os, glob
 import time as time_pkg
 from ..lib import manageevent as me
@@ -159,11 +159,7 @@ def plot_spectra(eventlabel, s5_meta=None):
                 raise AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
             
             # Convert to percent, ppm, etc. if requested
-            if hasattr(meta, 'y_scalar'):
-                medians *= meta.y_scalar
-                if errs is not None:
-                    errs *= meta.y_scalar
-            else:
+            if not hasattr(meta, 'y_scalar'):
                 meta.y_scalar = 1
 
             if meta.y_scalar==1e6:
@@ -190,14 +186,31 @@ def plot_spectra(eventlabel, s5_meta=None):
                     meta.model_y_scalar = 1
                 
                 # Convert the model y-units if needed to match the data y-units requested
-                if meta.model_y_scalar!=meta.y_scalar:
-                    model_y *= (meta.y_scalar/meta.model_y_scalar)
+                if meta.model_y_scalar!=1:
+                    model_y /= meta.model_y_scalar
             else:
                 model_x = None
                 model_y = None
 
             # Make the spectrum plot
-            plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, ylabel, xlabel)
+            if meta.isplots_S6>=1:
+                plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel)
+
+            if meta.isplots_S6>=3 and y_param=='rp' and np.all([hasattr(meta, val) for val in ['planet_Teq', 'planet_mu', 'planet_Rad', 'planet_Mass', 'star_Rad']]):
+                # Make the spectrum plot
+                if meta.planet_Rad is None:
+                    meta.planet_Rad = medians
+                    if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
+                        meta.planet_Rad = np.sqrt(meta.planet_Rad)
+                    meta.planet_Rad = np.mean(meta.planet_Rad)
+                    meta.planet_Rad *= meta.star_Rad*constants.R_sun/constants.R_jup
+                    meta.planet_Rad = meta.planet_Rad.si.value
+                meta.planet_g = ((constants.G*meta.planet_Mass*constants.M_jup)/(meta.planet_Rad*constants.R_jup)**2).si.value
+                log.writelog(f'Calculated g={np.round(meta.planet_g,2)} m/s^2 with Rp={np.round(meta.planet_Rad, 2)} R_jup and Mp={meta.planet_Mass} M_jup')
+                scaleHeight = (constants.k_B*(meta.planet_Teq*units.K)/((meta.planet_mu*units.u)*(meta.planet_g*units.m/units.s**2))).si.to('km')
+                log.writelog(f'Calculated H={np.round(scaleHeight,2)} with g={np.round(meta.planet_g, 2)} m/s^2, Teq={meta.planet_Teq} K, and mu={meta.planet_mu} u')
+                scaleHeight = (scaleHeight/(meta.star_Rad*constants.R_sun)).si.value
+                plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel, scaleHeight)
             
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -220,7 +233,6 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
                 keys = [key for key in samples.keys() if 'fp' in key]
             else:
                 keys = [key for key in samples.keys() if 'rp' in key]
-            print(keys, len(keys), len(keys)==0, keys is None)
             if len(keys)==0:
                 raise AssertionError(f'Parameter {y_param} was not in the list of fitted parameters which includes:'
                                     +', '.join(samples.keys()))

@@ -1,11 +1,24 @@
+from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_x=None, model_y=None, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)'):
+def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_x=None, model_y=None, y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)', scaleHeight=None):
 
 	fig = plt.figure('6101', figsize=(8, 4))
 	plt.clf()
 	ax = fig.subplots(1,1)
+
+	wavelength = deepcopy(wavelength)
+	spectrum = deepcopy(spectrum)
+	err = deepcopy(err)
+	model_x = deepcopy(model_x)
+	model_y = deepcopy(model_y)
+
+	spectrum *= y_scalar
+	if err is not None:
+		err *= y_scalar
+	if model_y is not None:
+		model_y *= y_scalar
 
 	ax.errorbar(wavelength, spectrum, fmt='o', capsize=3, ms=3, xerr=wavelength_error, yerr=err, color='k')
 	if (model_x is not None) and (model_y is not None):
@@ -19,7 +32,28 @@ def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_
 	ax.set_ylabel(ylabel)
 	ax.set_xlabel(xlabel)
 
-	fname = 'figs/fig6101.png'
+	if scaleHeight is not None:
+		if r'^2' in ylabel:
+			# We're dealing with transit depth, so need to convert accordingly
+			expFactor = 2
+		else:
+			expFactor = 1
+
+		H_0 = np.mean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
+
+		def H(r):
+			return (r/y_scalar)**(1/expFactor)/scaleHeight - H_0
+
+		def r(H):
+			return ((H+H_0)*scaleHeight)**expFactor*y_scalar
+
+		ax2 = ax.secondary_yaxis('right', functions=(H, r))
+		ax2.set_ylabel('Scale Height')
+
+		fname = 'figs/fig6301.png'
+	else:
+		fname = 'figs/fig6101.png'
+	
 	fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
 	if meta.hide_plots:
 		plt.close()
