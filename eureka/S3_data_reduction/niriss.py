@@ -5,6 +5,7 @@
 # Last updated date: February 7, 2022
 #
 ####################################
+import os
 import itertools
 import numpy as np
 import ccdproc as ccdp
@@ -174,7 +175,8 @@ def f277_mask(data, isplots=0):
     return new_mask, mid[q]
 
 
-def mask_method_one(data, meta=None, isplots=0, save=True, inclass=False):
+def mask_method_one(data, meta=None, isplots=0, save=False, inclass=False,
+                    outdir=None):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -275,8 +277,13 @@ def mask_method_one(data, meta=None, isplots=0, save=True, inclass=False):
     tab['order_1'] = fit1(x)
     tab['order_2'] = fit2(x)
 
+    fn = 'niriss_order_fits_method1.csv'
     if save:
-        tab.write('niriss_order_fits_method1.csv',format='csv')
+        if outdir is not None:
+            path = os.path.join(outdir, fn)
+        else:
+            path = fn
+        tab.write(path, format='csv')
 
     if inclass==False:
         meta.tab1 = tab
@@ -285,7 +292,8 @@ def mask_method_one(data, meta=None, isplots=0, save=True, inclass=False):
         return tab
 
 
-def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False):
+def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False,
+                    outdir=None):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
@@ -404,7 +412,13 @@ def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False):
     tab['order_2'] = np.nanmedian(avg[:,2:4],axis=1)
 
     if save:
-        tab.write('niriss_order_fits_method2.csv',format='csv')
+        fn = 'niriss_order_fits_method2.csv'
+        print(outdir)
+        if outdir is not None:
+            path = os.path.join(outdir, fn)
+        else:
+            path = fn
+        tab.write(path, format='csv')
 
     if inclass == False:
         meta.tab2 = tab
@@ -501,7 +515,7 @@ def flag_bg(data, meta):
     return
 
 
-def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0, inclass=False):
+def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     """
     Subtracts background from non-spectral regions.
 
@@ -551,10 +565,8 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0, incl
     box_mask = dirty_mask(data.median)
     data, bkg, bkg_var = fitbg3(data, np.array(box_mask-1, dtype=bool), 
                                 readnoise, sigclip, isplots)
-    if inclass==False:
-        return data, bkg, bkg_var
-    else:
-        return data.bkg_subbed, bkg, bkg_var, box_mask
+    return data, bkg, bkg_var
+
 
 
 def set_which_table(i, meta):
