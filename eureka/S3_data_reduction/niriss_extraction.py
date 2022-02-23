@@ -4,6 +4,7 @@ to fit to the NIRISS orders to complete
 the optimal extraction of the data.
 """
 import numpy as np
+from tqdm import tqdm
 import scipy.optimize as so
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
@@ -169,3 +170,150 @@ def profile_niriss_moffat(data, pos1, pos2):
                                                           pos2,
                                                           return_together=False)
     return out_img1[0], out_img2[0]
+
+
+def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
+                       pos1=None, pos2=None, sigma=20, cr_mask=None,
+                       proftype='gaussian', isplots=0, quad=1):
+    """
+    Optimal extraction routine for NIRISS. This is different from the 
+    general `optspex.optimize` since there are two ways to extract the
+    NIRISS data. The first is breaking up the image into quadrants. The
+    second is extracting the spectra all together.
+
+    Parameters
+    ----------
+    data : np.ndarray
+       Set of raw NIRISS 2D images.
+    spectrum : np.ndarray
+       Box-extracted spectra for each image to use in the 
+       optimal extraction routine.
+    spectrum_var : np.ndarray
+       Variance array for the box-extracted spectra.
+    sky_bkg : np.ndarray
+       Images of the estimated sky background.
+    pos1 : np.ndarray, optional
+       Initial guesses for the center of the first order. These 
+       can be taken from `meta.tab1` or `meta.tab2`. 
+       Default is None. This is not optional if you are using
+       the `gaussian` or `moffat` profile types.
+    pos2 : np.ndarray
+       Initial guesses for the center of the second order. These
+       can be taken from `meta.tab1` or `meta.tab2`.
+       Default is None. This is not optional if you are using
+       the `gaussian` or `moffat` profile types.
+    sigma : float, optional
+       Sigma to use when looking for cosmic rays. Default is 20.
+    cr_mask : np.ndarray , optional
+       A set of masks with cosmic rays already identified. This
+       will be used in the very last step, when extracting the
+       spectra. Default is None.
+    proftype : str, optional
+       Sets which type of profile to use when extracting the spectra.
+       Default is `gaussian`. Other options include `median` and `moffat`.
+    quad : int, optional
+       Sets which quadrant of the images to extract spectra from.
+       Quad = 1 is the upper right corner (isolated first order).
+       Quad = 2 is the lower right corner (isolated second order).
+       Quad = 3 is the left-hand side (overlap region between orders).
+       Quad = 4 is the entire image. 
+       Default is 1.
+    isplots : int, optional
+       A key to decide which diagnostic plots to save. Default is 0 
+       (no plots are saved).
+    """
+
+    # initialize arrays
+    extracted_spectra = np.zeros((len(data), data.shape[2]))
+    extracted_error   = np.zeros((len(data), data.shape[2]))
+    
+    for i in tqdm(range(len(data))):
+    
+        ny, nx = data[i].shape
+        x = np.arange(0,ny,1)
+        D = np.copy(data[i])
+        
+        median = np.nanmedian(data,axis=0)
+        median[median<0]=0
+
+        isnewprofile=True
+        M = np.ones(D.shape) # cosmic ray mask
+
+        while isnewprofile==True:
+
+            # 5. construct spatial profile
+            # Median mask creation
+            if proftype.lower() == 'median':
+                median = profile_niriss_median(median, sigma=5)
+                P,_ = (median-sky_bkg[i])*M
+
+            # Gaussian mask creation
+            elif proftype.lower() == 'gaussian':
+                if (pos1 is not None) and (pos2 is not None):
+                    P,_ = profile_niriss_gaussian((median-sky_bkg[i])*M, 
+                                                  pos1,
+                                                  pos2)
+                else:
+                    return('Please pass in `pos1` and `pos2` arguments.')
+
+            # Moffat mask creation
+            elif proftype.lower() == 'moffat':
+                if (pos1 is not None) and (pos2 is not None):
+                    P,_ = profile_niriss_moffat((median-sky_bkg[i])*M,
+                                                pos1,
+                                                pos2)
+                else:
+                    return('Please pass in `pos1` and `pos2` arguments.')
+
+            else:
+                return('Mask profile type not implemeted.')
+
+            P = P/np.nansum(P,axis=0) # profile normalized along columns
+            
+            isnewprofile=False
+
+            # 6. Revise variance estimates
+            V = spectrum_var[i] + np.abs(sky_bkg[i]+(P*spectrum[i]))/Q
+
+            # 7. Mask *more* cosmic ray hits
+            stdevs = np.sqrt((np.abs(D - sky_bkg[i] - spectrum[i])*P)**2.0/V)
+            y1,x1 = np.where((stdevs*M)>sigma)
+
+            if isplots>=8:
+                plt.title('check')
+                plt.imshow(stdevs*M, vmin=sigma-2, vmax=sigma)
+                plt.show()
+
+                plt.title('profile')
+                plt.imshow(P)
+                plt.show()
+
+            # If cosmic rays found, continue looping through untl 
+            # they are all masked
+            if len(y1)>0 or len(x1)>0:
+                M[y1,x1] = 0.0
+                isnewprofile=True
+
+            # When no more cosmic rays are idetified
+            else:
+                # Apply optional mask
+                if cr_mask is not None:
+                    D = D*~cr_mask[i]
+
+                # 8. Extract optimal spectrum
+                denom = np.nansum(M * P**2.0 / V, axis=0)
+                f = np.nansum(M*P*(D-sky_bkg[i])/V,axis=0) / denom
+                var_f = np.nansum(M*P,axis=0) / denom
+
+                if isplots==9:
+                    plt.imshow(D*M*P,
+                               vmin=np.nanpercentile(D*M*P,10),
+                               vmax=np.nanpercentile(D*M*P,99))
+                    plt.show()
+                    plt.imshow(P)
+                    plt.show()
+
+        extracted_spectra[i] = f + 0.0
+        extracted_error[i] = var_f + 0.0
+        
+    return extracted_spectra, extracted_error
