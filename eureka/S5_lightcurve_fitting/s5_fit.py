@@ -68,7 +68,7 @@ def fitJWST(eventlabel, s4_meta=None):
         s4_meta = read_s4_meta(meta)
 
     meta = load_general_s4_meta_info(meta, s4_meta)
-
+    
     if (not meta.s4_allapers) or (not meta.allapers):
         # The user indicated in the ecf that they only want to consider one aperture
         # in which case the code will consider only the one which made s4_meta.
@@ -88,7 +88,7 @@ def fitJWST(eventlabel, s4_meta=None):
         for bg_hw_val in meta.bg_hw_range:
             run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val)
             meta.runs_s5.append(run)
-
+    
     run_i = 0
     old_meta = meta
     for spec_hw_val in meta.spec_hw_range:
