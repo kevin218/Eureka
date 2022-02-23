@@ -141,6 +141,10 @@ def reduceJWST(eventlabel, s2_meta=None):
             raise AssertionError("Unable to find output data files from Eureka!'s S2 step! "
                                  + "Looked in the folder: \n{}".format(s2_meta.outputdir))
 
+    if hasattr(meta, 'datetime'):
+        meta.old_datetime = meta.datetime # Capture the date used by S2
+        meta.datetime = None # Reset the datetime in case we're running this on a different day
+
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
 
