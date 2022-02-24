@@ -127,6 +127,7 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
     s5_meta = s5.fitJWST(meta.eventlabel, s4_meta=s4_meta)
 
+    
     # assert stage 2 outputs
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
     name = pathdirectory(meta, 'S2', 1)
@@ -156,7 +157,7 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage3/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage4/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage5/*")
-
+    
 '''
 def test_MIRI(capsys): # NOTE:: still not implemented
 

@@ -33,5 +33,5 @@ topdir     ../tests
 
 # Directories relative to project dir
 inputdir     /data/JWST-Sim/NIRSpec/Stage2/
-ancildir     /data/JWST-Sim/NIRSpec/ancil/ref/
+ancildir     /data/JWST-Sim/NIRSpec/ancil
 outputdir	 /data/JWST-Sim/NIRSpec/Stage3/
