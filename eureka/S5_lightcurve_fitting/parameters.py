@@ -11,7 +11,7 @@ from ..lib import readECF as rd
 
 class Parameter:
     """A generic parameter class"""
-    def __init__(self, name, value, ptype='free', mn=None, mx=None):
+    def __init__(self, name, value, ptype='free', mn=None, mx=None, prior=None):
         """Instantiate a Parameter with a name and value at least
 
         Parameters
@@ -41,6 +41,7 @@ class Parameter:
         self.mn = mn
         self.mx = mx
         self.ptype = ptype
+        self.prior = prior
 
     @property
     def ptype(self):
@@ -70,7 +71,7 @@ class Parameter:
     @property
     def values(self):
         """Return all values for this parameter"""
-        vals = self.name, self.value, self.ptype, self.mn, self.mx
+        vals = self.name, self.value, self.ptype, self.mn, self.mx, self.prior
 
         return list(filter(lambda x: x is not None, vals))
 

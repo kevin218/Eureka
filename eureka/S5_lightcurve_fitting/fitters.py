@@ -51,7 +51,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     """
     # Group the different variable types
-    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, pmin, pmax, priortype, indep_vars = group_variables(model)
     
     results = lsq.minimize(lc, model, freepars, pmin, pmax, freenames, indep_vars)
     
@@ -171,6 +171,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February 23-25, 2022 Megan Mansfield
+        Added log-uniform and Gaussian priors.
     """
     log.writelog('\nCalling lsqfitter first...')
     lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
@@ -180,7 +182,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         lc.unc *= np.sqrt(lsq_sol.chi2red)
     
     # Group the different variable types
-    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, pmin, pmax, priortype, indep_vars = group_variables(model)
     
     if lsq_sol.cov_mat is not None:
         step_size = np.diag(lsq_sol.cov_mat)
@@ -197,8 +199,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
     burn_in = meta.run_nburn
 
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
-    in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
-    if not np.all(in_range):
+    uniformprior=np.where(priortype=='U')
+    loguniformprior=np.where(priortype=='LU')
+    in_range = np.array([((pmin[uniformprior] <= ii) & (ii <= pmax[uniformprior])).all() for ii in pos[:,uniformprior]])
+    in_range2 = np.array([((pmin[loguniformprior] <= np.log(ii)) & (np.log(ii) <= pmax[loguniformprior])).all() for ii in pos[:,loguniformprior]])
+    if not (np.all(in_range))&(np.all(in_range2)):
         log.writelog('Not all walkers were initialized within the priors, using a smaller proposal distribution')
         pos = pos[in_range]
         # Make sure the step size is well within the limits
@@ -214,18 +219,19 @@ def emceefitter(lc, model, meta, log, **kwargs):
         pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(new_nwalkers)]).reshape(-1,ndim), axis=0)
         if remove_zeroth:
             pos = pos[1:]
-        in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
-    if not np.any(in_range):
+        in_range = np.array([((pmin[uniformprior] <= ii) & (ii <= pmax[uniformprior])).all() for ii in pos[:,uniformprior]])
+        in_range2 = np.array([((pmin[loguniformprior] <= np.log(ii)) & (np.log(ii) <= pmax[loguniformprior])).all() for ii in pos[:,loguniformprior]])
+    if not (np.any(in_range))&(np.any(in_range2)):
         raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
                              'Check your stating position, decrease your step size, or increase the bounds on your parameters')
-    elif not np.all(in_range):
+    elif not (np.all(in_range))&(np.all(in_range2)):
         log.writelog('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
         log.writelog('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
-        pos = pos[in_range]
+        pos = pos[in_range+in_range2]
         nwalkers = pos.shape[0]
 
     log.writelog('Running emcee...')
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, freenames))
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, pmin, pmax, priortype, freenames))
     sampler.run_mcmc(pos, run_nsteps, progress=True)
     samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
     if meta.isplots_S5 >= 5:
@@ -295,6 +301,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February 23-25, 2022 Megan Mansfield
+        Added log-uniform and Gaussian priors.
     """
     log.writelog('\nCalling lsqfitter first...')
     # RUN LEAST SQUARES
@@ -305,7 +313,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         lc.unc *= np.sqrt(lsq_sol.chi2red)
 
     # Group the different variable types
-    freenames, freepars, pmin, pmax, indep_vars = group_variables(model)
+    freenames, freepars, pmin, pmax, priortype, indep_vars = group_variables(model)
 
     # DYNESTY
     nlive = meta.run_nlive # number of live points
@@ -315,12 +323,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     tol = meta.run_tol  # the stopping criterion
 
     # START DYNESTY
-    l_args = [lc, model, pmin, pmax, freenames]
+    l_args = [lc, model, pmin, pmax, priortype, freenames]
 
     log.writelog('Running dynesty...')
     sampler = NestedSampler(lnprob, ptform, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
-                            ptform_args=[pmin, pmax])
+                            ptform_args=[pmin, pmax, priortype])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
 
@@ -488,9 +496,11 @@ def group_variables(model):
     freepars: np.array
         The fitted variables.
     pmin: np.array
-        The lower bound for constrained variables.
+        The lower bound for constrained variables with uniform/log uniform priors, or mean for constrained variables with Gaussian priors.
     pmax: np.array
-        The upper bound for constrained variables.
+        The upper bound for constrained variables with uniform/log uniform priors, or mean for constrained variables with Gaussian priors.
+    priortype: np.array
+        Keywords indicating the type of prior for each free parameter.
     indep_vars: dict
         The frozen variables.
 
@@ -502,6 +512,8 @@ def group_variables(model):
         Moved code to separate function to reduce repeated code.
     - January 11, 2022 Megan Mansfield
         Added ability to have shared parameters
+    - February 23-25, 2022 Megan Mansfield
+        Added log-uniform and Gaussian priors.
     """
     all_params = []
     alreadylist = []
@@ -521,6 +533,7 @@ def group_variables(model):
     freepars = []
     pmin = []
     pmax = []
+    priortype = []
     indep_vars = {}
     for ii, item in enumerate(all_params):
         name, param = item
@@ -531,17 +544,20 @@ def group_variables(model):
             if len(param) > 3:
                 pmin.append(param[2])
                 pmax.append(param[3])
+                priortype.append(param[4])
             else:
                 pmin.append(-np.inf)
                 pmax.append(np.inf)
+                priortype.append('U')
         elif param[1] == 'independent':
             indep_vars[name] = param[0]
     freenames = np.array(freenames)
     freepars = np.array(freepars)
     pmin = np.array(pmin)
     pmax = np.array(pmax)
+    priortype = np.array(priortype)
 
-    return freenames, freepars, pmin, pmax, indep_vars
+    return freenames, freepars, pmin, pmax, priortype, indep_vars
 
 def group_variables_lmfit(model):
     """Group variables into fitted and frozen for lmfit fitter.
