@@ -198,20 +198,9 @@ def reduceJWST(eventlabel, s2_meta=None):
             log.writelog(f"Output directory: {meta.outputdir}")
             log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
 
-            # Copy ecf (and update inputdir in case S3 is being called sequentially with S2)
+            # Copy ecf
             log.writelog('Copying S3 control file')
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            rd.copy_ecf(meta, ecffile)
 
             # Create list of file segments
             meta = util.readfiles(meta)

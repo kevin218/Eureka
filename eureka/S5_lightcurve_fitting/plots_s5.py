@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import corner
+from scipy import stats
+from copy import deepcopy
 
 from .likelihood import computeRMS
 from .utils import COLORS
@@ -41,7 +43,10 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.copy(lc.flux)
-        unc = np.copy(lc.unc)
+        if "unc_fit" in lc.__dict__.keys():
+            unc = deepcopy(lc.unc_fit)
+        else:
+            unc = np.copy(lc.unc)
         model = np.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -68,7 +73,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         ax[1].plot(new_time, model_phys, color='0.3', zorder = 10)
         ax[1].set_ylabel('Calibrated Flux', size=14)
 
-        ax[2].errorbar(lc.time, residuals*1e6, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
+        ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.', color='w', ecolor=color, mec=color)
         ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
@@ -108,6 +113,8 @@ def plot_rms(lc, model, meta, fitter):
         Moved plotting code to a separate function.
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February 18, 2022 Caroline Piaulet
+        Using the fitted unc for plotted, if exists
     """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
@@ -117,7 +124,10 @@ def plot_rms(lc, model, meta, fitter):
 
     for channel in lc.fitted_channels:
         flux = np.copy(lc.flux)
-        unc = np.copy(lc.unc)
+        if "unc_fit" in lc.__dict__.keys():
+            unc = np.copy(lc.unc_fit)
+        else:
+            unc = np.copy(lc.unc)
         model = np.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -186,5 +196,68 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         plt.close()
     else:
         plt.pause(0.2)
+
+    return
+
+def plot_res_distr(lc, model, meta, fitter):
+    """Plot the normalized distribution of residuals + a Gaussian
+
+    Parameters
+    ----------
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+        
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+
+    History:
+    - February 18, 2022 Caroline Piaulet
+        Created function
+    """
+    if type(fitter)!=str:
+        raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
+
+    time = lc.time
+    model_lc = model.eval()
+
+    plt.figure(int('54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    
+
+    for channel in lc.fitted_channels:
+        flux = np.copy(lc.flux)
+        if "unc_fit" in lc.__dict__.keys():
+            unc = np.copy(lc.unc_fit)
+        else:
+            unc = np.copy(lc.unc)
+        model = np.copy(model_lc)
+        if lc.share:
+            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
+            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+        
+        residuals = flux - model
+        residuals = residuals[np.argsort(time)]
+        
+        n, bins, patches = plt.hist(residuals/unc,alpha=0.5,color='b',edgecolor='b',lw=1)
+        x=np.linspace(-4.,4.,200)
+        px=stats.norm.pdf(x,loc=0,scale=1)
+        plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
+        plt.xlabel("Residuals/scatter", fontsize=14)
+        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if meta.hide_plots:
+            plt.close()
+        else:
+            plt.pause(0.2)
 
     return

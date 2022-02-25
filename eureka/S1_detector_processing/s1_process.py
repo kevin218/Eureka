@@ -58,7 +58,7 @@ def rampfitJWST(eventlabel):
 	# This code allows the input and output files to be stored outside of the Eureka! folder
 	outputdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
 	if outputdir[-1]!='/':
-	  outputdir += '/'
+		outputdir += '/'
 	run = util.makedirectory(meta, 'S1')
 	meta.workdir = util.pathdirectory(meta, 'S1', run)
 	# Add a trailing slash so we don't need to add it everywhere below
@@ -74,7 +74,7 @@ def rampfitJWST(eventlabel):
 
 	# Copy ecf
 	log.writelog('Copying S1 control file')
-	shutil.copy(ecffile, meta.workdir)
+	rd.copy_ecf(meta, ecffile)
 
 	# Create list of file segments
 	meta = util.readfiles(meta)
