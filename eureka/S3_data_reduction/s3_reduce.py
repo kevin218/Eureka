@@ -206,10 +206,7 @@ def reduceJWST(eventlabel, s2_meta=None):
             meta = util.readfiles(meta)
             meta.num_data_files = len(meta.segment_list)
             if meta.num_data_files==0:
-                rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-                if rootdir[-1]!='/':
-                    rootdir += '/'
-                raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
+                raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!')
             else:
                 log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 
