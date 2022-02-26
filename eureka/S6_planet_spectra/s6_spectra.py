@@ -153,7 +153,7 @@ def plot_spectra(eventlabel, s5_meta=None):
                 ylabel = r'$(R_{\rm p}/R_{\rm *})^2$'
             elif meta.y_unit in ['Rp/Rs', 'Rp/R*']:
                 ylabel = r'$R_{\rm p}/R_{\rm *}$'
-            elif meta.y_unit in ['Fp/Rs', 'Fp/R*']:
+            elif meta.y_unit in ['Fp/Fs', 'Fp/F*']:
                 ylabel = r'$F_{\rm p}/F_{\rm *}$'
             else:
                 raise AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
