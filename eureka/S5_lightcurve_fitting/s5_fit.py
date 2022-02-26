@@ -195,7 +195,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
-    model = m.CompositeModel(modellist)
+    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
     
     # Fit the models using one or more fitters
     log.writelog("=========================")
