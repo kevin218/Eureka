@@ -78,9 +78,9 @@ def fitJWST(eventlabel, s4_meta=None):
 
     if meta.testing_S5:
         # Only fit a single channel while testing
-        chanrng = [0]
+        chanrng = 1
     else:
-        chanrng = range(meta.nspecchan)
+        chanrng = meta.nspecchan
 
     # Create directories for Stage 5 outputs
     meta.runs_s5 = []
@@ -108,20 +108,9 @@ def fitJWST(eventlabel, s4_meta=None):
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
             
-            # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
+            # Copy ecf
             log.writelog('Copying S5 control file')
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            rd.copy_ecf(meta, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
             shutil.copy(meta.fit_par, meta.outputdir)
@@ -141,23 +130,23 @@ def fitJWST(eventlabel, s4_meta=None):
             
             if sharedp:
                 #Make a long list of parameters for each channel
-                longparamlist, paramtitles = make_longparamlist(meta, params)
+                longparamlist, paramtitles = make_longparamlist(meta, params, chanrng)
 
-                log.writelog("\nStarting Shared Fit of {} Channels\n".format(meta.nspecchan))
+                log.writelog("\nStarting Shared Fit of {} Channels\n".format(chanrng))
                 
                 flux = np.array([])
                 flux_err = np.array([])
-                for i in np.arange(meta.nspecchan):
+                for i in range(chanrng):
                     flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
                     flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
                 
-                meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
+                meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
             else:
-                for channel in range(meta.nspecchan):
+                for channel in range(chanrng):
                     #Make a long list of parameters for each channel
-                    longparamlist, paramtitles = make_longparamlist(meta, params)
+                    longparamlist, paramtitles = make_longparamlist(meta, params, chanrng)
                     
-                    log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
+                    log.writelog("\nStarting Channel {} of {}\n".format(channel+1, chanrng))
                     
                     # Get the flux and error measurements for the current channel
                     flux = meta.lcdata[channel,:]
@@ -167,7 +156,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux_err = flux_err/ flux.mean()
                     flux = flux / flux.mean()
                     
-                    meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
+                    meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
             
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -181,9 +170,9 @@ def fitJWST(eventlabel, s4_meta=None):
     
     return meta
 
-def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles):
+def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng):
     # Load the relevant values into the LightCurve model object
-    lc_model = lc.LightCurve(time, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
+    lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
     
     if meta.testing_S5:
         # FINDME: Use this area to add systematics into the data
@@ -242,9 +231,9 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
 
     return meta
 
-def make_longparamlist(meta, params):
+def make_longparamlist(meta, params, chanrng):
     if meta.sharedp:
-        nspecchan = meta.nspecchan
+        nspecchan = chanrng
     else:
         nspecchan = 1
     
