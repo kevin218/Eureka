@@ -20,7 +20,7 @@ class MetaClass:
     def __init__(self):
         return
 
-def plot_spectra(eventlabel, s5_meta=None):
+def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
     '''Gathers together different wavelength fits and makes transmission/emission spectra.
 
     Parameters
@@ -50,14 +50,14 @@ def plot_spectra(eventlabel, s5_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S6_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # load savefile
     if s5_meta == None:
         s5_meta = read_s5_meta(meta)
 
-    meta = load_general_s5_meta_info(meta, s5_meta)
+    meta = load_general_s5_meta_info(meta, ecf_path, s5_meta)
 
     if (not meta.s5_allapers) or (not meta.allapers):
         # The user indicated in the ecf that they only want to consider one aperture
@@ -80,7 +80,7 @@ def plot_spectra(eventlabel, s5_meta=None):
             
             t0 = time_pkg.time()
             
-            meta = load_specific_s5_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
+            meta = load_specific_s5_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
             
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.runs_s6[run_i], ap=spec_hw_val, bg=bg_hw_val)
@@ -94,7 +94,7 @@ def plot_spectra(eventlabel, s5_meta=None):
             
             # Copy ecf
             log.writelog('Copying S6 control file')
-            rd.copy_ecf(meta, ecffile)
+            rd.copy_ecf(meta, ecf_path, ecffile)
             
             # Get the wavelength values
             wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
@@ -289,7 +289,7 @@ def read_s5_meta(meta):
 
     return s5_meta
 
-def load_general_s5_meta_info(meta, s5_meta):
+def load_general_s5_meta_info(meta, ecf_path, s5_meta):
 
     # Need to remove the topdir from the outputdir
     s5_outputdir = s5_meta.outputdir[len(s5_meta.topdir):]
@@ -304,7 +304,7 @@ def load_general_s5_meta_info(meta, s5_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S6_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Overwrite the inputdir with the exact output directory from S5
@@ -318,7 +318,7 @@ def load_general_s5_meta_info(meta, s5_meta):
 
     return meta
 
-def load_specific_s5_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
+def load_specific_s5_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     # Do some folder swapping to be able to reuse this function to find the correct S5 outputs
     tempfolder = meta.outputdir_raw
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
@@ -333,7 +333,7 @@ def load_specific_s5_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
 
     # Load S6 Eureka! control file and store values in the S5 metadata object
     ecffile = 'S6_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(new_meta, ecf)
 
     # Save correctly identified folders from earlier

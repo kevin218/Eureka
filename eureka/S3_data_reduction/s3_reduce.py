@@ -56,7 +56,7 @@ class DataClass:
         return
 
 
-def reduceJWST(eventlabel, s2_meta=None):
+def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters
@@ -90,7 +90,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
     meta.eventlabel=eventlabel
 
@@ -132,7 +132,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Load Eureka! control file and store values in the S2 metadata object
             ecffile = 'S3_' + eventlabel + '.ecf'
-            ecf = rd.read_ecf(ecffile)
+            ecf = rd.read_ecf(ecf_path, ecffile)
             rd.store_ecf(meta, ecf)
 
             # Overwrite the inputdir with the exact output directory from S2
@@ -200,7 +200,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Copy ecf
             log.writelog('Copying S3 control file')
-            rd.copy_ecf(meta, ecffile)
+            rd.copy_ecf(meta, ecf_path, ecffile)
 
             # Create list of file segments
             meta = util.readfiles(meta)

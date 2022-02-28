@@ -31,7 +31,7 @@ class MetaClass:
     def __init__(self):
         return
 
-def calibrateJWST(eventlabel):
+def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST pipeline into calints and x1dints.
 
     This function does the preparation for running the STScI's JWST pipeline and decides whether to run the
@@ -63,7 +63,7 @@ def calibrateJWST(eventlabel):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S2_' + eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Create directories for Stage 2 processing outputs
@@ -79,7 +79,7 @@ def calibrateJWST(eventlabel):
 
     # Copy ecf
     log.writelog('Copying S2 control file')
-    rd.copy_ecf(meta, ecffile)
+    rd.copy_ecf(meta, ecf_path, ecffile)
 
     # Create list of file segments
     meta = util.readfiles(meta)
