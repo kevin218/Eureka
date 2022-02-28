@@ -31,6 +31,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
 

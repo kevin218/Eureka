@@ -27,6 +27,8 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s5_meta:    MetaClass
         The metadata object from Eureka!'s S5 step (if running S5 and S6 sequentially).
 

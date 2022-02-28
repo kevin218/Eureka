@@ -46,6 +46,8 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s3_meta:    MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4 sequentially).
 

@@ -41,6 +41,10 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     ----------
     eventlabel: str
         Unique label for this dataset
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
+    s1_meta:    MetaClass
+        The metadata object from Eureka!'s S1 step (if running S1 and S2 sequentially).
 
     Returns
     -------

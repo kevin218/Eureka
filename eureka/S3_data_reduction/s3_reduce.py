@@ -63,6 +63,8 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s2_meta:    MetaClass
         The metadata object from Eureka!'s S2 step (if running S2 and S3 sequentially).
 
