@@ -23,9 +23,11 @@ class Parameter:
         ptype: str
             Parameter type, ['free','fixed','independent','shared']
         mn: float, int, str, list, tuple (optioal)
-            The minimum value
+            The first prior input value: lower-bound for uniform/log uniform priors, or mean for normal priors.
         mx: float, int, str, list, tuple (optioal)
-            The maximim value
+            The second prior input value: upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
+        prior: str
+            Type of prior, ['U','LU','N']
         """
         # If value is a list, distribute the elements
         if isinstance(value, list):
