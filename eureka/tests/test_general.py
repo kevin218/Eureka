@@ -70,14 +70,15 @@ def test_NIRCam(capsys):
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta.eventlabel='NIRCam'
     meta.topdir='../tests'
+    ecf_path='./NIRCam_ecfs/'
 
     # run S3 and S4
     reload(s3)
     reload(s4)
     reload(s5)
-    s3_meta = s3.reduceJWST(meta.eventlabel)
-    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
-    s5_meta = s5.fitJWST(meta.eventlabel, s4_meta=s4_meta)
+    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
+    s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     # run assertions for S3
     meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage3/'
@@ -116,16 +117,17 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta.eventlabel='NIRSpec'
     meta.topdir='../tests'
+    ecf_path='./NIRSpec_ecfs/'
 
     # run stage 3 and 4
     reload(s2)
     reload(s3)
     reload(s4)
     reload(s5)
-    s2_meta = s2.calibrateJWST(meta.eventlabel)
-    s3_meta = s3.reduceJWST(meta.eventlabel, s2_meta=s2_meta)
-    s4_meta = s4.lcJWST(meta.eventlabel, s3_meta=s3_meta)
-    s5_meta = s5.fitJWST(meta.eventlabel, s4_meta=s4_meta)
+    s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+    s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     
     # assert stage 2 outputs
