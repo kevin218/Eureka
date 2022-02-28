@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 
-def ln_like(theta, lc, model, priortype, freenames):
+def ln_like(theta, lc, model, freenames):
     """Compute the log-likelihood.
 
     Parameters
@@ -12,8 +12,6 @@ def ln_like(theta, lc, model, priortype, freenames):
         The lightcurve data object
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    priortype: ndarray
-        Keywords indicating the type of prior for each free parameter.
     freenames: iterable
         The names of the fitted parameters.
 
@@ -115,7 +113,7 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
-    ln_like_val = ln_like(theta, lc, model, priortype, freenames)
+    ln_like_val = ln_like(theta, lc, model, freenames)
     lp = lnprior(theta, prior1, prior2, priortype)
     lnprob = ln_like_val + lp
     if not np.isfinite(lnprob):
