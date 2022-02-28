@@ -95,7 +95,7 @@ class TestModels(unittest.TestCase):
         params = {"c1" : 0.0005, "c0": 0.997, "name": 'linear'}
 
         # Create the model
-        self.lin_model = models.PolynomialModel(parameters=None,coeff_dict=params)
+        self.lin_model = models.PolynomialModel(parameters=None,coeff_dict=params,nchan=1)
 
         # Evaluate and test output
         self.lin_model.time = self.time
@@ -121,12 +121,12 @@ class TestModels(unittest.TestCase):
         params.u4 = 0.1, 'free', 0., 1.
 
         # Make the transit model
-        self.t_model = models.TransitModel(parameters=params, name='transit')
+        self.t_model = models.TransitModel(parameters=params, name='transit',nchan=1)
 
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
-        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01})
+        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01},nchan=1)
 
         # Evaluate and test output
         self.exp_model.time = self.time
@@ -135,7 +135,7 @@ class TestModels(unittest.TestCase):
 
         # Create the model
         self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01,
-                                                           'r3':1., 'r4':0.05, 'r5':0.01})
+                                                           'r3':1., 'r4':0.05, 'r5':0.01},nchan=1)
 
         # Evaluate and test output
         self.exp_model.time = self.time
