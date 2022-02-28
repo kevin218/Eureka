@@ -30,7 +30,7 @@ interp			False	# Should astrophysical model be interpolated (useful for uneven s
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S5      False # Boolean, set True to only use the first spectral channel
-testing_model   True # Boolean, set True to only inject a model source of systematics
+testing_model   False # Boolean, set True to only inject a model source of systematics
 hide_plots      False # If True, plots will automatically be closed rather than popping up
 
 # Project directory
