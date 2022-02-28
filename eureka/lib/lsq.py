@@ -11,8 +11,14 @@ def modelfunc(freepars, lc, model, pmin, pmax, freenames, indep_vars):
     model.update(freepars, freenames)
     model_lc        = model.eval()
     if "scatter_ppm" in freenames:
-        ind = np.where(freenames=="scatter_ppm")
-        lc.unc_fit = freepars[ind]*1e-6
+        # ind = np.where(freenames=="scatter_ppm")
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * freepars[ind[0]] * 1e-6
+        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = freepars[ind[chan]] * 1e-6
+
     else:
         lc.unc_fit = deepcopy(lc.unc)
     residuals       = (lc.flux - model_lc)/lc.unc_fit

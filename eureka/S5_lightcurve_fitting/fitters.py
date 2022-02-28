@@ -215,6 +215,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
         freepars[ind_min] = pmid[ind_min]
     
+    ind_zero_step = np.where(step_size==0.)
+    if len(ind_zero_step[0]):
+        log.writelog('Warning: >=1 params would have a zero step. changing to 0.001 * prior range')
+        step_size[ind_zero_step] = 0.001*(pmax[ind_zero_step] - pmin[ind_zero_step])
+        
+    
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
     in_range = np.array([all((pmin <= ii) & (ii <= pmax)) for ii in pos])
     if not np.all(in_range):
@@ -262,8 +268,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
-        ind = np.where(freenames == "scatter_ppm")
-        lc.unc_fit = medians[ind[0][0]]*1e-6
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * medians[ind[0]] * 1e-6        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = medians[ind[chan]] * 1e-6
 
     # Plot fit
     if meta.isplots_S5 >= 1:
