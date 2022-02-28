@@ -113,10 +113,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
-            shutil.copy(meta.fit_par, meta.outputdir)
+            shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
             
             # Set the intial fitting parameters
-            params = p.Parameters(param_file=meta.fit_par)
+            params = p.Parameters(ecf_path, meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
