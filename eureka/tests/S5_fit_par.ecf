@@ -10,3 +10,4 @@ u1	0.7	'free'	0.	1
 u2	0.25	'free'	0.	1
 limb_dark	'quadratic'	'independent'
 transittype	'primary'	'independent'
+time_offset	0.0 	'independent'
