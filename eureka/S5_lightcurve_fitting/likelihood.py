@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 
-def ln_like(theta, lc, model, pmin, pmax, priortype, freenames):
+def ln_like(theta, lc, model, priortype, freenames):
     """Compute the log-likelihood.
 
     Parameters
@@ -12,10 +12,6 @@ def ln_like(theta, lc, model, pmin, pmax, priortype, freenames):
         The lightcurve data object
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    pmin: ndarray
-        The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    pmax: ndarray
-        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
     priortype: ndarray
         Keywords indicating the type of prior for each free parameter.
     freenames: iterable
@@ -42,16 +38,16 @@ def ln_like(theta, lc, model, pmin, pmax, priortype, freenames):
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
     return ln_like_val
 
-def lnprior(theta, pmin, pmax, priortype):
+def lnprior(theta, prior1, prior2, priortype):
     """Compute the log-prior.
 
     Parameters
     ----------
     theta: ndarray
         The current estimate of the fitted parameters
-    pmin: ndarray
+    prior1: ndarray
         The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    pmax: ndarray
+    prior2: ndarray
         The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
     priortype: ndarray
         Keywords indicating the type of prior for each free parameter.
@@ -74,18 +70,18 @@ def lnprior(theta, pmin, pmax, priortype):
     n = len(theta)
     for i in range(n):
         if priortype[i]=='U':
-            if np.logical_or(theta[i] < pmin[i], theta[i] > pmax[i]):
+            if np.logical_or(theta[i] < prior1[i], theta[i] > prior2[i]):
                 lnprior_prob += - np.inf
         elif priortype[i]=='N':
-            lnprior_prob -= 0.5*(np.sum(((theta[i] - pmin[i])/pmax[i])**2 + np.log(2.0*np.pi*(pmax[i])**2)))
+            lnprior_prob -= 0.5*(np.sum(((theta[i] - prior1[i])/prior2[i])**2 + np.log(2.0*np.pi*(prior2[i])**2)))
         elif priortype[i]=='LU':
-            if np.logical_or(np.log(theta[i]) < pmin[i], np.log(theta[i]) > pmax[i]):
+            if np.logical_or(np.log(theta[i]) < prior1[i], np.log(theta[i]) > prior2[i]):
                 lnprior_prob += - np.inf
         else:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return lnprior_prob
 
-def lnprob(theta, lc, model, pmin, pmax, priortype, freenames):
+def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     """Compute the log-probability.
 
     Parameters
@@ -96,9 +92,9 @@ def lnprob(theta, lc, model, pmin, pmax, priortype, freenames):
         The lightcurve data object
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    pmin: ndarray
+    prior1: ndarray
         The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    pmax: ndarray
+    prior2: ndarray
         The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
     priortype: ndarray
         Keywords indicating the type of prior for each free parameter.
@@ -119,8 +115,8 @@ def lnprob(theta, lc, model, pmin, pmax, priortype, freenames):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
-    ln_like_val = ln_like(theta, lc, model, pmin, pmax, priortype, freenames)
-    lp = lnprior(theta, pmin, pmax, priortype)
+    ln_like_val = ln_like(theta, lc, model, priortype, freenames)
+    lp = lnprior(theta, prior1, prior2, priortype)
     lnprob = ln_like_val + lp
     if not np.isfinite(lnprob):
         lnprob = -np.inf
@@ -135,16 +131,16 @@ def transform_log_uniform(x, a, b):
 def transform_normal(x, mu, sigma):
     return norm.ppf(x, loc=mu, scale=sigma)
 
-def ptform(theta, pmin, pmax, priortype):
+def ptform(theta, prior1, prior2, priortype):
     """Compute the prior transform for nested sampling.
 
     Parameters
     ----------
     theta: ndarray
         The current estimate of the fitted parameters
-    pmin: ndarray
+    prior1: ndarray
         The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    pmax: ndarray
+    prior2: ndarray
         The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
     priortype: ndarray
         Keywords indicating the type of prior for each free parameter.
@@ -167,11 +163,11 @@ def ptform(theta, pmin, pmax, priortype):
     n = len(theta)
     for i in range(n):
         if priortype[i]=='U':
-            p[i] = transform_uniform(theta[i], pmin[i], pmax[i])
+            p[i] = transform_uniform(theta[i], prior1[i], prior2[i])
         elif priortype[i]=='LU':
-            p[i] = transform_log_uniform(theta[i], pmin[i], pmax[i])
+            p[i] = transform_log_uniform(theta[i], prior1[i], prior2[i])
         elif priortype[i]=='N':
-            p[i] = transform_normal(theta[i], pmin[i], pmax[i])
+            p[i] = transform_normal(theta[i], prior1[i], prior2[i])
         else:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return p
