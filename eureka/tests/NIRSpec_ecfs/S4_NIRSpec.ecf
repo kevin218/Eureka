@@ -18,7 +18,7 @@ sub_continuum	True	# Set True to subtract the continuum from the spectra using a
 highpassWidth	10		# The integer width of the highpass filter when subtracting the continuum
 
 # Parameters for sigma clipping
-sigma_clip		True	# Whether or not sigma clipping should be performed on the 1D time series
+sigma_clip		False	# Whether or not sigma clipping should be performed on the 1D time series
 sigma			10		# The number of sigmas a point must be from the rolling median to be considered an outlier
 box_width		10		# The width of the box-car filter (used to calculated the rolling median) in units of number of data points
 maxiters		5		# The number of iterations of sigma clipping that should be performed.
