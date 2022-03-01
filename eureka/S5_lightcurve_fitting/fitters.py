@@ -54,8 +54,13 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     
     neg_lnprob = lambda theta, lc, model, prior1, prior2, priortype, freenames: -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
 
-    results = minimize(neg_lnprob, freepars, args=(lc, model, prior1, prior2, priortype, freenames),
-                       method='Nelder-Mead', tol=1e-15)
+    if not hasattr(meta, 'lsq_method'):
+        log.writelog('No lsq optimization method specified - using Nelder-Mead by default.')
+        meta.lsq_method = 'Nelder-Mead'
+    if not hasattr(meta, 'lsq_tol'):
+        log.writelog('No lsq tolerance specified - using 1e-6 by default.')
+        meta.lsq_tol = 1e-6
+    results = minimize(neg_lnprob, freepars, args=(lc, model, prior1, prior2, priortype, freenames), method=meta.lsq_method, tol=meta.lsq_tol)
 
     if meta.run_verbose:
         log.writelog("\nVerbose lsq results: {}\n".format(results))
@@ -209,9 +214,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     burn_in = meta.run_nburn
 
     # make it robust to lsq hitting the upper or lower bound of the param space
-    ind_max = np.where(freepars - pmax == 0.)
-    ind_min = np.where(freepars - pmin == 0.)
-    pmid = (pmax+pmin)/2.
+    ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
+    ind_min = np.where(np.logical_and(freepars - prior1 == 0., priortype=='U'))
+    pmid = (prior2+prior1)/2.
     if len(ind_max[0]):
         log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. Setting to the middle of the interval.')
         freepars[ind_max] = pmid[ind_max]
@@ -343,7 +348,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     tol = meta.run_tol  # the stopping criterion
 
     # START DYNESTY
-    l_args = [lc, model, prior1, prior2, priortype, freenames]
+    l_args = [lc, model, freenames]
 
     log.writelog('Running dynesty...')
 
