@@ -130,10 +130,10 @@ class EclipseModel(Model):
 
         return lcfinal
 
-class PhaseVariationsModel(Model):
-    """Eclipse Model"""
-    def __init__(self, **kwargs):
-        """Initialize the eclipse model
+class PhaseCurveModel(Model):
+    """Phase curve Model"""
+    def __init__(self, transit_model=None, eclipse_model=None, **kwargs):
+        """Initialize the phase curve model
         """
         # Inherit from Model calss
         super().__init__(**kwargs)
@@ -152,6 +152,38 @@ class PhaseVariationsModel(Model):
         self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
+
+        self.components = None
+        self.transit_model = transit_model
+        self.eclipse_model = eclipse_model
+        if transit_model is not None:
+            self.components = [self.transit_model,]
+        if eclipse_model is not None:
+            if self.components is None:
+                self.components = [self.eclipse_model,]
+            else:
+                self.components.append(self.eclipse_model)
+
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        self._time = time_array
+        if self.transit_model is not None:
+            self.transit_model.time = time_array
+        if self.eclipse_model is not None:
+            self.eclipse_model.time = time_array
+
+    def update(self, newparams, names, **kwargs):
+        super().update(newparams, names, **kwargs)
+        if self.transit_model is not None:
+            self.transit_model.update(newparams, names, **kwargs)
+        if self.eclipse_model is not None:
+            self.eclipse_model.update(newparams, names, **kwargs)
+        return
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -207,4 +239,7 @@ class PhaseVariationsModel(Model):
 
             lcfinal = np.append(lcfinal, phaseVars)
 
-        return lcfinal
+        transit = self.transit_model.eval()
+        eclipse = self.eclipse_model.eval()
+
+        return transit + lcfinal*(eclipse-1)

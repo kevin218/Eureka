@@ -192,8 +192,19 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     if 'eclipse' in meta.run_myfuncs:
         t_eclipse = m.EclipseModel(parameters=params, name='eclipse', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_eclipse)
-    if 'phase' in meta.run_myfuncs:
-        t_phase = m.PhaseVariationsModel(parameters=params, name='phase', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+    if 'phasecurve' in meta.run_myfuncs:
+        model_names = np.array([model.name for model in modellist])
+        transit_model = None
+        eclipse_model = None
+        # Nest any transit and/or eclipse models inside of the phase curve model
+        if 'transit' in model_names:
+            transit_model = modellist.pop(np.where(model_names=='transit')[0][0])
+            model_names = np.array([model.name for model in modellist])
+        if'eclipse' in model_names:
+            eclipse_model = modellist.pop(np.where(model_names=='eclipse')[0][0])
+            model_names = np.array([model.name for model in modellist])
+        t_phase = m.PhaseCurveModel(parameters=params, name='phasecurve', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles,
+                                    transit_model=transit_model, eclipse_model=eclipse_model)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
