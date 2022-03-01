@@ -109,6 +109,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         # This plot is only really useful if you're actually using the lsq fitter, otherwise don't make it
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
+    # Plot residuals distribution
+    if meta.isplots_S5 >= 3 and calling_function=='lsq':
+        plots.plot_res_distr(lc, model, meta, fitter=calling_function)
+
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -414,6 +418,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='dynesty')
+
+    # Plot residuals distribution
+    if meta.isplots_S5 >= 3:
+        plots.plot_res_distr(lc, model, meta, fitter='dynesty')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)

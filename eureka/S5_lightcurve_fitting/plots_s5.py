@@ -253,7 +253,7 @@ def plot_res_distr(lc, model, meta, fitter):
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/scatter", fontsize=14)
-        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        fname = 'figs/fig54{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
