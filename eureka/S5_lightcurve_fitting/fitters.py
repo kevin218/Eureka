@@ -3,20 +3,19 @@ import copy
 from io import StringIO
 import sys
 
+from scipy.optimize import minimize
 import lmfit
 import emcee
 
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from ..lib import lsq
 from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
-reload(lsq)
 reload(plots)
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
@@ -53,8 +52,11 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     
-    results = lsq.minimize(lc, model, freepars, prior1, prior2, freenames, indep_vars)
-    
+    neg_lnprob = lambda theta, lc, model, prior1, prior2, priortype, freenames: -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
+
+    results = minimize(neg_lnprob, freepars, args=(lc, model, prior1, prior2, priortype, freenames),
+                       method='Nelder-Mead', tol=1e-15)
+
     if meta.run_verbose:
         log.writelog("\nVerbose lsq results: {}\n".format(results))
     else:
