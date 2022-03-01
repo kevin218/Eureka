@@ -176,13 +176,13 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
     
-    if meta.testing_S5:
+    if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('****Adding exponential ramp systematic to light curve****')
         fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
-        fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
+        fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0]).reshape(1,-1)*np.ones((lc_model.nchannel_fitted,1))
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
