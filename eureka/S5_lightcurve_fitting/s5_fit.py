@@ -24,13 +24,15 @@ class MetaClass:
     def __init__(self):
         return
 
-def fitJWST(eventlabel, s4_meta=None):
+def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
 
@@ -60,15 +62,15 @@ def fitJWST(eventlabel, s4_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # load savefile
     if s4_meta == None:
         s4_meta = read_s4_meta(meta)
 
-    meta = load_general_s4_meta_info(meta, s4_meta)
-    
+    meta = load_general_s4_meta_info(meta, ecf_path, s4_meta)
+
     if (not meta.s4_allapers) or (not meta.allapers):
         # The user indicated in the ecf that they only want to consider one aperture
         # in which case the code will consider only the one which made s4_meta.
@@ -78,9 +80,9 @@ def fitJWST(eventlabel, s4_meta=None):
 
     if meta.testing_S5:
         # Only fit a single channel while testing
-        chanrng = [0]
+        chanrng = 1
     else:
-        chanrng = range(meta.nspecchan)
+        chanrng = meta.nspecchan
 
     # Create directories for Stage 5 outputs
     meta.runs_s5 = []
@@ -88,7 +90,7 @@ def fitJWST(eventlabel, s4_meta=None):
         for bg_hw_val in meta.bg_hw_range:
             run = util.makedirectory(meta, 'S5', ap=spec_hw_val, bg=bg_hw_val)
             meta.runs_s5.append(run)
-    
+
     run_i = 0
     old_meta = meta
     for spec_hw_val in meta.spec_hw_range:
@@ -96,7 +98,7 @@ def fitJWST(eventlabel, s4_meta=None):
             
             t0 = time_pkg.time()
             
-            meta = load_specific_s4_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
+            meta = load_specific_s4_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
             
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.runs_s5[run_i], ap=spec_hw_val, bg=bg_hw_val)
@@ -108,26 +110,15 @@ def fitJWST(eventlabel, s4_meta=None):
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
             
-            # Copy ecf (and update outputdir in case S5 is being called sequentially with S4)
+            # Copy ecf
             log.writelog('Copying S5 control file')
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
-            shutil.copy(meta.fit_par, meta.outputdir)
+            shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
             
             # Set the intial fitting parameters
-            params = p.Parameters(param_file=meta.fit_par)
+            params = p.Parameters(ecf_path, meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
@@ -137,27 +128,27 @@ def fitJWST(eventlabel, s4_meta=None):
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = meta.time - offset
-            time_units = meta.time_units+' - {offset}'
+            time_units = meta.time_units+f' - {offset}'
             
             if sharedp:
                 #Make a long list of parameters for each channel
-                longparamlist, paramtitles = make_longparamlist(meta, params)
+                longparamlist, paramtitles = make_longparamlist(meta, params, chanrng)
 
-                log.writelog("\nStarting Shared Fit of {} Channels\n".format(meta.nspecchan))
+                log.writelog("\nStarting Shared Fit of {} Channels\n".format(chanrng))
                 
                 flux = np.array([])
                 flux_err = np.array([])
-                for i in np.arange(meta.nspecchan):
+                for i in range(chanrng):
                     flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
                     flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
                 
-                meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
+                meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
             else:
-                for channel in range(meta.nspecchan):
+                for channel in range(chanrng):
                     #Make a long list of parameters for each channel
-                    longparamlist, paramtitles = make_longparamlist(meta, params)
+                    longparamlist, paramtitles = make_longparamlist(meta, params, chanrng)
                     
-                    log.writelog("\nStarting Channel {} of {}\n".format(channel+1, meta.nspecchan))
+                    log.writelog("\nStarting Channel {} of {}\n".format(channel+1, chanrng))
                     
                     # Get the flux and error measurements for the current channel
                     flux = meta.lcdata[channel,:]
@@ -167,7 +158,7 @@ def fitJWST(eventlabel, s4_meta=None):
                     flux_err = flux_err/ flux.mean()
                     flux = flux / flux.mean()
                     
-                    meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles)
+                    meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
             
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -181,9 +172,9 @@ def fitJWST(eventlabel, s4_meta=None):
     
     return meta
 
-def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles):
+def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng):
     # Load the relevant values into the LightCurve model object
-    lc_model = lc.LightCurve(time, flux, chan, meta.nspecchan, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
+    lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
     
     if meta.testing_S5:
         # FINDME: Use this area to add systematics into the data
@@ -206,7 +197,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
-    model = m.CompositeModel(modellist)
+    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
     
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -242,9 +233,9 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
 
     return meta
 
-def make_longparamlist(meta, params):
+def make_longparamlist(meta, params, chanrng):
     if meta.sharedp:
-        nspecchan = meta.nspecchan
+        nspecchan = chanrng
     else:
         nspecchan = 1
     
@@ -300,7 +291,7 @@ def read_s4_meta(meta):
 
     return s4_meta
 
-def load_general_s4_meta_info(meta, s4_meta):
+def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
@@ -315,7 +306,7 @@ def load_general_s4_meta_info(meta, s4_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Overwrite the inputdir with the exact output directory from S4
@@ -329,7 +320,7 @@ def load_general_s4_meta_info(meta, s4_meta):
 
     return meta
 
-def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
+def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     # Do some folder swapping to be able to reuse this function to find the correct S4 outputs
     tempfolder = meta.outputdir_raw
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
@@ -344,7 +335,7 @@ def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
 
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(new_meta, ecf)
 
     # Save correctly identified folders from earlier

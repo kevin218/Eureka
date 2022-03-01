@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
@@ -188,13 +189,13 @@ def convert_to_e(data, meta, log):
         # data = b2f.bright2flux(data, data.shdr['PIXAR_A2'])
         # Convert from brightness units (MJy/sr) to DNs
         log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        meta.photfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_PHOTOM'][7:]
+        meta.photfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_PHOTOM'][7:]
         data = bright2dn(data, meta)
-        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
+        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
         data = dn2electrons(data, meta)
     if data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
         log.writelog('  Converting from data numbers per second (DN/s) to electrons per second (e/s)')
-        meta.gainfile = meta.topdir + meta.ancildir + '/' + data.mhdr['R_GAIN'][7:]
+        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
         data = dn2electrons(data, meta)
     return data, meta

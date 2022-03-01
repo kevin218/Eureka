@@ -1,5 +1,6 @@
 
 import numpy as np
+import os
 
 """
     This class loads a Eureka! Control File (ecf) and lets you
@@ -111,7 +112,7 @@ class Ecf:
         file.write(key + " " + attrib.get(key).value[0] + "\n")
     file.close()
 
-def read_ecf(file):
+def read_ecf(folder, file):
     """
     Function to read the file:
     """
@@ -120,7 +121,7 @@ def read_ecf(file):
     ecfsets = []
 
     # Read the file
-    file = open(file, 'r')
+    file = open(os.path.join(folder, file), 'r')
     lines = file.readlines()
     file.close()
 
@@ -222,3 +223,19 @@ def store_ecf(meta, ecf):
             except:
                 print("Unable to store parameter: " + key)
     return
+
+def copy_ecf(meta, ecffolder, ecffile):
+  # Copy ecf (and update inputdir to be precise which exact inputs were used)
+  new_ecfname = meta.outputdir + ecffile.split('/')[-1]
+  with open(new_ecfname, 'w') as new_file:
+      with open(os.path.join(ecffolder, ecffile), 'r') as file:
+          for line in file.readlines():
+              if len(line.strip())==0 or line.strip()[0]=='#':
+                  new_file.write(line)
+              else:
+                  line_segs = line.strip().split()
+                  if line_segs[0]=='inputdir':
+                      new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
+                  else:
+                      new_file.write(line)
+  return

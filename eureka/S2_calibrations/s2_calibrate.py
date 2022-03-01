@@ -31,7 +31,7 @@ class MetaClass:
     def __init__(self):
         return
 
-def calibrateJWST(eventlabel):
+def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST pipeline into calints and x1dints.
 
     This function does the preparation for running the STScI's JWST pipeline and decides whether to run the
@@ -41,6 +41,10 @@ def calibrateJWST(eventlabel):
     ----------
     eventlabel: str
         Unique label for this dataset
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
+    s1_meta:    MetaClass
+        The metadata object from Eureka!'s S1 step (if running S1 and S2 sequentially).
 
     Returns
     -------
@@ -63,7 +67,7 @@ def calibrateJWST(eventlabel):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S2_' + eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Create directories for Stage 2 processing outputs
@@ -79,16 +83,13 @@ def calibrateJWST(eventlabel):
 
     # Copy ecf
     log.writelog('Copying S2 control file')
-    shutil.copy(ecffile, meta.outputdir)
+    rd.copy_ecf(meta, ecf_path, ecffile)
 
     # Create list of file segments
     meta = util.readfiles(meta)
     meta.num_data_files = len(meta.segment_list)
     if meta.num_data_files==0:
-        rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-        if rootdir[-1]!='/':
-            rootdir += '/'
-        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
+        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!')
     else:
         log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 

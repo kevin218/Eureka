@@ -81,7 +81,7 @@ class Parameter:
 class Parameters:
     """A class to hold the Parameter instances
     """
-    def __init__(self, param_file=None, **kwargs):
+    def __init__(self, param_path='./', param_file=None, **kwargs):
         """Initialize the parameter object
 
         Parameters
@@ -101,26 +101,26 @@ class Parameters:
         params = {}
 
         # If a param_file is given, make sure it exists
-        if param_file is not None and os.path.exists(param_file):
+        if param_file is not None and param_path is not None and os.path.exists(os.path.join(param_path,param_file)):
 
             # Parse the ASCII file
             if param_file.endswith('.txt'):
 
                 # Add the params to a dict
-                data = np.genfromtxt(param_file)
+                data = np.genfromtxt(os.path.join(param_path, param_file))
                 params = {i: j for i, j in data}
                 print(params)
 
             # Parse the JSON file
             elif param_file.endswith('.json'):
 
-                with open(param_file) as json_data:
+                with open(os.path.join(param_path, param_file)) as json_data:
                     params = json.load(json_data)
 
             # Parse Eureka control file
             elif param_file.endswith('.ecf'):
 
-                ecf = rd.read_ecf(param_file)
+                ecf = rd.read_ecf(param_path, param_file)
                 paramlist=vars(ecf)
                 keylist=list(paramlist.keys())
                 params={}

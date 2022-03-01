@@ -56,13 +56,15 @@ class DataClass:
         return
 
 
-def reduceJWST(eventlabel, s2_meta=None):
+def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s2_meta:    MetaClass
         The metadata object from Eureka!'s S2 step (if running S2 and S3 sequentially).
 
@@ -90,7 +92,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
     meta.eventlabel=eventlabel
 
@@ -132,7 +134,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Load Eureka! control file and store values in the S2 metadata object
             ecffile = 'S3_' + eventlabel + '.ecf'
-            ecf = rd.read_ecf(ecffile)
+            ecf = rd.read_ecf(ecf_path, ecffile)
             rd.store_ecf(meta, ecf)
 
             # Overwrite the inputdir with the exact output directory from S2
@@ -198,29 +200,15 @@ def reduceJWST(eventlabel, s2_meta=None):
             log.writelog(f"Output directory: {meta.outputdir}")
             log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
 
-            # Copy ecf (and update inputdir in case S3 is being called sequentially with S2)
+            # Copy ecf
             log.writelog('Copying S3 control file')
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            rd.copy_ecf(meta, ecf_path, ecffile)
 
             # Create list of file segments
             meta = util.readfiles(meta)
             meta.num_data_files = len(meta.segment_list)
             if meta.num_data_files==0:
-                rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-                if rootdir[-1]!='/':
-                    rootdir += '/'
-                raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{rootdir}"!')
+                raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!')
             else:
                 log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 

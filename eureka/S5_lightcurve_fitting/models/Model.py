@@ -28,6 +28,10 @@ class Model:
         self._parameters = Parameters()
         self.components = None
         self.fmt = None
+        if hasattr(kwargs, 'nchan'):
+            self.nchan = kwargs.get('nchan')
+        else:
+            self.nchan = 1
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
@@ -253,8 +257,7 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
         
         # Evaluate flux at each model
-        flux = np.ones(int(len(self.time)*self.components[0].nchan))
-        
+        flux = np.ones(len(self.time)*self.nchan)
         for model in self.components:
             if model.time is None:
                 model.time = self.time
@@ -269,7 +272,7 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
         
         # Evaluate flux at each model
-        flux = np.ones(int(len(self.time)*self.components[0].nchan))
+        flux = np.ones(len(self.time)*self.nchan)
         for model in self.components:
             if model.modeltype == 'systematic':
                 if model.time is None:
@@ -292,7 +295,7 @@ class CompositeModel(Model):
             new_time = self.time
 
         # Evaluate flux at each model
-        flux = np.ones(int(len(self.time)*self.components[0].nchan))
+        flux = np.ones(len(self.time)*self.nchan)
         for model in self.components:
             if model.modeltype == 'physical':
                 if model.time is None:

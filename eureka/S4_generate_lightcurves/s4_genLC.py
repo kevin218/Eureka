@@ -39,13 +39,15 @@ class MetaClass:
         return
 
 
-def lcJWST(eventlabel, s3_meta=None):
+def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s3_meta:    MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4 sequentially).
 
@@ -69,14 +71,14 @@ def lcJWST(eventlabel, s3_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     if s3_meta == None:
         #load savefile
         s3_meta = read_s3_meta(meta)
 
-    meta = load_general_s3_meta_info(meta, s3_meta)
+    meta = load_general_s3_meta_info(meta, ecf_path, s3_meta)
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one aperture
@@ -97,7 +99,7 @@ def lcJWST(eventlabel, s3_meta=None):
 
             t0 = time_pkg.time()
 
-            meta = load_specific_s3_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
+            meta = load_specific_s3_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
 
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.runs_s4[run_i], ap=spec_hw_val, bg=bg_hw_val)
@@ -110,21 +112,9 @@ def lcJWST(eventlabel, s3_meta=None):
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
-            # Copy ecf (and update outputdir in case S4 is being called sequentially with S3)
+            # Copy ecf
             log.writelog('Copying S4 control file')
-            # shutil.copy(ecffile, meta.outputdir)
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            rd.copy_ecf(meta, ecf_path, ecffile)
 
             log.writelog("Loading S3 save file")
             table = astropytable.readtable(meta.tab_filename)
@@ -247,7 +237,7 @@ def read_s3_meta(meta):
 
     return s3_meta
 
-def load_general_s3_meta_info(meta, s3_meta):
+def load_general_s3_meta_info(meta, ecf_path, s3_meta):
     # Need to remove the topdir from the outputdir
     s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
     if s3_outputdir[0]=='/':
@@ -259,7 +249,7 @@ def load_general_s3_meta_info(meta, s3_meta):
 
     # Load S4 Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Overwrite the inputdir with the exact output directory from S3
@@ -271,7 +261,7 @@ def load_general_s3_meta_info(meta, s3_meta):
 
     return meta
 
-def load_specific_s3_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
+def load_specific_s3_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     # Do some folder swapping to be able to reuse this function to find the correct S3 outputs
     tempfolder = meta.outputdir_raw
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
@@ -286,7 +276,7 @@ def load_specific_s3_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
 
     # Load S4 Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(new_meta, ecf)
 
     # Save correctly identified folders from earlier
