@@ -541,11 +541,13 @@ def group_variables(model):
         if (param[1] == 'free') or (param[1] == 'shared'):
             freenames.append(name)
             freepars.append(param[0])
-            if len(param) > 3:
+            if len(param) == 5: #If prior is specified.
                 prior1.append(param[2])
                 prior2.append(param[3])
                 priortype.append(param[4])
-            else:
+            elif (len(param) > 3) & (len(param) < 5): #If prior bounds are specified but not the prior type
+                raise IndexError("If you want to specify prior parameters, you must also specify the prior type: 'U', 'LU', or 'N'.")
+            else: #If no prior is specified, assume uniform prior with infinite bounds.
                 prior1.append(-np.inf)
                 prior2.append(np.inf)
                 priortype.append('U')
