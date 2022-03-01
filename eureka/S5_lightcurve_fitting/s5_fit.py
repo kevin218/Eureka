@@ -186,13 +186,13 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
 
     # Make the astrophysical and detector models
     modellist=[]
-    if 'transit' in meta.run_myfuncs:
-        t_transit = m.TransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+    if 'batman_tr' in meta.run_myfuncs:
+        t_transit = m.BatmanTransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_transit)
-    if 'eclipse' in meta.run_myfuncs:
-        t_eclipse = m.EclipseModel(parameters=params, name='eclipse', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+    if 'batman_ecl' in meta.run_myfuncs:
+        t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_eclipse)
-    if 'phasecurve' in meta.run_myfuncs:
+    if 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
         transit_model = None
         eclipse_model = None
@@ -203,8 +203,8 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         if'eclipse' in model_names:
             eclipse_model = modellist.pop(np.where(model_names=='eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
-        t_phase = m.PhaseCurveModel(parameters=params, name='phasecurve', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles,
-                                    transit_model=transit_model, eclipse_model=eclipse_model)
+        t_phase = m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles,
+                                            transit_model=transit_model, eclipse_model=eclipse_model)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)

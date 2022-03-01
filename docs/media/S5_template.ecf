@@ -5,7 +5,7 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./S5_fit_par_template.ecf # What fitting ecf do you want to use?
 run_verbose     True
 fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [transit,polynomial] #options are: transit, eclipse, phasecurve, expramp, and polynomial (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
