@@ -121,7 +121,7 @@ class TestModels(unittest.TestCase):
         params.u4 = 0.1, 'free', 0., 1.
 
         # Make the transit model
-        self.t_model = models.TransitModel(parameters=params, name='transit')
+        self.t_model = models.BatmanTransitModel(parameters=params, name='transit')
 
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
