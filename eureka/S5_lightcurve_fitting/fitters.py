@@ -9,8 +9,9 @@ from dynesty.utils import resample_equal
 
 from ..lib import lsq
 from .parameters import Parameters
-from .likelihood import computeRedChiSq, lnprob, ptform
+from .likelihood import computeRedChiSq, lnprob, ptform, ln_like
 from . import plots_s5 as plots
+
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
@@ -63,12 +64,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-
     model.update(fit_params, freenames)
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    model_lc = model.eval()
-
+    model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
     # FINDME
     # Commented out for now because op.least_squares() doesn't provide covariance matrix
@@ -297,11 +296,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     ptform_lambda = lambda theta: ptform(theta, pmin, pmax)
 
     log.writelog('Running dynesty...')
-    sampler = NestedSampler(lnprob, ptform_lambda, ndims,
+    sampler = NestedSampler(ln_like, ptform_lambda, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args)
-    sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
+    sampler.run_nested(dlogz=tol, print_progress=True) # output progress bar
     res = sampler.results  # get results dictionary from sampler
-
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
@@ -316,10 +314,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     if meta.run_verbose:
         log.writelog('Number of posterior samples is {}'.format(len(samples)))
 
-    # plot using corner.py
-    if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
-
+    
     medians = []
     for i in range(len(freenames)):
             q = np.percentile(samples[:, i], [16, 50, 84])
@@ -331,8 +326,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-    model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -352,6 +348,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
+    
+    #plot using corner.py
+    if meta.isplots_S5 >= 5:
+        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
 
     return best_model
 
