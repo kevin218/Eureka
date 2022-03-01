@@ -31,7 +31,7 @@ interp			False	# Should astrophysical model be interpolated (useful for uneven s
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S5      True # Boolean, set True to only use the first spectral channel
 testing_model   False # Boolean, set True to only inject a model source of systematics
-hide_plots      False # If True, plots will automatically be closed rather than popping up
+hide_plots      True # If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir      ../tests
@@ -39,4 +39,3 @@ topdir      ../tests
 # Directories relative to project dir
 inputdir    /data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
 outputdir	/data/JWST-Sim/NIRCam/Stage5/
-
