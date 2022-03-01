@@ -4,12 +4,16 @@ allapers        True # Run S5 on all of the apertures considered in S4? Otherwis
 rescale_err     False    # Rescale uncertainties to have reduced chi-squared of unity
 fit_par         ./S5_fit_par.ecf # What fitting ecf do you want to use?
 run_verbose     True
-fit_method      lsq #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     transit #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
+fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
+run_myfuncs     [transit] #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
 #ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
+
+#lsq
+lsq_method		'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_tol			1e-6 # The tolerance for the scipy.optimize.minimize optimization method
 
 #mcmc
 run_nsteps      4000
