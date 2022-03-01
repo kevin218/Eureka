@@ -1,6 +1,5 @@
 """Base and child classes to handle models
 used to fit light curves
-
 Author: Joe Filippazzo
 Email: jfilippazzo@stsci.edu
 """
@@ -35,12 +34,10 @@ class Model:
 
     def __mul__(self, other):
         """Multiply model components to make a combined model
-
         Parameters
         ----------
         other: ExoCTK.lightcurve_fitting.models.Model
             The model to multiply
-
         Returns
         -------
         ExoCTK.lightcurve_fitting.lightcurve.Model
@@ -64,7 +61,6 @@ class Model:
     @flux.setter
     def flux(self, flux_array):
         """A setter for the flux
-
         Parameters
         ----------
         flux_array: sequence
@@ -79,7 +75,6 @@ class Model:
 
     def interp(self, new_time):
         """Interpolate the flux to a new time axis
-
         Parameters
         ----------
         new_time: sequence, astropy.units.quantity.Quantity
@@ -108,7 +103,7 @@ class Model:
             params = Parameters(params)
 
         # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ != type(Parameters).__name):
+        if (params is not None) and (type(params).__name__ != Parameters.__name__):
             raise TypeError("'params' argument must be a JSON file, ascii\
                              file, or parameters.Parameters instance.")
 
@@ -117,7 +112,6 @@ class Model:
 
     def plot(self, time, components=False, ax=None, draw=False, ls='-', color='blue', zorder=np.inf, **kwargs):
         """Plot the model
-
         Parameters
         ----------
         time: array-like
@@ -126,7 +120,6 @@ class Model:
             Plot all model components
         ax: Matplotlib Axes
             The figure axes to plot on
-
         Returns
         -------
         bokeh.plotting.figure
@@ -167,7 +160,6 @@ class Model:
     @time.setter
     def time(self, time_array, time_units='BJD'):
         """A setter for the time
-
         Parameters
         ----------
         time_array: sequence, astropy.units.quantity.Quantity
@@ -193,7 +185,6 @@ class Model:
     @units.setter
     def units(self, units):
         """A setter for the units
-
         Parameters
         ----------
         units: str
@@ -209,7 +200,6 @@ class CompositeModel(Model):
     """A class to create composite models"""
     def __init__(self, models, **kwargs):
         """Initialize the composite model
-
         Parameters
         ----------
         models: sequence
@@ -220,8 +210,13 @@ class CompositeModel(Model):
 
         # Store the models
         self.components = models
+        
+        self.GP = False
+        for model in self.components:
+            if model.modeltype == 'GP':
+                self.GP = True
 
-    def eval(self, **kwargs):
+    def eval(self, incl_GP = False, **kwargs):
         """Evaluate the model components"""
         # Get the time
         if self.time is None:
@@ -234,11 +229,15 @@ class CompositeModel(Model):
         for model in self.components:
             if model.time is None:
                 model.time = self.time
-            flux *= model.eval(**kwargs)
-
+            if model.modeltype != 'GP':            
+                flux *= model.eval(**kwargs)
+        
+        if incl_GP == True:
+            flux += self.GPeval(flux)
+        
         return flux
 
-    def syseval(self, **kwargs):
+    def syseval(self,  **kwargs):
         """Evaluate the systematic model components only"""
         # Get the time
         if self.time is None:
@@ -253,7 +252,19 @@ class CompositeModel(Model):
                 if model.time is None:
                     model.time = self.time
                 flux *= model.eval(**kwargs)
-
+                
+        return flux
+    
+    def GPeval(self,  fit, **kwargs):
+        """Evaluate the GP model components only"""
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+        flux = 1.
+        # Evaluate flux
+        for model in self.components:
+            if model.modeltype == 'GP':
+                flux = model.eval(fit, **kwargs)
         return flux
 
     def physeval(self, **kwargs):
@@ -271,13 +282,19 @@ class CompositeModel(Model):
                 if model.time is None:
                     model.time = self.time
                 flux *= model.eval(**kwargs)
-
         return flux
+    
+    
+    def GP_model_likelihood(self,  fit, **kwargs):
+        """return GP object"""
+        for model in self.components:
+            if model.modeltype == 'GP':
+                return model.loglikelihood( fit)
+        return 0
 
     def update(self, newparams, names, **kwargs):
         """Update parameters in the model components"""
         # Evaluate flux at each model
         for model in self.components:
             model.update(newparams, names, **kwargs)
-
         return

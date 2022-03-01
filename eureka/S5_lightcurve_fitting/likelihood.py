@@ -38,8 +38,11 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     theta[ihi] = pmax[ihi]
     model.update(theta, freenames)
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
-    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
+    if model.GP:
+        ln_like_val = model.GP_model_likelihood(model_lc)
+    else:
+        residuals = (lc.flux - model_lc) #/ lc.unc
+        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc) ** 2))))
     if len(ilow[0]) + len(ihi[0]) > 0:
         ln_like_val = -np.inf
     return ln_like_val
@@ -69,7 +72,7 @@ def lnprior(theta, pmin, pmax):
         Moved code to separate file, added documentation.
     """
     lnprior_prob = 0.
-    n = len(theta)
+    n = len(theta)    
     for i in range(n):
         if np.logical_or(theta[i] < pmin[i],
                                 theta[i] > pmax[i]): lnprior_prob += - np.inf
@@ -152,7 +155,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
     """
-    model_lc = model.eval()
+    model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc) #/ lc.unc
     chi2 = np.sum((residuals / lc.unc) ** 2)
     chi2red = chi2 / (len(lc.unc) - len(freenames))

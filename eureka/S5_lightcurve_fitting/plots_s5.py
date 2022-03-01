@@ -7,7 +7,6 @@ from .utils import COLORS
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data after removing any systematics.
-
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -18,14 +17,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-
     Returns
     -------
     None
-
     Notes
     -----
-
     History:
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
@@ -67,7 +63,6 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
 def plot_rms(lc, model, meta, fitter):
     """Plot an Allan plot to look for red noise.
-
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -78,14 +73,11 @@ def plot_rms(lc, model, meta, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-
     Returns
     -------
     None
-
     Notes
     -----
-
     History:
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
@@ -93,7 +85,7 @@ def plot_rms(lc, model, meta, fitter):
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
     time = lc.time
-    model_lc = model.eval()
+    model_lc = model.eval(incl_GP = True)
     residuals = lc.flux - model_lc
     residuals = residuals[np.argsort(time)]
 
@@ -123,7 +115,6 @@ def plot_rms(lc, model, meta, fitter):
 
 def plot_corner(samples, lc, meta, freenames, fitter):
     """Plot a corner plot.
-
     Parameters
     ----------
     samples: ndarray
@@ -136,14 +127,11 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-
     Returns
     -------
     None
-
     Notes
     -----
-
     History:
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
@@ -152,6 +140,64 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.2)
+
+    return
+
+def plot_GP_components(lc, model, meta, fitter, isTitle=True):
+    """Plot the GP model
+    Parameters
+    ----------
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+    Returns
+    -------
+    None
+    Notes
+    -----
+    History:
+    - February 28, 2022 Eva-Maria Ahrer
+    """
+    if type(fitter)!=str:
+        raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
+
+    
+    model_lc = model.eval()
+    model_phys = model.physeval()
+    model_GP = model.GPeval(model_lc)
+    model_with_GP = model.eval(incl_GP = True)
+    residuals = (lc.flux - model_with_GP) #/ lc.unc
+
+    fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 9))
+    plt.clf()
+    ax = fig.subplots(3,1)
+
+    
+    if isTitle:
+        ax[0].set_title(f'{meta.eventlabel} - Channel {lc.channel} - {fitter}')
+    ax[0].plot(lc.time, model_with_GP, 'r', zorder=10)
+    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
+    ax[0].set_ylabel('Normalised Flux', size=14)
+
+    ax[1].plot(lc.time, model_GP, '.', color=lc.color)
+    ax[1].set_ylabel('GP component', size=14)
+    ax[1].set_xlabel(str(lc.time_units), size=14)
+
+    fname = 'figs/fig51{}_lc_GP_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    
+    ax[2].errorbar(lc.time, residuals*1e6, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
+    ax[2].set_ylabel('Residuals (ppm)', size=14)
+    ax[2].set_xlabel(str(lc.time_units), size=14)
     if meta.hide_plots:
         plt.close()
     else:
