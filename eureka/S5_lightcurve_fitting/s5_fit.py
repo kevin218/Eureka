@@ -24,13 +24,15 @@ class MetaClass:
     def __init__(self):
         return
 
-def fitJWST(eventlabel, s4_meta=None):
+def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
 
@@ -60,14 +62,14 @@ def fitJWST(eventlabel, s4_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # load savefile
     if s4_meta == None:
         s4_meta = read_s4_meta(meta)
 
-    meta = load_general_s4_meta_info(meta, s4_meta)
+    meta = load_general_s4_meta_info(meta, ecf_path, s4_meta)
 
     if (not meta.s4_allapers) or (not meta.allapers):
         # The user indicated in the ecf that they only want to consider one aperture
@@ -96,7 +98,7 @@ def fitJWST(eventlabel, s4_meta=None):
             
             t0 = time_pkg.time()
             
-            meta = load_specific_s4_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
+            meta = load_specific_s4_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
             
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.runs_s5[run_i], ap=spec_hw_val, bg=bg_hw_val)
@@ -110,13 +112,13 @@ def fitJWST(eventlabel, s4_meta=None):
             
             # Copy ecf
             log.writelog('Copying S5 control file')
-            rd.copy_ecf(meta, ecffile)
+            rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
-            shutil.copy(meta.fit_par, meta.outputdir)
+            shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
             
             # Set the intial fitting parameters
-            params = p.Parameters(param_file=meta.fit_par)
+            params = p.Parameters(ecf_path, meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
@@ -306,7 +308,7 @@ def read_s4_meta(meta):
 
     return s4_meta
 
-def load_general_s4_meta_info(meta, s4_meta):
+def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
@@ -321,7 +323,7 @@ def load_general_s4_meta_info(meta, s4_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Overwrite the inputdir with the exact output directory from S4
@@ -335,7 +337,7 @@ def load_general_s4_meta_info(meta, s4_meta):
 
     return meta
 
-def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
+def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     # Do some folder swapping to be able to reuse this function to find the correct S4 outputs
     tempfolder = meta.outputdir_raw
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
@@ -350,7 +352,7 @@ def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
 
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(new_meta, ecf)
 
     # Save correctly identified folders from earlier
