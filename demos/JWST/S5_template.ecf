@@ -11,6 +11,10 @@ run_myfuncs     [batman_tr,polynomial] #options are: batman_tr, batman_ecl, sinu
 #fix_ld          False #use limb darkening file?
 #ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
 
+#lsq
+lsq_method		'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_tol			1e-6 # The tolerance for the scipy.optimize.minimize optimization method
+
 #mcmc
 lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails)
 run_nsteps      4000
