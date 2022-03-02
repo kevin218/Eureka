@@ -11,6 +11,10 @@ run_myfuncs     [batman_tr] #options are: batman_tr, batman_ecl, sinusoid_pc, ex
 #fix_ld          False #use limb darkening file?
 #ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
 
+#lsq
+lsq_method		'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_tol			1e-6 # The tolerance for the scipy.optimize.minimize optimization method
+
 #mcmc
 lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails)
 run_nsteps      4000
@@ -34,8 +38,8 @@ testing_model   False # Boolean, set True to only inject a model source of syste
 hide_plots      True # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir      ../tests
+topdir      	../tests
 
 # Directories relative to project dir
-inputdir    /data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
-outputdir	/data/JWST-Sim/NIRCam/Stage5/
+inputdir    	/data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir		/data/JWST-Sim/NIRCam/Stage5/

@@ -2,8 +2,7 @@
 
 #__all__ = ["QuadLimbDark", "ImpactParameter", "eccentricity"]
 
-from . import gelmanrubin 
-from . import lsq
+from . import gelmanrubin
 from . import orbit 
 from . import smoothing
 from . import univ

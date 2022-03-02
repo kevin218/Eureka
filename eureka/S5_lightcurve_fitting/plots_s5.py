@@ -246,14 +246,15 @@ def plot_res_distr(lc, model, meta, fitter):
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
         
         residuals = flux - model
-        residuals = residuals[np.argsort(time)]
-        
-        n, bins, patches = plt.hist(residuals/unc,alpha=0.5,color='b',edgecolor='b',lw=1)
+        hist_vals = residuals/unc
+        hist_vals[~np.isfinite(hist_vals)] = np.nan # Mask out any infinities
+
+        n, bins, patches = plt.hist(hist_vals,alpha=0.5,color='b',edgecolor='b',lw=1)
         x=np.linspace(-4.,4.,200)
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/scatter", fontsize=14)
-        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        fname = 'figs/fig54{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
