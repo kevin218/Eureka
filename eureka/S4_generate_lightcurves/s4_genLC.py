@@ -165,7 +165,8 @@ def lcJWST(eventlabel, s3_meta=None):
                 # Correct for drift/jitter
                 for n in range(meta.n_int):
                     # Need to zero-out the weights of masked data
-                    weights = (~optspec[n].mask).astype(int)
+                    #weights = (~optspec[n].mask).astype(int)
+                    weights    = np.ones(meta.subnx)
                     spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0, w=weights)
                     spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0, w=weights)
                     optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
@@ -173,6 +174,7 @@ def lcJWST(eventlabel, s3_meta=None):
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta)
+                    plots_s4.lc_driftcorr(meta, wave_1d, optspec)
 
 
             log.writelog("Generating light curves")
@@ -214,7 +216,7 @@ def lcJWST(eventlabel, s3_meta=None):
     return meta
 
 def read_s3_meta(meta):
-    
+
     # Search for the S2 output metadata in the inputdir provided in
     # First just check the specific inputdir folder
     rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
