@@ -5,7 +5,7 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./S5_fit_par_template.ecf # What fitting ecf do you want to use?
 run_verbose     True
 fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [transit,polynomial] #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
@@ -30,6 +30,7 @@ interp			False	# Should astrophysical model be interpolated (useful for uneven s
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S5      False # Boolean, set True to only use the first spectral channel
+testing_model   False # Boolean, set True to only inject a model source of systematics
 hide_plots      False # If True, plots will automatically be closed rather than popping up
 
 # Project directory

@@ -1,4 +1,5 @@
 from .Model import Model, CompositeModel
-from .TransitModel import TransitModel
+from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
+from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
 from .PolynomialModel import PolynomialModel
 from .ExpRampModel import ExpRampModel

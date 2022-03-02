@@ -2,33 +2,35 @@
 
 allapers        True # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 rescale_err     False    # Rescale uncertainties to have reduced chi-squared of unity
-fit_par         ./s5_fit_par_wfc3_template.ecf # What fitting ecf do you want to use?
+fit_par         ./S5_fit_par_wfc3_template.ecf # What fitting ecf do you want to use?
 run_verbose     True
 fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [transit,polynomial] #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
 #ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
 
 #mcmc
+lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails)
 run_nsteps      4000
 run_nwalkers    50
 run_nburn       2000
 max_pos_iters   10 # How many times should the initial walkers be regenerated to fit within priors before giving up and using fewer walkers than desired?
 
 #dynesty
-run_nlive       1024
+run_nlive       1024 # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'unif'
 run_tol         0.1
 
 # Plotting controls
-interp			False	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
+interp			True	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S5      False # Boolean, set True to only use the first spectral channel
+testing_model   False # Boolean, set True to only inject a model source of systematics
 hide_plots      False # If True, plots will automatically be closed rather than popping up
 
 # Project directory
