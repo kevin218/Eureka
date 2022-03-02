@@ -257,12 +257,12 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 else:
                     meta.int_start = 0
                 
+                # Trim data to subarray region of interest
+                data, meta = util.trim(data, meta)
+
                 # Locate source postion
                 meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
                 log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
-                
-                # Trim data to subarray region of interest
-                data, meta = util.trim(data, meta)
                 
                 # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
