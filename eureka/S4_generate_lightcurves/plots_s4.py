@@ -53,7 +53,7 @@ def drift1d(meta):
     '''
     plt.figure(4101, figsize=(8,4))
     plt.clf()
-    plt.plot(np.arange(meta.nx)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
+    plt.plot(np.arange(meta.n_int)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
     # plt.subplot(211)
     # for j in range(istart,ev.n_reads-1):
     #     plt.plot(ev.drift2D[:,j,1],'.')
