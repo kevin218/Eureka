@@ -5,7 +5,7 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./S5_fit_par.ecf # What fitting ecf do you want to use?
 run_verbose     True
 fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [transit] #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
+run_myfuncs     [batman_tr] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
@@ -38,8 +38,8 @@ testing_model   False # Boolean, set True to only inject a model source of syste
 hide_plots      True # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          ../tests
+topdir      	../tests
 
 # Directories relative to project dir
-inputdir        /Data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-outputdir       /Data/JWST-Sim/NIRCam/Stage5/
+inputdir    	/data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir		/data/JWST-Sim/NIRCam/Stage5/

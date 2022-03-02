@@ -5,7 +5,7 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./S5_fit_par.ecf # What fitting ecf do you want to use?
 run_verbose     True
 fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [transit] #options are: transit, expramp, and polynomial (can list multiple types separated by commas)
+run_myfuncs     [batman_tr] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, and polynomial (can list multiple types separated by commas)
 
 # Limb darkening controls (not yet implemented)
 #fix_ld          False #use limb darkening file?
@@ -29,7 +29,7 @@ run_sample      'unif'
 run_tol         0.1
 
 # Plotting controls
-interp			True	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
+interp			False	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -38,8 +38,8 @@ testing_model   False # Boolean, set True to only inject a model source of syste
 hide_plots      True # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir     ../tests
+topdir     		../tests
 
 # Directories relative to project dir
-inputdir     /data/JWST-Sim/NIRSpec/Stage4/
-outputdir	 /data/JWST-Sim/NIRSpec/Stage5/
+inputdir     	/data/JWST-Sim/NIRSpec/Stage4/
+outputdir	 	/data/JWST-Sim/NIRSpec/Stage5/

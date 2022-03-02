@@ -121,7 +121,7 @@ class TestModels(unittest.TestCase):
         params.u4 = 0.1, 'free', 0., 1.
 
         # Make the transit model
-        self.t_model = models.TransitModel(parameters=params, name='transit',nchan=1)
+        self.t_model = models.BatmanTransitModel(parameters=params, name='transit',nchan=1)
 
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
@@ -194,7 +194,7 @@ class TestSimulations(unittest.TestCase):
         """Test the simulations can be made properly"""
         # Test to pass
         npts = 1234
-        time, flux, unc, params = simulations.simulate_lightcurve('WASP-107b', 0.1, npts=npts, plot=True)
+        time, flux, unc, params = simulations.simulate_lightcurve('WASP-107b', 0.1, npts=npts, plot=False)
         self.assertEqual(len(time), npts)
 
         # Test to fail
