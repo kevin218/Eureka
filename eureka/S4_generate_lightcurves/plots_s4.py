@@ -91,23 +91,17 @@ def lc_driftcorr(meta, wave_1d, optspec):
     wmin = wave_1d.min()
     wmax = wave_1d.max()
     n_int, nx = optspec.shape
-    # iwmin       = np.where(ev.wave[src_ypos]>wmin)[0][0]
-    # iwmax       = np.where(ev.wave[src_ypos]>wmax)[0][0]
     vmin = 0.97
     vmax = 1.03
-    # normspec    = np.mean(ev.optspec,axis=1)/np.mean(ev.optspec[ev.inormspec[0]:ev.inormspec[1]],axis=(0,1))
     normspec = optspec / np.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     ediff = np.zeros(n_int)
     for m in range(n_int):
         ediff[m] = 1e6 * np.median(np.abs(np.ediff1d(normspec[m])))
-        # plt.scatter(ev.wave[src_ypos], np.zeros(nx)+m, c=normspec[m],
-        #             s=14,linewidths=0,vmin=vmin,vmax=vmax,marker='s',cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(np.mean(ediff), 0).astype(int)) + " ppm")
-    # plt.xlim(wmin,wmax)
-    # plt.ylim(0,n_int)
     if meta.nspecchan > 1:
+        # Insert vertical dashed lines at spectroscopic channel edges
         xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
         plt.xticks(xticks,xticks)
         plt.vlines(xticks,0,n_int,'0.3','dashed')
