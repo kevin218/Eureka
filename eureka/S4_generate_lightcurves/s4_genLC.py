@@ -166,7 +166,6 @@ def lcJWST(eventlabel, s3_meta=None):
                 for n in range(meta.n_int):
                     # Need to zero-out the weights of masked data
                     weights = (~np.ma.getmaskarray(optspec[n])).astype(int)
-                    #weights    = np.ones(meta.subnx)
                     spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0, w=weights)
                     spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0, w=weights)
                     optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
