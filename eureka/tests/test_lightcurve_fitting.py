@@ -192,7 +192,7 @@ class TestSimulations(unittest.TestCase):
         """Test the simulations can be made properly"""
         # Test to pass
         npts = 1234
-        time, flux, unc, params = simulations.simulate_lightcurve('WASP-107b', 0.1, npts=npts, plot=True)
+        time, flux, unc, params = simulations.simulate_lightcurve('WASP-107b', 0.1, npts=npts, plot=False)
         self.assertEqual(len(time), npts)
 
         # Test to fail
