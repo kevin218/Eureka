@@ -70,7 +70,7 @@ class SinusoidPhaseCurveModel(Model):
         
        #Initialize model
         bm_params = batman.TransitParams()
-        pc_params = {'A':0., 'B':0., 'C':0., 'D':0.}
+        pc_params = {'AmpCos1':0., 'AmpSin1':0., 'AmpCos2':0., 'AmpSin2':0.}
 
         # Set all parameters
         lcfinal=np.array([])
@@ -108,11 +108,11 @@ class SinusoidPhaseCurveModel(Model):
                 phi  = anom + w*np.pi/180. + np.pi/2.
             
             #calculate the phase variations
-            if pc_params['C']==0. and pc_params['D']==0.:
+            if pc_params['AmpCos2']==0. and pc_params['AmpSin2']==0.:
                 #Skip multiplying by a bunch of zeros to speed up fitting
-                phaseVars = 1. + pc_params['A']*(np.cos(phi)-1.) + pc_params['B']*np.sin(phi)
+                phaseVars = 1. + pc_params['AmpCos1']*(np.cos(phi)-1.) + pc_params['AmpSin1']*np.sin(phi)
             else:
-                phaseVars = 1. + pc_params['A']*(np.cos(phi)-1.) + pc_params['B']*np.sin(phi) + pc_params['C']*(np.cos(2.*phi)-1.) + pc_params['D']*np.sin(2.*phi)
+                phaseVars = 1. + pc_params['AmpCos1']*(np.cos(phi)-1.) + pc_params['AmpSin1']*np.sin(phi) + pc_params['AmpCos2']*(np.cos(2.*phi)-1.) + pc_params['AmpSin2']*np.sin(2.*phi)
 
             lcfinal = np.append(lcfinal, phaseVars)
 
