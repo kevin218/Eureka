@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 def binned_lightcurve(meta, time, i):
     '''Plot each spectroscopic light curve.
-    
+
     Parameters
     ----------
     meta:   MetaClass
@@ -13,7 +13,7 @@ def binned_lightcurve(meta, time, i):
         The time in meta.time_units of each data point.
     i:  int
         The current bandpass number.
-    
+
     Returns
     -------
     None
@@ -41,12 +41,12 @@ def binned_lightcurve(meta, time, i):
 
 def drift1d(meta):
     '''Plot the 1D drift/jitter results.
-    
+
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
-    
+
     Returns
     -------
     None
@@ -70,9 +70,54 @@ def drift1d(meta):
     else:
         plt.pause(0.2)
 
+def lc_driftcorr(meta, wave_1d, optspec):
+    '''Plot a 2D light curve with drift correction.
+
+    Parameters
+    ----------
+    meta:   MetaClass
+        The metadata object.
+    wave_1d:
+        Wavelength array with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
+    optspec:
+        The optimally extracted spectrum.
+
+    Returns
+    -------
+    None
+    '''
+    plt.figure(4102, figsize=(8, 8))  # ev.n_files/20.+0.8))
+    plt.clf()
+    wmin = wave_1d.min()
+    wmax = wave_1d.max()
+    n_int, nx = optspec.shape
+    vmin = 0.97
+    vmax = 1.03
+    normspec = optspec / np.mean(optspec, axis=0)
+    plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
+               cmap=plt.cm.RdYlBu_r)
+    ediff = np.zeros(n_int)
+    for m in range(n_int):
+        ediff[m] = 1e6 * np.median(np.abs(np.ediff1d(normspec[m])))
+    plt.title("MAD = " + str(np.round(np.mean(ediff), 0).astype(int)) + " ppm")
+    if meta.nspecchan > 1:
+        # Insert vertical dashed lines at spectroscopic channel edges
+        xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
+        plt.xticks(xticks, xticks, rotation=90)
+        plt.vlines(xticks,0,n_int,'0.3','dashed')
+    plt.ylabel('Integration Number')
+    plt.xlabel(r'Wavelength ($\mu m$)')
+    plt.colorbar(label='Normalized Flux')
+    plt.tight_layout()
+    plt.savefig(meta.outputdir + 'figs/fig4102-2D_LC.png')
+    if meta.hide_plots:
+        plt.close()
+    else:
+        plt.pause(0.2)
+
 def cc_spec(meta, ref_spec, fit_spec, n):
     '''Compare the spectrum used for cross-correlation with the current spectrum.
-    
+
     Parameters
     ----------
     meta:   MetaClass
@@ -104,7 +149,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
 
 def cc_vals(meta, vals, n):
     '''Make the cross-correlation strength plot.
-    
+
     Parameters
     ----------
     meta:   MetaClass
