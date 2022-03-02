@@ -103,7 +103,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
     if meta.nspecchan > 1:
         # Insert vertical dashed lines at spectroscopic channel edges
         xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
-        plt.xticks(xticks,xticks)
+        plt.xticks(xticks, xticks, rotation=90)
         plt.vlines(xticks,0,n_int,'0.3','dashed')
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
