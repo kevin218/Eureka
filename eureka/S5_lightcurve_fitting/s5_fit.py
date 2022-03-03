@@ -24,13 +24,15 @@ class MetaClass:
     def __init__(self):
         return
 
-def fitJWST(eventlabel, s4_meta=None):
+def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
 
@@ -60,14 +62,14 @@ def fitJWST(eventlabel, s4_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # load savefile
     if s4_meta == None:
         s4_meta = read_s4_meta(meta)
 
-    meta = load_general_s4_meta_info(meta, s4_meta)
+    meta = load_general_s4_meta_info(meta, ecf_path, s4_meta)
 
     if (not meta.s4_allapers) or (not meta.allapers):
         # The user indicated in the ecf that they only want to consider one aperture
@@ -96,7 +98,7 @@ def fitJWST(eventlabel, s4_meta=None):
             
             t0 = time_pkg.time()
             
-            meta = load_specific_s4_meta_info(old_meta, run_i, spec_hw_val, bg_hw_val)
+            meta = load_specific_s4_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
             
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.runs_s5[run_i], ap=spec_hw_val, bg=bg_hw_val)
@@ -110,13 +112,13 @@ def fitJWST(eventlabel, s4_meta=None):
             
             # Copy ecf
             log.writelog('Copying S5 control file')
-            rd.copy_ecf(meta, ecffile)
+            rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
-            shutil.copy(meta.fit_par, meta.outputdir)
+            shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
             
             # Set the intial fitting parameters
-            params = p.Parameters(param_file=meta.fit_par)
+            params = p.Parameters(ecf_path, meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
@@ -126,7 +128,7 @@ def fitJWST(eventlabel, s4_meta=None):
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = meta.time - offset
-            time_units = meta.time_units+' - '+str(params.time_offset.value)
+            time_units = meta.time_units+f' - {offset}'
             
             if sharedp:
                 #Make a long list of parameters for each channel
@@ -174,21 +176,38 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
     
-    if meta.testing_S5:
+    if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('****Adding exponential ramp systematic to light curve****')
         fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
-        fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0])
+        fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0]).reshape(1,-1)*np.ones(lc_model.nchannel_fitted)
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
     # Make the astrophysical and detector models
     modellist=[]
-    if 'transit' in meta.run_myfuncs:
-        t_model = m.TransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
-        modellist.append(t_model)
+    if 'batman_tr' in meta.run_myfuncs:
+        t_transit = m.BatmanTransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        modellist.append(t_transit)
+    if 'batman_ecl' in meta.run_myfuncs:
+        t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        modellist.append(t_eclipse)
+    if 'sinusoid_pc' in meta.run_myfuncs:
+        model_names = np.array([model.name for model in modellist])
+        transit_model = None
+        eclipse_model = None
+        # Nest any transit and/or eclipse models inside of the phase curve model
+        if 'transit' in model_names:
+            transit_model = modellist.pop(np.where(model_names=='transit')[0][0])
+            model_names = np.array([model.name for model in modellist])
+        if'eclipse' in model_names:
+            eclipse_model = modellist.pop(np.where(model_names=='eclipse')[0][0])
+            model_names = np.array([model.name for model in modellist])
+        t_phase = m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles,
+                                            transit_model=transit_model, eclipse_model=eclipse_model)
+        modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_polynom)
@@ -289,7 +308,7 @@ def read_s4_meta(meta):
 
     return s4_meta
 
-def load_general_s4_meta_info(meta, s4_meta):
+def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
@@ -304,7 +323,7 @@ def load_general_s4_meta_info(meta, s4_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
 
     # Overwrite the inputdir with the exact output directory from S4
@@ -318,7 +337,7 @@ def load_general_s4_meta_info(meta, s4_meta):
 
     return meta
 
-def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
+def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     # Do some folder swapping to be able to reuse this function to find the correct S4 outputs
     tempfolder = meta.outputdir_raw
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
@@ -333,7 +352,7 @@ def load_specific_s4_meta_info(meta, run_i, spec_hw_val, bg_hw_val):
 
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
+    ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(new_meta, ecf)
 
     # Save correctly identified folders from earlier

@@ -16,7 +16,7 @@ from jwst import datamodels
 
 from jwst.datamodels import dqflags
 
-from jwst.lib import reffile_utils  
+from jwst.lib import reffile_utils
 from jwst.lib import pipe_utils
 
 #from eureka.S1_detector_processing.Eureka_ramp_fitting import mean_ramp_fit_single
@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 #do we need this? what is this?
-BUFSIZE = 1024 * 300000  # 300Mb cache size for data section 
+BUFSIZE = 1024 * 300000  # 300Mb cache size for data section
 
 __all__ = ["RampFitStep"]
 
@@ -83,56 +83,56 @@ class Eureka_RampFitStep(Step):
                 input_model.int_times = input_model.int_times
             else:
                 input_model.int_times = None
-            
+
             # DEFAULT RAMP FITTING ALGORITHM
             if self.algorithm == 'default':
                 # In our case, default just means Optimal Least Squares
-                self.algorithm = 'OLS'               
+                self.algorithm = 'OLS'
                 if self.weighting == 'default':
                     # Want to use the default optimal weighting
                     pass
                 elif self.weighting == 'fixed':
                     # Want to use default weighting, but don't want to
-                    # change exponent between pixels. 
+                    # change exponent between pixels.
                     if not isinstance(self.fixed_exponent, (int, float)):
                         raise ValueError('Weighting exponent must be of type "int" or "float" for "default_fixed" weighting')
 
                     # Overwrite the exponent calculation function from ols_fit
-                    stcal.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Pipeline version 1.3.3 
+                    stcal.ramp_fitting.ols_fit.calc_power = partial(fixed_power, weighting_exponent=self.fixed_exponent) #Pipeline version 1.3.3
                 elif self.weighting == 'interpolated':
-                    # Want to use an interpolated version of the default weighting. 
+                    # Want to use an interpolated version of the default weighting.
 
                     # Overwrite the exponent calculation function from ols_fit
-                    stcal.ramp_fitting.ols_fit.calc_power = interpolate_power #Pipeline version 1.3.3 
+                    stcal.ramp_fitting.ols_fit.calc_power = interpolate_power #Pipeline version 1.3.3
                 elif self.weighting == 'uniform':
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Pipeline version 1.3.3 
+                    stcal.ramp_fitting.ols_fit.calc_opt_sums = calc_opt_sums_uniform_weight #Pipeline version 1.3.3
                 elif self.weighting == 'custom':
                     # Want to manually assign snr bounds for exponent changes
 
                     # Overwrite the exponent calculation function from ols_fit
-                    stcal.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents) #Pipeline version 1.3.3 
+                    stcal.ramp_fitting.ols_fit.calc_power = partial(custom_power, snr_bounds=self.custom_snr_bounds, exponents=self.custom_exponents) #Pipeline version 1.3.3
                 else:
-                    raise ValueError('Could not interpret weighting "{}".'.format(self.weighting)) 
+                    raise ValueError('Could not interpret weighting "{}".'.format(self.weighting))
 
                 # Important! Must set the weighting to 'optimal' for the actual
                 # ramp_fit() function, previous if statements will have changed
-                # it's underlying functionality. 
+                # it's underlying functionality.
                 self.weighting = 'optimal'
 
                 image_info, integ_info, opt_info, gls_opt_model = ramp_fit.ramp_fit(input_model, buffsize, self.save_opt, readnoise_2d,\
                                                                                     gain_2d, self.algorithm, self.weighting,\
                                                                                     self.maximum_cores, dqflags.pixel)
-            # FUTURE IMPROVEMENT, WFC3-like differenced frames. 
+            # FUTURE IMPROVEMENT, WFC3-like differenced frames.
             elif self.algorithm == 'differenced':
                 raise ValueError('I do not know how to do differenced frames yet.')
             # PRIMARILY FOR TESTING, MEAN OF RAMP
             elif self.algorithm == 'mean':
                 image_info, integ_info, opt_info = mean_ramp_fit_single(input_model, buffsize, self.save_opt, readnoise_2d,\
                                                                         gain_2d, self.algorithm, self.weighting,\
-                                                                        self.maximum_cores, dqflags.pixel)  
+                                                                        self.maximum_cores, dqflags.pixel)
             else:
                 raise ValueError('Ramp fitting algorithm "{}" not implemented.'.format(self.algorithm))
 
@@ -148,7 +148,7 @@ class Eureka_RampFitStep(Step):
             int_model.meta.bunit_err = 'DN/s'
             int_model.meta.cal_step.ramp_fit = 'COMPLETE'
 
-         
+
         return out_model, int_model
 
 #######################################
@@ -166,7 +166,7 @@ def fixed_power(snr, weighting_exponent):
         signal-to-noise for the ramp segments
 
     weighting_exponent: int/float
-        exponent to use for all frames/pixels 
+        exponent to use for all frames/pixels
 
     Returns
     -------
@@ -180,8 +180,8 @@ def fixed_power(snr, weighting_exponent):
 
 def interpolate_power(snr):
     """
-    Interpolated version of the weighting exponent from `Fixsen, D.J., Offenberg, J.D., 
-    Hanisch, R.J., Mather, J.C, Nieto, Santisteban, M.A., Sengupta, R., & Stockman, H.S., 
+    Interpolated version of the weighting exponent from `Fixsen, D.J., Offenberg, J.D.,
+    Hanisch, R.J., Mather, J.C, Nieto, Santisteban, M.A., Sengupta, R., & Stockman, H.S.,
     2000, PASP, 112, 1350`.
 
     Parameters
@@ -210,8 +210,8 @@ def custom_power(snr, snr_bounds, exponents):
     `Fixsen, D.J., Offenberg, J.D., Hanisch, R.J., Mather, J.C, Nieto,
     Santisteban, M.A., Sengupta, R., & Stockman, H.S., 2000, PASP, 112, 1350`.
 
-    Exponent array will be overwritten in the order that snr_bounds are defined, 
-    and therefore in most cases snr_bounds should be provided in ascending order. 
+    Exponent array will be overwritten in the order that snr_bounds are defined,
+    and therefore in most cases snr_bounds should be provided in ascending order.
 
     Parameters
     ----------
@@ -238,9 +238,9 @@ def custom_power(snr, snr_bounds, exponents):
 
 def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d, xvalues, good_pix):
     """
-    Adjusted version of the calc_opt_sums() function from stcal ramp fitting. Now 
+    Adjusted version of the calc_opt_sums() function from stcal ramp fitting. Now
     weights are all equal to 1, except for those that correspond to NaN or inf's
-    in the inverse read noise^2 arrays. 
+    in the inverse read noise^2 arrays.
 
 
     Calculate the sums needed to determine the slope and intercept (and sigma of
@@ -362,7 +362,7 @@ def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d, xvalu
 
     # Set weights to all be equal to 1
     wt_h = np.ones(data_masked.shape, dtype=np.float32)
-    
+
     # Loop through and unweight any nan's inf from the inverse read noise^2
     for jj_rd in range(data_masked.shape[0]):
         wt_h[jj_rd, np.isnan(invrdns2_r)] = 0.
@@ -438,14 +438,14 @@ def mean_ramp_fit_single(model, buffsize, save_opt, readnoise_2d, gain_2d,algori
         The tuple of computed optional results arrays for fitting.
     """
     tstart = time.time()
-    
+
     ramp_data = ramp_fit.create_ramp_fit_class(model, dqflags)
     # Get readnoise array for calculation of variance of noiseless ramps, and
     #   gain array in case optimal weighting is to be done
     nframes = ramp_data.nframes
     readnoise_2d *= gain_2d / np.sqrt(2. * nframes)
     int_times = ramp_data.int_times
-    
+
     # For MIRI datasets having >1 group, if all pixels in the final group are
     #   flagged as DO_NOT_USE, resize the input model arrays to exclude the
     #   final group.  Similarly, if leading groups 1 though N have all pixels
@@ -579,13 +579,13 @@ create_integration_model()
 create_image_model()
 
 Will *not* need to be directly included in this file, we can instead simply
-import them from ramp_fitting.ramp_fit_step 
+import them from ramp_fitting.ramp_fit_step
 
-i.e. 
+i.e.
 
 from ramp_fitting.ramp_fit_step import xxx
 
-However, this has yet incorporated in the pypi repository, so can't do things straight away. 
+However, this has yet incorporated in the pypi repository, so can't do things straight away.
 
 '''
 

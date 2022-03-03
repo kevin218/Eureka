@@ -3,7 +3,7 @@ from scipy.stats import norm
 import pdb
 from copy import deepcopy
 
-def ln_like(theta, lc, model, pmin, pmax, freenames):
+def ln_like(theta, lc, model, freenames):
     """Compute the log-likelihood.
 
     Parameters
@@ -14,10 +14,6 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
         The lightcurve data object
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    pmin: ndarray
-        The lower-bound for uniform priors.
-    pmax: ndarray
-        The upper-bound for uniform priors.
     freenames: iterable
         The names of the fitted parameters.
 
@@ -35,14 +31,10 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     - January 22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     """
-    # params[ifreepars] = freepars
-    ilow = np.where(theta < pmin)
-    ihi = np.where(theta > pmax)
-    theta[ilow] = pmin[ilow]
-    theta[ihi] = pmax[ihi]
+
     model.update(theta, freenames)
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    residuals = (lc.flux - model_lc)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
         lc.unc_fit = np.ones_like(lc.flux) * theta[ind[0]] * 1e-6        
@@ -52,21 +44,21 @@ def ln_like(theta, lc, model, pmin, pmax, freenames):
     else:
         lc.unc_fit = deepcopy(lc.unc)
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
-    if len(ilow[0]) + len(ihi[0]) > 0:
-        ln_like_val = -np.inf
     return ln_like_val
 
-def lnprior(theta, pmin, pmax):
+def lnprior(theta, prior1, prior2, priortype):
     """Compute the log-prior.
 
     Parameters
     ----------
     theta: ndarray
         The current estimate of the fitted parameters
-    pmin: ndarray
-        The lower-bound for uniform priors.
-    pmax: ndarray
-        The upper-bound for uniform priors.
+    prior1: ndarray
+        The lower-bound for uniform/log uniform priors, or mean for normal priors.
+    prior2: ndarray
+        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
+    priortype: ndarray
+        Keywords indicating the type of prior for each free parameter.
 
     Returns
     -------
@@ -79,15 +71,25 @@ def lnprior(theta, pmin, pmax):
 
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
+    - February 23-25, 2022 Megan Mansfield
+        Added log-uniform and Gaussian priors.
     """
     lnprior_prob = 0.
     n = len(theta)
     for i in range(n):
-        if np.logical_or(theta[i] < pmin[i],
-                                theta[i] > pmax[i]): lnprior_prob += - np.inf
+        if priortype[i]=='U':
+            if np.logical_or(theta[i] < prior1[i], theta[i] > prior2[i]):
+                lnprior_prob += - np.inf
+        elif priortype[i]=='N':
+            lnprior_prob -= 0.5*(np.sum(((theta[i] - prior1[i])/prior2[i])**2 + np.log(2.0*np.pi*(prior2[i])**2)))
+        elif priortype[i]=='LU':
+            if np.logical_or(np.log(theta[i]) < prior1[i], np.log(theta[i]) > prior2[i]):
+                lnprior_prob += - np.inf
+        else:
+            raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return lnprior_prob
 
-def lnprob(theta, lc, model, pmin, pmax, freenames):
+def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     """Compute the log-probability.
 
     Parameters
@@ -98,10 +100,12 @@ def lnprob(theta, lc, model, pmin, pmax, freenames):
         The lightcurve data object
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    pmin: ndarray
-        The lower-bound for uniform priors.
-    pmax: ndarray
-        The upper-bound for uniform priors.
+    prior1: ndarray
+        The lower-bound for uniform/log uniform priors, or mean for normal priors.
+    prior2: ndarray
+        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
+    priortype: ndarray
+        Keywords indicating the type of prior for each free parameter.
     freenames:
         The names of the fitted parameters.
 
@@ -116,26 +120,64 @@ def lnprob(theta, lc, model, pmin, pmax, freenames):
 
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
+    - February 23-25, 2022 Megan Mansfield
+        Added log-uniform and Gaussian priors.
     """
-    ln_like_val = ln_like(theta, lc, model, pmin, pmax, freenames)
-    lp = lnprior(theta, pmin, pmax)
+    ln_like_val = ln_like(theta, lc, model, freenames)
+    lp = lnprior(theta, prior1, prior2, priortype)
     lnprob = ln_like_val + lp
     if not np.isfinite(lnprob):
         lnprob = -np.inf
     return lnprob
 
-#PRIOR TRANSFORMATION TODO: ADD GAUSSIAN PRIORS
 def transform_uniform(x, a, b):
     return a + (b - a) * x
+
+def transform_log_uniform(x, a, b):
+    return a*(b/a)**x
 
 def transform_normal(x, mu, sigma):
     return norm.ppf(x, loc=mu, scale=sigma)
 
-def ptform(theta, pmin, pmax):
+def ptform(theta, prior1, prior2, priortype):
+    """Compute the prior transform for nested sampling.
+
+    Parameters
+    ----------
+    theta: ndarray
+        The current estimate of the fitted parameters
+    prior1: ndarray
+        The lower-bound for uniform/log uniform priors, or mean for normal priors.
+    prior2: ndarray
+        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
+    priortype: ndarray
+        Keywords indicating the type of prior for each free parameter.
+    freenames:
+        The names of the fitted parameters.
+
+    Returns
+    -------
+    p: ndarray
+        The prior transform.
+
+    Notes
+    -----
+    History:
+
+    - February 23-25, 2022 Megan Mansfield
+        Added log-uniform and Gaussian priors.    
+    """
     p = np.zeros_like(theta)
     n = len(theta)
     for i in range(n):
-        p[i] = transform_uniform(theta[i], pmin[i], pmax[i])
+        if priortype[i]=='U':
+            p[i] = transform_uniform(theta[i], prior1[i], prior2[i])
+        elif priortype[i]=='LU':
+            p[i] = transform_log_uniform(theta[i], prior1[i], prior2[i])
+        elif priortype[i]=='N':
+            p[i] = transform_normal(theta[i], prior1[i], prior2[i])
+        else:
+            raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return p
 
 def computeRedChiSq(lc, model, meta, freenames):

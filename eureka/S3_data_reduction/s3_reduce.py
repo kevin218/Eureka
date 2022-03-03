@@ -56,13 +56,15 @@ class DataClass:
         return
 
 
-def reduceJWST(eventlabel, s2_meta=None):
+def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters
     ----------
     eventlabel: str
         The unique identifier for these data.
+    ecf_path:   str
+        The absolute or relative path to where ecfs are stored
     s2_meta:    MetaClass
         The metadata object from Eureka!'s S2 step (if running S2 and S3 sequentially).
 
@@ -90,7 +92,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
+    ecf = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(meta, ecf)
     meta.eventlabel=eventlabel
 
@@ -132,7 +134,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Load Eureka! control file and store values in the S2 metadata object
             ecffile = 'S3_' + eventlabel + '.ecf'
-            ecf = rd.read_ecf(ecffile)
+            ecf = rd.read_ecf(ecf_path, ecffile)
             rd.store_ecf(meta, ecf)
 
             # Overwrite the inputdir with the exact output directory from S2
@@ -200,7 +202,7 @@ def reduceJWST(eventlabel, s2_meta=None):
 
             # Copy ecf
             log.writelog('Copying S3 control file')
-            rd.copy_ecf(meta, ecffile)
+            rd.copy_ecf(meta, ecf_path, ecffile)
 
             # Create list of file segments
             meta = util.readfiles(meta)
@@ -255,12 +257,12 @@ def reduceJWST(eventlabel, s2_meta=None):
                 else:
                     meta.int_start = 0
                 
+                # Trim data to subarray region of interest
+                data, meta = util.trim(data, meta)
+
                 # Locate source postion
                 meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
                 log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
-                
-                # Trim data to subarray region of interest
-                data, meta = util.trim(data, meta)
                 
                 # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)

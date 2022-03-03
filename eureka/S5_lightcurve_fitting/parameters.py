@@ -11,7 +11,7 @@ from ..lib import readECF as rd
 
 class Parameter:
     """A generic parameter class"""
-    def __init__(self, name, value, ptype='free', mn=None, mx=None):
+    def __init__(self, name, value, ptype='free', mn=None, mx=None, prior=None):
         """Instantiate a Parameter with a name and value at least
 
         Parameters
@@ -23,9 +23,11 @@ class Parameter:
         ptype: str
             Parameter type, ['free','fixed','independent','shared']
         mn: float, int, str, list, tuple (optioal)
-            The minimum value
+            The first prior input value: lower-bound for uniform/log uniform priors, or mean for normal priors.
         mx: float, int, str, list, tuple (optioal)
-            The maximim value
+            The second prior input value: upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
+        prior: str
+            Type of prior, ['U','LU','N']
         """
         # If value is a list, distribute the elements
         if isinstance(value, list):
@@ -41,6 +43,7 @@ class Parameter:
         self.mn = mn
         self.mx = mx
         self.ptype = ptype
+        self.prior = prior
 
     @property
     def ptype(self):
@@ -70,7 +73,7 @@ class Parameter:
     @property
     def values(self):
         """Return all values for this parameter"""
-        vals = self.name, self.value, self.ptype, self.mn, self.mx
+        vals = self.name, self.value, self.ptype, self.mn, self.mx, self.prior
 
         return list(filter(lambda x: x is not None, vals))
 
@@ -78,7 +81,7 @@ class Parameter:
 class Parameters:
     """A class to hold the Parameter instances
     """
-    def __init__(self, param_file=None, **kwargs):
+    def __init__(self, param_path='./', param_file=None, **kwargs):
         """Initialize the parameter object
 
         Parameters
@@ -98,26 +101,26 @@ class Parameters:
         params = {}
 
         # If a param_file is given, make sure it exists
-        if param_file is not None and os.path.exists(param_file):
+        if param_file is not None and param_path is not None and os.path.exists(os.path.join(param_path,param_file)):
 
             # Parse the ASCII file
             if param_file.endswith('.txt'):
 
                 # Add the params to a dict
-                data = np.genfromtxt(param_file)
+                data = np.genfromtxt(os.path.join(param_path, param_file))
                 params = {i: j for i, j in data}
                 print(params)
 
             # Parse the JSON file
             elif param_file.endswith('.json'):
 
-                with open(param_file) as json_data:
+                with open(os.path.join(param_path, param_file)) as json_data:
                     params = json.load(json_data)
 
             # Parse Eureka control file
             elif param_file.endswith('.ecf'):
 
-                ecf = rd.read_ecf(param_file)
+                ecf = rd.read_ecf(param_path, param_file)
                 paramlist=vars(ecf)
                 keylist=list(paramlist.keys())
                 params={}

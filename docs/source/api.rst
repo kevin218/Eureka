@@ -68,13 +68,6 @@ lib.logedit
     :undoc-members:
     :show-inheritance:
 
-lib.lsq
----------------
-.. automodule:: eureka.lib.lsq
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.manageevent
 ---------------
 .. automodule:: eureka.lib.manageevent

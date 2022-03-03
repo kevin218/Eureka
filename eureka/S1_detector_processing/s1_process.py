@@ -15,7 +15,7 @@ class MetaClass:
 	def __init__(self):
 		return
 
-def rampfitJWST(eventlabel):
+def rampfitJWST(eventlabel, ecf_path='./'):
 	'''
 	Process a Stage 0, *_uncal.fits file to Stage 1 *_rate.fits and *_rateints.fits files. 
 	Steps taken to perform this processing can follow the default JWST pipeline, or alternative methods.  
@@ -47,7 +47,7 @@ def rampfitJWST(eventlabel):
 
 	# Load Eureka! control file and store values in Event object
 	ecffile = 'S1_' + eventlabel + '.ecf'
-	ecf     = rd.read_ecf(ecffile)
+	ecf     = rd.read_ecf(ecf_path, ecffile)
 	rd.store_ecf(meta, ecf)
 
 	# Shouldn't be too relevant for Stage 1, but assign raw input and output directories
@@ -74,7 +74,7 @@ def rampfitJWST(eventlabel):
 
 	# Copy ecf
 	log.writelog('Copying S1 control file')
-	rd.copy_ecf(meta, ecffile)
+	rd.copy_ecf(meta, ecf_path, ecffile)
 
 	# Create list of file segments
 	meta = util.readfiles(meta)
