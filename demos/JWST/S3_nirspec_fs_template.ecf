@@ -29,9 +29,9 @@ hide_plots	True		   # If True, plots will automatically be closed rather than po
 save_output True       # Save outputs for use in S4
 
 # Project directory
-topdir      /Users/mayem1/Documents/
+topdir      /home/User
 
 # Directories relative to project dir
-inputdir		/Analysis_JWST/JWST_Simulated/NIRSpec_PRISM/Stage2/S2_2022-02-23_wasp39_run1/	# The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
-outputdir		/Analysis_JWST/JWST_Simulated/NIRSpec_PRISM/Stage3/
-ancildir    /Analysis_JWST/JWST_Simulated/NIRSpec_PRISM/ancil/
+inputdir    /Data/JWST-Sim/NIRCam/Stage2	# The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+outputdir	/Data/JWST-Sim/NIRCam/Stage3
+ancildir    /Data/JWST-Sim/NIRCam/ancil
