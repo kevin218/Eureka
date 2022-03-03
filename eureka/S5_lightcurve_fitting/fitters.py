@@ -70,7 +70,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Get the best fit params
     fit_params = results.x
-    
+
+    # Save the fit ASAP
+    save_fit(meta, lc, calling_function, fit_params, freenames)
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
@@ -80,11 +83,11 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
 
-    residuals = (lc.flux - model_lc)
     # FINDME
     # Commented out for now because op.least_squares() doesn't provide covariance matrix
     # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
     # if results[1] is not None:
+    #     residuals = (lc.flux - model_lc)
     #     cov_mat = results[1]*np.var(residuals)
     # else:
     #     # Sometimes lsq will fail to converge and will return a None covariance matrix
@@ -115,8 +118,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
-    save_fit(meta, lc, calling_function, fit_params, freenames)
 
     return best_model
 
@@ -262,7 +263,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, prior1, prior2, priortype, freenames))
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     #samples = sampler.chain[:, meta.run_nburn::1, :].reshape((-1, ndim))
-    samples = sampler.get_chain(get_chain=True, discard=meta.run_nburn)
+    samples = sampler.get_chain(flat=True, discard=meta.run_nburn)
 
     medians = []
     for i in range(len(step_size)):
@@ -274,6 +275,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
 
     if meta.isplots_S5 >= 5:
+        plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', full=True, nburn=meta.run_nburn)
+        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', full=False)
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
@@ -490,6 +493,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
                    fit_params.get(i).vary, fit_params.get(i).min,
                    fit_params.get(i).max) for i in fit_params]
 
+    # Save the fit ASAP
+    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
+
     # Create new model with best fit parameters
     params = Parameters()
     # Store each as an attribute
@@ -516,8 +522,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
-    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
 
     return best_model
 
