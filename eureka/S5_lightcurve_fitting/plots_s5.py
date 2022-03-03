@@ -199,6 +199,74 @@ def plot_corner(samples, lc, meta, freenames, fitter):
 
     return
 
+def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0):
+    """Plot the evolution of the chain to look for temporal trends
+
+    Parameters
+    ----------
+    samples: ndarray
+        The samples produced by the sampling algorithm
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    freenames: iterable
+        The names of the fitted parameters
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+    full:   bool
+        Whether or not the samples passed in include any burn-in steps
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved plotting code to a separate function.
+    """
+    if len(freenames) > 20:
+        # Break the plot into many plots to avoid an enormous figure
+        ndims = 20*np.ones(int(len(freenames//20)), dtype=int)
+        if len(freenames)-np.sum(ndims) > 0:
+            ndims = np.append(ndims, int(len(freenames)-np.sum(ndims)))
+    else:
+        ndims = np.array([len(freenames),])
+
+    for plot_number, ndim in enumerate(ndims):
+        fig, axes = plt.subplots(ndim, 1, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6, ndim))
+        
+        print(plot_number)
+        print(ndims)
+        print(type(ndims[0]), type(ndim), type(plot_number), type(np.sum(ndims[:plot_number])), type(np.sum(ndims[:plot_number])+ndim))
+
+        for i, j in enumerate(range(np.sum(ndims[:plot_number]), np.sum(ndims[:plot_number])+ndim)):
+            axes[i].plot(samples[:, :, j], alpha=0.4)
+            axes[i].set_ylabel(freenames[j])
+            if full and nburn>0:
+                axes[i].axvline(nburn)
+        fig.tight_layout(h_pad=0.0)
+        
+        fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
+        if full:
+            fname += '_fullchain'
+        else:
+            fname += '_chain'
+        fname += '_{}'.format(fitter)
+        if len(ndims)>1:
+            fname += '_plot{}'.format(plot_number)
+        fname += '.png'
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+        if meta.hide_plots:
+            plt.close()
+        else:
+            plt.pause(0.2)
+
+    return
+
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian
 

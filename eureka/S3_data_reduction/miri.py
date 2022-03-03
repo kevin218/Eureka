@@ -58,11 +58,16 @@ def read(filename, data, meta):
     int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
 
     # Record integration mid-times in BJD_TDB
-    # There is no time information in the simulated MIRI data
-    # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt converted to days
+    # data.time = data.int_times['int_mid_BJD_TDB']
     print('WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
           'because they are not in the .fits files themselves')
-    data.time = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.intstart - 1:data.intend] # data.int_times['int_mid_BJD_TDB']
+    if data.mhdr['EFFINTTM']==10.3376:
+        # There is no time information in the old simulated MIRI data
+        # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt converted to days
+        data.time = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.intstart - 1:data.intend]
+    elif data.mhdr['EFFINTTM']==47.712:
+        # A new manually created time array for the new MIRI simulations
+        data.time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44, endpoint=True)[data.intstart - 1:data.intend-1] # Need to subtract an extra 1 from intend for these data
     meta.time_units = 'BJD_TDB'
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code

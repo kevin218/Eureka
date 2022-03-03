@@ -125,6 +125,11 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             wave_1d = table['wave_1d'].data[0:meta.subnx]
             meta.time = table['time'].data[::meta.subnx]
 
+            if meta.wave_min<np.min(wave_1d):
+                log.writelog(f'WARNING: The selected meta.wave_min ({meta.wave_min}) is smaller than the shortest wavelength ({np.min(wave_1d)})')
+            if meta.wave_max>np.max(wave_1d):
+                log.writelog(f'WARNING: The selected meta.wave_max ({meta.wave_max}) is larger than the longest wavelength ({np.max(wave_1d)})')
+
             #Replace NaNs with zero
             optspec[np.where(np.isnan(optspec))] = 0
             opterr[np.where(np.isnan(opterr))] = 0
@@ -163,8 +168,9 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta)
-                    plots_s4.lc_driftcorr(meta, wave_1d, optspec)
 
+            if meta.isplots_S4 >= 1:
+                plots_s4.lc_driftcorr(meta, wave_1d, optspec)
 
             log.writelog("Generating light curves")
             meta.lcdata   = np.ma.zeros((meta.nspecchan, meta.n_int))

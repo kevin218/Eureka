@@ -20,7 +20,6 @@ lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in,
 run_nsteps      4000
 run_nwalkers    50
 run_nburn       2000
-max_pos_iters   10 # How many times should the initial walkers be regenerated to fit within priors before giving up and using fewer walkers than desired?
 
 #dynesty
 run_nlive       1024
