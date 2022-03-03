@@ -79,25 +79,25 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
     old_meta = meta
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            
+
             t0 = time_pkg.time()
-            
+
             meta = load_specific_s5_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
-            
+
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.runs_s6[run_i], ap=spec_hw_val, bg=bg_hw_val)
             run_i += 1
-            
+
             # Copy existing S5 log file and resume log
             meta.s6_logname  = meta.outputdir + 'S6_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s6_logname, read=meta.s5_logname)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
-            
+
             # Copy ecf
             log.writelog('Copying S6 control file')
             rd.copy_ecf(meta, ecf_path, ecffile)
-            
+
             # Get the wavelength values
             wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
             wave_errs = (meta.wave_hi-meta.wave_low)/2
@@ -119,7 +119,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
             if label_unit=='um':
                 label_unit = r'$\mu$m'
             xlabel = physical_type+' ('+label_unit+')'
-            
+
             fit_methods = meta.fit_method.strip('[').strip(']').strip().split(',')
 
             accepted_y_units = ['Rp/Rs', 'Rp/R*', '(Rp/Rs)^2', '(Rp/R*)^2', 'Fp/Fs', 'Fp/F*']
@@ -159,7 +159,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 ylabel = r'$F_{\rm p}/F_{\rm *}$'
             else:
                 raise AssertionError(f'Unknown y_unit {meta.y_unit} is none of ['+', '.join(accepted_y_units)+']')
-            
+
             # Convert to percent, ppm, etc. if requested
             if not hasattr(meta, 'y_scalar'):
                 meta.y_scalar = 1
@@ -172,7 +172,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 ylabel += f' * {meta.y_scalar}'
 
             if meta.model_spectrum is not None:
-                model_x, model_y = np.loadtxt(os.path.join(meta.topdir, *meta.model_spectrum.split(os.sep)), delimiter=',').T
+                model_x, model_y = np.loadtxt(os.path.join(meta.topdir, *meta.model_spectrum.split(os.sep)), delimiter=meta.model_delimiter).T
                 # Convert model_x_unit to x_unit if needed
                 model_x *= getattr(units, meta.model_x_unit).to(x_unit, equivalencies=units.spectral())
                 if meta.model_y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2'] and meta.model_y_unit!=meta.y_unit:
@@ -186,10 +186,10 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
 
                 if not hasattr(meta, 'model_y_scalar'):
                     meta.model_y_scalar = 1
-                
+
                 # Convert the model y-units if needed to match the data y-units requested
                 if meta.model_y_scalar!=1:
-                    model_y /= meta.model_y_scalar
+                    model_y *= meta.model_y_scalar
             else:
                 model_x = None
                 model_y = None
@@ -214,17 +214,17 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 log.writelog(f'Calculated H={np.round(scaleHeight,2)} with g={np.round(meta.planet_g, 2)} m/s^2, Teq={meta.planet_Teq} K, and mu={meta.planet_mu} u')
                 scaleHeight = (scaleHeight/(meta.star_Rad*constants.R_sun)).si.value
                 plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel, scaleHeight, meta.planet_R0)
-            
+
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-            
+
             # Save results
             log.writelog('Saving results')
             me.saveevent(meta, meta.outputdir + 'S6_' + meta.eventlabel + "_Meta_Save", save=[])
-            
+
             log.closelog()
-    
+
     return meta
 
 def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
@@ -256,7 +256,7 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
                                     +', '.join(samples.keys()))
             medians = np.array([fitted_values[key] for key in keys])
             errs = None
-    
+
     return medians, errs
 
 def read_s5_meta(meta):

@@ -108,7 +108,7 @@ def ld_profile(name='quadratic', latex=False):
         return profile
 
     else:
-        print("'{}' is not a supported profile. Try".format(name), names)
+        raise Exception("'{}' is not a supported profile. Try".format(name), names)
         return
 
 
