@@ -262,7 +262,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     log.writelog('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, prior1, prior2, priortype, freenames))
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
-    #samples = sampler.chain[:, meta.run_nburn::1, :].reshape((-1, ndim))
     samples = sampler.get_chain(flat=True, discard=meta.run_nburn)
 
     medians = []
