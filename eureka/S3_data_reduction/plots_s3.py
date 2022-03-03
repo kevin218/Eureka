@@ -44,9 +44,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3101-2D_LC.png')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
+    #     plt.close()
+    # else:
         plt.pause(0.2)
 
 def image_and_background(data, meta, n):
@@ -87,9 +87,9 @@ def image_and_background(data, meta, n):
     plt.xlabel('Pixel Position')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
+    #     plt.close()
+    # else:
         plt.pause(0.2)
 
 
@@ -116,15 +116,15 @@ def optimal_spectrum(data, meta, n):
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
     plt.semilogy(range(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
     # plt.errorbar(range(subnx), stdspec[n], yerr=np.sqrt(stdvar[n]), fmt='-', color='C1', ecolor='C0', label='Std Spec')
-    plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
+    # plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
     plt.ylabel('Flux')
     plt.xlabel('Pixel Position')
     plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
+    #     plt.close()
+    # else:
         plt.pause(0.2)
 
 
@@ -186,9 +186,9 @@ def source_position(meta, x_dim, pos_max, m,
     plt.legend()
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/fig3303-file' + str(m+1) + '-source_pos.png')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
+    #     plt.close()
+    # else:
         plt.pause(0.2)
 
 def profile(eventdir, profile, submask, n, hide_plots=False):
@@ -221,7 +221,7 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
     plt.xlabel('Pixel Position')
     plt.tight_layout()
     plt.savefig(eventdir+'figs/fig3305-'+str(n)+'-Profile.png')
-    if hide_plots:
-        plt.close()
-    else:
+    if not hide_plots:
+    #     plt.close()
+    # else:
         plt.pause(0.2)
