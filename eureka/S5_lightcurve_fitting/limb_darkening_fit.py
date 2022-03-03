@@ -50,7 +50,7 @@ def ld_profile(name='quadratic', latex=False):
 
     """
     # Supported profiles a la BATMAN
-    names = ['uniform', 'linear', 'quadratic', 'square-root',
+    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
 
     # Check that the profile is supported
@@ -70,6 +70,13 @@ def ld_profile(name='quadratic', latex=False):
         if name == 'quadratic':
             def profile(m, c1, c2):
                 return 1. - c1*(1.-m) - c2*(1.-m)**2
+
+        # Reparameterized Quadratic (Kipping 2013)
+        if name == 'kipping2013':
+            def profile(m, c1, c2):
+                u1  = 2*np.sqrt(c1)*c2
+                u2  = np.sqrt(c1)*(1-2*c2)
+                return 1. - u1*(1.-m) - u2*(1.-m)**2
 
         # Square-root
         if name == 'square-root':

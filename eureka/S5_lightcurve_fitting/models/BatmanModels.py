@@ -65,6 +65,11 @@ class BatmanTransitModel(Model):
             # Use batman ld_profile name
             if self.parameters.limb_dark.value == '4-parameter':
                 bm_params.limb_dark = 'nonlinear'
+            elif self.parameters.limb_dark.value == 'kipping2013':
+                bm_params.limb_dark = 'quadratic'
+                u1  = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
+                u2  = np.sqrt(bm_params.u[0])*(1-2*bm_params.u[1])
+                bm_params.u = np.array([u1, u2])
 
             # Make the transit model
             m_transit = batman.TransitModel(bm_params, self.time, transittype='primary')
