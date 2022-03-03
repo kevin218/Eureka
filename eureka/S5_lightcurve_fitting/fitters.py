@@ -214,8 +214,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
         step_size = 0.001*np.abs(freepars)
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
-    run_nsteps = meta.run_nsteps
-    burn_in = meta.run_nburn
 
     # make it robust to lsq hitting the upper or lower bound of the param space
     ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
@@ -262,16 +260,21 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     log.writelog('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, prior1, prior2, priortype, freenames))
-    sampler.run_mcmc(pos, run_nsteps, progress=True)
-    samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
-    if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
+    sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
+    #samples = sampler.chain[:, meta.run_nburn::1, :].reshape((-1, ndim))
+    samples = sampler.get_chain(get_chain=True, discard=meta.run_nburn)
 
     medians = []
     for i in range(len(step_size)):
             q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
+
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
+
+    if meta.isplots_S5 >= 5:
+        plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -304,8 +307,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-    
-    save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
 
     return best_model
 
@@ -385,15 +386,18 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     if meta.run_verbose:
         log.writelog('Number of posterior samples is {}'.format(len(samples)))
 
+    medians = []
+    for i in range(len(freenames)):
+        q = np.percentile(samples[:, i], [16, 50, 84])
+        medians.append(q[1])
+    fit_params = np.array(medians)
+
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
+
     # plot using corner.py
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
-
-    medians = []
-    for i in range(len(freenames)):
-            q = np.percentile(samples[:, i], [16, 50, 84])
-            medians.append(q[1])
-    fit_params = np.array(medians)
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -425,8 +429,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
-    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
 
     return best_model
 
