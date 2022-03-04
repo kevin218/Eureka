@@ -230,7 +230,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
     """
     if len(freenames) > 20:
         # Break the plot into many plots to avoid an enormous figure
-        ndims = 20*np.ones(int(len(freenames//20)), dtype=int)
+        ndims = 20*np.ones(int(len(freenames)//20), dtype=int)
         if len(freenames)-np.sum(ndims) > 0:
             ndims = np.append(ndims, int(len(freenames)-np.sum(ndims)))
     else:
@@ -239,10 +239,6 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
     for plot_number, ndim in enumerate(ndims):
         fig, axes = plt.subplots(ndim, 1, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6, ndim))
         
-        print(plot_number)
-        print(ndims)
-        print(type(ndims[0]), type(ndim), type(plot_number), type(np.sum(ndims[:plot_number])), type(np.sum(ndims[:plot_number])+ndim))
-
         for i, j in enumerate(range(np.sum(ndims[:plot_number]), np.sum(ndims[:plot_number])+ndim)):
             axes[i].plot(samples[:, :, j], alpha=0.4)
             axes[i].set_ylabel(freenames[j])
