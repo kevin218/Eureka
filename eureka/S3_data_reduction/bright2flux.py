@@ -185,27 +185,52 @@ def convert_to_e(data, meta, log):
         The metadata object.
     """
     if data.shdr['BUNIT'] != 'ELECTRONS/S':
-        log.writelog('Automatically getting reference files to convert units to e/s')
+        log.writelog('Automatically getting reference files to convert units to electrons')
         if data.mhdr['TELESCOP'] != 'JWST':
             raise ValueError('Currently unable to automatically download reference files for non-jwst observations!')
-        meta.photfile, meta.gainfile = download_ancil(data.filename)
+        meta.photfile, meta.gainfile = retrieve_ancil(data.filename)
     
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
         # log.writelog('Converting from brightness to flux units')
         # data = b2f.bright2flux(data, data.shdr['PIXAR_A2'])
         # Convert from brightness units (MJy/sr) to DNs
-        log.writelog('  Converting from brightness units (MJy/sr) to electrons per second (e/s)')
+        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
         data = bright2dn(data, meta)
         data = dn2electrons(data, meta)
     if data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
-        log.writelog('  Converting from data numbers per second (DN/s) to electrons per second (e/s)')
+        log.writelog('  Converting from data numbers per second (DN/s) to electrons')
         data = dn2electrons(data, meta)
     
     return data, meta
 
-def download_ancil(fitsname):
+def retrieve_ancil(fitsname):
+    '''Use code from the STScI's JWST pipeline to find/download the needed ancilliary files.
+
+    This code requires that the CRDS_PATH and CRDS_SERVER_URL environment variables be set
+    in your .bashrc file (or equivalent, e.g. .bash_profile)
+
+    Parameters
+    ----------
+    fitsname:   
+        The filename of the file currently being analyzed.
+
+    Returns
+    -------
+    phot_filename:  str
+        The full path to the photom calibration file.
+    gain_filename:  str
+        The full path to the gain calibration file.
+
+    Notes
+    -----
+    
+    History:
+
+    - 2022-03-04 Taylor J Bell
+        Initial code version.
+    '''
     step = PhotomStep()
     with datamodels.open(fitsname) as model:
         phot_filename = step.get_reference_file(model, 'photom')
