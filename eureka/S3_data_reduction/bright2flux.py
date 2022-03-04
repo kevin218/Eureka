@@ -1,8 +1,11 @@
-import os
+import sys
+from io import StringIO
 import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
+from jwst import datamodels
+from jwst.photom import PhotomStep
 
 def dn2electrons(data, meta):
     """This function converts the data, uncertainty, and variance arrays from raw units (DN) to electrons.
@@ -183,19 +186,30 @@ def convert_to_e(data, meta, log):
     meta:   MetaClass
         The metadata object.
     """
+    if data.shdr['BUNIT'] != 'ELECTRONS/S':
+        log.writelog('Automatically getting reference files to convert units to e/s')
+        if data.mhdr['TELESCOP'] != 'JWST':
+            raise ValueError('Currently unable to automatically download reference files for non-jwst observations!')
+        meta.photfile, meta.gainfile = download_ancil(data.filename)
+    
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
         # log.writelog('Converting from brightness to flux units')
         # data = b2f.bright2flux(data, data.shdr['PIXAR_A2'])
         # Convert from brightness units (MJy/sr) to DNs
-        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        meta.photfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_PHOTOM'][7:]
+        log.writelog('  Converting from brightness units (MJy/sr) to electrons per second (e/s)')
         data = bright2dn(data, meta)
-        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
         data = dn2electrons(data, meta)
     if data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
         log.writelog('  Converting from data numbers per second (DN/s) to electrons per second (e/s)')
-        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
         data = dn2electrons(data, meta)
+    
     return data, meta
+
+def download_ancil(fitsname):
+    step = PhotomStep()
+    with datamodels.open(fitsname) as model:
+        phot_filename = step.get_reference_file(model, 'photom')
+        gain_filename = step.get_reference_file(model, 'gain')
+    return phot_filename, gain_filename 
