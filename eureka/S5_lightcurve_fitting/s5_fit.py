@@ -95,28 +95,28 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     old_meta = meta
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
-            
+
             t0 = time_pkg.time()
-            
+
             meta = load_specific_s4_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
-            
+
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.runs_s5[run_i], ap=spec_hw_val, bg=bg_hw_val)
             run_i += 1
-            
+
             # Copy existing S4 log file and resume log
             meta.s5_logname  = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
             log         = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
-            
+
             # Copy ecf
             log.writelog('Copying S5 control file')
             rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file')
             shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
-            
+
             # Set the intial fitting parameters
             params = p.Parameters(ecf_path, meta.fit_par)
             sharedp = False
@@ -124,58 +124,58 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                 if 'shared' in val:
                     sharedp = True
             meta.sharedp = sharedp
-            
+
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = meta.time - offset
             time_units = meta.time_units+f' - {offset}'
-            
+
             if sharedp:
                 #Make a long list of parameters for each channel
                 longparamlist, paramtitles = make_longparamlist(meta, params, chanrng)
 
                 log.writelog("\nStarting Shared Fit of {} Channels\n".format(chanrng))
-                
-                flux = np.array([])
-                flux_err = np.array([])
+
+                flux = np.ma.masked_array([])
+                flux_err = np.ma.masked_array([])
                 for i in range(chanrng):
-                    flux = np.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
-                    flux_err = np.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
-                
+                    flux = np.ma.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
+                    flux_err = np.ma.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
+
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
             else:
                 for channel in range(chanrng):
                     #Make a long list of parameters for each channel
                     longparamlist, paramtitles = make_longparamlist(meta, params, chanrng)
-                    
+
                     log.writelog("\nStarting Channel {} of {}\n".format(channel+1, chanrng))
-                    
+
                     # Get the flux and error measurements for the current channel
                     flux = meta.lcdata[channel,:]
                     flux_err = meta.lcerr[channel,:]
-                    
+
                     # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
                     flux_err = flux_err/ flux.mean()
                     flux = flux / flux.mean()
-                    
+
                     meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
-            
+
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-            
+
             # Save results
             log.writelog('Saving results')
             me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
-            
+
             log.closelog()
-    
+
     return meta
 
 def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng):
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist, unc=flux_err, time_units=time_units, name=eventlabel, share=sharedp)
-    
+
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
@@ -215,7 +215,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
     model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
-    
+
     # Fit the models using one or more fitters
     log.writelog("=========================")
     if 'lsq' in meta.fit_method:
@@ -243,7 +243,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         log.writelog("Completed lmfit fit.")
         log.writelog("-------------------------")
     log.writelog("=========================")
-    
+
     # Plot the results from the fit(s)
     if meta.isplots_S5 >= 1:
         lc_model.plot(meta)
@@ -255,7 +255,7 @@ def make_longparamlist(meta, params, chanrng):
         nspecchan = chanrng
     else:
         nspecchan = 1
-    
+
     longparamlist=[ [] for i in range(nspecchan)]
     tlist=list(params.dict.keys())
     for param in tlist:

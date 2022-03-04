@@ -40,13 +40,13 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_sys_full = model.syseval()
     model_phys_full, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
-    
+
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.copy(lc.flux)
+        flux = np.ma.MaskedArray.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
             unc = deepcopy(lc.unc_fit)
         else:
-            unc = np.copy(lc.unc)
+            unc = np.ma.MaskedArray.copy(lc.unc)
         model = np.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -58,7 +58,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_sys = model_sys[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
-        
+
         residuals = flux - model
         fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
@@ -84,7 +84,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             plt.close()
         else:
             plt.pause(0.2)
-    
+
     return
 
 def plot_rms(lc, model, meta, fitter):
@@ -133,7 +133,7 @@ def plot_rms(lc, model, meta, fitter):
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         residuals = residuals[np.argsort(time)]
 
@@ -238,7 +238,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
 
     for plot_number, ndim in enumerate(ndims):
         fig, axes = plt.subplots(ndim, 1, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6, ndim))
-        
+
         print(plot_number)
         print(ndims)
         print(type(ndims[0]), type(ndim), type(plot_number), type(np.sum(ndims[:plot_number])), type(np.sum(ndims[:plot_number])+ndim))
@@ -249,7 +249,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
             if full and nburn>0:
                 axes[i].axvline(nburn)
         fig.tight_layout(h_pad=0.0)
-        
+
         fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
         if full:
             fname += '_fullchain'
@@ -280,7 +280,7 @@ def plot_res_distr(lc, model, meta, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-        
+
     Returns
     -------
     None
@@ -299,20 +299,20 @@ def plot_res_distr(lc, model, meta, fitter):
     model_lc = model.eval()
 
     plt.figure(int('54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
-    
+
 
     for channel in lc.fitted_channels:
-        flux = np.copy(lc.flux)
+        flux = np.ma.MaskedArray.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
             unc = np.copy(lc.unc_fit)
         else:
-            unc = np.copy(lc.unc)
+            unc = np.ma.MaskedArray.copy(lc.unc)
         model = np.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         hist_vals = residuals/unc
         hist_vals[~np.isfinite(hist_vals)] = np.nan # Mask out any infinities
