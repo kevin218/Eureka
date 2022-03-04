@@ -35,8 +35,6 @@ def binned_lightcurve(meta, time, i):
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     plt.savefig(meta.outputdir + 'figs/Fig' + str(4300 + i) + '-' + meta.eventlabel + '-1D_LC.png')
     if not meta.hide_plots:
-    #     plt.close()
-    # else:
         plt.pause(0.2)
 
 def drift1d(meta):
@@ -66,8 +64,6 @@ def drift1d(meta):
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/Fig4101-Drift.png')
     if not meta.hide_plots:
-    #     plt.close()
-    # else:
         plt.pause(0.2)
 
 def cc_spec(meta, ref_spec, fit_spec, n):
@@ -98,8 +94,6 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.tight_layout()
     plt.savefig(meta.outputdir + f'figs/Fig4500-{n}-CC_Spec')
     if not meta.hide_plots:
-    #     plt.close()
-    # else:
         plt.pause(0.2)
 
 def cc_vals(meta, vals, n):
@@ -125,6 +119,4 @@ def cc_vals(meta, vals, n):
     plt.tight_layout()
     plt.savefig(meta.outputdir + f'figs/Fig4501-{n}-CC_Vals')
     if not meta.hide_plots:
-    #     plt.close()
-    # else:
         plt.pause(0.2)
