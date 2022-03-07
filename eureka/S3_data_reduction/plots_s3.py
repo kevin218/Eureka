@@ -18,6 +18,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, log):
     -------
     None
     '''
+    optspec = np.ma.masked_invalid(optspec)
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
     wmin = wave_1d.min()
@@ -25,13 +26,13 @@ def lc_nodriftcorr(meta, wave_1d, optspec, log):
     n_int, nx = optspec.shape
     vmin = 0.97
     vmax = 1.03
-    normspec = optspec / np.mean(optspec, axis=0)
+    normspec = optspec / np.ma.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
-    ediff = np.zeros(n_int)
+    ediff = np.ma.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = 1e6 * np.median(np.abs(np.ediff1d(normspec[m])))
-    MAD = np.mean(ediff)
+        ediff[m] = 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(normspec[m])))
+    MAD = np.ma.mean(ediff)
     log.writelog("MAD = " + str(np.round(MAD, 0).astype(int)) + " ppm")
     plt.title("MAD = " + str(np.round(MAD, 0).astype(int)) + " ppm")
     plt.ylabel('Integration Number')
