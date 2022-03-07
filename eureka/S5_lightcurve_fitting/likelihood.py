@@ -31,16 +31,20 @@ def ln_like(theta, lc, model, freenames):
     - January 22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     """
-
     model.update(theta, freenames)
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc)
     if "scatter_ppm" in freenames:
         ind = np.where(freenames=="scatter_ppm")
         lc.unc_fit = theta[ind]*1e-6
     else:
         lc.unc_fit = deepcopy(lc.unc)
-    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+    if model.GP:
+        ln_like_val = model.GP_model_likelihood(model_lc)
+    else:
+        residuals = (lc.flux - model_lc) #/ lc.unc
+        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+    if len(ilow[0]) + len(ihi[0]) > 0:
+        ln_like_val = -np.inf
     return ln_like_val
 
 def lnprior(theta, prior1, prior2, priortype):
@@ -127,6 +131,7 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         lnprob = -np.inf
     return lnprob
 
+
 def transform_uniform(x, a, b):
     return a + (b - a) * x
 
@@ -203,7 +208,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
     """
-    model_lc = model.eval()
+    model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc) #/ lc.unc
     chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))

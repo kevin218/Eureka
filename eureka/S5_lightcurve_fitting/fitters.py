@@ -77,12 +77,12 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-
-    model.update(fit_params, freenames)
     
-    # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    model_lc = model.eval()
+    model.update(fit_params, freenames)
 
+    # Save the covariance matrix in case it's needed to estimate step size for a sampler
+    model_lc = model.eval(incl_GP=True)
+    residuals = (lc.flux - model_lc)
     # FINDME
     # Commented out for now because op.least_squares() doesn't provide covariance matrix
     # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
@@ -94,7 +94,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
-    
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter=calling_function)
@@ -215,7 +215,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         step_size = 0.001*np.abs(freepars)
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
-
+    
     # make it robust to lsq hitting the upper or lower bound of the param space
     ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
     ind_min = np.where(np.logical_and(freepars - prior1 == 0., priortype=='U'))
@@ -227,6 +227,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
         freepars[ind_min] = pmid[ind_min]
     
+
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
     uniformprior=np.where(priortype=='U')
     loguniformprior=np.where(priortype=='LU')
@@ -269,7 +270,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
             q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
-
+    
+    
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
 
@@ -286,7 +288,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if "scatter_ppm" in freenames:
         ind = np.where(freenames == "scatter_ppm")
         lc.unc_fit = medians[ind[0][0]]*1e-6
-
+        
+    #Plot GP fit + components
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='emcee')
+    
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='emcee')
@@ -302,11 +308,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='emcee')
-        
+    
     # Plot residuals distribution
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
-
+    
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -344,6 +350,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
+    
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
 
@@ -358,17 +365,17 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     l_args = [lc, model, freenames]
 
     log.writelog('Running dynesty...')
-
+    
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
     if nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least {min_nlive} ****')
+    
 
     sampler = NestedSampler(ln_like, ptform, ndims,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
                             ptform_args=[prior1, prior2, priortype])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
-
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
@@ -387,13 +394,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     samples = resample_equal(res.samples, weights)
     if meta.run_verbose:
         log.writelog('Number of posterior samples is {}'.format(len(samples)))
-
+    
     medians = []
     for i in range(len(freenames)):
         q = np.percentile(samples[:, i], [16, 50, 84])
         medians.append(q[1])
     fit_params = np.array(medians)
-
+    
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
 
@@ -406,8 +413,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
-    model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    
+    #Plot GP fit + components
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -424,14 +433,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='dynesty')
-
+    
     # Plot residuals distribution
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='dynesty')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
+    
     return best_model
 
 def lmfitter(lc, model, meta, log, **kwargs):
@@ -491,7 +500,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
     new_params = [(fit_params.get(i).name, fit_params.get(i).value,
                    fit_params.get(i).vary, fit_params.get(i).min,
                    fit_params.get(i).max) for i in fit_params]
-
+    
     # Save the fit ASAP
     save_fit(meta, lc, 'lmfitter', fit_params, freenames)
 
@@ -571,6 +580,7 @@ def group_variables(model):
                     all_params.append(par)
                     alreadylist.append(par[0])
                         
+
     # Group the different variable types
     freenames = []
     freepars = []
