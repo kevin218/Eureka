@@ -174,7 +174,7 @@ def profile_niriss_moffat(data, pos1, pos2):
 
 def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
                        pos1=None, pos2=None, sigma=20, cr_mask=None,
-                       proftype='gaussian', isplots=0, quad=1):
+                       proftype='gaussian', isplots=0, per_quad=False):
     """
     Optimal extraction routine for NIRISS. This is different from the 
     general `optspex.optimize` since there are two ways to extract the
@@ -211,13 +211,9 @@ def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
     proftype : str, optional
        Sets which type of profile to use when extracting the spectra.
        Default is `gaussian`. Other options include `median` and `moffat`.
-    quad : int, optional
-       Sets which quadrant of the images to extract spectra from.
-       Quad = 1 is the upper right corner (isolated first order).
-       Quad = 2 is the lower right corner (isolated second order).
-       Quad = 3 is the left-hand side (overlap region between orders).
-       Quad = 4 is the entire image. 
-       Default is 1.
+    per_quad : bool, optional
+       Sets whether to extract the orders via quadrants or all together.
+       Default is False.
     isplots : int, optional
        A key to decide which diagnostic plots to save. Default is 0 
        (no plots are saved).

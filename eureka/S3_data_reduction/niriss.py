@@ -515,7 +515,7 @@ def flag_bg(data, meta):
     return
 
 
-def flag_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
+def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], isplots=0):
     """ 
     I think this is just a wrapper for fit_bg, because I perform outlier
     flagging at the same time as the background fitting.
@@ -526,7 +526,7 @@ def flag_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     return data
 
 
-def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
+def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], isplots=0):
     """
     Subtracts background from non-spectral regions.
 
@@ -534,9 +534,6 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     ----------
     data : object
     meta : object
-    n_iters : int, optional
-       The number of iterations to go over and remove cosmic
-       rays. Default is 3.
     readnoise : float, optional
        An estimation of the readnoise of the detector.
        Default is 5.
