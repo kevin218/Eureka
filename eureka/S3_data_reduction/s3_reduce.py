@@ -332,7 +332,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
+                plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, log)
 
             # Save results
             if meta.save_output == True:
