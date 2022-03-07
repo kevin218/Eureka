@@ -21,7 +21,7 @@ from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
 from .background import fitbg3
-from .niriss_profiles import *
+from .niriss_extraction import *
 
 # some cute cython code
 import pyximport
@@ -515,6 +515,17 @@ def flag_bg(data, meta):
     return
 
 
+def flag_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
+    """ 
+    I think this is just a wrapper for fit_bg, because I perform outlier
+    flagging at the same time as the background fitting.
+    """
+    data, bkg, bkg_var = fit_bg(data, meta, n_iters, readnoise, sigclip, isplots)
+    data.bkg = bkg
+    data.bkg_var = bkg_vat
+    return data
+
+
 def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     """
     Subtracts background from non-spectral regions.
@@ -662,7 +673,7 @@ def fit_orders(data, meta, which_table=2):
     return meta
     
 
-def fit_orders_fast(data, meta, which_table=2):
+def fit_orders_fast(data, meta, which_table=2, profile='gaussian'):
     """
     A faster method to fit a 2D mask to the NIRISS data.
     Very similar to `fit_orders`, but works with 
@@ -682,9 +693,14 @@ def fit_orders_fast(data, meta, which_table=2):
     """
     def residuals(params, data, y1_pos, y2_pos):
         """ Calcualtes residuals for best-fit profile. """
+        nonlocal profile
+
         A, B, sig1 = params
         # Produce the model:   
-        model,_ = niriss_cython.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
+        if profile.lower() == 'gaussian':
+            model,_ = niriss_cython.build_gaussian_images(data, [A], [B], [sig1], y1_pos, y2_pos)
+        elif profile.lower() == 'moffat':
+            model,_ = niriss_cython.build_moffat_images(data, [A], [B], [sig1], y1_pos, y2_pos)
         # Calculate residuals:     
         res = (model[0] - data)
         return res.flatten()
@@ -692,20 +708,30 @@ def fit_orders_fast(data, meta, which_table=2):
     pos1, pos2 = set_which_table(which_table, meta)
 
     # fits the mask
+    if profile.lower()=='gaussian':
+        x0=[2,3,30]
+    elif profile.lower()=='moffat':
+        x0=[]
+    else:
+        print('profile shape not implemented. using gaussian')
+        profile='gaussian'
+        x0=[2,3,30]
+
     results = so.least_squares( residuals, 
-                                x0=np.array([2,3,30]), 
+                                x0=np.array(x0), 
                                 args=(data.median, pos1, pos2),
                                 xtol=1e-11, ftol=1e-11, max_nfev=1e3
                                )
 
     # creates the final mask
-    out_img1,out_img2,_= niriss_cython.build_image_models(data.median, 
-                                                          results.x[0:1], 
-                                                          results.x[1:2], 
-                                                          results.x[2:3], 
-                                                          pos1, 
-                                                          pos2,
-                                                          return_together=False)
+    if profile.lower() == 'gaussian':
+        out_img1,out_img2,_= niriss_cython.build_gaussian_images(data.median, 
+                                                                 results.x[0:1], 
+                                                                 results.x[1:2], 
+                                                                 results.x[2:3], 
+                                                                 pos1, 
+                                                                 pos2,
+                                                                 return_together=False)
     meta.order1_mask_fast = out_img1[0]
     meta.order2_mask_fast = out_img2[0]
 

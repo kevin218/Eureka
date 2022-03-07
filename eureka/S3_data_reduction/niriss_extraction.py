@@ -14,7 +14,7 @@ pyximport.install()
 from . import niriss_cython
 
 __all__ = ['profile_niriss_median', 'profile_niriss_gaussian',
-           'profile_niriss_moffat']
+           'profile_niriss_moffat', 'optimal_extraction']
 
 def profile_niriss_median(data, medprof, sigma=50):
     """                         
@@ -226,7 +226,30 @@ def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
     # initialize arrays
     extracted_spectra = np.zeros((len(data), data.shape[2]))
     extracted_error   = np.zeros((len(data), data.shape[2]))
+
+    block_extra = np.ones(data[0].shape)
+
+    # Figures out which quadrant location to use
+    if quad == 1: # Isolated first order (top right)
+        x1,x2 = 1000, data.shape[2]
+        y1,y2 = 0, 100
+        block_extra[80:y2,x1:x1+250]=0 # there's a bit of 2nd order
+                                       # that needs to be masked
+
+    elif quad == 2: # Isolated second order (bottom right)
+        x1,x2 = 1000, 1900
+        y1,y2 = 70, data.shape[1]
     
+    elif quad == 3: # Overlap region (left-hand side)
+        x1,x2 = 0, 1000
+        y1,y2 = 0, data.shape[1]
+
+    else: # Full image
+        x1,x2 = 0, data.shape[2]
+        y1,y2 = 0, data.shape[1]
+    
+    data = np.copy(data*block_extra)[:,y1:y2, x1:x2] # Takes the proper data slice
+
     for i in tqdm(range(len(data))):
     
         ny, nx = data[i].shape

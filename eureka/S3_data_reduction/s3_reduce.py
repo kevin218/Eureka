@@ -235,7 +235,7 @@ def reduceJWST(eventlabel, s2_meta=None):
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
             elif meta.inst == 'niriss':
-                raise ValueError('NIRISS observations are currently unsupported!')
+                from . import niriss as inst
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta, log = inst.preparation_step(meta, log)

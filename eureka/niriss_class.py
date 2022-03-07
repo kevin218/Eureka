@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from .S3_data_reduction import niriss
 from .S3_data_reduction import background
+from .S3_data_reduction import niriss_extraction
 from .S3_data_reduction.s3_reduce import MetaClass, DataClass
 
 __all__ = ['NIRISS_S3']
@@ -86,8 +87,10 @@ class NIRISS_S3(object):
         self.wavelength_order2 = w2 + 0.0
         self.wavelength_order3 = w3 + 0.0
 
+        self.bkg  = None
         self.tab1 = None
         self.tab2 = None
+        self.box_mask = None
 
     def reassign_attrs(self, obj):
         """
@@ -164,7 +167,8 @@ class NIRISS_S3(object):
             
         return
 
-    def box_extraction(self, boxsize1=70, boxsize2=60):
+    def box_extraction(self, boxsize1=70, boxsize2=60, perorder=False,
+                       set=True):
         """
         Performs a really quick and dirty box mask.
         
@@ -176,6 +180,9 @@ class NIRISS_S3(object):
         boxsize2 : int, optional
            The size of the box for the second order.
            Default is 60.
+        perorder : bool, optional
+           Creates an image filled with 1s and 2s for where the
+           orders are. Default is False.
 
         Attributes
         ----------
@@ -186,7 +193,12 @@ class NIRISS_S3(object):
            to create `box_order1` and `box_order2`.
            Tuple is (boxsize1, boxsize2).
         """
-        mask = np.ones(self.median.shape)
+        if perorder==False:
+            mask = np.ones(self.median.shape)
+            fill1, fill2 = 0, 0
+        else:
+            mask = np.zeros(self.median.shape)
+            fill1, fill2 = 1, 2
 
         if self.tab2 is not None:
             t = self.tab2
@@ -195,18 +207,23 @@ class NIRISS_S3(object):
         else:
             return('Need to run `identify_orders()`.')
 
+        # Fills the mask with appropriate values for where the orders are
+        # and the size of the boxes
         for i in range(self.median.shape[1]):
             s,e = int(t['order_1'][i]-boxsize1/2), int(t['order_1'][i]+boxsize1/2)
-            mask[s:e,i] = 0
+            mask[s:e,i] = fill1
 
             s,e = int(t['order_2'][i]-boxsize2/2), int(t['order_2'][i]+boxsize2/2)
             try:
-                mask[s:e,i] = 0
+                mask[s:e,i] += fill2
             except:
                 pass
 
-        self.box_mask = mask
-        self.box_sizes= (boxsize1, boxsize2)
+        if set:
+            self.box_mask = mask
+            self.box_sizes= (boxsize1, boxsize2)
+        else:
+            return box_mask
         return
 
     def fit_background(self, readnoise=18, sigclip=[4,4,4]):
@@ -247,3 +264,45 @@ class NIRISS_S3(object):
         self.bkg_var = bkg_outputs[2]
 
         return
+
+
+    def optimal_extraction(self, proftype='gaussian', quad=1, pos1=None,
+                           pos2=None):
+        """
+        Performs optimal extraction.
+        """
+        def sum_spectra(order, boxes):
+            """ Box extracted spectra and variance. """
+            test = np.zeros(boxes.shape)
+            x,y = np.where((boxes==order) | (boxes==3))
+            test[x,y]=1
+            bs =  np.nansum(test*self.data,axis=1)
+            bv =  np.sqrt(np.nansum((test*self.var)**2, axis=1))
+            return bs, bv
+
+        boxes = self.box_extraction(perorder=True, set=False)
+        spectrum1, var1 = sum_spectra(1, boxes) # box extracted spectra order 1
+        spectrum2, var2 = sum_spectra(2, boxes) # box extracted spectra order 2
+
+        if self.bkg is None:
+            print("Running background modeling with default settings.")
+            self.fit_background()
+
+        if quad == 1:
+            s, e = niriss_extraction.optimal_extraction(self.data,
+                                                        spectrum=spectrum1,
+                                                        spectrum_var=var1,
+                                                        sky_bkg=self.bkg,
+                                                        pos1=pos1,
+                                                        pos2=pos2,
+                                                        proftype=proftype,
+                                                        quad=quad)
+        elif quad == 2:
+            s, e = niriss_extraction.optimal_extraction(self.data,
+                                                        spectrum=spectrum2,
+                                                        spectrum_var=var2,
+                                                        sky_bkg=self.bkg,
+                                                        pos1=pos1,
+                                                        pos2=pos2,
+                                                        proftype=proftype,
+                                                        quad=quad)
