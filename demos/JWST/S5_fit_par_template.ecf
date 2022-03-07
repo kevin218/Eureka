@@ -13,3 +13,8 @@ u1			0.3				'free'			-1				1				U
 u2			0.1				'free'			-1				1				U
 transittype	'primary'	 	'independent'
 c0			1.009			'free'			0.95			1.05			U
+#GP parameters
+A			-5.			'free'			-15.			5.			U
+WN			-15. 'free'			-30.			-5.			U
+m_1			-5.			'free'			-20.			5.			U
+m_2			-3			'free'			-20			5.			U
