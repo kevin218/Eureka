@@ -661,7 +661,7 @@ def save_fit(meta, lc, fitter, fit_params, freenames, samples=[]):
         if lc.share:
             fname = f'S5_{fitter}_samples_shared.csv'
         else:
-            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
+            fname = f'S5_{fitter}_samples_ch%03i.csv' % lc.channel
         np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
     
     return
