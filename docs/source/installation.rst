@@ -46,6 +46,20 @@ With Git/GitHub
 
 		pip install .
 
+CRDS Environment Variables
+--------------------------
+
+Eureka! installs the JWST Calibration Pipeline as part of its requirements, and this also requires users to set the proper environment variables so that it can download the proper reference files needed to run the pipeline. 
+For users not on the internal STScI network, two environment variables need to be set to enable this functionality:
+
+	.. code-block:: bash
+
+		export CRDS_PATH=/PATH/TO/FOLDER/crds_cache
+		
+		export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
+
+If these environment variables are not set, the JWST calibration pipeline steps will fail.
+
 For the JWST ERS Pre-Launch Data Hackathon
 -----------------------------------------------
 
