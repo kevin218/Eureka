@@ -99,6 +99,8 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
             rd.copy_ecf(meta, ecf_path, ecffile)
 
             # Get the wavelength values
+            meta.wave_low = np.array(meta.wave_low)
+            meta.wave_hi = np.array(meta.wave_hi)
             wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
             wave_errs = (meta.wave_hi-meta.wave_low)/2
 
