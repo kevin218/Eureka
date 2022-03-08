@@ -52,6 +52,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         Increasing connectedness of S5 and S4
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - January - February, 2022 Eva-Maria Ahrer
+        Adding GP functionality
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
