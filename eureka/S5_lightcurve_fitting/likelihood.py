@@ -177,7 +177,7 @@ def ptform(theta, prior1, prior2, priortype):
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return p
 
-def computeRedChiSq(lc, model, meta, freenames):
+def computeRedChiSq(lc, model, meta, freenames, log):
     """Compute the reduced chi-squared value.
 
     Parameters
@@ -190,6 +190,8 @@ def computeRedChiSq(lc, model, meta, freenames):
         The metadata object.
     freenames: iterable
         The names of the fitted parameters.
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -209,7 +211,7 @@ def computeRedChiSq(lc, model, meta, freenames):
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
     if meta.run_verbose:
-        print('Reduced Chi-squared: ', chi2red)
+        log.writelog('Reduced Chi-squared: ', chi2red)
 
     return chi2red
 

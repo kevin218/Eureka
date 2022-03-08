@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from io import StringIO
 import sys
+import h5py
 
 from scipy.optimize import minimize
 import lmfit
@@ -100,7 +101,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
     
     print('\nLSQ RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -292,7 +293,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='emcee')
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
 
     log.writelog('\nEMCEE RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -414,7 +415,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='dynesty')
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
 
     log.writelog('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -513,7 +514,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -652,16 +653,17 @@ def group_variables_lmfit(model):
 
 def save_fit(meta, lc, fitter, fit_params, freenames, samples=[]):
     if lc.share:
-        fname = f'S5_{fitter}_fitparams_shared.csv'
+        fname = f'S5_{fitter}_fitparams_shared'
     else:
-        fname = f'S5_{fitter}_fitparams_ch{lc.channel}.csv'
-    np.savetxt(meta.outputdir+fname, fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+        fname = f'S5_{fitter}_fitparams_ch{lc.channel}'
+    np.savetxt(meta.outputdir+fname+'.csv', fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
 
     if len(samples)!=0:
         if lc.share:
-            fname = f'S5_{fitter}_samples_shared.csv'
+            fname = f'S5_{fitter}_samples_shared'
         else:
-            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
-        np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
+            fname = f'S5_{fitter}_samples_ch{lc.channel}'
+        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
+            hf.create_dataset("samples",  data=samples)
     
     return
