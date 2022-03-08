@@ -18,32 +18,6 @@ from copy import deepcopy
 reload(m)
 reload(f)
 
-class LightCurveFitter:
-    def __init__(self, time, flux, model):
-        """Fit the model to the flux cube
-
-        Parameters
-        ----------
-        time:
-            1D or 2D time axes
-        flux:
-            2D flux
-        """
-        self.flux = np.ones(100)
-        self.time = np.arange(100)
-        self.results = pd.DataFrame(names=('fit_number', 'wavelength', 'P',
-                                           'Tc', 'a/Rs', 'b', 'd', 'ldcs',
-                                           'e', 'w', 'model_name', 'chi2'))
-
-    def run(self):
-        """Run the model fits"""
-        pass
-
-    # Method to return sliced results table
-    def master_slicer(self, value, param_name='wavelength'):
-        return self.results.iloc[self.results[param_name] == value]
-
-
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
         """
