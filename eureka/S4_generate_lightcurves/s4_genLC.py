@@ -136,9 +136,13 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             meta.n_int, meta.subnx   = optspec.shape
 
             # Determine wavelength bins
-            binsize     = (meta.wave_max - meta.wave_min)/meta.nspecchan
-            meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
-            meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
+            if not hasattr(meta, 'wave_hi'):
+                binsize     = (meta.wave_max - meta.wave_min)/meta.nspecchan
+                meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
+                meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
+            elif meta.nspecchan!=len(meta.wave_hi):
+                log.writelog(f'WARNING: Your nspecchan value of {meta.nspecchan} differs from the size of wave_hi ({len(meta.wave_hi)}). Using the latter instead.')
+                meta.nspecchan = len(meta.wave_hi)
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             optspec = np.ma.masked_array(optspec)
