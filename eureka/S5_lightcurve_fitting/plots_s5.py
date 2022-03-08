@@ -33,9 +33,12 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         Moved plotting code to a separate function.
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February 28-March 1, 2022 Caroline Piaulet
+        Adding scatter_ppm parameter
     """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
+
 
     model_sys_full = model.syseval()
     model_phys_full, new_time = model.physeval(interp=meta.interp)
@@ -44,7 +47,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
-            unc = deepcopy(lc.unc_fit)
+            unc = deepcopy(np.array(lc.unc_fit))
         else:
             unc = np.copy(lc.unc)
         model = np.copy(model_lc)
@@ -113,8 +116,6 @@ def plot_rms(lc, model, meta, fitter):
         Moved plotting code to a separate function.
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
-    - February 18, 2022 Caroline Piaulet
-        Using the fitted unc for plotted, if exists
     """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
@@ -124,14 +125,9 @@ def plot_rms(lc, model, meta, fitter):
 
     for channel in lc.fitted_channels:
         flux = np.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.copy(lc.unc_fit)
-        else:
-            unc = np.copy(lc.unc)
         model = np.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
         
         residuals = flux - model
@@ -304,7 +300,7 @@ def plot_res_distr(lc, model, meta, fitter):
     for channel in lc.fitted_channels:
         flux = np.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
-            unc = np.copy(lc.unc_fit)
+            unc = np.copy(np.array(lc.unc_fit))
         else:
             unc = np.copy(lc.unc)
         model = np.copy(model_lc)

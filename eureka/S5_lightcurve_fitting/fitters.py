@@ -48,6 +48,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Also saving covariance matrix for later estimation of sampler step size.
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February 28-March 1, 2022 Caroline Piaulet
+        Adding scatter_ppm parameter
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -79,6 +81,12 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
+    if "scatter_ppm" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * fit_params[ind[0]] * 1e-6        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
     
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
@@ -185,6 +193,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
         Adding ability to do a single shared fit across all channels
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
+    - February 28-March 1, 2022 Caroline Piaulet
+        Adding scatter_ppm parameter. Added statements to avoid some initial 
+        state issues.
+
     """
     if not hasattr(meta, 'lsq_first') or meta.lsq_first:
         # Only call lsq fitter first if asked or lsq_first option wasn't passed (allowing backwards compatibility)
@@ -226,6 +238,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if len(ind_min[0]):
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
         freepars[ind_min] = pmid[ind_min]
+    
+    ind_zero_step = np.where(step_size==0.)
+    if len(ind_zero_step[0]):
+        log.writelog('Warning: >=1 params would have a zero step. changing to 0.001 * prior range')
+        step_size[ind_zero_step] = 0.001*(pmax[ind_zero_step] - pmin[ind_zero_step])
+        
     
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
     uniformprior=np.where(priortype=='U')
@@ -284,8 +302,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
-        ind = np.where(freenames == "scatter_ppm")
-        lc.unc_fit = medians[ind[0][0]]*1e-6
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * fit_params[ind[0]] * 1e-6        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -298,7 +319,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     for freenames_i, fit_params_i in zip(freenames, fit_params):
         log.writelog('{0}: {1}'.format(freenames_i, fit_params_i))
     log.writelog('')
-
+    
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='emcee')
@@ -343,6 +364,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Adding ability to do a single shared fit across all channels
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
+    - February 28-March 1, 2022 Caroline Piaulet
+        Adding scatter_ppm parameter. 
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -406,6 +429,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
+    if "scatter_ppm" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * fit_params[ind[0]] * 1e-6        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
+
+
     model_lc = model.eval()
     residuals = (lc.flux - model_lc) #/ lc.unc
 
@@ -461,6 +492,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
+    - February 28-March 1, 2022 Caroline Piaulet
+        Adding scatter_ppm parameter. 
     """
         #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
 
@@ -508,6 +541,13 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
     model.update(fit_params, freenames)
+    if "scatter_ppm" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * fit_params[ind[0]] * 1e-6        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
