@@ -121,7 +121,7 @@ class BatmanEclipseModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
         
-       #Initialize model
+        #Initialize model
         bm_params = batman.TransitParams()
 
         # Set all parameters
