@@ -341,40 +341,58 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     - February 28, 2022 Eva-Maria Ahrer
         Written function
     """
+    
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
-
     
-    model_lc = model.eval()
-    model_phys = model.physeval()
     model_GP = model.GPeval(model_lc)
     model_with_GP = model.eval(incl_GP = True)
-    residuals = (lc.flux - model_with_GP) #/ lc.unc
-
-    fig = plt.figure(int('51{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 9))
-    plt.clf()
-    ax = fig.subplots(3,1)
-
+    model_sys_full = model.syseval()
+    model_phys_full, new_time = model.physeval(interp=meta.interp)
+    model_lc = model.eval()
     
-    if isTitle:
-        ax[0].set_title(f'{meta.eventlabel} - Channel {lc.channel} - {fitter}')
-    ax[0].plot(lc.time, model_with_GP, 'r', zorder=10)
-    ax[0].errorbar(lc.time, lc.flux, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
-    ax[0].set_ylabel('Normalised Flux', size=14)
+    for i, channel in enumerate(lc.fitted_channels):
+        flux = np.copy(lc.flux)
+        if "unc_fit" in lc.__dict__.keys():
+            unc = deepcopy(lc.unc_fit)
+        else:
+            unc = np.copy(lc.unc)
+        model = np.copy(model_with_GP)
+        model_sys = model_sys_full
+        model_phys = model_phys_full
+        model_GP_component = model_GP
+        color = lc.colors[i]
 
-    ax[1].plot(lc.time, model_GP, '.', color=lc.color)
-    ax[1].set_ylabel('GP component', size=14)
-    ax[1].set_xlabel(str(lc.time_units), size=14)
-
-    fname = 'figs/fig51{}_lc_GP_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
-    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-    
-    ax[2].errorbar(lc.time, residuals*1e6, yerr=lc.unc, fmt='.', color='w', ecolor=lc.color, mec=lc.color)
-    ax[2].set_ylabel('Residuals (ppm)', size=14)
-    ax[2].set_xlabel(str(lc.time_units), size=14)
-    if meta.hide_plots:
-        plt.close()
-    else:
-        plt.pause(0.2)
+        if lc.share:
+            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
+            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model_sys = model_sys[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
+            model_GP_component = model_GP_component[channel*len(lc.time):(channel+1)*len(lc.time)]
+        
+        residuals = flux - model
+        fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        plt.clf()
+        ax = fig.subplots(3,1)
+        ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
+        ax[0].plot(lc.time, model, '.', ls='', ms=2, color='0.3', zorder = 10)
+        if isTitle:
+            ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - {fitter}')
+        ax[0].set_ylabel('Normalized Flux', size=14)
+        ax[1].plot(lc.time, model_GP_component, '.', color=color)
+        ax[1].set_ylabel('GP component', size=14)
+        ax[1].set_xlabel(str(lc.time_units), size=14)
+        ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.', color='w', ecolor=color, mec=color)
+        ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
+        ax[2].set_ylabel('Residuals (ppm)', size=14)
+        ax[2].set_xlabel(str(lc.time_units), size=14)
+        
+        fname = 'figs/fig51{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if meta.hide_plots:
+            plt.close()
+        else:
+            plt.pause(0.2)
 
     return
