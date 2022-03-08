@@ -30,6 +30,8 @@ def ln_like(theta, lc, model, freenames):
         Moved code to separate file, added documentation.
     - January 22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February, 2022 Eva-Maria Ahrer
+        Adding GP likelihood
     """
     model.update(theta, freenames)
     model_lc = model.eval()
@@ -43,8 +45,6 @@ def ln_like(theta, lc, model, freenames):
     else:
         residuals = (lc.flux - model_lc) #/ lc.unc
         ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
-    if len(ilow[0]) + len(ihi[0]) > 0:
-        ln_like_val = -np.inf
     return ln_like_val
 
 def lnprior(theta, prior1, prior2, priortype):
@@ -207,6 +207,8 @@ def computeRedChiSq(lc, model, meta, freenames):
 
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
+    - February, 2022 Eva-Maria Ahrer
+        Added GP functionality
     """
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc) #/ lc.unc
