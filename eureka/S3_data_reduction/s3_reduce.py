@@ -39,7 +39,6 @@ from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
 
-
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
@@ -325,6 +324,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 log.writelog("  Performing optimal spectral extraction")
                 data.optspec = np.zeros(data.stdspec.shape)
                 data.opterr  = np.zeros(data.stdspec.shape)
+
                 gain = 1  # Already converted DN to electrons, so gain = 1 for optspex
                 for n in tqdm(range(meta.int_start,meta.n_int)):
                     data.optspec[n], data.opterr[n], mask = optspex.optimize(data.apdata[n], data.apmask[n], data.apbg[n],
@@ -334,7 +334,9 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                                                                              deg=meta.prof_deg, n=data.intstart + n,
                                                                              isplots=meta.isplots_S3, eventdir=meta.outputdir,
                                                                              meddata=data.medapdata, hide_plots=meta.hide_plots)
-
+                #Replace NaNs with zero
+                data.optspec[np.where(np.isnan(data.optspec))] = 0
+                data.opterr[np.where(np.isnan(data.opterr))] = 0
                 # Plot results
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for optimal spectral extraction')
