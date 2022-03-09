@@ -87,14 +87,14 @@ def bright2dn(data, meta):
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     if meta.inst == 'miri':
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['subarray'] == data.mhdr['SUBARRAY']))[0][0]
-
+    
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
     igood = np.where(response_wave > 0)[0]
     response_wave = response_wave[igood]
     response_vals = response_vals[igood]
     # Interpolate response at desired wavelengths
-    f = spi.interp1d(response_wave, response_vals, 'cubic')
+    f = spi.interp1d(response_wave, response_vals, kind='cubic', bounds_error=False, fill_value='extrapolate')
     response = f(data.subwave)
 
     scalar = data.shdr['PHOTMJSR']
