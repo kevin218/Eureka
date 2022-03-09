@@ -5,18 +5,13 @@ Email: jfilippazzo@stsci.edu
 """
 import numpy as np
 import pandas as pd
-#from bokeh.plotting import figure, show
 import matplotlib.pyplot as plt
 
 from . import models as m
 from . import fitters as f
 from .utils import COLORS, color_gen
 
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
 from copy import deepcopy
-reload(m)
-reload(f)
 
 class LightCurveFitter:
     def __init__(self, time, flux, model):
@@ -126,8 +121,6 @@ class LightCurve(m.Model):
         self.results = []
 
         self.longparamlist = longparamlist
-
-        self.log = log
 
         self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
 

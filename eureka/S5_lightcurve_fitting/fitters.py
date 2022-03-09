@@ -14,9 +14,7 @@ from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(plots)
+from multiprocessing import Pool
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -242,7 +240,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     ind_zero_step = np.where(step_size==0.)
     if len(ind_zero_step[0]):
         log.writelog('Warning: >=1 params would have a zero step. changing to 0.001 * prior range')
-        step_size[ind_zero_step] = 0.001*(pmax[ind_zero_step] - pmin[ind_zero_step])
+        step_size[ind_zero_step] = 0.001*(prior2[ind_zero_step] - prior1[ind_zero_step])
         
     
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
@@ -278,8 +276,16 @@ def emceefitter(lc, model, meta, log, **kwargs):
         nwalkers = pos.shape[0]
 
     log.writelog('Running emcee...')
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, prior1, prior2, priortype, freenames))
+    if hasattr(meta, 'ncpu') and meta.ncpu > 1:
+        pool = Pool(meta.ncpu)
+    else:
+        pool = None
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, prior1, prior2, priortype, freenames),
+                                    pool=pool)
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
+    if meta.ncpu > 1:
+        pool.close()
+        pool.join()
     samples = sampler.get_chain(flat=True, discard=meta.run_nburn)
 
     medians = []
@@ -287,6 +293,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
             q = np.percentile(samples[:, i], [16, 50, 84])
             medians.append(q[1])
     fit_params = np.array(medians)
+
+    if "scatter_ppm" in freenames:
+        ind = np.where(freenames=="scatter_ppm")
+        lc.unc_fit = fit_params[ind]*1e-6
+    else:
+        lc.unc_fit = lc.unc
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
@@ -386,11 +398,20 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     if nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least {min_nlive} ****')
 
-    sampler = NestedSampler(ln_like, ptform, ndims,
+    if hasattr(meta, 'ncpu') and meta.ncpu > 1:
+        pool = Pool(meta.ncpu)
+        queue_size = meta.ncpu
+    else:
+        pool = None
+        queue_size = None
+    sampler = NestedSampler(ln_like, ptform, ndims, pool=pool, queue_size=queue_size,
                             bound=bound, sample=sample, nlive=nlive, logl_args = l_args,
                             ptform_args=[prior1, prior2, priortype])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
+    if meta.ncpu > 1:
+        pool.close()
+        pool.join()
 
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
@@ -416,6 +437,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         q = np.percentile(samples[:, i], [16, 50, 84])
         medians.append(q[1])
     fit_params = np.array(medians)
+
+    if "scatter_ppm" in freenames:
+        ind = np.where(freenames=="scatter_ppm")
+        lc.unc_fit = fit_params[ind]*1e-6
+    else:
+        lc.unc_fit = lc.unc
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
