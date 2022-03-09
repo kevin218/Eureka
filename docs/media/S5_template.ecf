@@ -18,7 +18,8 @@ lsq_method		'Nelder-Mead' # The scipy.optimize.minimize optimization method to u
 lsq_tol			1e-6 # The tolerance for the scipy.optimize.minimize optimization method
 
 #mcmc
-lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails)
+old_chain       None # Output folder relative to topdir that contains an old emcee chain to resume where you left off (set to None to start from scratch)
+lsq_first       True    # Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails). Only used if old_chain is None
 run_nsteps      4000
 run_nwalkers    50
 run_nburn       2000

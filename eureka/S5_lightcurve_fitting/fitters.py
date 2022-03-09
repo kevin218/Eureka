@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
 import copy
 from io import StringIO
-import sys
+import os, sys
+import h5py
 
 from scipy.optimize import minimize
 import lmfit
@@ -196,84 +198,25 @@ def emceefitter(lc, model, meta, log, **kwargs):
         state issues.
 
     """
-    if not hasattr(meta, 'lsq_first') or meta.lsq_first:
-        # Only call lsq fitter first if asked or lsq_first option wasn't passed (allowing backwards compatibility)
-        log.writelog('\nCalling lsqfitter first...')
-        # RUN LEAST SQUARES
-        lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
-
-        # SCALE UNCERTAINTIES WITH REDUCED CHI2
-        if meta.rescale_err:
-            lc.unc *= np.sqrt(lsq_sol.chi2red)
-    else:
-        lsq_sol = None
-    
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
-    
-    if lsq_sol is not None and lsq_sol.cov_mat is not None:
-        step_size = np.diag(lsq_sol.cov_mat)
-        ind_zero = np.where(step_size==0.)[0]
-        if len(ind_zero):
-            step_size[ind_zero] = 0.001*np.abs(freepars[ind_zero])
-    else:
-        # Sometimes the lsq fitter won't converge and will give None as the covariance matrix
-        # In that case, we need to establish the step size in another way. A fractional step compared
-        # to the value can work okay, but it may fail if the step size is larger than the bounds
-        # which is not uncommon for precisely known values like t0 and period
-        log.writelog('No covariance matrix from LSQ - falling back on a 0.1% step size')
-        step_size = 0.001*np.abs(freepars)
-    ndim = len(step_size)
-    nwalkers = meta.run_nwalkers
+    ndim = len(freenames)
 
-    # make it robust to lsq hitting the upper or lower bound of the param space
-    ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
-    ind_min = np.where(np.logical_and(freepars - prior1 == 0., priortype=='U'))
-    pmid = (prior2+prior1)/2.
-    if len(ind_max[0]):
-        log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. Setting to the middle of the interval.')
-        freepars[ind_max] = pmid[ind_max]
-    if len(ind_min[0]):
-        log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
-        freepars[ind_min] = pmid[ind_min]
-    
-    ind_zero_step = np.where(step_size==0.)
-    if len(ind_zero_step[0]):
-        log.writelog('Warning: >=1 params would have a zero step. changing to 0.001 * prior range')
-        step_size[ind_zero_step] = 0.001*(prior2[ind_zero_step] - prior1[ind_zero_step])
-        
-    
-    pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
-    uniformprior=np.where(priortype=='U')
-    loguniformprior=np.where(priortype=='LU')
-    in_range = np.array([((prior1[uniformprior] <= ii) & (ii <= prior2[uniformprior])).all() for ii in pos[:,uniformprior]])
-    in_range2 = np.array([((prior1[loguniformprior] <= np.log(ii)) & (np.log(ii) <= prior2[loguniformprior])).all() for ii in pos[:,loguniformprior]])
-    if not (np.all(in_range))&(np.all(in_range2)):
-        log.writelog('Not all walkers were initialized within the priors, using a smaller proposal distribution')
-        pos = pos[in_range]
-        # Make sure the step size is well within the limits
-        step_size_options = np.append(step_size.reshape(-1,1), np.abs(np.append((prior2-freepars).reshape(-1,1)/10, (freepars-prior1).reshape(-1,1)/10, axis=1)), axis=1)
-        step_size = np.min(step_size_options, axis=1)
-        if pos.shape[0]==0:
-            remove_zeroth = True
-            new_nwalkers = nwalkers-len(pos)
-            pos = np.zeros((1,ndim))
+    if hasattr(meta, 'old_chain') and meta.old_chain is not None:
+        pos, nwalkers = start_from_oldchain_emcee(meta, log, ndim, lc.channel, freenames)
+    else:
+        if not hasattr(meta, 'lsq_first') or meta.lsq_first:
+            # Only call lsq fitter first if asked or lsq_first option wasn't passed (allowing backwards compatibility)
+            log.writelog('\nCalling lsqfitter first...')
+            # RUN LEAST SQUARES
+            lsq_sol = lsqfitter(lc, model, meta, log, calling_function='emcee_lsq', **kwargs)
+
+            # SCALE UNCERTAINTIES WITH REDUCED CHI2
+            if meta.rescale_err:
+                lc.unc *= np.sqrt(lsq_sol.chi2red)
         else:
-            remove_zeroth = False
-            new_nwalkers = nwalkers-len(pos)
-        pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(new_nwalkers)]).reshape(-1,ndim), axis=0)
-        if remove_zeroth:
-            pos = pos[1:]
-        in_range = np.array([((prior1[uniformprior] <= ii) & (ii <= prior2[uniformprior])).all() for ii in pos[:,uniformprior]])
-        in_range2 = np.array([((prior1[loguniformprior] <= np.log(ii)) & (np.log(ii) <= prior2[loguniformprior])).all() for ii in pos[:,loguniformprior]])
-    if not (np.any(in_range))&(np.any(in_range2)):
-        raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
-                             'Check your stating position, decrease your step size, or increase the bounds on your parameters')
-    elif not (np.all(in_range))&(np.all(in_range2)):
-        log.writelog('Warning: Failed to initialize all walkers within the set bounds for all parameters!')
-        log.writelog('Using {} walkers instead of the initially requested {} walkers'.format(np.sum(in_range), nwalkers))
-        pos = pos[in_range+in_range2]
-        nwalkers = pos.shape[0]
+            lsq_sol = None
+        pos, nwalkers = initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2, priortype)
 
     log.writelog('Running emcee...')
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
@@ -289,9 +232,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     samples = sampler.get_chain(flat=True, discard=meta.run_nburn)
 
     medians = []
-    for i in range(len(step_size)):
-            q = np.percentile(samples[:, i], [16, 50, 84])
-            medians.append(q[1])
+    for i in range(ndim):
+        q = np.percentile(samples[:, i], [16, 50, 84])
+        medians.append(q[1])
     fit_params = np.array(medians)
 
     if "scatter_ppm" in freenames:
@@ -344,6 +287,133 @@ def emceefitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('fit_params',fit_params)
 
     return best_model
+
+def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
+    if meta.sharedp:
+        channel_key = 'shared'
+    else:
+        channel_key = f'ch{channel}'
+    
+    foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
+    fname = f'S5_emcee_fitparams_{channel_key}.csv'
+    fitted_values = pd.read_csv(os.path.join(foldername,fname), escapechar='#', skipinitialspace=True)
+    full_keys = np.array(fitted_values.keys())
+    full_keys[0] = full_keys[0][1:] # Remove the " " from the start of the first key
+
+    if np.all(full_keys!=freenames):
+        log.writelog('Old chain does not have the same fitted parameters and cannot be used to initialize the new fit.\n'+
+                     'The old chain included:\n['+','.join(full_keys)+']\n'+
+                     'The new chain included:\n['+','.join(freenames)+']', mute=True)
+        raise AssertionError('Old chain does not have the same fitted parameters and cannot be used to initialize the new fit.\n'+
+                             'The old chain included:\n['+','.join(full_keys)+']\n'+
+                             'The new chain included:\n['+','.join(freenames)+']')
+    
+    fname = f'S5_emcee_samples_{channel_key}'
+    if os.path.isfile(os.path.join(foldername,fname)+'.h5'):
+        # New code to load HDF5 files
+        full_fname = os.path.join(foldername,fname)+'.h5'
+        with h5py.File(full_fname, 'r') as hf:
+            samples = hf['samples'][:]
+    else:
+        # Keep this old code for the time being to allow backwards compatibility
+        full_fname = os.path.join(foldername,fname)+'.csv'
+        samples = np.loadtxt(full_fname, delimiter=',')
+    log.writelog(f'Old chain path: {full_fname}')
+
+    # Initialize the walkers using samples from the old chain
+    nwalkers = meta.run_nwalkers
+    pos = samples[-nwalkers:]
+    walkers_used = nwalkers
+    
+    # Make sure that no walkers are starting in the same place as they would then exactly follow each other
+    repeat_pos = np.where([np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1)) for i in range(pos.shape[0])])[0]
+    while len(repeat_pos) > 0 and samples.shape[0]>(walkers_used+len(repeat_pos)):
+        pos[repeat_pos] = samples[:-walkers_used][-len(repeat_pos):]
+        walkers_used += len(repeat_pos)
+        repeat_pos = np.where([np.any(np.all(pos[i] == np.delete(pos, i, axis=0), axis=1)) for i in range(pos.shape[0])])[0]
+
+    # If unable to initialize all walkers in unique starting locations, use fewer walkers unless there'd be fewer walkers than dimensions
+    if len(repeat_pos)>0 and (nwalkers-len(repeat_pos) > ndim):
+        pos = np.delete(pos, repeat_pos, axis=0)
+        nwalkers = pos.shape[0]
+        log.writelog('Warning: Unable to initialize all walkers at different positions using old chain!\n'+
+                     'Using {} walkers instead of the initially requested {} walkers'.format(nwalkers, meta.run_nwalkers))
+    elif len(repeat_pos)>0:
+        log.writelog('Error: Unable to initialize all walkers at different positions using old chain!\n'+
+                     'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, meta.run_nwalkers, ndim), mute=True)
+        raise AssertionError('Error: Unable to initialize all walkers at different positions using old chain!\n'+
+                             'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, meta.run_nwalkers, ndim))
+
+    return pos, nwalkers
+
+def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2, priortype):
+    if lsq_sol is not None and lsq_sol.cov_mat is not None:
+        step_size = np.diag(lsq_sol.cov_mat)
+        ind_zero = np.where(step_size==0.)[0]
+        if len(ind_zero):
+            step_size[ind_zero] = 0.001*(prior2[ind_zero] - prior1[ind_zero])
+    else:
+        # Sometimes the lsq fitter won't converge and will give None as the covariance matrix
+        # In that case, we need to establish the step size in another way. Using a fractional step
+        # compared to the prior range can work best for precisely known values like t0 and period
+        log.writelog('No covariance matrix from LSQ - falling back on a step size of 1% of prior2-prior1')
+        step_size = 0.01*(prior2 - prior1)
+    nwalkers = meta.run_nwalkers
+
+    # make it robust to lsq hitting the upper or lower bound of the param space
+    ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
+    ind_min = np.where(np.logical_and(freepars - prior1 == 0., priortype=='U'))
+    pmid = (prior2+prior1)/2.
+    if len(ind_max[0]):
+        log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. Setting to the middle of the interval.')
+        freepars[ind_max] = pmid[ind_max]
+    if len(ind_min[0]):
+        log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
+        freepars[ind_min] = pmid[ind_min]
+    
+    # Generate the walker positions
+    pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
+
+    # Make sure the walker positions obey the priors
+    uniformprior=np.where(priortype=='U')
+    loguniformprior=np.where(priortype=='LU')
+    in_range = np.array([((prior1[uniformprior] <= ii) & (ii <= prior2[uniformprior])).all() for ii in pos[:,uniformprior]])
+    in_range2 = np.array([((prior1[loguniformprior] <= np.log(ii)) & (np.log(ii) <= prior2[loguniformprior])).all() for ii in pos[:,loguniformprior]])
+    if not (np.all(in_range))&(np.all(in_range2)):
+        log.writelog('Not all walkers were initialized within the priors, using a smaller proposal distribution')
+        pos = pos[in_range]
+        # Make sure the step size is well within the limits
+        step_size_options = np.append(step_size.reshape(-1,1), np.abs(np.append((prior2-freepars).reshape(-1,1)/10, (freepars-prior1).reshape(-1,1)/10, axis=1)), axis=1)
+        step_size = np.min(step_size_options, axis=1)
+        if pos.shape[0]==0:
+            remove_zeroth = True
+            new_nwalkers = nwalkers-len(pos)
+            pos = np.zeros((1,ndim))
+        else:
+            remove_zeroth = False
+            new_nwalkers = nwalkers-len(pos)
+        pos = np.append(pos, np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(new_nwalkers)]).reshape(-1,ndim), axis=0)
+        if remove_zeroth:
+            pos = pos[1:]
+        in_range = np.array([((prior1[uniformprior] <= ii) & (ii <= prior2[uniformprior])).all() for ii in pos[:,uniformprior]])
+        in_range2 = np.array([((prior1[loguniformprior] <= np.log(ii)) & (np.log(ii) <= prior2[loguniformprior])).all() for ii in pos[:,loguniformprior]])
+    if not (np.any(in_range))&(np.any(in_range2)):
+        raise AssertionError('Failed to initialize any walkers within the set bounds for all parameters!\n'+
+                             'Check your stating position, decrease your step size, or increase the bounds on your parameters')
+    elif not (np.all(in_range))&(np.all(in_range2)):
+        old_nwalkers = nwalkers
+        pos = pos[in_range+in_range2]
+        nwalkers = pos.shape[0]
+        if nwalkers > ndim:
+            log.writelog('Warning: Failed to initialize all walkers within the set bounds for all parameters!\n'+
+                         'Using {} walkers instead of the initially requested {} walkers'.format(nwalkers, old_nwalkers))
+        else:
+            log.writelog('Error: Failed to initialize all walkers within the set bounds for all parameters!\n'+
+                         'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim), mute=True)
+            raise AssertionError('Error: Failed to initialize all walkers within the set bounds for all parameters!\n'+
+                                 'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim))
+
+    return pos, nwalkers
 
 def dynestyfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using dynesty.
