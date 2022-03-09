@@ -30,12 +30,12 @@ from . import niriss_cython
 
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
-           'f277_mask', 'fit_bg', 'wave_NIRISS',
+           'f277_mask', 'flag_bg', 'fit_bg', 'wave_NIRISS',
            'mask_method_one', 'mask_method_two', 'fit_orders',
-           'fit_orders_fast']
+           'fit_orders_fast', 'box_extract', 'dirty_mask']
 
 
-def read(filename, f277_filename, data, meta):
+def read(filename, data, meta, f277_filename=None):
     """
     Reads a single FITS file from JWST's NIRISS instrument.
     This takes in the Stage 2 processed files.
@@ -61,7 +61,10 @@ def read(filename, f277_filename, data, meta):
     meta.filename = filename
 
     hdu = fits.open(filename)
-    f277= fits.open(f277_filename)
+    if f277_filename is not None:
+        f277= fits.open(f277_filename)
+        data.f277 = f277[1].data + 0.0
+        f277.close()
 
     # loads in all the header data
     data.mhdr = hdu[0].header
@@ -78,8 +81,6 @@ def read(filename, f277_filename, data, meta):
     data.err  = hdu['ERR',1].data + 0.0
     data.dq   = hdu['DQ' ,1].data + 0.0
 
-    data.f277 = f277[1].data + 0.0
-
     data.var  = hdu['VAR_POISSON',1].data + 0.0
     data.v0   = hdu['VAR_RNOISE' ,1].data + 0.0
 
@@ -90,6 +91,7 @@ def read(filename, f277_filename, data, meta):
     data.err[ np.isnan(data.err) ==True] = 0
 
     data.median = np.nanmedian(data.data, axis=0)
+    hdu.close()
 
     return data, meta
 
@@ -121,11 +123,11 @@ def image_filtering(img, radius=1, gf=4):
     mask = np.array(mask, dtype=bool)
 
     # applies the mask to the main frame
-    data = img*~mask
+    data = img*mask
     g = gaussian_filter(data, gf)
-    g[g>6] = 200
+    g[g>4] = 10000
     edges = filters.sobel(g)
-    edges[edges>0] = 1
+    edges[edges>0] = 10
 
     # turns edge array into a boolean array
     edges = (edges-np.nanmax(edges)) * -1
@@ -133,7 +135,7 @@ def image_filtering(img, radius=1, gf=4):
 
     return z, g
 
-def f277_mask(data, isplots=0):
+def f277_mask(data, radius=1, gf=4, isplots=0):
     """        
     Marks the overlap region in the f277w filter image.
     
@@ -153,7 +155,7 @@ def f277_mask(data, isplots=0):
        (x,y) anchors for where the overlap region is located.
     """
     img = np.nanmax(data.f277, axis=(0,1))
-    mask, _ = image_filtering(img[:150,:500])
+    mask, _ = image_filtering(img[:150,:500], radius, gf)
     mid = np.zeros((mask.shape[1], 2),dtype=int)
     new_mask = np.zeros(img.shape)
     
@@ -175,7 +177,8 @@ def f277_mask(data, isplots=0):
     return new_mask, mid[q]
 
 
-def mask_method_one(data, meta=None, isplots=0, save=False, inclass=False,
+def mask_method_one(data, meta=None, radius=1, gf=4,
+                    isplots=0, save=False, inclass=False,
                     outdir=None):
     """
     There are some hard-coded numbers in here right now. The idea
@@ -217,7 +220,6 @@ def mask_method_one(data, meta=None, isplots=0, save=False, inclass=False,
                 centers[i] = np.nanmean(inds)
 
         centers = rm_outliers(centers)
-
         if cutends is not None:
             centers[cutends:] = 0
 
@@ -234,8 +236,7 @@ def mask_method_one(data, meta=None, isplots=0, save=False, inclass=False,
         return fit
 
     g = simplify_niriss_img(data, meta, isplots)
-
-    f,_ = f277_mask(data)
+    f,_ = f277_mask(data, radius, gf)
 
     g_centers = find_centers(g,cutends=None)
     f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
@@ -247,10 +248,12 @@ def mask_method_one(data, meta=None, isplots=0, save=False, inclass=False,
         inds = np.where(g[:,i]>100)[0]
         inds_1 = inds[inds <= 78] # hard coded y-boundary for the first order
         inds_2 = inds[inds>=80]   # hard coded y-boundary for the second order
+        
         if len(inds_1)>=1:
             gcenters_1[i] = np.nanmean(inds_1)
         if len(inds_2)>=1:
             gcenters_2[i] = np.nanmean(inds_2)
+
 
     gcenters_1 = rm_outliers(gcenters_1)
     gcenters_2 = rm_outliers(gcenters_2)
@@ -343,14 +346,25 @@ def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False,
         if len(fp)==2:
             f277_peaks[i] = fp
     
+        if isplots>5:
+            plt.plot(np.arange(0,len(summed_f277[:,i]),1), summed_f277[:,i],'k')
+            plt.plot(np.arange(0,len(summed_f277[:,i]),1)[fp], summed_f277[:,i][fp],'ro')
+            plt.show()
+
         if i < double_peaked[0]:
-            height=2000
+            height=200
         elif i >= double_peaked[0] and i < double_peaked[1]:
-            height = 100
+            height = 200
         elif i >= double_peaked[1]:
-            height = 5000
+            height = 500
             
         p = identify_peaks(new_ccd_no_premask[:,i].data, height=height, distance=10)
+
+        if isplots>5:
+            plt.plot(np.arange(0,len(new_ccd_no_premask[:,i].data),1), new_ccd_no_premask[:,i].data,'k')
+            plt.plot(np.arange(0,len(new_ccd_no_premask[:,i].data),1)[p], new_ccd_no_premask[:,i].data[p],'go')
+            plt.show()
+
         if i < 900:
             p = p[p>40] # sometimes catches an upper edge that doesn't exist
         
@@ -494,39 +508,101 @@ def wave_NIRISS(wavefile, meta=None, inclass=False):
     else:
         return w1, w2, w3
 
-def flag_bg(data, meta):
-    '''Outlier rejection of sky background along time axis.
 
-    Parameters
-    ----------
-    data:   DataClass
-        The data object in which the fits data will stored
-    meta:   MetaClass
-        The metadata object
-
-    Returns
-    -------
-    data:   DataClass
-        The updated data object with outlier background pixels flagged.
-    '''
-
-    print('WARNING, niriss.flag_bg is not yet implemented!')
-
-    return
-
-
-def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], isplots=0):
+def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], 
+            box=(5,2), filter_size=(2,2), isplots=0):
     """ 
     I think this is just a wrapper for fit_bg, because I perform outlier
     flagging at the same time as the background fitting.
     """
-    data, bkg, bkg_var = fit_bg(data, meta, n_iters, readnoise, sigclip, isplots)
+    data, bkg, bkg_var = fit_bg(data, meta, readnoise, sigclip, box, filter_size, isplots)
     data.bkg = bkg
-    data.bkg_var = bkg_vat
+    data.bkg_var = bkg_var
     return data
 
 
-def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], isplots=0):
+def dirty_mask(img, meta, boxsize1=70, boxsize2=60, booltype=True,
+               return_together=True):
+    """Really dirty box mask for background purposes."""
+    order1 = np.zeros((boxsize1, len(img[0])))
+    order2 = np.zeros((boxsize2, len(img[0])))
+    mask = np.zeros(img.shape)
+
+    if booltype==True:
+        m1, m2 = -1, -1
+    else:
+        m1, m2 = 1, 2
+    
+    for i in range(img.shape[1]):
+        s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
+        order1[:,i] = img[s:e,i]
+        mask[s:e,i] += m1
+        
+        s,e = int(meta.tab2['order_2'][i]-boxsize2/2), int(meta.tab2['order_2'][i]+boxsize2/2)
+        try:
+            order2[:,i] = img[s:e,i]
+            mask[s:e,i] += m2
+        except:
+            pass
+        
+    if booltype==True:
+        mask = ~np.array(mask, dtype=bool)
+
+    if return_together:
+        return mask
+    else:
+        m1, m2 = np.zeros(mask.shape), np.zeros(mask.shape)
+        m1[(mask==1) | (mask==3)] = 1
+        m2[mask>=2] = 1
+        return m1, m2
+
+
+def box_extract(data, meta, boxsize1=60, boxsize2=50, bkgsub=False):
+    """
+    Quick & dirty box extraction to use in the optimal extraction routine.
+    
+    Parameters
+    ----------
+    data : object
+    boxsize1 : int, optional
+       Size of the box for the first order. Default is 60 pixels.
+    boxsize2 : int, optional
+       Size of the box for the second order. Default is 50 pixels.
+
+    Returns
+    -------
+    spec1 : np.ndarray
+       Extracted spectra for the first order.
+    spec2 : np.ndarray
+       Extracted spectra for the second order.
+    """
+    spec1 = np.zeros((data.data.shape[0], 
+                      data.data.shape[2]))
+    spec2 = np.zeros((data.data.shape[0],
+                      data.data.shape[2]))
+    var1 = np.zeros(spec1.shape)
+    var2 = np.zeros(spec2.shape)
+
+    m1,m2 = dirty_mask(data.median, meta,
+                       boxsize1, boxsize2,
+                       booltype=False, return_together=False)
+    
+    if bkgsub:
+        d=data.bkg_removed+0.0
+    else:
+        d=data.data+0.0
+
+    for i in range(len(d)):
+        spec1[i] = np.nansum(d[i] * m1, axis=0)
+        spec2[i] = np.nansum(d[i] * m2, axis=0)
+
+        var1[i] = np.sqrt(np.nansum(data.var[i] * m1, axis=0))
+        var2[i] = np.sqrt(np.nansum(data.var[i] * m2, axis=0))
+
+    return spec1, spec2, var1, var2
+
+
+def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2), isplots=0):
     """
     Subtracts background from non-spectral regions.
 
@@ -550,29 +626,11 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], isplots=0):
     data : object
     bkg : np.ndarray
     """
-    def dirty_mask(img, boxsize1=70, boxsize2=60):
-        """Really dirty box mask for background purposes."""
-        order1 = np.zeros((boxsize1, len(img[0])))
-        order2 = np.zeros((boxsize2, len(img[0])))
-        mask = np.ones(img.shape)
-        
-        for i in range(img.shape[1]):
-            s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
-            order1[:,i] = img[s:e,i]
-            mask[s:e,i] = 0
-
-            s,e = int(meta.tab2['order_2'][i]-boxsize2/2), int(meta.tab2['order_2'][i]+boxsize2/2)
-            try:
-                order2[:,i] = img[s:e,i]
-                mask[s:e,i] = 0
-            except:
-                pass
-
-        return mask
-
-    box_mask = dirty_mask(data.median)
+    box_mask = dirty_mask(data.median, meta, booltype=True,
+                          return_together=True)
     data, bkg, bkg_var = fitbg3(data, np.array(box_mask-1, dtype=bool), 
-                                readnoise, sigclip, isplots)
+                                readnoise, sigclip, 
+                                box=box, filter_size=filter_size, isplots=isplots)
     return data, bkg, bkg_var
 
 
