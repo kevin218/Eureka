@@ -140,7 +140,7 @@ def gauss_removal(img, mask, linspace, where='bkg'):
 
     if where=='bkg':
         g = Gaussian1D(mean=0,amplitude=100,stddev=10)
-        rmv = np.where(np.abs(bincenters)<=5)[0]
+        rmv = np.where(np.abs(bincenters)<=1)[0]
     elif where=='order':
         GaussianSkewed = custom_model(skewed_gaussian)
         g = GaussianSkewed(eta=0,omega=20,alpha=4, scale=100)
@@ -176,12 +176,22 @@ def time_removal(img, sigma=5):
     sigma : float, optional
        The sigma outlier by which to mask pixels. Default=5.
     """
+    import matplotlib.pyplot as plt
+
     cr_mask = np.zeros(img.shape)
     
     for x in tqdm(range(img.shape[1])):
         for y in range(img.shape[2]):
             dat = img[:,x,y] + 0.0
-            ind = np.where(dat>=np.nanmedian(dat)+sigma*np.nanstd(dat))[0]
+            ind = np.where((dat>=np.nanmedian(dat)+sigma*np.nanstd(dat)) |
+                           (dat<=np.nanmedian(dat)-sigma*np.nanstd(dat)) )[0]
             if len(ind)>0:
                 cr_mask[ind,x,y] = 1.0
+
+            # Checks for extreme differences in values
+            diff = np.abs(np.diff(dat))
+            ind = np.where(diff>5)[0]
+            if len(ind)>0:
+                cr_mask[ind,x,y] = 1.0
+
     return cr_mask
