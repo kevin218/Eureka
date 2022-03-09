@@ -416,7 +416,8 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
 
 
 def fitbg3(data, order_mask, readnoise=11, 
-           sigclip=[4,4,4], isplots=0,
+           sigclip=[4,4,4], box=(10,2),
+           filter_size=(1,1), sigma=5, isplots=0,
            inclass=False):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
@@ -447,12 +448,12 @@ def fitbg3(data, order_mask, readnoise=11,
     bkg_var = np.zeros(data.data.shape)
 
     # Does a first pass at CR removal in the time-direction
-    first_pass = clipping.time_removal(data.data)
+    first_pass = clipping.time_removal(data.data, sigma=sigclip[0])
 
     # Loops through and removes more cosimc rays
-    for i in tqdm(range(len(data.data))):
+    for i in tqdm(range(5)):#len(data.data))):
 
-        mask = np.array(first_pass[i],dtype=bool)
+        mask = np.array(first_pass[i], dtype=bool)
         ccd = CCDData(data.data[i]*~mask*units.electron)
 
         # Second pass at removing cosmic rays, with ccdproc
@@ -463,22 +464,16 @@ def fitbg3(data, order_mask, readnoise=11,
 
         rm_crs[i] = m1.data
         rm_crs[i][mask>=1] = np.nan
-
-        # Third pass at removing cosmic rays
-        rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
-                                           linspace=[-200,200]) # removal from background
-        rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
-                                           linspace=[-10,10], where='order') # removal from order
         
         # Fits a 2D background (with the orders masked)
         b1,b1_err = bkg_sub(rm_crs[i], 
                             order_mask,
                             bkg_estimator='median', 
-                            sigma=4, box=(10,5), filter_size=(2,2))
+                            sigma=sigma, box=(10,5), filter_size=(2,2))
         # Iterates twice to remove 1/f noise well
         b2,b2_err = bkg_sub(rm_crs[i]-b1, 
                             order_mask,
-                            sigma=3,
+                            sigma=sigma-1, box=box, filter_size=filter_size,
                             bkg_estimator='median')
         
         bkg_subbed[i] = (rm_crs[i]-b1)-b2
