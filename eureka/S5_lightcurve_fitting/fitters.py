@@ -246,9 +246,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
 
-    if meta.isplots_S5 >= 5:
+    if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', full=True, nburn=meta.run_nburn)
         plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', full=False)
+    if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
@@ -351,32 +352,42 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
         step_size = np.diag(lsq_sol.cov_mat)
         ind_zero = np.where(step_size==0.)[0]
         if len(ind_zero):
-            step_size[ind_zero] = 0.001*(prior2[ind_zero] - prior1[ind_zero])
+            step_size[ind_zero][priortype[ind_zero]=='U'] = 0.001*(prior2[ind_zero][priortype[ind_zero]=='U'] - prior1[ind_zero][priortype[ind_zero]=='U'])
+            step_size[ind_zero][priortype[ind_zero]=='LU'] = 0.001*(np.exp(prior2[ind_zero][priortype[ind_zero]=='LU']) - np.exp(prior1[ind_zero][priortype[ind_zero]=='LU']))
+            step_size[ind_zero][priortype[ind_zero]=='N'] = 0.1*prior2[ind_zero][priortype[ind_zero]=='N']
     else:
         # Sometimes the lsq fitter won't converge and will give None as the covariance matrix
         # In that case, we need to establish the step size in another way. Using a fractional step
         # compared to the prior range can work best for precisely known values like t0 and period
-        log.writelog('No covariance matrix from LSQ - falling back on a step size of 1% of prior2-prior1')
-        step_size = 0.01*(prior2 - prior1)
+        log.writelog('No covariance matrix from LSQ - falling back on a step size based on the prior range')
+        step_size = np.ones(ndim)
+        step_size[priortype=='U'] = 0.001*(prior2[priortype=='U'] - prior1[priortype=='U'])
+        step_size[priortype=='LU'] = 0.001*(np.exp(prior2[priortype=='LU']) - np.exp(prior1[priortype=='LU']))
+        step_size[priortype=='N'] = 0.1*prior2[priortype=='N']
     nwalkers = meta.run_nwalkers
 
     # make it robust to lsq hitting the upper or lower bound of the param space
-    ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
-    ind_min = np.where(np.logical_and(freepars - prior1 == 0., priortype=='U'))
+    ind_max = np.where(freepars[priortype=='U'] - prior2[priortype=='U'] == 0.)[0]
+    ind_min = np.where(freepars[priortype=='U'] - prior1[priortype=='U'] == 0.)[0]
+    ind_max_LU = np.where(np.log(freepars[priortype=='LU']) - prior2[priortype=='LU'] == 0.)[0]
+    ind_min_LU = np.where(np.log(freepars[priortype=='LU']) - prior1[priortype=='LU'] == 0.)[0]
     pmid = (prior2+prior1)/2.
-    if len(ind_max[0]):
+    if len(ind_max)>0 or len(ind_max_LU)>0:
         log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. Setting to the middle of the interval.')
-        freepars[ind_max] = pmid[ind_max]
-    if len(ind_min[0]):
+        freepars[priortype=='U'][ind_max] = pmid[priortype=='U'][ind_max]
+        freepars[priortype=='LU'][ind_max_LU] = (np.exp(prior2[priortype=='LU'][ind_max_LU])+np.exp(prior1[priortype=='LU'][ind_max_LU]))/2.
+    if len(ind_min)>0 or len(ind_min_LU)>0:
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
-        freepars[ind_min] = pmid[ind_min]
+        freepars[priortype=='U'][ind_min] = pmid[priortype=='U'][ind_min]
+        freepars[priortype=='LU'][ind_min_LU] = (np.exp(prior2[priortype=='LU'][ind_min_LU])+np.exp(prior1[priortype=='LU'][ind_min_LU]))/2.
     
     # Generate the walker positions
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
 
     # Make sure the walker positions obey the priors
-    uniformprior=np.where(priortype=='U')
-    loguniformprior=np.where(priortype=='LU')
+    uniformprior = np.where(priortype=='U')[0]
+    loguniformprior = np.where(priortype=='LU')[0]
+    normalprior = np.where(priortype=='N')[0]
     in_range = np.array([((prior1[uniformprior] <= ii) & (ii <= prior2[uniformprior])).all() for ii in pos[:,uniformprior]])
     in_range2 = np.array([((prior1[loguniformprior] <= np.log(ii)) & (np.log(ii) <= prior2[loguniformprior])).all() for ii in pos[:,loguniformprior]])
     if not (np.all(in_range))&(np.all(in_range2)):
@@ -384,6 +395,9 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
         pos = pos[in_range]
         # Make sure the step size is well within the limits
         step_size_options = np.append(step_size.reshape(-1,1), np.abs(np.append((prior2-freepars).reshape(-1,1)/10, (freepars-prior1).reshape(-1,1)/10, axis=1)), axis=1)
+        step_size_options[loguniformprior,1] = np.abs((np.exp(prior2[loguniformprior])-freepars[loguniformprior]).reshape(-1,1)/10)
+        step_size_options[loguniformprior,2] = np.abs((np.exp(prior1[loguniformprior])-freepars[loguniformprior]).reshape(-1,1)/10)
+        step_size_options[normalprior,1:] = step_size_options[normalprior,0]
         step_size = np.min(step_size_options, axis=1)
         if pos.shape[0]==0:
             remove_zeroth = True
