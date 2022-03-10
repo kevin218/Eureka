@@ -239,7 +239,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 istart = 0
             for m in range(istart, meta.num_data_files):
                 # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
-                if m==istart:
+                if m==istart and meta.spec_hw==meta.spec_hw_range[0] and meta.bg_hw==meta.bg_hw_range[0]:
                     meta.firstFile = True
                 else:
                     meta.firstFile = False
