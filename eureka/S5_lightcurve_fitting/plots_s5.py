@@ -195,7 +195,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
 
     return
 
-def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0):
+def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn=0, nrows=3, ncols=4, nthin=1):
     """Plot the evolution of the chain to look for temporal trends
 
     Parameters
@@ -210,8 +210,16 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-    full:   bool
-        Whether or not the samples passed in include any burn-in steps
+    burnin:   bool
+        Whether or not the samples include the burnin phase
+    nburn:  int
+        The number of burn-in steps that are discarded later
+    nrows:  int
+        The number of rows to make per figure
+    ncols:  int
+        The number of columns to make per figure
+    nthin:  int
+        If >1, the plot will use every nthin point to help speed up computation and reduce clutter on the plot.
 
     Returns
     -------
@@ -235,20 +243,33 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
     for plot_number, ndim in enumerate(ndims):
         fig, axes = plt.subplots(ndim, 1, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6, ndim))
         
-        print(plot_number)
-        print(ndims)
-        print(type(ndims[0]), type(ndim), type(plot_number), type(np.sum(ndims[:plot_number])), type(np.sum(ndims[:plot_number])+ndim))
-
-        for i, j in enumerate(range(np.sum(ndims[:plot_number]), np.sum(ndims[:plot_number])+ndim)):
-            axes[i].plot(samples[:, :, j], alpha=0.4)
-            axes[i].set_ylabel(freenames[j])
-            if full and nburn>0:
-                axes[i].axvline(nburn)
+        for j in range(ncols):
+            for i in range(nrows):
+                if k >= samples.shape[2]:
+                    axes[i][j].set_axis_off()
+                    continue
+                vals = samples[::nthin, :, k]
+                xvals = np.arange(samples.shape[0])[::nthin]
+                n3sig, n2sig, n1sig, med, p1sig, p2sig, p3sig = np.percentile(vals, [0.15,2.5,16,50,84,97.5,99.85], axis=1)
+                axes[i][j].fill_between(xvals, n3sig, p3sig, alpha=0.2, label=r'3$\sigma$')
+                axes[i][j].fill_between(xvals, n2sig, p2sig, alpha=0.2, label=r'2$\sigma$')
+                axes[i][j].fill_between(xvals, n1sig, p1sig, alpha=0.2, label=r'1$\sigma$')
+                axes[i][j].plot(xvals, med, label='Median')
+                axes[i][j].set_ylabel(freenames[k])
+                axes[i][j].set_xlim(0, samples.shape[0]-1)
+                for arr in [n3sig, n2sig, n1sig, med, p1sig, p2sig, p3sig]:
+                    # Add some horizontal lines to make movement in walker population more obvious
+                    axes[i][j].axhline(arr[0], ls='dotted', c='k', lw=1)
+                if burnin and nburn>0:
+                    axes[i][j].axvline(nburn, ls='--', c='k', label='End of Burn-In')
+                if (j==(ncols-1) and i==(nrows//2)) or (k == samples.shape[2]-1):
+                    axes[i][j].legend(loc=6, bbox_to_anchor=(1.01,0.5))
+                k += 1
         fig.tight_layout(h_pad=0.0)
         
         fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
-        if full:
-            fname += '_fullchain'
+        if burnin:
+            fname += '_burninchain'
         else:
             fname += '_chain'
         fname += '_{}'.format(fitter)
