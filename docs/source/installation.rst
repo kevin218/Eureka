@@ -50,7 +50,7 @@ CRDS Environment Variables
 --------------------------
 
 Eureka! installs the JWST Calibration Pipeline as part of its requirements, and this also requires users to set the proper environment variables so that it can download the proper reference files needed to run the pipeline. 
-For users not on the internal STScI network, two environment variables need to be set to enable this functionality:
+For users not on the internal STScI network, two environment variables need to be set to enable this functionality. In your .bashrc file, or other shell initialization file, add these two lines:
 
 	.. code-block:: bash
 
