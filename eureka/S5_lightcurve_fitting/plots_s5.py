@@ -340,16 +340,19 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     History:
     - February 28, 2022 Eva-Maria Ahrer
         Written function
+    - March 9, 2022 Eva-Maria Ahrer
+        Adapted with shared parameters
     """
     
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
     
-    model_GP = model.GPeval(model_lc)
+    
     model_with_GP = model.eval(incl_GP = True)
     model_sys_full = model.syseval()
     model_phys_full, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
+    model_GP = model.GPeval(model_lc)
     
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.copy(lc.flux)
