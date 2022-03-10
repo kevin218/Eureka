@@ -90,6 +90,7 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
+        self.unc_fit = deepcopy(self.unc)
 
         # Place to save the fit results
         self.results = []
