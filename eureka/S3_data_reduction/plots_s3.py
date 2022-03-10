@@ -206,7 +206,7 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
     -------
     None
     '''
-    profile[np.where(np.isnan(profile))] = 0
+    profile = np.ma.masked_invalid(profile)
     vmax = 0.05*np.max(profile*submask)
     plt.figure(3305)
     plt.clf()

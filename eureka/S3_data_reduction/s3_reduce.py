@@ -335,8 +335,8 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                                                                              isplots=meta.isplots_S3, eventdir=meta.outputdir,
                                                                              meddata=data.medapdata, hide_plots=meta.hide_plots)
                 #Replace NaNs with zero
-                data.optspec[np.where(np.isnan(data.optspec))] = 0
-                data.opterr[np.where(np.isnan(data.opterr))] = 0
+                data.optspec = np.ma.masked_invalid(data.optspec)
+                data.opterr = np.ma.masked_invalid(data.opterr)
                 # Plot results
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for optimal spectral extraction')
