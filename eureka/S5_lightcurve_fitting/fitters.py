@@ -260,6 +260,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
         pool = Pool(meta.ncpu)
     else:
+        meta.ncpu = 1
         pool = None
     
     # Run emcee burn-in
@@ -576,6 +577,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         pool = Pool(meta.ncpu)
         queue_size = meta.ncpu
     else:
+        meta.ncpu = 1
         pool = None
         queue_size = None
     sampler = NestedSampler(ln_like, ptform, ndims, pool=pool, queue_size=queue_size,
