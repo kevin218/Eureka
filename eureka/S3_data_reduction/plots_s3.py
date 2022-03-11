@@ -13,6 +13,8 @@ def lc_nodriftcorr(meta, wave_1d, optspec, log):
         Wavelength array with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
     optspec:    
         The optimally extracted spectrum.
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
