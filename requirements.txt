@@ -8,6 +8,7 @@ corner
 cython
 dynesty
 emcee
+george
 gwcs
 h5py
 ipython
