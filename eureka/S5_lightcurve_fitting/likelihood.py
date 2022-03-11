@@ -46,8 +46,8 @@ def ln_like(theta, lc, model, freenames):
     if model.GP:
         ln_like_val = model.GP_model_likelihood(model_lc)
     else:
-        residuals = (lc.flux - model_lc) #/ lc.unc
-        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+        residuals = (lc.flux - model_lc) 
+        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
     return ln_like_val
 
 def lnprior(theta, prior1, prior2, priortype):
