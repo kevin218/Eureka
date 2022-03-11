@@ -329,14 +329,6 @@ class CompositeModel(Model):
                 else:
                     flux *= model.eval(**kwargs)
         return flux, new_time
-    
-    
-    def GP_model_likelihood(self,  fit, **kwargs):
-        """return GP object"""
-        for model in self.components:
-            if model.modeltype == 'GP':
-                return model.loglikelihood( fit)
-        return 0
 
     def update(self, newparams, names, **kwargs):
         """Update parameters in the model components"""
