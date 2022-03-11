@@ -334,7 +334,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                                                                              deg=meta.prof_deg, n=data.intstart + n,
                                                                              isplots=meta.isplots_S3, eventdir=meta.outputdir,
                                                                              meddata=data.medapdata, hide_plots=meta.hide_plots)
-                #Replace NaNs with zero
+                #Mask out NaNs
                 data.optspec = np.ma.masked_invalid(data.optspec)
                 data.opterr = np.ma.masked_invalid(data.opterr)
                 # Plot results

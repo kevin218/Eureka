@@ -207,7 +207,7 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
     None
     '''
     profile = np.ma.masked_invalid(profile)
-    vmax = 0.05*np.max(profile*submask)
+    vmax = 0.05*np.ma.max(profile*submask)
     plt.figure(3305)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
