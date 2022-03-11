@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .source_pos import gauss
 
-def lc_nodriftcorr(meta, wave_1d, optspec):
+def lc_nodriftcorr(meta, wave_1d, optspec, log):
     '''Plot a 2D light curve without drift correction.
     
     Parameters
@@ -18,27 +18,23 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     -------
     None
     '''
-    plt.figure(3101, figsize=(8, 8))  # ev.n_files/20.+0.8))
+    optspec = np.ma.masked_invalid(optspec)
+    plt.figure(3101, figsize=(8, 8))
     plt.clf()
     wmin = wave_1d.min()
     wmax = wave_1d.max()
     n_int, nx = optspec.shape
-    # iwmin       = np.where(ev.wave[src_ypos]>wmin)[0][0]
-    # iwmax       = np.where(ev.wave[src_ypos]>wmax)[0][0]
     vmin = 0.97
     vmax = 1.03
-    # normspec    = np.mean(ev.optspec,axis=1)/np.mean(ev.optspec[ev.inormspec[0]:ev.inormspec[1]],axis=(0,1))
-    normspec = optspec / np.mean(optspec, axis=0)
+    normspec = optspec / np.ma.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
-    ediff = np.zeros(n_int)
+    ediff = np.ma.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = 1e6 * np.median(np.abs(np.ediff1d(normspec[m])))
-        # plt.scatter(ev.wave[src_ypos], np.zeros(nx)+m, c=normspec[m],
-        #             s=14,linewidths=0,vmin=vmin,vmax=vmax,marker='s',cmap=plt.cm.RdYlBu_r)
-    plt.title("MAD = " + str(np.round(np.mean(ediff), 0).astype(int)) + " ppm")
-    # plt.xlim(wmin,wmax)
-    # plt.ylim(0,n_int)
+        ediff[m] = 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(normspec[m])))
+    MAD = np.ma.mean(ediff)
+    log.writelog("MAD = " + str(np.round(MAD, 0).astype(int)) + " ppm")
+    plt.title("MAD = " + str(np.round(MAD, 0).astype(int)) + " ppm")
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
@@ -72,16 +68,13 @@ def image_and_background(data, meta, n):
     plt.title('Background-Subtracted Flux')
     max = np.max(subdata[n] * submask[n])
     plt.imshow(subdata[n] * submask[n], origin='lower', aspect='auto', vmin=0, vmax=max / 10)
-    # plt.imshow(subdata[n], origin='lower', aspect='auto', vmin=0, vmax=10000)
     plt.colorbar()
     plt.ylabel('Pixel Position')
     plt.subplot(212)
     plt.title('Subtracted Background')
-    # plt.imshow(submask[i], origin='lower', aspect='auto', vmax=1)
     median = np.median(subbg[n])
     std = np.std(subbg[n])
     plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median - 3 * std, vmax=median + 3 * std)
-    # plt.imshow(submask[n], origin='lower', aspect='auto', vmin=0, vmax=1)
     plt.colorbar()
     plt.ylabel('Pixel Position')
     plt.xlabel('Pixel Position')
@@ -113,7 +106,6 @@ def optimal_spectrum(data, meta, n):
     plt.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
     plt.semilogy(range(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
-    # plt.errorbar(range(subnx), stdspec[n], yerr=np.sqrt(stdvar[n]), fmt='-', color='C1', ecolor='C0', label='Std Spec')
     plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
     plt.ylabel('Flux')
     plt.xlabel('Pixel Position')

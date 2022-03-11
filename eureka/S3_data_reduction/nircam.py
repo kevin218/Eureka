@@ -39,6 +39,7 @@ def read(filename, data, meta):
     hdulist = fits.open(filename)
 
     # Load master and science headers
+    data.filename = filename
     data.mhdr    = hdulist[0].header
     data.shdr    = hdulist['SCI',1].header
 
