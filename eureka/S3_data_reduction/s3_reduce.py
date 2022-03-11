@@ -116,7 +116,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
     #check for range of background apertures
     if isinstance(meta.bg_hw, list):
-        meta.bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1]+meta.spec_hw[2], meta.bg_hw[2])
+        meta.bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1]+meta.bg_hw[2], meta.bg_hw[2])
     else:
         meta.bg_hw_range = [meta.bg_hw]
 
@@ -197,7 +197,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 istart = 0
             for m in range(istart, meta.num_data_files):
                 # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
-                if m==istart:
+                if m==istart and meta.spec_hw==meta.spec_hw_range[0] and meta.bg_hw==meta.bg_hw_range[0]:
                     meta.firstFile = True
                 else:
                     meta.firstFile = False
