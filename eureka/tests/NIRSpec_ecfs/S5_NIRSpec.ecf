@@ -27,6 +27,10 @@ run_bound       'multi'
 run_sample      'unif'
 run_tol         0.1
 
+#GP inputs
+kernel_inputs   ['time','time'] #options: time
+kernel_class    ['ExpSquared','Exp'] #options: ExpSquared, Matern32, Exp, RationalQuadratic
+
 # Plotting controls
 interp			False	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
