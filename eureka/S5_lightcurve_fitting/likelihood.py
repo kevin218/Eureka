@@ -277,7 +277,7 @@ def GP_loglikelihood(model, fit):
     - March 11, 2022 Eva-Maria Ahrer
         moved code from Model.py
     """
-    for model in self.components:
-        if model.modeltype == 'GP':
-            return model.loglikelihood( fit)
+    for m in model.components:
+        if m.modeltype == 'GP':
+            return m.loglikelihood( fit)
     return 0
