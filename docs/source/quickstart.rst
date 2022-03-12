@@ -30,7 +30,7 @@ If your internet connection is slow, download the `smallest file only <https://s
 -----------------------------------------------------------------
 
 3.1 Go into the downloaded ``Eureka!`` directory (it is likely called Eureka-main if you downloaded it from GitHub) and open the file ``Eureka-main/demos/S3/S3_template.ecf``.
-Update "topdir + inputdir" and "topdir + ancildir" to the location of your Stage2 data and the ancil data, respectively.
+Update "topdir + inputdir" to the location of your Stage2 data.
 
 You can get more information about the ecf (``Eureka!`` control file) :ref:`here<ecf>`.
 

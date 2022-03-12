@@ -63,6 +63,7 @@ def read(filename, f277_filename, data, meta):
     f277= fits.open(f277_filename)
 
     # loads in all the header data
+    data.filename = filename
     data.mhdr = hdu[0].header
     data.shdr = hdu['SCI',1].header
 

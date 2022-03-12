@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from astropy import units, constants
-import os, glob
+import os, glob, h5py
 import time as time_pkg
 from ..lib import manageevent as me
 from ..lib import readECF as rd
@@ -99,6 +99,8 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
             rd.copy_ecf(meta, ecf_path, ecffile)
 
             # Get the wavelength values
+            meta.wave_low = np.array(meta.wave_low)
+            meta.wave_hi = np.array(meta.wave_hi)
             wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
             wave_errs = (meta.wave_hi-meta.wave_low)/2
 
@@ -230,16 +232,34 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
 def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
     for fitter in fit_methods:
         if fitter in ['dynesty', 'emcee']:
-            fname = f'S5_{fitter}_samples_{channel_key}.csv'
-            samples = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
-            if y_param=='fp':
-                keys = [key for key in samples.keys() if 'fp' in key]
+            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
+            full_keys = fitted_values.keys()
+            
+            fname = f'S5_{fitter}_samples_{channel_key}'
+            if os.path.isfile(meta.inputdir+fname+'.h5'):
+                # New code to load HDF5 files
+                with h5py.File(meta.inputdir+fname+'.h5', 'r') as hf:
+                    samples = hf['samples'][:]
             else:
-                keys = [key for key in samples.keys() if 'rp' in key]
+                # Keep this old code for the time being to allow backwards compatibility
+                samples = pd.read_csv(meta.inputdir+fname+'.csv', escapechar='#', skipinitialspace=True)
+
+            if y_param=='fp':
+                keys = [key for key in full_keys if 'fp' in key]
+            else:
+                keys = [key for key in full_keys if 'rp' in key]
+
             if len(keys)==0:
                 raise AssertionError(f'Parameter {y_param} was not in the list of fitted parameters which includes:'
-                                    +', '.join(samples.keys()))
-            spectra_samples = np.array([samples[key] for key in keys])
+                                    +', '.join(full_keys))
+    
+            if os.path.isfile(meta.inputdir+fname+'.h5'):
+                # New code to load HDF5 files
+                spectra_samples = np.array([samples[:,full_keys==key] for key in keys]).reshape((len(keys),-1))
+            else:
+                # Keep this old code for the time being to allow backwards compatibility
+                spectra_samples = np.array([samples[key] for key in keys])
             lowers, medians, uppers = np.percentile(spectra_samples, [16,50,84], axis=1)
             lowers = np.abs(medians-lowers)
             uppers = np.abs(uppers-medians)

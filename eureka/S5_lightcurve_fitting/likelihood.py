@@ -36,8 +36,11 @@ def ln_like(theta, lc, model, freenames):
     model_lc = model.eval()
     residuals = (lc.flux - model_lc)
     if "scatter_ppm" in freenames:
-        ind = np.where(freenames=="scatter_ppm")
-        lc.unc_fit = theta[ind]*1e-6
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        lc.unc_fit = np.ones_like(lc.flux) * theta[ind[0]] * 1e-6        
+        if len(ind)>1:
+            for chan in np.arange(lc.flux.size//lc.time.size):
+                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * 1e-6
     else:
         lc.unc_fit = deepcopy(lc.unc)
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
@@ -177,7 +180,7 @@ def ptform(theta, prior1, prior2, priortype):
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return p
 
-def computeRedChiSq(lc, model, meta, freenames):
+def computeRedChiSq(lc, model, meta, freenames, log):
     """Compute the reduced chi-squared value.
 
     Parameters
@@ -190,6 +193,8 @@ def computeRedChiSq(lc, model, meta, freenames):
         The metadata object.
     freenames: iterable
         The names of the fitted parameters.
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -204,12 +209,12 @@ def computeRedChiSq(lc, model, meta, freenames):
         Moved code to separate file, added documentation.
     """
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    residuals = (lc.flux - model_lc)
     chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
     if meta.run_verbose:
-        print('Reduced Chi-squared: ', chi2red)
+        log.writelog(f'Reduced Chi-squared: {chi2red}')
 
     return chi2red
 
