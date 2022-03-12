@@ -92,7 +92,10 @@ def BGsubtraction(data, meta, log, isplots):
     if hasattr(meta, 'save_bgsub') and meta.save_bgsub:
         log.writelog('  Saving background subtracted FITS files', mute=(not meta.verbose))
         new_filename = data.filename.split(os.sep)[-1]
-        new_filename = os.path.join(meta.outputdir, 'bgsub_FITS', new_filename)
+        new_folder = os.path.join(meta.outputdir, 'bgsub_FITS')
+        if not os.path.isdir(new_folder):
+            os.mkdir(new_folder)
+        new_filename = os.path.join(new_folder, new_filename)
         with datamodels.open(data.filename) as file:
             file.data = data.subdata
             file.save(new_filename)
