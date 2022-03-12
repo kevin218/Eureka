@@ -232,16 +232,12 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    if len(freenames) > 20:
-        # Break the plot into many plots to avoid an enormous figure
-        ndims = 20*np.ones(int(len(freenames//20)), dtype=int)
-        if len(freenames)-np.sum(ndims) > 0:
-            ndims = np.append(ndims, int(len(freenames)-np.sum(ndims)))
-    else:
-        ndims = np.array([len(freenames),])
+    nsubplots = nrows*ncols
+    nplots = int(np.ceil(len(freenames)/nsubplots))
 
-    for plot_number, ndim in enumerate(ndims):
-        fig, axes = plt.subplots(ndim, 1, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6, ndim))
+    k = 0
+    for plot_number in range(nplots):
+        fig, axes = plt.subplots(nrows, ncols, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
         
         for j in range(ncols):
             for i in range(nrows):
@@ -273,8 +269,8 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
         else:
             fname += '_chain'
         fname += '_{}'.format(fitter)
-        if len(ndims)>1:
-            fname += '_plot{}'.format(plot_number)
+        if nplots>1:
+            fname += '_plot{}of{}'.format(plot_number+1,nplots)
         fname += '.png'
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
         if meta.hide_plots:

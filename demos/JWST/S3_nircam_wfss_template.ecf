@@ -34,4 +34,3 @@ topdir      /home/User
 # Directories relative to project dir
 inputdir    /Data/JWST-Sim/NIRCam/Stage2	# The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir	/Data/JWST-Sim/NIRCam/Stage3
-ancildir    /Data/JWST-Sim/NIRCam/ancil

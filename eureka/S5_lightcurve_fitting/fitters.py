@@ -934,7 +934,7 @@ def load_old_fitparams(meta, log, channel, freenames):
 
 def save_fit(meta, lc, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
     if lc.share:
-        fname = f'S5_{fitter}_fitparams_shared.csv'
+        fname = f'S5_{fitter}_fitparams_shared'
     else:
         fname = f'S5_{fitter}_fitparams_ch{lc.channel}'
     data = fit_params.reshape(1,-1)
@@ -945,9 +945,10 @@ def save_fit(meta, lc, fitter, fit_params, freenames, samples=[], upper_errs=[],
 
     if len(samples)!=0:
         if lc.share:
-            fname = f'S5_{fitter}_samples_shared.csv'
+            fname = f'S5_{fitter}_samples_shared'
         else:
-            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
-        np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
+            fname = f'S5_{fitter}_samples_ch{lc.channel}'
+        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
+            hf.create_dataset("samples",  data=samples)
     
     return

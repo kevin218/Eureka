@@ -200,6 +200,8 @@ def computeRedChiSq(lc, log, model, meta, freenames):
         The metadata object.
     freenames: iterable
         The names of the fitted parameters.
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -214,7 +216,7 @@ def computeRedChiSq(lc, log, model, meta, freenames):
         Moved code to separate file, added documentation.
     """
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    residuals = (lc.flux - model_lc)
     chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
