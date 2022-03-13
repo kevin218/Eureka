@@ -26,7 +26,7 @@ def binned_lightcurve(meta, time, i):
     # Normalized light curve
     norm_lcdata = meta.lcdata[i] / meta.lcdata[i, -1]
     norm_lcerr = meta.lcerr[i] / meta.lcdata[i, -1]
-    plt.errorbar(time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec='w')
+    plt.errorbar(time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
     plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
@@ -34,9 +34,7 @@ def binned_lightcurve(meta, time, i):
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     plt.savefig(meta.outputdir + 'figs/Fig' + str(4300 + i) + '-' + meta.eventlabel + '-1D_LC.png')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
         plt.pause(0.2)
 
 def drift1d(meta):
@@ -53,7 +51,7 @@ def drift1d(meta):
     '''
     plt.figure(4101, figsize=(8,4))
     plt.clf()
-    plt.plot(np.arange(meta.nx)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
+    plt.plot(np.arange(meta.n_int)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
     # plt.subplot(211)
     # for j in range(istart,ev.n_reads-1):
     #     plt.plot(ev.drift2D[:,j,1],'.')
@@ -65,9 +63,7 @@ def drift1d(meta):
     plt.xlabel('Frame Number')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/Fig4101-Drift.png')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
         plt.pause(0.2)
 
 def lc_driftcorr(meta, wave_1d, optspec):
@@ -142,9 +138,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig(meta.outputdir + f'figs/Fig4500-{n}-CC_Spec')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
         plt.pause(0.2)
 
 def cc_vals(meta, vals, n):
@@ -169,7 +163,5 @@ def cc_vals(meta, vals, n):
     plt.plot(range(-meta.drift_range,meta.drift_range+1), vals, '.')
     plt.tight_layout()
     plt.savefig(meta.outputdir + f'figs/Fig4501-{n}-CC_Vals')
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if not meta.hide_plots:
         plt.pause(0.2)

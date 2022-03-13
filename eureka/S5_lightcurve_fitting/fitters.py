@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from io import StringIO
 import sys
+import h5py
 
 from scipy.optimize import minimize
 import lmfit
@@ -80,6 +81,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     t_results = table.Table([freenames, fit_params], 
                             names=("Parameter", "Median")  )  
     
+    # Save the fit ASAP
+    save_fit(meta, lc, calling_function, t_results, freenames)
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
@@ -95,11 +99,11 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval()
 
-    residuals = (lc.flux - model_lc)
     # FINDME
     # Commented out for now because op.least_squares() doesn't provide covariance matrix
     # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
     # if results[1] is not None:
+    #     residuals = (lc.flux - model_lc)
     #     cov_mat = results[1]*np.var(residuals)
     # else:
     #     # Sometimes lsq will fail to converge and will return a None covariance matrix
@@ -112,7 +116,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
     
     print('\nLSQ RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -130,8 +134,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
-    save_fit(meta, lc, calling_function, t_results, freenames)
 
     return best_model
 
@@ -234,8 +236,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
         step_size = 0.001*np.abs(freepars)
     ndim = len(step_size)
     nwalkers = meta.run_nwalkers
-    run_nsteps = meta.run_nsteps
-    burn_in = meta.run_nburn
 
     # make it robust to lsq hitting the upper or lower bound of the param space
     ind_max = np.where(np.logical_and(freepars - prior2 == 0., priortype=='U'))
@@ -288,10 +288,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     log.writelog('Running emcee...')
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(lc, model, prior1, prior2, priortype, freenames))
-    sampler.run_mcmc(pos, run_nsteps, progress=True)
-    samples = sampler.chain[:, burn_in::1, :].reshape((-1, ndim))
-    if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
+    sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
+    samples = sampler.get_chain(flat=True, discard=meta.run_nburn)
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
@@ -301,6 +299,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
     t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
                             names=("Parameter", "Median", "-1sig", "+1sig"))
     
+
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, 'emcee', t_results, freenames, samples)
+
+    if meta.isplots_S5 >= 5:
+        plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', full=True, nburn=meta.run_nburn)
+        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', full=False)
+        plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -319,7 +325,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='emcee')
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
 
     log.writelog('\nEMCEE RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -336,8 +342,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-    
-    save_fit(meta, lc, 'emcee', t_results, freenames, samples)
+
 
     return best_model
 
@@ -433,6 +438,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
                             names=("Parameter", "Median", "-1sig", "+1sig"))
 
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, 'dynesty', t_results, freenames, samples)
+
+    # plot using corner.py
+    if meta.isplots_S5 >= 5:
+        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
@@ -454,7 +466,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='dynesty')
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
 
     log.writelog('\nDYNESTY RESULTS:')
     for freenames_i, fit_params_i in zip(freenames, fit_params):
@@ -471,8 +483,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
-    save_fit(meta, lc, 'dynesty', t_results, freenames, samples)
 
     return best_model
 
@@ -541,6 +551,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
                             names=("Parameter", "Median")  )  
+    # Save the fit ASAP
+    save_fit(meta, lc, 'lmfitter', t_results, freenames)
 
     # Create new model with best fit parameters
     params = Parameters()
@@ -567,7 +579,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, model, meta, freenames)
+    chi2red = computeRedChiSq(lc, model, meta, freenames, log)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -575,8 +587,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-
-    save_fit(meta, lc, 'lmfitter', t_results, freenames)
 
     return best_model
 
@@ -717,16 +727,18 @@ def save_fit(meta, lc, fitter, results_table, freenames, samples=[]):
         Record an astropy table for median +/- 1 sigma, all params
     """
     if lc.share:
-        fname = f'S5_{fitter}_fitparams_shared.csv'
+        fname = f'S5_{fitter}_fitparams_shared'
     else:
-        fname = f'S5_{fitter}_fitparams_ch{lc.channel}.csv'
-    results_table.write(meta.outputdir+fname, format='csv', overwrite=False)
+        fname = f'S5_{fitter}_fitparams_ch{lc.channel}'
+    results_table.write(meta.outputdir+fname+'.csv', format='csv', overwrite=False)
+
 
     if len(samples)!=0:
         if lc.share:
-            fname = f'S5_{fitter}_samples_shared.csv'
+            fname = f'S5_{fitter}_samples_shared'
         else:
-            fname = f'S5_{fitter}_samples_ch{lc.channel}.csv'
-        np.savetxt(meta.outputdir+fname, samples, header=','.join(freenames), delimiter=',')
+            fname = f'S5_{fitter}_samples_ch{lc.channel}'
+        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
+            hf.create_dataset("samples",  data=samples)
     
     return

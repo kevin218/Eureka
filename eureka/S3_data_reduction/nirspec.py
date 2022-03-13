@@ -36,6 +36,7 @@ def read(filename, data, meta):
 
     # Now we can start working with the data.
     hdulist 		= fits.open(filename)
+    data.filename = filename
     data.mhdr 		= hdulist[0].header
     data.shdr 		= hdulist['SCI',1].header
 

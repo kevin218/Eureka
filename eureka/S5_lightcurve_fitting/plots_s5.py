@@ -195,6 +195,91 @@ def plot_corner(samples, lc, meta, freenames, fitter):
 
     return
 
+def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0, nrows=3, ncols=4, nthin=1):
+    """Plot the evolution of the chain to look for temporal trends
+
+    Parameters
+    ----------
+    samples: ndarray
+        The samples produced by the sampling algorithm
+    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    freenames: iterable
+        The names of the fitted parameters
+    meta: MetaClass
+        The metadata object
+    fitter: str
+        The name of the fitter (for plot filename)
+    full:   bool
+        Whether or not the samples passed in include any burn-in steps
+    nburn:  int
+        The number of burn-in steps that are discarded later
+    nrows:  int
+        The number of rows to make per figure
+    ncols:  int
+        The number of columns to make per figure
+    nthin:  int
+        If >1, the plot will use every nthin point to help speed up computation and reduce clutter on the plot.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+
+    History:
+    - December 29, 2021 Taylor Bell
+        Moved plotting code to a separate function.
+    """
+    nsubplots = nrows*ncols
+    nplots = int(np.ceil(len(freenames)/nsubplots))
+
+    k = 0
+    for plot_number in range(nplots):
+        fig, axes = plt.subplots(nrows, ncols, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
+        
+        for j in range(ncols):
+            for i in range(nrows):
+                if k >= samples.shape[2]:
+                    axes[i][j].set_axis_off()
+                    continue
+                vals = samples[::nthin, :, k]
+                xvals = np.arange(samples.shape[0])[::nthin]
+                n3sig, n2sig, n1sig, med, p1sig, p2sig, p3sig = np.percentile(vals, [0.15,2.5,16,50,84,97.5,99.85], axis=1)
+                axes[i][j].fill_between(xvals, n3sig, p3sig, alpha=0.2, label=r'3$\sigma$')
+                axes[i][j].fill_between(xvals, n2sig, p2sig, alpha=0.2, label=r'2$\sigma$')
+                axes[i][j].fill_between(xvals, n1sig, p1sig, alpha=0.2, label=r'1$\sigma$')
+                axes[i][j].plot(xvals, med, label='Median')
+                axes[i][j].set_ylabel(freenames[k])
+                axes[i][j].set_xlim(0, samples.shape[0]-1)
+                for arr in [n3sig, n2sig, n1sig, med, p1sig, p2sig, p3sig]:
+                    # Add some horizontal lines to make movement in walker population more obvious
+                    axes[i][j].axhline(arr[0], ls='dotted', c='k', lw=1)
+                if full and nburn>0:
+                    axes[i][j].axvline(nburn, ls='--', c='k', label='End of Burn-In')
+                if (j==(ncols-1) and i==(nrows//2)) or (k == samples.shape[2]-1):
+                    axes[i][j].legend(loc=6, bbox_to_anchor=(1.01,0.5))
+                k += 1
+        fig.tight_layout(h_pad=0.0)
+        
+        fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
+        if full:
+            fname += '_fullchain'
+        else:
+            fname += '_chain'
+        fname += '_{}'.format(fitter)
+        if nplots>1:
+            fname += '_plot{}of{}'.format(plot_number+1,nplots)
+        fname += '.png'
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+        if meta.hide_plots:
+            plt.close()
+        else:
+            plt.pause(0.2)
+
+    return
+
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian
 
