@@ -101,8 +101,8 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
             # Get the wavelength values
             meta.wave_low = np.array(meta.wave_low)
             meta.wave_hi = np.array(meta.wave_hi)
-            wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
-            wave_errs = (meta.wave_hi-meta.wave_low)/2
+            meta.wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
+            meta.wave_errs = (meta.wave_hi-meta.wave_low)/2
 
             # Convert to the user-provided x-axis unit if needed
             if hasattr(meta, 'x_unit'):
@@ -112,8 +112,8 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 x_unit = units.um
             # FINDME: For now this is assuming that the data is in units of microns
             # We should add something to S3 that notes what the units of the wavelength were in the FITS file
-            wavelengths *= units.um.to(x_unit, equivalencies=units.spectral())
-            wave_errs   *= units.um.to(x_unit, equivalencies=units.spectral())
+            meta.wavelengths *= units.um.to(x_unit, equivalencies=units.spectral())
+            meta.wave_errs   *= units.um.to(x_unit, equivalencies=units.spectral())
             physical_type = str(x_unit.physical_type).title()
             if physical_type=='Length':
                 physical_type = 'Wavelength'
@@ -134,26 +134,26 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
 
             # Read in S5 fitted values
             if meta.sharedp:
-                medians, errs = parse_s5_saves(meta, fit_methods, y_param, 'shared')
+                meta.spectrum_median, meta.spectrum_err = parse_s5_saves(meta, fit_methods, y_param, 'shared')
             else:
-                medians = []
-                errs = []
+                meta.spectrum_median = []
+                meta.spectrum_err = []
                 for channel in range(meta.nspecchan):
                     median, err = parse_s5_saves(meta, fit_methods, y_param, f'ch{channel}')
-                    medians.append(median[0])
-                    errs.append(np.array(err).reshape(-1))
-                medians = np.array(medians).reshape(-1)
-                errs = np.array(errs).swapaxes(0,1)
-                if np.all(errs==None):
-                    errs = None
+                    meta.spectrum_median.append(median[0])
+                    meta.spectrum_err.append(np.array(err).reshape(-1))
+                meta.spectrum_median = np.array(meta.spectrum_median).reshape(-1)
+                meta.spectrum_err = np.array(meta.spectrum_err).swapaxes(0,1)
+                if np.all(meta.spectrum_err==None):
+                    meta.spectrum_err = None
 
             # Convert the y-axis unit to the user-provided value if needed
             if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
-                if errs is not None:
-                    lower = np.abs((medians-errs[0,:])**2-medians**2)
-                    upper = np.abs((medians+errs[1,:])**2-medians**2)
-                    errs = np.append(lower.reshape(1,-1), upper.reshape(1,-1), axis=0)
-                medians *= medians
+                if meta.spectrum_err is not None:
+                    lower = np.abs((meta.spectrum_median-meta.spectrum_err[0,:])**2-meta.spectrum_median**2)
+                    upper = np.abs((meta.spectrum_median+meta.spectrum_err[1,:])**2-meta.spectrum_median**2)
+                    meta.spectrum_err = np.append(lower.reshape(1,-1), upper.reshape(1,-1), axis=0)
+                meta.spectrum_median *= meta.spectrum_median
                 ylabel = r'$(R_{\rm p}/R_{\rm *})^2$'
             elif meta.y_unit in ['Rp/Rs', 'Rp/R*']:
                 ylabel = r'$R_{\rm p}/R_{\rm *}$'
@@ -198,12 +198,12 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
 
             # Make the spectrum plot
             if meta.isplots_S6>=1:
-                plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel)
+                plots.plot_spectrum(meta, model_x, model_y, meta.y_scalar, ylabel, xlabel)
 
             if meta.isplots_S6>=3 and y_param=='rp' and np.all([hasattr(meta, val) for val in ['planet_Teq', 'planet_mu', 'planet_Rad', 'planet_Mass', 'star_Rad', 'planet_R0']]):
                 # Make the spectrum plot
                 if meta.planet_Rad is None:
-                    meta.planet_Rad = medians
+                    meta.planet_Rad = meta.spectrum_median
                     if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
                         meta.planet_Rad = np.sqrt(meta.planet_Rad)
                     meta.planet_Rad = np.mean(meta.planet_Rad)
@@ -215,7 +215,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 scaleHeight = (constants.k_B*(meta.planet_Teq*units.K)/((meta.planet_mu*units.u)*(meta.planet_g*units.m/units.s**2))).si.to('km')
                 log.writelog(f'Calculated H={np.round(scaleHeight,2)} with g={np.round(meta.planet_g, 2)} m/s^2, Teq={meta.planet_Teq} K, and mu={meta.planet_mu} u')
                 scaleHeight = (scaleHeight/(meta.star_Rad*constants.R_sun)).si.value
-                plots.plot_spectrum(meta, wavelengths, medians, errs, wave_errs, model_x, model_y, meta.y_scalar, ylabel, xlabel, scaleHeight, meta.planet_R0)
+                plots.plot_spectrum(meta, model_x, model_y, meta.y_scalar, ylabel, xlabel, scaleHeight, meta.planet_R0)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -235,7 +235,7 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
             fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
             fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
             full_keys = fitted_values.keys()
-            
+
             fname = f'S5_{fitter}_samples_{channel_key}'
             if os.path.isfile(meta.inputdir+fname+'.h5'):
                 # New code to load HDF5 files
@@ -253,7 +253,7 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
             if len(keys)==0:
                 raise AssertionError(f'Parameter {y_param} was not in the list of fitted parameters which includes:'
                                     +', '.join(full_keys))
-    
+
             if os.path.isfile(meta.inputdir+fname+'.h5'):
                 # New code to load HDF5 files
                 spectra_samples = np.array([samples[:,full_keys==key] for key in keys]).reshape((len(keys),-1))
