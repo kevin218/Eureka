@@ -251,7 +251,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     ind_zero_step = np.where(step_size==0.)
     if len(ind_zero_step[0]):
         log.writelog('Warning: >=1 params would have a zero step. changing to 0.001 * prior range')
-        step_size[ind_zero_step] = 0.001*(pmax[ind_zero_step] - pmin[ind_zero_step])
+        step_size[ind_zero_step] = 0.001*(prior2[ind_zero_step] - prior1[ind_zero_step])
         
     
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
