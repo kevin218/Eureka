@@ -14,6 +14,8 @@ from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 
+from astropy import table
+
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
 reload(plots)
@@ -50,6 +52,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
+    - Mar 13, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -72,6 +76,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Get the best fit params
     fit_params = results.x
+    # Create table of results
+    t_results = table.Table([freenames, fit_params], 
+                            names=("Parameter", "Median")  )  
     
     # Make a new model instance
     best_model = copy.copy(model)
@@ -124,7 +131,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
-    save_fit(meta, lc, calling_function, fit_params, freenames)
+    save_fit(meta, lc, calling_function, t_results, freenames)
 
     return best_model
 
@@ -195,7 +202,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. Added statements to avoid some initial 
         state issues.
-
+    - Mar 13, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
     """
     if not hasattr(meta, 'lsq_first') or meta.lsq_first:
         # Only call lsq fitter first if asked or lsq_first option wasn't passed (allowing backwards compatibility)
@@ -285,11 +293,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
-    medians = []
-    for i in range(len(step_size)):
-            q = np.percentile(samples[:, i], [16, 50, 84])
-            medians.append(q[1])
-    fit_params = np.array(medians)
+    # Record median + percentiles
+    q = np.percentile(samples, [16, 50, 84], axis=0)
+    fit_params = q[1] # median
+    
+    # Create table of results
+    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
+                            names=("Parameter", "Median", "-1sig", "+1sig"))
+    
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -326,7 +337,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
     
-    save_fit(meta, lc, 'emcee', fit_params, freenames, samples)
+    save_fit(meta, lc, 'emcee', t_results, freenames, samples)
 
     return best_model
 
@@ -363,6 +374,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Added log-uniform and Gaussian priors.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
+    - Mar 13, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -412,11 +425,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
 
-    medians = []
-    for i in range(len(freenames)):
-            q = np.percentile(samples[:, i], [16, 50, 84])
-            medians.append(q[1])
-    fit_params = np.array(medians)
+    # Record median + percentiles
+    q = np.percentile(samples, [16, 50, 84], axis=0)
+    fit_params = q[1] # median
+    
+    # Create table of results
+    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
+                            names=("Parameter", "Median", "-1sig", "+1sig"))
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -457,7 +472,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
-    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples)
+    save_fit(meta, lc, 'dynesty', t_results, freenames, samples)
 
     return best_model
 
@@ -490,6 +505,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
+    - Mar 13, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
     """
         #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
 
@@ -520,6 +537,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     new_params = [(fit_params.get(i).name, fit_params.get(i).value,
                    fit_params.get(i).vary, fit_params.get(i).min,
                    fit_params.get(i).max) for i in fit_params]
+
+    # Create table of results
+    t_results = table.Table([freenames, fit_params], 
+                            names=("Parameter", "Median")  )  
 
     # Create new model with best fit parameters
     params = Parameters()
@@ -555,7 +576,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
-    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
+    save_fit(meta, lc, 'lmfitter', t_results, freenames)
 
     return best_model
 
@@ -685,12 +706,21 @@ def group_variables_lmfit(model):
 
     return param_list, freenames, indep_vars
 
-def save_fit(meta, lc, fitter, fit_params, freenames, samples=[]):
+def save_fit(meta, lc, fitter, results_table, freenames, samples=[]):
+    """Save fitted parameters and chains
+
+    Notes
+    -----
+    History:
+
+    - Mar 13, 2022 Caroline Piaulet
+        Record an astropy table for median +/- 1 sigma, all params
+    """
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared.csv'
     else:
         fname = f'S5_{fitter}_fitparams_ch{lc.channel}.csv'
-    np.savetxt(meta.outputdir+fname, fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+    results_table.write(meta.outputdir+fname, format='csv', overwrite=False)
 
     if len(samples)!=0:
         if lc.share:
