@@ -102,10 +102,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             log.writelog(f"Output directory: {meta.outputdir}")
 
             # Copy ecf
-            log.writelog('Copying S5 control file')
+            log.writelog('Copying S5 control file', mute=(not meta.verbose))
             rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
-            log.writelog('Copying S5 parameter control file')
+            log.writelog('Copying S5 parameter control file', mute=(not meta.verbose))
             shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
 
             # Set the intial fitting parameters
@@ -354,5 +354,8 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     new_meta.runs_s5 = meta.runs_s5
     new_meta.datetime = meta.datetime
+
+    new_meta.spec_hw = spec_hw_val
+    new_meta.bg_hw = bg_hw_val
 
     return new_meta

@@ -145,8 +145,8 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
             else:
                 log.writelog('WARNING: Unknown scan direction for file ' + str(m) + '.')
     
-    log.writelog("# of files in scan direction 0: " + str(meta.n_scan0))
-    log.writelog("# of files in scan direction 1: " + str(meta.n_scan1))
+    log.writelog("# of files in scan direction 0: " + str(meta.n_scan0), mute=(not meta.verbose))
+    log.writelog("# of files in scan direction 1: " + str(meta.n_scan1), mute=(not meta.verbose))
 
     # Group frames into frame, batch, and orbit number
     meta.framenum, meta.batchnum, meta.orbitnum = hst.groupFrames(obstimes)

@@ -98,13 +98,13 @@ class Logedit:
       self.log.writelines(content)
 
 
-  def writelog(self, message, mute=False):
+  def writelog(self, message, mute=False, end='\n'):
     """
       Prints message in the terminal and stores it in the log file.
     """
     # print to screen:
     if not mute:
-      print(message, flush=True)
+      print(message, end=end, flush=True)
     # print to file:
     print(message, file=self.log)
 
@@ -116,9 +116,9 @@ class Logedit:
     self.log.close()
 
 
-  def writeclose(self, message, mute=False):
+  def writeclose(self, message, mute=False, end='\n'):
     """
       Print message in terminal and log, then close log.
     """
-    self.writelog(message, mute)
+    self.writelog(message, mute, end)
     self.closelog()

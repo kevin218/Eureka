@@ -67,11 +67,14 @@ def BGsubtraction(data, meta, log, isplots):
         return
 
     # Compute background for each integration
-    log.writelog('  Performing background subtraction')
+    log.writelog('  Performing background subtraction', mute=(not meta.verbose))
     data.subbg = np.zeros((data.subdata.shape))
     if meta.ncpu == 1:
         # Only 1 CPU
-        for n in tqdm(range(meta.int_start,meta.n_int)):
+        iterfn = range(meta.int_start,meta.n_int)
+        if meta.verbose:
+            iterfn = tqdm(iterfn)
+        for n in iterfn:
             # Fit sky background with out-of-spectra data
             writeBG(inst.fit_bg(data, meta, n, isplots))
     else:
@@ -82,7 +85,10 @@ def BGsubtraction(data, meta, log, isplots):
             args_list.append((data, meta, n, isplots))
         jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
         pool.close()
-        for job in tqdm(jobs):
+        iterfn = jobs
+        if meta.verbose:
+            iterfn = tqdm(iterfn)
+        for job in iterfn:
             res = job.get()
 
     # 9.  Background subtraction
