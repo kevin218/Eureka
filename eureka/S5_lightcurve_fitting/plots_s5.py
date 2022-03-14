@@ -43,13 +43,13 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_sys_full = model.syseval()
     model_phys_full, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
-    
+
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.copy(lc.flux)
+        flux = np.ma.MaskedArray.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
             unc = deepcopy(np.array(lc.unc_fit))
         else:
-            unc = np.copy(lc.unc)
+            unc = np.ma.MaskedArray.copy(lc.unc)
         model = np.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -61,7 +61,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_sys = model_sys[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
-        
+
         residuals = flux - model
         fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
@@ -87,7 +87,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             plt.close()
         else:
             plt.pause(0.2)
-    
+
     return
 
 def plot_rms(lc, model, meta, fitter):
@@ -129,7 +129,7 @@ def plot_rms(lc, model, meta, fitter):
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         residuals = residuals[np.argsort(time)]
 
@@ -238,7 +238,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
     k = 0
     for plot_number in range(nplots):
         fig, axes = plt.subplots(nrows, ncols, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
-        
+
         for j in range(ncols):
             for i in range(nrows):
                 if k >= samples.shape[2]:
@@ -262,7 +262,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
                     axes[i][j].legend(loc=6, bbox_to_anchor=(1.01,0.5))
                 k += 1
         fig.tight_layout(h_pad=0.0)
-        
+
         fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
         if burnin:
             fname += '_burninchain'
@@ -293,7 +293,7 @@ def plot_res_distr(lc, model, meta, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-        
+
     Returns
     -------
     None
@@ -311,21 +311,21 @@ def plot_res_distr(lc, model, meta, fitter):
     time = lc.time
     model_lc = model.eval()
 
-    plt.figure(int('54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
-    
+    plt.figure(int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+
 
     for channel in lc.fitted_channels:
-        flux = np.copy(lc.flux)
+        flux = np.ma.MaskedArray.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
             unc = np.copy(np.array(lc.unc_fit))
         else:
-            unc = np.copy(lc.unc)
+            unc = np.ma.MaskedArray.copy(lc.unc)
         model = np.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         hist_vals = residuals/unc
         hist_vals[~np.isfinite(hist_vals)] = np.nan # Mask out any infinities
@@ -335,7 +335,7 @@ def plot_res_distr(lc, model, meta, fitter):
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/scatter", fontsize=14)
-        fname = 'figs/fig54{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        fname = 'figs/fig55{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()

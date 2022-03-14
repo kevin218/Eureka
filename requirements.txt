@@ -22,5 +22,6 @@ pytest
 recommonmark
 requests
 scipy
+sphinx-rtd-theme
 svo_filters
 tqdm

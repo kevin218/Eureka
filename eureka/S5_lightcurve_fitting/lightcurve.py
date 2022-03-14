@@ -130,7 +130,7 @@ class LightCurve(m.Model):
         """
         # Empty default fit
         fit_model = None
-        
+
         model.time = self.time
         # Make sure the model is a CompositeModel
         if not isinstance(model, m.CompositeModel):
@@ -183,23 +183,23 @@ class LightCurve(m.Model):
             if self.share:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
-            
+
             fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
             ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i], zorder=0)
-            
+
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
-            
+
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
                     model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf, share=self.share, chan=channel)
-            
+
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
+            ax.set_title(f'{meta.eventlabel} - Channel {channel}')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)
             ax.legend(loc='best')

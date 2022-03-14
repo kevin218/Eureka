@@ -143,8 +143,8 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             elif meta.nspecchan!=len(meta.wave_hi):
                 log.writelog(f'WARNING: Your nspecchan value of {meta.nspecchan} differs from the size of wave_hi ({len(meta.wave_hi)}). Using the latter instead.')
                 meta.nspecchan = len(meta.wave_hi)
-                meta.wave_hi = np.array(meta.wave_hi)
-                meta.wave_low = np.array(meta.wave_low)
+            meta.wave_hi = np.array(meta.wave_hi)
+            meta.wave_low = np.array(meta.wave_low)
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             optspec = np.ma.masked_array(optspec)
