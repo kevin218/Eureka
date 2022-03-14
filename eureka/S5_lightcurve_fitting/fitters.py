@@ -299,9 +299,21 @@ def emceefitter(lc, model, meta, log, **kwargs):
     t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
                             names=("Parameter", "Median", "-1sig", "+1sig"))
     
-
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # get wavelengths at middle of bin
+    wave_low = meta.wave_low[lc.fitted_channels]
+    wave_hi = meta.wave_hi[lc.fitted_channels]
+    wave_mid = (wave_hi+wave_low)/2.
+    t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+                          (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, 'emcee', t_results, freenames, samples)
+    save_fit(meta, lc, 'emcee', t_results, freenames, samples, spec_table=t_spec)
+    
+    
 
     if meta.isplots_S5 >= 5:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', full=True, nburn=meta.run_nburn)
@@ -716,7 +728,7 @@ def group_variables_lmfit(model):
 
     return param_list, freenames, indep_vars
 
-def save_fit(meta, lc, fitter, results_table, freenames, samples=[]):
+def save_fit(meta, lc, fitter, results_table, freenames, samples=[], spec_table=None):
     """Save fitted parameters and chains
 
     Notes
@@ -732,6 +744,15 @@ def save_fit(meta, lc, fitter, results_table, freenames, samples=[]):
         fname = f'S5_{fitter}_fitparams_ch{lc.channel}'
     results_table.write(meta.outputdir+fname+'.csv', format='csv', overwrite=False)
 
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    if spec_table is not None:
+        if lc.share:
+            spec_fname = f'S5_{fitter}_trspec_shared'
+        else:
+            spec_fname = f'S5_{fitter}_trspec_ch{lc.channel}'
+        
+        spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
 
     if len(samples)!=0:
         if lc.share:
