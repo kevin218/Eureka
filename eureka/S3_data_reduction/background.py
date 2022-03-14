@@ -10,7 +10,7 @@ from astropy.modeling.models import Gaussian1D
 from astropy.stats import SigmaClip, sigma_clip
 from astropy.modeling.models import custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
-from photutils import MMMBackground, MedianBackground, Background2D
+from photutils import MMMBackground, MedianBackground, Background2D, MeanBackground
 
 from ..lib import clipping
 
@@ -406,6 +406,8 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
         bkg = MMMBackground()
     elif bkg_estimator.lower()=='median':
         bkg = MedianBackground()
+    elif bkg_estimator.lower()=='mean':
+        bkg = MeanBackground()
         
     b = Background2D(img, box,
                      filter_size=filter_size,
@@ -417,7 +419,9 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
 
 def fitbg3(data, order_mask, readnoise=11, 
            sigclip=[4,4,4], box=(10,2),
-           filter_size=(1,1), sigma=5, isplots=0,
+           filter_size=(1,1), sigma=5, 
+           bkg_estimator=['median'],
+           isplots=0, 
            inclass=False):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
@@ -451,7 +455,7 @@ def fitbg3(data, order_mask, readnoise=11,
     first_pass = clipping.time_removal(data.data, sigma=sigclip[0])
 
     # Loops through and removes more cosimc rays
-    for i in tqdm(range(5)):#len(data.data))):
+    for i in tqdm(range(len(data.data))):
 
         mask = np.array(first_pass[i], dtype=bool)
         ccd = CCDData(data.data[i]*~mask*units.electron)
@@ -465,20 +469,25 @@ def fitbg3(data, order_mask, readnoise=11,
         rm_crs[i] = m1.data
         rm_crs[i][mask>=1] = np.nan
         
+        v = np.zeros((len(bkg_estimator), rm_crs[i].shape[0], rm_crs[i].shape[1]))
         # Fits a 2D background (with the orders masked)
-        b1,b1_err = bkg_sub(rm_crs[i], 
-                            order_mask,
-                            bkg_estimator='median', 
-                            sigma=sigma, box=(10,5), filter_size=(2,2))
-        # Iterates twice to remove 1/f noise well
-        b2,b2_err = bkg_sub(rm_crs[i]-b1, 
-                            order_mask,
-                            sigma=sigma-1, box=box, filter_size=filter_size,
-                            bkg_estimator='median')
+        for j in range(len(bkg_estimator)):
+            b1,b1_err = bkg_sub(rm_crs[i], 
+                                order_mask,
+                                bkg_estimator=bkg_estimator[j], 
+                                sigma=sigma, box=box[j], filter_size=filter_size[j])
+            bkg[i] += b1
+            v[j] = b1_err
+
+            if box[j][0]<5 or box[j][1]<5:
+                b1 *= order_mask
+
+            if j == 0:
+                bkg_subbed[i] = rm_crs[i] - b1
+            else:
+                bkg_subbed[i] -= b1
         
-        bkg_subbed[i] = (rm_crs[i]-b1)-b2
-        bkg[i] = b1 + b2
-        bkg_var[i] = np.sqrt(b1_err**2.0 + b2_err**2.0)
+        bkg_var[i] = np.sqrt(np.nansum(v**2.0, axis=0))
         
 
     if inclass == False:

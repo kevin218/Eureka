@@ -510,12 +510,14 @@ def wave_NIRISS(wavefile, meta=None, inclass=False):
 
 
 def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], 
-            box=(5,2), filter_size=(2,2), isplots=0):
+            box=(5,2), filter_size=(2,2), bkg_estimator=['median'], isplots=0):
     """ 
     I think this is just a wrapper for fit_bg, because I perform outlier
     flagging at the same time as the background fitting.
     """
-    data, bkg, bkg_var = fit_bg(data, meta, readnoise, sigclip, box, filter_size, isplots)
+    data, bkg, bkg_var = fit_bg(data, meta, readnoise, sigclip, 
+                                bkg_estimator=bkg_estimator, box=box, 
+                                filter_size=filter_size, isplots=isplots)
     data.bkg = bkg
     data.bkg_var = bkg_var
     return data
@@ -602,7 +604,8 @@ def box_extract(data, meta, boxsize1=60, boxsize2=50, bkgsub=False):
     return spec1, spec2, var1, var2
 
 
-def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2), isplots=0):
+def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2), 
+           bkg_estimator=['median'], isplots=0):
     """
     Subtracts background from non-spectral regions.
 
@@ -629,7 +632,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
     box_mask = dirty_mask(data.median, meta, booltype=True,
                           return_together=True)
     data, bkg, bkg_var = fitbg3(data, np.array(box_mask-1, dtype=bool), 
-                                readnoise, sigclip, 
+                                readnoise, sigclip, bkg_estimator=bkg_estimator,
                                 box=box, filter_size=filter_size, isplots=isplots)
     return data, bkg, bkg_var
 
