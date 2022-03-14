@@ -53,8 +53,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
-    - Mar 13, 2022 Caroline Piaulet
+    - Mar 13-14, 2022 Caroline Piaulet
          Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -80,9 +81,20 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
                             names=("Parameter", "Median")  )  
+
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # get wavelengths at middle of bin
+    wave_low = meta.wave_low[lc.fitted_channels]
+    wave_hi = meta.wave_hi[lc.fitted_channels]
+    wave_mid = (wave_hi+wave_low)/2.
+    t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+                          np.zeros_like(wave_low), np.zeros_like(wave_low)],
+                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
     
     # Save the fit ASAP
-    save_fit(meta, lc, calling_function, t_results, freenames)
+    save_fit(meta, lc, calling_function, t_results, freenames, spec_table=t_spec)
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -204,8 +216,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. Added statements to avoid some initial 
         state issues.
-    - Mar 13, 2022 Caroline Piaulet
+    - Mar 13-14, 2022 Caroline Piaulet
          Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     if not hasattr(meta, 'lsq_first') or meta.lsq_first:
         # Only call lsq fitter first if asked or lsq_first option wasn't passed (allowing backwards compatibility)
@@ -391,8 +404,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Added log-uniform and Gaussian priors.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
-    - Mar 13, 2022 Caroline Piaulet
+    - Mar 13-14, 2022 Caroline Piaulet
          Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -450,8 +464,19 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
                             names=("Parameter", "Median", "-1sig", "+1sig"))
 
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # get wavelengths at middle of bin
+    wave_low = meta.wave_low[lc.fitted_channels]
+    wave_hi = meta.wave_hi[lc.fitted_channels]
+    wave_mid = (wave_hi+wave_low)/2.
+    t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+                          (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, 'dynesty', t_results, freenames, samples)
+    save_fit(meta, lc, 'dynesty', t_results, freenames, samples, spec_table=t_spec)
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
@@ -527,8 +552,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
-    - Mar 13, 2022 Caroline Piaulet
+    - Mar 13-14, 2022 Caroline Piaulet
          Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
         #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
 
@@ -563,8 +589,21 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
                             names=("Parameter", "Median")  )  
+
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # get wavelengths at middle of bin
+    wave_low = meta.wave_low[lc.fitted_channels]
+    wave_hi = meta.wave_hi[lc.fitted_channels]
+    wave_mid = (wave_hi+wave_low)/2.
+    t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+                          np.zeros_like(wave_low), np.zeros_like(wave_low)],
+                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    
+
     # Save the fit ASAP
-    save_fit(meta, lc, 'lmfitter', t_results, freenames)
+    save_fit(meta, lc, 'lmfitter', t_results, freenames, spec_table=t_spec)
 
     # Create new model with best fit parameters
     params = Parameters()
@@ -735,8 +774,9 @@ def save_fit(meta, lc, fitter, results_table, freenames, samples=[], spec_table=
     -----
     History:
 
-    - Mar 13, 2022 Caroline Piaulet
-        Record an astropy table for median +/- 1 sigma, all params
+    - Mar 13-14, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
