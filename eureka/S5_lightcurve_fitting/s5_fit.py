@@ -134,6 +134,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                     flux_err = np.ma.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
+
+                # Save results
+                log.writelog('Saving results')
+                me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
             else:
                 for channel in range(chanrng):
                     #Make a long list of parameters for each channel
@@ -151,13 +155,13 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
                     meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 
+                    # Save results
+                    log.writelog('Saving results', mute=(not meta.verbose))
+                    me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
+
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
-            # Save results
-            log.writelog('Saving results')
-            me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
 
             log.closelog()
 
