@@ -306,7 +306,7 @@ def read_s4_meta(meta):
 def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Need to remove the topdir from the outputdir
-    s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
+    s4_outputdir = s4_meta.outputdir[len(meta.topdir):]
     if s4_outputdir[0]=='/':
         s4_outputdir = s4_outputdir[1:]
     if s4_outputdir[-1]!='/':
