@@ -1,242 +1,30 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.interpolate as spi
-import scipy.signal as sps
 from ..lib import gaussian as g
 from ..lib import smooth
+from . import plots_s3
 
-# STEP 3: Fit sky background with out-of-spectra data
-def fitbg(dataim, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplots=False):
-    '''
-    Fit sky background with out-of-spectra data
+def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
+    '''Construct normalized spatial profile using polynomial fits along the wavelength direction.
 
-    HISTORY
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    deg:    int
+        Polynomial degree.
+    threshold:  float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
     -------
-    Written by Kevin Stevenson
-    Removed [::-1] for LDSS3                May 2013
-    Modified x1 and x2 to allow for arrays  Feb 2014
-    '''
-
-    # Assume x is the spatial direction and y is the wavelength direction
-    # Otherwise, rotate array
-    if isrotate == 1:
-        dataim = dataim[::-1].T
-        mask   = mask[::-1].T
-    elif isrotate == 2:
-        dataim = dataim.T
-        mask   = mask.T
-
-    #Convert x1 and x2 to array, if need be
-    ny, nx   = np.shape(dataim)
-    if type(x1) == int or type(x1) == np.int64:
-        x1 = np.zeros(ny,dtype=int)+x1
-    if type(x2) == int or type(x2) == np.int64:
-        x2 = np.zeros(ny,dtype=int)+x2
-
-    if deg < 0:
-        # Calculate median background of entire frame
-        # Assumes all x1 and x2 values are the same
-        submask = np.concatenate((  mask[:,    :x1[0]].T,  mask[:,x2[0]+1:nx].T)).T
-        subdata = np.concatenate((dataim[:,    :x1[0]].T,dataim[:,x2[0]+1:nx].T)).T
-        bg      = np.zeros((ny,nx)) + np.median(subdata[np.where(submask)])
-    elif deg == None :
-        # No background subtraction
-        bg      = np.zeros((ny,nx))
-    else:
-        degs = np.ones(ny)*deg
-        #degs[np.where(np.sum(mask[:,    :x1],axis=1) < deg)] = 0
-        #degs[np.where(np.sum(mask[:,x2+1:nx],axis=1) < deg)] = 0
-        # Initiate background image with zeros
-        bg      = np.zeros((ny,nx))
-        # Fit polynomial to each column
-        for j in range(ny):
-            nobadpixels = False
-            # Create x indices for background sections of frame
-            xvals    = np.concatenate((range(x1[j]), range(x2[j]+1,nx))).astype(int)
-            # If too few good pixels then average
-            if (np.sum(mask[j,:x1[j]]) < deg) or (np.sum(mask[j,x2[j]+1:nx]) < deg):
-                degs[j] = 0
-            while (nobadpixels == False):
-                try:
-                    goodxvals = xvals[np.where(mask[j,xvals])]
-                except:
-                    print(j)
-                    print(xvals)
-                    print(np.where(mask[j,xvals]))
-                    return
-                dataslice = dataim[j,goodxvals]
-                # Check for at least 1 good x value
-                if len(goodxvals) == 0:
-                    #print(j,ny)
-                    nobadpixels = True      #exit while loop
-                    #Use coefficients from previous row
-                else:
-                    # Fit along spatial direction with a polynomial of degree 'deg'
-                    coeffs    = np.polyfit(goodxvals, dataslice, deg=degs[j])
-                    # Evaluate model at goodexvals
-                    model     = np.polyval(coeffs, goodxvals)
-                    #model = smooth.smooth(dataslice, window_len=window_len, window=windowtype)
-                    #model = sps.medfilt(dataslice, window_len)
-                    '''
-                    if isplots == 6:
-                        plt.figure(4)
-                        plt.clf()
-                        plt.title(str(j))
-                        plt.plot(goodxvals, dataslice, 'bo')
-                        plt.plot(goodxvals, model, 'g-')
-                        #plt.savefig('Fig6_BG_'+str(j)+'.png')
-                        plt.pause(0.01)
-                    '''
-                    # Calculate residuals and number of sigma from the model
-                    residuals = dataslice - model
-                    # Simple standard deviation (faster but prone to missing scanned background stars)
-                    #stdres = np.std(residuals)
-                    # Median Absolute Deviation (slower but more robust)
-                    #stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    # Mean Absolute Deviation (good comprimise)
-                    stdres  = np.mean(np.abs(np.ediff1d(residuals)))
-                    if stdres == 0:
-                        stdres = np.inf
-                    stdevs    = np.abs(residuals) / stdres
-                    # Find worst data point
-                    loc       = np.argmax(stdevs)
-                    # Mask data point if > threshold
-                    if stdevs[loc] > threshold:
-                        mask[j,goodxvals[loc]] = 0
-                    else:
-                        nobadpixels = True      #exit while loop
-
-            # Evaluate background model at all points, write model to background image
-            if len(goodxvals) != 0:
-                bg[j] = np.polyval(coeffs, range(nx))
-                #bg[j] = np.interp(range(nx), goodxvals, model)
-                if isplots == 6:
-                    plt.figure(3601)
-                    plt.clf()
-                    plt.title(str(j))
-                    plt.plot(goodxvals, dataslice, 'bo')
-                    plt.plot(range(nx), bg[j], 'g-')
-                    #plt.savefig('Fig6_BG_'+str(j)+'.png')
-                    plt.pause(0.01)
-
-    if isrotate == 1:
-        bg   = (bg.T)[::-1]
-        mask = (mask.T)[::-1]
-    elif isrotate == 2:
-        bg   = (bg.T)
-        mask = (mask.T)
-
-    return bg, mask #,variance
-
-# STEP 3: Fit sky background with out-of-spectra data
-def fitbg2(dataim, mask, bgmask, deg=1, threshold=5, isrotate=False, isplots=False):
-    '''
-    Fit sky background with out-of-spectra data
-
-    HISTORY
-    -------
-    Written by Kevin Stevenson      September 2016
-    '''
-
-    # Assume x is the spatial direction and y is the wavelength direction
-    # Otherwise, rotate array
-    if isrotate == 1:
-        dataim = dataim[::-1].T
-        mask   = mask[::-1].T
-        bgmask = bgmask[::-1].T
-    elif isrotate == 2:
-        dataim = dataim.T
-        mask   = mask.T
-        bgmask = bgmask.T
-
-    # Initiate background image with zeros
-    ny, nx  = np.shape(dataim)
-    bg      = np.zeros((ny,nx))
-    mask2   = mask*bgmask
-    if deg < 0:
-        # Calculate median background of entire frame
-        bg  += np.median(data[np.where(mask2)])
-    elif deg == None :
-        # No background subtraction
-        pass
-    else:
-        degs = np.ones(ny)*deg
-        # Fit polynomial to each column
-        for j in range(ny):
-            nobadpixels = False
-            # Create x indices for background sections of frame
-            xvals   = np.where(bgmask[j] == 1)[0]
-            # If too few good pixels on either half of detector then compute average
-            if (np.sum(mask2[j,:nx/2]) < deg) or (np.sum(mask2[j,nx/2:nx]) < deg):
-                degs[j] = 0
-            while (nobadpixels == False):
-                try:
-                    goodxvals = xvals[np.where(mask[j,xvals])]
-                except:
-                    print(j)
-                    print(xvals)
-                    print(np.where(mask[j,xvals]))
-                    return
-                dataslice = dataim[j,goodxvals]
-                # Check for at least 1 good x value
-                if len(goodxvals) == 0:
-                    #print(j,ny)
-                    nobadpixels = True      #exit while loop
-                    #Use coefficients from previous row
-                else:
-                    # Fit along spatial direction with a polynomial of degree 'deg'
-                    coeffs    = np.polyfit(goodxvals, dataslice, deg=degs[j])
-                    # Evaluate model at goodexvals
-                    model     = np.polyval(coeffs, goodxvals)
-                    #model = smooth.smooth(dataslice, window_len=window_len, window=windowtype)
-                    #model = sps.medfilt(dataslice, window_len)
-                    if isplots == 6:
-                        plt.figure(3601)
-                        plt.clf()
-                        plt.title(str(j))
-                        plt.plot(goodxvals, dataslice, 'bo')
-                        plt.plot(goodxvals, model, 'g-')
-                        plt.pause(0.01)
-
-                    # Calculate residuals
-                    residuals   = dataslice - model
-                    # Find worst data point
-                    loc         = np.argmax(np.abs(residuals))
-                    # Calculate standard deviation of points excluding worst point
-                    ind         = range(len(residuals))
-                    ind.remove(loc)
-                    stdres      = np.std(residuals[ind])
-                    if stdres == 0:
-                        stdres = np.inf
-                    # Calculate number of sigma from the model
-                    stdevs    = np.abs(residuals) / stdres
-                    # Mask data point if > threshold
-                    if stdevs[loc] > threshold:
-                        mask[j,goodxvals[loc]] = 0
-                    else:
-                        nobadpixels = True      #exit while loop
-
-            # Evaluate background model at all points, write model to background image
-            if len(goodxvals) != 0:
-                bg[j] = np.polyval(coeffs, range(nx))
-                #bg[j] = np.interp(range(nx), goodxvals, model)
-
-    if isrotate == 1:
-        bg      = (bg.T)[::-1]
-        mask    = (mask.T)[::-1]
-        bgmask  = (bgmask.T)[::-1]
-    elif isrotate == 2:
-        bg      = (bg.T)
-        mask    = (mask.T)
-        bgmask  = (bgmask.T)
-
-    return bg, mask #,variance
-
-# Construct normalized spatial profile using polynomial fits along the wavelength direction
-def profile_poly(subdata, mask, deg=3, threshold=10, isplots=False):
-    '''
-
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     submask  = np.copy(mask)
     ny, nx   = np.shape(subdata)
@@ -287,10 +75,29 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=False):
 
     return profile
 
-# Construct normalized spatial profile using a smoothing function
-def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanning', isplots=False):
-    '''
 
+def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanning', isplots=False):
+    '''Construct normalized spatial profile using a smoothing function.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    threshold:  float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    window_len: int
+        The dimension of the smoothing window.
+    windowtype: {'flat', 'hanning', 'hamming', 'bartlett', 'blackman'}
+        UNUSED. The type of window. A flat window will produce a moving average smoothing.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     submask  = np.copy(mask)
     ny, nx   = np.shape(subdata)
@@ -347,10 +154,27 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21, windowtype='hanni
 
     return profile
 
-#Construct normalized spatial profile using median of all data frames
-def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
-    '''
 
+def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
+    '''Construct normalized spatial profile using median of all data frames.
+
+    Parameters
+    ----------
+    data:    ndarray
+        UNUSED. Image data.
+    mask:   ndarray
+        UNUSED. Outlier mask.
+    meddata:    ndarray
+        The median of all data frames.
+    threshold:  float
+        UNUSED. Sigma threshold for outlier rejection while constructing spatial profile.
+    isplots:    int
+        UNUSED. The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     #profile = np.copy(meddata*mask)
     profile = np.copy(meddata)
@@ -363,10 +187,30 @@ def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
 
 
 # Construct normalized spatial profile using wavelets
-def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=False):
-    '''
-    This function performs 1D image denoising using BayesShrink soft thresholding.
-    Ref: Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
+def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
+    '''This function performs 1D image denoising using BayesShrink soft thresholding.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    wavelet:    Wavelet object or name string
+        qWavelet to use
+    numlvls:    int
+        Decomposition levels to consider (must be >= 0).
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
+
+    References
+    ----------
+    Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
     '''
     import pywt
     submask  = np.copy(mask)
@@ -411,10 +255,30 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=False):
     return profile
 
 # Construct normalized spatial profile using wavelets
-def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=False):
-    '''
-    This function performs 2D image denoising using BayesShrink soft thresholding.
-    Ref: Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
+def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
+    '''This function performs 2D image denoising using BayesShrink soft thresholding.
+    
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    wavelet:    Wavelet object or name string
+        qWavelet to use
+    numlvls:    int
+        Decomposition levels to consider (must be >= 0).
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
+
+    References
+    ----------
+    Chang et al. "Adaptive Wavelet Thresholding for Image Denoising and Compression", 2000
     '''
     import pywt
     submask  = np.copy(mask)
@@ -463,10 +327,27 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=False):
 
     return profile
 
-# Construct normalized spatial profile using a Gaussian smoothing function
-def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=False):
-    '''
 
+def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
+    '''Construct normalized spatial profile using a Gaussian smoothing function.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    threshold:  float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    guess: list
+        UNUSED. The initial guess for the Gaussian parameters.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+
+    Returns
+    -------
+    profile:    ndarray
+        Fitted profile in the same shape as the input data array.
     '''
     submask  = np.copy(mask)
     ny, nx   = np.shape(subdata)
@@ -509,17 +390,17 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=False):
             # Mask data point if > threshold
             if stdevs[loc] > threshold:
                 # Check for bad fit, possibly due to a bad pixel
-                if i > 0 and (err == None or abs(params[0]) < abs(0.2*guess[0])):
+                if i > 0 and (err == None or np.abs(params[0]) < np.abs(0.2*guess[0])):
                     #print(i, params)
                     # Remove brightest pixel within region of fit
                     loc = params[1]-3 + np.argmax(dataslice[params[1]-3:params[1]+4])
                     #print(loc)
                 else:
-                    guess = abs(params)
+                    guess = np.abs(params)
                 submask[loc,i] = 0
             else:
                 nobadpixels = True      #exit while loop
-                guess = abs(params)
+                guess = np.abs(params)
             iternum += 1
 
         profile[:,i] = model
@@ -533,10 +414,55 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=False):
 
     return profile
 
-# Extract optimal spectrum with uncertainties
-def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=False, eventdir='.',meddata=None):
-    '''
 
+def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=0, eventdir='.',meddata=None, hide_plots=False):
+    '''Extract optimal spectrum with uncertainties.
+
+    Parameters
+    ----------
+    subdata:    ndarray
+        Background subtracted data.
+    mask:   ndarray
+        Outlier mask.
+    bg: ndarray
+        Background array.
+    spectrum:   ndarray
+        Standard spectrum.
+    Q:  float
+        The gain factor.
+    v0:     ndarray
+        Variance array for data.
+    p5thresh:   float
+        Sigma threshold for outlier rejection while constructing spatial profile.
+    p7thresh:   float
+        Sigma threshold for outlier rejection during optimal spectral extraction.
+    fittype:    {'smooth', 'meddata', 'wavelet2D', 'wavelet', 'gauss', 'poly'}
+        The type of profile fitting you want to do.
+    window_len: int
+        The dimension of the smoothing window.
+    deg:    int
+        Polynomial degree.
+    windowtype: {'flat', 'hanning', 'hamming', 'bartlett', 'blackman'}
+        UNUSED. The type of window. A flat window will produce a moving average smoothing.
+    n:  int
+        Integration number.
+    isplots:    int
+        The amount of plots saved; set in ecf.
+    eventdir:   str
+        Directory in which to save outupts.
+    meddata:    ndarray
+        The median of all data frames.
+    hide_plots: 
+        If True, plots will automatically be closed rather than popping up.
+
+    Returns
+    -------
+    spectrum:   ndarray
+        The optimally extracted spectrum.
+    specunc:    ndarray
+        The standard deviation on the spectrum.
+    submask:    ndarray
+        The mask array.
     '''
     submask      = np.copy(mask)
     ny, nx       = subdata.shape
@@ -554,20 +480,18 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
             profile = profile_wavelet(subdata, submask, wavelet='bior5.5', numlvls=3, isplots=isplots)
         elif fittype == 'gauss':
             profile = profile_gauss(subdata, submask, threshold=p5thresh, guess=None, isplots=isplots)
-        else:
+        elif fittype == 'poly':
             profile = profile_poly(subdata, submask, deg=deg, threshold=p5thresh)
+        else:
+            print("Unknown normalized spatial profile method.")
+            return
         #
         if isplots >= 3:
-            try:
-                plt.figure(3305)
-                plt.clf()
-                plt.suptitle("Profile - " + str(n))
-                plt.imshow(profile*submask, aspect='auto', origin='lower',vmax=0.01)
-                #print(profile.min(),profile.max())
-                plt.savefig(eventdir+'/figs/fig3305-'+str(n)+'-Profile.png')
-                #plt.pause(0.2)
-            except:
-                pass
+            plots_s3.profile(eventdir, profile, submask, n, hide_plots=hide_plots)
+            # try:
+            #     plots_s3.profile(eventdir, profile, submask)
+            # except:
+            #     pass
 
         isnewprofile = False
         isoutliers   = True
@@ -613,13 +537,17 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
                         if isplots >= 5:
                             plt.figure(3501)
                             plt.clf()
-                            plt.suptitle(str(n) + ", " + str(i) + "/" + str(nx))
+                            plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
+                            #plt.suptitle(str(n) + ", " + str(i) + "/" + str(nx))
                             #print(np.where(submask[:,i])[0])
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')
                             plt.plot((loc[i]), (subdata[loc[i],i]), 'ro')
-                            plt.savefig(eventdir + "/figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
-                            plt.pause(0.1)
+                            plt.savefig(eventdir + "figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
+                            if hide_plots:
+                                plt.close()
+                            else:
+                                plt.pause(0.1)
                         # Check for insufficient number of good points
                         if sum(submask[:,i]) < ny/2.:
                             submask[:,i] = 0

@@ -1,7 +1,6 @@
-.. _api:
 
-The Code
-==============
+The Code (API)
+===============
 
 lib
 ''''''''''''''''''''
@@ -9,6 +8,13 @@ lib
 lib.astropytable
 ---------------------
 .. automodule:: eureka.lib.astropytable
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.centroid
+---------------
+.. automodule:: eureka.lib.centroid
     :members:
     :undoc-members:
     :show-inheritance:
@@ -62,16 +68,16 @@ lib.logedit
     :undoc-members:
     :show-inheritance:
 
-lib.lsq
+lib.manageevent
 ---------------
-.. automodule:: eureka.lib.lsq
+.. automodule:: eureka.lib.manageevent
     :members:
     :undoc-members:
     :show-inheritance:
 
-lib.manageevent
+lib.medstddev
 ---------------
-.. automodule:: eureka.lib.manageevent
+.. automodule:: eureka.lib.medstddev
     :members:
     :undoc-members:
     :show-inheritance:
@@ -132,6 +138,13 @@ lib.sort_nicely
     :undoc-members:
     :show-inheritance:
 
+lib.suntimecorr
+---------------
+.. automodule:: eureka.lib.suntimecorr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.time2phase2
 ---------------------
 .. automodule:: eureka.lib.time2phase2
@@ -153,6 +166,13 @@ lib.univ
     :undoc-members:
     :show-inheritance:
 
+lib.utc_tt
+---------------
+.. automodule:: eureka.lib.utc_tt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.util
 ---------------
 .. automodule:: eureka.lib.util
@@ -161,9 +181,24 @@ lib.util
     :show-inheritance:
 
 
+S2_calibrations
+''''''''''''''''''''
+
+S2_calibrations.s2_calibrate.EurekaS2Pipeline
+--------------------------------
+.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaS2Pipeline
+    :members:
+
 
 S3_data_reduction
 ''''''''''''''''''''
+
+S3_data_reduction.background
+--------------------------------
+.. automodule:: eureka.S3_data_reduction.background
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 S3_data_reduction.bright2flux
 --------------------------------
@@ -228,9 +263,30 @@ S3_data_reduction.s3_reduce
     :undoc-members:
     :show-inheritance:
 
+S3_data_reduction.sigrej
+----------------------------
+.. automodule:: eureka.S3_data_reduction.sigrej
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.source_pos
+----------------------------
+.. automodule:: eureka.S3_data_reduction.source_pos
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 S4_generate_lightcurves
 ''''''''''''''''''''''''''
+
+S4_generate_lightcurves.drift
+----------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.drift
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 S4_generate_lightcurves.plots_s4
 ----------------------------------

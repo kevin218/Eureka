@@ -1,97 +1,100 @@
 
 # NIRCam specific rountines go here
 import numpy as np
-from importlib import reload
 from astropy.io import fits
-from eureka.S3_data_reduction import sigrej, optspex
+from . import sigrej, background
 from . import bright2flux as b2f
-reload(b2f)
 
 # Read FITS file from JWST's NIRCam instrument
-def read(filename, dat, returnHdr=True):
-    '''
-    Reads single FITS file from JWST's NIRCam instrument.
+def read(filename, data, meta):
+    '''Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
     ----------
-    filename          : Single filename to read
-    returnHdr         : Set True to return header files
+    filename:   str
+        Single filename to read
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
 
     Returns
     -------
-    data            : Array of data frames
-    err             : Array of uncertainty frames
-    hdr             : List of header files
-    master_hdr      : List of master header files
+    data: DataClass
+        The updated data object with the fits data stored inside
 
-    History
-    -------
-    Written by Kevin Stevenson          November 2012
-    Updated for NIRCam (KBS)            May 2021
+    Notes
+    -----
+    History:
 
+    - November 2012 Kevin Stevenson
+        Initial version
+    - May 2021 KBS
+        Updated for NIRCam
+    - July 2021
+        Moved bjdtdb into here              
     '''
     assert isinstance(filename, str)
 
     hdulist = fits.open(filename)
 
     # Load master and science headers
-    dat.mhdr    = hdulist[0].header
-    dat.shdr    = hdulist['SCI',1].header
+    data.filename = filename
+    data.mhdr    = hdulist[0].header
+    data.shdr    = hdulist['SCI',1].header
 
-    dat.intstart    = dat.mhdr['INTSTART']
-    dat.intend      = dat.mhdr['INTEND']
+    data.intstart    = data.mhdr['INTSTART']
+    data.intend      = data.mhdr['INTEND']
 
-    dat.data    = hdulist['SCI',1].data
-    dat.err     = hdulist['ERR',1].data
-    dat.dq      = hdulist['DQ',1].data
-    dat.wave    = hdulist['WAVELENGTH',1].data
-    dat.v0      = hdulist['VAR_RNOISE',1].data
-    dat.int_times = hdulist['INT_TIMES',1].data[dat.intstart-1:dat.intend]
+    data.data    = hdulist['SCI',1].data
+    data.err     = hdulist['ERR',1].data
+    data.dq      = hdulist['DQ',1].data
+    data.wave    = hdulist['WAVELENGTH',1].data
+    data.v0      = hdulist['VAR_RNOISE',1].data
+    int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
 
+    # Record integration mid-times in BJD_TDB
+    data.time = int_times['int_mid_BJD_TDB']
+    meta.time_units = 'BJD_TDB'
 
-    #if returnHdr:
-    #    return data, err, dq, wave, v0, int_times, mhdr, shdr
-    #else:
-    #    return data, err, dq, wave, v0, int_times
-    return dat
+    return data, meta
 
-def flag_bg(dat, md):
+def flag_bg(data, meta):
+    '''Outlier rejection of sky background along time axis.
+
+    Parameters
+    ----------
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
+
+    Returns
+    -------
+    data:   DataClass
+        The updated data object with outlier background pixels flagged.
     '''
-    Outlier rejection of sky background along time axis
-    '''
-
-    data, err, mask, y1, y2, bg_thresh = dat.subdata, dat.suberr, dat.submask, md.bg_y1, md.bg_y2, md.bg_thresh
-
-    bgdata1 = data[:,  :y1]
-    bgmask1 = mask[:,  :y1]
-    bgdata2 = data[:,y2:  ]
-    bgmask2 = mask[:,y2:  ]
-    bgerr1  = np.median(err[:,  :y1])
-    bgerr2  = np.median(err[:,y2:  ])
+    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
+    
+    bgdata1 = data.subdata[:,  :y1]
+    bgmask1 = data.submask[:,  :y1]
+    bgdata2 = data.subdata[:,y2:  ]
+    bgmask2 = data.submask[:,y2:  ]
+    bgerr1  = np.median(data.suberr[:,  :y1])
+    bgerr2  = np.median(data.suberr[:,y2:  ])
     estsig1 = [bgerr1 for j in range(len(bg_thresh))]
     estsig2 = [bgerr2 for j in range(len(bg_thresh))]
-    mask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
-    mask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
 
-    return mask
+    data.submask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
+    data.submask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
 
-def fit_bg(data, mask, y1, y2, bg_deg, p3thresh, n, isplots=False):
+    return data
+
+
+def fit_bg(data, meta, n, isplots=False):
+    '''Fit for a non-uniform background.
     '''
 
-    '''
-    bg, mask = optspex.fitbg(data, mask, y1, y2, deg=bg_deg,
-                             threshold=p3thresh, isrotate=2, isplots=isplots)
+    bg, mask = background.fitbg(data.subdata[n], meta, data.submask[n], meta.bg_y1, meta.bg_y2, deg=meta.bg_deg,
+                                threshold=meta.p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)
-
-def unit_convert(dat, md, log):
-    if dat.shdr['BUNIT'] == 'MJy/sr':
-        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
-        # log.writelog('Converting from brightness to flux units')
-        # subdata, suberr, subv0 = b2f.bright2flux(subdata, suberr, subv0, shdr['PIXAR_A2'])
-        # Convert from brightness units (MJy/sr) to DNs
-        log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        md.photfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_PHOTOM'][7:]
-        dat = b2f.bright2dn(dat, md)
-        md.gainfile = md.topdir + md.ancildir + '/' + dat.mhdr['R_GAIN'][7:]
-        dat = b2f.dn2electrons(dat, md)
-    return dat, md

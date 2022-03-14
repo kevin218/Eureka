@@ -7,13 +7,16 @@ import numpy as np
 import pandas as pd
 #from bokeh.plotting import figure, show
 import matplotlib.pyplot as plt
-from importlib import reload
 
 from . import models as m
 from . import fitters as f
-reload(f)
-from .utils import COLORS
+from .utils import COLORS, color_gen
 
+#FINDME: Keep reload statements for easy testing
+from importlib import reload
+from copy import deepcopy
+reload(m)
+reload(f)
 
 class LightCurveFitter:
     def __init__(self, time, flux, model):
@@ -42,7 +45,7 @@ class LightCurveFitter:
 
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, unc=None, parameters=None, time_units='BJD', name='My Light Curve'):
+    def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
         """
         A class to store the actual light curve
 
@@ -52,6 +55,12 @@ class LightCurve(m.Model):
             The time axis in days, [MJD or BJD]
         flux: sequence
             The flux in electrons (not ADU)
+        channel: int
+            The channel number.
+        nChannel: int
+            The total number of channels.
+        log: logedit.Logedit
+            The open log in which notes from this step can be added.
         unc: sequence
             The uncertainty on the flux
         parameters: str, object (optional)
@@ -61,44 +70,95 @@ class LightCurve(m.Model):
             The time units
         name: str
             A name for the object
+        share: bool
+            Whether the fit shares parameters between spectral channels
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        History:
+        - Dec 29, 2021 Taylor Bell
+            Allowing for a constant uncertainty to be input with just a float.
+            Added a channel number.
+        - Jan. 15, 2022 Megan Mansfield
+            Added ability to share fit between all channels
         """
         # Initialize the model
         super().__init__()
 
+        self.name = name
+        self.share = share
+        self.channel = channel
+        self.nchannel = nchannel
+        if self.share:
+            self.nchannel_fitted = self.nchannel
+            self.fitted_channels = np.arange(self.nchannel)
+        else:
+            self.nchannel_fitted = 1
+            self.fitted_channels = np.array([self.channel])
+
         # Check data
-        if len(time) != len(flux):
+        if len(time)*self.nchannel_fitted != len(flux):
             raise ValueError('Time and flux axes must be the same length.')
+
+        # Set the time and flux axes
+        self.flux = flux
+        self.time = time
+        # Set the units
+        self.time_units = time_units
 
         # Set the data arrays
         if unc is not None:
-            if len(unc) != len(time):
+            if type(unc) == float or type(unc) == np.float64:
+                log.writelog('Warning: Only one uncertainty input, assuming constant uncertainty.')
+            elif len(time)*self.nchannel_fitted != len(unc):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
-
         else:
             self.unc = np.array([np.nan]*len(self.time))
-
-        # Set the time and flux axes
-        self.time = time
-        self.flux = flux
-
-        # Set the units
-        self.time_units = time_units
-        self.name = name
 
         # Place to save the fit results
         self.results = []
 
-    def fit(self, model, fitter='lsq', **kwargs):
+        self.longparamlist = longparamlist
+
+        self.log = log
+
+        self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
+
+        return
+
+    def fit(self, model, meta, log, fitter='lsq', **kwargs):
         """Fit the model to the lightcurve
 
         Parameters
         ----------
-        model: ExoCTK.lightcurve_fitter.models.Model
+        model: eureka.S5_lightcurve_fitting.models.CompositeModel
             The model to fit to the data
+        meta: MetaClass
+            The metadata object
+        log: logedit.Logedit
+            The open log in which notes from this step can be added.
         fitter: str
             The name of the fitter to use
+        **kwargs:
+            Arbitrary keyword arguments.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        History:
+        - Dec 29, 2021 Taylor Bell
+            Updated documentation and reduced repeated code
         """
         # Empty default fit
         fit_model = None
@@ -108,34 +168,30 @@ class LightCurve(m.Model):
         if not isinstance(model, m.CompositeModel):
             model = m.CompositeModel([model])
             model.time = self.time
-        # else:
-        #     for n in range(len(model.components)):
-        #         model.components[n].time = self.time
 
         if fitter == 'lmfit':
-
-            # Run the fit
-            fit_model = f.lmfitter(self.time, self.flux, model, self.unc, **kwargs)
-
+            self.fitter_func = f.lmfitter
         elif fitter == 'demc':
-
-            # Run the fit
-            fit_model = f.demcfitter(self.time, self.flux, model, self.unc, **kwargs)
-
+            self.fitter_func = f.demcfitter
         elif fitter == 'lsq':
-
-            # Run the fit
-            fit_model = f.lsqfitter(self, model, **kwargs)
-            #fit_model = f.lsqfitter(self.time, self.flux, model, self.unc, **kwargs)
-
+            self.fitter_func = f.lsqfitter
+        elif fitter == 'emcee':
+            self.fitter_func = f.emceefitter
+        elif fitter == 'dynesty':
+            self.fitter_func = f.dynestyfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
+
+        # Run the fit
+        fit_model = self.fitter_func(self, model, meta, log, **kwargs)
 
         # Store it
         if fit_model is not None:
             self.results.append(fit_model)
 
-    def plot(self, fits=True, draw=True):
+        return
+
+    def plot(self, meta, fits=True):
         """Plot the light curve with all available fits
 
         Parameters
@@ -147,40 +203,51 @@ class LightCurve(m.Model):
 
         Returns
         -------
-        bokeh.plotting.figure
-            The figure
+        None
         """
         # Make the figure
-        fig = plt.figure(figsize=(8,6))
-        # Draw the data
-        ax = fig.add_subplot(111)
-        ax.errorbar(self.time, self.flux, self.unc, fmt='.', color=next(COLORS), zorder=0)
-        # Draw best-fit model
-        if fits and len(self.results) > 0:
-            for model in self.results:
-                model.plot(self.time, ax=ax, color=next(COLORS), zorder=1)
+        for i, channel in enumerate(self.fitted_channels):
+            flux = self.flux
+            if "unc_fit" in self.__dict__.keys():
+                unc = deepcopy(self.unc_fit)
+            else:
+                unc = deepcopy(self.unc)
+            if self.share:
+                flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
+                unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
-        # fig = figure(width=800, height=400)
-        #
-        # # Draw the data
-        # fig.circle(self.time, self.flux, legend=self.name)
-        #
-        # # Plot fit models
-        # if fits and len(self.results) > 0:
-        #     for model in self.results:
-        #         model.plot(self.time, fig=fig, color=next(COLORS))
-        #
-        # Format axes
-        ax.set_xlabel(str(self.time_units))
-        ax.set_ylabel('Flux')
-        fig.tight_layout()
+            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+            fig.clf()
+            # Draw the data
+            ax = fig.gca()
+            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i], zorder=0)
 
-        # Draw or return
-        if draw:
-            fig.show()
-        else:
-            return
+            # Make a new color generator for the models
+            plot_COLORS = color_gen("Greys", 6)
+
+            # Draw best-fit model
+            if fits and len(self.results) > 0:
+                for model in self.results:
+                    model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf, share=self.share, chan=channel)
+
+            # Format axes
+            ax.set_title(f'{meta.eventlabel} - Channel {channel}')
+            ax.set_xlabel(str(self.time_units))
+            ax.set_ylabel('Normalized Flux', size=14)
+            ax.legend(loc='best')
+            fig.tight_layout()
+
+            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
+            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+            if meta.hide_plots:
+                plt.close()
+            else:
+                plt.pause(0.2)
+
+        return
 
     def reset(self):
         """Reset the results"""
         self.results = []
+
+        return

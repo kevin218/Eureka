@@ -22,9 +22,6 @@ from bokeh.models.widgets import Panel, Tabs
 from . import utils
 from . import modelgrid
 
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 16})
-rc('text', usetex=True)
-
 warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', category=FutureWarning)
 
@@ -53,7 +50,7 @@ def ld_profile(name='quadratic', latex=False):
 
     """
     # Supported profiles a la BATMAN
-    names = ['uniform', 'linear', 'quadratic', 'square-root',
+    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
 
     # Check that the profile is supported
@@ -61,8 +58,8 @@ def ld_profile(name='quadratic', latex=False):
 
         # Uniform
         if name == 'uniform':
-            def profile(m, c1):
-                return c1
+            def profile(m):
+                return 1.
 
         # Linear
         if name == 'linear':
@@ -73,6 +70,13 @@ def ld_profile(name='quadratic', latex=False):
         if name == 'quadratic':
             def profile(m, c1, c2):
                 return 1. - c1*(1.-m) - c2*(1.-m)**2
+
+        # Reparameterized Quadratic (Kipping 2013)
+        if name == 'kipping2013':
+            def profile(m, c1, c2):
+                u1  = 2*np.sqrt(c1)*c2
+                u2  = np.sqrt(c1)*(1-2*c2)
+                return 1. - u1*(1.-m) - u2*(1.-m)**2
 
         # Square-root
         if name == 'square-root':
@@ -111,7 +115,7 @@ def ld_profile(name='quadratic', latex=False):
         return profile
 
     else:
-        print("'{}' is not a supported profile. Try".format(name), names)
+        raise Exception("'{}' is not a supported profile. Try".format(name), names)
         return
 
 

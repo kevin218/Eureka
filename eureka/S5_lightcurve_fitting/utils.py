@@ -36,7 +36,7 @@ ON_TRAVIS_OR_RTD = HOME_DIR == '/home/travis' or HOME_DIR == '/Users/travis' or 
 if not ON_TRAVIS_OR_RTD:
     if not EXOCTK_DATA:
         print(
-            'WARNING: The $EXOCTK_DATA environment variable is not set.  Please set the '
+            'WARNING (only important for Stage 5): The $EXOCTK_DATA environment variable is not set.  Please set the '
             'value of this variable to point to the location of the exoctk_data '
             'download folder.  Users may retreive this folder by clicking the '
             '"ExoCTK Data Download" button on the ExoCTK website, or by using '
@@ -45,14 +45,14 @@ if not ON_TRAVIS_OR_RTD:
         # If the variable exists but doesn't point to a real location
         if not os.path.exists(EXOCTK_DATA):
             print(
-                'WARNING: The $EXOCTK_DATA environment variable is set to a location that '
+                'WARNING (only important for Stage 5): The $EXOCTK_DATA environment variable is set to a location that '
                 'cannot be accessed.')
 
         # If the variable exists, points to a real location, but is missing contents
         for item in ['exoctk_contam', 'exoctk_log', 'fortney', 'generic', 'groups_integrations', 'modelgrid']:
             if item not in [os.path.basename(item) for item in glob.glob(os.path.join(EXOCTK_DATA, '*'))]:
                 print(
-                    'WARNING: Missing {}/ directory from {}. Please ensure that the ExoCTK data package has been '
+                    'WARNING (only important for Stage 5): Missing {}/ directory from {}. Please ensure that the ExoCTK data package has been '
                     'downloaded. Users may retrieve this package by clicking the "ExoCTK Data Download" '
                     'button on the ExoCTK website, or by using the exoctk.utils.download_exoctk_data() '
                     'function'.format(item, EXOCTK_DATA))
@@ -181,7 +181,7 @@ def color_gen(colormap='viridis', key=None, n=10):
     yield from itertools.cycle(palette)
 
 
-COLORS = color_gen('Category10')
+COLORS = color_gen('Category10', 10)
 
 
 def interp_flux(mu, flux, params, values):
