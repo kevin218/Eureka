@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
+ncpu            1 # The number of CPU threads to use when running emcee or dynesty in parallel
+
 allapers        True # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 rescale_err     False    # Rescale uncertainties to have reduced chi-squared of unity
 fit_par         ./S5_fit_par.ecf # What fitting ecf do you want to use?
@@ -12,11 +14,12 @@ run_myfuncs     [batman_tr] #options are: batman_tr, batman_ecl, sinusoid_pc, ex
 #ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
 
 #lsq
-lsq_method		'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
-lsq_tol			1e-6 # The tolerance for the scipy.optimize.minimize optimization method
+lsq_method      'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_tol         1e-6 # The tolerance for the scipy.optimize.minimize optimization method
 
 #mcmc
-lsq_first		True	# Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails)
+old_chain       None # Output folder relative to topdir that contains an old emcee chain to resume where you left off (set to None to start from scratch)
+lsq_first       True    # Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails). Only used if old_chain is None
 run_nsteps      4000
 run_nwalkers    50
 run_nburn       2000
@@ -28,7 +31,7 @@ run_sample      'unif'
 run_tol         0.1
 
 # Plotting controls
-interp			False	# Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
+interp          False    # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -37,8 +40,8 @@ testing_model   False # Boolean, set True to only inject a model source of syste
 hide_plots      True # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir      	../tests
+topdir          ../tests
 
 # Directories relative to project dir
-inputdir    	/data/JWST-Sim/NIRCam/Stage4/	# The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
-outputdir		/data/JWST-Sim/NIRCam/Stage5/
+inputdir        /data/JWST-Sim/NIRCam/Stage4/    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir       /data/JWST-Sim/NIRCam/Stage5/

@@ -33,8 +33,8 @@ class BatmanTransitModel(Model):
         self.paramtitles = kwargs.get('paramtitles')
 
         # Store the ld_profile
-        self.ld_func = ld_profile(self.parameters.limb_dark.value)
-        len_params = len(inspect.signature(self.ld_func).parameters)
+        ld_func = ld_profile(self.parameters.limb_dark.value)
+        len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
     def eval(self, **kwargs):
@@ -100,9 +100,6 @@ class BatmanEclipseModel(Model):
         self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
-
-        # Store the ld_profile
-        self.ld_func = ld_profile('uniform')
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""

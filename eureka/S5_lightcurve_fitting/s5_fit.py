@@ -1,21 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import glob, os, shutil
 import time as time_pkg
 from ..lib import manageevent as me
 from ..lib import readECF as rd
-from ..lib import sort_nicely as sn
 from ..lib import util, logedit
 from . import parameters as p
 from . import lightcurve as lc
 from . import models as m
-from .utils import get_target_data
-
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(p)
-reload(m)
-reload(lc)
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
