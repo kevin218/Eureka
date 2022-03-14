@@ -85,14 +85,16 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Save transmission spectrum
     # indices of fitted rps for all channels
     ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    # get wavelengths at middle of bin
-    wave_low = meta.wave_low[lc.fitted_channels]
-    wave_hi = meta.wave_hi[lc.fitted_channels]
-    wave_mid = (wave_hi+wave_low)/2.
-    t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
-                          np.zeros_like(wave_low), np.zeros_like(wave_low)],
-                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    
+    if len(ind_spec):
+        # get wavelengths at middle of bin
+        wave_low = meta.wave_low[lc.fitted_channels]
+        wave_hi = meta.wave_hi[lc.fitted_channels]
+        wave_mid = (wave_hi+wave_low)/2.
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+                              np.zeros_like(wave_low), np.zeros_like(wave_low)],
+                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
     # Save the fit ASAP
     save_fit(meta, lc, calling_function, t_results, freenames, spec_table=t_spec)
 
@@ -315,14 +317,16 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Save transmission spectrum
     # indices of fitted rps for all channels
     ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    # get wavelengths at middle of bin
-    wave_low = meta.wave_low[lc.fitted_channels]
-    wave_hi = meta.wave_hi[lc.fitted_channels]
-    wave_mid = (wave_hi+wave_low)/2.
-    t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
-                          (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
-                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    
+    if len(ind_spec):
+        # get wavelengths at middle of bin
+        wave_low = meta.wave_low[lc.fitted_channels]
+        wave_hi = meta.wave_hi[lc.fitted_channels]
+        wave_mid = (wave_hi+wave_low)/2.
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+                              (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'emcee', t_results, freenames, samples, spec_table=t_spec)
     
@@ -467,14 +471,16 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Save transmission spectrum
     # indices of fitted rps for all channels
     ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    # get wavelengths at middle of bin
-    wave_low = meta.wave_low[lc.fitted_channels]
-    wave_hi = meta.wave_hi[lc.fitted_channels]
-    wave_mid = (wave_hi+wave_low)/2.
-    t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
-                          (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
-                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    
+    if len(ind_spec):
+        # get wavelengths at middle of bin
+        wave_low = meta.wave_low[lc.fitted_channels]
+        wave_hi = meta.wave_hi[lc.fitted_channels]
+        wave_mid = (wave_hi+wave_low)/2.
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+                              (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, 'dynesty', t_results, freenames, samples, spec_table=t_spec)
 
@@ -593,14 +599,16 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Save transmission spectrum
     # indices of fitted rps for all channels
     ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    # get wavelengths at middle of bin
-    wave_low = meta.wave_low[lc.fitted_channels]
-    wave_hi = meta.wave_hi[lc.fitted_channels]
-    wave_mid = (wave_hi+wave_low)/2.
-    t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
-                          np.zeros_like(wave_low), np.zeros_like(wave_low)],
-                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    
+    if len(ind_spec):
+        # get wavelengths at middle of bin
+        wave_low = meta.wave_low[lc.fitted_channels]
+        wave_hi = meta.wave_hi[lc.fitted_channels]
+        wave_mid = (wave_hi+wave_low)/2.
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+                              np.zeros_like(wave_low), np.zeros_like(wave_low)],
+                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
 
     # Save the fit ASAP
     save_fit(meta, lc, 'lmfitter', t_results, freenames, spec_table=t_spec)
