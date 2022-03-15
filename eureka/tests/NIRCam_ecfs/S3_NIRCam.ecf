@@ -14,6 +14,7 @@ bg_hw       20			# Half-width of exclusion region for BG subtraction (relative t
 bg_thresh   [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg      1           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh    5           # X-sigma threshold for outlier rejection during background subtraction
+save_bgsub  False      # Whether or not to save background subtracted FITS files
 
 # Spectral extraction parameters
 spec_hw     20			# Half-width of aperture region for spectral extraction (relative to source position)
@@ -34,5 +35,4 @@ topdir     ../tests
 
 # Directories relative to project dir
 inputdir     /data/JWST-Sim/NIRCam/Stage2/
-ancildir    /data/JWST-Sim/NIRCam/ancil/
 outputdir	/data/JWST-Sim/NIRCam/Stage3/

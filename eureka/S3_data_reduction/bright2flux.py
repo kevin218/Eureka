@@ -1,8 +1,42 @@
-import os
 import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
+from jwst import datamodels
+from jwst.photom import PhotomStep
+
+def rate2count(data):
+    """This function converts the data, uncertainty, and variance arrays from rate units (#/s) to counts (#).
+
+    Parameters
+    ----------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in rate units (#/s).
+
+    Returns
+    -------
+    data:   DataClass
+        Data object containing data, uncertainty, and variance arrays in count units (#).
+
+    Notes
+    -----
+    History:
+    
+    - Mar 7, 2022 Taylor J Bell
+        Initial version
+    """
+    if "EFFINTTM" in data.mhdr.keys():
+        int_time = data.mhdr['EFFINTTM']
+    elif "EXPTIME" in data.mhdr.keys():
+        int_time = data.mhdr['EXPTIME']
+    else:
+        raise ValueError('No FITS header keys found to permit conversion from rate units (#/s) to counts (#)')
+    
+    data.subdata *= int_time
+    data.suberr  *= int_time
+    data.subv0   *= int_time
+
+    return data
 
 def dn2electrons(data, meta):
     """This function converts the data, uncertainty, and variance arrays from raw units (DN) to electrons.
@@ -85,8 +119,10 @@ def bright2dn(data, meta):
     foo = fits.getdata(meta.photfile)
     if meta.inst == 'nircam':
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
-    if meta.inst == 'miri':
+    elif meta.inst == 'miri':
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['subarray'] == data.mhdr['SUBARRAY']))[0][0]
+    else:
+        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst}, and can currently only handle miri and nircam observations.')
 
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
@@ -102,11 +138,6 @@ def bright2dn(data, meta):
     data.subdata /= scalar * response
     data.suberr  /= scalar * response
     data.subv0   /= (scalar * response)**2
-    # From DN/sec to DN
-    int_time = data.mhdr['EFFINTTM']
-    data.subdata *= int_time
-    data.suberr  *= int_time
-    data.subv0   *= int_time
 
     return data
 
@@ -183,19 +214,59 @@ def convert_to_e(data, meta, log):
     meta:   MetaClass
         The metadata object.
     """
+    if data.shdr['BUNIT'] != 'ELECTRONS/S':
+        log.writelog('Automatically getting reference files to convert units to electrons')
+        if data.mhdr['TELESCOP'] != 'JWST':
+            raise ValueError('Currently unable to automatically download reference files for non-jwst observations!')
+        meta.photfile, meta.gainfile = retrieve_ancil(data.filename)
+    else:
+        log.writelog('  Converting from electrons per second (e/s) to electrons')
+
     if data.shdr['BUNIT'] == 'MJy/sr':
-        # Convert from brightness units (MJy/sr) to flux units (uJy/pix)
-        # log.writelog('Converting from brightness to flux units')
-        # data = b2f.bright2flux(data, data.shdr['PIXAR_A2'])
-        # Convert from brightness units (MJy/sr) to DNs
+        # Convert from brightness units (MJy/sr) to DN/s
         log.writelog('  Converting from brightness units (MJy/sr) to electrons')
-        meta.photfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_PHOTOM'][7:]
         data = bright2dn(data, meta)
-        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
         data = dn2electrons(data, meta)
-    if data.shdr['BUNIT'] == 'DN/s':
+    elif data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
-        log.writelog('  Converting from data numbers per second (DN/s) to electrons per second (e/s)')
-        meta.gainfile = os.path.join(meta.topdir, *meta.ancildir.split(os.sep)) + '/' + data.mhdr['R_GAIN'][7:]
+        log.writelog('  Converting from data numbers per second (DN/s) to electrons')
         data = dn2electrons(data, meta)
+    elif data.shdr['BUNIT'] != 'ELECTRONS/S':
+        raise ValueError(f'Currently unable to convert from input units {data.shdr["BUNIT"]} to electrons - try running Stage 2 again without the photom step.')
+    
+    # Convert from e/s to e
+    data = rate2count(data)
+
     return data, meta
+
+def retrieve_ancil(fitsname):
+    '''Use code from the STScI's JWST pipeline to find/download the needed ancilliary files.
+
+    This code requires that the CRDS_PATH and CRDS_SERVER_URL environment variables be set
+    in your .bashrc file (or equivalent, e.g. .bash_profile)
+
+    Parameters
+    ----------
+    fitsname:   
+        The filename of the file currently being analyzed.
+
+    Returns
+    -------
+    phot_filename:  str
+        The full path to the photom calibration file.
+    gain_filename:  str
+        The full path to the gain calibration file.
+
+    Notes
+    -----
+    
+    History:
+
+    - 2022-03-04 Taylor J Bell
+        Initial code version.
+    '''
+    step = PhotomStep()
+    with datamodels.open(fitsname) as model:
+        phot_filename = step.get_reference_file(model, 'photom')
+        gain_filename = step.get_reference_file(model, 'gain')
+    return phot_filename, gain_filename 
