@@ -66,8 +66,8 @@ def savetable_S4(filename, time, wavelength, bin_width, lcdata, lcerr):
     time = np.repeat(time, dims[1])
     wavelength = np.tile(wavelength, dims[0])
     bin_width = np.tile(bin_width, dims[0])
-    lcdata = lcdata.flatten()
-    lcerr = lcerr.flatten()
+    lcdata = lcdata.T.flatten()
+    lcerr = lcerr.T.flatten()
 
     arr = [time, wavelength, bin_width, lcdata, lcerr]
     
@@ -101,9 +101,9 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model, re
 
     orig_shapes = [str(time.shape), str(wavelength.shape), str(bin_width.shape), str(lcdata.shape), str(lcerr.shape), str(model.shape), str(residuals.shape)]
 
-    time = np.repeat(time, dims[1])
-    wavelength = np.tile(wavelength, dims[0])
-    bin_width = np.tile(bin_width, dims[0])
+    time = np.tile(time, dims[1])
+    wavelength = np.repeat(wavelength, dims[0])
+    bin_width = np.repeat(bin_width, dims[0])
     lcdata = lcdata.flatten()
     lcerr = lcerr.flatten()
     model = model.flatten()
