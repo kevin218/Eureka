@@ -20,6 +20,7 @@ from ..lib import astropytable
 
 from multiprocessing import Pool
 
+
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
 
@@ -52,6 +53,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
+    - Mar 13-14, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -106,6 +110,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+
 
     # Make a new model instance
     best_model = copy.copy(model)
@@ -227,7 +232,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. Added statements to avoid some initial 
         state issues.
-
+    - Mar 13-14, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -464,6 +471,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
         log.writelog('Warning: >=1 params hit the lower bound in the lsq fit. Setting to the middle of the interval.')
         freepars[priortype=='U'][ind_min] = pmid[priortype=='U'][ind_min]
         freepars[priortype=='LU'][ind_min_LU] = (np.exp(prior2[priortype=='LU'][ind_min_LU])+np.exp(prior1[priortype=='LU'][ind_min_LU]))/2.
+
     
     # Generate the walker positions
     pos = np.array([freepars + np.array(step_size)*np.random.randn(ndim) for i in range(nwalkers)])
@@ -515,6 +523,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
 
     return pos, nwalkers
 
+
 def dynestyfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using dynesty.
 
@@ -548,6 +557,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Added log-uniform and Gaussian priors.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
+    - Mar 13-14, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -631,11 +643,34 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     else:
         lc.unc_fit = lc.unc
 
+
+    # Record median + percentiles
+    q = np.percentile(samples, [16, 50, 84], axis=0)
+    fit_params = q[1] # median
+    
+    # Create table of results
+    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
+                            names=("Parameter", "Median", "-1sig", "+1sig"))
+
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    if len(ind_spec):
+        # get wavelengths at middle of bin
+        wave_low = meta.wave_low[lc.fitted_channels]
+        wave_hi = meta.wave_hi[lc.fitted_channels]
+        wave_mid = (wave_hi+wave_low)/2.
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+                              (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'dynesty', fit_params, freenames, samples, upper_errs=upper_errs, lower_errs=lower_errs)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+
 
     # plot using corner.py
     if meta.isplots_S5 >= 5:
@@ -710,6 +745,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
+    - Mar 13-14, 2022 Caroline Piaulet
+         Record an astropy table for median +/- 1 sigma, all params
+         Save transmission spectrum
     """
         #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
 
@@ -754,6 +792,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', fit_params, freenames)
+
 
     # Create new model with best fit parameters
     params = Parameters()
@@ -931,6 +970,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     return np.array(fitted_values)[0]
 
 def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
+
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
@@ -940,6 +980,7 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_e
         data = np.append(data, -lower_errs.reshape(1,-1), axis=0)
         data = np.append(data, upper_errs.reshape(1,-1), axis=0)
     np.savetxt(meta.outputdir+fname+'.csv', fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+
 
     if len(samples)!=0:
         if lc.share:
