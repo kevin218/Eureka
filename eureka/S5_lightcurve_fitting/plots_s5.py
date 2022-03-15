@@ -43,13 +43,13 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_sys_full = model.syseval()
     model_phys_full, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
-    
+
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.copy(lc.flux)
+        flux = np.ma.MaskedArray.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
             unc = deepcopy(np.array(lc.unc_fit))
         else:
-            unc = np.copy(lc.unc)
+            unc = np.ma.MaskedArray.copy(lc.unc)
         model = np.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -61,7 +61,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_sys = model_sys[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
-        
+
         residuals = flux - model
         fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
@@ -87,7 +87,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             plt.close()
         else:
             plt.pause(0.2)
-    
+
     return
 
 def plot_rms(lc, model, meta, fitter):
@@ -129,7 +129,7 @@ def plot_rms(lc, model, meta, fitter):
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         residuals = residuals[np.argsort(time)]
 
@@ -195,7 +195,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
 
     return
 
-def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0):
+def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn=0, nrows=3, ncols=4, nthin=1):
     """Plot the evolution of the chain to look for temporal trends
 
     Parameters
@@ -210,8 +210,16 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-    full:   bool
-        Whether or not the samples passed in include any burn-in steps
+    burnin:   bool
+        Whether or not the samples include the burnin phase
+    nburn:  int
+        The number of burn-in steps that are discarded later
+    nrows:  int
+        The number of rows to make per figure
+    ncols:  int
+        The number of columns to make per figure
+    nthin:  int
+        If >1, the plot will use every nthin point to help speed up computation and reduce clutter on the plot.
 
     Returns
     -------
@@ -224,36 +232,45 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', full=True, nburn=0)
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    if len(freenames) > 20:
-        # Break the plot into many plots to avoid an enormous figure
-        ndims = 20*np.ones(int(len(freenames//20)), dtype=int)
-        if len(freenames)-np.sum(ndims) > 0:
-            ndims = np.append(ndims, int(len(freenames)-np.sum(ndims)))
-    else:
-        ndims = np.array([len(freenames),])
+    nsubplots = nrows*ncols
+    nplots = int(np.ceil(len(freenames)/nsubplots))
 
-    for plot_number, ndim in enumerate(ndims):
-        fig, axes = plt.subplots(ndim, 1, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6, ndim))
-        
-        print(plot_number)
-        print(ndims)
-        print(type(ndims[0]), type(ndim), type(plot_number), type(np.sum(ndims[:plot_number])), type(np.sum(ndims[:plot_number])+ndim))
+    k = 0
+    for plot_number in range(nplots):
+        fig, axes = plt.subplots(nrows, ncols, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
 
-        for i, j in enumerate(range(np.sum(ndims[:plot_number]), np.sum(ndims[:plot_number])+ndim)):
-            axes[i].plot(samples[:, :, j], alpha=0.4)
-            axes[i].set_ylabel(freenames[j])
-            if full and nburn>0:
-                axes[i].axvline(nburn)
+        for j in range(ncols):
+            for i in range(nrows):
+                if k >= samples.shape[2]:
+                    axes[i][j].set_axis_off()
+                    continue
+                vals = samples[::nthin, :, k]
+                xvals = np.arange(samples.shape[0])[::nthin]
+                n3sig, n2sig, n1sig, med, p1sig, p2sig, p3sig = np.percentile(vals, [0.15,2.5,16,50,84,97.5,99.85], axis=1)
+                axes[i][j].fill_between(xvals, n3sig, p3sig, alpha=0.2, label=r'3$\sigma$')
+                axes[i][j].fill_between(xvals, n2sig, p2sig, alpha=0.2, label=r'2$\sigma$')
+                axes[i][j].fill_between(xvals, n1sig, p1sig, alpha=0.2, label=r'1$\sigma$')
+                axes[i][j].plot(xvals, med, label='Median')
+                axes[i][j].set_ylabel(freenames[k])
+                axes[i][j].set_xlim(0, samples.shape[0]-1)
+                for arr in [n3sig, n2sig, n1sig, med, p1sig, p2sig, p3sig]:
+                    # Add some horizontal lines to make movement in walker population more obvious
+                    axes[i][j].axhline(arr[0], ls='dotted', c='k', lw=1)
+                if burnin and nburn>0:
+                    axes[i][j].axvline(nburn, ls='--', c='k', label='End of Burn-In')
+                if (j==(ncols-1) and i==(nrows//2)) or (k == samples.shape[2]-1):
+                    axes[i][j].legend(loc=6, bbox_to_anchor=(1.01,0.5))
+                k += 1
         fig.tight_layout(h_pad=0.0)
-        
+
         fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
-        if full:
-            fname += '_fullchain'
+        if burnin:
+            fname += '_burninchain'
         else:
             fname += '_chain'
         fname += '_{}'.format(fitter)
-        if len(ndims)>1:
-            fname += '_plot{}'.format(plot_number)
+        if nplots>1:
+            fname += '_plot{}of{}'.format(plot_number+1,nplots)
         fname += '.png'
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
         if meta.hide_plots:
@@ -276,7 +293,7 @@ def plot_res_distr(lc, model, meta, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-        
+
     Returns
     -------
     None
@@ -294,21 +311,21 @@ def plot_res_distr(lc, model, meta, fitter):
     time = lc.time
     model_lc = model.eval()
 
-    plt.figure(int('54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
-    
+    plt.figure(int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+
 
     for channel in lc.fitted_channels:
-        flux = np.copy(lc.flux)
+        flux = np.ma.MaskedArray.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
             unc = np.copy(np.array(lc.unc_fit))
         else:
-            unc = np.copy(lc.unc)
+            unc = np.ma.MaskedArray.copy(lc.unc)
         model = np.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         hist_vals = residuals/unc
         hist_vals[~np.isfinite(hist_vals)] = np.nan # Mask out any infinities
@@ -318,7 +335,7 @@ def plot_res_distr(lc, model, meta, fitter):
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/scatter", fontsize=14)
-        fname = 'figs/fig54{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        fname = 'figs/fig55{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()

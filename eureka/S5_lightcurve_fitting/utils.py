@@ -34,14 +34,14 @@ EXOCTK_DATA = os.environ.get('EXOCTK_DATA')
 HOME_DIR = os.path.expanduser('~')
 ON_TRAVIS_OR_RTD = HOME_DIR == '/home/travis' or HOME_DIR == '/Users/travis' or HOME_DIR == '/home/docs'
 if not ON_TRAVIS_OR_RTD:
-    if not EXOCTK_DATA:
-        print(
-            'WARNING (only important for Stage 5): The $EXOCTK_DATA environment variable is not set.  Please set the '
-            'value of this variable to point to the location of the exoctk_data '
-            'download folder.  Users may retreive this folder by clicking the '
-            '"ExoCTK Data Download" button on the ExoCTK website, or by using '
-            'the exoctk.utils.download_exoctk_data() function.')
-    else:
+    # if not EXOCTK_DATA:
+    #     print(
+    #         'WARNING (only important for Stage 5): The $EXOCTK_DATA environment variable is not set.  Please set the '
+    #         'value of this variable to point to the location of the exoctk_data '
+    #         'download folder.  Users may retreive this folder by clicking the '
+    #         '"ExoCTK Data Download" button on the ExoCTK website, or by using '
+    #         'the exoctk.utils.download_exoctk_data() function.')
+    if EXOCTK_DATA:
         # If the variable exists but doesn't point to a real location
         if not os.path.exists(EXOCTK_DATA):
             print(

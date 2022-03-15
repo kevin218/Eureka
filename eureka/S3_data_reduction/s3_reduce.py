@@ -95,59 +95,17 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     rd.store_ecf(meta, ecf)
     meta.eventlabel=eventlabel
 
-    # S3 is not being called right after S2 - try to load a metadata in case S2 was previously run
     if s2_meta == None:
-        # Search for the S2 output metadata in the inputdir provided in
-        rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-        if rootdir[-1]!='/':
-            rootdir += '/'
-        fnames = glob.glob(rootdir+'**/S2_'+meta.eventlabel+'_Meta_Save.dat', recursive=True)
-        
-        if len(fnames)>=1:
-            # get the folder with the latest modified time
-            fname = max(fnames, key=os.path.getmtime)
+        #load savefile
+        s2_meta = read_s2_meta(meta)
 
-        if len(fnames)==0:
-            # There may be no metafiles in the inputdir - raise an error and give a helpful message
-            print('WARNING: Unable to find an output metadata file from Eureka!\'s S2 step '
-                 +'in the inputdir: \n"{}"!\n'.format(meta.inputdir)
-                 +'Assuming this S2 data was produced by the JWST pipeline instead.')
-        else:
-            if len(fnames)>1:
-                # There may be multiple runs - use the most recent but warn the user
-                print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(meta.inputdir)
-                     +'Using the metadata file: \n"{}"'.format(fname))
-
-            fname = fname[:-4] # Strip off the .dat ending
-            s2_meta = me.loadevent(fname)
-
-    # Locate the exact output folder from the previous S2 run (since there is a procedurally generated subdirectory for each run)
     if s2_meta != None:
-        # Need to remove the topdir from the outputdir
-        if os.path.isdir(s2_meta.outputdir):
-            s2_outputdir = s2_meta.outputdir[len(s2_meta.topdir):]
-            if s2_outputdir[0]=='/':
-                s2_outputdir = s2_outputdir[1:]
-
-            meta = s2_meta
-
-            # Load Eureka! control file and store values in the S2 metadata object
-            ecffile = 'S3_' + eventlabel + '.ecf'
-            ecf = rd.read_ecf(ecf_path, ecffile)
-            rd.store_ecf(meta, ecf)
-
-            # Overwrite the inputdir with the exact output directory from S2
-            meta.inputdir = s2_outputdir
-        else:
-            raise AssertionError("Unable to find output data files from Eureka!'s S2 step! "
-                                 + "Looked in the folder: \n{}".format(s2_meta.outputdir))
-
-    if hasattr(meta, 'datetime'):
-        meta.old_datetime = meta.datetime # Capture the date used by S2
-        meta.datetime = None # Reset the datetime in case we're running this on a different day
-
-    meta.inputdir_raw = meta.inputdir
-    meta.outputdir_raw = meta.outputdir
+        meta = load_general_s2_meta_info(meta, ecf_path, s2_meta)
+    else:
+        meta.inputdir_raw = meta.inputdir
+        meta.outputdir_raw = meta.outputdir
+        meta.inputdir = os.path.join(meta.topdir, *meta.inputdir_raw.split(os.sep))
+        meta.outputdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
 
     # check for range of spectral apertures
     if isinstance(meta.spec_hw, list):
@@ -157,7 +115,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
     #check for range of background apertures
     if isinstance(meta.bg_hw, list):
-        meta.bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1]+meta.spec_hw[2], meta.bg_hw[2])
+        meta.bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1]+meta.bg_hw[2], meta.bg_hw[2])
     else:
         meta.bg_hw_range = [meta.bg_hw]
 
@@ -238,7 +196,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 istart = 0
             for m in range(istart, meta.num_data_files):
                 # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
-                if m==istart:
+                if m==istart and meta.spec_hw==meta.spec_hw_range[0] and meta.bg_hw==meta.bg_hw_range[0]:
                     meta.firstFile = True
                 else:
                     meta.firstFile = False
@@ -376,7 +334,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
+                plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, log)
 
             # Save results
             if meta.save_output == True:
@@ -384,5 +342,65 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 me.saveevent(meta, meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save", save=[])
 
             log.closelog()
+
+    return meta
+
+def read_s2_meta(meta):
+
+    # Search for the S2 output metadata in the inputdir provided in
+    # First just check the specific inputdir folder
+    rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
+    if rootdir[-1]!='/':
+        rootdir += '/'
+    fnames = glob.glob(rootdir+'S2_'+meta.eventlabel+'*_Meta_Save.dat')
+    if len(fnames)==0:
+        # There were no metadata files in that folder, so let's see if there are in children folders
+        fnames = glob.glob(rootdir+'**/S2_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
+        fnames = sn.sort_nicely(fnames)
+
+    if len(fnames)>=1:
+        # get the folder with the latest modified time
+        fname = max(fnames, key=os.path.getmtime)
+
+    if len(fnames)==0:
+        # There may be no metafiles in the inputdir - raise an error and give a helpful message
+        print('WARNING: Unable to find an output metadata file from Eureka!\'s S2 step '
+                +'in the inputdir: \n"{}"!\n'.format(meta.inputdir)
+                +'Assuming this S2 data was produced by the JWST pipeline instead.')
+        return None
+    elif len(fnames)>1:
+        # There may be multiple runs - use the most recent but warn the user
+        print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
+                +'Using the metadata file: \n{}\n'.format(fname)
+                +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
+                +'of the run you intended, please provide a more precise folder for the metadata file.')
+    
+    fname = fname[:-4] # Strip off the .dat ending
+
+    s2_meta = me.loadevent(fname)
+
+    return s2_meta
+
+def load_general_s2_meta_info(meta, ecf_path, s2_meta):
+    # Need to remove the topdir from the outputdir
+    s2_outputdir = s2_meta.outputdir[len(s2_meta.topdir):]
+    if s2_outputdir[0]=='/':
+        s2_outputdir = s2_outputdir[1:]
+    if s2_outputdir[-1]!='/':
+        s2_outputdir += '/'
+
+    meta = s2_meta
+
+    # Load S3 Eureka! control file and store values in the S2 metadata object
+    ecffile = 'S3_' + meta.eventlabel + '.ecf'
+    ecf     = rd.read_ecf(ecf_path, ecffile)
+    rd.store_ecf(meta, ecf)
+
+    # Overwrite the inputdir with the exact output directory from S2
+    meta.inputdir = os.path.join(s2_meta.topdir, s2_outputdir)
+    meta.old_datetime = meta.datetime # Capture the date that the
+    meta.datetime = None # Reset the datetime in case we're running this on a different day
+    meta.inputdir_raw = s2_outputdir
+    meta.outputdir_raw = meta.outputdir
 
     return meta

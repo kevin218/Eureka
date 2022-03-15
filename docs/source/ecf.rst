@@ -320,12 +320,6 @@ topdir + outputdir
 The path to the directory in which to output the Stage 3 JWST data and plots.
 
 
-topdir + ancildir
-''''''''''''''''''
-The path to the directory containing the ancillary data.
-
-E.g.: NIRCam needs a photometic file and a gainfile file to convert MJy/sr to DN (Data Numbers) and from DN to Electrons, respectively.
-The names of the the files needed are given in the header as ``hdulist[0].header['R_PHOTOM']`` and ``hdulist[0].header['R_GAIN']`` and can be downloaded here: `<https://jwst-crds.stsci.edu/browse_db/>`_
 
 
 

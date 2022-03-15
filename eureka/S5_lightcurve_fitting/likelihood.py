@@ -37,10 +37,15 @@ def ln_like(theta, lc, model, freenames):
     residuals = (lc.flux - model_lc)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
-        lc.unc_fit = np.ones_like(lc.flux) * theta[ind[0]] * 1e-6        
-        if len(ind)>1:
-            for chan in np.arange(lc.flux.size//lc.time.size):
-                lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * 1e-6
+        for chan in range(len(ind)):
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * 1e-6
+    elif "scatter_mult" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:12] == "scatter_mult"]
+        if np.any(theta[ind] < 0):
+            # Force noise multiplier to be positive
+            return -np.inf
+        for chan in range(len(ind)):
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
     else:
         lc.unc_fit = deepcopy(lc.unc)
     ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
@@ -75,17 +80,14 @@ def lnprior(theta, prior1, prior2, priortype):
         Added log-uniform and Gaussian priors.
     """
     lnprior_prob = 0.
-    n = len(theta)
-    for i in range(n):
-        if priortype[i]=='U':
-            if np.logical_or(theta[i] < prior1[i], theta[i] > prior2[i]):
-                lnprior_prob += - np.inf
+    for i in range(len(theta)):
+        if priortype[i]=='U' and np.logical_or(theta[i] < prior1[i], theta[i] > prior2[i]):
+            return -np.inf
+        elif priortype[i]=='LU' and np.logical_or(np.log(theta[i]) < prior1[i], np.log(theta[i]) > prior2[i]):
+            return - np.inf
         elif priortype[i]=='N':
             lnprior_prob -= 0.5*(np.sum(((theta[i] - prior1[i])/prior2[i])**2 + np.log(2.0*np.pi*(prior2[i])**2)))
-        elif priortype[i]=='LU':
-            if np.logical_or(np.log(theta[i]) < prior1[i], np.log(theta[i]) > prior2[i]):
-                lnprior_prob += - np.inf
-        else:
+        elif priortype[i] not in ['U', 'LU', 'N']:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return lnprior_prob
 
@@ -123,12 +125,15 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
-    ln_like_val = ln_like(theta, lc, model, freenames)
     lp = lnprior(theta, prior1, prior2, priortype)
+    if not np.isfinite(lp):
+        return -np.inf
+    ln_like_val = ln_like(theta, lc, model, freenames)
     lnprob = ln_like_val + lp
     if not np.isfinite(lnprob):
-        lnprob = -np.inf
-    return lnprob
+        return -np.inf
+    else:
+        return lnprob
 
 def transform_uniform(x, a, b):
     return a + (b - a) * x
@@ -180,19 +185,23 @@ def ptform(theta, prior1, prior2, priortype):
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return p
 
-def computeRedChiSq(lc, model, meta, freenames):
+def computeRedChiSq(lc, log, model, meta, freenames):
     """Compute the reduced chi-squared value.
 
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
     meta: MetaObject
         The metadata object.
     freenames: iterable
         The names of the fitted parameters.
+    log: logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -207,12 +216,11 @@ def computeRedChiSq(lc, model, meta, freenames):
         Moved code to separate file, added documentation.
     """
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc) #/ lc.unc
+    residuals = (lc.flux - model_lc)
     chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
-    if meta.run_verbose:
-        print('Reduced Chi-squared: ', chi2red)
+    log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.run_verbose))
 
     return chi2red
 

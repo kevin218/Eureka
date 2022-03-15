@@ -101,6 +101,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
         xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
         plt.xticks(xticks, xticks, rotation=90)
         plt.vlines(xticks,0,n_int,'0.3','dashed')
+        plt.xlim(xticks[0], xticks[-1])
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')

@@ -2,7 +2,7 @@ from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_x=None, model_y=None,
+def plot_spectrum(meta, model_x=None, model_y=None,
                   y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)',
                   scaleHeight=None, planet_R0=None):
 
@@ -13,9 +13,10 @@ def plot_spectrum(meta, wavelength, spectrum, err, wavelength_error=None, model_
     plt.clf()
     ax = fig.subplots(1,1)
 
-    wavelength = deepcopy(wavelength)
-    spectrum = deepcopy(spectrum)
-    err = deepcopy(err)
+    wavelength = deepcopy(meta.wavelengths)
+    wavelength_error = deepcopy(meta.wave_errs)
+    spectrum = deepcopy(meta.spectrum_median)
+    err = deepcopy(meta.spectrum_err)
     model_x = deepcopy(model_x)
     model_y = deepcopy(model_y)
 
