@@ -30,7 +30,6 @@ from ..lib import astropytable
 from ..lib import util
 from ..lib import clipping
 
-
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
@@ -124,7 +123,6 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
             wave_1d = table['wave_1d'].data[0:meta.subnx]
             meta.time = table['time'].data[::meta.subnx]
-
             if meta.wave_min<np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min ({meta.wave_min}) is smaller than the shortest wavelength ({np.min(wave_1d)})')
             if meta.wave_max>np.max(wave_1d):

@@ -130,7 +130,7 @@ def bright2dn(data, meta):
     response_wave = response_wave[igood]
     response_vals = response_vals[igood]
     # Interpolate response at desired wavelengths
-    f = spi.interp1d(response_wave, response_vals, 'cubic')
+    f = spi.interp1d(response_wave, response_vals, kind='cubic', bounds_error=False, fill_value='extrapolate')
     response = f(data.subwave)
 
     scalar = data.shdr['PHOTMJSR']
