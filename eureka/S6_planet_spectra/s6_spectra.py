@@ -147,7 +147,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 meta.spectrum_err = np.array(meta.spectrum_err).swapaxes(0,1)
                 if np.all(meta.spectrum_err==None):
                     meta.spectrum_err = None
-                meta.spectrum_median = np.aray(meta.spectrum_median)
+                meta.spectrum_median = np.array(meta.spectrum_median)
                 meta.spectrum_err = np.array(meta.spectrum_err)
 
             # Convert the y-axis unit to the user-provided value if needed
@@ -339,7 +339,7 @@ def read_s5_meta(meta):
 def load_general_s5_meta_info(meta, ecf_path, s5_meta):
 
     # Need to remove the topdir from the outputdir
-    s5_outputdir = s5_meta.outputdir[len(s5_meta.topdir):]
+    s5_outputdir = s5_meta.outputdir[len(meta.topdir):]
     if s5_outputdir[0]=='/':
         s5_outputdir = s5_outputdir[1:]
     if s5_outputdir[-1]!='/':
