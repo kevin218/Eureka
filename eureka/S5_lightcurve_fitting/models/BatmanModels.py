@@ -63,7 +63,7 @@ class BatmanTransitModel(Model):
             bm_params.u = uarray
 
             # Enforce physicality to avoid crashes from batman by returning something that should be a horrible fit
-            if not ((0 < bm_params.rp < 1) and (0 < bm_params.per) and (0 < bm_params.inc < 90) and (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
+            if not ((0 < bm_params.rp) and (0 < bm_params.per) and (0 < bm_params.inc < 90) and (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was the best I could think of
                 lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
                 continue
@@ -129,7 +129,7 @@ class BatmanEclipseModel(Model):
                 setattr(bm_params, self.paramtitles[index], self.parameters.dict[item][0])
 
             # Enforce physicality to avoid crashes from batman by returning something that should be a horrible fit
-            if not ((0 < bm_params.fp < 1) and (0 < bm_params.rp < 1) and (0 < bm_params.per) and (0 < bm_params.inc < 90) and (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
+            if not ((bm_params.fp < 1) and (0 < bm_params.rp) and (0 < bm_params.per) and (0 < bm_params.inc < 90) and (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was the best I could think of
                 lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
                 continue
