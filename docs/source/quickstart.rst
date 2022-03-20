@@ -46,10 +46,10 @@ Next, add an event label to the ecf filenames. If you're working with data for W
 
 .. code-block::
 
-	S3_nirspec_fs_template.ecf --> S3_wasp39b.ecf
-	S4_template.ecf --> S4_wasp39b.ecf
-	S5_template.ecf --> S5_wasp39b.ecf
-	S6_template.ecf --> S6_wasp39b.ecf
+	mv S3_nirspec_fs_template.ecf S3_wasp39b.ecf
+	mv S4_template.ecf S4_wasp39b.ecf
+	mv S5_template.ecf S5_wasp39b.ecf
+	mv S6_template.ecf S6_wasp39b.ecf
 
 Next, update the ``topdir``, ``inputdir``, and ``outputdir`` in each ``.ecf`` file. For each stage, the ``inputdir`` is the previous stage, e.g.:
 
@@ -65,12 +65,10 @@ Finally, update the event label in ``run_eureka.py``:
 
         eventlabel = 'wasp39b'
 
-1. Run Eureka!
+4. Run Eureka!
 -----------------------------------------------------------------
 
-4.1. 
-
-Now you're ready to run ``Eureka!``
+4.1.  Now you're ready to run ``Eureka!``
 
 Enter ``python run_eureka.py`` at the command prompt to run each stage in sequence. To start at a later stage, simply edit the ``run_eureka.py`` script and comment out the earlier stages. 
 
