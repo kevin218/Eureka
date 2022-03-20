@@ -40,7 +40,7 @@ The JWST demos directory contains template files to run ``Eureka!``. There are t
     -  A script to run the pipeline, ``run_eureka.py``. 
 
 
-3.2  To set up a run, first decide which stage you want to start with. For example, if you download Stage 2 data, you will start with ``Eureka!`` Stage 3. For an overview of the stages, see FIXME. 
+3.2  To set up a run, first decide which stage you want to start with. For example, if you download Stage 2 data, you will start with ``Eureka!`` Stage 3. 
 
 Next, add an event label to the ecf filenames. If you're working with data for WASP-39b, the event label could be ``wasp39b``. Modify the file names of the templates that are appropriate for your stage and instrument mode. For example, if you're starting with Stage 2 NIRSPec data, you would update the following filenames: 
 
@@ -74,12 +74,10 @@ Now you're ready to run ``Eureka!``
 
 Enter ``python run_eureka.py`` at the command prompt to run each stage in sequence. To start at a later stage, simply edit the ``run_eureka.py`` script and comment out the earlier stages. 
 
-Stages 3 and later use metadata from the previous stages. If you wish to run each stage individually rather than sequentially, simply comment out the metadata argument from the function calls (e.g. remove the `` s2_meta=s2_meta`` argument) and ``Eureka!`` will automatically search for the metadata.
+Stages 3 and later use metadata from the previous stages. If you wish to run each stage individually rather than sequentially, comment out the metadata argument from the function calls (e.g. remove the `` s2_meta=s2_meta`` argument) and ``Eureka!`` will automatically search for the metadata.
 
 4.2. The code will run and save data and plots in a new directory set by the ``outputdir`` parameter in each ``.ecf`` file.
 Below you see an example for a simulated spectrum which you should get after running the script and having ``is_plotsS3 = 3``:
 
 .. image:: ../media/fig3301-1-Image+Background.png
 
-
-Note: If you run into a ``matplotlib`` error, you might want to install ``sudo apt install cm-super`` and try it again.
