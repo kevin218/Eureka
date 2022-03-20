@@ -11,7 +11,7 @@ Follow the instructions on the :ref:`installation` page.
 2. Download the data
 -----------------------------------
 
-2.1 Simulated data sets for all four instruments are available for the Transiting Exoplanet Community ERS Data Challenge #1.  Download a simulated data set of your choice from the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_.
+2.1 Simulated data sets for all four instruments are available for the Transiting Exoplanet Community ERS Data Challenge No. 1.  Download a simulated data set of your choice from the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_.
 
 2.2. Make a new directory to store the data.  For example, if you want to work with NIRSpec data, you could structure your directories like this:
 
