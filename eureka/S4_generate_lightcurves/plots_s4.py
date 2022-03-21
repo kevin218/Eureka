@@ -86,17 +86,11 @@ def lc_driftcorr(meta, wave_1d, optspec):
     plt.clf()
     wmin = wave_1d.min()
     wmax = wave_1d.max()
-    iwmin = np.argmin(np.abs(wave_1d-meta.wave_low[0]))
-    iwmax = np.argmin(np.abs(wave_1d-meta.wave_hi[-1]))
-    # iwmin = np.where(wave_1d >= wmin)[0][0]
-    # try:
-    #     iwmax = np.where(wave_1d >= wmax)[0][0]
-    # except:
-    #     iwmax = None
+    iwmin = np.argmin(np.abs(wave_1d-meta.wave_min))
+    iwmax = np.argmin(np.abs(wave_1d-meta.wave_max))
     n_int, nx = optspec.shape
     vmin = 0.97
     vmax = 1.03
-    print(optspec.shape, iwmin, iwmax) #FINDME
     normspec = optspec / np.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
