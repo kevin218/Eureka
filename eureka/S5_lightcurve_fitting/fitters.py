@@ -99,6 +99,22 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     t_results = table.Table([freenames, fit_params], 
                             names=("Parameter", "Median")  ) 
 
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # get wavelengths at middle of bin
+    wave_low = meta.wave_low[lc.fitted_channels]
+    wave_hi = meta.wave_hi[lc.fitted_channels]
+    wave_mid = (wave_hi+wave_low)/2.
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    if len(ind_spec):
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+                          np.zeros_like(wave_low), np.zeros_like(wave_low)],
+                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
@@ -112,7 +128,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, calling_function, t_results, freenames)
+    save_fit(meta, lc, model, calling_function, t_results, freenames, spec_table=t_spec)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
@@ -633,31 +649,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     samples = resample_equal(res.samples, weights)
     log.writelog('Number of posterior samples is {}'.format(len(samples)), mute=(not meta.verbose))
 
-    # Compute the medians and uncertainties
-    fit_params = []
-    upper_errs = []
-    lower_errs = []
-    for i in range(ndims):
-        q = np.percentile(samples[:, i], [16, 50, 84])
-        lower_errs.append(q[0])
-        fit_params.append(q[1])
-        upper_errs.append(q[2])
-    fit_params = np.array(fit_params)
-    upper_errs = np.array(upper_errs)-fit_params
-    lower_errs = fit_params-np.array(lower_errs)
-
-    model.update(fit_params, freenames)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:12] == "scatter_mult"]
-        for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
-    else:
-        lc.unc_fit = lc.unc
-
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
@@ -680,8 +671,21 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                              names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
     else:
         t_spec = None
+
+    model.update(fit_params, freenames)
+    if "scatter_ppm" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        for chan in range(len(ind)):
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
+    elif "scatter_mult" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:12] == "scatter_mult"]
+        for chan in range(len(ind)):
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
+    else:
+        lc.unc_fit = lc.unc
+    
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
+    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples, spec_table = t_spec)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
@@ -796,6 +800,20 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
                             names=("Parameter", "Median")  )  
+    
+    # Save transmission spectrum
+    # indices of fitted rps for all channels
+    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    if len(ind_spec):
+        # get wavelengths at middle of bin
+        wave_low = meta.wave_low[lc.fitted_channels]
+        wave_hi = meta.wave_hi[lc.fitted_channels]
+        wave_mid = (wave_hi+wave_low)/2.
+        t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+                              np.zeros_like(wave_low), np.zeros_like(wave_low)],
+                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    else:
+        t_spec = None
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
@@ -809,7 +827,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
+    save_fit(meta, lc, model, 'lmfitter', t_results, freenames, spec_table=t_spec)
 
 
     # Create new model with best fit parameters
