@@ -108,7 +108,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.run_verbose))
+    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
     # Make a new model instance
     best_model = copy.copy(model)
