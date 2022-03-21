@@ -111,9 +111,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    model_lc = model.eval()
-
-    # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
     # FINDME
