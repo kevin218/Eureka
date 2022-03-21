@@ -86,16 +86,25 @@ def lc_driftcorr(meta, wave_1d, optspec):
     plt.clf()
     wmin = wave_1d.min()
     wmax = wave_1d.max()
+    iwmin = np.argmin(np.abs(wave_1d-meta.wave_low[0]))
+    iwmax = np.argmin(np.abs(wave_1d-meta.wave_hi[-1]))
+    # iwmin = np.where(wave_1d >= wmin)[0][0]
+    # try:
+    #     iwmax = np.where(wave_1d >= wmax)[0][0]
+    # except:
+    #     iwmax = None
     n_int, nx = optspec.shape
     vmin = 0.97
     vmax = 1.03
+    print(optspec.shape, iwmin, iwmax) #FINDME
     normspec = optspec / np.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     ediff = np.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = 1e6 * np.median(np.abs(np.ediff1d(normspec[m])))
-    plt.title("MAD = " + str(np.round(np.mean(ediff), 0).astype(int)) + " ppm")
+        ediff[m] = 1e6 * np.median(np.abs(np.ediff1d(normspec[m,iwmin:iwmax])))
+    mad = np.mean(ediff)
+    plt.title("MAD = " + str(np.round(mad, 0).astype(int)) + " ppm")
     if meta.nspecchan > 1:
         # Insert vertical dashed lines at spectroscopic channel edges
         xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
@@ -111,6 +120,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
         plt.close()
     else:
         plt.pause(0.2)
+    return mad
 
 def cc_spec(meta, ref_spec, fit_spec, n):
     '''Compare the spectrum used for cross-correlation with the current spectrum.
