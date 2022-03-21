@@ -340,7 +340,7 @@ Number of spectroscopic channels spread evenly over given wavelength range
 
 wave_min & wave_max
 ''''''''''''''''''''
-Start and End of the wavelength range being considered
+Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
 
 allapers

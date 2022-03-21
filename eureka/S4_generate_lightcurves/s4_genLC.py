@@ -123,9 +123,16 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
             wave_1d = table['wave_1d'].data[0:meta.subnx]
             meta.time = table['time'].data[::meta.subnx]
-            if meta.wave_min<np.min(wave_1d):
+
+            if meta.wave_min is None:
+                meta.wave_min = np.min(wave_1d)
+                log.writelog(f'No value was provided for meta.wave_min, so defaulting to {meta.wave_min}.', mute=(not meta.verbose))
+            elif meta.wave_min<np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min ({meta.wave_min}) is smaller than the shortest wavelength ({np.min(wave_1d)})')
-            if meta.wave_max>np.max(wave_1d):
+            if meta.wave_max is None:
+                meta.wave_max = np.max(wave_1d)
+                log.writelog(f'No value was provided for meta.wave_max, so defaulting to {meta.wave_max}.', mute=(not meta.verbose))
+            elif meta.wave_max>np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max ({meta.wave_max}) is larger than the longest wavelength ({np.max(wave_1d)})')
 
             #Replace NaNs with zero
