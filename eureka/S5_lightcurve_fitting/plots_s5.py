@@ -407,7 +407,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
         
-        fname = 'figs/fig51{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fname = 'figs/fig55{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
