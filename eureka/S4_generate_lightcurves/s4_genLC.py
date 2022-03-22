@@ -181,7 +181,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                     plots_s4.drift1d(meta)
 
             if meta.isplots_S4 >= 1:
-                plots_s4.lc_driftcorr(meta, wave_1d, optspec)
+                meta.mad_s4 = plots_s4.lc_driftcorr(meta, wave_1d, optspec)
 
             log.writelog("Generating light curves")
             meta.lcdata   = np.ma.zeros((meta.nspecchan, meta.n_int))
