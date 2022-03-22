@@ -9,6 +9,7 @@ from ..lib import util, logedit
 from ..lib import sort_nicely as sn
 
 from . import plots_s6 as plots
+from ..lib import astropytable
 
 #FINDME: Keep reload statements for easy testing
 from importlib import reload
@@ -146,6 +147,8 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 meta.spectrum_err = np.array(meta.spectrum_err).swapaxes(0,1)
                 if np.all(meta.spectrum_err==None):
                     meta.spectrum_err = None
+                meta.spectrum_median = np.array(meta.spectrum_median)
+                meta.spectrum_err = np.array(meta.spectrum_err)
 
             # Convert the y-axis unit to the user-provided value if needed
             if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
@@ -220,6 +223,28 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+
+            log.writelog('Saving results as astropy table')
+            event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
+            meta.tab_filename_s6 = meta.outputdir + 'S6_' + event_ap_bg + "_Table_Save.txt"
+            wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
+            wave_errs = (meta.wave_hi-meta.wave_low)/2
+            if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
+                tr_depth = meta.spectrum_median
+                tr_depth_err = meta.spectrum_err
+            elif meta.y_unit in ['Rp/Rs', 'Rp/R*']:
+                tr_depth = meta.spectrum_median**2
+                tr_depth_err = meta.spectrum_err**2
+            else:
+                tr_depth = np.ones_like(meta.spectrum_median)*np.nan
+                tr_depth_err = np.ones_like(meta.spectrum_err)*np.nan
+            if meta.y_unit in ['Fp/Fs', 'Fp/F*']:
+                ecl_depth = meta.spectrum_median
+                ecl_depth_err = meta.spectrum_err
+            else:
+                ecl_depth = np.ones_like(meta.spectrum_median)*np.nan
+                ecl_depth_err = np.ones_like(meta.spectrum_err)*np.nan
+            astropytable.savetable_S6(meta.tab_filename_s6, wavelengths, wave_errs, tr_depth, tr_depth_err, ecl_depth, ecl_depth_err)
 
             # Save results
             log.writelog('Saving results')
@@ -314,7 +339,7 @@ def read_s5_meta(meta):
 def load_general_s5_meta_info(meta, ecf_path, s5_meta):
 
     # Need to remove the topdir from the outputdir
-    s5_outputdir = s5_meta.outputdir[len(s5_meta.topdir):]
+    s5_outputdir = s5_meta.outputdir[len(meta.topdir):]
     if s5_outputdir[0]=='/':
         s5_outputdir = s5_outputdir[1:]
     if s5_outputdir[-1]!='/':

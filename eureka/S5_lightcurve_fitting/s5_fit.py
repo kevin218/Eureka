@@ -102,10 +102,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             log.writelog(f"Output directory: {meta.outputdir}")
 
             # Copy ecf
-            log.writelog('Copying S5 control file')
+            log.writelog('Copying S5 control file', mute=(not meta.verbose))
             rd.copy_ecf(meta, ecf_path, ecffile)
             # Copy parameter ecf
-            log.writelog('Copying S5 parameter control file')
+            log.writelog('Copying S5 parameter control file', mute=(not meta.verbose))
             shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
 
             # Set the intial fitting parameters
@@ -134,6 +134,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                     flux_err = np.ma.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
+
+                # Save results
+                log.writelog('Saving results')
+                me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
             else:
                 for channel in range(chanrng):
                     #Make a long list of parameters for each channel
@@ -151,13 +155,13 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
                     meta = fit_channel(meta,time,flux,channel,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 
+                    # Save results
+                    log.writelog('Saving results', mute=(not meta.verbose))
+                    me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
+
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
-            # Save results
-            log.writelog('Saving results')
-            me.saveevent(meta, meta.outputdir + 'S5_' + meta.eventlabel + "_Meta_Save", save=[])
 
             log.closelog()
 
@@ -302,7 +306,7 @@ def read_s4_meta(meta):
 def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Need to remove the topdir from the outputdir
-    s4_outputdir = s4_meta.outputdir[len(s4_meta.topdir):]
+    s4_outputdir = s4_meta.outputdir[len(meta.topdir):]
     if s4_outputdir[0]=='/':
         s4_outputdir = s4_outputdir[1:]
     if s4_outputdir[-1]!='/':
@@ -354,5 +358,8 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     new_meta.runs_s5 = meta.runs_s5
     new_meta.datetime = meta.datetime
+
+    new_meta.spec_hw = spec_hw_val
+    new_meta.bg_hw = bg_hw_val
 
     return new_meta

@@ -215,12 +215,13 @@ def convert_to_e(data, meta, log):
         The metadata object.
     """
     if data.shdr['BUNIT'] != 'ELECTRONS/S':
-        log.writelog('Automatically getting reference files to convert units to electrons')
+        log.writelog('  Automatically getting reference files to convert units to electrons', mute=(not meta.verbose))
         if data.mhdr['TELESCOP'] != 'JWST':
-            raise ValueError('Currently unable to automatically download reference files for non-jwst observations!')
+            log.writelog('Error: Currently unable to automatically download reference files for non-jwst observations!', mute=True)
+            raise ValueError('Error: Currently unable to automatically download reference files for non-jwst observations!')
         meta.photfile, meta.gainfile = retrieve_ancil(data.filename)
     else:
-        log.writelog('  Converting from electrons per second (e/s) to electrons')
+        log.writelog('  Converting from electrons per second (e/s) to electrons', mute=(not meta.verbose))
 
     if data.shdr['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to DN/s
@@ -229,9 +230,10 @@ def convert_to_e(data, meta, log):
         data = dn2electrons(data, meta)
     elif data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
-        log.writelog('  Converting from data numbers per second (DN/s) to electrons')
+        log.writelog('  Converting from data numbers per second (DN/s) to electrons', mute=(not meta.verbose))
         data = dn2electrons(data, meta)
     elif data.shdr['BUNIT'] != 'ELECTRONS/S':
+        log.writelog(f'Currently unable to convert from input units {data.shdr["BUNIT"]} to electrons - try running Stage 2 again without the photom step.', mute=True)
         raise ValueError(f'Currently unable to convert from input units {data.shdr["BUNIT"]} to electrons - try running Stage 2 again without the photom step.')
     
     # Convert from e/s to e
@@ -265,7 +267,10 @@ def retrieve_ancil(fitsname):
     - 2022-03-04 Taylor J Bell
         Initial code version.
     '''
-    step = PhotomStep()
+    # Suppress logging output unless it is a warning or worse
+    import logging
+    logging.root.manager.disable = logging.INFO
+    step = PhotomStep(name=None)
     with datamodels.open(fitsname) as model:
         phot_filename = step.get_reference_file(model, 'photom')
         gain_filename = step.get_reference_file(model, 'gain')

@@ -181,7 +181,8 @@ def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with np.errstate(divide='ignore',invalid='ignore'):
+        profile /= np.sum(profile, axis=0)
 
     return profile
 

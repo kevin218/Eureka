@@ -52,8 +52,8 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill
     residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, cenfunc=np.ma.median)
     outliers = np.ma.getmaskarray(residuals)
   
-    if np.any(outliers) and verbose:
-        log.writelog('Identified {} outliers for wavelength {}'.format(np.sum(outliers), wavelength))
+    if np.any(outliers):
+        log.writelog('Identified {} outliers for wavelength {}'.format(np.sum(outliers), wavelength), mute=(not verbose))
   
     # Replace clipped data
     if fill_value=='mask':
