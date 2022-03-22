@@ -11,5 +11,4 @@ w    		90.				'fixed' 		0 				180				U
 limb_dark	'quadratic' 	'independent'
 u1			0.3				'free'			-1				1				U
 u2			0.1				'free'			-1				1				U
-transittype	'primary'	 	'independent'
 c0			1.009			'free'			0.95			1.05			U

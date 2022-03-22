@@ -488,7 +488,7 @@ The following set the parameters for running dynesty. These options are describe
 
 run_nlive
 '''''''''
-Integer. Number of live points for dynesty to use.
+Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
 
 run_bound
 '''''''''
