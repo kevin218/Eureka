@@ -93,10 +93,10 @@ class SinusoidPhaseCurveModel(Model):
             else:
                 t_secondary = self.parameters.dict['t_secondary'][0]
 
-            if self.parameters.dict['ecc'] == 0.:
+            if self.parameters.dict['ecc'][0] == 0.:
                 #the planet is on a circular orbit
                 t    = self.time - t_secondary
-                freq = 2.*np.pi/self.parameters.dict['per']
+                freq = 2.*np.pi/self.parameters.dict['per'][0]
                 phi  = (freq*t)
             else:
                 if m_transit is None:
