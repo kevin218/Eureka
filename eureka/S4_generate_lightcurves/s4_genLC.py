@@ -151,13 +151,16 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             meta.wave_hi = np.array(meta.wave_hi)
             meta.wave_low = np.array(meta.wave_low)
 
+            if not hasattr(meta, 'boundary'):
+                meta.boundary = 'extend' # The default value before this was added as an option
+
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             optspec = np.ma.masked_array(optspec)
             if meta.sigma_clip:
                 log.writelog('Sigma clipping unbinned spectral time series', mute=(not meta.verbose))
                 outliers = 0
                 for l in range(meta.subnx):
-                    optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=meta.verbose)
+                    optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=meta.verbose)
                     outliers += nout
                 log.writelog('Identified a total of {} outliers in time series, or an average of {} outliers per wavelength'.format(outliers, np.round(outliers/meta.subnx, 1)), mute=meta.verbose)
 
@@ -197,7 +200,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=False)
+                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
                     log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
 
                 # Plot each spectroscopic light curve
