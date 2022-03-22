@@ -25,8 +25,8 @@ skip_gain_scale     False
 topdir              /home/User
 
 # Directories relative to project directory
-inputdir            /Data/JWST-Sim/NIRCam/Uncalibrated
-outputdir           /Data/JWST-Sim/NIRCam/Stage1
+inputdir            /Data/JWST-Sim/MIRI/Uncalibrated
+outputdir           /Data/JWST-Sim/MIRI/Stage1
 
 # Diagnostics
 testing_S1          False
