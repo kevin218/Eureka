@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def binned_lightcurve(meta, time, i):
-    '''Plot each spectroscopic light curve.
+    '''Plot each spectroscopic light curve. (Fig 4300)
 
     Parameters
     ----------
@@ -18,7 +18,7 @@ def binned_lightcurve(meta, time, i):
     -------
     None
     '''
-    plt.figure(4300 + i, figsize=(8, 6))
+    plt.figure(int('43{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 6))
     plt.clf()
     plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
     ax = plt.subplot(111)
@@ -33,12 +33,12 @@ def binned_lightcurve(meta, time, i):
     plt.xlabel(f'Time [{meta.time_units} - {time_modifier}]')
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
-    plt.savefig(meta.outputdir + 'figs/Fig' + str(4300 + i) + '-' + meta.eventlabel + '-1D_LC.png')
+    plt.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
         plt.pause(0.2)
 
 def drift1d(meta):
-    '''Plot the 1D drift/jitter results.
+    '''Plot the 1D drift/jitter results. (Fig 4100)
 
     Parameters
     ----------
@@ -49,25 +49,18 @@ def drift1d(meta):
     -------
     None
     '''
-    plt.figure(4101, figsize=(8,4))
+    plt.figure(int('41{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
-    # plt.subplot(211)
-    # for j in range(istart,ev.n_reads-1):
-    #     plt.plot(ev.drift2D[:,j,1],'.')
-    # plt.ylabel('Spectrum Drift Along y')
-    # plt.subplot(212)
-    # for j in range(istart,ev.n_reads-1):
-    #     plt.plot(ev.drift2D[:,j,0]+ev.drift[:,j],'.')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig4101-Drift.png')
+    plt.savefig(meta.outputdir + 'figs/Fig41{}-Drift.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
         plt.pause(0.2)
 
 def lc_driftcorr(meta, wave_1d, optspec):
-    '''Plot a 2D light curve with drift correction.
+    '''Plot a 2D light curve with drift correction. (Fig 4200)
 
     Parameters
     ----------
@@ -82,7 +75,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
     -------
     None
     '''
-    plt.figure(4102, figsize=(8, 8))  # ev.n_files/20.+0.8))
+    plt.figure(int('42{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 8))
     plt.clf()
     wmin = wave_1d.min()
     wmax = wave_1d.max()
@@ -109,7 +102,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/fig4102-2D_LC.png')
+    plt.savefig(meta.outputdir + 'figs/Fig42{}-2D_LC.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if meta.hide_plots:
         plt.close()
     else:
@@ -117,7 +110,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
     return mad
 
 def cc_spec(meta, ref_spec, fit_spec, n):
-    '''Compare the spectrum used for cross-correlation with the current spectrum.
+    '''Compare the spectrum used for cross-correlation with the current spectrum (Fig 4400).
 
     Parameters
     ----------
@@ -134,7 +127,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     -------
     None
     '''
-    plt.figure(4500)
+    plt.figure(int('44{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 8))
     plt.clf()
     plt.title(f'Cross Correlation - Spectrum {n}')
     nx = len(ref_spec)
@@ -142,12 +135,12 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.plot(range(meta.drift_range,nx-meta.drift_range), fit_spec, '-', label='Current Spectrum')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + f'figs/Fig4500-{n}-CC_Spec')
+    plt.savefig(meta.outputdir + 'figs/Fig44{}-CC_Spec.png'.format(str(n).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
         plt.pause(0.2)
 
 def cc_vals(meta, vals, n):
-    '''Make the cross-correlation strength plot.
+    '''Make the cross-correlation strength plot (Fig 4500).
 
     Parameters
     ----------
@@ -162,11 +155,11 @@ def cc_vals(meta, vals, n):
     -------
     None
     '''
-    plt.figure(4501)
+    plt.figure(int('45{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 8))
     plt.clf()
     plt.title(f'Cross Correlation - Values {n}')
     plt.plot(range(-meta.drift_range,meta.drift_range+1), vals, '.')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + f'figs/Fig4501-{n}-CC_Vals')
+    plt.savefig(meta.outputdir + 'figs/Fig45{}-CC_Vals.png'.format(str(n).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
         plt.pause(0.2)
