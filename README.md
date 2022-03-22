@@ -44,7 +44,7 @@ GitHub following the method described below.
 	pip install .
 	```
 
-3. Set JWST CRDS environment variables. Eureka! installs the JWST Calibration Pipeline, and these variables need to be set for the calibration steps to properly run. The best practice for doing this is to add these two lines to your .bashrc (or equivalent shell startup script).
+3. Set JWST CRDS environment variables. Eureka! installs the JWST Calibration Pipeline, and these variables need to be set for the calibration steps to properly run. The best practice for doing this is to add these two lines to your .zshrc (for Mac users) or .bashrc (for bash users), or equivalent shell startup script.
 
 	```bash
 	export CRDS_PATH=/PATH/TO/FOLDER/crds_cache	
