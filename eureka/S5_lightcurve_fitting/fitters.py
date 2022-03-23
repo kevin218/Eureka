@@ -112,7 +112,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
     model_lc = model.eval(incl_GP=True)
-    residuals = (lc.flux - model_lc)
+    
     # FINDME
     # Commented out for now because op.least_squares() doesn't provide covariance matrix
     # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
@@ -516,7 +516,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
                          'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim), mute=True)
             raise AssertionError('Error: Failed to initialize all walkers within the set bounds for all parameters!\n'+
                                  'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim))
-  return pos, nwalkers
+	return pos, nwalkers
 
 
 def dynestyfitter(lc, model, meta, log, **kwargs):
