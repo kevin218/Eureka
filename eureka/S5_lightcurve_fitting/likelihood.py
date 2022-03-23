@@ -211,7 +211,7 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
-    log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.run_verbose))
+    log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.verbose))
 
     return chi2red
 

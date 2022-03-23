@@ -181,7 +181,8 @@ def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with np.errstate(divide='ignore',invalid='ignore'):
+        profile /= np.sum(profile, axis=0)
 
     return profile
 
@@ -485,7 +486,7 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
         else:
             print("Unknown normalized spatial profile method.")
             return
-        #
+
         if isplots >= 3:
             plots_s3.profile(eventdir, profile, submask, n, hide_plots=hide_plots)
             # try:

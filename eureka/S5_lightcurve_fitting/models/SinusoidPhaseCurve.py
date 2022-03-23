@@ -77,7 +77,7 @@ class SinusoidPhaseCurveModel(Model):
         for c in np.arange(self.nchan):
             # Set all parameters
             for index,item in enumerate(self.longparamlist[c]):
-                if item in pc_params.keys():
+                if np.any([key in item for key in pc_params.keys()]):
                     pc_params[self.paramtitles[index]] = self.parameters.dict[item][0]
                 else:
                     setattr(bm_params, self.paramtitles[index], self.parameters.dict[item][0])
@@ -93,13 +93,13 @@ class SinusoidPhaseCurveModel(Model):
             else:
                 t_secondary = self.parameters.dict['t_secondary'][0]
 
-            if self.parameters.dict['ecc'] == 0.:
+            if self.parameters.dict['ecc'][0] == 0.:
                 #the planet is on a circular orbit
                 t    = self.time - t_secondary
-                freq = 2.*np.pi/self.parameters.dict['per']
+                freq = 2.*np.pi/self.parameters.dict['per'][0]
                 phi  = (freq*t)
             else:
-                if m_transit is not None:
+                if m_transit is None:
                     # Avoid overhead of making a new transit model if avoidable
                     m_transit = batman.TransitModel(bm_params, self.time, transittype='primary')
                 anom = m_transit.get_true_anomaly()

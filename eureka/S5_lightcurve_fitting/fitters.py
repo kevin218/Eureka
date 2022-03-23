@@ -16,6 +16,7 @@ from dynesty.utils import resample_equal
 from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
+from ..lib import astropytable
 
 from multiprocessing import Pool
 
@@ -58,7 +59,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.run_verbose))
+    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     neg_lnprob = lambda theta, lc, model, prior1, prior2, priortype, freenames: -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -80,23 +81,13 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         meta.lsq_maxiter = None
     results = minimize(neg_lnprob, freepars, args=(lc, model, prior1, prior2, priortype, freenames), method=meta.lsq_method, tol=meta.lsq_tol, options={'maxiter':meta.lsq_maxiter}, callback=callback)
 
-    log.writelog("\nVerbose lsq results: {}\n".format(results), mute=(not meta.run_verbose))
-    if not meta.run_verbose:
+    log.writelog("\nVerbose lsq results: {}\n".format(results), mute=(not meta.verbose))
+    if not meta.verbose:
         log.writelog("Success?: {}".format(results.success))
         log.writelog(results.message)
 
     # Get the best fit params
     fit_params = results.x
-
-    # Save the fit ASAP
-    save_fit(meta, lc, calling_function, fit_params, freenames)
-
-    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.run_verbose))
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -110,12 +101,24 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         for chan in range(len(ind)):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
 
+    # Save the fit ASAP
+    save_fit(meta, lc, model, calling_function, fit_params, freenames)
+
+    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
+    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+
+    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
+    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
+
     # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    model_lc = model.eval(incl_GP=True)
-    residuals = (lc.flux - model_lc)
     # FINDME
     # Commented out for now because op.least_squares() doesn't provide covariance matrix
     # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
+    # model_lc = model.eval()
     # if results[1] is not None:
     #     residuals = (lc.flux - model_lc)
     #     cov_mat = results[1]*np.var(residuals)
@@ -137,7 +140,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
             if chan.isnumeric():
-                chan = int(chan)+1
+                chan = int(chan)
             else:
                 chan = 0
             scatter_ppm = fit_params[i] * np.ma.median(lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]) * 1e6
@@ -254,7 +257,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         pos, nwalkers = initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2, priortype)
 
     start_lnprob = lnprob(np.median(pos, axis=0), lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.run_verbose))
+    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     # Initialize tread pool
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
@@ -269,13 +272,13 @@ def emceefitter(lc, model, meta, log, **kwargs):
     log.writelog('Running emcee burn-in...')
     state = sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # # Log some details about the burn-in phase
-    # log.writelog("Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)), mute=(not meta.run_verbose))
+    # log.writelog("Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)), mute=(not meta.verbose))
     # try:
-    #     log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.run_verbose))
+    #     log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.verbose))
     # except:
-    #     log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.run_verbose))
+    #     log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
     # mid_lnprob = lnprob(np.median(sampler.get_chain()[-1], axis=0), lc, model, prior1, prior2, priortype, freenames)
-    # log.writelog(f'Intermediate lnprob: {mid_lnprob}', mute=(not meta.run_verbose))
+    # log.writelog(f'Intermediate lnprob: {mid_lnprob}', mute=(not meta.verbose))
     # if meta.isplots_S5 >= 3:
     #     plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True)
     # # Reset the sampler and do the production run
@@ -303,25 +306,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     upper_errs = np.array(upper_errs)-fit_params
     lower_errs = fit_params-np.array(lower_errs)
 
-    # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, 'emcee', fit_params, freenames, samples, upper_errs=upper_errs, lower_errs=lower_errs)
-
-    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.run_verbose))
-    log.writelog("Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)), mute=(not meta.run_verbose))
-    try:
-        log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.run_verbose))
-    except:
-        log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.run_verbose))
-
-    if meta.isplots_S5 >= 3:
-        plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)
-        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', burnin=False)
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
@@ -333,6 +317,25 @@ def emceefitter(lc, model, meta, log, **kwargs):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
     else:
         lc.unc_fit = lc.unc
+
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, model, 'emcee', fit_params, freenames, samples, upper_errs=upper_errs, lower_errs=lower_errs)
+
+    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
+    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+    log.writelog("Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)), mute=(not meta.verbose))
+    try:
+        log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.verbose))
+    except:
+        log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
+
+    if meta.isplots_S5 >= 3:
+        plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)
+        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', burnin=False)
+
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -350,7 +353,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
             if chan.isnumeric():
-                chan = int(chan)+1
+                chan = int(chan)
             else:
                 chan = 0
             scatter_ppm = fit_params[i] * np.ma.median(lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]) * 1e6
@@ -567,7 +570,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     tol = meta.run_tol  # the stopping criterion
 
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.run_verbose))
+    log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
     # START DYNESTY
     l_args = [lc, model, freenames]
@@ -599,20 +602,20 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     logZdynesty = res.logz[-1]  # value of logZ
     logZerrdynesty = res.logzerr[-1]  # estimate of the statistcal uncertainty on logZ
 
-    log.writelog('', mute=(not meta.run_verbose))
+    log.writelog('', mute=(not meta.verbose))
     # Need to temporarily redirect output since res.summar() prints rather than returns a string
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
     res.summary()
     sys.stdout = old_stdout
-    log.writelog(mystdout.getvalue(), mute=(not meta.run_verbose))
+    log.writelog(mystdout.getvalue(), mute=(not meta.verbose))
 
     # get function that resamples from the nested samples to give sampler with equal weight
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples = resample_equal(res.samples, weights)
-    
-    log.writelog('Number of posterior samples is {}'.format(len(samples)), mute=(not meta.run_verbose))
+
+    log.writelog('Number of posterior samples is {}'.format(len(samples)), mute=(not meta.verbose))
 
     # Compute the medians and uncertainties
     fit_params = []
@@ -627,21 +630,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     upper_errs = np.array(upper_errs)-fit_params
     lower_errs = fit_params-np.array(lower_errs)
 
-    # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, 'dynesty', fit_params, freenames, samples, upper_errs=upper_errs, lower_errs=lower_errs)
-
-    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.run_verbose))
-
-    # plot using corner.py
-    if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
-    model.update(fit_params, freenames)    
+    model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
@@ -653,7 +642,19 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     else:
         lc.unc_fit = lc.unc
 
-    model_lc = model.eval()
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, model, 'dynesty', fit_params, freenames, samples, upper_errs=upper_errs, lower_errs=lower_errs)
+
+    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
+    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
+
+    # plot using corner.py
+    if meta.isplots_S5 >= 5:
+        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
 
     #Plot GP fit + components
     if model.GP:
@@ -671,7 +672,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
             if chan.isnumeric():
-                chan = int(chan)+1
+                chan = int(chan)
             else:
                 chan = 0
             scatter_ppm = fit_params[i] * np.ma.median(lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]) * 1e6
@@ -746,28 +747,13 @@ def lmfitter(lc, model, meta, log, **kwargs):
     result = lcmodel.fit(lc.flux, weights=1/lc.unc, params=initialParams,
                          **indep_vars, **kwargs)
 
-    log.writelog(result.fit_report(), mute=(not meta.run_verbose))
+    log.writelog(result.fit_report(), mute=(not meta.verbose))
 
     # Get the best fit params
     fit_params = result.__dict__['params']
     new_params = [(fit_params.get(i).name, fit_params.get(i).value,
                    fit_params.get(i).vary, fit_params.get(i).min,
                    fit_params.get(i).max) for i in fit_params]
-    
-    # Save the fit ASAP
-    save_fit(meta, lc, 'lmfitter', fit_params, freenames)
-
-    # Create new model with best fit parameters
-    params = Parameters()
-    # Store each as an attribute
-    for param in new_params:
-        setattr(params, param[0], param[1:])
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -780,6 +766,21 @@ def lmfitter(lc, model, meta, log, **kwargs):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
     else:
         lc.unc_fit = lc.unc
+
+    # Save the fit ASAP
+    save_fit(meta, lc, model, 'lmfitter', fit_params, freenames)
+
+    # Create new model with best fit parameters
+    params = Parameters()
+    # Store each as an attribute
+    for param in new_params:
+        setattr(params, param[0], param[1:])
+
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
+    # best_model.parameters = params
+    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -945,7 +946,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     
     return np.array(fitted_values)[0]
 
-def save_fit(meta, lc, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
+def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
@@ -963,5 +964,21 @@ def save_fit(meta, lc, fitter, fit_params, freenames, samples=[], upper_errs=[],
             fname = f'S5_{fitter}_samples_ch{lc.channel}'
         with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
             hf.create_dataset("samples",  data=samples)
+
+    event_ap_bg = meta.eventlabel + "_ap" + str(meta.spec_hw) + '_bg' + str(meta.bg_hw)
+    if lc.share:
+        channel_tag = '_shared'
+    else:
+        channel_tag = f'_ch{lc.channel}'
+    meta.tab_filename_s5 = meta.outputdir + 'S5_' + event_ap_bg + "_Table_Save"+channel_tag+".txt"
+    # temporary code
+    meta.wave_low = np.array(meta.wave_low)
+    meta.wave_hi = np.array(meta.wave_hi)
+    # end temporary code
+    wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
+    wave_errs = (meta.wave_hi-meta.wave_low)/2
+    model_lc = model.eval()
+    residuals = lc.flux-model_lc
+    astropytable.savetable_S5(meta.tab_filename_s5, meta.time, wavelengths[lc.fitted_channels], wave_errs[lc.fitted_channels], lc.flux, lc.unc_fit, model_lc, residuals)
     
     return

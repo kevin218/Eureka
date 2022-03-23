@@ -21,6 +21,13 @@ If you are following the installation instructions and still encounter an error,
 `GitHub <https://github.com/kevin218/Eureka/issues>`_ and paste the full error message you are getting along
 with details about which python version and operating system you are using.
 
+Issues installing or importing batman
+'''''''''''''''''''''''''''''''''''''
+
+Be sure that you are installing (or have installed) batman-package (not batman) from pip. If you have accidentally
+installed the wrong package you can try pip uninstalling it, but you may just need to make a whole new environment.
+In general, we strongly recommend you closely follow the instructions on the :ref:`installation` page.
+
 
 Matplotlib RuntimeError() whenever Eureka is imported and plt.show() is called
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -59,6 +66,14 @@ Some more permanent solutions would be to:
   An example of this is to change ``export PATH="~/anaconda3/bin:$PATH"`` in your **~/.bashrc** file to ``export PATH="~/anaconda3/bin:~/Library/TeX/texbin:$PATH"``.
   For anyone using Ubuntu or an older version of Mac this might be found in /usr/bin instead. Make sure you run source ~/.bash_profile or source ~/.bashrc to apply the changes.
 
+My question isn't listed here!
+''''''''''''''''''''''''''''''
+
+First check to see if your question/concern is already addressed in an open or closed issue on the Eureka! 
+`GitHub <https://github.com/kevin218/Eureka/issues>`_ page. If not, please open a new issue and paste the
+full error message you are getting along with details about which python version and operating system you
+are using, and ideally the ecf you used to get your error (ideally copy-paste it into the issue in a
+quote block).
 
 FAQ
 --------------------------

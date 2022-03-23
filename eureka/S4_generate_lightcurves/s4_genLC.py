@@ -30,7 +30,6 @@ from ..lib import astropytable
 from ..lib import util
 from ..lib import clipping
 
-
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
@@ -113,10 +112,10 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             log.writelog(f"Output directory: {meta.outputdir}")
 
             # Copy ecf
-            log.writelog('Copying S4 control file')
+            log.writelog('Copying S4 control file', mute=(not meta.verbose))
             rd.copy_ecf(meta, ecf_path, ecffile)
 
-            log.writelog("Loading S3 save file")
+            log.writelog("Loading S3 save file", mute=(not meta.verbose))
             table = astropytable.readtable(meta.tab_filename)
 
             # Reverse the reshaping which has been done when saving the astropy table
@@ -125,9 +124,15 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             wave_1d = table['wave_1d'].data[0:meta.subnx]
             meta.time = table['time'].data[::meta.subnx]
 
-            if meta.wave_min<np.min(wave_1d):
+            if meta.wave_min is None:
+                meta.wave_min = np.min(wave_1d)
+                log.writelog(f'No value was provided for meta.wave_min, so defaulting to {meta.wave_min}.', mute=(not meta.verbose))
+            elif meta.wave_min<np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min ({meta.wave_min}) is smaller than the shortest wavelength ({np.min(wave_1d)})')
-            if meta.wave_max>np.max(wave_1d):
+            if meta.wave_max is None:
+                meta.wave_max = np.max(wave_1d)
+                log.writelog(f'No value was provided for meta.wave_max, so defaulting to {meta.wave_max}.', mute=(not meta.verbose))
+            elif meta.wave_max>np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max ({meta.wave_max}) is larger than the longest wavelength ({np.max(wave_1d)})')
 
             #Replace NaNs with zero
@@ -140,7 +145,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                 binsize     = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
                 meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
-            elif meta.nspecchan!=len(meta.wave_hi):
+            elif meta.nspecchan is not None and meta.nspecchan!=len(meta.wave_hi):
                 log.writelog(f'WARNING: Your nspecchan value of {meta.nspecchan} differs from the size of wave_hi ({len(meta.wave_hi)}). Using the latter instead.')
                 meta.nspecchan = len(meta.wave_hi)
             meta.wave_hi = np.array(meta.wave_hi)
@@ -149,18 +154,17 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             optspec = np.ma.masked_array(optspec)
             if meta.sigma_clip:
-                log.writelog('Sigma clipping unbinned spectral time series')
+                log.writelog('Sigma clipping unbinned spectral time series', mute=(not meta.verbose))
                 outliers = 0
                 for l in range(meta.subnx):
                     optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=meta.verbose)
                     outliers += nout
-                if not meta.verbose:
-                    log.writelog('Identified a total of {} outliers in time series, or an average of {} outliers per wavelength'.format(outliers, np.round(outliers/meta.subnx, 1)))
+                log.writelog('Identified a total of {} outliers in time series, or an average of {} outliers per wavelength'.format(outliers, np.round(outliers/meta.subnx, 1)), mute=meta.verbose)
 
             # Apply 1D drift/jitter correction
             if meta.correctDrift:
                 #Calculate drift over all frames and non-destructive reads
-                log.writelog('Applying drift/jitter correction')
+                log.writelog('Applying drift/jitter correction', mute=(not meta.verbose))
                 # Compute drift/jitter
                 meta = drift.spec1D(optspec, meta, log)
                 # Correct for drift/jitter
@@ -176,7 +180,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                     plots_s4.drift1d(meta)
 
             if meta.isplots_S4 >= 1:
-                plots_s4.lc_driftcorr(meta, wave_1d, optspec)
+                meta.mad_s4 = plots_s4.lc_driftcorr(meta, wave_1d, optspec)
 
             log.writelog("Generating light curves")
             meta.lcdata   = np.ma.zeros((meta.nspecchan, meta.n_int))
@@ -203,6 +207,13 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+
+            log.writelog('Saving results as astropy table')
+            event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
+            meta.tab_filename_s4 = meta.outputdir + 'S4_' + event_ap_bg + "_Table_Save.txt"
+            wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
+            wave_errs = (meta.wave_hi-meta.wave_low)/2
+            astropytable.savetable_S4(meta.tab_filename_s4, meta.time, wavelengths, wave_errs, meta.lcdata, meta.lcerr)
 
             # Save results
             log.writelog('Saving results')
@@ -300,5 +311,8 @@ def load_specific_s3_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     new_meta.runs_s4 = meta.runs_s4
     new_meta.datetime = meta.datetime
+
+    new_meta.spec_hw = spec_hw_val
+    new_meta.bg_hw = bg_hw_val
 
     return new_meta

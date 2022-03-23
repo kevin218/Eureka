@@ -62,10 +62,21 @@ class BatmanTransitModel(Model):
                     uarray.append(self.parameters.dict[item][0])
             bm_params.u = uarray
 
+            # Enforce physicality to avoid crashes from batman by returning something that should be a horrible fit
+            if not ((0 < bm_params.rp) and (0 < bm_params.per) and (0 < bm_params.inc < 90) and (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
+                # Returning nans or infs breaks the fits, so this was the best I could think of
+                lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                continue
+
             # Use batman ld_profile name
             if self.parameters.limb_dark.value == '4-parameter':
                 bm_params.limb_dark = 'nonlinear'
             elif self.parameters.limb_dark.value == 'kipping2013':
+                # Enforce physicality to avoid crashes from batman by returning something that should be a horrible fit
+                if bm_params.u[0] <= 0:
+                    # Returning nans or infs breaks the fits, so this was the best I could think of
+                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                    continue
                 bm_params.limb_dark = 'quadratic'
                 u1  = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
                 u2  = np.sqrt(bm_params.u[0])*(1-2*bm_params.u[1])
@@ -107,7 +118,7 @@ class BatmanEclipseModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
         
-       #Initialize model
+        #Initialize model
         bm_params = batman.TransitParams()
 
         # Set all parameters
@@ -116,6 +127,12 @@ class BatmanEclipseModel(Model):
             # Set all parameters
             for index,item in enumerate(self.longparamlist[c]):
                 setattr(bm_params, self.paramtitles[index], self.parameters.dict[item][0])
+
+            # Enforce physicality to avoid crashes from batman by returning something that should be a horrible fit
+            if not ((bm_params.fp < 1) and (0 < bm_params.rp) and (0 < bm_params.per) and (0 < bm_params.inc < 90) and (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
+                # Returning nans or infs breaks the fits, so this was the best I could think of
+                lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                continue
 
             bm_params.limb_dark = 'uniform'
             bm_params.u = []
