@@ -698,10 +698,10 @@ def fit_orders(data, meta, which_table=2):
     combos = construct_guesses([0.1,30], [0.1,30], [1,40])
     
     # generates length x length x length number of images and fits to the data
-    img1, sigout1 = niriss_cython.build_image_models(data.median,
-                                                     combos[:,0], combos[:,1], 
-                                                     combos[:,2], 
-                                                     pos1, pos2)
+    img1, sigout1 = niriss_cython.build_gaussian_images(data.median,
+                                                        combos[:,0], combos[:,1], 
+                                                        combos[:,2], 
+                                                        pos1, pos2)
 
     # Iterates on a smaller region around the best guess
     best_guess = combos[np.argmin(sigout1)]
@@ -711,20 +711,20 @@ def fit_orders(data, meta, which_table=2):
 
     # generates length x length x length number of images centered around the previous
     #   guess to optimize the image fit
-    img2, sigout2 = niriss_cython.build_image_models(data.median, 
-                                                     combos[:,0], combos[:,1],
-                                                     combos[:,2],
-                                                     pos1, pos2)
+    img2, sigout2 = niriss_cython.build_gaussian_images(data.median, 
+                                                        combos[:,0], combos[:,1],
+                                                        combos[:,2],
+                                                        pos1, pos2)
 
     # creates a 2D image for the first and second orders with the best-fit gaussian
     #    profiles
     final_guess = combos[np.argmin(sigout2)]
-    ord1, ord2, _ = niriss_cython.build_image_models(data.median,
-                                                     [final_guess[0]],
-                                                     [final_guess[1]],
-                                                     [final_guess[2]],
-                                                     pos1, pos2,
-                                                     return_together=False)
+    ord1, ord2, _ = niriss_cython.build_gaussian_images(data.median,
+                                                        [final_guess[0]],
+                                                        [final_guess[1]],
+                                                        [final_guess[2]],
+                                                        pos1, pos2,
+                                                        return_together=False)
     meta.order1_mask = ord1[0]
     meta.order2_mask = ord2[0]
 
