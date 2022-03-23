@@ -391,7 +391,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             model_GP_component = model_GP_component[channel*len(lc.time):(channel+1)*len(lc.time)]
         
         residuals = flux - model
-        fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        fig = plt.figure(int('56{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3,1)
         ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
@@ -407,7 +407,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
         
-        fname = 'figs/fig55{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fname = 'figs/fig56{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
