@@ -100,8 +100,8 @@ def optimal_spectrum(data, meta, n):
     plt.figure(3302)
     plt.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
-    plt.semilogy(range(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
-    plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
+    plt.semilogy(np.arange(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
+    plt.errorbar(np.arange(subnx), optspec[n], yerr=opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
     plt.ylabel('Flux')
     plt.xlabel('Pixel Position')
     plt.legend(loc='best')
@@ -194,6 +194,10 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
     None
     '''
     profile = np.ma.masked_invalid(profile)
+    submask = np.ma.masked_invalid(submask)
+    mask = np.logical_or(np.ma.getmaskarray(profile), np.ma.getmaskarray(submask))
+    profile = np.ma.masked_where(mask, profile)
+    submask = np.ma.masked_where(mask, submask)
     vmax = 0.05*np.ma.max(profile*submask)
     plt.figure(3305)
     plt.clf()
