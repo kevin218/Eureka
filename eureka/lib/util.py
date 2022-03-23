@@ -170,7 +170,9 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
     optspec:
         Optimally extracted spectra, 2D array (time, nx)
     wave_min:
+        Minimum wavelength for binned lightcurves, as given in the S4 .ecf file
     wave_max:
+        Maximum wavelength for binned lightcurves, as given in the S4 .ecf file
 
     Returns:
         Single MAD value in ppm

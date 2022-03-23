@@ -180,7 +180,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                     plots_s4.drift1d(meta)
 
             # Compute MAD alue
-            meta.mad_s4 = util.get_mad(meta, wave_1d, optspec)
+            meta.mad_s4 = util.get_mad(meta, wave_1d, optspec, meta.wave_min, meta.wave_max)
             log.writelog("Stage 4 MAD = " + str(np.round(meta.mad_s4, 2).astype(int)) + " ppm")
 
             if meta.isplots_S4 >= 1:
