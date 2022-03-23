@@ -70,7 +70,7 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         meta.bg_hw_range = [meta.bg_hw,]
 
     if meta.testing_S5:
-        # Only fit a single channel while testing
+        # Only fit a single channel while testing unless doing a shared fit then do two
         chanrng = 1
     else:
         chanrng = meta.nspecchan
@@ -115,6 +115,9 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                 if 'shared' in val:
                     sharedp = True
             meta.sharedp = sharedp
+
+            if meta.sharedp and meta.testing_S5:
+                chanrng = 2
 
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
