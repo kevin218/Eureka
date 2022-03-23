@@ -205,10 +205,10 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                     log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
                 else:
                     log.writelog(f'Reading file {m + 1} of {meta.num_data_files}', end='\r')
-                
+
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
-                
+
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.data.shape
                 if meta.testing_S3:
@@ -216,14 +216,14 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                     meta.int_start = np.max((0,meta.n_int-5))
                 else:
                     meta.int_start = 0
-                
+
                 # Trim data to subarray region of interest
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
                 meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
                 log.writelog(f'  Source position on detector is row {meta.src_ypos}.', mute=(not meta.verbose))
-                
+
                 # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
 
@@ -235,22 +235,22 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 data.submask = util.check_nans(data.subdata, data.submask, log, name='SUBDATA')
                 data.submask = util.check_nans(data.suberr, data.submask, log, name='SUBERR')
                 data.submask = util.check_nans(data.subv0, data.submask, log, name='SUBV0')
-                
+
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
                     log.writelog("  Masking manually identified bad pixels", mute=(not meta.verbose))
                     for i in range(len(meta.manmask)):
                         ind, colstart, colend, rowstart, rowend = meta.manmask[i]
                         data.submask[rowstart:rowend, colstart:colend] = 0
-                
+
                 # Perform outlier rejection of sky background along time axis
                 log.writelog('  Performing background outlier rejection', mute=(not meta.verbose))
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
                 data = inst.flag_bg(data, meta)
-                
+
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
-                
+
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for background subtraction', mute=(not meta.verbose))
                     iterfn = range(meta.int_start,meta.n_int)
@@ -279,7 +279,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 # Compute fraction of masked pixels within regular spectral extraction window
                 # numpixels   = 2.*meta.spec_width*subnx
                 # fracMaskReg = (numpixels - np.sum(apmask,axis=(2,3)))/numpixels
-                
+
                 # Compute median frame
                 data.medsubdata = np.median(data.subdata, axis=0)
                 data.medapdata  = np.median(data.apdata, axis=0)
@@ -343,10 +343,14 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 meta.tab_filename = meta.outputdir + 'S3_' + event_ap_bg + "_Table_Save.txt"
                 astropytable.savetable_S3(meta.tab_filename, time, wave_1d, stdspec, stdvar, optspec, opterr)
 
+            # Compute MAD alue
+            meta.mad_s3 = util.get_mad(meta, wave_1d, optspec)
+            log.writelog("Stage 3 MAD = " + str(np.round(meta.mad_s3, 2).astype(int)) + " ppm")
+
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, wave_1d, optspec, log)
+                plots_s3.lc_nodriftcorr(meta, wave_1d, optspec)
 
             # Save results
             if meta.save_output == True:
@@ -386,7 +390,7 @@ def read_s2_meta(meta):
                 +'Using the metadata file: \n{}\n'.format(fname)
                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
                 +'of the run you intended, please provide a more precise folder for the metadata file.')
-    
+
     fname = fname[:-4] # Strip off the .dat ending
 
     s2_meta = me.loadevent(fname)
