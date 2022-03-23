@@ -156,3 +156,38 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     path = outputdir+str(run)+'/'
 
     return path
+
+def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
+    """
+    Computes variation on median absolute deviation (MAD) using ediff1d.
+
+    Parameters
+    ----------
+    meta:   MetaClass
+        The metadata object.
+    wave_1d:
+        Wavelength array (nx) with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
+    optspec:
+        Optimally extracted spectra, 2D array (time, nx)
+    wave_min:
+    wave_max:
+
+    Returns:
+        Single MAD value in ppm
+    """
+    optspec = np.ma.masked_invalid(optspec)
+    n_int, nx = optspec.shape
+    if not wave_min == None:
+        iwmin = np.argmin(np.abs(wave_1d-wave_min))
+    else:
+        iwmin = 0
+    if not wave_max == None:
+        iwmax = np.argmin(np.abs(wave_1d-wave_max))
+    else:
+        iwmax = None
+    normspec = optspec / np.ma.mean(optspec, axis=0)
+    ediff = np.ma.zeros(n_int)
+    for m in range(n_int):
+        ediff[m] = 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(normspec[m,iwmin:iwmax])))
+    mad = np.ma.mean(ediff)
+    return mad
