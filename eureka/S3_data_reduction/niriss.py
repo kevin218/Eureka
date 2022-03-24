@@ -77,12 +77,12 @@ def read(filename, data, meta, f277_filename=None):
     meta.time_units = 'BJD_TDB'
 
     # loads all the data into the data object
-    data.data = hdu['SCI',1].data + 0.0
+    data.data = hdu['SCI',1].data +0.0#* hdu[0].header['EFFINTTM']
     data.err  = hdu['ERR',1].data + 0.0
     data.dq   = hdu['DQ' ,1].data + 0.0
 
-    data.var  = hdu['VAR_POISSON',1].data + 0.0
-    data.v0   = hdu['VAR_RNOISE' ,1].data + 0.0
+    data.var  = hdu['VAR_POISSON',1].data * hdu[0].header['EFFINTTM']**2.0
+    data.v0   = hdu['VAR_RNOISE' ,1].data * hdu[0].header['EFFINTTM']**2.0
 
     meta.meta = hdu[-1].data
 
@@ -595,11 +595,13 @@ def box_extract(data, meta, boxsize1=60, boxsize2=50, bkgsub=False):
         d=data.data+0.0
 
     for i in range(len(d)):
-        spec1[i] = np.nansum(d[i] * m1, axis=0)
-        spec2[i] = np.nansum(d[i] * m2, axis=0)
+        spec1[i] = np.nansum(d[i],# * m1, 
+                             axis=0)
+        spec2[i] = np.nansum(d[i],# * m2
+                             axis=0)
 
-        var1[i] = np.sqrt(np.nansum(data.var[i] * m1, axis=0))
-        var2[i] = np.sqrt(np.nansum(data.var[i] * m2, axis=0))
+        var1[i] = np.nansum(data.var[i] * m1, axis=0)
+        var2[i] = np.nansum(data.var[i] * m2, axis=0)
 
     return spec1, spec2, var1, var2
 
