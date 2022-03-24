@@ -63,152 +63,99 @@ import os
                           by Patricio Cubillos      pcubillos@fulbrightmail.org
     2010-10-27 patricio   Docstring updated
     2011-02-12 patricio   Merged with ccampo's tepclass.py
+    2022-03-24 taylor     Significantly modified for Eureka
+                          by Taylor J Bell          bell@baeri.org
 
 """
 
 
 # each parameter is an instance of this class
 class Param:
-  # constructor
-  def __init__(self, vals):
-    self.value = vals
+    # constructor
+    def __init__(self, vals):
+        self.value = vals
 
-  def get(self, index=0):
-    """
-    Return a numeric/boolean/None/etc. value if possible, else return a string.
-    """
-    try:
-      return eval(self.value[index])
-    except:
-      return self.value[index]
+    def __str__(self):
+        try:
+            return str(self.get(0))
+        except:
+            try:
+                return str(self.getarr(0))
+            except:
+                return "Unable to print parameter"
 
-  def getarr(self):
-    length = np.size(self.value)
-    ret = np.zeros(length, dtype='object')
-    for i in np.arange(length):
-      ret[i] = self.get(i)
-    return ret
+    def get(self, index=0):
+        """
+        Return a numeric/boolean/None/etc. value if possible, else return a string.
+        """
+        try:
+            return eval(self.value[index])
+        except:
+            return self.value[index]
 
+    def getarr(self):
+        length = np.size(self.value)
+        ret = np.zeros(length, dtype='object')
+        for i in np.arange(length):
+            ret[i] = self.get(i)
+        return ret
 
 class Ecf:
+    def __init__(self, params):
+        # :::: And now, Chris' code ::::
+        # load all parameters
+        for i, parname in enumerate(params):
+            setattr(self, parname[0], Param(parname[1:]))
 
-  def __init__(self, params):
+    def __str__(self):
+        output = ''
+        for par in self.__dict__:
+            output += par+': '+str(self.__dict__[par])+'\n'
+        return output
 
-  # :::: And now, Chris' code ::::
-  # load all parameters
-    for i, parname in enumerate(params):
-      exec("self.{pname} = Param(parname[1:])".format(pname  = parname[0]))
+    def make_file(self, name):
+        with open(name, 'w') as file:
+            attrib = vars(self)
+            keys = attrib.keys()
 
-  def make_file(self, name):
-
-    file = open(name, 'w')
-
-    attrib = vars(self)
-    keys = attrib.keys()
-
-    file.write("@ " + self.ecfname.get() + "\n")
-    for key in keys:
-      if key != "ecfname":
-        file.write(key + " " + attrib.get(key).value[0] + "\n")
-    file.close()
+            file.write("@ " + self.ecfname.get() + "\n")
+            for key in keys:
+                if key != "ecfname":
+                    file.write(key + " " + attrib.get(key).value[0] + "\n")
+        return
 
 def read_ecf(folder, file):
     """
-    Function to read the file:
+    Function to read ECF files:
     """
 
-    # List containing the set of parameters:
-    ecfsets = []
-
     # Read the file
-    file = open(os.path.join(folder, file), 'r')
-    lines = file.readlines()
-    file.close()
+    with open(os.path.join(folder, file), 'r') as file:
+        lines = file.readlines()
 
     cleanlines = []   # list with only the important lines
-    block      = []   # Blocks separator
     # Clean the lines:
     for i in np.arange(len(lines)):
-      line = lines[i]
-      # Strip off comments:
-      try:
-        line = line[0:line.index('#')].strip()
-      except:
-        line = line.strip()
+        line = lines[i]
+        # Strip off comments:
+        try:
+            line = line[0:line.index('#')].strip()
+        except:
+            line = line.strip()
 
-      # Keep only useful lines:
-      if len(line) > 0:
-        cleanlines.append(line)
-        # identify the separators:
-        if line[0] == "@":
-          block.append([len(cleanlines)-1, line[1:].strip()])
+        # Keep only useful lines:
+        if len(line) > 0:
+            cleanlines.append(line)
 
-    # Append a line to mark the end of the block:
-    block.append([len(cleanlines), "end"])
-
-
-    if (len(block)-1) == 0:
-      # do normal readecfs
-      params = []
-      for line in cleanlines:
-        params.append( np.array(line.split()) )
-      return Ecf(params)
-    else:
-      # Loop over each block:
-      for i in np.arange(len(block)-1):
-        params    = []  # List for the parameters and values of the block
-        multiples = []  # line position of multiple valued parameter
-        nval      = []  # number of values
-
-        for j in np.arange(block[i][0]+1, block[i+1][0]):
-          params.append( np.array(cleanlines[j].split()) )
-          # if the parameter has more than 1 value:
-          if len(params[-1]) > 2:
-            multiples.append(len(params)-1)
-            nval.append(len(params[-1])-1)
-
-
-        # number of parameters with multiple values:
-        nmul = len(multiples)
-
-        if nmul == 0:
-          ecfsets.append(params)
-          ecfsets[-1].append(["ecfname", str(block[i][1])])
-        else:
-          # calculate total number of sets
-          nt = 1
-          for j in np.arange(nmul):
-            nt *= nval[j]
-          ncurrent = nt
-
-          # holder of the sets of params:
-          parset = []
-          # make nt copies of the original set:
-          for j in np.arange(nt):
-            parset.append(params[:])
-            # and add the ecfname:
-            parset[j].append(["ecfname", str(block[i][1])])
-
-          # Loop over each multiple valued parameter:
-          for j in np.arange(nmul):
-            ncurrent /= nval[j]
-            mpar = np.copy(params[multiples[j]][1:])
-            # Edit the value in each set:
-            for k in np.arange(nt):
-              index = int((k/ncurrent) % nval[j])
-
-              parset[k][multiples[j]] = np.array([params[multiples[j]][0],
-                                                  mpar[index]])
-          for ps in parset:
-            ecfsets.append(ps)
-
-      # return a List of ecf objects (one for each set):
-      ecf = []
-      i = 0
-      for ecfset in ecfsets:
-        ecf.append(Ecf(ecfset))
-        i += 1
-      return ecf
+    # do normal readecfs
+    params = []
+    for line in cleanlines:
+        temp_line = line.split()
+        if len(temp_line)>2:
+            # Remove any spaces in the ecf value (otherwise only the values before the space would be used)
+            temp_line = [temp_line[0], ''.join(temp_line[1:])]
+        params.append( np.array(temp_line) )
+    return Ecf(params)
 
 def store_ecf(meta, ecf):
     '''
@@ -216,26 +163,26 @@ def store_ecf(meta, ecf):
     '''
     for key in ecf.__dict__.keys():
         try:
-            exec('meta.' + key + ' = ecf.'+key+'.get(0)', locals())
+            setattr(meta, key, getattr(ecf, key).get(0))
         except:
             try:
-                exec('meta.' + key + ' = ecf.'+key+'.getarr(0)', locals())
+                setattr(meta, key, getattr(ecf, key).getarr(0))
             except:
                 print("Unable to store parameter: " + key)
     return
 
 def copy_ecf(meta, ecffolder, ecffile):
-  # Copy ecf (and update inputdir to be precise which exact inputs were used)
-  new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-  with open(new_ecfname, 'w') as new_file:
-      with open(os.path.join(ecffolder, ecffile), 'r') as file:
-          for line in file.readlines():
-              if len(line.strip())==0 or line.strip()[0]=='#':
-                  new_file.write(line)
-              else:
-                  line_segs = line.strip().split()
-                  if line_segs[0]=='inputdir':
-                      new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                  else:
-                      new_file.write(line)
-  return
+    # Copy ecf (and update inputdir to be precise which exact inputs were used)
+    new_ecfname = meta.outputdir + ecffile.split('/')[-1]
+    with open(new_ecfname, 'w') as new_file:
+        with open(os.path.join(ecffolder, ecffile), 'r') as file:
+            for line in file.readlines():
+                if len(line.strip())==0 or line.strip()[0]=='#':
+                    new_file.write(line)
+                else:
+                    line_segs = line.strip().split()
+                    if line_segs[0]=='inputdir':
+                        new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
+                    else:
+                        new_file.write(line)
+    return
