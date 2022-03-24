@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 
+from . import niriss
+
 import pyximport
 pyximport.install()
 from . import niriss_cython
@@ -43,18 +45,20 @@ def profile_niriss_median(medprof, sigma=50):
         col = medprof[:,i]+0.0
         x = np.arange(0,len(col),1)
 
+        plt.plot(x, col, 'k')
+
         # fits the spatial profile with a savitsky-golay filter
         # window length needs to be quite small for the NIRISS columns
         filt = savgol_filter(col, window_length=15, polyorder=5)
         resid = np.abs(col-filt)
 
         # finds outliers 
-        inliers = np.where(resid<=sigma*np.nanstd(resid))[0]
+        inliers = np.where(resid<=sigma)[0]
         outliers = np.delete(x,inliers)
         
         # removes outliers
         if len(outliers)>0:
-            filt = savgol_filter(col[inliers], window_length=3, polyorder=2)
+            filt = savgol_filter(col[inliers], window_length=7, polyorder=2)
 
             # finds values that are above/below the interpolation range    
             # these need to be masked first, otherwise it will raise an error
@@ -74,6 +78,10 @@ def profile_niriss_median(medprof, sigma=50):
             interp = interp1d(x[inliers], filt)
             if len(outliers)>0:
                 medprof[:,i][outliers] = interp(x[outliers])
+
+        #if i > 300 and i < 350:
+        #    plt.plot(x, medprof[:,i], 'r')
+        #    plt.show()
 
     return medprof
 
@@ -173,7 +181,7 @@ def profile_niriss_moffat(data, pos1, pos2):
     return out_img1[0], out_img2[0]
 
 
-def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
+def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None,
                        pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
                        proftype='gaussian', isplots=0, per_quad=False):
     """
@@ -221,11 +229,14 @@ def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
     """
     block_extra = np.ones(data[0].shape)
 
+    boxmask = 
+
     if per_quad:
         es_all = np.zeros(3, dtype=np.ndarray)
         ev_all = np.zeros(3, dtype=np.ndarray)
+        p_all = np.zeros(3, dtype=np.ndarray)
 
-        for quad in range(1,4): # CHANGE BACK TO 4
+        for quad in range(1,2): # CHANGE BACK TO 4
             # Figures out which quadrant location to use
             if quad == 1: # Isolated first order (top right)
                 x1,x2 = 1000, data.shape[2]
@@ -248,44 +259,52 @@ def optimal_extraction(data, spectrum, spectrum_var, sky_bkg,
 
             if cr_mask is not None:
                 new_cr_mask = np.copy(cr_mask[:, y1:y2, x1:x2]) + 0
-                print(newdata.shape, new_sky_bkg.shape, new_cr_mask.shape)
             else:
                 new_cr_mask = None
 
             new_spectrum = np.copy(spectrum[:,x1:x2]) + 0.0
+            newvar = np.copy(var[:,y1:y2,x1:x2]) + 0.0
+            print(newvar.shape)
             new_spectrum_var = np.copy(spectrum_var[:,x1:x2]) + 0.0
 
-            es, ev = extraction_routine(newdata, 
-                                        new_spectrum, 
-                                        new_spectrum_var,
-                                        new_sky_bkg, 
-                                        pos1=pos1[x1:x2],
-                                        pos2=pos2[x1:x2],
-                                        sigma=sigma,
-                                        cr_mask=new_cr_mask,
-                                        Q=Q,
-                                        proftype=proftype,
-                                        isplots=isplots)
+            es, ev, p = extraction_routine(newdata,
+                                           newvar,
+                                           new_spectrum, 
+                                           new_spectrum_var,
+                                           new_sky_bkg, 
+                                           medframe=medframe[y1:y2, x1:x2],
+                                           pos1=pos1[x1:x2],
+                                           pos2=pos2[x1:x2],
+                                           sigma=sigma,
+                                           cr_mask=new_cr_mask,
+                                           Q=Q,
+                                           proftype=proftype,
+                                           isplots=isplots)
             es_all[quad-1] = es + 0.0
             ev_all[quad-1] = ev + 0.0
+            p_all[quad-1] = p + 0.0
 
-        return es_all, ev_all
+        return es_all, ev_all, p_all
 
     else: # Full image
-        es, ev = extraction_routine(data, spectrum, spectrum_var,
-                                    sky_bkg,
-                                    pos1=pos1,
-                                    pos2=pos2,
-                                    sigma=sigma,
-                                    cr_mask=cr_mask,
-                                    Q=Q,
-                                    proftype=proftype,
-                                    isplots=isplots)
+        es, ev, p = extraction_routine(data, var,
+                                       spectrum, 
+                                       spectrum_var,
+                                       sky_bkg,
+                                       medframe=medframe,
+                                       pos1=pos1,
+                                       pos2=pos2,
+                                       sigma=sigma,
+                                       cr_mask=cr_mask,
+                                       Q=Q,
+                                       proftype=proftype,
+                                       isplots=isplots)
     
-        return es, ev
+        return es, ev, p
 
 
-def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
+def extraction_routine(data, var, 
+                       spectrum, spectrum_var, sky_bkg, medframe=None,
                        pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
                        proftype='gaussian', isplots=0):
     """
@@ -296,7 +315,9 @@ def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
     # initialize arrays
     extracted_spectra = np.zeros((len(data), data.shape[2]))
     extracted_error   = np.zeros((len(data), data.shape[2]))
-
+    best_fit_prof     = np.zeros(data.shape)
+    
+    # Loop through each frame
     for i in tqdm(range(len(data))):
     
         ny, nx = data[i].shape
@@ -307,15 +328,19 @@ def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
 
         isnewprofile=True
         M = np.ones(data[i].shape) # cosmic ray mask
+        fill_vals = np.zeros(data[i].shape) # array with values to fill in masked pixels
+
+        reference = spectrum[i] + 0.0
 
         while isnewprofile==True:
 
             # 5. construct spatial profile
             # Median mask creation
             if proftype.lower() == 'median':
-                median = profile_niriss_median(median, sigma=5)
-                P = (median-sky_bkg[i])*M
-
+                #median = profile_niriss_median(median, sigma=3.5)
+                #P = (median-sky_bkg[i])*M
+                P = medframe*M + 0.0
+                
             # Gaussian mask creation
             elif proftype.lower() == 'gaussian':
                 if (pos1 is not None) and (pos2 is not None):
@@ -324,7 +349,7 @@ def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
                                                   pos2)
                 else:
                     return('Please pass in `pos1` and `pos2` arguments.')
-
+                
             # Moffat mask creation
             elif proftype.lower() == 'moffat':
                 if (pos1 is not None) and (pos2 is not None):
@@ -333,21 +358,23 @@ def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
                                                 pos2)
                 else:
                     return('Please pass in `pos1` and `pos2` arguments.')
-
+                
             else:
                 return('Mask profile type not implemeted.')
 
             P = P/np.nansum(P,axis=0) # profile normalized along columns
+            P = np.abs(P)
             
-            isnewprofile=False
-
             # 6. Revise variance estimates
-            V = spectrum_var[i] + np.abs(sky_bkg[i]+(P*spectrum[i]))/Q
+            V = spectrum_var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
+            #V = var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
 
             # 7. Mask *more* cosmic ray hits
-            stdevs = np.sqrt((np.abs(data[i] - sky_bkg[i] - spectrum[i])*P)**2.0/V)
-            yy1,xx1 = np.where((stdevs*M)>sigma)
+            stdevs = (np.abs(data[i] - sky_bkg[i] - reference)*P)/np.sqrt(V)
 
+            # this needs to be the *worst* pixel in a *single column*
+            yy1,xx1 = np.where((stdevs*M)>sigma)
+            
             if isplots>=9:
                 plt.title('check')
                 plt.imshow(stdevs*M, vmin=sigma-2, vmax=sigma)
@@ -360,18 +387,38 @@ def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
             # If cosmic rays found, continue looping through untl 
             # they are all masked
             if len(yy1)>0 or len(xx1)>0:
-                M[yy1,xx1] = 0.0
-                isnewprofile=True
+
+                isnewprofile = True
+
+                for u in np.unique(xx1):
+                    r = np.where(xx1==u)[0]
+                    o = np.argmax(data[0,yy1[r], xx1[r]])
+                    M[yy1[r][o], xx1[r][0]] *= 0.0
+                    
+                    fv = np.nanmedian(data[i,yy1[r][o-1:o+2], xx1[r][0]] * M[yy1[r][o-1:o+2], xx1[r][0]])
+                    fill_vals[yy1[r][o], xx1[r][0]] += fv
+                    
+                    if isplots==14:
+                        l = len(data[i][:,xx1[r][0]])
+                        plt.plot(np.arange(0,l,1), P[:,xx1[r][0]], 'red')
+                        plt.title('{}, {}'.format(yy1[r][o],xx1[r][0]))
+                        plt.show()
+
+                denom = np.nansum(M * P**2.0 / V, axis=0)
+
+                # Remake spectrum[i] reference
+                reference = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
 
             # When no more cosmic rays are idetified
             else:
+                isnewprofile = False
                 # 8. Extract optimal spectrum
                 denom = np.nansum(M * P**2.0 / V, axis=0)
 
                 if cr_mask is not None:
-                    f = np.nansum(M*P*((cr_mask[i])-sky_bkg[i])/V,axis=0) / denom
+                    f = np.nansum(M*P*( (cr_mask[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
                 else:
-                    f = np.nansum(M*P*(data[i]-sky_bkg[i])/V,axis=0) / denom
+                    f = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
 
                 var_f = np.nansum(M*P,axis=0) / denom # This may need a sqrt ?
 
@@ -382,5 +429,6 @@ def extraction_routine(data, spectrum, spectrum_var, sky_bkg,
 
         extracted_spectra[i] = f + 0.0
         extracted_error[i] = var_f + 0.0
-        
-    return extracted_spectra, extracted_error
+        best_fit_prof[i] = P + 0.0
+
+    return extracted_spectra, extracted_error, best_fit_prof
