@@ -20,6 +20,10 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
+from jwst import datamodels
+from jwst.pipeline import calwebb_spec2
+from jwst.pipeline import calwebb_detector1
+
 from .background import fitbg3
 from .niriss_extraction import *
 
@@ -481,7 +485,7 @@ def simplify_niriss_img(data, meta, isplots=False):
     return g
 
 
-def wave_NIRISS(wavefile, meta=None, inclass=False):
+def wave_NIRISS(wavefile, meta=None, inclass=False, filename=None):
     """
     Adds the 2D wavelength solutions to the meta object.
     
@@ -491,22 +495,40 @@ def wave_NIRISS(wavefile, meta=None, inclass=False):
        The name of the .FITS file with the wavelength
        solution.
     meta : object
+    filename : str, optional
+       The flux filename. Default is None. Needs a filename if
+       the `meta` class is not provided.
 
     Returns
     -------
     meta : object
     """
-    hdu = fits.open(wavefile)
-    w1, w2, w3 = hdu[1].data, hdu[2].data, hdu[3].data
-    hdu.close()
+    if meta is not None:
+        rampfitting_results = datamodels.open(meta.filename)
+    else:
+        rampfitting_results = datamodels.open(filename)
 
+    # Run assignwcs step on Stage 1 outputs:
+    assign_wcs_results = calwebb_spec2.assign_wcs_step.AssignWcsStep.call(rampfitting_results)
+
+    # Extract 2D wavelenght map for order 1:
+    rows, columns = assign_wcs_results.data[0,:,:].shape
+    wavelength_map = np.zeros([3, rows, columns])
+    
+    # Loops through the three orders to retrieve the wavelength maps
+    for order in [1,2,3]:
+        for row in tqdm(range(rows)):
+            for column in range(columns):
+                wavelength_map[order-1, row, column] = assign_wcs_results.meta.wcs(column, 
+                                                                                   row, 
+                                                                                   order)[-1]
     if inclass == False:
-        meta.wavelength_order1 = w1 + 0.0
-        meta.wavelength_order2 = w2 + 0.0
-        meta.wavelength_order3 = w3 + 0.0
+        meta.wavelength_order1 = wavelength_map[0] + 0.0
+        meta.wavelength_order2 = wavelength_map[1] + 0.0
+        meta.wavelength_order3 = wavelength_map[2] + 0.0
         return meta
     else:
-        return w1, w2, w3
+        return wavelength_map[0], wavelength_map[1], wavelength_map[2]
 
 
 def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], 
