@@ -523,12 +523,18 @@ def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4],
     return data
 
 
-def dirty_mask(img, meta, boxsize1=70, boxsize2=60, booltype=True,
-               return_together=True):
+def dirty_mask(img, meta=None, boxsize1=70, boxsize2=60, booltype=True,
+               return_together=True, pos1=None, pos2=None):
     """Really dirty box mask for background purposes."""
     order1 = np.zeros((boxsize1, len(img[0])))
     order2 = np.zeros((boxsize2, len(img[0])))
     mask = np.zeros(img.shape)
+
+    if meta is not None:
+        pos1 = meta.tab2['order_1'] + 0.0
+        pos2 = meta.tab2['order_2'] + 0.0
+    if meta is None and pos1 is None:
+        return('Cannot create box mask without trace.')
 
     if booltype==True:
         m1, m2 = -1, -1
@@ -536,11 +542,11 @@ def dirty_mask(img, meta, boxsize1=70, boxsize2=60, booltype=True,
         m1, m2 = 1, 2
     
     for i in range(img.shape[1]):
-        s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
+        s,e = int(pos1[i]-boxsize1/2), int(pos1[i]+boxsize1/2)
         order1[:,i] = img[s:e,i]
         mask[s:e,i] += m1
         
-        s,e = int(meta.tab2['order_2'][i]-boxsize2/2), int(meta.tab2['order_2'][i]+boxsize2/2)
+        s,e = int(pos2[i]-boxsize2/2), int(pos2[i]+boxsize2/2)
         try:
             order2[:,i] = img[s:e,i]
             mask[s:e,i] += m2

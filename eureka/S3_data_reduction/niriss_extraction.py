@@ -2,6 +2,9 @@
 A library of custom weighted profiles
 to fit to the NIRISS orders to complete
 the optimal extraction of the data.
+
+Written by: Adina Feinstein
+Last updated: March 23, 2022
 """
 import numpy as np
 from tqdm import tqdm
@@ -229,8 +232,11 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
     """
     block_extra = np.ones(data[0].shape)
 
-    boxmask = 
+    # Create a box mask to set pixels far from the order to 0
+    boxmask = niriss.dirty_mask(medframe, pos1=pos1, pos2=pos2)
+    boxmask = np.array(~boxmask, dtype=int)
 
+    # Loops over each quadrant
     if per_quad:
         es_all = np.zeros(3, dtype=np.ndarray)
         ev_all = np.zeros(3, dtype=np.ndarray)
@@ -262,12 +268,13 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
             else:
                 new_cr_mask = None
 
+            # Clip 1D arrays to the length of the quadrant
             new_spectrum = np.copy(spectrum[:,x1:x2]) + 0.0
             newvar = np.copy(var[:,y1:y2,x1:x2]) + 0.0
-            print(newvar.shape)
             new_spectrum_var = np.copy(spectrum_var[:,x1:x2]) + 0.0
 
-            es, ev, p = extraction_routine(newdata,
+            # Run the optimal extraction routine on the quadrant
+            es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2],
                                            newvar,
                                            new_spectrum, 
                                            new_spectrum_var,
@@ -337,8 +344,6 @@ def extraction_routine(data, var,
             # 5. construct spatial profile
             # Median mask creation
             if proftype.lower() == 'median':
-                #median = profile_niriss_median(median, sigma=3.5)
-                #P = (median-sky_bkg[i])*M
                 P = medframe*M + 0.0
                 
             # Gaussian mask creation
@@ -393,7 +398,7 @@ def extraction_routine(data, var,
                 for u in np.unique(xx1):
                     r = np.where(xx1==u)[0]
                     o = np.argmax(data[0,yy1[r], xx1[r]])
-                    M[yy1[r][o], xx1[r][0]] *= 0.0
+                    M[yy1[r][o], xx1[r][0]] *= 0.0 # Set bad pixels to 0
                     
                     fv = np.nanmedian(data[i,yy1[r][o-1:o+2], xx1[r][0]] * M[yy1[r][o-1:o+2], xx1[r][0]])
                     fill_vals[yy1[r][o], xx1[r][0]] += fv
@@ -417,11 +422,11 @@ def extraction_routine(data, var,
 
                 if cr_mask is not None:
                     f = np.nansum(M*P*( (cr_mask[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
+                    var_f = np.nansum( (M*P)*cr_mask[i], axis=0) / denom # This may need a sqrt ?
                 else:
-                    f = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
-
-                var_f = np.nansum(M*P,axis=0) / denom # This may need a sqrt ?
-
+                    f = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom                    
+                    var_f = np.nansum(M*P,axis=0) / denom # This may need a sqrt ?
+                
                 if isplots>=8:
                     plt.imshow(P)
                     plt.colorbar()
