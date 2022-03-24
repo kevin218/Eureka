@@ -35,9 +35,9 @@ def interpolating_row(data, mask, reg=2, arrtype='data'):
 
     for loc in np.array([nanx,nany]).T:
         if loc[0] < reg:
-            y = np.arange(0,5,1,dtype=int)
-        elif loc[0] > 256-reg:
-            y = np.arange(loc[0]-reg, 256, 1, dtype=int)
+            y = np.arange(0,reg*2, 1, dtype=int)
+        elif loc[0] > data.shape[0]-reg:
+            y = np.arange(loc[0]-reg, data.shape[0], 1, dtype=int)
         else:
             y = np.arange(loc[0]-reg, loc[0]+reg,1,dtype=int)
 
