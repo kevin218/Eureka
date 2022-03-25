@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rc, rcdefaults
+from matplotlib import rc, rcdefaults, rcParams
 
 # Function to adjust matplotlib rcParams for plotting procedures.
 def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
@@ -22,6 +22,8 @@ def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
         font='Helvetica'
         fontsize=16
         rc('font', **{'family': family, family: [font], 'size': fontsize})
+        params = {'legend.fontsize': 11}
+        rcParams.update(params)
     elif style == 'default':
         # Use default matplotlib settings
         rcdefaults()
