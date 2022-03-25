@@ -4,7 +4,7 @@ import os
 
 """
     This class loads a Eureka! Parameter File (epf) and lets you
-    querry the parameters and values.
+    query the parameters and values.
 
     Modification History:
     --------------------
@@ -12,38 +12,6 @@ import os
                           by Taylor J Bell          bell@baeri.org
 
 """
-
-# each parameter is an instance of this class
-class Param:
-    # constructor
-    def __init__(self, vals):
-        self.value = vals
-
-    def __str__(self):
-        try:
-            return str(self.getarr())
-        except:
-            try:
-                return str(self.get(0))
-            except:
-                return "Unable to print parameter"
-
-    def get(self, index=0):
-        """
-        Return a numeric/boolean/None/etc. value if possible, else return a string.
-        """
-        try:
-            return eval(self.value[index])
-        except:
-            return self.value[index]
-
-    def getarr(self):
-        length = np.size(self.value)
-        ret = np.zeros(length, dtype='object')
-        for i in np.arange(length):
-            ret[i] = self.get(i)
-        return ret
-
 
 class EPF:
     def __init__(self, folder=None, file=None):
@@ -53,12 +21,25 @@ class EPF:
             self.params = {}
             for line in self.cleanlines:
                 par = np.array(line.split())
-                self.params[par[0]] = Param(par[1:])
+                name = par[0]
+                vals = []
+                for i in range(len(par[1:])):
+                    try:
+                        vals.append(eval(par[i+1]))
+                    except:
+                        vals.append(par[i+1])
+                self.params[name] = vals
 
     def __str__(self):
         output = ''
         for line in self.cleanlines:
             output += line+'\n'
+        return output[:-1]
+
+    def __repr__(self):
+        output = type(self).__module__+'.'+type(self).__qualname__+'('
+        output += f"folder='{self.folder}', file='{self.filename}')\n"
+        output += str(self)
         return output
 
     def read(self, folder, file):
@@ -66,6 +47,7 @@ class EPF:
         Function to read the file:
         """
         self.filename = file
+        self.folder = folder
         # Read the file
         with open(os.path.join(folder, file), 'r') as file:
             self.lines = file.readlines()
@@ -186,11 +168,12 @@ class Parameters:
 
         # Make an empty params dict
         self.params = {}
+        self.dict = {}
 
         # If a param_file is given, make sure it exists
         if param_file is not None and param_path is not None and os.path.exists(os.path.join(param_path,param_file)):
 
-            # Parse the ASCII file
+            # Parse the file
             if param_file.endswith('.txt') or param_file.endswith('.json'):
                 raise AssertionError('ERROR: S5 parameter files in txt or json file formats have been deprecated.\n'+
                                      'Please change to using EPF (Eureka! Parameter File) file formats.')
@@ -199,13 +182,7 @@ class Parameters:
                 print('Please update the file format to an EPF (Eureka! Parameter File; .epf).')
 
             self.epf = EPF(param_path, param_file)
-            paramlist = self.epf.params
-            keylist=list(paramlist.keys())
-            for i in keylist:
-                if len(paramlist[i].getarr())==1:
-                    self.params[i]=paramlist[i].get()
-                else:
-                    self.params[i]=list(paramlist[i].getarr())
+            self.params = self.epf.params
 
         # Add any kwargs to the parameter dict
         self.params.update(kwargs)
@@ -226,3 +203,34 @@ class Parameters:
         output += "**"+str(self.params)
         output = output+')'
         return output
+
+    def __setattr__(self, item, value):
+        """Maps attributes to values
+
+        Parameters
+        ----------
+        item: str
+            The name for the attribute
+        value: any
+            The attribute value
+        """
+        if item=='epf' or item=='params' or item=='dict':
+            self.__dict__[item] = value
+            return
+
+        if isinstance(value, (str, float, int, bool)):
+            # Convert single items to list
+            value = [value,]
+        elif isinstance(value, tuple):
+            # Convert tuple to list
+            value = list(value)
+        elif not isinstance(value, list):
+            raise TypeError("Cannot set {}={}.".format(item, value))
+
+        # Set the attribute
+        self.__dict__[item] = Parameter(item, *value)
+
+        # Add it to the list of parameters
+        self.__dict__['dict'][item] = self.__dict__[item].values[1:]
+
+        return
