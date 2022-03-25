@@ -15,6 +15,7 @@ from . import demc
 from . import integrate
 from . import modelsPOET
 from . import readECF
+from . import readEPF
 from . import time2phase2
 from . import gaussian
 from . import logedit
