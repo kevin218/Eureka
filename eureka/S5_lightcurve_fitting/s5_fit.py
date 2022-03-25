@@ -4,7 +4,7 @@ import time as time_pkg
 from ..lib import manageevent as me
 from ..lib import readECF as rd
 from ..lib import util, logedit
-from . import parameters as p
+from ..lib.readEPF import Parameters
 from . import lightcurve as lc
 from . import models as m
 
@@ -109,7 +109,7 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
 
             # Set the intial fitting parameters
-            params = p.Parameters(ecf_path, meta.fit_par)
+            params = Parameters(ecf_path, meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
@@ -132,9 +132,9 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
-                for i in range(chanrng):
-                    flux = np.ma.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
-                    flux_err = np.ma.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
+                for channel in range(chanrng):
+                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.mean(meta.lcdata[channel,:]))
+                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.mean(meta.lcdata[channel,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 

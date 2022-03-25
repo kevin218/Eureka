@@ -13,7 +13,7 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from .parameters import Parameters
+from ..lib.readEPF import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 from ..lib import astropytable
@@ -759,16 +759,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
     save_fit(meta, lc, model, 'lmfitter', fit_params, freenames)
 
     # Create new model with best fit parameters
-    params = Parameters()
-    # Store each as an attribute
-    for param in new_params:
-        setattr(params, param[0], param[1:])
-
-    # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
     # Plot fit
     if meta.isplots_S5 >= 1:
