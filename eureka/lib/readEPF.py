@@ -174,6 +174,28 @@ class Parameters:
 
         return
 
+    def __add__(self, other):
+        """Add parameters to make a combined model
+        Parameters
+        ----------
+        other: ExoCTK.lightcurve_fitting.parameters.Parameters
+            The parameters to  to multiply
+        Returns
+        -------
+        ExoCTK.lightcurve_fitting.parameters.Parameters
+            The combined model
+        """
+        # Make sure it is the right type
+        if not type(self) == type(other):
+            raise TypeError('Only another Parameters instance may be added.')
+
+        # Combine the model parameters too
+        kwargs = self.dict
+        kwargs.update(other.dict)
+        newParams = Parameters(**kwargs)
+
+        return newParams
+
     def read(self, folder, file):
         """
         Function to read the file:
