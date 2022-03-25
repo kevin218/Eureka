@@ -13,66 +13,6 @@ import os
 
 """
 
-class EPF:
-    def __init__(self, folder=None, file=None):
-        # load all parameters
-        if folder is not None and file is not None and os.path.isfile(os.path.join(folder, file)):
-            self.read(folder, file)
-            self.params = {}
-            for line in self.cleanlines:
-                par = np.array(line.split())
-                name = par[0]
-                vals = []
-                for i in range(len(par[1:])):
-                    try:
-                        vals.append(eval(par[i+1]))
-                    except:
-                        vals.append(par[i+1])
-                self.params[name] = vals
-
-    def __str__(self):
-        output = ''
-        for line in self.cleanlines:
-            output += line+'\n'
-        return output[:-1]
-
-    def __repr__(self):
-        output = type(self).__module__+'.'+type(self).__qualname__+'('
-        output += f"folder='{self.folder}', file='{self.filename}')\n"
-        output += str(self)
-        return output
-
-    def read(self, folder, file):
-        """
-        Function to read the file:
-        """
-        self.filename = file
-        self.folder = folder
-        # Read the file
-        with open(os.path.join(folder, file), 'r') as file:
-            self.lines = file.readlines()
-
-        self.cleanlines = []   # list with only the important lines
-        # Clean the lines:
-        for line in self.lines:
-            # Strip off comments:
-            if "#" in line:
-                line = line[0:line.index('#')]
-            line = line.strip()
-
-            line = ' '.join(line.split())
-
-            # Keep only useful lines:
-            if len(line) > 0:
-                self.cleanlines.append(line)
-
-        return
-
-    def write(self, folder):
-        with open(os.path.join(folder, self.filename), 'w') as file:
-            file.writelines(self.lines)
-        return
-
 class Parameter:
     """A generic parameter class"""
     def __init__(self, name, value, ptype, mn=None, mx=None, prior=None):
@@ -181,8 +121,7 @@ class Parameters:
                 print('WARNING, using ECF file formats for S5 parameter files has been deprecated.')
                 print('Please update the file format to an EPF (Eureka! Parameter File; .epf).')
 
-            self.epf = EPF(param_path, param_file)
-            self.params = self.epf.params
+            self.read(param_path, param_file)
 
         # Add any kwargs to the parameter dict
         self.params.update(kwargs)
@@ -214,7 +153,7 @@ class Parameters:
         value: any
             The attribute value
         """
-        if item=='epf' or item=='params' or item=='dict':
+        if item=='epf' or item=='params' or item=='dict' or item=='filename' or item=='folder' or item=='lines' or item=='cleanlines':
             self.__dict__[item] = value
             return
 
@@ -233,4 +172,47 @@ class Parameters:
         # Add it to the list of parameters
         self.__dict__['dict'][item] = self.__dict__[item].values[1:]
 
+        return
+
+    def read(self, folder, file):
+        """
+        Function to read the file:
+        """
+        self.filename = file
+        self.folder = folder
+        # Read the file
+        with open(os.path.join(folder, file), 'r') as file:
+            self.lines = file.readlines()
+
+        cleanlines = []   # list with only the important lines
+        # Clean the lines:
+        for line in self.lines:
+            # Strip off comments:
+            if "#" in line:
+                line = line[0:line.index('#')]
+            line = line.strip()
+
+            line = ' '.join(line.split())
+
+            # Keep only useful lines:
+            if len(line) > 0:
+                cleanlines.append(line)
+
+        self.params = {}
+        for line in cleanlines:
+            par = np.array(line.split())
+            name = par[0]
+            vals = []
+            for i in range(len(par[1:])):
+                try:
+                    vals.append(eval(par[i+1]))
+                except:
+                    vals.append(par[i+1])
+            self.params[name] = vals
+
+        return
+
+    def write(self, folder):
+        with open(os.path.join(folder, self.filename), 'w') as file:
+            file.writelines(self.lines)
         return
