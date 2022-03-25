@@ -56,10 +56,6 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
 
     meta = load_general_s5_meta_info(meta, ecf_path, s5_meta)
 
-    print(meta.params)
-    print()
-    print(meta.__dict__)
-
     if (not meta.s5_allapers) or (not meta.allapers):
         # The user indicated in the ecf that they only want to consider one aperture
         # in which case the code will consider only the one which made s4_meta.
