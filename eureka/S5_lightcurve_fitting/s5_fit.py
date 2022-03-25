@@ -2,7 +2,7 @@ import numpy as np
 import glob, os, shutil
 import time as time_pkg
 from ..lib import manageevent as me
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
 from . import lightcurve as lc
@@ -47,14 +47,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     # load savefile
     if s4_meta == None:
@@ -103,7 +99,7 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
             # Copy ecf
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
-            rd.copy_ecf(meta, ecf_path, ecffile)
+            meta.copy_ecf()
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file', mute=(not meta.verbose))
             shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
@@ -304,6 +300,9 @@ def read_s4_meta(meta):
 
     s4_meta = me.loadevent(fname)
 
+    # Code to not break backwards compatibility with old MetaClass save files but also use the new MetaClass going forwards
+    s4_meta = readECF.MetaClass(**s4_meta.__dict__)
+
     return s4_meta
 
 def load_general_s4_meta_info(meta, ecf_path, s4_meta):
@@ -321,8 +320,7 @@ def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S4
     meta.inputdir = s4_outputdir
@@ -350,8 +348,7 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(new_meta, ecf)
+    new_meta.read(ecf_path, ecffile)
 
     # Save correctly identified folders from earlier
     new_meta.inputdir = meta.inputdir

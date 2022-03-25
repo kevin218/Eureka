@@ -16,7 +16,7 @@
 # 9.  Produce plots
 
 
-import sys, os, shutil, glob
+import os, glob
 import time as time_pkg
 import numpy as np
 import scipy.interpolate as spi
@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from . import plots_s4, drift
 from ..lib import sort_nicely as sn
 from ..lib import logedit
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
@@ -64,14 +64,10 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
     - October 2021 Taylor Bell
         Updated to allow for inputs from new S3
     '''
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
-    ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    ecffile = 'S4_' + eventlabel + '.ecf'
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     if s3_meta == None:
         #load savefile
@@ -113,7 +109,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
             # Copy ecf
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
-            rd.copy_ecf(meta, ecf_path, ecffile)
+            meta.copy_ecf()
 
             log.writelog("Loading S3 save file", mute=(not meta.verbose))
             table = astropytable.readtable(meta.tab_filename)
@@ -266,6 +262,9 @@ def read_s3_meta(meta):
 
     s3_meta = me.loadevent(fname)
 
+    # Code to not break backwards compatibility with old MetaClass save files but also use the new MetaClass going forwards
+    s3_meta = readECF.MetaClass(**s3_meta.__dict__)
+
     return s3_meta
 
 def load_general_s3_meta_info(meta, ecf_path, s3_meta):
@@ -280,8 +279,7 @@ def load_general_s3_meta_info(meta, ecf_path, s3_meta):
 
     # Load S4 Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
@@ -307,8 +305,7 @@ def load_specific_s3_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     # Load S4 Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(new_meta, ecf)
+    new_meta.read(ecf_path, ecffile)
 
     # Save correctly identified folders from earlier
     new_meta.inputdir = meta.inputdir

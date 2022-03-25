@@ -9,7 +9,7 @@ from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import readECF as rd
+from ..lib import readECF
 
 class MetaClass:
 	def __init__(self):
@@ -40,15 +40,11 @@ def rampfitJWST(eventlabel, ecf_path='./'):
 
 	t0 = time.time()
 
-	# Initialize metadata object
-	meta = MetaClass()
-	meta.eventlabel = eventlabel
-	meta.suffix = 'uncal'  # This will break for any instruments/observations that do not result in uncal
-
 	# Load Eureka! control file and store values in Event object
 	ecffile = 'S1_' + eventlabel + '.ecf'
-	ecf     = rd.read_ecf(ecf_path, ecffile)
-	rd.store_ecf(meta, ecf)
+	meta = readECF.MetaClass(ecf_path, ecffile)
+	meta.eventlabel = eventlabel
+	meta.suffix = 'uncal'  # This will break for any instruments/observations that do not result in uncal
 
 	# Shouldn't be too relevant for Stage 1, but assign raw input and output directories
 	meta.inputdir_raw = meta.inputdir
@@ -74,7 +70,7 @@ def rampfitJWST(eventlabel, ecf_path='./'):
 
 	# Copy ecf
 	log.writelog('Copying S1 control file')
-	rd.copy_ecf(meta, ecf_path, ecffile)
+	meta.copy_ecf()
 
 	# Create list of file segments
 	meta = util.readfiles(meta)
