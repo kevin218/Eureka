@@ -134,6 +134,9 @@ dmypy.json
 # ecf file 
 *.ecf
 
+# epf file 
+*.epf
+
 # VS Code workspaces
 *.code-workspace
 .vscode/settings.json

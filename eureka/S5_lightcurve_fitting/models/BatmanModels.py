@@ -7,7 +7,7 @@ except ImportError:
 
 from ..limb_darkening_fit import ld_profile
 from .Model import Model
-from ..parameters import Parameters
+from ...lib.readEPF import Parameters
 
 class BatmanTransitModel(Model):
     """Transit Model"""

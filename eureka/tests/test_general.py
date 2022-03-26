@@ -5,6 +5,7 @@
 
 import numpy as np
 from ..lib import util
+from ..lib.readECF import MetaClass
 from ..S2_calibrations import s2_calibrate as s2
 from ..S3_data_reduction import s3_reduce as s3
 from ..S4_generate_lightcurves import s4_genLC as s4
@@ -12,31 +13,9 @@ from ..S5_lightcurve_fitting import s5_fit as s5
 from ..lib.util import pathdirectory
 import pytest
 
-
-class MetaClass:
-  def __init__(self):
-    return
-
 class DataClass:
   def __init__(self):
     return
-
-meta= MetaClass()
-data = DataClass()
-
-######################
-
-#Let's assume we have a dataset with 7 integrations and every spectrum has the dimensions of 100x20
-n = 7
-ny = 20
-nx = 100
-
-data.data = np.ones((n, ny, nx))
-data.err = np.ones((n, ny, nx))
-data.dq = np.ones((n, ny, nx))
-data.wave = np.ones((n, ny, nx))
-data.v0 = np.ones((n, ny, nx))
-
 
 def test_b2f():
     #Let's trim by giving metadata some xwindow and ywindow information which is normally given by the user in the S3_ecf
@@ -44,6 +23,18 @@ def test_b2f():
     trim_x1 = 90
     trim_y0 = 2
     trim_y1 = 14
+
+    meta = MetaClass()
+    data = DataClass()
+    n = 7
+    ny = 20
+    nx = 100
+    #Let's assume we have a dataset with 7 integrations and every spectrum has the dimensions of 100x20
+    data.data = np.ones((n, ny, nx))
+    data.err = np.ones((n, ny, nx))
+    data.dq = np.ones((n, ny, nx))
+    data.wave = np.ones((n, ny, nx))
+    data.v0 = np.ones((n, ny, nx))
 
     meta.ywindow = [trim_y0,trim_y1]
     meta.xwindow = [trim_x0,trim_x1]
@@ -68,6 +59,7 @@ def test_NIRCam(capsys):
         print("NIRCam test:")
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
+    meta = MetaClass()
     meta.eventlabel='NIRCam'
     meta.topdir='../tests'
     ecf_path='./NIRCam_ecfs/'
@@ -115,6 +107,7 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
         print("NIRSpec test:")
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
+    meta = MetaClass()
     meta.eventlabel='NIRSpec'
     meta.topdir='../tests'
     ecf_path='./NIRSpec_ecfs/'

@@ -1,7 +1,7 @@
 import numpy as np
 
 from .Model import Model
-from ..parameters import Parameters
+from ...lib.readEPF import Parameters
 
 class PolynomialModel(Model):
     """Polynomial Model"""

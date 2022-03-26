@@ -5,7 +5,7 @@ except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
-from ..parameters import Parameters
+from ...lib.readEPF import Parameters
 
 class SinusoidPhaseCurveModel(Model):
     """A sinusoidal phase curve model"""
