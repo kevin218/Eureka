@@ -393,7 +393,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             model_GP_component = model_GP_component[channel*len(lc.time):(channel+1)*len(lc.time)]
         
         residuals = flux - model
-        fig = plt.figure(int('56{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        fig = plt.figure(int('56{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3,1)
         ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
