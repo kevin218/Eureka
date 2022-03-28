@@ -12,13 +12,13 @@ The simplest way to install the Eureka! package is with the following one-line c
 
 .. code-block:: bash
 
-	pip install git+git://github.com/kevin218/Eureka.git
+	pip install git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
 
 where specific branches can be installed using:
 
 .. code-block:: bash
 	
-	pip install git+git://github.com/kevin218/Eureka.git@mybranchname
+	pip install git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
 
 If you desire any of the files in the `demos folder <https://github.com/kevin218/Eureka/tree/main/demos>`_, you will have to download these from
 GitHub following the method described below.
@@ -44,7 +44,7 @@ With Git/GitHub
 
 	.. code-block:: bash
 
-		pip install .
+		pip install .[jwst]
 
 CRDS Environment Variables
 --------------------------
@@ -58,7 +58,14 @@ For users not on the internal STScI network, two environment variables need to b
 		
 		export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
 
-If these environment variables are not set, the JWST calibration pipeline steps will fail.
+If these environment variables are not set, Stages 1-3 of the pipeline will fail.
+
+Issues with installing the jwst dependency
+------------------------------------------
+
+If you have problems installing Eureka! and it seems to be centred around the installation of the jwst package, you can also install Eureka without
+this requirement by removing the "[jwst]" part from the pip install lines above. This will, however, result in you being unable to run Eureka's
+Stages 1 and 2 which simply offer ways of editing the behaviour of the jwst package's Stages 1 and 2.
 
 For the JWST ERS Pre-Launch Data Hackathon
 -----------------------------------------------

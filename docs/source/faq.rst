@@ -12,8 +12,8 @@ Missing packages during installation
 
 If you are encountering errors when installing Eureka! like missing packages (e.g. extension_helpers), be sure
 that you are following the instructions on the on the :ref:`installation` page. If you are trying to directly
-call setup.py using the ``python setup.py install`` command, you should instead be using ``pip install .`` which
-helps to make sure that all required dependencies are installed in the right order and checks for implicit
+call setup.py using the ``python setup.py install`` command, you should instead be using ``pip install .[jwst]``
+which helps to make sure that all required dependencies are installed in the right order and checks for implicit
 dependencies. If you still encounter issues, you should be sure that you are using a new conda environment as
 other packages you've previously installed could have conflicting requirements with Eureka!.
 
@@ -28,6 +28,23 @@ Be sure that you are installing (or have installed) batman-package (not batman) 
 installed the wrong package you can try pip uninstalling it, but you may just need to make a whole new environment.
 In general, we strongly recommend you closely follow the instructions on the :ref:`installation` page.
 
+Issues installing or importing jwst
+'''''''''''''''''''''''''''''''''''''
+
+First ensure that you were following the instructions on the :ref:`installation` page and using a command that
+included "[jwst]" like ``pip install .[jwst]``. If you were doing that and you are still receiving error messages,
+it is possible that something about your installation environment does not play well with jwst. The first step to
+try and resolve this would be to make a brand new conda environment and try the installation again. If that still
+gives you issues, you should open or comment on an already open issue on the Eureka!
+`GitHub <https://github.com/kevin218/Eureka/issues>`_ page and tell us as many details as you can about every step you
+took to finally get to that error message as well as details about your operating system, python version, and conda version.
+You should also consider opening an issue on the jwst `GitHub <https://github.com/spacetelescope/jwst/issues>`_ page as
+there may not be much we can do to help troubleshoot a package we have no control over.
+
+Finally, if you simply cannot get jwst to install and still want to use later stages of the Eureka! pipeline, then you can
+install Eureka! using ``pip install .`` instead of ``pip install .[jwst]`` which will not install the jwst package. Note,
+however, that this means that Stages 1 and 2 will not work at all as Eureka's Stages 1 and 2 simply offer ways of editing
+the behaviour of the jwst package's Stages 1 and 2.
 
 Matplotlib RuntimeError() whenever Eureka is imported and plt.show() is called
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
