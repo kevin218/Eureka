@@ -39,7 +39,6 @@ from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
 
-
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
@@ -139,7 +138,6 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
             t0 = time_pkg.time()
 
             meta.spec_hw = spec_hw_val
-
             meta.bg_hw = bg_hw_val
 
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], ap=spec_hw_val, bg=bg_hw_val)
@@ -159,16 +157,17 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
             log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
 
             # Copy ecf
-            log.writelog('Copying S3 control file')
+            log.writelog('Copying S3 control file', mute=(not meta.verbose))
             rd.copy_ecf(meta, ecf_path, ecffile)
 
             # Create list of file segments
             meta = util.readfiles(meta)
             meta.num_data_files = len(meta.segment_list)
             if meta.num_data_files==0:
+                log.writelog(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!', mute=True)
                 raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!')
             else:
-                log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
+                log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits', mute=(not meta.verbose))
 
             with fits.open(meta.segment_list[-1]) as hdulist:
                 # Figure out which instrument we are using
@@ -202,7 +201,10 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 else:
                     meta.firstFile = False
                 # Report progress
-                log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
+                if meta.verbose:
+                    log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
+                else:
+                    log.writelog(f'Reading file {m + 1} of {meta.num_data_files}', end='\r')
                 
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
@@ -220,7 +222,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
                 # Locate source postion
                 meta.src_ypos = source_pos.source_pos(data, meta, m, header=('SRCYPOS' in data.shdr))
-                log.writelog(f'  Source position on detector is row {meta.src_ypos}.')
+                log.writelog(f'  Source position on detector is row {meta.src_ypos}.', mute=(not meta.verbose))
                 
                 # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
@@ -236,13 +238,13 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    log.writelog("  Masking manually identified bad pixels")
+                    log.writelog("  Masking manually identified bad pixels", mute=(not meta.verbose))
                     for i in range(len(meta.manmask)):
                         ind, colstart, colend, rowstart, rowend = meta.manmask[i]
                         data.submask[rowstart:rowend, colstart:colend] = 0
                 
                 # Perform outlier rejection of sky background along time axis
-                log.writelog('  Performing background outlier rejection')
+                log.writelog('  Performing background outlier rejection', mute=(not meta.verbose))
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
                 data = inst.flag_bg(data, meta)
@@ -250,14 +252,17 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
                 
                 if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for background subtraction')
-                    for n in tqdm(range(meta.int_start,meta.n_int)):
+                    log.writelog('  Creating figures for background subtraction', mute=(not meta.verbose))
+                    iterfn = range(meta.int_start,meta.n_int)
+                    if meta.verbose:
+                        iterfn = tqdm(iterfn)
+                    for n in iterfn:
                         # make image+background plots
                         plots_s3.image_and_background(data, meta, n)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
-                    log.writelog('  Correcting for 2D drift')
+                    log.writelog('  Correcting for 2D drift', mute=(not meta.verbose))
                     inst.correct_drift2D(data, meta, m)
 
                 # Select only aperture region
@@ -280,11 +285,15 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 data.medapdata  = np.median(data.apdata, axis=0)
 
                 # Extract optimal spectrum with uncertainties
-                log.writelog("  Performing optimal spectral extraction")
+                log.writelog("  Performing optimal spectral extraction", mute=(not meta.verbose))
                 data.optspec = np.zeros(data.stdspec.shape)
                 data.opterr  = np.zeros(data.stdspec.shape)
+
                 gain = 1  # Already converted DN to electrons, so gain = 1 for optspex
-                for n in tqdm(range(meta.int_start,meta.n_int)):
+                iterfn = range(meta.int_start,meta.n_int)
+                if meta.verbose:
+                    iterfn = tqdm(iterfn)
+                for n in iterfn:
                     data.optspec[n], data.opterr[n], mask = optspex.optimize(data.apdata[n], data.apmask[n], data.apbg[n],
                                                                              data.stdspec[n], gain, data.apv0[n],
                                                                              p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
@@ -292,11 +301,16 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                                                                              deg=meta.prof_deg, n=data.intstart + n,
                                                                              isplots=meta.isplots_S3, eventdir=meta.outputdir,
                                                                              meddata=data.medapdata, hide_plots=meta.hide_plots)
-
+                #Mask out NaNs
+                data.optspec = np.ma.masked_invalid(data.optspec)
+                data.opterr = np.ma.masked_invalid(data.opterr)
                 # Plot results
                 if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for optimal spectral extraction')
-                    for n in tqdm(range(meta.int_start,meta.n_int)):
+                    log.writelog('  Creating figures for optimal spectral extraction', mute=(not meta.verbose))
+                    iterfn = range(meta.int_start,meta.n_int)
+                    if meta.verbose:
+                        iterfn = tqdm(iterfn)
+                    for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n)
 

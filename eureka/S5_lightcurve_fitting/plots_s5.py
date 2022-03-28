@@ -8,7 +8,8 @@ from .likelihood import computeRMS
 from .utils import COLORS
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
-    """Plot the fitted model over the data.
+    """Plot the fitted model over the data. (Fig 5100)
+
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -61,7 +62,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
 
         residuals = flux - model
-        fig = plt.figure(int('51{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        fig = plt.figure(int('51{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3,1)
         ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
@@ -87,8 +88,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     return
 
 def plot_rms(lc, model, meta, fitter):
-    """Plot an Allan plot to look for red noise.
-    
+    """Plot an Allan plot to look for red noise. (Fig 5200)
+
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -131,7 +132,7 @@ def plot_rms(lc, model, meta, fitter):
         rms, stderr, binsz = computeRMS(residuals, binstep=1)
         normfactor = 1e-6
         plt.rcParams.update({'legend.fontsize': 11}) # FINDME: this should not be done here but where the rcparams are defined for Eureka
-        plt.figure(int('52{}'.format(str(channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        plt.figure(int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         plt.suptitle(' Correlated Noise', size=16)
         plt.loglog(binsz, rms / normfactor, color='black', lw=1.5, label='Fit RMS', zorder=3)  # our noise
@@ -153,8 +154,8 @@ def plot_rms(lc, model, meta, fitter):
     return
 
 def plot_corner(samples, lc, meta, freenames, fitter):
-    """Plot a corner plot.
-    
+    """Plot a corner plot. (Fig 5300)
+
     Parameters
     ----------
     samples: ndarray
@@ -179,7 +180,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    fig = plt.figure(int('53{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
     fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
@@ -191,7 +192,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     return
 
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn=0, nrows=3, ncols=4, nthin=1):
-    """Plot the evolution of the chain to look for temporal trends
+    """Plot the evolution of the chain to look for temporal trends (Fig 5400)
 
     Parameters
     ----------
@@ -232,7 +233,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
 
     k = 0
     for plot_number in range(nplots):
-        fig, axes = plt.subplots(nrows, ncols, num=int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
+        fig, axes = plt.subplots(nrows, ncols, num=int('54{}'.format(str(0).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
 
         for j in range(ncols):
             for i in range(nrows):
@@ -258,7 +259,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
                 k += 1
         fig.tight_layout(h_pad=0.0)
 
-        fname = 'figs/fig55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
+        fname = 'figs/fig54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
         if burnin:
             fname += '_burninchain'
         else:
@@ -276,7 +277,8 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
     return
 
 def plot_res_distr(lc, model, meta, fitter):
-    """Plot the normalized distribution of residuals + a Gaussian
+    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5500)
+
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -303,7 +305,7 @@ def plot_res_distr(lc, model, meta, fitter):
     time = lc.time
     model_lc = model.eval()
 
-    plt.figure(int('55{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    plt.figure(int('55{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
 
     for channel in lc.fitted_channels:
         flux = np.ma.MaskedArray.copy(lc.flux)
@@ -337,7 +339,7 @@ def plot_res_distr(lc, model, meta, fitter):
         
 
 def plot_GP_components(lc, model, meta, fitter, isTitle=True):
-    """Plot the GP model
+    """Plot the lightcurve + GP model + residuals (Fig 5600)
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve

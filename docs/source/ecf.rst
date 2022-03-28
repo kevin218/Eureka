@@ -340,7 +340,7 @@ Number of spectroscopic channels spread evenly over given wavelength range
 
 wave_min & wave_max
 ''''''''''''''''''''
-Start and End of the wavelength range being considered
+Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
 
 allapers
@@ -406,3 +406,150 @@ The path to the directory containing the Stage 3 JWST data.
 topdir + outputdir
 '''''''''''''''''''
 The path to the directory in which to output the Stage 4 JWST data and plots.
+
+
+
+Stage 5
+-------
+
+.. include:: ../media/S5_template.ecf
+   :literal:
+
+ncpu
+''''
+Integer. Sets the number of CPUs to use for multiprocessing Stage 5 fitting.
+
+allapers
+''''''''
+Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
+
+rescale_err
+'''''''''''
+Boolean to determine whether the uncertainties will be rescaled to have a reduced chi-squared of 1
+
+fit_par
+'''''''
+Path to Stage 5 priors and fit parameter file.
+
+run_verbose
+'''''''''''
+Boolean to determine whether Stage 5 prints verbose output.
+
+fit_method
+''''''''''
+Fitting routines to run for Stage 5 lightcurve fitting. Can be one or more of the following: [lsq, emcee, dynesty]
+
+run_myfuncs
+'''''''''''
+Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial]
+
+
+Least-Squares Fitting Parameters
+''''''''''''''''''''''''''''''''
+The following set the parameters for running the least-squares fitter.
+
+lsq_method
+''''''''''
+Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.
+
+lsq_tolerance
+'''''''''''''
+Float to determine the tolerance of the scipy.optimize.minimize method.
+
+
+Emcee Fitting Parameters
+''''''''''''''''''''''''
+The following set the parameters for running emcee. 
+
+old_chain
+'''''''''
+Output folder containing previous emcee chains to resume previous runs. To start from scratch, set to None.
+
+lsq_first
+'''''''''
+Boolean to determine whether to run least-squares fitting before MCMC. This can shorten burn-in but should be turned off if least-squares fails. Only used if old_chain is None.
+
+run_nsteps
+''''''''''
+Integer. The number of steps for emcee to run.
+
+run_nwalkers
+''''''''''''
+Integer. The number of walkers to use.
+
+run_nburn
+'''''''''
+Integer. The number of burn-in steps to run.
+
+
+Dynesty Fitting Parameters
+''''''''''''''''''''''''''
+The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html?highlight=unif#module-dynesty.dynesty
+
+run_nlive
+'''''''''
+Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+
+run_bound
+'''''''''
+The bounding method to use. Options are: ['none', 'single', 'multi', 'balls', 'cubes']
+
+run_sample
+''''''''''
+The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']
+
+run_tol
+'''''''
+Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume tot he total evidence falls below this threshold.
+
+
+interp
+''''''
+Boolean to determine whether the astrophysical model is interpolated when plotted. This is useful when there is uneven sampling in the observed data.
+
+isplots_S5
+'''''''''''
+Sets how many plots should be saved when running Stage 5.
+
+- ``isplots_S5 >= 1``:
+   - (All Fitters) Plots the fitted model for each spectroscopic lightcurve.
+
+- ``isplots_S5 >= 3``:
+   - (All Fitters) Plot RMS deviation, residuals distribution.
+   - (emcee) Plot chains from the emcee sampler.
+
+- ``isplots_S5 >= 5``:
+   - (emcee, dynesty) Plot posterior corner plots.
+
+
+hide_plots
+'''''''''''
+If True, plots will automatically be closed rather than popping up on the screen.
+
+
+topdir + inputdir
+''''''''''''''''''
+The path to the directory containing the Stage 4 JWST data.
+
+
+topdir + outputdir
+'''''''''''''''''''
+The path to the directory in which to output the Stage 5 JWST data and plots.
+
+
+Stage 5 Fit Parameters
+----------------------
+
+This file describes the transit/eclipse parameters and their prior distributions. Each line describes a new parameter, with the following basic format:
+
+``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
+
+The ``PriorType`` can be U (Uniform), LU (Log Uniform), or N (Normal). If U/LU, then ``PriorPar1`` and ``PriorPar2`` are the lower and upper limits of the prior distribution. If N, then ``PriorPar1`` is the mean and ``PriorPar2`` is the stadard deviation of the Gaussian prior.
+
+``Free`` determines whether the parameter is fixed, free, independent, or shared. Fixed parameters are fixed in the fitting routine and not fit for. Free parameters are fit for according to the specified prior distribution, independently for each wavelength channel. Shared parameters are fit for according to the specified prior distribution, but are common to all wavelength channels. Independent variables set auxiliary functions needed for the fitting routines.
+
+Here's an example fit parameter file:
+
+
+.. include:: ../media/S5_fit_par_template.ecf
+   :literal:

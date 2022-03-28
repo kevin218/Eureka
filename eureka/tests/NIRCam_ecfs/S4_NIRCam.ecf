@@ -2,8 +2,8 @@
 
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan   10          # Number of spectroscopic channels
-wave_min    2.5         # Minimum wavelength
-wave_max    4.0         # Maximum wavelength
+wave_min    2.5         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
+wave_max    4.0         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 allapers	True		# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Parameters for drift correction of 1D spectra
@@ -26,8 +26,8 @@ fill_value		mask	# Either the string 'mask' to mask the outlier values (recommen
 
 # Diagnostics
 isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-hide_plots	True		# If True, plots will automatically be closed rather than popping up
-verbose		False		# If True, more details will be printed about steps in Stage 4
+hide_plots  True        # If True, plots will automatically be closed rather than popping up
+verbose     False       # If True, more details will be printed about steps
 
 # Project directory
 topdir      ../tests

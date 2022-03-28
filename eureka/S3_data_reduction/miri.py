@@ -51,17 +51,18 @@ def read(filename, data, meta):
     data.err = hdulist['ERR', 1].data
     data.dq = hdulist['DQ', 1].data
 
-    print('WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
-          'because they are not in the .fits files themselves')
-
+    if meta.firstFile:
+        print('  WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
+              'because they are not in the .fits files themselves')
     data.wave = np.tile(wave_MIRI(filename),(data.data.shape[2],1))[:,::-1]    # hdulist['WAVELENGTH', 1].data
     data.v0 = hdulist['VAR_RNOISE', 1].data
     int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
 
     # Record integration mid-times in BJD_TDB
     # data.time = data.int_times['int_mid_BJD_TDB']
-    print('WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
-          'because they are not in the .fits files themselves')
+    if meta.firstFile:
+        print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
+              'because they are not in the .fits files themselves')
     if data.mhdr['EFFINTTM']==10.3376:
         # There is no time information in the old simulated MIRI data
         # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt converted to days
