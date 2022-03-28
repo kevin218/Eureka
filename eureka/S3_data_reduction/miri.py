@@ -1,8 +1,7 @@
 import os
 import numpy as np
 from astropy.io import fits
-from . import background, nircam
-from . import bright2flux as b2f
+from . import nircam
 from jwst import datamodels
 from gwcs.wcstools import grid_from_bounding_box
 
@@ -90,7 +89,6 @@ def read(filename, data, meta):
             meta.xwindow = data.data.shape[2] - temp[::-1]
 
     return data, meta
-
 
 def wave_MIRI(filename):
     '''This code uses the jwst and gwcs packages to get the wavelength information out of the WCS for the MIRI data.
