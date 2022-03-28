@@ -156,10 +156,10 @@ class TestParameters(unittest.TestCase):
         pname = 'p1'
         pval = 12.34
         ptype = 'free'
-        pmn = 10
-        pmx = 15
+        priorpar1 = 10
+        priorpar2 = 15
         prior = 'U'
-        self.param = Parameter(pname, pval, ptype, pmn, pmx, prior)
+        self.param = Parameter(pname, pval, ptype, priorpar1, priorpar2, prior)
 
         # Test bogus input
         self.assertRaises(TypeError, Parameter, 123)
@@ -169,10 +169,10 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(self.param.name, pname)
         self.assertEqual(self.param.value, pval)
         self.assertEqual(self.param.ptype, ptype)
-        self.assertEqual(self.param.mn, pmn)
-        self.assertEqual(self.param.mx, pmx)
+        self.assertEqual(self.param.priorpar1, priorpar1)
+        self.assertEqual(self.param.priorpar2, priorpar2)
         self.assertEqual(self.param.prior, prior)
-        self.assertEqual(self.param.values, [pname, pval, ptype, pmn, pmx, prior])
+        self.assertEqual(self.param.values, [pname, pval, ptype, priorpar1, priorpar2, prior])
 
     def test_parameters(self):
         """Test that a Parameters object can be created"""

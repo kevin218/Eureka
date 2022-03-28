@@ -1,6 +1,7 @@
 
 import numpy as np
 import os
+import inspect
 
 """
     This class loads a Eureka! Parameter File (epf) and lets you
@@ -15,7 +16,7 @@ import os
 
 class Parameter:
     """A generic parameter class"""
-    def __init__(self, name, value, ptype, mn=None, mx=None, prior=None):
+    def __init__(self, name, value, ptype, priorpar1=None, priorpar2=None, prior=None):
         """Instantiate a Parameter with a name and value at least
 
         Parameters
@@ -26,12 +27,16 @@ class Parameter:
             The value of the parameter
         ptype: str
             The parameter type from ['free','fixed','independent','shared']
-        mn: float, int, str, list, tuple (optioal)
+        priorpar1: float, int, str, list, tuple (optioal)
             The first prior input value: lower-bound for uniform/log uniform priors, or mean for normal priors.
-        mx: float, int, str, list, tuple (optioal)
+        priorpar2: float, int, str, list, tuple (optioal)
             The second prior input value: upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
         prior: str
             Type of prior, ['U','LU','N']
+
+        Returns
+        -------
+        None
         """
         # If value is a list, distribute the elements
         if isinstance(value, list):
@@ -39,22 +44,66 @@ class Parameter:
             if len(other) > 1:
                 ptype, *other = other
             if len(other) > 0:
-                mn, mx = other
+                priorpar1, priorpar2 = other
 
         # Set the attributes
         self.name = name
         self.value = value
-        self.mn = mn
-        self.mx = mx
+        self.priorpar1 = priorpar1
+        self.priorpar2 = priorpar2
         self.ptype = ptype
         self.prior = prior
 
     def __str__(self):
+        '''A function to nicely format some outputs when a Parameter object is converted to a string.
+
+        This function gets used if one does str(param) or print(param).
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        output: str
+            A string representation of what is contained in the Parameter object.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial version.
+        '''
+        # Return a string representation of the self.values list
         return str(self.values)
 
     def __repr__(self):
+        '''A function to nicely format some outputs when asked for a printable representation of the Parameter object.
+
+        This function gets used if one does repr(param) or does just param in an interactive shell.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        output: str
+            A string representation of what is contained in the Parameter object in a manner that could reproduce a similar Parameter object.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial version.
+        '''
+        # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
-        keys = ['name', 'value', 'ptype', 'mn', 'mx', 'prior']
+        # Get the list of Parameter.__init__ arguments (excluding self)
+        keys = inspect.getargspec(self.__init__)[0].remove('self')
+        # Show how the Parameter could be initialized (e.g. name='rp', val=0.01, ptype='free')
         for name in keys:
             val = getattr(self, name)
             if isinstance(val, str):
@@ -62,6 +111,7 @@ class Parameter:
             else:
                 val = str(val)
             output += name+'='+val+', '
+        # Remove the extra ', ' and close with a parenthesis
         output = output[:-2]+')'
         return output
 
@@ -89,7 +139,7 @@ class Parameter:
     @property
     def values(self):
         """Return all values for this parameter"""
-        vals = self.name, self.value, self.ptype, self.mn, self.mx, self.prior
+        vals = self.name, self.value, self.ptype, self.priorpar1, self.priorpar2, self.prior
 
         return list(filter(lambda x: x is not None, vals))
 
@@ -131,14 +181,58 @@ class Parameters:
             setattr(self, param, value)
 
     def __str__(self):
+        '''A function to nicely format some outputs when a Parameters object is converted to a string.
+
+        This function gets used if one does str(params) or print(params).
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        output: str
+            A string representation of what is contained in the Parameters object.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial version.
+        '''
         output = ''
         for key in self.params:
+            # For each parameter, format a line as "Name: Value"
             output += key+': '+str(getattr(self, key))+'\n'
         return output[:-1]
 
     def __repr__(self):
+        '''A function to nicely format some outputs when asked for a printable representation of the Parameters object.
+
+        This function gets used if one does repr(params) or does just params in an interactive shell.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        output: str
+            A string representation of what is contained in the Parameters object in a manner that could reproduce a similar Parameters object.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial version.
+        '''
+        # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
-        output += "param_path='./', param_file=None, "
+        # Show what folder and file were used to read in an EPF
+        output += f"param_path='{self.folder}', param_file='{self.filename}', "
+        # Show what values have been loaded into the params dictionary
         output += "**"+str(self.params)
         output = output+')'
         return output
@@ -152,6 +246,10 @@ class Parameters:
             The name for the attribute
         value: any
             The attribute value
+
+        Returns
+        -------
+        None
         """
         if item=='epf' or item=='params' or item=='dict' or item=='filename' or item=='folder' or item=='lines' or item=='cleanlines':
             self.__dict__[item] = value
@@ -176,13 +274,15 @@ class Parameters:
 
     def __add__(self, other):
         """Add parameters to make a combined model
+
         Parameters
         ----------
-        other: ExoCTK.lightcurve_fitting.parameters.Parameters
-            The parameters to  to multiply
+        other: Parameters
+            The parameters object to combine
+
         Returns
         -------
-        ExoCTK.lightcurve_fitting.parameters.Parameters
+        newParams:  Parameters
             The combined model
         """
         # Make sure it is the right type
@@ -197,8 +297,25 @@ class Parameters:
         return newParams
 
     def read(self, folder, file):
-        """
-        Function to read the file:
+        """A function to read EPF files
+
+        Parameters
+        ----------
+        folder: str
+            The folder containing an EPF file to be read in.
+        file:   str
+            The EPF filename to be read in.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        History:
+        - Mar 2022 Taylor J Bell
+            Initial Version based on old readECF code.
         """
         self.filename = file
         self.folder = folder
@@ -235,6 +352,27 @@ class Parameters:
         return
 
     def write(self, folder):
+        """A function to write an EPF file based on the current Parameters settings.
+
+        NOTE: For now this only rewrites the input EPF file to a new EPF file in the requested folder.
+        In the future this function should make a full EPF file based on any adjusted parameters.
+
+        Parameters
+        ----------
+        folder: str
+            The folder where the EPF file should be written.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        History:
+        - Mar 2022 Taylor J Bell
+            Initial Version.
+        """
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
         return
