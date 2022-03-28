@@ -2,8 +2,7 @@ import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
-from jwst import datamodels
-from jwst.photom import PhotomStep
+import crds
 
 def rate2count(data):
     """This function converts the data, uncertainty, and variance arrays from rate units (#/s) to counts (#).
@@ -242,10 +241,10 @@ def convert_to_e(data, meta, log):
     return data, meta
 
 def retrieve_ancil(fitsname):
-    '''Use code from the STScI's JWST pipeline to find/download the needed ancilliary files.
+    '''Use code crds package to find/download the needed ancilliary files.
 
     This code requires that the CRDS_PATH and CRDS_SERVER_URL environment variables be set
-    in your .bashrc file (or equivalent, e.g. .bash_profile)
+    in your .bashrc file (or equivalent, e.g. .bash_profile or .zshrc)
 
     Parameters
     ----------
@@ -266,12 +265,24 @@ def retrieve_ancil(fitsname):
 
     - 2022-03-04 Taylor J Bell
         Initial code version.
+    - 2022-03-28 Taylor J Bell
+        Removed jwst dependency, using crds package now instead.
     '''
-    # Suppress logging output unless it is a warning or worse
-    import logging
-    logging.root.manager.disable = logging.INFO
-    step = PhotomStep(name=None)
-    with datamodels.open(fitsname) as model:
-        phot_filename = step.get_reference_file(model, 'photom')
-        gain_filename = step.get_reference_file(model, 'gain')
+    with fits.open(fitsname) as file:
+        # Automatically get the best reference files using the information contained in the FITS header and the crds package.
+        # The parameters below are easily obtained from model.get_crds_parameters(), but datamodels is a jwst sub-package.
+        # Instead, I've resorted to manually populating the required lines for finding gain and photom reference files.
+        parameters = {
+            "meta.ref_file.crds.context_used": file[0].header["CRDS_CTX"],
+            "meta.ref_file.crds.sw_version": file[0].header["CRDS_VER"],
+            "meta.instrument.name": file[0].header["INSTRUME"],
+            "meta.instrument.detector": file[0].header["DETECTOR"],
+            "meta.observation.date": file[0].header["DATE-OBS"],
+            "meta.observation.time": file[0].header["TIME-OBS"],
+            "meta.exposure.type": file[0].header["EXP_TYPE"],
+            }
+        refiles = crds.getreferences(parameters, ["gain", "photom"], observatory=file[0].header['TELESCOP'].lower())
+        gain_filename = refiles["gain"]
+        phot_filename = refiles["photom"]
+
     return phot_filename, gain_filename 
