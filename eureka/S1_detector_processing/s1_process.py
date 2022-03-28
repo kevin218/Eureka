@@ -12,6 +12,9 @@ from ..lib import manageevent as me
 from ..lib import readECF as rd
 
 class MetaClass:
+    '''A class to hold Eureka! metadata.
+    '''
+    
     def __init__(self):
         return
 
