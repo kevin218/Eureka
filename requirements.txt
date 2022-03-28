@@ -23,5 +23,6 @@ recommonmark
 requests
 scipy
 sphinx-rtd-theme
+stdatamodels
 svo_filters
 tqdm
