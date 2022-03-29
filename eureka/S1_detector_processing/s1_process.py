@@ -2,11 +2,8 @@ import os, sys, shutil, time
 import numpy as np
 from astropy.io import fits
 
-try:
-    from jwst import datamodels
-    from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
-except ModuleNotFoundError as e:
-    print("WARNING: The package jwst has not been installed. As a result, Eureka!'s Stages 1 and 2 will not work.")
+from jwst import datamodels
+from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 

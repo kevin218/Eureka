@@ -16,13 +16,9 @@ import os, sys, shutil, time
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
-try:
-    from jwst import datamodels
-    from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
-    from jwst.pipeline.calwebb_image2 import Image2Pipeline
-except ModuleNotFoundError as e:
-    # A warning message was already thrown by Stage 1, so don't need to do so here as well
-    pass
+from jwst import datamodels
+from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
+from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF as rd

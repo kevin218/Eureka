@@ -5,7 +5,7 @@ from . import nircam
 try:
     from jwst import datamodels
 except ModuleNotFoundError as e:
-    # A warning message was already thrown by Stage 1, so don't need to do so here as well
+    print("WARNING: The package jwst has not been installed. As a result, Eureka!'s Stage 3 for MIRI will not work.")
     pass
 from gwcs.wcstools import grid_from_bounding_box
 

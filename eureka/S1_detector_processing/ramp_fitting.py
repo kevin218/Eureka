@@ -8,25 +8,16 @@ from functools import partial
 import time
 import warnings
 
-try:
-    from stcal.ramp_fitting import ramp_fit, utils, ramp_fit_class
-    import stcal.ramp_fitting.ols_fit
-except ModuleNotFoundError as e:
-    print("WARNING: The package stcal has not been installed. As a result, Eureka!'s Stage 1 will not work.\n"+
-          "The stcal package is installed when using [jwst] during a pip install.")
-    pass
+from stcal.ramp_fitting import ramp_fit, utils, ramp_fit_class
+import stcal.ramp_fitting.ols_fit
 
-try:
-    from jwst.stpipe import Step
-    from jwst import datamodels
+from jwst.stpipe import Step
+from jwst import datamodels
 
-    from jwst.datamodels import dqflags
+from jwst.datamodels import dqflags
 
-    from jwst.lib import reffile_utils
-    from jwst.lib import pipe_utils
-except ModuleNotFoundError as e:
-    # We already raised a warning about jwst not being installed in s1_process.py, so don't do so again here.
-    pass
+from jwst.lib import reffile_utils
+from jwst.lib import pipe_utils
 
 #from eureka.S1_detector_processing.Eureka_ramp_fitting import mean_ramp_fit_single
 
