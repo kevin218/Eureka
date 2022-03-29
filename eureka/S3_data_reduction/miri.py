@@ -2,7 +2,11 @@ import os
 import numpy as np
 from astropy.io import fits
 from . import nircam
-from jwst import datamodels
+try:
+    from jwst import datamodels
+except ModuleNotFoundError as e:
+    # A warning message was already thrown by Stage 1, so don't need to do so here as well
+    pass
 from gwcs.wcstools import grid_from_bounding_box
 
 def read(filename, data, meta):
