@@ -1,0 +1,14 @@
+name: assign-issue
+on:
+  issues:
+    types:
+      - created
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Naturalclar/issue-action@v2.0.2
+        with:
+          title-or-body: "both"
+          parameters: '[ {"keywords": ["light curve fitting"], "assignees": ["meganmansfield"]}]'
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
