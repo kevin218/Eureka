@@ -40,9 +40,8 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Relevant log output
-      description: Please copy and paste any relevant log output.
-      render: shell
+      label: Error traceback output
+      description: Please copy and paste the full traceback of the error you encountered.
   - type: checkboxes
     id: terms
     attributes:
