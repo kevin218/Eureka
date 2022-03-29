@@ -18,6 +18,7 @@ myst_parser
 nbsphinx
 numpy>=1.20.0
 pandas
+photutils
 pytest
 recommonmark
 requests
