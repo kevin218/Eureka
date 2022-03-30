@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
     REQUIRES = f.read().splitlines()
 
 extras_require = {
-   'jwst': ["jwst==1.3.3", "stcal"]
+   'jwst': ["jwst==1.3.3", "stcal", "asdf>=2.7.1,<2.11.0"]
 }
 
 FILES = []

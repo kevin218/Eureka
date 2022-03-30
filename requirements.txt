@@ -1,6 +1,4 @@
-asdf==2.8.1
 astropy
-astroquery>=0.4.2
 batman-package
 bokeh
 ccdproc
@@ -14,16 +12,16 @@ h5py
 ipython
 lmfit
 matplotlib
-myst_parser
-nbsphinx
+myst_parser # Needed for documentation
+nbsphinx # Needed for documentation
 numpy>=1.20.0
 pandas
 photutils
 pytest
-recommonmark
+recommonmark # Needed for documentation
 requests
-scipy
-sphinx-rtd-theme
+scipy>=1.4.0 # Needed for scipy.fft
+sphinx-rtd-theme # Needed for documentation
 stdatamodels
 svo_filters
 tqdm
