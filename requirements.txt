@@ -5,8 +5,8 @@ ccdproc
 corner
 crds
 cython
-dynesty
-emcee
+dynesty>1.0
+emcee>3.0.0
 gwcs
 h5py
 ipython
