@@ -31,13 +31,19 @@ In general, we strongly recommend you closely follow the instructions on the :re
 Issues installing or importing jwst
 '''''''''''''''''''''''''''''''''''''
 
-First ensure that you were following the instructions on the :ref:`installation` page and using a command that
-included "[jwst]" like ``pip install .[jwst]``. If you were doing that and you are still receiving error messages,
-it is possible that something about your installation environment does not play well with jwst. The first step to
-try and resolve this would be to make a brand new conda environment and try the installation again. If that still
-gives you issues, you should open or comment on an already open issue on the Eureka!
+As a first step, make sure that you were following the instructions on the :ref:`installation` page and using a
+command that included "[jwst]" like ``pip install .[jwst]``. If you are getting error messages on linux that
+mention gcc, you likely need to first install gcc using ``sudo apt install gcc``. If you are getting messages on
+macOS that mention clang, X-Code, and/or CommandLineTools, you need to make sure that CommandLineTools is first
+manually installed. CommandLineTools is installed whenever you first manually use a command that requires it like
+git, so one very simple way to install it would be to run ``git status`` in a terminal which should give a pop-up
+saying that command line developer tools must be installed first. Alternatively, you can instead run
+``xcode-select --install`` which will install CommandLineTools.
+
+If you were doing that and you are still receiving error messages, it is possible that something about your
+installation environment does not play well with jwst. You should open or comment on an already open issue on the Eureka!
 `GitHub <https://github.com/kevin218/Eureka/issues>`_ page and tell us as many details as you can about every step you
-took to finally get to that error message as well as details about your operating system, python version, and conda version.
+took to finally get to your error message as well as details about your operating system, python version, and conda version.
 You should also consider opening an issue on the jwst `GitHub <https://github.com/spacetelescope/jwst/issues>`_ page as
 there may not be much we can do to help troubleshoot a package we have no control over.
 
