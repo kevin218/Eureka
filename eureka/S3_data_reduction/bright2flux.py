@@ -44,7 +44,6 @@ def dn2electrons(data, meta):
     ----------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of DN.
-
     meta:   MetaClass
         The metadata object.
 
@@ -94,7 +93,6 @@ def bright2dn(data, meta):
     ----------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of MJy/sr.
-
     meta:   MetaClass
         The metadata object.
 
@@ -198,10 +196,8 @@ def convert_to_e(data, meta, log):
     ----------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of MJy/sr or DN/s.
-
     meta:   MetaClass
         The metadata object.
-
     log:    logedit.Logedit
         The open log in which notes from this step can be added.
 
@@ -209,7 +205,6 @@ def convert_to_e(data, meta, log):
     -------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of electrons.
-
     meta:   MetaClass
         The metadata object.
     """
@@ -241,7 +236,7 @@ def convert_to_e(data, meta, log):
     return data, meta
 
 def retrieve_ancil(fitsname):
-    '''Use code crds package to find/download the needed ancilliary files.
+    '''Use crds package to find/download the needed ancilliary files.
 
     This code requires that the CRDS_PATH and CRDS_SERVER_URL environment variables be set
     in your .bashrc file (or equivalent, e.g. .bash_profile or .zshrc)
