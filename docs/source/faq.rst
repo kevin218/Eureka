@@ -97,6 +97,3 @@ First check to see if your question/concern is already addressed in an open or c
 full error message you are getting along with details about which python version and operating system you
 are using, and ideally the ecf you used to get your error (ideally copy-paste it into the issue in a
 quote block).
-
-FAQ
---------------------------
