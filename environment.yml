@@ -1,4 +1,4 @@
-name: eureka2
+name: eureka
 channels:
     - conda-forge
     - defaults
