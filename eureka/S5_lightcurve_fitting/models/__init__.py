@@ -3,3 +3,4 @@ from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
 from .PolynomialModel import PolynomialModel
 from .ExpRampModel import ExpRampModel
+from .GPModel import GPModel
