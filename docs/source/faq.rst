@@ -29,7 +29,7 @@ installed the wrong package you can try pip uninstalling it, but you may just ne
 In general, we strongly recommend you closely follow the instructions on the :ref:`installation` page.
 
 Issues installing or importing jwst
-'''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''
 
 As a first step, make sure that you were following the instructions on the :ref:`installation` page and were
 either using the conda environment.yml installation method or a pip installation command that included "[jwst]"

@@ -96,9 +96,8 @@ If these environment variables are not set, Stages 1-3 of the pipeline will fail
 Issues with installing the jwst dependency
 ------------------------------------------
 
-If you have problems installing Eureka! and it seems to be centred around the installation of the jwst package, you can also install Eureka without
-this requirement by removing the "[jwst]" part from the pip install lines above. This will, however, result in you being unable to run Eureka's
-Stages 1 and 2 which simply offer ways of editing the behaviour of the jwst package's Stages 1 and 2.
+If you have issues installing the jwst dependency, check out the debugging advice related to the jwst package on our
+`FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_.
 
 For the JWST ERS Pre-Launch Data Hackathon
 -----------------------------------------------
