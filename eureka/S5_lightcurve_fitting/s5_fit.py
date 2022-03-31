@@ -17,7 +17,7 @@ class MetaClass:
 
 def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
-
+    
     Parameters
     ----------
     eventlabel: str
@@ -26,16 +26,15 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
-
+    
     Returns
     -------
     meta:   MetaClass
         The metadata object with attributes added by S5.
-
+    
     Notes
     -------
     History:
-
     - November 12-December 15, 2021 Megan Mansfield
         Original version
     - December 17-20, 2021 Megan Mansfield
@@ -44,6 +43,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         Increasing connectedness of S5 and S4
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - January - February, 2022 Eva-Maria Ahrer
+        Adding GP functionality
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
@@ -212,6 +213,9 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
+    if 'GP' in meta.run_myfuncs:
+        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--')
+        modellist.append(t_GP)
     model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
 
     # Fit the models using one or more fitters
@@ -307,7 +311,6 @@ def read_s4_meta(meta):
     return s4_meta
 
 def load_general_s4_meta_info(meta, ecf_path, s4_meta):
-
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(meta.topdir):]
     if s4_outputdir[0]=='/':
@@ -330,7 +333,6 @@ def load_general_s4_meta_info(meta, ecf_path, s4_meta):
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
-
     meta.s4_allapers = s4_allapers
 
     return meta
@@ -341,24 +343,24 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
     meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs_s4[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
     meta.outputdir_raw = tempfolder
-
+    
     # Read in the correct S4 metadata for this aperture pair
     tempfolder = meta.inputdir
     meta.inputdir = meta.inputdir[len(meta.topdir):]
     new_meta = read_s4_meta(meta)
     meta.inputdir = tempfolder
-
+    
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
     ecf     = rd.read_ecf(ecf_path, ecffile)
     rd.store_ecf(new_meta, ecf)
-
+    
     # Save correctly identified folders from earlier
     new_meta.inputdir = meta.inputdir
     new_meta.outputdir = meta.outputdir
     new_meta.inputdir_raw = meta.inputdir_raw
     new_meta.outputdir_raw = meta.outputdir_raw
-
+    
     new_meta.runs_s5 = meta.runs_s5
     new_meta.datetime = meta.datetime
 

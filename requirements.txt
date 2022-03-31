@@ -7,6 +7,7 @@ crds
 cython
 dynesty>1.0
 emcee>3.0.0
+george
 gwcs
 h5py
 ipython

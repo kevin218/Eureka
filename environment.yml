@@ -13,6 +13,7 @@ dependencies:
     - cython
     - dynesty[version='>1.0']
     - emcee[version='>3.0.0']
+    - george
     - gwcs
     - h5py
     - ipython
