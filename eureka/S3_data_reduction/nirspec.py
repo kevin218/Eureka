@@ -2,8 +2,7 @@
 import os
 import numpy as np
 from astropy.io import fits
-from . import sigrej, background, nircam
-from . import bright2flux as b2f
+from . import nircam
 
 def read(filename, data, meta):
     '''Reads single FITS file from JWST's NIRCam instrument.

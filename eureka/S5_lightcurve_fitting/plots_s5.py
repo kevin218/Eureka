@@ -24,10 +24,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     Returns
     -------
     None
-    
+
     Notes
     -----
     History:
+
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     - January 7-22, 2022 Megan Mansfield
@@ -70,14 +71,16 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - {fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
+
         ax[1].errorbar(lc.time, flux/model_sys, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
         ax[1].plot(new_time, model_phys, color='0.3', zorder = 10)
         ax[1].set_ylabel('Calibrated Flux', size=14)
+
         ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.', color='w', ecolor=color, mec=color)
         ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
-        
+
         fname = 'figs/fig51{}_lc_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
@@ -100,15 +103,15 @@ def plot_rms(lc, model, meta, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-        
+
     Returns
     -------
     None
-    
+
     Notes
     -----
-    
     History:
+
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     - January 7-22, 2022 Megan Mansfield
@@ -116,6 +119,7 @@ def plot_rms(lc, model, meta, fitter):
     """
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
+
     time = lc.time
     model_lc = model.eval()
 
@@ -131,7 +135,6 @@ def plot_rms(lc, model, meta, fitter):
 
         rms, stderr, binsz = computeRMS(residuals, binstep=1)
         normfactor = 1e-6
-        plt.rcParams.update({'legend.fontsize': 11}) # FINDME: this should not be done here but where the rcparams are defined for Eureka
         plt.figure(int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         plt.suptitle(' Correlated Noise', size=16)
@@ -168,15 +171,15 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
-        
+
     Returns
     -------
     None
-    
+
     Notes
     -----
-    
     History:
+
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
@@ -223,8 +226,8 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
 
     Notes
     -----
-
     History:
+
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
@@ -293,9 +296,11 @@ def plot_res_distr(lc, model, meta, fitter):
     Returns
     -------
     None
+
     Notes
     -----
     History:
+
     - February 18, 2022 Caroline Piaulet
         Created function
     """
@@ -322,6 +327,7 @@ def plot_res_distr(lc, model, meta, fitter):
         residuals = flux - model
         hist_vals = residuals/unc
         hist_vals[~np.isfinite(hist_vals)] = np.nan # Mask out any infinities
+
         n, bins, patches = plt.hist(hist_vals,alpha=0.5,color='b',edgecolor='b',lw=1)
         x=np.linspace(-4.,4.,200)
         px=stats.norm.pdf(x,loc=0,scale=1)
@@ -334,12 +340,10 @@ def plot_res_distr(lc, model, meta, fitter):
         else:
             plt.pause(0.2)
     return
-        
-        
-        
 
 def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     """Plot the lightcurve + GP model + residuals (Fig 5600)
+
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
@@ -350,28 +354,29 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         The metadata object
     fitter: str
         The name of the fitter (for plot filename)
+
     Returns
     -------
     None
+
     Notes
     -----
     History:
+
     - February 28, 2022 Eva-Maria Ahrer
         Written function
     - March 9, 2022 Eva-Maria Ahrer
         Adapted with shared parameters
-    """
-    
+    """    
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
-    
-    
+
     model_with_GP = model.eval(incl_GP = True)
     model_sys_full = model.syseval()
     model_phys_full, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
     model_GP = model.GPeval(model_lc)
-    
+
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
@@ -391,7 +396,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             model_sys = model_sys[channel*len(lc.time):(channel+1)*len(lc.time)]
             model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
             model_GP_component = model_GP_component[channel*len(lc.time):(channel+1)*len(lc.time)]
-        
+
         residuals = flux - model
         fig = plt.figure(int('56{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
@@ -408,7 +413,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
-        
+
         fname = 'figs/fig56{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:

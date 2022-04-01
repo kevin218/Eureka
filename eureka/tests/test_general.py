@@ -5,38 +5,20 @@
 
 import numpy as np
 from ..lib import util
-from ..S2_calibrations import s2_calibrate as s2
+from ..lib.readECF import MetaClass
+try:
+    from ..S2_calibrations import s2_calibrate as s2
+except ModuleNotFoundError as e:
+    pass
 from ..S3_data_reduction import s3_reduce as s3
 from ..S4_generate_lightcurves import s4_genLC as s4
 from ..S5_lightcurve_fitting import s5_fit as s5
 from ..lib.util import pathdirectory
 import pytest
 
-
-class MetaClass:
-  def __init__(self):
-    return
-
 class DataClass:
   def __init__(self):
     return
-
-meta= MetaClass()
-data = DataClass()
-
-######################
-
-#Let's assume we have a dataset with 7 integrations and every spectrum has the dimensions of 100x20
-n = 7
-ny = 20
-nx = 100
-
-data.data = np.ones((n, ny, nx))
-data.err = np.ones((n, ny, nx))
-data.dq = np.ones((n, ny, nx))
-data.wave = np.ones((n, ny, nx))
-data.v0 = np.ones((n, ny, nx))
-
 
 def test_b2f():
     #Let's trim by giving metadata some xwindow and ywindow information which is normally given by the user in the S3_ecf
@@ -44,6 +26,18 @@ def test_b2f():
     trim_x1 = 90
     trim_y0 = 2
     trim_y1 = 14
+
+    meta = MetaClass()
+    data = DataClass()
+    n = 7
+    ny = 20
+    nx = 100
+    #Let's assume we have a dataset with 7 integrations and every spectrum has the dimensions of 100x20
+    data.data = np.ones((n, ny, nx))
+    data.err = np.ones((n, ny, nx))
+    data.dq = np.ones((n, ny, nx))
+    data.wave = np.ones((n, ny, nx))
+    data.v0 = np.ones((n, ny, nx))
 
     meta.ywindow = [trim_y0,trim_y1]
     meta.xwindow = [trim_x0,trim_x1]
@@ -68,6 +62,7 @@ def test_NIRCam(capsys):
         print("NIRCam test:")
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
+    meta = MetaClass()
     meta.eventlabel='NIRCam'
     meta.topdir='../tests'
     ecf_path='./NIRCam_ecfs/'
@@ -107,6 +102,11 @@ def test_NIRCam(capsys):
 
 def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mismatch)
 
+    s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
+    if not s2_installed:
+        with capsys.disabled():
+            print('Skipping NIRSpec Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
+
     # is able to display any message without failing a test
     # useful to leave messages for future users who run the tests
     with capsys.disabled():
@@ -115,26 +115,35 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
         print("NIRSpec test:")
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
+    meta = MetaClass()
     meta.eventlabel='NIRSpec'
     meta.topdir='../tests'
     ecf_path='./NIRSpec_ecfs/'
 
     # run stage 3 and 4
-    reload(s2)
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        reload(s2)
     reload(s3)
     reload(s4)
     reload(s5)
-    s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+    else:
+        s2_meta = None
     s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
     s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
     s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     
     # assert stage 2 outputs
-    meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
-    name = pathdirectory(meta, 'S2', 1)
-    assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
+        name = pathdirectory(meta, 'S2', 1)
+        assert os.path.exists(name)
+        assert os.path.exists(name+'/figs')
     
     # assert stage 3 outputs
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage3/'
@@ -155,7 +164,10 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     assert os.path.exists(name+'/figs')
     
     # remove temp files
-    os.system("rm -r data/JWST-Sim/NIRSpec/Stage2/*")
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        os.system("rm -r data/JWST-Sim/NIRSpec/Stage2/S2_*")
+        pass
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage3/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage4/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage5/*")

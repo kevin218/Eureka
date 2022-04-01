@@ -2,9 +2,9 @@ import numpy as np
 import glob, os, shutil
 import time as time_pkg
 from ..lib import manageevent as me
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import util, logedit
-from . import parameters as p
+from ..lib.readEPF import Parameters
 from . import lightcurve as lc
 from . import models as m
 
@@ -17,7 +17,7 @@ class MetaClass:
 
 def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
-    
+
     Parameters
     ----------
     eventlabel: str
@@ -26,15 +26,16 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
-    
+
     Returns
     -------
     meta:   MetaClass
         The metadata object with attributes added by S5.
-    
+
     Notes
     -------
     History:
+
     - November 12-December 15, 2021 Megan Mansfield
         Original version
     - December 17-20, 2021 Megan Mansfield
@@ -48,14 +49,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S5_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     # load savefile
     if s4_meta == None:
@@ -104,13 +101,13 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
             # Copy ecf
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
-            rd.copy_ecf(meta, ecf_path, ecffile)
+            meta.copy_ecf()
             # Copy parameter ecf
             log.writelog('Copying S5 parameter control file', mute=(not meta.verbose))
             shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
 
             # Set the intial fitting parameters
-            params = p.Parameters(ecf_path, meta.fit_par)
+            params = Parameters(ecf_path, meta.fit_par)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
@@ -133,9 +130,9 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
-                for i in range(chanrng):
-                    flux = np.ma.append(flux,meta.lcdata[i,:] / np.mean(meta.lcdata[i,:]))
-                    flux_err = np.ma.append(flux_err,meta.lcerr[i,:] / np.mean(meta.lcdata[i,:]))
+                for channel in range(chanrng):
+                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.mean(meta.lcdata[channel,:]))
+                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.mean(meta.lcdata[channel,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 
@@ -308,6 +305,9 @@ def read_s4_meta(meta):
 
     s4_meta = me.loadevent(fname)
 
+    # Code to not break backwards compatibility with old MetaClass save files but also use the new MetaClass going forwards
+    s4_meta = readECF.MetaClass(**s4_meta.__dict__)
+
     return s4_meta
 
 def load_general_s4_meta_info(meta, ecf_path, s4_meta):
@@ -324,8 +324,7 @@ def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S4
     meta.inputdir = s4_outputdir
@@ -343,24 +342,23 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
     meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs_s4[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
     meta.outputdir_raw = tempfolder
-    
+
     # Read in the correct S4 metadata for this aperture pair
     tempfolder = meta.inputdir
     meta.inputdir = meta.inputdir[len(meta.topdir):]
     new_meta = read_s4_meta(meta)
     meta.inputdir = tempfolder
-    
+
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(new_meta, ecf)
-    
+    new_meta.read(ecf_path, ecffile)
+
     # Save correctly identified folders from earlier
     new_meta.inputdir = meta.inputdir
     new_meta.outputdir = meta.outputdir
     new_meta.inputdir_raw = meta.inputdir_raw
     new_meta.outputdir_raw = meta.outputdir_raw
-    
+
     new_meta.runs_s5 = meta.runs_s5
     new_meta.datetime = meta.datetime
 

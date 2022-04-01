@@ -34,7 +34,7 @@ from . import background as bg
 from . import bright2flux as b2f
 from ..lib import sort_nicely as sn
 from ..lib import logedit
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
@@ -81,19 +81,13 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     - October 2021 Taylor Bell
         Updated to allow for inputs from S2
     '''
-
     # Initialize data object
     data = DataClass()
 
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
-    meta.eventlabel=eventlabel
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     if s2_meta == None:
         #load savefile
@@ -158,7 +152,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
             # Copy ecf
             log.writelog('Copying S3 control file', mute=(not meta.verbose))
-            rd.copy_ecf(meta, ecf_path, ecffile)
+            meta.copy_ecf()
 
             # Create list of file segments
             meta = util.readfiles(meta)
@@ -366,7 +360,25 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     return meta
 
 def read_s2_meta(meta):
+    '''Loads in an S2 meta file.
 
+    Parameters
+    ----------
+    meta:    MetaClass
+        The new meta object for the current S3 processing.
+
+    Returns
+    -------
+    s2_meta:   MetaClass
+        The S2 metadata object.
+
+    Notes
+    -------
+    History:
+
+    - March 2022 Taylor Bell
+        Initial version.
+    '''
     # Search for the S2 output metadata in the inputdir provided in
     # First just check the specific inputdir folder
     rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
@@ -399,25 +411,48 @@ def read_s2_meta(meta):
 
     s2_meta = me.loadevent(fname)
 
+    # Code to not break backwards compatibility with old MetaClass save files but also use the new MetaClass going forwards
+    s2_meta = readECF.MetaClass(**s2_meta.__dict__)
+
     return s2_meta
 
 def load_general_s2_meta_info(meta, ecf_path, s2_meta):
+    '''Loads in the S2 meta save file and adds in attributes from the S3 ECF.
+
+    Parameters
+    ----------
+    meta:    MetaClass
+        The new meta object for the current S3 processing.
+    ecf_path:
+        The absolute path to where the S3 ECF is stored.
+
+    Returns
+    -------
+    meta:   MetaClass
+        The S2 metadata object with attributes added by S3.
+
+    Notes
+    -------
+    History:
+
+    - March 2022 Taylor Bell
+        Initial version.
+    '''
     # Need to remove the topdir from the outputdir
     s2_outputdir = s2_meta.outputdir[len(s2_meta.topdir):]
     if s2_outputdir[0]=='/':
         s2_outputdir = s2_outputdir[1:]
     if s2_outputdir[-1]!='/':
         s2_outputdir += '/'
-
-    meta = s2_meta
-
+    s2_topdir = s2_meta.topdir
+    
     # Load S3 Eureka! control file and store values in the S2 metadata object
     ecffile = 'S3_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = s2_meta
+    meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S2
-    meta.inputdir = os.path.join(s2_meta.topdir, s2_outputdir)
+    meta.inputdir = os.path.join(s2_topdir, s2_outputdir)
     meta.old_datetime = meta.datetime # Capture the date that the
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = s2_outputdir

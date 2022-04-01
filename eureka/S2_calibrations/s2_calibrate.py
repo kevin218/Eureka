@@ -12,7 +12,7 @@
 # 5.  Produce plots
 
 
-import os, sys, shutil, time
+import os, shutil, time
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -21,8 +21,7 @@ from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import readECF as rd
-
+from ..lib import readECF
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -61,14 +60,10 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
 
     t0 = time.time()
 
-    # Initialize metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S2_' + eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     # Create directories for Stage 2 processing outputs
     meta.inputdir_raw = meta.inputdir
@@ -83,7 +78,7 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
 
     # Copy ecf
     log.writelog('Copying S2 control file')
-    rd.copy_ecf(meta, ecf_path, ecffile)
+    meta.copy_ecf()
 
     # Create list of file segments
     meta = util.readfiles(meta)
@@ -145,7 +140,6 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     log.closelog()
     
     return meta
-
 
 class EurekaSpec2Pipeline(Spec2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_spec2.Spec2Pipeline.
@@ -265,7 +259,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
 
         return
 
-
 class EurekaImage2Pipeline(Image2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_image2.Image2Pipeline.
 
@@ -302,7 +295,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
         - 03 Nov 2021 Taylor Bell
             Initial version
         '''
-
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.flat_field.skip = meta.skip_flat_field
