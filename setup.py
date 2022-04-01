@@ -7,6 +7,10 @@ import numpy as np
 with open('requirements.txt') as f:
     REQUIRES = f.read().splitlines()
 
+extras_require = {
+   'jwst': ["jwst==1.3.3", "stcal", "asdf>=2.7.1,<2.11.0"]
+}
+
 FILES = []
 for root, _, files in os.walk("Eureka"):
     FILES += [os.path.join(root.replace("Eureka/", ""), fname) \
@@ -26,5 +30,6 @@ setup(name='Eureka',
       zip_safe=True,
       use_2to3=False,
       ext_modules = cythonize(["eureka/S3_data_reduction/niriss_cython.pyx"]),
-      include_dirs = np.get_include()
+      include_dirs = np.get_include(),
+      extras_require=extras_require
 )
