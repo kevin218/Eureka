@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import norm
-import pdb
 from copy import deepcopy
 
 def ln_like(theta, lc, model, freenames):
