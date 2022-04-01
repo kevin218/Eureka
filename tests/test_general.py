@@ -7,7 +7,10 @@ import numpy as np
 import sys
 sys.path.insert(0, '../')
 from eureka.lib import util
-from eureka.S2_calibrations import s2_calibrate as s2
+try:
+    from eureka.S2_calibrations import s2_calibrate as s2
+except ModuleNotFoundError as e:
+    pass
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
@@ -109,6 +112,11 @@ def test_NIRCam(capsys):
 
 def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mismatch)
 
+    s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
+    if not s2_installed:
+        with capsys.disabled():
+            print('Skipping NIRSpec Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
+
     # is able to display any message without failing a test
     # useful to leave messages for future users who run the tests
     with capsys.disabled():
@@ -122,21 +130,29 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     ecf_path='./NIRSpec_ecfs/'
 
     # run stage 3 and 4
-    reload(s2)
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        reload(s2)
     reload(s3)
     reload(s4)
     reload(s5)
-    s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+    else:
+        s2_meta = None
     s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
     s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
     s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
     
     # assert stage 2 outputs
-    meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
-    name = pathdirectory(meta, 'S2', 1)
-    assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
+        name = pathdirectory(meta, 'S2', 1)
+        assert os.path.exists(name)
+        assert os.path.exists(name+'/figs')
     
     # assert stage 3 outputs
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage3/'
@@ -157,7 +173,10 @@ def test_NIRSpec(capsys): # NOTE:: doesn't work, see issues in github (array mis
     assert os.path.exists(name+'/figs')
     
     # remove temp files
-    os.system("rm -r data/JWST-Sim/NIRSpec/Stage2/*")
+    if s2_installed:
+        # Only run S2 stuff if jwst package has been installed
+        os.system("rm -r data/JWST-Sim/NIRSpec/Stage2/S2_*")
+        pass
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage3/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage4/*")
     os.system("rm -r data/JWST-Sim/NIRSpec/Stage5/*")

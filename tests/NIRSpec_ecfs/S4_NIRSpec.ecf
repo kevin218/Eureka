@@ -25,7 +25,7 @@ maxiters		5		# The number of iterations of sigma clipping that should be perform
 fill_value		mask	# Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
 # Diagnostics
-isplots_S4  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+isplots_S4  5           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 hide_plots	True		# If True, plots will automatically be closed rather than popping up
 verbose     False       # If True, more details will be printed about steps
 

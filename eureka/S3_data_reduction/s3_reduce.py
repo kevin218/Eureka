@@ -81,7 +81,6 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     - October 2021 Taylor Bell
         Updated to allow for inputs from S2
     '''
-
     # Initialize data object
     data = DataClass()
 
@@ -365,7 +364,25 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     return meta
 
 def read_s2_meta(meta):
+    '''Loads in an S2 meta file.
 
+    Parameters
+    ----------
+    meta:    MetaClass
+        The new meta object for the current S3 processing.
+
+    Returns
+    -------
+    s2_meta:   MetaClass
+        The S2 metadata object.
+
+    Notes
+    -------
+    History:
+
+    - March 2022 Taylor Bell
+        Initial version.
+    '''
     # Search for the S2 output metadata in the inputdir provided in
     # First just check the specific inputdir folder
     rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
@@ -401,6 +418,27 @@ def read_s2_meta(meta):
     return s2_meta
 
 def load_general_s2_meta_info(meta, ecf_path, s2_meta):
+    '''Loads in the S2 meta save file and adds in attributes from the S3 ECF.
+
+    Parameters
+    ----------
+    meta:    MetaClass
+        The new meta object for the current S3 processing.
+    ecf_path:
+        The absolute path to where the S3 ECF is stored.
+
+    Returns
+    -------
+    meta:   MetaClass
+        The S2 metadata object with attributes added by S3.
+
+    Notes
+    -------
+    History:
+
+    - March 2022 Taylor Bell
+        Initial version.
+    '''
     # Need to remove the topdir from the outputdir
     s2_outputdir = s2_meta.outputdir[len(s2_meta.topdir):]
     if s2_outputdir[0]=='/':
