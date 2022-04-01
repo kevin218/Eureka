@@ -146,7 +146,6 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     
     return meta
 
-
 class EurekaSpec2Pipeline(Spec2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_spec2.Spec2Pipeline.
 
@@ -265,7 +264,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
 
         return
 
-
 class EurekaImage2Pipeline(Image2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_image2.Image2Pipeline.
 
@@ -302,7 +300,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
         - 03 Nov 2021 Taylor Bell
             Initial version
         '''
-
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.flat_field.skip = meta.skip_flat_field

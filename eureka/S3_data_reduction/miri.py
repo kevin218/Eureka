@@ -1,9 +1,12 @@
 import os
 import numpy as np
 from astropy.io import fits
-from . import background, nircam
-from . import bright2flux as b2f
-from jwst import datamodels
+from . import nircam
+try:
+    from jwst import datamodels
+except ModuleNotFoundError as e:
+    print("WARNING: The package jwst has not been installed. As a result, Eureka!'s Stage 3 for MIRI will not work.")
+    pass
 from gwcs.wcstools import grid_from_bounding_box
 
 def read(filename, data, meta):
@@ -90,7 +93,6 @@ def read(filename, data, meta):
             meta.xwindow = data.data.shape[2] - temp[::-1]
 
     return data, meta
-
 
 def wave_MIRI(filename):
     '''This code uses the jwst and gwcs packages to get the wavelength information out of the WCS for the MIRI data.

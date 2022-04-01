@@ -3,7 +3,6 @@
 import numpy as np
 from astropy.io import fits
 from . import sigrej, background
-from . import bright2flux as b2f
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, data, meta):
