@@ -9,7 +9,7 @@ from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import readECF as rd
+from ..lib import readECF
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -19,8 +19,8 @@ class MetaClass:
         return
 
 def rampfitJWST(eventlabel, ecf_path='./'):
-    '''Process a Stage 0, *_uncal.fits file to Stage 1 *_rate.fits and *_rateints.fits files. 
-    
+    '''Process a Stage 0, *_uncal.fits file to Stage 1 *_rate.fits and *_rateints.fits files.
+
     Steps taken to perform this processing can follow the default JWST pipeline, or alternative methods.  
 
     Parameters
@@ -32,12 +32,13 @@ def rampfitJWST(eventlabel, ecf_path='./'):
     
     Returns
     -------
-    meta        : Metadata object
+    meta: MetaClass
+        The metadata object
     
     Notes
     -----
     History:
-
+    
     - October 2021 Taylor Bell
         Code fragments
     - October 2021 Aarynn Carter and Eva-Maria Ahrer
@@ -47,15 +48,11 @@ def rampfitJWST(eventlabel, ecf_path='./'):
     '''
     t0 = time.time()
 
-    # Initialize metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-    meta.suffix = 'uncal'  # This will break for any instruments/observations that do not result in uncal
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S1_' + eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
+    meta.suffix = 'uncal'  # This will break for any instruments/observations that do not result in uncal
 
     # Shouldn't be too relevant for Stage 1, but assign raw input and output directories
     meta.inputdir_raw = meta.inputdir
@@ -81,7 +78,7 @@ def rampfitJWST(eventlabel, ecf_path='./'):
 
     # Copy ecf
     log.writelog('Copying S1 control file')
-    rd.copy_ecf(meta, ecf_path, ecffile)
+    meta.copy_ecf()
 
     # Create list of file segments
     meta = util.readfiles(meta)

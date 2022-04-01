@@ -3,5 +3,5 @@
 This packages contains package tests.
 """
 
-from . import test_lightcurve_fitting
+from . import test_general
 from . import test_lightcurve_fitting
