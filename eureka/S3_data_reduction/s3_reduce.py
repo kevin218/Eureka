@@ -179,6 +179,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 from . import nircam as inst
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
+                log.writelog('WARNING: Are you using real JWST data? Take a look at at the flag_bg() function in nirspec.py and Issue #193 on Github!')
             elif meta.inst == 'niriss':
                 raise ValueError('NIRISS observations are currently unsupported!')
             elif meta.inst == 'wfc3':

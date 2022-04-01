@@ -66,18 +66,11 @@ def read(filename, data, meta):
     data.time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'], data.intend)
     meta.time_units = 'BJD_TDB'
 
-    # NIRSpec CV3 data has a lot of NaNs in the data and err arrays, which is making life difficult.
-    print('  WARNING: Manually changing NaNs from DATA and ERR arrays to 0 for the CV3 data')
-    data.err[np.where(np.isnan(data.err))] = np.inf
-    data.data[np.where(np.isnan(data.data))] = 0
-
     return data, meta
 
 
 def flag_bg(data, meta):
     '''Outlier rejection of sky background along time axis.
-
-    Uses the code written for NIRCam and untested for NIRSpec, but likely to still work
 
     Parameters
     ----------
@@ -91,8 +84,22 @@ def flag_bg(data, meta):
     data:   DataClass
         The updated data object with outlier background pixels flagged.
     '''
-    return nircam.flag_bg(data, meta)
+    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
+    
+    bgdata1 = data.subdata[:,  :y1]
+    bgmask1 = data.submask[:,  :y1]
+    bgdata2 = data.subdata[:,y2:  ]
+    bgmask2 = data.submask[:,y2:  ]
+    bgerr1  = np.ma.median(np.ma.masked_equal(data.suberr[:,  :y1],0))  # This might not be necessary for real data
+    bgerr2  = np.ma.median(np.ma.masked_equal(data.suberr[:,y2:  ],0))
+    
+    estsig1 = [bgerr1 for j in range(len(bg_thresh))]
+    estsig2 = [bgerr2 for j in range(len(bg_thresh))]
 
+    data.submask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
+    data.submask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
+
+    return data
 
 def fit_bg(data, meta, n, isplots=False):
     '''Fit for a non-uniform background.
