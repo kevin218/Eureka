@@ -48,7 +48,7 @@ def ln_like(theta, lc, model, freenames):
         ln_like_val = GP_loglikelihood(model, model_lc)
     else:
         residuals = (lc.flux - model_lc) 
-        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+        ln_like_val = (-0.5 * (np.ma.sum((residuals / lc.unc_fit) ** 2+ np.ma.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
     return ln_like_val
 
 def lnprior(theta, prior1, prior2, priortype):
@@ -208,8 +208,9 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc) 
  
-    chi2 = np.sum((residuals / lc.unc_fit) ** 2)
-    chi2red = chi2 / (len(lc.flux) - len(freenames))
+    chi2 = np.ma.sum((residuals / lc.unc_fit) ** 2)
+    Ndata = (~np.ma.getmaskarray(lc.flux)).sum()
+    chi2red = chi2 / (Ndata - len(freenames))
 
     log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.verbose))
 
