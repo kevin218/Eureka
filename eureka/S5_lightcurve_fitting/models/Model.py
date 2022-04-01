@@ -27,6 +27,7 @@ class Model:
         self._units = q.day
         self._parameters = Parameters()
         self.components = None
+        self.modeltype = None
         self.fmt = None
         if hasattr(kwargs, 'nchan'):
             self.nchan = kwargs.get('nchan')
