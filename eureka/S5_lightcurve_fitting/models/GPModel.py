@@ -5,9 +5,6 @@ from george import kernels
 from .Model import Model
 from ...lib.readEPF import Parameters
 
-
-
-
 ###########for future tinygp version - tinygp needs python >= 3.7
 ###########!! careful when activating - did not test the tinygp code yet (didn't have python >= 3.7)
 #import jax.numpy as jnp
@@ -29,8 +26,7 @@ class GPModel(Model):
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
-           
-        
+
         # Generate parameters from kwargs if necessary
         self.gp_code_name = gp_code
         self.kernel_types = kernel_classes
@@ -47,9 +43,6 @@ class GPModel(Model):
 
         # Update coefficients
         self._parse_coeffs()
-        
-        
-    
 
     def _parse_coeffs(self):
         """Convert dict of coefficients into a list
@@ -66,7 +59,7 @@ class GPModel(Model):
         # Parse keyword arguments as coefficients
         self.coeffs = {}
         kernel_no = 0
-        
+
         for k, v in self.parameters.dict.items():
             if k.startswith('A'):
                 self.coeffs['A'] = v[0]
@@ -79,7 +72,6 @@ class GPModel(Model):
                     self.fit_white_noise = False
                 else:
                     self.fit_white_noise = True
-                
     
     def eval(self, fit, gp=None, **kwargs):
         """Compute GP with the given parameters
@@ -90,7 +82,6 @@ class GPModel(Model):
         Returns
         -------
         predicted systematics model 
-
         """
         # Get the time
         #if self.time is None:
@@ -115,22 +106,21 @@ class GPModel(Model):
                 cond_gp = gp.condition(self.kernel_inputs[0],self.lc.unc).gp
                 mu, cov = cond_gp.loc, cond_gp.variance
         #std = np.sqrt(np.diag(cov))
-        
+
         #gp.evaluate() #tinygp           
         return mu#, std
-    
+
     def set_inputs(self, normalise=False):
         """Setting up kernel inputs as array and standardizing them 
         see e.g. Evans et al. 2017
         Parameters
         ----------
         kernel input as strings e.g. 'time' 
-        
+
         Returns
         ----------
         kernel inputs as a np.array
         """
-         
         kernel_inputs = []
         for i in self.kernel_input_names:
             if i == 'time':
@@ -139,7 +129,7 @@ class GPModel(Model):
                 kernel_inputs.append(x)
                 #kernel_inputs.append(self.time)
             ##add more input options here 
-        
+
         if normalise: 
             #print(kernel_inputs)
             norm_kernel_inputs = [(i-i.mean())/i.std() for i in kernel_inputs]
@@ -148,7 +138,7 @@ class GPModel(Model):
         else:
             self.kernel_input_arrays = np.array(kernel_inputs)
         return
-                
+
     def setup_GP(self, **kwargs):
         """Set up GP kernels and GP object.
         
@@ -161,8 +151,6 @@ class GPModel(Model):
         GP object
 
         """
-        
-      
         if len(self.kernel_input_arrays) == 0:
             self.set_inputs()
 
@@ -171,9 +159,9 @@ class GPModel(Model):
                 kernel = self.get_kernel(self.kernel_types[i],i)
             else:
                 kernel += self.get_kernel(self.kernel_types[i],i)
-        
+
         kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
-        
+
         if self.gp_code_name == 'george': 
             gp = george.GP(kernel, white_noise=self.coeffs['WN'],fit_white_noise=self.fit_white_noise, mean=0, fit_mean=False)#, solver=george.solvers.HODLRSolver)
         if self.gp_code_name == 'tinygp':
@@ -181,8 +169,7 @@ class GPModel(Model):
         #tiny gp code
         #kernel = tinygp.kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
         return gp
-        
-        
+
     def loglikelihood(self, fit):
         """Compute log likelihood of GP
         Parameters 
@@ -192,7 +179,6 @@ class GPModel(Model):
         Returns
         -------
         log likelihood of the GP evaluated by george/tinygp
-
         """
         gp = self.setup_GP()
         #gp_evaluated = self.eval(lc, fit, gp=gp)
@@ -203,16 +189,14 @@ class GPModel(Model):
             else:
                 gp.compute(self.kernel_input_arrays[0],self.lc.unc)
             loglike = gp.lnlikelihood(self.lc.flux - fit,quiet=True)
-        
+
         if self.gp_code_name == 'tinygp':
             if self.nkernels > 1:
                 loglike = gp.condition(self.lc.flux - fit, X_test = self.kernel_input_arrays.T).log_probability
             else:
                 loglike = gp.condition(self.lc.flux - fit, X_test = self.kernel_input_arrays[0]).log_probability  
         return loglike
-        
 
-    
     def get_kernel(self, kernel_name, i):
         """get individual kernels"""
         metric = ( 1./np.exp(self.coeffs[kernel_name]) )**2
@@ -225,7 +209,7 @@ class GPModel(Model):
                 kernel = kernels.RationalQuadraticKernel(log_alpha=1,metric=metric,ndim=self.nkernels,axes=i)
             if kernel_name == 'Exp':
                 kernel = kernels.ExpKernel(metric,ndim=self.nkernels,axes=i)   
-            
+
         if self.gp_code_name == 'tinygp':
             if kernel_name == 'Matern32':
                 kernel = tinygp.kernels.Matern32(metric,ndim=self.nkernels,axes=i)
@@ -235,9 +219,8 @@ class GPModel(Model):
                 kernel = tinygp.kernels.RationalQuadratic(alpha=1,scale=metric,ndim=self.nkernels,axes=i)
             if kernel_name == 'Exp':
                 kernel = tinygp.kernels.Exp(metric,ndim=self.nkernels,axes=i) 
-        
+
         return kernel
-            
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""

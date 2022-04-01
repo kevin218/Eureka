@@ -337,7 +337,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='emcee')
-        
+
     #Plot GP fit + components
     if model.GP:
         plots.plot_GP_components(lc, model, meta, fitter='emcee')
@@ -453,7 +453,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
         step_size[priortype=='LU'] = 0.001*(np.exp(prior2[priortype=='LU']) - np.exp(prior1[priortype=='LU']))
         step_size[priortype=='N'] = 0.1*prior2[priortype=='N']
     nwalkers = meta.run_nwalkers
-    
+
     # make it robust to lsq hitting the upper or lower bound of the param space
     ind_max = np.where(freepars[priortype=='U'] - prior2[priortype=='U'] == 0.)[0]
     ind_min = np.where(freepars[priortype=='U'] - prior1[priortype=='U'] == 0.)[0]
@@ -518,7 +518,6 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
                                  'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim))
     return pos, nwalkers
 
-
 def dynestyfitter(lc, model, meta, log, **kwargs):
     """Perform sampling using dynesty.
 
@@ -553,7 +552,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. 
     """
-    
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
@@ -573,11 +571,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     l_args = [lc, model, freenames]
 
     log.writelog('Running dynesty...')
-    
+
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
     if nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least {min_nlive} ****')
-    
 
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
         pool = Pool(meta.ncpu)
@@ -591,7 +588,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                             ptform_args=[prior1, prior2, priortype])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
-
     if meta.ncpu > 1:
         pool.close()
         pool.join()
@@ -611,7 +607,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # draw posterior samples
     weights = np.exp(res['logwt'] - res['logz'][-1])
     samples = resample_equal(res.samples, weights)
-
     log.writelog('Number of posterior samples is {}'.format(len(samples)), mute=(not meta.verbose))
 
     # Compute the medians and uncertainties
@@ -683,14 +678,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='dynesty')
-    
+
     # Plot residuals distribution
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='dynesty')
 
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
-    
+
     return best_model
 
 def lmfitter(lc, model, meta, log, **kwargs):
@@ -833,7 +828,6 @@ def group_variables(model):
                 if par[0] not in alreadylist:
                     all_params.append(par)
                     alreadylist.append(par[0])
-                        
 
     # Group the different variable types
     freenames = []
@@ -919,7 +913,7 @@ def load_old_fitparams(meta, log, channel, freenames):
         channel_key = 'shared'
     else:
         channel_key = f'ch{channel}'
-    
+
     fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values.keys())
@@ -932,7 +926,7 @@ def load_old_fitparams(meta, log, channel, freenames):
         raise AssertionError('Old fit does not have the same fitted parameters and cannot be used to initialize the new fit.\n'+
                              'The old fit included:\n['+','.join(full_keys)+']\n'+
                              'The new fit included:\n['+','.join(freenames)+']')
-    
+
     return np.array(fitted_values)[0]
 
 def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
@@ -969,5 +963,5 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_e
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta.time, wavelengths[lc.fitted_channels], wave_errs[lc.fitted_channels], lc.flux, lc.unc_fit, model_lc, residuals)
-    
+
     return

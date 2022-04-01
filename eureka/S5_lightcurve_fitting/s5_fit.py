@@ -17,7 +17,7 @@ class MetaClass:
 
 def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
-    
+
     Parameters
     ----------
     eventlabel: str
@@ -26,15 +26,16 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         The absolute or relative path to where ecfs are stored
     s4_meta:    MetaClass
         The metadata object from Eureka!'s S4 step (if running S4 and S5 sequentially).
-    
+
     Returns
     -------
     meta:   MetaClass
         The metadata object with attributes added by S5.
-    
+
     Notes
     -------
     History:
+
     - November 12-December 15, 2021 Megan Mansfield
         Original version
     - December 17-20, 2021 Megan Mansfield
@@ -341,13 +342,13 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     meta.outputdir_raw = '/'.join(meta.inputdir_raw.split('/')[:-2])
     meta.inputdir = util.pathdirectory(meta, 'S4', meta.runs_s4[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
     meta.outputdir_raw = tempfolder
-    
+
     # Read in the correct S4 metadata for this aperture pair
     tempfolder = meta.inputdir
     meta.inputdir = meta.inputdir[len(meta.topdir):]
     new_meta = read_s4_meta(meta)
     meta.inputdir = tempfolder
-    
+
     # Load S5 Eureka! control file and store values in the S4 metadata object
     ecffile = 'S5_' + meta.eventlabel + '.ecf'
     new_meta.read(ecf_path, ecffile)
@@ -357,7 +358,7 @@ def load_specific_s4_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
     new_meta.outputdir = meta.outputdir
     new_meta.inputdir_raw = meta.inputdir_raw
     new_meta.outputdir_raw = meta.outputdir_raw
-    
+
     new_meta.runs_s5 = meta.runs_s5
     new_meta.datetime = meta.datetime
 
