@@ -115,6 +115,15 @@ class BatmanEclipseModel(Model):
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
 
+        # Check if we need to do ltt correction for each wavelength or only one
+        if self.nchan > 1:
+            # Get the parameters relevant to light travel time correction
+            ltt_params = ['a', 'per',  'inc', 't0', 'ecc', 'w']
+            # Check whether the parameters are all either fixed or shared
+            self.compute_ltt_once = all([self.parameters.dict.get(name)[1] in ['shared', 'fixed'] for name in ltt_params])
+        else:
+            self.compute_ltt_once = True
+
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
         # Get the time
@@ -140,13 +149,16 @@ class BatmanEclipseModel(Model):
             bm_params.limb_dark = 'uniform'
             bm_params.u = []
 
+            if c==0 or not self.compute_ltt_once:
+                self.adjusted_time = correct_light_travel_time(self.time, bm_params)
+
             if not np.any(['t_secondary' in key for key in self.longparamlist[c]]):
                 # If not explicitly fitting for the time of eclipse, get the time of eclipse from the time of transit, period, eccentricity, and argument of periastron
-                m_transit = batman.TransitModel(bm_params, self.time, transittype='primary')
+                m_transit = batman.TransitModel(bm_params, self.adjusted_time, transittype='primary')
                 bm_params.t_secondary = m_transit.get_t_secondary(bm_params)
             
             # Make the eclipse model
-            m_eclipse = batman.TransitModel(bm_params, self.time, transittype='secondary')
+            m_eclipse = batman.TransitModel(bm_params, self.adjusted_time, transittype='secondary')
 
             lcfinal = np.append(lcfinal, m_eclipse.light_curve(bm_params))
 
@@ -189,7 +201,7 @@ def correct_light_travel_time(time, bm_params):
         old_x, _, _ = orbit.xyz(time)
         transit_x, _, _ = orbit.xyz(bm_params.t0)
     else:
-        # No need to solve Kepler's equation for circular orbits, so save some time
+        # No need to solve Kepler's equation for circular orbits, so save some computation time
         transit_x = a*np.sin(bm_params.inc)
         old_x = transit_x*np.cos(2*np.pi*(time-bm_params.t0)/bm_params.per)
     
@@ -199,5 +211,6 @@ def correct_light_travel_time(time, bm_params):
     # Compute for light travel time (and convert to days)
     delta_t = (delta_x/const.c.value)/(3600.*24.)
 
-    # I need to check whether I should be doing addition or subtraction here
+    # Subtract light travel time as a first-order correction
+    # Batman will then calculate the model at a slightly earlier time
     return time-delta_t
