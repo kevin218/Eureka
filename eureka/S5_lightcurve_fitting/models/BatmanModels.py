@@ -9,6 +9,9 @@ from ..limb_darkening_fit import ld_profile
 from .Model import Model
 from ..parameters import Parameters
 
+from .KeplerOrbit import KeplerOrbit
+import astropy.constants as const
+
 class BatmanTransitModel(Model):
     """Transit Model"""
     def __init__(self, **kwargs):
@@ -148,3 +151,53 @@ class BatmanEclipseModel(Model):
             lcfinal = np.append(lcfinal, m_eclipse.light_curve(bm_params))
 
         return lcfinal
+
+def correct_light_travel_time(time, bm_params):
+    '''Correct for the finite light travel speed.
+
+    This function uses the KeplerOrbit.py file from the Bell_EBM package
+    as that code includes a newer, faster method of solving Kepler's equation
+    based on Tommasini+2018.
+
+    Parameters
+    ----------
+    time:   ndarray
+        The times at which observations were collected
+    bm_params:  batman.TransitParams
+        The batman TransitParams object that contains information on the orbit.
+
+    Returns
+    -------
+    time:   ndarray
+        Updated times that can be put into batman transit and eclipse functions
+        that will give the expected results assuming a finite light travel speed.
+
+    Notes
+    -----
+    History:
+
+    - 2022-03-31 Taylor J Bell
+        Initial version based on the Bell_EMB KeplerOrbit.py file by Taylor J Bell
+        and the light travel time calculations of SPIDERMAN's web.c file by Tom Louden
+    '''
+    a = bm_params.a * (bm_params.Rs*const.R_sun.value) # Need to convert from a/Rs to a in meters
+
+    if bm_params.ecc>0:
+        # Need to solve Kepler's equation, so use the KeplerOrbit class for rapid computation
+        # In the SPIDERMAN notation z is the radial coordinate, while for Bell_EBM the radial coordinate is x
+        orbit = KeplerOrbit(a=a, Porb=bm_params.per, inc=bm_params.inc, t0=bm_params.t0, e=bm_params.ecc, argp=bm_params.w)
+        old_x, _, _ = orbit.xyz(time)
+        transit_x, _, _ = orbit.xyz(bm_params.t0)
+    else:
+        # No need to solve Kepler's equation for circular orbits, so save some time
+        transit_x = a*np.sin(bm_params.inc)
+        old_x = transit_x*np.cos(2*np.pi*(time-bm_params.t0)/bm_params.per)
+    
+    # Get the radial distance variations of the planet
+    delta_x = transit_x - old_x
+    
+    # Compute for light travel time (and convert to days)
+    delta_t = (delta_x/const.c.value)/(3600.*24.)
+
+    # I need to check whether I should be doing addition or subtraction here
+    return time-delta_t
