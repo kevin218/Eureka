@@ -298,6 +298,9 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 #Mask out NaNs
                 data.optspec = np.ma.masked_invalid(data.optspec)
                 data.opterr = np.ma.masked_invalid(data.opterr)
+                mask = np.logical_or(np.ma.getmaskarray(data.optspec), np.ma.getmaskarray(data.opterr))
+                data.optspec = np.ma.masked_where(mask, data.optspec)
+                data.opterr = np.ma.masked_where(mask, data.opterr)
                 # Plot results
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for optimal spectral extraction', mute=(not meta.verbose))
