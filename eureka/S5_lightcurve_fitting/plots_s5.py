@@ -131,7 +131,6 @@ def plot_rms(lc, model, meta, fitter):
 
         rms, stderr, binsz = computeRMS(residuals, binstep=1)
         normfactor = 1e-6
-        plt.rcParams.update({'legend.fontsize': 11}) # FINDME: this should not be done here but where the rcparams are defined for Eureka
         plt.figure(int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
         plt.clf()
         plt.suptitle(' Correlated Noise', size=16)

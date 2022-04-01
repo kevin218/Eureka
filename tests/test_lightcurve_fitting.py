@@ -25,13 +25,11 @@ import batman
 
 import sys
 sys.path.insert(0, '../')
-from eureka.S5_lightcurve_fitting import lightcurve, models, parameters, simulations
+from eureka.S5_lightcurve_fitting import lightcurve, models, simulations
+from eureka.lib.readEPF import Parameters, Parameter
+from eureka.lib.readECF import MetaClass
 
-class MetaClass:
-  def __init__(self):
-    return
-
-meta= MetaClass()
+meta = MetaClass()
 meta.eventlabel='NIRCam'
 
 '''
@@ -94,7 +92,7 @@ class TestModels(unittest.TestCase):
     def test_polynomialmodel(self):
         """Tests for the PolynomialModel class"""
         # create dictionary
-        params = {"c1" : 0.0005, "c0": 0.997, "name": 'linear'}
+        params = {"c1" : [0.0005, 'free'], "c0": [0.997, 'free'], "name": 'linear'}
 
         # Create the model
         self.lin_model = models.PolynomialModel(parameters=None,coeff_dict=params,nchan=1)
@@ -107,7 +105,7 @@ class TestModels(unittest.TestCase):
     def test_transitmodel(self):
         """Tests for the TransitModel class"""
         # Set the intial parameters
-        params = parameters.Parameters()
+        params = Parameters()
         params.rp = 0.22, 'free', 0.0, 0.4  # rprs
         params.per = 10.721490, 'fixed'
         params.t0 = 0.48, 'free', 0, 1
@@ -123,12 +121,12 @@ class TestModels(unittest.TestCase):
         params.u4 = 0.1, 'free', 0., 1.
 
         # Make the transit model
-        self.t_model = models.BatmanTransitModel(parameters=params, name='transit',nchan=1)
+        self.t_model = models.BatmanTransitModel(parameters=params, name='transit', nchan=1)
 
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
-        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01},nchan=1)
+        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':[1., 'free'], 'r1':[0.05, 'free'], 'r2':[0.01, 'free']}, nchan=1)
 
         # Evaluate and test output
         self.exp_model.time = self.time
@@ -136,8 +134,8 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
         # Create the model
-        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':1., 'r1':0.05, 'r2':0.01,
-                                                           'r3':1., 'r4':0.05, 'r5':0.01},nchan=1)
+        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':[1., 'free'], 'r1':[0.05, 'free'], 'r2':[0.01, 'free'],
+                                                           'r3':[1., 'free'], 'r4':[0.05, 'free'], 'r5':[0.01, 'free']}, nchan=1)
 
         # Evaluate and test output
         self.exp_model.time = self.time
@@ -157,29 +155,29 @@ class TestParameters(unittest.TestCase):
         pname = 'p1'
         pval = 12.34
         ptype = 'free'
-        pmn = 10
-        pmx = 15
+        priorpar1 = 10
+        priorpar2 = 15
         prior = 'U'
-        self.param = parameters.Parameter(pname, pval, ptype, pmn, pmx, prior)
+        self.param = Parameter(pname, pval, ptype, priorpar1, priorpar2, prior)
 
         # Test bogus input
-        self.assertRaises(TypeError, parameters.Parameter, 123)
-        self.assertRaises(ValueError, parameters.Parameter, 'foo', 123, 123)
+        self.assertRaises(TypeError, Parameter, 123)
+        self.assertRaises(ValueError, Parameter, 'foo', 123, 123)
 
         # Test the attributes
         self.assertEqual(self.param.name, pname)
         self.assertEqual(self.param.value, pval)
         self.assertEqual(self.param.ptype, ptype)
-        self.assertEqual(self.param.mn, pmn)
-        self.assertEqual(self.param.mx, pmx)
+        self.assertEqual(self.param.priorpar1, priorpar1)
+        self.assertEqual(self.param.priorpar2, priorpar2)
         self.assertEqual(self.param.prior, prior)
-        self.assertEqual(self.param.values, [pname, pval, ptype, pmn, pmx, prior])
+        self.assertEqual(self.param.values, [pname, pval, ptype, priorpar1, priorpar2, prior])
 
     def test_parameters(self):
         """Test that a Parameters object can be created"""
-        self.params = parameters.Parameters()
-        self.params.param1 = 123.456
-        self.params.param2 = 234.567, True, 200, 300
+        self.params = Parameters()
+        self.params.param1 = 123.456, 'free'
+        self.params.param2 = 234.567, 'free', 200, 300
 
         # Test the auto attribute assignment
         self.assertEqual(self.params.param1.values, ['param1', 123.456, 'free'])

@@ -3,7 +3,7 @@ import george
 from george import kernels
 
 from .Model import Model
-from ..parameters import Parameters
+from ...lib.readEPF import Parameters
 
 
 

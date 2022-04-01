@@ -11,7 +11,7 @@ import os
 
 import astropy.units as q
 
-from ..parameters import Parameters
+from ...lib.readEPF import Parameters
 from ..utils import COLORS
 
 class Model:
