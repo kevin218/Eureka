@@ -2,7 +2,7 @@
 import os
 import numpy as np
 from astropy.io import fits
-from . import nircam
+from . import nircam, sigrej
 
 def read(filename, data, meta):
     '''Reads single FITS file from JWST's NIRCam instrument.
@@ -66,7 +66,6 @@ def read(filename, data, meta):
     meta.time_units = 'BJD_TDB'
 
     return data, meta
-
 
 def flag_bg(data, meta):
     '''Outlier rejection of sky background along time axis.
