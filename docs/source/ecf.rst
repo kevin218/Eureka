@@ -5,7 +5,7 @@ Eureka! Control File (.ecf)
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
 
-In the following, we look at the contents of the ecf for Stages 1, 2, 3, and 4.
+In the following, we look at the contents of the ecf for Stages 1, 2, 3, 4, and 5.
 
 
 Stage 1
@@ -71,6 +71,8 @@ In short this weights each pixel, :math:`i`, within a slope following :math:`w_i
 
 Stage 2
 --------
+
+ A full description of the Stage 2 Outputs is available here: :ref:`Stage 2 Output <s2-out>`
 
 .. include:: ../media/S2_template.ecf
    :literal:
@@ -267,36 +269,7 @@ Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It 
 
 isplots_S3
 '''''''''''
-Sets how many plots should be saved when running Stage 3.
-
-1. ``isplots_S3 >= 1``:
-
-   1.1  2D light curve without drift correction
-
-2. ``isplots_S3 >= 3``:
-
-   2.1  make optimal spectrum plot
-
-   2.2  make image+background plots
-
-   2.3  plot profile
-
-1.1: Normalized Flux over Time (Integration Number) as a function of Wavelength.
-
-.. image:: ../media/fig3101-2D_LC.png
-
-2.1: 1D Spectrum for an Integration using standard spectrum extraction (sum of the aperture; in orange) and optimal spectral extraction (in green).
-
-.. image:: ../media/fig3302-1-Spectrum.png
-
-2.2: *Upper Panel*: 2D Spectrum for an Integration; *Lower Panel*: Column-wise background for an Integration (here ``bg_deg = 0`` was set).
-
-.. image:: ../media/fig3301-1-Image+Background.png
-
-2.3: 2D spectrum for an Integration after Unit conversion
-
-.. image:: ../media/fig3305-1-Profile.png
-
+Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
 testing_S3
 '''''''''''
@@ -385,12 +358,7 @@ If True, subtract spectrum mean during cross correlation (can help with cross-co
 
 isplots_S4
 '''''''''''
-Sets how many plots should be saved when running Stage 4.
-
-- ``isplots_S4 >= 3``:
-   -  Plot each spectroscopic light curve. Below an example for a light curve using the Simulated NIRCam data for WASP-43b between 2.5 and 2.65 micron. Due to a bug in the Simulation pipeline the errorbars are currently way bigger than expected.
-
-.. image:: ../media/Fig4100-wasp43b-1D_LC.png
+Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
 
 
 hide_plots
@@ -500,7 +468,7 @@ The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 's
 
 run_tol
 '''''''
-Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume tot he total evidence falls below this threshold.
+Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
 
 
 interp
@@ -509,18 +477,7 @@ Boolean to determine whether the astrophysical model is interpolated when plotte
 
 isplots_S5
 '''''''''''
-Sets how many plots should be saved when running Stage 5.
-
-- ``isplots_S5 >= 1``:
-   - (All Fitters) Plots the fitted model for each spectroscopic lightcurve.
-
-- ``isplots_S5 >= 3``:
-   - (All Fitters) Plot RMS deviation, residuals distribution.
-   - (emcee) Plot chains from the emcee sampler.
-
-- ``isplots_S5 >= 5``:
-   - (emcee, dynesty) Plot posterior corner plots.
-
+Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
 
 hide_plots
 '''''''''''
