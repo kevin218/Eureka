@@ -177,7 +177,8 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('****Adding exponential ramp systematic to light curve****')
-        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', log=log,
+                                  longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         fakeramp.coeffs = np.array([-1,40,-3, 0, 0, 0]).reshape(1,-1)*np.ones(lc_model.nchannel_fitted)
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
@@ -185,10 +186,12 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     # Make the astrophysical and detector models
     modellist=[]
     if 'batman_tr' in meta.run_myfuncs:
-        t_transit = m.BatmanTransitModel(parameters=params, name='transit', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        t_transit = m.BatmanTransitModel(parameters=params, name='transit', fmt='r--', log=log,
+                                         longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
-        t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse', fmt='r--', log=log,
+                                         longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_eclipse)
     if 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
@@ -201,17 +204,20 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         if'eclipse' in model_names:
             eclipse_model = modellist.pop(np.where(model_names=='eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
-        t_phase = m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles,
+        t_phase = m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve', fmt='r--', log=log,
+                                            longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles,
                                             transit_model=transit_model, eclipse_model=eclipse_model)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
-        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        t_polynom = m.PolynomialModel(parameters=params, name='polynom', fmt='r--', log=log,
+                                      longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_polynom)
     if 'expramp' in meta.run_myfuncs:
-        t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', log=log,
+                                longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
     if 'GP' in meta.run_myfuncs:
-        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--')
+        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--', log=log)
         modellist.append(t_GP)
     model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
 

@@ -36,7 +36,8 @@ class Model:
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
-            setattr(self, arg, val)
+            if arg!='log':
+                setattr(self, arg, val)
 
     def __mul__(self, other):
         """Multiply model components to make a combined model
