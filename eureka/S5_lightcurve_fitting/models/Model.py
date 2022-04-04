@@ -298,9 +298,10 @@ class CompositeModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-            
-        flux = np.ones(len(self.time)*self.nchan)
-        
+
+        # Set the default value
+        flux = np.zeros(len(self.time)*self.nchan)
+
         # Evaluate flux
         for model in self.components:
             if model.modeltype == 'GP':
