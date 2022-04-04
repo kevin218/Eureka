@@ -4,7 +4,9 @@
 
 
 import numpy as np
-import sys
+import sys, os
+from importlib import reload
+
 sys.path.insert(0, '../')
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
@@ -16,7 +18,6 @@ except ModuleNotFoundError as e:
 from eureka.S3_data_reduction import s3_reduce as s3
 from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
-import pytest
 
 class DataClass:
   def __init__(self):
@@ -50,9 +51,6 @@ def test_b2f():
     assert res_dat.subdata.shape == (n, (trim_y1 - trim_y0), (trim_x1 - trim_x0))
 
 #######################################################################
-
-import sys, os, time
-from importlib import reload
 
 def test_NIRCam(capsys):
     print(os.system("pwd"))
