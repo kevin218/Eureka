@@ -81,9 +81,14 @@ def BGsubtraction(data, meta, log, isplots):
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         args_list = []
-        for n in range(meta.int_start,meta.n_int):
-            args_list.append((data, meta, n, isplots))
-        jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
+
+        # Todo, convert WFC3/NIRISS fit_bg to only accept individual frames (see nircam and below for example)
+        if meta.inst in ['niriss', 'wfc3']:
+            for n in range(meta.int_start,meta.n_int):
+                args_list.append((data, meta, n, isplots))
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
+        else: 
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.subdata[n], data.submask[n], n, meta, isplots,), callback=writeBG) for n in range(meta.int_start,meta.n_int)]
         pool.close()
         iterfn = jobs
         if meta.verbose:
