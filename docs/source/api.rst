@@ -207,13 +207,6 @@ S3_data_reduction.bright2flux
     :undoc-members:
     :show-inheritance:
 
-S3_data_reduction.julday
-------------------------
-.. automodule:: eureka.S3_data_reduction.julday
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 S3_data_reduction.miri
 -----------------------
 .. automodule:: eureka.S3_data_reduction.miri
