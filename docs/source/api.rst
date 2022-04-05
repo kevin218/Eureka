@@ -26,13 +26,6 @@ lib.correlated_noise
     :undoc-members:
     :show-inheritance:
 
-lib.demc
----------------------
-.. automodule:: eureka.lib.demc
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.gaussian
 ---------------
 .. automodule:: eureka.lib.gaussian
@@ -43,20 +36,6 @@ lib.gaussian
 lib.gelmanrubin
 ---------------
 .. automodule:: eureka.lib.gelmanrubin
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.hiloerr
----------------
-.. automodule:: eureka.lib.hiloerr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.integrate
----------------------
-.. automodule:: eureka.lib.integrate
     :members:
     :undoc-members:
     :show-inheritance:
@@ -78,27 +57,6 @@ lib.manageevent
 lib.medstddev
 ---------------
 .. automodule:: eureka.lib.medstddev
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.modelsPOET
----------------
-.. automodule:: eureka.lib.modelsPOET
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.nasc
----------------
-.. automodule:: eureka.lib.nasc
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.orbit
----------------------
-.. automodule:: eureka.lib.orbit
     :members:
     :undoc-members:
     :show-inheritance:
@@ -141,27 +99,6 @@ lib.sort_nicely
 lib.suntimecorr
 ---------------
 .. automodule:: eureka.lib.suntimecorr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.time2phase2
----------------------
-.. automodule:: eureka.lib.time2phase2
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.timer
----------------------
-.. automodule:: eureka.lib.timer
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.univ
----------------
-.. automodule:: eureka.lib.univ
     :members:
     :undoc-members:
     :show-inheritance:
