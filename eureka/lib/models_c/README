@@ -1,8 +1,0 @@
-Please do not run python setup.py install, as this will try to insert
-a module in the site-packages directory, obviously not the desired
-behaivor. Use the script build.sh
-
-After compiling the C code, run UnitTest.py to made sure all of 
-the files import and run correctly. If you run into trouble,
-open setup.py, see if the "exec" commands are set to run with
-Linux or Mac, and change if need be.
