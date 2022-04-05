@@ -55,8 +55,6 @@ def read(filename, f277_filename, data, meta):
        Metadata stored in the FITS file.
     """
 
-    assert(filename, str)
-
     meta.filename = filename
 
     hdu = fits.open(filename)
