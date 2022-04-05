@@ -8,7 +8,7 @@ import os, sys
 from . import optspex
 from ..lib import gaussian as g
 from ..lib import sort_nicely as sn
-from ..lib import julday, smooth, centroid, smoothing
+from ..lib import smooth, centroid, smoothing
 
 try:
     basestring
