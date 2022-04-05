@@ -120,8 +120,10 @@ def bright2dn(data, meta, mjy=False):
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['subarray'] == data.mhdr['SUBARRAY']))[0][0]
     elif meta.inst == 'nirspec':
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['grating'] == data.mhdr['GRATING']) * (foo['slit'] == data.shdr['SLTNAME']))[0][0] 
+    elif meta.inst == 'niriss':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     else:
-        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst}, and can currently only handle miri and nircam observations.')
+        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst},and can currently only handle JWST niriss, nirspec, nircam, and miri observations.')
 
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
