@@ -134,7 +134,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 meta.spectrum_median = []
                 meta.spectrum_err = []
                 for channel in range(meta.nspecchan):
-                    median, err = parse_s5_saves(meta, fit_methods, y_param, f'ch{channel}')
+                    median, err = parse_s5_saves(meta, fit_methods, y_param, f'ch{str(channel).zfill(len(str(meta.nspecchan)))}')
                     meta.spectrum_median.append(median[0])
                     meta.spectrum_err.append(np.array(err).reshape(-1))
                 meta.spectrum_median = np.array(meta.spectrum_median).reshape(-1)
