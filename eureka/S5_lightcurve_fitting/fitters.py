@@ -930,34 +930,33 @@ def load_old_fitparams(meta, log, channel, freenames):
     return np.array(fitted_values)[0]
 
 def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
+    # Save the fitted parameters and their uncertainties (if possible)
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
-        fname = f'S5_{fitter}_fitparams_ch{lc.channel}'
+        fname = f'S5_{fitter}_fitparams_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
     data = fit_params.reshape(1,-1)
     if len(upper_errs)!=0 and len(lower_errs)!=0:
         data = np.append(data, -lower_errs.reshape(1,-1), axis=0)
         data = np.append(data, upper_errs.reshape(1,-1), axis=0)
     np.savetxt(meta.outputdir+fname+'.csv', fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
 
+    # Save the chain from the sampler (if a chain was provided)
     if len(samples)!=0:
         if lc.share:
             fname = f'S5_{fitter}_samples_shared'
         else:
-            fname = f'S5_{fitter}_samples_ch{lc.channel}'
+            fname = f'S5_{fitter}_samples_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
         with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
             hf.create_dataset("samples",  data=samples)
 
+    # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel + "_ap" + str(meta.spec_hw) + '_bg' + str(meta.bg_hw)
     if lc.share:
         channel_tag = '_shared'
     else:
-        channel_tag = f'_ch{lc.channel}'
+        channel_tag = f'_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
     meta.tab_filename_s5 = meta.outputdir + 'S5_' + event_ap_bg + "_Table_Save"+channel_tag+".txt"
-    # temporary code
-    meta.wave_low = np.array(meta.wave_low)
-    meta.wave_hi = np.array(meta.wave_hi)
-    # end temporary code
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     model_lc = model.eval()
