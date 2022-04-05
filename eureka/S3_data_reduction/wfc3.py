@@ -4,7 +4,7 @@ import numpy as np
 import multiprocessing as mp
 from astropy.io import fits
 import scipy.interpolate as spi
-import scipy.ndimage.interpolation as spni
+import scipy.ndimage as spni
 from . import background, nircam
 from . import bright2flux as b2f
 from . import hst_scan as hst
