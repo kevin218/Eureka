@@ -27,6 +27,7 @@ class Model:
         self._units = q.day
         self._parameters = Parameters()
         self.components = None
+        self.modeltype = None
         self.fmt = None
         if hasattr(kwargs, 'nchan'):
             self.nchan = kwargs.get('nchan')
@@ -250,19 +251,29 @@ class CompositeModel(Model):
         # Store the models
         self.components = models
 
-    def eval(self, **kwargs):
+        self.GP = False
+        for model in self.components:
+            if model.modeltype == 'GP':
+                self.GP = True
+
+    def eval(self, incl_GP = False, **kwargs):
         """Evaluate the model components"""
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-        
-        # Evaluate flux at each model
+
         flux = np.ones(len(self.time)*self.nchan)
+
+        # Evaluate flux at each model
         for model in self.components:
             if model.time is None:
                 model.time = self.time
-            flux *= model.eval(**kwargs)
-        
+            if model.modeltype != 'GP':            
+                flux *= model.eval(**kwargs)
+
+        if incl_GP == True:
+            flux += self.GPeval(flux)
+
         return flux
 
     def syseval(self, **kwargs):
@@ -270,9 +281,10 @@ class CompositeModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-        
-        # Evaluate flux at each model
+
         flux = np.ones(len(self.time)*self.nchan)
+
+        # Evaluate flux at each model
         for model in self.components:
             if model.modeltype == 'systematic':
                 if model.time is None:
@@ -280,13 +292,27 @@ class CompositeModel(Model):
                 flux *= model.eval(**kwargs)
 
         return flux
+    
+    def GPeval(self,  fit, **kwargs):
+        """Evaluate the GP model components only"""
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+            
+        flux = np.ones(len(self.time)*self.nchan)
+        
+        # Evaluate flux
+        for model in self.components:
+            if model.modeltype == 'GP':
+                flux = model.eval(fit, **kwargs)
+        return flux
 
     def physeval(self, interp=False, **kwargs):
         """Evaluate the physical model components only"""
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-        
+
         if interp:
             dt = self.time[1]-self.time[0]
             steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
@@ -294,8 +320,9 @@ class CompositeModel(Model):
         else:
             new_time = self.time
 
-        # Evaluate flux at each model
         flux = np.ones(len(self.time)*self.nchan)
+
+        # Evaluate flux at each model
         for model in self.components:
             if model.modeltype == 'physical':
                 if model.time is None:
@@ -304,7 +331,6 @@ class CompositeModel(Model):
                     flux *= model.interp(new_time, **kwargs)
                 else:
                     flux *= model.eval(**kwargs)
-        
         return flux, new_time
 
     def update(self, newparams, names, **kwargs):
@@ -312,5 +338,4 @@ class CompositeModel(Model):
         # Evaluate flux at each model
         for model in self.components:
             model.update(newparams, names, **kwargs)
-
         return

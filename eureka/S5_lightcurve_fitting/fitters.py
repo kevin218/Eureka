@@ -127,7 +127,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
-    
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter=calling_function)
@@ -341,6 +341,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='emcee')
 
+    #Plot GP fit + components
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='emcee')
+
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
@@ -515,7 +519,6 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
                          'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim), mute=True)
             raise AssertionError('Error: Failed to initialize all walkers within the set bounds for all parameters!\n'+
                                  'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim))
-
     return pos, nwalkers
 
 def dynestyfitter(lc, model, meta, log, **kwargs):
@@ -647,6 +650,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
+
+    #Plot GP fit + components
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -824,7 +831,7 @@ def group_variables(model):
                 if par[0] not in alreadylist:
                     all_params.append(par)
                     alreadylist.append(par[0])
-                        
+
     # Group the different variable types
     freenames = []
     freepars = []
@@ -909,7 +916,7 @@ def load_old_fitparams(meta, log, channel, freenames):
         channel_key = 'shared'
     else:
         channel_key = f'ch{channel}'
-    
+
     fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values.keys())
@@ -922,7 +929,7 @@ def load_old_fitparams(meta, log, channel, freenames):
         raise AssertionError('Old fit does not have the same fitted parameters and cannot be used to initialize the new fit.\n'+
                              'The old fit included:\n['+','.join(full_keys)+']\n'+
                              'The new fit included:\n['+','.join(freenames)+']')
-    
+
     return np.array(fitted_values)[0]
 
 def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
@@ -959,5 +966,5 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_e
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta.time, wavelengths[lc.fitted_channels], wave_errs[lc.fitted_channels], lc.flux, lc.unc_fit, model_lc, residuals)
-    
+
     return

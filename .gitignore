@@ -131,10 +131,10 @@ dmypy.json
 
 *.DS_Store
 
-# ecf file 
+# ecf files
 *.ecf
 
-# epf file 
+# epf files
 *.epf
 
 # VS Code workspaces
@@ -146,3 +146,8 @@ image_registration/
 
 # Compiled niriss_cython file
 niriss_cython.c
+
+# Dockerfiles
+Dockerfile
+docker-compose.yml
+docker-setup.sh

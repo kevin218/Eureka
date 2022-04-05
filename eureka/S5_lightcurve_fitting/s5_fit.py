@@ -44,6 +44,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         Increasing connectedness of S5 and S4
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - January - February, 2022 Eva-Maria Ahrer
+        Adding GP functionality
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
@@ -208,6 +210,9 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--', longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
+    if 'GP' in meta.run_myfuncs:
+        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--')
+        modellist.append(t_GP)
     model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
 
     # Fit the models using one or more fitters
@@ -306,7 +311,6 @@ def read_s4_meta(meta):
     return s4_meta
 
 def load_general_s4_meta_info(meta, ecf_path, s4_meta):
-
     # Need to remove the topdir from the outputdir
     s4_outputdir = s4_meta.outputdir[len(meta.topdir):]
     if s4_outputdir[0]=='/':
@@ -328,7 +332,6 @@ def load_general_s4_meta_info(meta, ecf_path, s4_meta):
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir
-
     meta.s4_allapers = s4_allapers
 
     return meta

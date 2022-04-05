@@ -30,11 +30,11 @@ def ln_like(theta, lc, model, freenames):
         Moved code to separate file, added documentation.
     - January 22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
+    - February, 2022 Eva-Maria Ahrer
+        Adding GP likelihood
     """
-
     model.update(theta, freenames)
     model_lc = model.eval()
-    residuals = (lc.flux - model_lc)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
@@ -48,7 +48,11 @@ def ln_like(theta, lc, model, freenames):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
     else:
         lc.unc_fit = deepcopy(lc.unc)
-    ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+    if model.GP:
+        ln_like_val = GP_loglikelihood(model, model_lc)
+    else:
+        residuals = (lc.flux - model_lc) 
+        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
     return ln_like_val
 
 def lnprior(theta, prior1, prior2, priortype):
@@ -214,8 +218,10 @@ def computeRedChiSq(lc, log, model, meta, freenames):
 
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
+    - February, 2022 Eva-Maria Ahrer
+        Added GP functionality
     """
-    model_lc = model.eval()
+    model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
     chi2 = np.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
@@ -280,3 +286,29 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         return rms, stderr, binsz, rmserr
     else:
         return rms, stderr, binsz
+
+def GP_loglikelihood(model, fit):
+    """Compute likelihood, when model fit includes GP
+
+    Parameters
+    ----------
+    model: CompositeModel object
+        The model including the GP model
+    fit: ndarray
+        the evaluated model without the GP
+
+    Returns
+    -------
+    likelihood of the model
+
+    Notes
+    -----
+    History:
+
+    - March 11, 2022 Eva-Maria Ahrer
+        moved code from Model.py
+    """
+    for m in model.components:
+        if m.modeltype == 'GP':
+            return m.loglikelihood( fit)
+    return 0
