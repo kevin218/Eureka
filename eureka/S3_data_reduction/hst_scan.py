@@ -633,7 +633,7 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         return cordata
 
 # Calulate drift2D
-from ..image_registration import image_registration as imr
+import image_registration as imr
 def calcDrift2D(im1, im2, m, n, n_files):
     # try:
     #     sys.stdout.write('\r'+str(m+1)+'/'+str(n_files))
