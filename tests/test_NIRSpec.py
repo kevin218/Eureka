@@ -22,15 +22,15 @@ def test_NIRSpec(capsys):
         with capsys.disabled():
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print('Skipping NIRSpec Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
-            print("NIRSpec S3-5 test: ", end='', flush=True)
+            print('\nSkipping NIRSpec Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
+            print("\nNIRSpec S3-5 test: ", end='', flush=True)
     else:
         with capsys.disabled():
             # is able to display any message without failing a test
             # useful to leave messages for future users who run the tests
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print("\NIRSpec S2-5 test: ", end='', flush=True)
+            print("\nNIRSpec S2-5 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()

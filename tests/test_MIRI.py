@@ -23,8 +23,8 @@ def test_MIRI(capsys):
         with capsys.disabled():
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print('Skipping MIRI Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
-            print("MIRI S3-6 test: ", end='', flush=True)
+            print('\nSkipping MIRI Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
+            print("\nMIRI S3-6 test: ", end='', flush=True)
     else:
         with capsys.disabled():
             # is able to display any message without failing a test
