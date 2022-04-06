@@ -108,25 +108,3 @@ def utc_tdb(jd_utc, leapdir):
 	+ 0.000002*np.sin(21.3299*T 	+	 5.5431)
 	+ 0.000010*T*np.sin(628.3076*T 	+ 	4.2490))/86400.
 	return jd_tdb
-
-def bjdcorr(date, ra, dec, location="s"):
-	#Wrapper for suntimecorr
-	horizonsdir = "/home/esp01/ancil/horizons/"
-	if location == "s":
-		tabfile = "all_spitzer.vec"
-	elif location == "g":
-		tabfile = "all_geo.vec"
-	elif location == "h":
-		tabfile = "all_sun.vec"
-	bjd = suntimecorr(hms_rad(ra), dms_rad(dec), date, horizonsdir+tabfile)
-	return bjd
-
-def hms_rad(params):
-    hour, minute, second = params
-    #Converts right ascension from hh:mm:ss to radians
-    return (hour + minute/60. + second/3600.)*np.pi/12
-
-def dms_rad(params):
-    degree, minute, second = params
-    #Converts declination from dd:mm:ss to radians
-    return (np.abs(degree) + minute/60. + second/3600.)*np.sign(degree)*np.pi/180
