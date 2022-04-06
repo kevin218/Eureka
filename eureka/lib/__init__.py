@@ -4,7 +4,6 @@
 
 from . import gelmanrubin
 from . import smoothing
-from . import correlated_noise
 from . import manageevent
 from . import plots
 from . import sort_nicely

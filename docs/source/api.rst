@@ -26,13 +26,6 @@ lib.clipping
     :undoc-members:
     :show-inheritance:
 
-lib.correlated_noise
----------------------
-.. automodule:: eureka.lib.correlated_noise
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.disk
 ---------------
 .. automodule:: eureka.lib.disk
