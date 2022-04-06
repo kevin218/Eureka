@@ -19,9 +19,23 @@ lib.centroid
     :undoc-members:
     :show-inheritance:
 
+lib.clipping
+---------------
+.. automodule:: eureka.lib.clipping
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.correlated_noise
 ---------------------
 .. automodule:: eureka.lib.correlated_noise
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.disk
+---------------
+.. automodule:: eureka.lib.disk
     :members:
     :undoc-members:
     :show-inheritance:
@@ -75,6 +89,13 @@ lib.readECF
     :undoc-members:
     :show-inheritance:
 
+lib.readEPF
+---------------
+.. automodule:: eureka.lib.readEPF
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.smooth
 ---------------------
 .. automodule:: eureka.lib.smooth
@@ -92,6 +113,13 @@ lib.smoothing
 lib.sort_nicely
 ---------------
 .. automodule:: eureka.lib.sort_nicely
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.splinterp
+---------------
+.. automodule:: eureka.lib.splinterp
     :members:
     :undoc-members:
     :show-inheritance:
@@ -118,12 +146,47 @@ lib.util
     :show-inheritance:
 
 
+S1_calibrations
+''''''''''''''''''''
+
+S1_calibrations.s1_process.rampfitJWST
+--------------------------------------------
+.. automodule:: eureka.S1_calibrations.s1_process.rampfitJWST
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S1_calibrations.s1_process.EurekaS1Pipeline
+--------------------------------------------
+.. autoclass:: eureka.S1_calibrations.s1_process.EurekaS1Pipeline
+    :members:
+
+S1_calibrations.ramp_fitting
+--------------------------------------------
+.. automodule:: eureka.S1_calibrations.ramp_fitting
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 S2_calibrations
 ''''''''''''''''''''
 
-S2_calibrations.s2_calibrate.EurekaS2Pipeline
+S2_calibrations.s2_calibrate.calibrateJWST
+--------------------------------------------
+.. automodule:: eureka.S2_calibrations.s2_calibrate.calibrateJWST
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S2_calibrations.s2_calibrate.EurekaSpec2Pipeline
 --------------------------------
-.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaS2Pipeline
+.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaSpec2Pipeline
+    :members:
+
+S2_calibrations.s2_calibrate.EurekaImage2Pipeline
+--------------------------------
+.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaImage2Pipeline
     :members:
 
 
@@ -144,6 +207,13 @@ S3_data_reduction.bright2flux
     :undoc-members:
     :show-inheritance:
 
+S3_data_reduction.hst_scan
+--------------------------------
+.. automodule:: eureka.S3_data_reduction.hst_scan
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 S3_data_reduction.miri
 -----------------------
 .. automodule:: eureka.S3_data_reduction.miri
@@ -154,6 +224,13 @@ S3_data_reduction.miri
 S3_data_reduction.nircam
 -------------------------
 .. automodule:: eureka.S3_data_reduction.nircam
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S3_data_reduction.niriss_profiles
+----------------------------------
+.. automodule:: eureka.S3_data_reduction.niriss_profiles
     :members:
     :undoc-members:
     :show-inheritance:
@@ -207,6 +284,13 @@ S3_data_reduction.source_pos
     :undoc-members:
     :show-inheritance:
 
+S3_data_reduction.wfc3
+----------------------------
+.. automodule:: eureka.S3_data_reduction.wfc3
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 S4_generate_lightcurves
 ''''''''''''''''''''''''''
@@ -228,6 +312,91 @@ S4_generate_lightcurves.plots_s4
 S4_generate_lightcurves.s4_genLC
 ----------------------------------
 .. automodule:: eureka.S4_generate_lightcurves.s4_genLC
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+S5_lightcurve_fitting
+''''''''''''''''''''''''''
+
+S5_lightcurve_fitting.fitters
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.fitters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.lightcurve
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.lightcurve
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.likelihood
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.likelihood
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.limb_darkening
+-------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.limb_darkening
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.modelgrid
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.modelgrid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.plots_s5
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.plots_s5
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.s5_fit
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.s5_fit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.simulations
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.simulations
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.utils
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+S6_planet_spectra
+''''''''''''''''''''''''''
+
+S6_planet_spectra.plots_s6
+----------------------------------
+.. automodule:: eureka.S6_planet_spectra.plots_s6
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S6_planet_spectra.s6_spectra
+----------------------------------
+.. automodule:: eureka.S6_planet_spectra.s6_spectra
     :members:
     :undoc-members:
     :show-inheritance:
