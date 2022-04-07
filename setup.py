@@ -9,8 +9,12 @@ with open('requirements.txt') as f:
 
 extras_require = {
    'jwst': ["jwst==1.3.3", "stcal", "asdf>=2.7.1,<2.11.0"],
-   'hst': ["image_registration"]
+   'hst': ["image_registration"],
+   'pymc3': ['starry>=1', 'pymc3', 'theano-pymc', 'exoplanet'],
+   'test': ['pytest', 'pytest-cov', 'codecov', 'flake8', 'pytest-doctestplus'],
+   'jupyter': ['jupyter', 'ipykernel']
 }
+extras_require['all'] = [val for vals in extras_require.values() for val in vals]
 
 FILES = []
 for root, _, files in os.walk("Eureka"):

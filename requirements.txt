@@ -13,12 +13,12 @@ h5py
 ipython
 lmfit
 matplotlib
+# mkl-service # Needed for theano - only available by conda install mkl-service
 myst_parser # Needed for documentation
 nbsphinx # Needed for documentation
-numpy>=1.20.0
+numpy>=1.20.0,<1.22 # Upper limit required for theano and starry
 pandas
 photutils
-pytest
 recommonmark # Needed for documentation
 requests
 scipy>=1.4.0 # Needed for scipy.fft
