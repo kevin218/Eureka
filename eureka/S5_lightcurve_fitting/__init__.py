@@ -2,6 +2,7 @@
 Package to fit models to light curve data
 """
 from . import fitters
+from . import gradient_fitters
 from . import lightcurve
 from . import likelihood
 from . import limb_darkening_fit

@@ -4,3 +4,4 @@ from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
 from .PolynomialModel import PolynomialModel
 from .ExpRampModel import ExpRampModel
 from .GPModel import GPModel
+from .PyMC3Models import StarryModel

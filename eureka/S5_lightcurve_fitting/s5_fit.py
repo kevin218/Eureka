@@ -185,6 +185,10 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
 
     # Make the astrophysical and detector models
     modellist=[]
+    if 'starry' in meta.run_myfuncs:
+        t_transit = m.StarryModel(parameters=params, name='starry', fmt='r--', log=log,
+                                  longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
+        modellist.append(t_transit)
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = m.BatmanTransitModel(parameters=params, name='transit', fmt='r--', log=log,
                                          longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
@@ -219,7 +223,12 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--', log=log)
         modellist.append(t_GP)
-    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
+
+    if 'starry' in meta.run_myfuncs:
+        # Only have that one model for starry
+        model = modellist[0]
+    else:
+        model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -246,6 +255,12 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
         model.fitter = 'lmfit'
         lc_model.fit(model, meta, log, fitter='lmfit')
         log.writelog("Completed lmfit fit.")
+        log.writelog("-------------------------")
+    if 'exoplanet' in meta.fit_method:
+        log.writelog("Starting exoplanet fit.")
+        model.fitter = 'exoplanet'
+        lc_model.fit(model, meta, log, fitter='exoplanet')
+        log.writelog("Completed exoplanet fit.")
         log.writelog("-------------------------")
     log.writelog("=========================")
 
