@@ -49,12 +49,14 @@ class PolynomialModel(Model):
         # Parse 'c#' keyword arguments as coefficients
         coeffs = np.zeros((self.nchan,10))
         for k, v in self.parameters.dict.items():
-            remvisnum=k.split('_')
-            if k.lower().startswith('c') and k[1:].isdigit():
-                coeffs[0,int(k[1:])] = v[0]
-            elif len(remvisnum)>1 and self.nchan>1:
-                if remvisnum[0].lower().startswith('c') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
-                    coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
+            if k.lower().startswith('c'):
+                k = k[1:]
+                remvisnum=k.split('_')
+                if k.isdigit():
+                    coeffs[0,int(k)] = v[0]
+                elif len(remvisnum)>1 and self.nchan>1:
+                    if remvisnum[0].isdigit() and remvisnum[1].isdigit():
+                        coeffs[int(remvisnum[1]),int(remvisnum[0])] = v[0]
 
         # Trim zeros and reverse
         coeffs=coeffs[:,~np.all(coeffs==0,axis=0)]

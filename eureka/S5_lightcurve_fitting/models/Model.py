@@ -53,7 +53,7 @@ class Model:
             The combined model
         """
         # Make sure it is the right type
-        attrs = ['units', 'flux', 'time']
+        attrs = ['flux', 'time']
         if not all([hasattr(other, attr) for attr in attrs]):
             raise TypeError('Only another Model instance may be multiplied.')
 
@@ -135,8 +135,7 @@ class Model:
 
         # Or a Parameters instance
         if (params is not None) and (type(params).__name__ != Parameters.__name__):
-            raise TypeError("'params' argument must be a JSON file, ascii\
-                             file, or parameters.Parameters instance.")
+            raise TypeError("'params' argument must be a JSON file, ascii file, or Parameters instance.")
 
         # Set the parameters attribute
         self._parameters = params
@@ -215,26 +214,6 @@ class Model:
 
         # Set the array
         self._time = time_array
-
-    @property
-    def units(self):
-        """A getter for the units"""
-        return self._units
-
-    @units.setter
-    def units(self, units):
-        """A setter for the units
-
-        Parameters
-        ----------
-        units: str
-            The time units ['BJD', 'MJD', 'phase']
-        """
-        # Check the type
-        if units not in ['BJD', 'MJD', 'phase']:
-            raise TypeError("units axis must be 'BJD', 'MJD', or 'phase'.")
-
-        self._units = units
 
 class CompositeModel(Model):
     """A class to create composite models"""

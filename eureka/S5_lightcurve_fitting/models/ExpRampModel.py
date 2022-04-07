@@ -46,14 +46,18 @@ class ExpRampModel(Model):
             The sequence of coefficient values
         """
         # Parse 'r#' keyword arguments as coefficients
-        self.coeffs = np.zeros((self.nchan, 6))
+        coeffs = np.zeros((self.nchan,6))
         for k, v in self.parameters.dict.items():
-            remvisnum=k.split('_')
-            if k.lower().startswith('r') and k[1:].isdigit():
-                self.coeffs[0,int(k[1:])] = v[0]
-            elif len(remvisnum)>1 and self.nchan>1:
-                if remvisnum[0].lower().startswith('r') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
-                    self.coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
+            if k.lower().startswith('r'):
+                k = k[1:]
+                remvisnum=k.split('_')
+                if k.isdigit():
+                    coeffs[0,int(k)] = v[0]
+                elif len(remvisnum)>1 and self.nchan>1:
+                    if remvisnum[0].isdigit() and remvisnum[1].isdigit():
+                        coeffs[int(remvisnum[1]),int(remvisnum[0])] = v[0]
+
+        self.coeffs=coeffs
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
