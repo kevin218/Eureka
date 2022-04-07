@@ -33,6 +33,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         The metadata object
     log: logedit.Logedit
         The open log in which notes from this step can be added.
+    calling_function: str, optional
+        The name of the fitter/sampler currently being run (aka emcee if running emcee with lsq_first=True)
     **kwargs:
         Arbitrary keyword arguments.
 
