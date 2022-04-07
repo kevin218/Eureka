@@ -97,7 +97,7 @@ Issues with installing the jwst dependency
 ------------------------------------------
 
 If you have issues installing the jwst dependency, check out the debugging advice related to the jwst package on our
-`FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_.
+`FAQ page <https://eurekadocs.readthedocs.io/en/latest/faq.html#issues-installing-or-importing-jwst>`_.
 
 For the JWST ERS Pre-Launch Data Hackathon
 -----------------------------------------------

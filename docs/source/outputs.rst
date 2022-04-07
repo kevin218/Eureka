@@ -69,14 +69,12 @@ Stage 4 Outputs
 ---------------
 
 In Stage 4:
-   - If ``isplots_S4`` = 1: ``Eureka!`` will plot the spectral drift per exposure.
+   - If ``isplots_S4`` = 1: ``Eureka!`` will plot the spectral drift per exposure, and the drift-corrected 2-dimensional lightcurve with extracted bins overlaid.
 
    .. figure:: ../media/S4_out/fig4101.png
       :alt: Stage 4 spectral drift plot
 
       Stage 4 output: Spectral Drift Plot
-
-   - If ``isplots_S4`` = 2: ``Eureka!`` will plot the drift-corrected 2-dimensional lightcurve with extracted bins overlaid.
 
    .. figure:: ../media/S4_out/fig4201.png
       :alt: Stage 4 2-dimensional binned spectrum
@@ -90,14 +88,12 @@ In Stage 4:
 
       Stage 4 output: Spectroscopic Lightcurve
 
-   - If ``isplots_S4`` = 4: ``Eureka!`` will plot the cross-correlated reference spectrum with the current spectrum for each integration.
+   - If ``isplots_S4`` = 5: ``Eureka!`` will plot the cross-correlated reference spectrum with the current spectrum for each integration, and the cross-correlation strength for each integration.
 
    .. figure:: ../media/S4_out/fig4401.png
       :alt: Stage 4 cross correlated reference spectrum
 
       Stage 4 output: Cross-Correlated Reference Spectrum
-
-   - If ``isplots_S4`` = 5: ``Eureka!`` will plot the cross-correlation strength for each integration.
 
    .. figure:: ../media/S4_out/fig4501.png
       :alt: Stage 4 cross correlation strength
@@ -112,8 +108,28 @@ Stage 5 Outputs
 
 In Stage 5:
    - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel.
-   - If ``isplots_S5`` = 2: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise.
-   - If ``isplots_S5`` = 3: ``Eureka!`` will plot a corner plot for each channel.
-   - If ``isplots_S5`` = 4: ``Eureka!`` will plot the fitting chains for each channel.
-   - If ``isplots_S5`` = 5: ``Eureka!`` will plot the normalized residual distribution.
-   - If ``isplots_S6`` = 6, and if a GP model was used in the fit: ``Eureka!`` will plot the lightcurve, the GP model, and the residuals.
+   
+   .. figure:: ../media/S5_out/fig5101.png
+      :alt: Stage 5 fit data and lightcurve
+
+      Stage 5 output: Fitted lightcurve
+
+   - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
+   .. figure:: ../media/S5_out/fig5501.png
+      :alt: Stage 5 residual distribution
+
+      Stage 5 output: Residual Distribution
+
+   .. figure:: ../media/S5_out/fig5403.png
+      :alt: Stage 5 fitting chains
+
+      Stage 5 output: Fitting Chains
+
+   - If ``isplots_S5`` = 5: ``Eureka!`` will plot a corner plot for each channel.
+
+   .. figure:: ../media/S5_out/fig5301.png
+      :alt: Stage 5 corner plot
+
+      Stage 5 output: Corner Plot
+
+   - If a GP model was used in the fit, then ``Eureka!`` will plot the lightcurve, the GP model, and the residuals.

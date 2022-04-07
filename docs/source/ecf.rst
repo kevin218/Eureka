@@ -497,16 +497,48 @@ The path to the directory in which to output the Stage 5 JWST data and plots.
 Stage 5 Fit Parameters
 ----------------------
 
-This file describes the transit/eclipse parameters and their prior distributions. Each line describes a new parameter, with the following basic format:
+.. warning::
+   The Stage 5 fit parameter file has the file extension ``.epf``, not ``.ecf``. These have different formats, and are not interchangeable.
+
+This file describes the transit/eclipse and systematics parameters and their prior distributions. Each line describes a new parameter, with the following basic format:
 
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
-The ``PriorType`` can be U (Uniform), LU (Log Uniform), or N (Normal). If U/LU, then ``PriorPar1`` and ``PriorPar2`` are the lower and upper limits of the prior distribution. If N, then ``PriorPar1`` is the mean and ``PriorPar2`` is the stadard deviation of the Gaussian prior.
+``Name`` defines the specific parameter being fit for. Available options are:
+   - Transit and Eclipse Parameters
+      - ``rp`` - planet radius, for the transit models.
+      - ``fp`` - planet/star flux ratio, for the eclipse models.
+   - Orbital Parameters
+      - ``per`` - orbital period (in days)
+      - ``t0`` - transit time (in days)
+      - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
+      - ``inc`` - orbital inclination (in degrees)
+      - ``a`` - a/R*, the ratio of the semimajor axis to the stellar radius
+      - ``ecc`` - orbital eccentricity
+      - ``w`` - argument of periapsis (degrees)
+   - Phase Curve Parameters - the phase curve model allows for the addition of up to four sinusoids into a single phase curve
+      - ``AmpCos1`` - Amplitude of the first cosine 
+      - ``AmpSin1`` - Amplitude of the first sine
+      - ``AmpCos2`` - Amplitude of the second cosine
+      - ``AmpSin2`` - Amplitude of the second sine
+   - Limb Darkening Parameters
+      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']``
+      - ``u1`` - The first limb darkening parameter
+      - ``u2`` - The second limb darkening parameter.
+      Further limb darkening parameters can be specified as needed by the specified model.
+   - Systematics Parameters - Depending on the model specified in the Stage 5 ECF, set either polynomial model coefficients ``c0--c9`` for 0th to 3rd order polynomials. Polynomial fits should include at least ``c0`` for usable results. Exponential ramp models can fit up to two ramps. ``r0--r2`` for one ramp, ``r3--r5`` for the second.
+   - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm
 
-``Free`` determines whether the parameter is fixed, free, independent, or shared. Fixed parameters are fixed in the fitting routine and not fit for. Free parameters are fit for according to the specified prior distribution, independently for each wavelength channel. Shared parameters are fit for according to the specified prior distribution, but are common to all wavelength channels. Independent variables set auxiliary functions needed for the fitting routines.
+
+
+``Free`` determines whether the parameter is ``fixed``, ``free``, ``independent``, or ``shared``. ``fixed`` parameters are fixed in the fitting routine and not fit for. ``free`` parameters are fit for according to the specified prior distribution, independently for each wavelength channel. ``shared`` parameters are fit for according to the specified prior distribution, but are common to all wavelength channels. ``independent`` variables set auxiliary functions needed for the fitting routines.
+
+
+
+The ``PriorType`` can be U (Uniform), LU (Log Uniform), or N (Normal). If U/LU, then ``PriorPar1`` and ``PriorPar2`` are the lower and upper limits of the prior distribution. If N, then ``PriorPar1`` is the mean and ``PriorPar2`` is the stadard deviation of the Gaussian prior.
 
 Here's an example fit parameter file:
 
 
-.. include:: ../media/S5_fit_par_template.ecf
+.. include:: ../media/S5_fit_par_template.epf
    :literal:
