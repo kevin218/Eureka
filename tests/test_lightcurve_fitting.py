@@ -70,19 +70,6 @@ class TestModels(unittest.TestCase):
         # Set time to use for evaluations
         self.time = np.linspace(0, 1, 100)
 
-    def test_model(self):
-        """Tests for the generic Model class"""
-        # Test model creation
-        name = 'Model 1'
-        self.model = models.Model(name=name)
-        self.assertEqual(self.model.name, name)
-
-        # Test model units
-        self.assertEqual(str(self.model.units), 'd')
-        self.model.units = 'MJD'
-        self.assertEqual(self.model.units, 'MJD')
-        self.assertRaises(TypeError, setattr, self.model.units, 'foobar')
-
     def test_compositemodel(self):
         """Tests for the CompositeModel class"""
         model1 = models.Model()
