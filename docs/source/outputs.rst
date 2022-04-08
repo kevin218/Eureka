@@ -133,3 +133,8 @@ In Stage 5:
       Stage 5 output: Corner Plot
 
    - If a GP model was used in the fit, then ``Eureka!`` will plot the lightcurve, the GP model, and the residuals.
+
+   .. figure:: ../media/S5_out/fig5121_lc_GP.png
+      :alt: Stage 5 GP plot
+
+      Stage 5 output: Lightcurve, GP model, and Residual Plot
