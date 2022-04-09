@@ -75,71 +75,84 @@ class StarryModel(pm.Model):
                             # If a parameter is shared, make it equal to the 0th parameter value
                             setattr(self, parname_temp, pm.Deterministic(parname_temp, getattr(self, parname)))
 
-            # Initialize star object
+            
             if hasattr(self, 'u2'):
-                udeg = 2
+                self.udeg = 2
             elif hasattr(self, 'u1'):
-                udeg = 1
+                self.udeg = 1
             else:
-                udeg = 0
-            self.star = starry.Primary(starry.Map(ydeg=0, udeg=udeg, amp=1.0), m=self.Ms, r=self.Rs, prot=1.0)
-
-            # FINDME: non-uniform limb darkening does not currently work
-            # FINDME: non-uniform limb darkening does not currently work for multi-wavelength fits
-            if self.parameters.limb_dark.value == 'kipping2013':
-                # Transform stellar variables to uniform used by starry
-                self.u1_quadratic = pm.Deterministic('u1_quadratic', 2*tt.sqrt(self.u1)*self.u2)
-                self.u2_quadratic = pm.Deterministic('u2_quadratic', tt.sqrt(self.u1)*(1-2*self.u2))
-                self.star.map[1] = self.u1_quadratic
-                self.star.map[2] = self.u2_quadratic
-            elif self.parameters.limb_dark.value == 'quadratic':
-                self.star.map[1] = self.u1
-                self.star.map[2] = self.u2
-            elif self.parameters.limb_dark.value == 'linear':
-                self.star.map[1] = self.u1
-            elif self.parameters.limb_dark.value != 'uniform':
-                raise ValueError(f'ERROR: starryModel is not yet able to handle {self.parameters.limb_dark.value} limb darkening.\n'+
-                                 f'       limb_dark must be one of uniform, linear, quadratic, or kipping2013.')
-
-            # Initialize planet object
+                self.udeg = 0
             if hasattr(self, 'AmpCos2') or hasattr(self, 'AmpSin2'):
                 self.ydeg=2
             elif hasattr(self, 'AmpCos1') or hasattr(self, 'AmpSin1'):
                 self.ydeg=1
             else:
                 self.ydeg=0
-            if hasattr(self, 'fp'):
-                amp = self.fp
-            else:
-                amp = 0
-            self.planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
-                m=self.Mp*const.M_jup.value/const.M_sun.value, # Convert mass to M_sun units
-                r=self.rp*self.Rs, # Convert radius to R_star units
-                a=self.a, # Setting porb here overwrites a
-                # porb = self.per,
-                # prot = self.per,
-                #inc=tt.arccos(b/a)*180/np.pi # Another option to set inclination using impact parameter
-                inc=self.inc,
-                ecc=self.ecc,
-                w=self.w
-            )
-            self.planet.porb = self.per # Setting porb here may not override a
-            self.planet.prot = self.per # Setting prot here may not override a
-            if hasattr(self, 'AmpCos1'):
-                self.planet.map[1, 0] = self.AmpCos1
-            if hasattr(self, 'AmpSin1'):
-                self.planet.map[1, 1] = self.AmpSin1
-            if self.ydeg==2:
-                if hasattr(self, 'AmpCos2'):
-                    self.planet.map[2, 0] = self.AmpCos2
-                if hasattr(self, 'AmpSin2'):
-                    self.planet.map[2, 1] = self.AmpSin2
-            self.planet.theta0 = 180.0 # Offset is controlled by AmpSin1
-            self.planet.tref = 0
+            
+            self.systems = []
+            for c in range(self.nchan):
+                # Initialize star object
+                star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg, amp=1.0), m=self.Ms, r=self.Rs, prot=1.0)
 
-            # Instantiate the system
-            self.sys = starry.System(self.star, self.planet)
+                # To save ourselves from tonnes of getattr lines, let's make a new object without the _c parts of the parnames
+                # This way we can do `temp.u1` rather than  `getattr(self, 'u1_'+c)`
+                temp = fit_class()
+                for key in self.paramtitles:
+                    if getattr(self.parameters, key).ptype in ['free', 'shared', 'fixed']:
+                        if c>0 and getattr(self.parameters, key).ptype!='fixed':
+                            # Remove the _c part of the parname but leave any other underscores intact
+                            setattr(temp, key, getattr(self, key+'_'+str(c)))
+                        else:
+                            setattr(temp, key, getattr(self, key))
+
+                # FINDME: non-uniform limb darkening does not currently work
+                if self.parameters.limb_dark.value == 'kipping2013':
+                    # Transform stellar variables to uniform used by starry
+                    star.map[1] = pm.Deterministic('u1_quadratic_'+str(c), 2*tt.sqrt(temp.u1)*temp.u2)
+                    star.map[2] = pm.Deterministic('u2_quadratic_'+str(c), tt.sqrt(temp.u1)*(1-2*temp.u2))
+                elif self.parameters.limb_dark.value == 'quadratic':
+                    star.map[1] = temp.u1
+                    star.map[2] = temp.u2
+                elif self.parameters.limb_dark.value == 'linear':
+                    star.map[1] = temp.u1
+                elif self.parameters.limb_dark.value != 'uniform':
+                    raise ValueError(f'ERROR: starryModel is not yet able to handle {self.parameters.limb_dark.value} limb darkening.\n'+
+                                    f'       limb_dark must be one of uniform, linear, quadratic, or kipping2013.')
+                
+                if hasattr(self, 'fp'):
+                    amp = temp.fp
+                else:
+                    amp = 0
+                # Initialize planet object
+                planet = starry.Secondary(
+                    starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
+                    m=self.Mp*const.M_jup.value/const.M_sun.value, # Convert mass to M_sun units
+                    r=temp.rp*self.Rs, # Convert radius to R_star units
+                    a=temp.a, # Setting porb here overwrites a
+                    # porb = temp.per,
+                    # prot = temp.per,
+                    #inc=tt.arccos(b/a)*180/np.pi # Another option to set inclination using impact parameter
+                    inc=temp.inc,
+                    ecc=temp.ecc,
+                    w=temp.w
+                )
+                planet.porb = temp.per # Setting porb here may not override a
+                planet.prot = temp.per # Setting prot here may not override a
+                if hasattr(self, 'AmpCos1'):
+                    planet.map[1, 0] = temp.AmpCos1
+                if hasattr(self, 'AmpSin1'):
+                    planet.map[1, 1] = temp.AmpSin1
+                if self.ydeg==2:
+                    if hasattr(self, 'AmpCos2'):
+                        planet.map[2, 0] = temp.AmpCos2
+                    if hasattr(self, 'AmpSin2'):
+                        planet.map[2, 1] = temp.AmpSin2
+                planet.theta0 = 180.0 # Offset is controlled by AmpSin1
+                planet.tref = 0
+
+                # Instantiate the system
+                sys = starry.System(star, planet)
+                self.systems.append(sys)
 
     @property
     def flux(self):
@@ -311,15 +324,15 @@ class StarryModel(pm.Model):
 
         if eval:
             phys_flux = np.zeros(0)
-            lcpiece = self.fit.sys.flux(new_time-self.fit.t0).eval()
             for c in range(self.nchan):
+                lcpiece = self.fit.systems[c].flux(new_time-self.fit.t0).eval()
                 phys_flux = np.concatenate([phys_flux, lcpiece])
 
             return phys_flux, new_time
         else:
             phys_flux = tt.zeros(0)
-            lcpiece = self.sys.flux(new_time-self.t0)
             for c in range(self.nchan):
+                lcpiece = self.systems[c].flux(new_time-self.t0)
                 phys_flux = tt.concatenate([phys_flux, lcpiece])
 
             return phys_flux, new_time
@@ -348,69 +361,83 @@ class StarryModel(pm.Model):
                     setattr(fit, parname_temp, getattr(fit, parname))
                     self._fit_dict[parname_temp] = getattr(fit, parname)
 
-        # Initialize star object
-        if hasattr(fit, 'u2'):
-            udeg = 2
-        elif hasattr(fit, 'u1'):
-            udeg = 1
+        if hasattr(self, 'u2'):
+            fit.udeg = 2
+        elif hasattr(self, 'u1'):
+            fit.udeg = 1
         else:
-            udeg = 0
-        fit.star = starry.Primary(starry.Map(ydeg=0, udeg=udeg, amp=1.0), m=fit.Ms, r=fit.Rs, prot=1.0)
-
-        if self.parameters.limb_dark.value == 'kipping2013':
-            # Transform stellar variables to uniform used by starry
-            fit.u1_quadratic = pm.Deterministic('u1_quadratic', 2*tt.sqrt(fit.u1)*fit.u2)
-            fit.u2_quadratic = pm.Deterministic('u2_quadratic', tt.sqrt(fit.u1)*(1-2*fit.u2))
-            fit.star.map[1] = fit.u1_quadratic
-            fit.star.map[2] = fit.u2_quadratic
-        elif self.parameters.limb_dark.value == 'linear':
-            fit.star.map[1] = fit.u1
-        elif self.parameters.limb_dark.value == 'quadratic':
-            fit.star.map[1] = fit.u1
-            fit.star.map[2] = fit.u2
-        elif self.parameters.limb_dark.value != 'uniform':
-            raise ValueError(f'ERROR: starryModel is not yet able to handle {self.parameters.limb_dark.value} limb darkening.\n'+
-                            f'       limb_dark must be one of uniform, linear, quadratic, or kipping2013.')
-
-        # Initialize planet object
-        if hasattr(fit, 'AmpCos2') or hasattr(fit, 'AmpSin2'):
+            fit.udeg = 0
+        if hasattr(self, 'AmpCos2') or hasattr(self, 'AmpSin2'):
             fit.ydeg=2
-        elif hasattr(fit, 'AmpCos1') or hasattr(fit, 'AmpSin1'):
+        elif hasattr(self, 'AmpCos1') or hasattr(self, 'AmpSin1'):
             fit.ydeg=1
         else:
             fit.ydeg=0
-        if hasattr(fit, 'fp'):
-            amp = fit.fp
-        else:
-            amp = 0
-        fit.planet = starry.Secondary(
-            starry.Map(ydeg=fit.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
-            m=fit.Mp*const.M_jup.value/const.M_sun.value,
-            r=fit.rp*fit.Rs,
-            a=fit.a, # Setting porb overwrites a
-            # porb = fit.per,
-            # prot = fit.per,
-            #inc=tt.arccos(b/a)*180/np.pi
-            inc=fit.inc,
-            ecc=fit.ecc,
-            w=fit.w
-        )
-        fit.planet.porb = fit.per
-        fit.planet.prot = fit.per
-        if hasattr(fit, 'AmpCos1'):
-            fit.planet.map[1, 0] = fit.AmpCos1
-        if hasattr(fit, 'AmpSin1'):
-            fit.planet.map[1, 1] = fit.AmpSin1
-        if fit.ydeg==2:
-            if hasattr(fit, 'AmpCos2'):
-                fit.planet.map[2, 0] = fit.AmpCos2
-            if hasattr(fit, 'AmpSin2'):
-                fit.planet.map[2, 1] = fit.AmpSin2
-        fit.planet.theta0 = 180.0 # Offset is controlled by AmpSin1
-        fit.planet.tref = 0
 
-        # Instantiate the system
-        fit.sys = starry.System(fit.star, fit.planet)
+        fit.systems = []
+        for c in range(self.nchan):
+            # Initialize star object
+            star = starry.Primary(starry.Map(ydeg=0, udeg=fit.udeg, amp=1.0), m=self.Ms, r=self.Rs, prot=1.0)
+
+            # To save ourselves from tonnes of getattr lines, let's make a new object without the _c parts of the parnames
+            # This way we can do `temp.u1` rather than  `getattr(self, 'u1_'+c)`
+            temp = fit_class()
+            for key in self.paramtitles:
+                if getattr(self.parameters, key).ptype in ['free', 'shared', 'fixed']:
+                    if c>0 and getattr(self.parameters, key).ptype!='fixed':
+                        # Remove the _c part of the parname but leave any other underscores intact
+                        setattr(temp, key, getattr(fit, key+'_'+str(c)))
+                    else:
+                        setattr(temp, key, getattr(fit, key))
+
+            # FINDME: non-uniform limb darkening does not currently work
+            if self.parameters.limb_dark.value == 'kipping2013':
+                # Transform stellar variables to uniform used by starry
+                star.map[1] = 2*np.sqrt(temp.u1)*temp.u2
+                star.map[2] = np.sqrt(temp.u1)*(1-2*temp.u2)
+            elif self.parameters.limb_dark.value == 'quadratic':
+                star.map[1] = temp.u1
+                star.map[2] = temp.u2
+            elif self.parameters.limb_dark.value == 'linear':
+                star.map[1] = temp.u1
+            elif self.parameters.limb_dark.value != 'uniform':
+                raise ValueError(f'ERROR: starryModel is not yet able to handle {self.parameters.limb_dark.value} limb darkening.\n'+
+                                f'       limb_dark must be one of uniform, linear, quadratic, or kipping2013.')
+            
+            if hasattr(self, 'fp'):
+                amp = temp.fp
+            else:
+                amp = 0
+            # Initialize planet object
+            planet = starry.Secondary(
+                starry.Map(ydeg=fit.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
+                m=self.Mp*const.M_jup.value/const.M_sun.value, # Convert mass to M_sun units
+                r=temp.rp*self.Rs, # Convert radius to R_star units
+                a=temp.a, # Setting porb here overwrites a
+                # porb = temp.per,
+                # prot = temp.per,
+                #inc=tt.arccos(b/a)*180/np.pi # Another option to set inclination using impact parameter
+                inc=temp.inc,
+                ecc=temp.ecc,
+                w=temp.w
+            )
+            planet.porb = temp.per # Setting porb here may not override a
+            planet.prot = temp.per # Setting prot here may not override a
+            if hasattr(self, 'AmpCos1'):
+                planet.map[1, 0] = temp.AmpCos1
+            if hasattr(self, 'AmpSin1'):
+                planet.map[1, 1] = temp.AmpSin1
+            if self.ydeg==2:
+                if hasattr(self, 'AmpCos2'):
+                    planet.map[2, 0] = temp.AmpCos2
+                if hasattr(self, 'AmpSin2'):
+                    planet.map[2, 1] = temp.AmpSin2
+            planet.theta0 = 180.0 # Offset is controlled by AmpSin1
+            planet.tref = 0
+
+            # Instantiate the system
+            sys = starry.System(star, planet)
+            fit.systems.append(sys)
 
         if hasattr(fit, 'scatter_mult'):
             # Fitting the noise level as a multiplier
