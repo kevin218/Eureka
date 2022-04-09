@@ -51,12 +51,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet', **kwargs
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
-
-    unmasked = np.where(np.logical_and(~np.ma.getmaskarray(np.ma.masked_invalid(lc.flux)), ~np.ma.getmaskarray(np.ma.masked_invalid(lc.unc))))
-    # PyMC3 doesn't seem to handle masked arrays well, so just cut out masked data
-    time, flux, unc = lc.time[unmasked], lc.flux[unmasked], lc.unc[unmasked]
-    lc.time, lc.flux, lc.unc, meta.time = time, flux, unc, time
-    model.setup(time, flux, unc)
+    
+    model.setup(lc.time, lc.flux, lc.unc)
 
     start = {}
     for name, val in zip(freenames, freepars):
@@ -69,23 +65,19 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet', **kwargs
     fit_params = np.array([map_soln[name] for name in freenames])
     model.fit_dict = {freenames[i]: fit_params[i] for i in range(len(freenames))}
 
-    if 'scatter_ppm' in fit_params:
-        lc.unc_fit = map_soln['scatter_ppm']*np.ones_like(lc.time)
-    else:
-        lc.unc_fit = lc.unc
+    if "scatter_ppm" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        for chan in range(len(ind)):
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * 1e-6
+    elif "scatter_mult" in freenames:
+        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:12] == "scatter_mult"]
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.copy(lc.unc)
+        for chan in range(len(ind)):
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, fit_params, freenames)
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter=calling_function)
-
-    # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
     print('\nEXOPLANET RESULTS:')
     for i in range(len(freenames)):
@@ -101,6 +93,13 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet', **kwargs
             log.writelog('{0}: {1}'.format(freenames[i], fit_params[i]))
     log.writelog('')
 
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
+
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter=calling_function)
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3 and calling_function=='exoplanet':
         # This plot is only really useful if you're actually using the lsq fitter, otherwise don't make it
@@ -110,6 +109,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet', **kwargs
     if meta.isplots_S5 >= 3 and calling_function=='exoplanet':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
+    # Make a new model instance
+    best_model = copy.copy(model)
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 import starry
 import pymc3 as pm
@@ -33,6 +34,7 @@ class StarryModel(pm.Model):
         self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
+        self.uniqueparams = np.unique(self.longparamlist)
 
         self.components = [self]
 
@@ -48,28 +50,30 @@ class StarryModel(pm.Model):
                     continue
                 elif param.ptype == 'fixed':
                     setattr(self, parname, tt.constant(param.value))
+                elif param.ptype not in ['free', 'shared']:
+                    raise ValueError(f'ptype {param.ptype} for parameter {param.name} is not recognized.')
                 else:
-                    if param.ptype=='free':
-                        if self.nchan==1:
-                            shape = 1
+                    for c in range(self.nchan):
+                        if c!=0:
+                            parname_temp = parname+'_'+str(c)
                         else:
-                            # FINDME: multi-wavelength fits do not currently work
-                            shape = (1,self.nchan)
-                    elif param.ptype=='shared':
-                        shape = ()
-                    else:
-                        raise ValueError(f'ptype {param.ptype} for parameter {param.name} is not recognized.')
-                    if param.prior == 'U':
-                        setattr(self, parname, pm.Uniform(parname, lower=param.priorpar1, upper=param.priorpar2))#, shape=shape))
-                    elif param.prior == 'N':
-                        if parname in ['rp', 'per', 'ecc', 'scatter_mult', 'scatter_ppm', 'c0']:
-                            setattr(self, parname, BoundedNormal_0(parname, mu=param.priorpar1, sigma=param.priorpar2))#, shape=shape))
-                        elif parname in ['inc']:
-                            setattr(self, parname, BoundedNormal_90(parname, mu=param.priorpar1, sigma=param.priorpar2))#, shape=shape))
+                            parname_temp = parname
+
+                        if param.ptype=='free' or c==0:
+                            if param.prior == 'U':
+                                setattr(self, parname_temp, pm.Uniform(parname_temp, lower=param.priorpar1, upper=param.priorpar2))
+                            elif param.prior == 'N':
+                                if parname in ['rp', 'per', 'ecc', 'scatter_mult', 'scatter_ppm', 'c0']:
+                                    setattr(self, parname_temp, BoundedNormal_0(parname_temp, mu=param.priorpar1, sigma=param.priorpar2))
+                                elif parname in ['inc']:
+                                    setattr(self, parname_temp, BoundedNormal_90(parname_temp, mu=param.priorpar1, sigma=param.priorpar2))
+                                else:
+                                    setattr(self, parname_temp, pm.Normal(parname_temp, mu=param.priorpar1, sigma=param.priorpar2))
+                            elif param.prior == 'LU':
+                                setattr(self, parname_temp, tt.exp(pm.Uniform(parname_temp, lower=param.priorpar1, upper=param.priorpar2)))
                         else:
-                            setattr(self, parname, pm.Normal(parname, mu=param.priorpar1, sigma=param.priorpar2))#, shape=shape))
-                    elif param.prior == 'LU':
-                        setattr(self, parname, tt.exp(pm.Uniform(parname, lower=param.priorpar1, upper=param.priorpar2)))#, shape=shape)))
+                            # If a parameter is shared, make it equal to the 0th parameter value
+                            setattr(self, parname_temp, pm.Deterministic(parname_temp, getattr(self, parname)))
 
             # Initialize star object
             if hasattr(self, 'u2'):
@@ -81,6 +85,7 @@ class StarryModel(pm.Model):
             self.star = starry.Primary(starry.Map(ydeg=0, udeg=udeg, amp=1.0), m=self.Ms, r=self.Rs, prot=1.0)
 
             # FINDME: non-uniform limb darkening does not currently work
+            # FINDME: non-uniform limb darkening does not currently work for multi-wavelength fits
             if self.parameters.limb_dark.value == 'kipping2013':
                 # Transform stellar variables to uniform used by starry
                 self.u1_quadratic = pm.Deterministic('u1_quadratic', 2*tt.sqrt(self.u1)*self.u2)
@@ -155,8 +160,8 @@ class StarryModel(pm.Model):
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
-        self._flux = np.array(flux_array)
-        # self._flux = np.ma.masked_array(flux_array)
+        # self._flux = np.array(flux_array)
+        self._flux = np.ma.masked_array(flux_array)
 
     @property
     def parameters(self):
@@ -183,23 +188,38 @@ class StarryModel(pm.Model):
         self.lc_unc = lc_unc
 
         with self:
+            if hasattr(self, 'scatter_ppm'):
+                scatter_ppm_array = self.scatter_ppm*tt.ones(len(self.time))
+                for c in range(1, self.nchan):
+                    parname_temp = 'scatter_ppm_'+str(c)
+                    scatter_ppm_array = tt.concatenate([scatter_ppm_array, getattr(self, parname_temp)*tt.ones(len(self.time))])
+                self.scatter_ppm_array = pm.Deterministic("scatter_ppm_array", scatter_ppm_array*1e6)
             if hasattr(self, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
-                self.scatter_ppm = pm.Deterministic("scatter_ppm", self.scatter_mult*self.lc_unc)
-            if not hasattr(self, 'scatter_ppm'):
+                scatter_ppm_array = self.scatter_mult*self.lc_unc[:len(self.time)]
+                for c in range(1, self.nchan):
+                    parname_temp = 'scatter_mult_'+str(c)
+                    scatter_ppm_array = tt.concatenate([scatter_ppm_array, getattr(self, parname_temp)*self.lc_unc[c*len(self.time):(c+1)*len(self.time)]])
+                self.scatter_ppm_array = pm.Deterministic("scatter_ppm_array", scatter_ppm_array*1e6)
+            if not hasattr(self, 'scatter_ppm_array'):
                 # Not fitting the noise level
-                self.scatter_ppm = self.lc_unc
+                self.scatter_ppm_array = self.lc_unc*1e6
 
             # This is how we tell `pymc3` about our observations;
             # we are assuming they are ampally distributed about
             # the true model. This line effectively defines our
             # likelihood function.
-            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_ppm, observed=self.flux)
+            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_ppm_array/1e6, observed=self.flux)
 
         return
 
     def eval(self, eval=True, **kwargs):
-        return self.physeval(eval=eval)[0]*self.syseval(eval=eval)
+        sys_eval = self.syseval(eval=eval)
+        phys_eval = self.physeval(eval=eval)[0]
+        if eval:
+            return phys_eval*sys_eval
+        else:
+            return phys_eval*sys_eval
 
     def syseval(self, eval=True):
         if eval:
@@ -218,7 +238,7 @@ class StarryModel(pm.Model):
                             poly_coeffs[int(remvisnum[1]),int(remvisnum[0])] = v
                 elif k.lower().startswith('r'):
                     k = k[1:]
-                    remvisnum=k[1:].split('_')
+                    remvisnum=k.split('_')
                     if k.isdigit():
                         ramp_coeffs[0,int(k)] = v
                     elif len(remvisnum)>1 and self.nchan>1:
@@ -231,14 +251,14 @@ class StarryModel(pm.Model):
             time_poly = self.time - self.time.mean()
             for c in range(self.nchan):
                 poly = np.poly1d(poly_coeffs[c])
-                poly_flux = np.append(poly_flux, np.polyval(poly, time_poly))
+                poly_flux = np.concatenate([poly_flux, np.polyval(poly, time_poly)])
 
             ramp_flux = np.zeros(0)
             time_ramp = self.time - self.time[0]
             for c in range(self.nchan):
                 r0, r1, r2, r3, r4, r5 = ramp_coeffs[c]
                 lcpiece = r0*np.exp(-r1*time_ramp + r2) + r3*np.exp(-r4*time_ramp + r5) + 1
-                ramp_flux = np.append(ramp_flux, lcpiece)
+                ramp_flux = np.concatenate([ramp_flux, lcpiece])
 
             return poly_flux*ramp_flux
         else:
@@ -246,7 +266,7 @@ class StarryModel(pm.Model):
             poly_coeffs = np.zeros((self.nchan,10)).tolist()
             ramp_coeffs = np.zeros((self.nchan,6)).tolist()
             # Add fitted parameters
-            for k in self.paramtitles:
+            for k in self.uniqueparams:
                 if k.lower().startswith('c'):
                     k = k[1:]
                     remvisnum=k.split('_')
@@ -257,7 +277,7 @@ class StarryModel(pm.Model):
                             poly_coeffs[int(remvisnum[1])][int(remvisnum[0])] = getattr(self, 'c'+k)
                 elif k.lower().startswith('r'):
                     k = k[1:]
-                    remvisnum=k[1:].split('_')
+                    remvisnum=k.split('_')
                     if k.isdigit():
                         ramp_coeffs[0][int(k)] = getattr(self, 'r'+k)
                     elif len(remvisnum)>1 and self.nchan>1:
@@ -290,9 +310,19 @@ class StarryModel(pm.Model):
             new_time = self.time
 
         if eval:
-            return self.fit.sys.flux(new_time-self.fit.t0).eval(), new_time
+            phys_flux = np.zeros(0)
+            lcpiece = self.fit.sys.flux(new_time-self.fit.t0).eval()
+            for c in range(self.nchan):
+                phys_flux = np.concatenate([phys_flux, lcpiece])
+
+            return phys_flux, new_time
         else:
-            return self.sys.flux(new_time-self.t0), new_time
+            phys_flux = tt.zeros(0)
+            lcpiece = self.sys.flux(new_time-self.t0)
+            for c in range(self.nchan):
+                phys_flux = tt.concatenate([phys_flux, lcpiece])
+
+            return phys_flux, new_time
 
     @property
     def fit_dict(self):
@@ -306,12 +336,17 @@ class StarryModel(pm.Model):
         for key in self.fit_dict.keys():
             setattr(fit, key, self.fit_dict[key])
 
-        for parname in self.paramtitles:
+        for parname in self.uniqueparams:
             param = getattr(self.parameters, parname)
             if param.ptype == 'independent':
                 continue
             elif param.ptype == 'fixed':
                 setattr(fit, parname, param.value)
+            elif param.ptype == 'shared':
+                for c in range(1, self.nchan):
+                    parname_temp = parname+'_'+str(c)
+                    setattr(fit, parname_temp, getattr(fit, parname))
+                    self._fit_dict[parname_temp] = getattr(fit, parname)
 
         # Initialize star object
         if hasattr(fit, 'u2'):
@@ -344,24 +379,24 @@ class StarryModel(pm.Model):
             fit.ydeg=1
         else:
             fit.ydeg=0
-        # if hasattr(fit, 'fp'):
-        #     amp = fit.fp
-        # else:
-        #     amp = 0
+        if hasattr(fit, 'fp'):
+            amp = fit.fp
+        else:
+            amp = 0
         fit.planet = starry.Secondary(
-            starry.Map(ydeg=fit.ydeg, udeg=0, amp=fit.fp, inc=90.0, obl=0.0),
+            starry.Map(ydeg=fit.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
             m=fit.Mp*const.M_jup.value/const.M_sun.value,
             r=fit.rp*fit.Rs,
-            # a=fit.a, # Setting porb overwrites a
-            porb = fit.per,
-            prot = fit.per,
+            a=fit.a, # Setting porb overwrites a
+            # porb = fit.per,
+            # prot = fit.per,
             #inc=tt.arccos(b/a)*180/np.pi
             inc=fit.inc,
             ecc=fit.ecc,
             w=fit.w
         )
-        # fit.planet.porb = fit.per
-        # fit.planet.prot = fit.per
+        fit.planet.porb = fit.per
+        fit.planet.prot = fit.per
         if hasattr(fit, 'AmpCos1'):
             fit.planet.map[1, 0] = fit.AmpCos1
         if hasattr(fit, 'AmpSin1'):
@@ -376,6 +411,13 @@ class StarryModel(pm.Model):
 
         # Instantiate the system
         fit.sys = starry.System(fit.star, fit.planet)
+
+        if hasattr(fit, 'scatter_mult'):
+            # Fitting the noise level as a multiplier
+            fit.scatter_ppm = fit.scatter_mult*self.lc_unc*1e6
+        if not hasattr(fit, 'scatter_ppm'):
+            # Not fitting the noise level
+            fit.scatter_ppm = self.lc_unc*1e6
 
         self.fit = fit
 
@@ -454,4 +496,5 @@ class StarryModel(pm.Model):
         self.time_units = time_units
 
         # Set the array
-        self._time = time_array
+        # self._time = np.array(time_array)
+        self._time = np.ma.masked_array(time_array)
