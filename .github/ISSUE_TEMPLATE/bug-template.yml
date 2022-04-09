@@ -52,7 +52,7 @@ body:
       label: Error traceback output
       description: Please copy and paste the full traceback of the error you encountered.
   - type: checkboxes
-    id: terms
+    id: codeofconduct
     attributes:
       label: Code of Conduct
       description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/kevin218/Eureka/blob/main/code_of_conduct.md)
