@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+import theano
+theano.config.gcc__cxxflags += " -fexceptions"
 import starry
 import pymc3 as pm
 import theano.tensor as tt
