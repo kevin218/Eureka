@@ -388,7 +388,6 @@ def fit_bg(data, meta, n, isplots=False):
     bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
     data.subv0[n]      += np.mean(bgerr**2)
     data.subvariance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
-    #variance    = abs(data.subdata*submask) / gain + v0
 
     return (bg, mask, n)
 

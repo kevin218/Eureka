@@ -10,11 +10,6 @@ from ..lib import gaussian as g
 from ..lib import sort_nicely as sn
 from ..lib import smooth, centroid, smoothing
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 # Read FITS files from HST's WFC3 instrument
 def read(filenames, returnHdr=True):
     '''
@@ -37,7 +32,7 @@ def read(filenames, returnHdr=True):
     Written by Kevin Stevenson        November 2012
 
     '''
-    if isinstance(filenames, basestring):
+    if isinstance(filenames, str):
         filenames    = [filenames]
     hdulist = fits.open(filenames[0])
     nx        = hdulist['SCI',1].header['NAXIS1']
