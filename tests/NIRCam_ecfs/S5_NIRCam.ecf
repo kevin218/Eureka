@@ -28,7 +28,7 @@ run_nburn       10 # For testing, set to something quick
 run_nlive       64 # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'auto'
-run_tol         10 # For testing, set to something dynesty can get to quickly
+run_tol         1000 # For testing, set to something dynesty can get to quickly
 
 #GP inputs
 kernel_inputs   ['time','time'] #options: time
