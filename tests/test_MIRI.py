@@ -8,6 +8,7 @@ sys.path.insert(0, '../')
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 try:
+    from eureka.S1_detector_processing import s1_process as s1
     from eureka.S2_calibrations import s2_calibrate as s2
 except ModuleNotFoundError as e:
     pass
@@ -23,7 +24,7 @@ def test_MIRI(capsys):
         with capsys.disabled():
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print('\nSkipping MIRI Stage 2 tests as could not import eureka.S2_calibrations.s2_calibrate')
+            print('\nSkipping MIRI Stage 1-2 tests as could not import them.')
             print("\nMIRI S3-6 test: ", end='', flush=True)
     else:
         with capsys.disabled():
@@ -31,7 +32,7 @@ def test_MIRI(capsys):
             # useful to leave messages for future users who run the tests
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print("\nMIRI S2-6 test: ", end='', flush=True)
+            print("\nMIRI S1-6 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
@@ -40,14 +41,16 @@ def test_MIRI(capsys):
     ecf_path='./MIRI_ecfs/'
 
     if s2_installed:
-        # Only run S2 stuff if jwst package has been installed
+        # Only run S1-2 stuff if jwst package has been installed
+        reload(s1)
         reload(s2)
     reload(s3)
     reload(s4)
     reload(s5)
     reload(s6)
     if s2_installed:
-        # Only run S2 stuff if jwst package has been installed
+        # Only run S1-2 stuff if jwst package has been installed
+        s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
     else:
         s2_meta = None
@@ -58,7 +61,11 @@ def test_MIRI(capsys):
 
     # run assertions for S2
     if s2_installed:
-        # Only run S2 stuff if jwst package has been installed
+        # Only run S1-2 stuff if jwst package has been installed
+        meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage1/'
+        name = pathdirectory(meta, 'S1', 1)
+        assert os.path.exists(name)
+
         meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage2/'
         name = pathdirectory(meta, 'S2', 1)
         assert os.path.exists(name)
@@ -89,6 +96,7 @@ def test_MIRI(capsys):
     assert os.path.exists(name+'/figs')
 
     # remove temporary files
+    os.system("rm -r data/JWST-Sim/MIRI/Stage1/S1_*")
     os.system("rm -r data/JWST-Sim/MIRI/Stage2/S2_*")
     os.system("rm -r data/JWST-Sim/MIRI/Stage3")
     os.system("rm -r data/JWST-Sim/MIRI/Stage4")
