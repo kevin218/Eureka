@@ -1,6 +1,5 @@
 name: Blank Issue
 description: Submit an issue that doesn't fall into any other category
-title: ""
 body:
   - type: markdown
     attributes:
