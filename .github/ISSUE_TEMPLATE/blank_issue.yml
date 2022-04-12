@@ -31,18 +31,18 @@ body:
     attributes:
       label: Error traceback output
       description: If relevant, please copy and paste the full traceback of any errors you encountered.
- - type: input
+  - type: input
     id: OS
     attributes:
       label: What operating system are you using?
       description: E.g., Windows 11; Mac OS 10.10 El Capitan
-- type: input
+  - type: input
     id: python_version
     attributes:
       label: What version of Python are you running?
       description: If you're not sure, open a terminal with the environment you're running Eureka! in and type "python --version"
       placeholder: E.g., Python 3.7
-- type: textarea
+  - type: textarea
     id: package_list
     attributes:
       label: What Python packages do you have installed?
