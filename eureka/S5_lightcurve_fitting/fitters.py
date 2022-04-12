@@ -13,10 +13,9 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from ..lib.readEPF import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
-from ..lib import astropytable
+from ..lib import astropytable, gelmanrubin
 
 from multiprocessing import Pool
 
@@ -291,7 +290,13 @@ def emceefitter(lc, model, meta, log, **kwargs):
     try:
         log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.verbose))
     except:
-        log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
+        log.writelog("WARNING: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
+    
+    log.writelog("Gelman & Rubin Convergence Test:", mute=(not meta.verbose))
+    psrf, meanpsrf = gelmanrubin.convergetest(samples, nchains=4)
+    for name, stat in zip(freenames, psrf):
+        log.writelog(f"  {name}: {stat}", mute=(not meta.verbose))
+    log.writelog(f"  Mean PSRF: {meanpsrf}", mute=(not meta.verbose))
 
     if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)
