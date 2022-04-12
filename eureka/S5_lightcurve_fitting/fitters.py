@@ -325,7 +325,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     except:
         log.writelog("WARNING: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
     
-    log.writelog(":", mute=(not meta.verbose))
+    log.writelog("Gelman & Rubin Convergence Test:", mute=(not meta.verbose))
     psrf, meanpsrf = gelmanrubin.convergetest(samples, nchains=4)
     for name, stat in zip(freenames, psrf):
         log.writelog(f"  {name}: {np.round(stat, 3)}", mute=(not meta.verbose))
