@@ -47,7 +47,7 @@ body:
     id: OS
     attributes:
       label: What operating system are you using?
-      description: E.g., Windows 11; Mac OS 10.10 El Capitan
+      placeholder: E.g., Windows 11; Mac OS 10.10 El Capitan
   - type: input
     id: python_version
     attributes:
