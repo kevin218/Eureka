@@ -16,7 +16,7 @@ def medstddev(data, mask=None, medi=False, axis=0):
     medi:   boolean, optional
         If True return a tuple with (stddev, median) of data.
     axis:   int
-          The axis along wich the median std deviation is calculated.
+        The axis along wich the median std deviation is calculated.
 
     Notes:
     ------
@@ -72,17 +72,17 @@ def medstddev(data, mask=None, medi=False, axis=0):
     Modification history:
     ---------------------
     2005-01-18  statia
-      Written by Statia Luszcz.
+        Written by Statia Luszcz.
     2005-01-19  statia
-      Updated variance calculation according to algorithm in moment.pro,
-      added medi keyword.
+        Updated variance calculation according to algorithm in moment.pro,
+        added medi keyword.
     2005-01-20  Joe Harrington, Cornell, jh@oobleck.astro.cornell.edu
-      Header update.  Removed algorithm from moment.pro because it
-      doesn't work for the median.  Added /double.
+        Header update.  Removed algorithm from moment.pro because it
+        doesn't work for the median.  Added /double.
     2010-11-05  patricio  pcubillos@fulbrightmail.org
-      Converted to python, documented.
+        Converted to python, documented.
     2022-04-11  Taylor James Bell
-      Efficiently using numpy axes
+        Efficiently using numpy axes
     """
     # mask invalid values:
     data = np.ma.masked_invalid(data)
