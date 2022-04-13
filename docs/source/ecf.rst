@@ -338,6 +338,11 @@ nspecchan
 Number of spectroscopic channels spread evenly over given wavelength range
 
 
+compute_white
+'''''''''''''
+If True, also compute the white-light lightcurve.
+
+
 wave_min & wave_max
 ''''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.

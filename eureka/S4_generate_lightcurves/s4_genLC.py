@@ -188,7 +188,6 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             log.writelog("Generating light curves")
             meta.lcdata   = np.ma.zeros((meta.nspecchan, meta.n_int))
             meta.lcerr    = np.ma.zeros((meta.nspecchan, meta.n_int))
-            # ev.eventname2 = ev.eventname
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
                 # Compute valid indeces within wavelength range
@@ -200,12 +199,35 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
+                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, np.mean([meta.wave_low[i], meta.wave_hi[i]]), meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
                     log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
                     plots_s4.binned_lightcurve(meta, meta.time, i)
+
+            # If requested, also generate white-light light curve
+            if hasattr(meta, 'compute_white') and meta.compute_white:
+                log.writelog("Generating white-light light curve")
+                meta.lcdata_white = np.ma.zeros((1, meta.n_int))
+                meta.lcerr_white = np.ma.zeros((1, meta.n_int))
+
+                log.writelog(f"  White-light Bandpass = %.3f - %.3f" % (meta.wave_min, meta.wave_max))
+                # Compute valid indeces within wavelength range
+                index   = np.where((wave_1d >= meta.wave_min)*(wave_1d < meta.wave_max))[0]
+                # Sum flux for each spectroscopic channel
+                meta.lcdata_white[0]    = np.sum(optspec[:,index],axis=1)
+                # Add uncertainties in quadrature
+                meta.lcerr_white[0]     = np.sqrt(np.sum(opterr[:,index]**2,axis=1))
+
+                # Do 1D sigma clipping (along time axis) on binned spectra
+                if meta.sigma_clip:
+                    meta.lcdata_white[0], outliers = clipping.clip_outliers(meta.lcdata_white[0], log, np.mean([meta.wave_min, meta.wave_max]), meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
+                    log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
+
+                # Plot each spectroscopic light curve
+                if meta.isplots_S4 >= 3:
+                    plots_s4.binned_lightcurve(meta, meta.time, 0, white=True)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -218,13 +240,17 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             wave_errs = (meta.wave_hi-meta.wave_low)/2
             astropytable.savetable_S4(meta.tab_filename_s4, meta.time, wavelengths, wave_errs, meta.lcdata, meta.lcerr)
 
+            # If requested, also save white-light light curve
+            if hasattr(meta, 'compute_white') and meta.compute_white:
+                event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
+                meta.tab_filename_s4_white = meta.outputdir + 'S4_' + event_ap_bg + "_white_Table_Save.txt"
+                wavelengths = np.array([np.mean([meta.wave_min, meta.wave_max])])
+                wave_errs = np.array([(meta.wave_max-meta.wave_min)/2])
+                astropytable.savetable_S4(meta.tab_filename_s4_white, meta.time, wavelengths, wave_errs, meta.lcdata_white, meta.lcerr_white)
+
             # Save results
             log.writelog('Saving results')
             me.saveevent(meta, meta.outputdir + 'S4_' + meta.eventlabel + "_Meta_Save", save=[])
-
-            # if (isplots >= 1) and (correctDrift == True):
-            #     # Plot Drift
-            #     # Plots corrected 2D light curves
 
             log.closelog()
 

@@ -2,38 +2,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def binned_lightcurve(meta, time, i):
+def binned_lightcurve(meta, time, i, white=False):
     '''Plot each spectroscopic light curve. (Fig 4300)
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : MetaClass
         The metadata object.
-    time:  ndarray (1D)
+    time : ndarray (1D)
         The time in meta.time_units of each data point.
-    i:  int
+    i : int
         The current bandpass number.
+    white : bool, optional
+        Whether or not this figure is for the additional white-light light curve
 
     Returns
     -------
     None
     '''
-    plt.figure(int('43{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 6))
+    fig = plt.figure(int('43{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 6))
     plt.clf()
-    plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
-    ax = plt.subplot(111)
+    ax = fig.gca()
+    if white:
+        fig.suptitle(f"White-light Bandpass = %.3f - %.3f" % (meta.wave_min, meta.wave_max))
+        # Normalized light curve
+        norm_lcdata = meta.lcdata_white[0] / meta.lcdata_white[0, -1]
+        norm_lcerr = meta.lcerr_white[0] / meta.lcdata_white[0, -1]
+        i = 0
+        plot_ind = '_white'
+    else:
+        fig.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
+        # Normalized light curve
+        norm_lcdata = meta.lcdata[i] / meta.lcdata[i, -1]
+        norm_lcerr = meta.lcerr[i] / meta.lcdata[i, -1]
+        plot_ind = i
     time_modifier = np.floor(time[0])
-    # Normalized light curve
-    norm_lcdata = meta.lcdata[i] / meta.lcdata[i, -1]
-    norm_lcerr = meta.lcerr[i] / meta.lcdata[i, -1]
-    plt.errorbar(time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
-    plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
+    ax.errorbar(time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
+    ax.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')
-    plt.ylabel('Normalized Flux')
-    plt.xlabel(f'Time [{meta.time_units} - {time_modifier}]')
+    ax.set_ylabel('Normalized Flux')
+    ax.set_xlabel(f'Time [{meta.time_units} - {time_modifier}]')
 
-    plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
-    plt.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
+    fig.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
+    fig.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(plot_ind).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
         plt.pause(0.2)
 
