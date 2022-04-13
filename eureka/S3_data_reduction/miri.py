@@ -132,9 +132,6 @@ def wave_MIRI_hardcoded():
     lam_x_full: list
         A list of the wavelengths
     '''
-    if meta.firstFile:
-        print('WARNING: The wavelengths for the simulated MIRI data are currently hardcoded '
-              'because they are not in the .fits files themselves')
 
     # This array only contains the wavelength information for the BB
     lam_x = [np.nan, np.nan, 14.381619594576934, 14.366161703458102, 14.350688919921913,
