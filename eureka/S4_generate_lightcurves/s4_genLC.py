@@ -238,6 +238,8 @@ def read_s3_meta(meta):
     if rootdir[-1]!='/':
         rootdir += '/'
     fnames = glob.glob(rootdir+'S3_'+meta.eventlabel+'*_Meta_Save.dat')
+    print(rootdir+'S3_'+meta.eventlabel+'*_Meta_Save.dat')
+    print(fnames)
     if len(fnames)==0:
         # There were no metadata files in that folder, so let's see if there are in children folders
         fnames = glob.glob(rootdir+'**/S3_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
@@ -269,7 +271,7 @@ def read_s3_meta(meta):
 
 def load_general_s3_meta_info(meta, ecf_path, s3_meta):
     # Need to remove the topdir from the outputdir
-    s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
+    s3_outputdir = s3_meta.outputdir[len(meta.topdir):]
     if s3_outputdir[0]=='/':
         s3_outputdir = s3_outputdir[1:]
     if s3_outputdir[-1]!='/':
