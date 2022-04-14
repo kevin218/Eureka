@@ -116,6 +116,11 @@ In Stage 5:
 
    - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
    .. figure:: ../media/S5_out/fig5501.png
+      :alt: Stage 5 RMS deviation plot
+
+      Stage 5 output: RMS Deviation Plot
+   
+   .. figure:: ../media/S5_out/fig5501.png
       :alt: Stage 5 residual distribution
 
       Stage 5 output: Residual Distribution
