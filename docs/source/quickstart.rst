@@ -1,27 +1,29 @@
 
-Quickstart
-============
+⚡️ Quickstart ⚡️
+================
 
-1. Installation and requirements
+Want to get up and running with ``Eureka!``, but not really sure where to begin? Keep reading! 
+
+1. Installation 📦
+------------------
+
+The first thing you need to do is install the package, so if you haven't already, take a break from this page and follow the :ref:`installation` instructions (if you have issues be sure to visit the `FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_ first). 
+
+
+2. Download the data 💾
 -----------------------------------
 
-Follow the instructions on the :ref:`installation` page.
+With the installation complete, you'll need some data to run ``Eureka!`` on. For now let's use some simulated data that was produced for the Transiting Exoplanet Community ERS Data Challenge. Datasets for all four instruments are available on the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_, however, for the rest of this quickstart guide the `NIRCam Tiny dataset <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/156846571847>`_ will be used. 
 
-
-2. Download the data
------------------------------------
-
-2.1 Simulated data sets for all four instruments are available for the Transiting Exoplanet Community ERS Data Challenge No. 1.  Download a simulated data set of your choice from the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_.
-
-2.2. Make a new directory to store the data.  For example, if you want to work with NIRSpec data, you could structure your directories like this:
+Now, I'm sure you didn't just leave the data in your Downloads folder, but if so, let's make a new directory to store things. For example:
 
 .. code-block:: bash
 
-	mkdir /User/Data/JWST-Sim/NIRSpec/
-	cd /User/Data/JWST-Sim/NIRSpec/
-	mkdir Stage2
+	mkdir /User/Data/JWST-Sim/NIRCam/
+	cd /User/Data/JWST-Sim/NIRCam/
+	mv ~/Downloads/Stage2 . 
 
-Note that you do *not* need to download any ancillary data --- any additional files will be downloaded automatically (remember to set the CRDS environment variables when you install ``Eureka!``). 
+Note that for Eureka! you do *not* need to download any ancillary data --- any additional files will be downloaded automatically (if you remembered to set the CRDS environment variables during installation!). 
 
 
 3. Set up your run directory 
