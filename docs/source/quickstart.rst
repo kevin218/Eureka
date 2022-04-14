@@ -83,7 +83,7 @@ Notice that all of the ``*.ecf`` files have a common "wasp39b" string. It's usef
         eventlabel = 'wasp39b'
 
 
-Finally, we need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. For the ``S2_wasp39b.ecf``, we want something like:
+Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. For the ``S2_wasp39b.ecf``, you want something like:
 
 .. code-block:: bash
 
@@ -91,7 +91,7 @@ Finally, we need to connect everything together by opening up each ``.ecf`` file
 	inputdir	/Data/JWST-Sim/NIRSpec
 	outputdir	/DataAnalysis/JWST/MyFirstEureka/Stage2
 
-However, for the later stages we can use something simpler, e.g. for the ``S3_wasp39b.ecf``:
+However, for the later stages you can use something simpler, e.g. for the ``S3_wasp39b.ecf``:
 
 .. code-block:: bash
 
@@ -99,14 +99,14 @@ However, for the later stages we can use something simpler, e.g. for the ``S3_wa
 	inputdir	/Stage2
 	outputdir	/Stage3
 
-The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, it is important to notice a few settings in the ``S5_wasp39b.ecf``, specifically we need to assign the correct ``.epf`` file, and modify the number of processors we want to use for light curve fitting.
+The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, it is important to notice a few settings in the ``S5_wasp39b.ecf``. Specifically, you need to assign the correct ``.epf`` file, and modify the number of processors you want to use during the light curve fitting.
 
 .. code-block:: bash
 	
 	ncpu		4
 	fit_par		S5_fit_par_wasp39b.epf
 
-Whilst editing those files you will have noticed that there are a whole range of other inputs that can be tweaked and adjusted at each different stage. For now, we can ignore these as the demo files we've selected have been specifically tailored to this simulated dataset of WASP-39b.
+While editing those files you may have noticed that there are a whole range of other inputs that can be tweaked and adjusted at each different stage. For now you can ignore these, as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
 
 
 4. Run Eureka! 💡
@@ -184,4 +184,4 @@ You made it! Congratulations, it's time to reward yourself with a break 😊
 
 However, if this quickstart guide wasn't enough to sate your appetite, considering taking a look at the different parameter settings within the ``*.ecf`` files :ref:`here<ecf>`. If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_! Or if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
 
-If any bugs / errors cropped up whilst you were working through this quickstart, or if they turn up in the future, take a look at our `FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_ or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. 
+If any bugs / errors cropped up while you were working through this quickstart, or if they turn up in the future, take a look at our `FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_ or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. Thanks!
