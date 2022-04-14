@@ -14,7 +14,7 @@ from .utils import COLORS, color_gen
 from copy import deepcopy
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
+    def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False, white=False):
         """
         A class to store the actual light curve
 
@@ -41,6 +41,8 @@ class LightCurve(m.Model):
             A name for the object
         share: bool
             Whether the fit shares parameters between spectral channels
+        white: bool
+            Whether the current fit is for a white-light light curve
 
         Returns
         -------
@@ -61,6 +63,7 @@ class LightCurve(m.Model):
 
         self.name = name
         self.share = share
+        self.white = white
         self.channel = channel
         self.nchannel = nchannel
         if self.share:
@@ -203,7 +206,10 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
+            fname = 'figs/fig57{}'.format(str(channel).zfill(len(str(self.nchannel))))
+            if self.white:
+                fname += '_white'
+            fname += '_all_fits.png'
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()

@@ -260,16 +260,19 @@ def emceefitter(lc, model, meta, log, **kwargs):
     fit_params = []
     upper_errs = []
     lower_errs = []
+    errs = {}
     for i in range(ndim):
         q = np.percentile(samples[:, i], [16, 50, 84])
         lower_errs.append(q[0])
         fit_params.append(q[1])
         upper_errs.append(q[2])
+        errs[freenames[i]] = np.std(samples[:, i])
     fit_params = np.array(fit_params)
     upper_errs = np.array(upper_errs)-fit_params
     lower_errs = fit_params-np.array(lower_errs)
 
     model.update(fit_params, freenames)
+    model.errs = errs
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
@@ -579,16 +582,19 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     fit_params = []
     upper_errs = []
     lower_errs = []
+    errs = {}
     for i in range(ndims):
         q = np.percentile(samples[:, i], [16, 50, 84])
         lower_errs.append(q[0])
         fit_params.append(q[1])
         upper_errs.append(q[2])
+        errs[freenames[i]] = np.std(samples[:, i])
     fit_params = np.array(fit_params)
     upper_errs = np.array(upper_errs)-fit_params
     lower_errs = fit_params-np.array(lower_errs)
 
     model.update(fit_params, freenames)
+    model.errs = errs
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
@@ -805,7 +811,7 @@ def group_variables(model):
     for ii, item in enumerate(all_params):
         name, param = item
         #param = list(param)
-        if (param[1] == 'free') or (param[1] == 'shared'):
+        if (param[1] == 'free') or (param[1] == 'shared') or (param[1] == 'white'):
             freenames.append(name)
             freepars.append(param[0])
             if len(param) == 5: #If prior is specified.
@@ -897,7 +903,9 @@ def load_old_fitparams(meta, log, channel, freenames):
 
 def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_errs=[], lower_errs=[]):
     # Save the fitted parameters and their uncertainties (if possible)
-    if lc.share:
+    if lc.white:
+        fname = f'S5_{fitter}_fitparams_white'
+    elif lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
         fname = f'S5_{fitter}_fitparams_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
@@ -909,7 +917,9 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_e
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples)!=0:
-        if lc.share:
+        if lc.white:
+            fname = f'S5_{fitter}_samples_white'
+        elif lc.share:
             fname = f'S5_{fitter}_samples_shared'
         else:
             fname = f'S5_{fitter}_samples_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
@@ -918,7 +928,9 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_e
 
     # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel + "_ap" + str(meta.spec_hw) + '_bg' + str(meta.bg_hw)
-    if lc.share:
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
         channel_tag = '_shared'
     else:
         channel_tag = f'_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'

@@ -5,7 +5,6 @@ from scipy import stats
 from copy import deepcopy
 
 from .likelihood import computeRMS
-from .utils import COLORS
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Fig 5100)
@@ -81,7 +80,10 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fname = 'figs/fig51{}_lc_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fname = 'figs/fig51{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+        if lc.white:
+            fname += '_white'
+        fname += '_lc_{}.png'.format(fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -147,7 +149,10 @@ def plot_rms(lc, model, meta, fitter):
         plt.xticks(size=12)
         plt.yticks(size=12)
         plt.legend()
-        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'allanplot_'+fitter+'.png'
+        fname = 'figs/fig52{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+        if lc.white:
+            fname += '_white'
+        fname += '_allanplot_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -185,7 +190,10 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     """
     fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
     fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
-    fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
+    fname = 'figs/fig53{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
+    if lc.white:
+        fname += '_white'
+    fname += '_corner_{}.png'.format(fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
     if meta.hide_plots:
         plt.close()
@@ -263,6 +271,8 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
         fig.tight_layout(h_pad=0.0)
 
         fname = 'figs/fig54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
+        if lc.white:
+            fname += '_white'
         if burnin:
             fname += '_burninchain'
         else:
@@ -333,7 +343,10 @@ def plot_res_distr(lc, model, meta, fitter):
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/scatter", fontsize=14)
-        fname = 'figs/fig55{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        fname = 'figs/fig55{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+        if lc.white:
+            fname += '_white'
+        fname += '_res_distri_'+fitter+'.png'
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -414,7 +427,10 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fname = 'figs/fig56{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fname = 'figs/fig56{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+        if lc.white:
+            fname += '_white'
+        fname += '_lc_GP_{}.png'.format(fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()

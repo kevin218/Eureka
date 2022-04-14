@@ -26,7 +26,7 @@ class Parameter:
         value: float, int, str, list, tuple
             The value of the parameter
         ptype: str
-            The parameter type from ['free','fixed','independent','shared']
+            The parameter type from ['free','fixed','independent','shared','white']
         priorpar1: float, int, str, list, tuple (optioal)
             The first prior input value: lower-bound for uniform/log uniform priors, or mean for normal priors.
         priorpar2: float, int, str, list, tuple (optioal)
@@ -102,7 +102,7 @@ class Parameter:
         # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
         # Get the list of Parameter.__init__ arguments (excluding self)
-        keys = inspect.getargspec(self.__init__)[0].remove('self')
+        keys = inspect.getfullargspec(Parameter.__init__).args[1:]
         # Show how the Parameter could be initialized (e.g. name='rp', val=0.01, ptype='free')
         for name in keys:
             val = getattr(self, name)
@@ -127,12 +127,12 @@ class Parameter:
         Parameters
         ----------
         param_type: str
-            Parameter type, ['free','fixed','independent','shared']
+            Parameter type, ['free','fixed','independent','shared','white']
         """
         if param_type in [True, False]:
-            raise ValueError("Boolean ptype values are deprecated. ptype must now be 'free', 'fixed', 'independent', or 'shared'")
-        elif param_type not in ['free', 'fixed', 'independent', 'shared']:
-            raise ValueError("ptype must be 'free', 'fixed', 'independent', or 'shared'")
+            raise ValueError("Boolean ptype values are deprecated. ptype must now be 'free', 'fixed', 'independent', 'shared', or 'white'")
+        elif param_type not in ['free', 'fixed', 'independent', 'shared', 'white']:
+            raise ValueError("ptype must be 'free', 'fixed', 'independent', 'shared', or 'white'")
 
         self._ptype = param_type
 
