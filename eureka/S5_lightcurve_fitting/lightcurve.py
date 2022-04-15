@@ -141,6 +141,8 @@ class LightCurve(m.Model):
             self.fitter_func = f.lmfitter
         elif fitter == 'lsq':
             self.fitter_func = f.lsqfitter
+        # elif fitter == 'demc':
+        #     self.fitter_func = f.demcfitter
         elif fitter == 'emcee':
             self.fitter_func = f.emceefitter
         elif fitter == 'dynesty':
