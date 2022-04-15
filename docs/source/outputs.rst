@@ -128,9 +128,9 @@ In Stage 5:
    .. figure:: ../media/S5_out/fig5403.png
       :alt: Stage 5 fitting chains
 
-      Stage 5 output: Fitting Chains
+      Stage 5 output: Fitting Chains. Only made for ``emcee`` runs. Two version of the plot will be saved, one including the burn in steps and one without the burn in steps. 
 
-   - If ``isplots_S5`` = 5: ``Eureka!`` will plot a corner plot for each channel.
+   - If ``isplots_S5`` = 5, and if ``emcee`` or ``dynesty`` were used as the fitter: ``Eureka!`` will plot a corner plot for each channel.
 
    .. figure:: ../media/S5_out/fig5301.png
       :alt: Stage 5 corner plot
