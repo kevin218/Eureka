@@ -16,10 +16,6 @@ def readfiles(meta):
     meta:   MetaClass
         The metadata object with added segment_list containing the sorted data fits files.
     """
-    meta.inputdir = os.path.join(meta.topdir, *meta.inputdir_raw.split(os.sep))
-    if meta.inputdir[-1]!='/':
-      meta.inputdir += '/'
-
     meta.segment_list = []
     for fname in os.listdir(meta.inputdir):
         if fname.endswith(meta.suffix + '.fits'):
