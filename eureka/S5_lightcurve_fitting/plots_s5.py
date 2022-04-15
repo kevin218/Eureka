@@ -184,6 +184,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    fig.clf()
     fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
@@ -237,6 +238,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
     k = 0
     for plot_number in range(nplots):
         fig, axes = plt.subplots(nrows, ncols, num=int('54{}'.format(str(0).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
+        fig.clf()
 
         for j in range(ncols):
             for i in range(nrows):
@@ -311,6 +313,7 @@ def plot_res_distr(lc, model, meta, fitter):
     model_lc = model.eval()
 
     plt.figure(int('55{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    plt.clf()
 
     for channel in lc.fitted_channels:
         flux = np.ma.MaskedArray.copy(lc.flux)
