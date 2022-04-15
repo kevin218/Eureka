@@ -46,7 +46,7 @@ From here, the simplest way to set up all of the Eureka input files is to duplic
 	mkdir demos
 	cp -r User/Eureka/Install/Location/demos/JWST/* ./demos
 
-Or, if you're lost in the depths of your conda installation, you can also download the demos folder directly `here <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_ and copy them over:
+Or, if you're lost in the depths of your conda directory, you can also download the demos folder directly `here <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_ and copy them over:
 
 .. code-block:: bash
 
@@ -76,7 +76,7 @@ So, let's only copy over the specific files needed to process this NIRSpec datas
 	cp demos/S5_fit_par_template.epf S5_fit_par_wasp39b.ecf
 	cp demos/S6_template.ecf S6_wasp39b.ecf
 
-Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's useful to keep this homogenous across files as it is what ``Eureka!`` interprets as an "event label", and is used to locate specific input files when running the pipeline. To see this more clearly, open up the ``run_eureka.py`` file and look at how the individual stages are being called. While you're here modify the ``eventlabel`` string directly to match the chosen naming:
+Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's useful to keep this homogenous across files as it is what ``Eureka!`` interprets as an "event label", and is used to locate specific input files when running the pipeline. To see this more clearly, open up the ``run_eureka.py`` file and look at how the individual stages are being called. While you're here, modify the ``eventlabel`` string directly to match the chosen naming:
 
 .. code-block:: bash
 
@@ -120,7 +120,7 @@ Now that everything is set up, you should now be able to run the pipeline using:
 
 This will start printing information to your terminal, saving a bunch of output data/figures to the ``outputdir`` file locations you assigned above, and depending on the number of processors you were brave enough to allocate, potentially make your laptop as noisy as the engine of a Boeing 747. 
 
-Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Alternatively, feel free to dig through the ``outputdirs`` and get a gauge of what each stage is doing at your own speed. 
+Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Alternatively, feel free to dig through the output directories and get a gauge of what each stage is doing at your own speed. 
 
 Stage 1: Ramp Fitting
 ~~~~~~~~~~~~~~~~~~~~~

@@ -19,8 +19,8 @@ rp           0.173010       'free'         0.1         0.3          U
 # ------------------
 # ** Orbital parameters **
 # ------------------
-per          4.055259   	'free'        		4   		4.1 		U
-t0           0.53		 	'free'         0.35     0.60     U
+per          4.055259   	'free'         4.055259   	1e-5		 N
+t0           0.5		 	'free'         0.4     0.6     U
 time_offset  0            	'independent'
 inc          87.93        	'free'         85       90        U
 a            11.612         'free'         10         13         U
@@ -30,7 +30,7 @@ w            90.           	'fixed'        0            180          U
 # ** Limb darkening parameters **
 # Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']
 # -------------------------
-limb_dark    'quadratic'	'independent'
+limb_dark    'kipping2013'	'independent'
 u1           0.5           	'free'         0            1            U
 u2           0.5           	'free'         0            1            U
 # --------------------
