@@ -301,7 +301,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,params,log,longparamlist
                 if model.fitter=='emcee':
                     best_model = model
             if best_model is None:
-                raise AssertionError('Unable to find the dynesty fitter results')
+                raise AssertionError('Unable to find the emcee fitter results')
             for key in params.params:
                 if getattr(params, key).ptype == 'white':
                     value = getattr(best_model.components[0].parameters, key).value
