@@ -21,13 +21,14 @@ import unittest
 
 import numpy as np
 
-import batman
-
+import os
 import sys
 sys.path.insert(0, '../')
 from eureka.S5_lightcurve_fitting import lightcurve, models, simulations
 from eureka.lib.readEPF import Parameters, Parameter
 from eureka.lib.readECF import MetaClass
+from eureka.lib import logedit
+from eureka.S5_lightcurve_fitting import s5_fit
 
 meta = MetaClass()
 meta.eventlabel='NIRCam'
@@ -103,25 +104,107 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
     def test_transitmodel(self):
-        """Tests for the TransitModel class"""
+        """Tests for the BatmanTransitModel class"""
         # Set the intial parameters
         params = Parameters()
-        params.rp = 0.22, 'free', 0.0, 0.4  # rprs
+        params.rp = 0.22, 'free', 0.0, 0.4, 'U'  # rprs
         params.per = 10.721490, 'fixed'
-        params.t0 = 0.48, 'free', 0, 1
-        params.inc = 89.7, 'free', 80., 90.
-        params.a = 18.2, 'free', 15., 20.    # aprs
+        params.t0 = 0.48, 'free', 0, 1, 'U'
+        params.inc = 89.7, 'free', 80., 90., 'U'
+        params.a = 18.2, 'free', 15., 20., 'U'    # aprs
         params.ecc = 0., 'fixed'
         params.w = 90., 'fixed'             # omega
         params.limb_dark = '4-parameter', 'independent'
-        params.transittype = 'primary', 'independent'
-        params.u1 = 0.1, 'free', 0., 1.
-        params.u2 = 0.1, 'free', 0., 1.
-        params.u3 = 0.1, 'free', 0., 1.
-        params.u4 = 0.1, 'free', 0., 1.
+        params.u1 = 0.1, 'free', 0., 1., 'U'
+        params.u2 = 0.1, 'free', 0., 1., 'U'
+        params.u3 = 0.1, 'free', 0., 1., 'U'
+        params.u4 = 0.1, 'free', 0., 1., 'U'
 
         # Make the transit model
-        self.t_model = models.BatmanTransitModel(parameters=params, name='transit', nchan=1)
+        meta = MetaClass()
+        meta.sharedp = False
+        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        self.t_model = models.BatmanTransitModel(parameters=params, name='transit', fmt='r--',
+                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
+
+        # Evaluate and test output
+        self.t_model.time = self.time
+        vals = self.t_model.eval()
+        self.assertEqual(vals.size, self.time.size)
+
+    def test_eclipsemodel(self):
+        """Tests for the BatmanEclipseModel class"""
+        # Set the intial parameters
+        params = Parameters()
+        params.rp = 0.22, 'fixed' # rprs
+        params.fp = 0.08, 'free', 0.0, 0.1, 'U'  # fprs
+        params.per = 10.721490, 'fixed'
+        params.t0 = 0.48, 'free', 0, 1, 'U'
+        params.inc = 89.7, 'free', 80., 90., 'U'
+        params.a = 18.2, 'free', 15., 20., 'U'    # aprs
+        params.ecc = 0., 'fixed'
+        params.w = 90., 'fixed'             # omega
+        params.Rs = 1., 'independent'
+
+        # Make the eclipse model
+        meta = MetaClass()
+        meta.sharedp = False
+        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        log = logedit.Logedit('./data/test.log')
+        self.e_model = models.BatmanEclipseModel(parameters=params, name='transit', fmt='r--', log=log,
+                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
+
+        # Remove the temporary log file
+        os.system("rm ./data/test.log")
+
+        # Evaluate and test output
+        self.e_model.time = self.time
+        vals = self.e_model.eval()
+        self.assertEqual(vals.size, self.time.size)
+
+    def test_sinsoidalmodel(self):
+        """Tests for the PolynomialModel class"""
+        # create dictionary
+        params = Parameters()
+        params.rp = 0.22, 'free', 0.0, 0.4, 'U'  # rprs
+        params.fp = 0.08, 'free', 0.0, 0.1, 'U'  # fprs
+        params.per = 10.721490, 'fixed'
+        params.t0 = 0.48, 'free', 0, 1, 'U'
+        params.inc = 89.7, 'free', 80., 90., 'U'
+        params.a = 18.2, 'free', 15., 20., 'U'    # aprs
+        params.ecc = 0., 'fixed'
+        params.w = 90., 'fixed'             # omega
+        params.limb_dark = '4-parameter', 'independent'
+        params.u1 = 0.1, 'free', 0., 1., 'U'
+        params.u2 = 0.1, 'free', 0., 1., 'U'
+        params.u3 = 0.1, 'free', 0., 1., 'U'
+        params.u4 = 0.1, 'free', 0., 1., 'U'
+        params.AmpSin1 = 0.1, 'free', -0.5, 0.5, 'U'
+        params.AmpCos1 = 0.3, 'free', 0.0, 0.5, 'U'
+        params.AmpSin2 = 0.01, 'free', -1, 1, 'U'
+        params.AmpCos2 = 0.01, 'free', -1, 1, 'U'
+        params.Rs = 1., 'independent'
+        
+        # Create the model
+        meta = MetaClass()
+        meta.sharedp = False
+        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        log = logedit.Logedit('./data/test.log')
+        self.t_model = models.BatmanTransitModel(parameters=params, name='transit', fmt='r--',
+                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
+        self.e_model = models.BatmanEclipseModel(parameters=params, name='transit', fmt='r--', log=log,
+                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
+        self.phasecurve = models.SinusoidPhaseCurveModel(parameters=params, name='phasecurve', fmt='r--',
+                                                         longparamlist=longparamlist, nchan=1, paramtitles=paramtitles,
+                                                         transit_model=self.t_model, eclipse_model=self.e_model)
+
+        # Remove the temporary log file
+        os.system("rm ./data/test.log")
+
+        # Evaluate and test output
+        self.phasecurve.time = self.time
+        vals = self.phasecurve.eval()
+        self.assertEqual(vals.size, self.time.size)
 
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""

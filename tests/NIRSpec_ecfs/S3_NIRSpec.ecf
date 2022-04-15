@@ -5,23 +5,23 @@ suffix      calints     # Data file suffix
 
 # Subarray region of interest
 ywindow     [0,31]      # Vertical axis as seen in DS9
-xwindow     [65,400]  # Horizontal axis as seen in DS9
+xwindow     [65,400]    # Horizontal axis as seen in DS9
 src_pos_type gaussian   # Determine source position when not given in header (Options: gaussian, weighted, or max)
 
 # Background parameters
-bg_hw       10          # Half-width of exclusion region for BG subtraction (relative to source position)
-bg_thresh   [15,15]       # Double-iteration X-sigma threshold for outlier rejection along time axis
+bg_hw       10         # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_thresh   [15,15]    # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg      0          # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
-p3thresh    2           # X-sigma threshold for outlier rejection during background subtraction
+p3thresh    2          # X-sigma threshold for outlier rejection during background subtraction
 save_bgsub  False      # Whether or not to save background subtracted FITS files
 
 # Spectral extraction parameters
-spec_hw     8         # Half-width of aperture region for spectral extraction (relative to source position)
-fittype     smooth    # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
+spec_hw     8          # Half-width of aperture region for spectral extraction (relative to source position)
+fittype     smooth     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 window_len  5          # Smoothing window length, when fittype = smooth
-prof_deg    3           # Polynomial degree, when fittype = poly
-p5thresh    10          # X-sigma threshold for outlier rejection while constructing spatial profile
-p7thresh    30          # X-sigma threshold for outlier rejection during optimal spectral extraction
+prof_deg    3          # Polynomial degree, when fittype = poly
+p5thresh    10         # X-sigma threshold for outlier rejection while constructing spatial profile
+p7thresh    30         # X-sigma threshold for outlier rejection during optimal spectral extraction
 
 # Diagnostics
 isplots_S3  5          # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

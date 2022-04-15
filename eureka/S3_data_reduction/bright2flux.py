@@ -86,8 +86,8 @@ def dn2electrons(data, meta):
 
     return data
 
-def bright2dn(data, meta):
-    """This function converts the data, uncertainty, and variance arrays from brightness units (MJy/sr) to raw units (DN).
+def bright2dn(data, meta, mjy=False):
+    """This function converts the data, uncertainty, and variance arrays from brightness units (MJy/sr) or (MJy) to raw units (DN).
 
     Parameters
     ----------
@@ -118,8 +118,12 @@ def bright2dn(data, meta):
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     elif meta.inst == 'miri':
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['subarray'] == data.mhdr['SUBARRAY']))[0][0]
+    elif meta.inst == 'nirspec':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['grating'] == data.mhdr['GRATING']) * (foo['slit'] == data.shdr['SLTNAME']))[0][0] 
+    elif meta.inst == 'niriss':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     else:
-        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst}, and can currently only handle miri and nircam observations.')
+        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst},and can currently only handle JWST niriss, nirspec, nircam, and miri observations.')
 
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
@@ -131,12 +135,15 @@ def bright2dn(data, meta):
     response = f(data.subwave)
 
     scalar = data.shdr['PHOTMJSR']
+    if mjy == True:
+        scalar *= data.shdr['PIXAR_SR']
     # Convert to DN/sec
     data.subdata /= scalar * response
     data.suberr  /= scalar * response
     data.subv0   /= (scalar * response)**2
 
     return data
+
 
 def bright2flux(data, pixel_area):
     """This function converts the data and uncertainty arrays from brightness units (MJy/sr) to flux units (Jy/pix).
@@ -208,6 +215,10 @@ def convert_to_e(data, meta, log):
     meta:   MetaClass
         The metadata object.
     """
+    if data.shdr['BUNIT']=='ELECTRONS':
+        # HST/WFC3 spectra are in ELECTRONS already, so do nothing
+        return data, meta
+
     if data.shdr['BUNIT'] != 'ELECTRONS/S':
         log.writelog('  Automatically getting reference files to convert units to electrons', mute=(not meta.verbose))
         if data.mhdr['TELESCOP'] != 'JWST':
@@ -221,6 +232,11 @@ def convert_to_e(data, meta, log):
         # Convert from brightness units (MJy/sr) to DN/s
         log.writelog('  Converting from brightness units (MJy/sr) to electrons')
         data = bright2dn(data, meta)
+        data = dn2electrons(data, meta)
+    elif data.shdr['BUNIT'] == 'MJy':
+        # Convert from brightness units (MJy) to DN/s
+        log.writelog('  Converting from brightness units MJy to electrons')
+        data = bright2dn(data, meta, mjy=True)
         data = dn2electrons(data, meta)
     elif data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
