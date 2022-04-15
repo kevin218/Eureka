@@ -187,7 +187,6 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
-    plt.clf()
     if meta.hide_plots:
         plt.close()
     else:
