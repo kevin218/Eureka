@@ -16,7 +16,7 @@ ecf_path = './'
 if __name__ == '__main__':
 	s1_meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
 	
-	s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
+	s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path, s1_meta=s1_meta)
 
 	s3_meta = s3.reduceJWST(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
 
