@@ -46,7 +46,7 @@ From here, the simplest way to set up all of the Eureka input files is to duplic
 	mkdir demos
 	cp -r User/Eureka/Install/Location/demos/JWST/* ./demos
 
-Or, if you're lost in the depths of your conda installation, you can also download the demos folder directly `here <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_:
+Or, if you're lost in the depths of your conda installation, you can also download the demos folder directly `here <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_ and copy them over:
 
 .. code-block:: bash
 
@@ -64,7 +64,7 @@ This demos directory contains a selection of template files to run ``Eureka!``. 
 
 You might notice that not all of the demo files will be applicable to every dataset, either because they are tailored to a specific instrument, or because they are for a ``Eureka!`` pipeline stage that precedes the input data. This is the case for the NIRSpec data being used here, which as a ``*rateints.fits`` file (more information on JWST pipeline products `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/data_products/product_types.html>`_) has already been processed through an equivalent to Stage 1 of ``Eureka!``.
 
-So, let's copy over the specific files needed to process this NIRSpec dataset further. Given that the dataset contains a transit for WASP-39b, let's also change some of the default filenames to something a little more informative:
+So, let's only copy over the specific files needed to process this NIRSpec dataset further. Given that the dataset contains a transit for WASP-39b, let's also change some of the default filenames to something a little more informative:
 
 .. code-block::
 
@@ -76,7 +76,7 @@ So, let's copy over the specific files needed to process this NIRSpec dataset fu
 	cp demos/S5_fit_par_template.epf S5_fit_par_wasp39b.ecf
 	cp demos/S6_template.ecf S6_wasp39b.ecf
 
-Notice that all of the ``*.ecf`` files have a common "wasp39b" string. It's useful to keep this homogenous across files as it is what ``Eureka!`` understands as an "event label", and is used to locate specific input files when running the pipeline. To see this more clearly, open up the ``run_eureka.py`` file and modify the ``eventlabel`` string directly:
+Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's useful to keep this homogenous across files as it is what ``Eureka!`` interprets as an "event label", and is used to locate specific input files when running the pipeline. To see this more clearly, open up the ``run_eureka.py`` file and look at how the individual stages are being called. While you're here modify the ``eventlabel`` string directly to match the chosen naming:
 
 .. code-block:: bash
 
@@ -132,14 +132,14 @@ The NIRSpec data being used here has already undergone the equivalent of this St
 Stage 2: Calibrations
 ~~~~~~~~~~~~~~~~~~~~~
 
-Stage 2 calibrates the data by performing a range of steps such as flat fielding and photometric unit conversions. Similarly to Stage 1, this broadly follows the STScI JWST pipeline methodology. In the case of the NIRSpec dataset we are using, the ``Eureka!`` implementation of this Stage avoids any spatial trimming of the images that usually occurs with the STScI pipeline. This facilitates a more accurate correction of the background and 1/f noise during Stage 3, as more unilluminated pixels are available. 
+Stage 2 calibrates the data by performing a range of steps such as flat fielding and photometric unit conversions. Similarly to Stage 1, this broadly follows the STScI JWST pipeline methodology. In the case of the NIRSpec dataset we are using, the ``Eureka!`` implementation of this Stage avoids any spatial trimming of the images that usually occurs with the STScI pipeline. This facilitates a more accurate correction of the background and 1/f noise during Stage 3, as more background pixels are retained. 
 
 Stage 3: Reduction
 ~~~~~~~~~~~~~~~~~~
 
 From Stage 3 onwards, ``Eureka!`` no longer makes use of the STScI pipeline and instead implements a range of custom routines to reduce the data further. It's at this stage that background subtraction and spectral extraction is performed, resulting in 1D spectra that can be used for light curve analysis and fitting. 
 
-By entering the ``figs`` folder you'll find a range of diagnostic figures. For example, on the left hand side of the figure copied below, the background subtracted 2D spectrum for the first integration is plotted (top) alongside a 2D image of the estimated background. Note that the distinct striping is a result of 1/f noise in the NIRSpec detector, which is dominant along pixel columns as that is the direction of the detector readout. 
+By entering the ``figs`` folder you'll find a range of diagnostic figures. For example, on the left hand side of the figure copied below, the background subtracted 2D spectrum for the first integration is plotted (top) alongside a 2D image of the estimated background. Note that the distinct striping is a result of 1/f noise in the NIRSpec detector electronics, and is dominant along pixel columns as they correspond to the direction of the detector readout. 
 
 To the right you can see a 2D representation of the variation in flux between consecutive integrations as a function of wavelength. In fact, the transit of WASP-39b can be seen via the horizontal band of reduced flux between integrations ~9-25. At the top, the median absolute deviation (MAD) for the entire dataset is displayed, and is calculated by determining the flux difference between each image and the next, for each wavelength, followed by taking the overall median of these values across all wavelengths and all images. 
 
@@ -173,7 +173,7 @@ An example figure demonstrating the best fit model lightcurve alongside the data
 Stage 6: Plot Spectra
 ~~~~~~~~~~~~~~~~~~~~~
 
-The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcurve fitting and produces transmission and/or emission spectra. As mentioned earlier, this quickstart only makes use of two different light curves from this dataset from 1.5-3.0 μm and 3.0-4.5 μm. In this case, our transmission spectrum for the transit of WASP-39b will only have two data points (see figure below). Note that the errors bars are not representative of what could be expected for true JWST data, as this dataset has been trimmed down from 8192 integrations, to only 32. 
+The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcurve fitting and produces transmission and/or emission spectra. As mentioned earlier, this quickstart only makes use of two different light curves from this dataset from 1.5-3.0 μm and 3.0-4.5 μm. In this case, our transmission spectrum for the transit of WASP-39b will only have two data points (see figure below). Note that the errors bars are not representative of what could be expected for true JWST data, as this dataset has been trimmed down from 8192 integrations, to only 32. Finally, the transmission spectrum data is saved in the ``*Table_Save.txt`` file. 
 
 .. image:: ../media/stage6_quickstart.png
 
@@ -182,6 +182,6 @@ The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcur
 
 You made it! Congratulations, it's time to reward yourself with a break 😊
 
-However, if this quickstart guide wasn't enough to sate your appetite, considering taking a look at the different parameter settings within the ``*.ecf`` files :ref:`here<ecf>`. If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_! Or if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
+However, if this quickstart guide wasn't enough to sate your appetite, consider taking a look at the different parameter settings within the ``*.ecf`` files :ref:`here<ecf>` and tweak away! If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_. Or, if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
 
 If any bugs / errors cropped up while you were working through this quickstart, or if they turn up in the future, take a look at our `FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_ or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. Thanks!
