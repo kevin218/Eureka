@@ -506,7 +506,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
 ``Name`` defines the specific parameter being fit for. Available options are:
    - Transit and Eclipse Parameters
-      - ``rp`` - planet radius, for the transit models.
+      - ``rp`` - planet-to-star radius ratio, for the transit models.
       - ``fp`` - planet/star flux ratio, for the eclipse models.
    - Orbital Parameters
       - ``per`` - orbital period (in days)
@@ -523,9 +523,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``AmpSin2`` - Amplitude of the second sine
    - Limb Darkening Parameters
       - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']``
-      - ``u1`` - The first limb darkening parameter
-      - ``u2`` - The second limb darkening parameter.
-      Further limb darkening parameters can be specified as needed by the specified model.
+      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic`` and ``kipping2013`` have two ``u1, u2``, ``square-root, logarithmic, exponential, 4-parameter`` all have four parameters ``u1, u2, u3, u4``
    - Systematics Parameters - Depending on the model specified in the Stage 5 ECF, set either polynomial model coefficients ``c0--c9`` for 0th to 3rd order polynomials. Polynomial fits should include at least ``c0`` for usable results. Exponential ramp models can fit up to two ramps. ``r0--r2`` for one ramp, ``r3--r5`` for the second.
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm
 
