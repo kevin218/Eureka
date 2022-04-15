@@ -84,7 +84,8 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     meta = util.readfiles(meta)
     meta.num_data_files = len(meta.segment_list)
     if meta.num_data_files==0:
-        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!')
+        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!\n'+
+                             f'You likely need to change the inputdir in {meta.filename} to point to the folder containing the "{meta.suffix}.fits" files.')
     else:
         log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
 
