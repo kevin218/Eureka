@@ -1,9 +1,7 @@
 import numpy as np
 
 def gelmanrubin(chain, nchains):
-    """
-    Perform the convergence test of Gelman & Rubin (1992) on a MCMC
-    chain.
+    """Perform convergence test of Gelman & Rubin (1992) on a MCMC chain.
 
     Parameters
     ----------
@@ -21,10 +19,14 @@ def gelmanrubin(chain, nchains):
         much greater than 1, the chain has not converged and requires
         more samples.
 
-    Revisions
-    ---------
-    2010-08-20  ccampo  Initial version.
-    2011-07-07  kevin   Removed chain length constraint
+    Notes
+    -----
+    History:
+
+    2010-08-20  ccampo
+        Initial version.
+    2011-07-07  kevin
+        Removed chain length constraint
     """
     # Shorten chain by 'remainder' so that chain length is evenly divisible by nchains
     remainder = int(chain.size % nchains)
@@ -53,9 +55,9 @@ def gelmanrubin(chain, nchains):
     return psrf
 
 def convergetest(pars, nchains):
-    """
-    Perform the convergence test of Gelman & Rubin (1992) on a MCMC
-    chain.  Driver routine for gelmanrubin.
+    """Driver routine for gelmanrubin.
+    
+    Perform convergence test of Gelman & Rubin (1992) on a MCMC chain.
 
     Parameters
     ----------
@@ -109,9 +111,12 @@ def convergetest(pars, nchains):
              3.52118005,  1.10592542,  1.05514509,  1.00101459]),
              1.3185994837687156)
 
-    Revisions
-    ---------
-    2010-08-20  ccampo  Initial version.
+    Notes
+    -----
+    History:
+    
+    2010-08-20  ccampo
+        Initial version.
     """   
     # allocate placeholder for results
     nfpar = pars.shape[0]

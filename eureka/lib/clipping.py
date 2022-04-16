@@ -8,7 +8,7 @@ from astropy.stats import sigma_clip
 
 __all__ = ['clip_outliers', 'gauss_removal', 'time_removal']
  
-def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill_value='mask', verbose=False):
+def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, boundary='extend', fill_value='mask', verbose=False):
     '''Find outliers in 1D time series.
   
     Be careful when using this function on a time-series with known astrophysical variations. The variable
@@ -46,15 +46,16 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, fill
     '''
     kernel = Box1DKernel(box_width)
     # Compute the moving mean
-    smoothed_data = convolve(data, kernel, boundary='extend')
+    bound_val = np.ma.median(data) # Only used if boundary=='fill'
+    smoothed_data = convolve(data, kernel, boundary=boundary, fill_value=bound_val)
     # Compare data to the moving mean (to remove astrophysical signals)
     residuals = data-smoothed_data
     # Sigma clip residuals to find bad points in data
     residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, cenfunc=np.ma.median)
     outliers = np.ma.getmaskarray(residuals)
   
-    if np.any(outliers) and verbose:
-        log.writelog('Identified {} outliers for wavelength {}'.format(np.sum(outliers), wavelength))
+    if np.any(outliers):
+        log.writelog('Identified {} outliers for wavelength {}'.format(np.sum(outliers), wavelength), mute=(not verbose))
   
     # Replace clipped data
     if fill_value=='mask':

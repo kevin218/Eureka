@@ -5,43 +5,13 @@ Email: jfilippazzo@stsci.edu
 """
 import numpy as np
 import pandas as pd
-#from bokeh.plotting import figure, show
 import matplotlib.pyplot as plt
 
 from . import models as m
 from . import fitters as f
 from .utils import COLORS, color_gen
 
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
-reload(m)
-reload(f)
-
-class LightCurveFitter:
-    def __init__(self, time, flux, model):
-        """Fit the model to the flux cube
-
-        Parameters
-        ----------
-        time:
-            1D or 2D time axes
-        flux:
-            2D flux
-        """
-        self.flux = np.ones(100)
-        self.time = np.arange(100)
-        self.results = pd.DataFrame(names=('fit_number', 'wavelength', 'P',
-                                           'Tc', 'a/Rs', 'b', 'd', 'ldcs',
-                                           'e', 'w', 'model_name', 'chi2'))
-
-    def run(self):
-        """Run the model fits"""
-        pass
-
-    # Method to return sliced results table
-    def master_slicer(self, value, param_name='wavelength'):
-        return self.results.iloc[self.results[param_name] == value]
-
+from copy import deepcopy
 
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
@@ -120,13 +90,12 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
+        self.unc_fit = deepcopy(self.unc)
 
         # Place to save the fit results
         self.results = []
 
         self.longparamlist = longparamlist
-
-        self.log = log
 
         self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
 
@@ -161,7 +130,7 @@ class LightCurve(m.Model):
         """
         # Empty default fit
         fit_model = None
-        
+
         model.time = self.time
         # Make sure the model is a CompositeModel
         if not isinstance(model, m.CompositeModel):
@@ -170,10 +139,10 @@ class LightCurve(m.Model):
 
         if fitter == 'lmfit':
             self.fitter_func = f.lmfitter
-        elif fitter == 'demc':
-            self.fitter_func = f.demcfitter
         elif fitter == 'lsq':
             self.fitter_func = f.lsqfitter
+        # elif fitter == 'demc':
+        #     self.fitter_func = f.demcfitter
         elif fitter == 'emcee':
             self.fitter_func = f.emceefitter
         elif fitter == 'dynesty':
@@ -207,27 +176,30 @@ class LightCurve(m.Model):
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
-            unc = self.unc
+            if "unc_fit" in self.__dict__.keys():
+                unc = deepcopy(self.unc_fit)
+            else:
+                unc = deepcopy(self.unc)
             if self.share:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
-            
-            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+
+            fig = plt.figure(int('54{}'.format(str(0).zfill(len(str(self.nchannel))))), figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
             ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i], zorder=0)
-            
+
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
-            
+
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
                     model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf, share=self.share, chan=channel)
-            
+
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {self.channel}')
+            ax.set_title(f'{meta.eventlabel} - Channel {channel}')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)
             ax.legend(loc='best')

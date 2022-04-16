@@ -3,7 +3,6 @@
 import numpy as np
 from astropy.io import fits
 from . import sigrej, background
-from . import bright2flux as b2f
 
 # Read FITS file from JWST's NIRCam instrument
 def read(filename, data, meta):
@@ -39,6 +38,7 @@ def read(filename, data, meta):
     hdulist = fits.open(filename)
 
     # Load master and science headers
+    data.filename = filename
     data.mhdr    = hdulist[0].header
     data.shdr    = hdulist['SCI',1].header
 

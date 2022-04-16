@@ -213,112 +213,6 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
   return height * np.exp(-0.5 * ponent) + background
 
 
-def old_gaussianguess(y, x=None, mask=None):
-  """
-    Crudely estimates the parameters of a Gaussian that fits the (y, x) data.
-
-    Parameters
-    ----------
-    y : ndarray
-        Array giving the function values.
-    x : ndarray, same shape as y
-        (optional) An array of the same shape as y giving the
-        abcissas of y (if missing, uses array indices).  Must be
-        sorted ascending (which is not checked).
-
-    Returns
-    -------
-    param : tuple, 3 elements
-    This function returns a tuple giving extimates of the (width,
-    center, height) of a Gaussian that might fit the input data.
-    See 'param' input parameter of gaussian() for format of this
-    tuple.
-
-    Notes
-    -----
-    Currently only works for 1D data.
-
-    If the data do not look Gaussian, and certainly if they contain
-    spikes higher/lower than the peak of the real Gaussian, the
-    parameter estimates will be poor.  x must be sorted ascending
-    (which is not checked).
-
-    Method: The most extreme element of y (or its neighbor if a border
-    element) is the location and height of the peak.  The routine
-    looks for the width at 0.6 of this maximum.
-
-    Todo:
-    When expanding to 2D, take arrays of X and Y coords rather than a
-    (redundant) 2D array.  This will prevent irregular grids.
-
-
-    2011-05-05 patricio: This function doesnt work for 2D, I don't
-    even know if it works for 1D. If I ever have time I'll see what
-    can we do. The function below seems to work fine for our 2D data.
-
-    Examples
-    --------
-    >>> import gaussian as g
-
-    >>> x = np.arange(-10., 10.05, 0.1)
-    >>> y = g.gaussian(x)
-    >>> print(g.gaussianguess(y, x))
-    (0.99999999999999645, -3.5527136788005009e-14, 0.3989422804014327)
-
-
-    Revisions
-    ---------
-    2007-09-17 0.1 jh@physics.ucf.edu    Initial version 0.01
-    2007-11-13 0.2 jh@physics.ucf.edu    Fixed docs, return order.
-    2008-12-02 0.3 nlust@physics.ucf.edu Fixed a bug where if an
-                   initial guess was not provided, it would error out
-    2009-10-25 0.4 jh@physics.ucf.edu    Converted to standard doc header.
-    2021-10-15     taylorbell275@gmail.com  Fixed non-existent ArrayShapeError
-                   issue.
-  """
-
-  if y.ndim != 1 :
-    raise AssertionError("ArrayShapeError: y must be 1D, for now.")
-
-  if x is None :
-    x = np.indices(y.shape)[0]
-  else:
-    if x.shape == (1, y.shape):
-      oldshape = x.shape
-      x.shape  = y.shape
-    elif x.shape != y.shape :
-      raise AssertionError("ArrayShapeError: x must have same shape as y (and be sorted).")
-
-  # Default mask:
-  if mask is None:
-    mask = np.ones(np.shape(y))
-
-  ymax  = np.amax(y*mask)
-  #iymax = np.where(y == ymax)[0][0]
-  iymax = np.argmax(y*mask)
-
-  ymin  = np.amin(y*mask)
-  #iymin = np.where(y == ymin)[0][0]
-  iymin = np.argmin(y*mask)
-
-  if np.abs(ymin) >= np.abs(ymax):
-    icenter = iymin
-  else:
-    icenter = iymax
-
-  icenter = np.clip(icenter, 1, x.size-2)
-
-  center = x[icenter]
-  height = y[icenter]
-  gtsigma = np.where(y > (0.6 * height))
-  width = (x[gtsigma[0].max()] - x[gtsigma[0].min()] ) / 2.
-
-  if 'oldshape' in locals():
-    x.shape = oldshape
-
-  return (width, center, height)
-
-
 def gaussianguess(data, mask=None, yxguess=None):
 
   # Default mask:
@@ -745,8 +639,6 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
   """
     Fit position and flux of a data image with gaussians, same sigma
     is applied to all dispersions.
-
-
     Parameters:
     -----------
     y : array_like
@@ -754,7 +646,6 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
     x : array_like
         (optional) Array (any shape) giving the abcissas of y (if
         missing, uses np.indices(y).
-
     guess : 2D-tuple, [[width1, center1, height1],
                        [width2, center2, height2],
                        ...                       ]
@@ -762,7 +653,6 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
         the optimizer.  If supplied, x and y can be any shape and need
         not be sorted.  See gaussian() for meaning and format of this
         tuple.
-
   """
   if x is None:
     x = np.indices(y.shape)[0]
