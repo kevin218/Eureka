@@ -81,7 +81,7 @@ def read(filename, data, meta, f277_filename=None):
     meta.time_units = 'BJD_TDB'
 
     # loads all the data into the data object
-    data.data = hdu['SCI',1].data +0.0#* hdu[0].header['EFFINTTM']
+    data.data = hdu['SCI',1].data * hdu[0].header['EFFINTTM']
     data.err  = hdu['ERR',1].data + 0.0
     data.dq   = hdu['DQ' ,1].data + 0.0
 
