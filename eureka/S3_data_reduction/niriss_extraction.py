@@ -17,10 +17,119 @@ from . import niriss
 
 import pyximport
 pyximport.install()
-from . import niriss_cython
+from . import profiles
 
-__all__ = ['profile_niriss_median', 'profile_niriss_gaussian',
-           'profile_niriss_moffat', 'optimal_extraction']
+__all__ = ['box_extract', 'dirty_mask',
+           'profile_niriss_median', 'profile_niriss_gaussian',
+           'profile_niriss_moffat', 'optimal_extraction_routine',
+           'extraction_routine']
+
+
+def box_extract(data, var, boxmask):
+    """
+    Quick & dirty box extraction to use in the optimal extraction routine.
+
+    Parameters
+    ----------
+    data : np.ndarray
+       Array of science frames.
+    var : np.ndarray
+       Array of variance frames.
+    boxmask : np.ndarray
+       Array of masks for each individual order.
+
+    Returns
+    -------
+    spec1 : np.ndarray
+       Extracted spectra for the first order.
+    spec2 : np.ndarray
+       Extracted spectra for the second order.  
+    """
+
+    spec1 = np.zeros((data.shape[0],
+                      data.shape[2]))
+    spec2 = np.zeros((data.shape[0],
+                      data.shape[2]))
+    var1 = np.zeros(spec1.shape)
+    var2 = np.zeros(spec2.shape)
+
+    m1, m2 = boxmask
+
+    for i in range(len(data)):
+        spec1[i] = np.nansum(data[i], # I think this needs to mask 2nd order?
+                             axis=0)
+        spec2[i] = np.nansum(data[i], # I think this needs to mask 1st order?
+                             axis=0)
+
+        var1[i] = np.nansum(var[i] * m1, axis=0)
+        var2[i] = np.nansum(var[i] * m2, axis=0)
+
+    return spec1, spec2, var1, var2
+
+
+def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
+               return_together=True, pos1=None, pos2=None):
+    """
+    Really dirty box mask for background purposes.
+    
+    Parameters
+    ----------
+    img : np.ndarray
+       Science image.
+    tab : astropy.table.Table
+       Table containing the location of the traces.
+    boxsize1 : int, optional
+       Box size for the first order. Default is 70.
+    boxsize2 : int, optional
+       Box size for the second order. Default is 60.
+    booltype : bool, optional
+       Sets the dtype of the mask array. Default is
+       True (returns array of boolean values).
+    return_together : bool, optional
+       Determines whether or not to return one combined
+       profile mask or masks for both orders separately.
+       Default is True.
+
+    Return
+    ------
+
+    """
+    order1 = np.zeros((boxsize1, len(img[0])))
+    order2 = np.zeros((boxsize2, len(img[0])))
+    mask = np.zeros(img.shape)
+    
+    if tab is not None:
+        pos1 = tab['order_1'] + 0.0
+        pos2 = tab['order_2'] + 0.0
+
+    m1, m2 = 1, 2
+
+    for i in range(img.shape[1]):
+        s,e = int(pos1[i]-boxsize1/2), int(pos1[i]+boxsize1/2)
+        order1[:,i] = img[s:e,i]
+        mask[s:e,i] += m1
+
+        s,e = int(pos2[i]-boxsize2/2), int(pos2[i]+boxsize2/2)
+        try:
+            order2[:,i] = img[s:e,i]
+            mask[s:e,i] += m2
+        except:
+            pass
+
+    if return_together:
+        if booltype==True:
+            mask = ~np.array(mask,dtype=bool)
+        return mask
+    else:
+        m1, m2 = np.zeros(mask.shape), np.zeros(mask.shape)
+        m1[(mask==1) | (mask==3)] = 1
+        m2[mask>=2] = 1
+    
+        if booltype==True:
+            return np.array(m1,dtype=bool), np.array(m2,dtype=bool)
+        else:
+            return m1, m2
+
 
 def profile_niriss_median(medprof, sigma=50):
     """                         
@@ -113,7 +222,7 @@ def profile_niriss_gaussian(data, pos1, pos2):
         """ Calcualtes residuals for best-fit profile. """
         A, B, sig1 = params
         # Produce the model: 
-        model,_ = niriss_cython.build_gaussian_images(data, [A], [B], [sig1], y1_pos, y2_pos)
+        model,_ = profiles.build_gaussian_images(data, [A], [B], [sig1], y1_pos, y2_pos)
         # Calculate residuals:
         res = (model[0] - data)
         return res.flatten()
@@ -126,13 +235,13 @@ def profile_niriss_gaussian(data, pos1, pos2):
                                 xtol=1e-11, ftol=1e-11, max_nfev=1e3
                                )
     # creates the final mask
-    out_img1,out_img2,_= niriss_cython.build_gaussian_images(data,
-                                                          results.x[0:1],
-                                                          results.x[1:2],
-                                                          results.x[2:3],
-                                                          pos1,
-                                                          pos2,
-                                                          return_together=False)
+    out_img1,out_img2,_= profiles.build_gaussian_images(data,
+                                                        results.x[0:1],
+                                                        results.x[1:2],
+                                                        results.x[2:3],
+                                                        pos1,
+                                                        pos2,
+                                                        return_together=False)
     return out_img1[0], out_img2[0]
 
 
@@ -146,7 +255,7 @@ def profile_niriss_moffat(data, pos1, pos2):
     data : np.ndarray
        Image to fit a Moffat profile to.
     pos1 : np.array  
-       x-values for the center of the first order.
+      x-values for the center of the first order.
     pos2 : np.array  
        x-values for the center of the second order.
 
@@ -162,7 +271,7 @@ def profile_niriss_moffat(data, pos1, pos2):
         """ Calcualtes residuals for best-fit profile. """
         A, alpha, gamma = params
         # Produce the model:
-        model = niriss_cython.build_moffat_images(data, [A], [alpha], [gamma], y1_pos, y2_pos)
+        model = profiles.build_moffat_images(data, [A], [alpha], [gamma], y1_pos, y2_pos)
         # Calculate residuals:
         res = (model[0] - data)
         return res.flatten()
@@ -174,19 +283,19 @@ def profile_niriss_moffat(data, pos1, pos2):
                                 xtol=1e-11, ftol=1e-11, max_nfev=1e3
                                )
     # creates the final mask
-    out_img1,out_img2 = niriss_cython.build_moffat_images(data,
-                                                          results.x[0:1],
-                                                          results.x[1:2],
-                                                          results.x[2:3],
-                                                          pos1,
-                                                          pos2,
-                                                          return_together=False)
+    out_img1,out_img2 = profiles.build_moffat_images(data,
+                                                     results.x[0:1],
+                                                     results.x[1:2],
+                                                     results.x[2:3],
+                                                     pos1,
+                                                     pos2,
+                                                     return_together=False)
     return out_img1[0], out_img2[0]
 
 
-def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None,
-                       pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
-                       proftype='gaussian', isplots=0, per_quad=False):
+def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medframe=None,
+                               pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
+                               proftype='gaussian', isplots=0, per_quad=False):
     """
     Optimal extraction routine for NIRISS. This is different from the 
     general `optspex.optimize` since there are two ways to extract the
@@ -206,12 +315,12 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
        Images of the estimated sky background.
     pos1 : np.ndarray, optional
        Initial guesses for the center of the first order. These 
-       can be taken from `meta.tab1` or `meta.tab2`. 
+       can be taken from `tab1` or `tab2`. 
        Default is None. This is not optional if you are using
        the `gaussian` or `moffat` profile types.
     pos2 : np.ndarray
        Initial guesses for the center of the second order. These
-       can be taken from `meta.tab1` or `meta.tab2`.
+       can be taken from `tab1` or `tab2`.
        Default is None. This is not optional if you are using
        the `gaussian` or `moffat` profile types.
     sigma : float, optional
@@ -233,7 +342,7 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
     block_extra = np.ones(data[0].shape)
 
     # Create a box mask to set pixels far from the order to 0
-    boxmask = niriss.dirty_mask(medframe, pos1=pos1, pos2=pos2)
+    boxmask = dirty_mask(medframe, pos1=pos1, pos2=pos2)
     boxmask = np.array(~boxmask, dtype=int)
 
     # Loops over each quadrant
@@ -244,23 +353,28 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
 
         for quad in range(1,4): # CHANGE BACK TO 4
             # Figures out which quadrant location to use
-            print(quad)
             if quad == 1: # Isolated first order (top right)
                 x1,x2 = 1000, data.shape[2]
-                y1,y2 = 0, 90
+                y1,y2 = 0, 100
                 block_extra[80:y2,x1:x1+250]=0 # there's a bit of 2nd order
                                                # that needs to be masked
                 newdata = (data * block_extra)[:,y1:y2, x1:x2]
+
+                index = 0 # Index for the box extracted spectra
 
             elif quad == 2: # Isolated second order (bottom right)
                 x1,x2 = 1000, 1900
                 y1,y2 = 70, data.shape[1]
                 newdata = np.copy(data)[:,y1:y2, x1:x2] # Takes the proper data slice 
+
+                index = 1 # Index for the box extracted spectra
     
             elif quad == 3: # Overlap region (left-hand side)
                 x1,x2 = 0, 1000
                 y1,y2 = 0, data.shape[1]
                 newdata = np.copy(data)[:,y1:y2, x1:x2] # Takes the proper data slice
+
+                index = 0 # Index for the box extracted spectra
 
             new_sky_bkg = np.copy(sky_bkg[:, y1:y2, x1:x2]) + 0.0
 
@@ -270,9 +384,9 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
                 new_cr_mask = None
 
             # Clip 1D arrays to the length of the quadrant
-            new_spectrum = np.copy(spectrum[:,x1:x2]) + 0.0
+            new_spectrum = np.copy(spectrum[index,:,x1:x2]) + 0.0
             newvar = np.copy(var[:,y1:y2,x1:x2]) + 0.0
-            new_spectrum_var = np.copy(spectrum_var[:,x1:x2]) + 0.0
+            new_spectrum_var = np.copy(spectrum_var[index,:,x1:x2]) + 0.0
 
             # Run the optimal extraction routine on the quadrant
             es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2],
