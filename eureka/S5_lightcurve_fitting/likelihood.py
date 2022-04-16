@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import norm
-import pdb
 from copy import deepcopy
 
 def ln_like(theta, lc, model, freenames):
@@ -52,7 +51,7 @@ def ln_like(theta, lc, model, freenames):
         ln_like_val = GP_loglikelihood(model, model_lc)
     else:
         residuals = (lc.flux - model_lc) 
-        ln_like_val = (-0.5 * (np.sum((residuals / lc.unc_fit) ** 2+ np.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+        ln_like_val = (-0.5 * (np.ma.sum((residuals / lc.unc_fit) ** 2+ np.ma.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
     return ln_like_val
 
 def lnprior(theta, prior1, prior2, priortype):
