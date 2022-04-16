@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import corner
 from scipy import stats
-from copy import deepcopy
 
 from .likelihood import computeRMS
 from .utils import COLORS
@@ -45,12 +44,12 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_lc = model.eval()
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.MaskedArray.copy(lc.flux)
+        flux = np.ma.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
-            unc = deepcopy(np.array(lc.unc_fit))
+            unc = np.ma.copy(lc.unc_fit)
         else:
-            unc = np.ma.MaskedArray.copy(lc.unc)
-        model = np.copy(model_lc)
+            unc = np.ma.copy(lc.unc)
+        model = np.ma.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
@@ -124,8 +123,8 @@ def plot_rms(lc, model, meta, fitter):
     model_lc = model.eval()
 
     for channel in lc.fitted_channels:
-        flux = np.copy(lc.flux)
-        model = np.copy(model_lc)
+        flux = np.ma.copy(lc.flux)
+        model = np.ma.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -316,12 +315,12 @@ def plot_res_distr(lc, model, meta, fitter):
     plt.clf()
 
     for channel in lc.fitted_channels:
-        flux = np.ma.MaskedArray.copy(lc.flux)
+        flux = np.ma.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
-            unc = np.copy(np.array(lc.unc_fit))
+            unc = np.ma.copy(np.array(lc.unc_fit))
         else:
-            unc = np.ma.MaskedArray.copy(lc.unc)
-        model = np.copy(model_lc)
+            unc = np.ma.copy(lc.unc)
+        model = np.ma.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -381,12 +380,12 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     model_GP = model.GPeval(model_lc)
 
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.copy(lc.flux)
+        flux = np.ma.copy(lc.flux)
         if "unc_fit" in lc.__dict__.keys():
-            unc = deepcopy(lc.unc_fit)
+            unc = np.ma.copy(lc.unc_fit)
         else:
-            unc = np.copy(lc.unc)
-        model = np.copy(model_with_GP)
+            unc = np.ma.copy(lc.unc)
+        model = np.ma.copy(model_with_GP)
         model_sys = model_sys_full
         model_phys = model_phys_full
         model_GP_component = model_GP
