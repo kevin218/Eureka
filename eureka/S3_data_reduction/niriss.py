@@ -38,8 +38,7 @@ from . import niriss_cython
 
 __all__ = ['read',
            'flag_bg', 'fit_bg', 'wave_NIRISS',
-           'mask_method_one', 'mask_method_two',
-           'box_extract', 'dirty_mask']
+           'mask_method_one', 'mask_method_two']
 
 
 def read(filename, data, meta, f277_filename=None):
@@ -176,6 +175,7 @@ def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False,
     else:
         return tab
 
+
 def wave_NIRISS(wavefile, meta=None, inclass=False, filename=None):
     """
     Adds the 2D wavelength solutions to the meta object.
@@ -235,94 +235,6 @@ def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4],
     data.bkg_var = bkg_var
     return data
 
-
-def dirty_mask(img, meta=None, boxsize1=70, boxsize2=60, booltype=True,
-               return_together=True, pos1=None, pos2=None):
-    """Really dirty box mask for background purposes."""
-    order1 = np.zeros((boxsize1, len(img[0])))
-    order2 = np.zeros((boxsize2, len(img[0])))
-    mask = np.zeros(img.shape)
-
-    if meta is not None:
-        pos1 = meta.tab2['order_1'] + 0.0
-        pos2 = meta.tab2['order_2'] + 0.0
-    if meta is None and pos1 is None:
-        return('Cannot create box mask without trace.')
-
-    if booltype==True:
-        m1, m2 = -1, -1
-    else:
-        m1, m2 = 1, 2
-    
-    for i in range(img.shape[1]):
-        s,e = int(pos1[i]-boxsize1/2), int(pos1[i]+boxsize1/2)
-        order1[:,i] = img[s:e,i]
-        mask[s:e,i] += m1
-        
-        s,e = int(pos2[i]-boxsize2/2), int(pos2[i]+boxsize2/2)
-        try:
-            order2[:,i] = img[s:e,i]
-            mask[s:e,i] += m2
-        except:
-            pass
-        
-    if booltype==True:
-        mask = ~np.array(mask, dtype=bool)
-
-    if return_together:
-        return mask
-    else:
-        m1, m2 = np.zeros(mask.shape), np.zeros(mask.shape)
-        m1[(mask==1) | (mask==3)] = 1
-        m2[mask>=2] = 1
-        return m1, m2
-
-
-def box_extract(data, meta, boxsize1=60, boxsize2=50, bkgsub=False):
-    """
-    Quick & dirty box extraction to use in the optimal extraction routine.
-    
-    Parameters
-    ----------
-    data : object
-    boxsize1 : int, optional
-       Size of the box for the first order. Default is 60 pixels.
-    boxsize2 : int, optional
-       Size of the box for the second order. Default is 50 pixels.
-
-    Returns
-    -------
-    spec1 : np.ndarray
-       Extracted spectra for the first order.
-    spec2 : np.ndarray
-       Extracted spectra for the second order.
-    """
-    spec1 = np.zeros((data.data.shape[0], 
-                      data.data.shape[2]))
-    spec2 = np.zeros((data.data.shape[0],
-                      data.data.shape[2]))
-    var1 = np.zeros(spec1.shape)
-    var2 = np.zeros(spec2.shape)
-
-    m1,m2 = dirty_mask(data.median, meta,
-                       boxsize1, boxsize2,
-                       booltype=False, return_together=False)
-    
-    if bkgsub:
-        d=data.bkg_removed+0.0
-    else:
-        d=data.data+0.0
-
-    for i in range(len(d)):
-        spec1[i] = np.nansum(d[i],# * m1, 
-                             axis=0)
-        spec2[i] = np.nansum(d[i],# * m2
-                             axis=0)
-
-        var1[i] = np.nansum(data.var[i] * m1, axis=0)
-        var2[i] = np.nansum(data.var[i] * m2, axis=0)
-
-    return spec1, spec2, var1, var2
 
 
 def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2), 
