@@ -667,7 +667,6 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
     return data, bkg, bkg_var
 
 
-
 def set_which_table(i, meta):
     """ 
     A little routine to return which table to

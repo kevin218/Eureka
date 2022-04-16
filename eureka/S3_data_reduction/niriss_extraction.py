@@ -242,11 +242,12 @@ def optimal_extraction(data, var, spectrum, spectrum_var, sky_bkg, medframe=None
         ev_all = np.zeros(3, dtype=np.ndarray)
         p_all = np.zeros(3, dtype=np.ndarray)
 
-        for quad in range(1,2): # CHANGE BACK TO 4
+        for quad in range(1,4): # CHANGE BACK TO 4
             # Figures out which quadrant location to use
+            print(quad)
             if quad == 1: # Isolated first order (top right)
                 x1,x2 = 1000, data.shape[2]
-                y1,y2 = 0, 100
+                y1,y2 = 0, 90
                 block_extra[80:y2,x1:x1+250]=0 # there's a bit of 2nd order
                                                # that needs to be masked
                 newdata = (data * block_extra)[:,y1:y2, x1:x2]
