@@ -1,6 +1,54 @@
 import numpy as np
+from scipy.interpolate import NearestNDInterpolator
 
-__all__ = ['interpolating_row']
+__all__ = ['interpolating_row', 'data_quality_mask',
+           'interpolating_image']
+
+
+def interpolating_image(data, mask):
+    """
+    Uses `scipy.interpolate.NearestNDInterpolator` to 
+    fill in bad pixels/cosmic rays/whichever mask you
+    decide to pass in.
+
+    Parameters
+    ----------
+    data : np.ndarray
+       Image frame.
+    mask : np.ndarray
+       Mask of integers or boolean values, where values
+       greater than 0/True are bad pixels.
+
+    Returns
+    -------
+    cleaned : np.ndarray
+       Array of shape `data` which now has interpolated
+       values over the bad masked pixels.
+    """
+    def interpolate(d, m):
+        try:
+            m = m == False
+        except:
+            m = m > 0
+
+        x, y = np.meshgrid(np.arange(d.shape[1]),
+                           np.arange(d.shape[0]))
+        xym  = np.vstack( (np.ravel(x[m]),
+                           np.ravel(y[m]) )).T
+        data = np.ravel(d[m])
+        interp = NearestNDInterpolator(xym, data)        
+        return interp(np.ravel(x), np.ravel(y)).reshape(d.shape)
+
+    cleaned = np.zeros(data.shape)
+
+    if len(data.shape) == 3:
+        for i in range(len(data)):
+            cleaned[i] = interpolate(data[i], mask[i])
+    else:
+        cleaned = interpolate(data, mask)
+    return cleaned
+    
+
 
 def interpolating_row(data, mask, reg=2, arrtype='data'):
     """
@@ -49,3 +97,36 @@ def interpolating_row(data, mask, reg=2, arrtype='data'):
             newval = 0.0
         interp[loc[0], loc[1]] = newval + 0.0
     return interp
+
+
+def data_quality_mask(dq):
+    """
+    Masks all pixels that are not normal (value != 0)
+    or are reference pixels (value == 2147483648).
+
+    Parameters
+    ----------
+    dq : np.array
+       Array of data quality values.
+
+    Returns
+    -------
+    dq_mask : np.array
+       Boolean array masking where the bad pixels are.
+    """
+    dq_mask = np.ones(dq.shape, dtype=bool)
+
+    if len(dq.shape) == 3:
+        for i in range(len(dq)):
+            x,y = np.where( (dq[i] == 0) |
+                            (dq[i] == 2147483648))
+            dq_mask[i,x,y] = False
+
+    elif len(dq.shape) == 2:
+        x, y = np.where( (dq[i] == 0) |
+                         (dq[i] == 2147483648))
+        dq_mask[x,y] = False
+    else:
+        return('Data quality array should be 2D.')
+
+    return ~dq_mask
