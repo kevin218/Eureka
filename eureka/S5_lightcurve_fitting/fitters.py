@@ -166,26 +166,26 @@ def demcfitter(lc, model, meta, log, **kwargs):
 
     Parameters
     ----------
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    meta: MetaClass
+    meta : MetaClass
         The metadata object
-    log: logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
-    **kwargs:
+    **kwargs : dict
         Arbitrary keyword arguments.
 
     Returns
     -------
-    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
 
     Notes
     -----
     History:
-
+    
     - December 29, 2021 Taylor Bell
         Updated documentation and arguments
     """
