@@ -124,7 +124,10 @@ In Stage 5:
       :alt: Stage 5 residual distribution
 
       Stage 5 output: Residual Distribution
-
+   
+   .. figure:: ../media/S5_out/fig5402.png
+      :alt: Stage 5 fitting chains
+   
    .. figure:: ../media/S5_out/fig5403.png
       :alt: Stage 5 fitting chains
 
