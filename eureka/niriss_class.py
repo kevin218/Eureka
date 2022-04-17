@@ -5,15 +5,15 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.table import Table
 
-from lib.trace        import mask_method_one, mask_method_two, ref_file
-from lib.masking      import (interpolating_row, data_quality_mask,
+from .lib.tracing_niriss import mask_method_one, mask_method_two, ref_file
+from .lib.masking        import (interpolating_row, data_quality_mask,
                               interpolating_image)
-from lib.clipping     import time_removal
-from lib.background   import fit_bkg
-from S3_reduction.niriss_extraction   import (dirty_mask, box_extract, 
+from .lib.clipping       import time_removal
+from .S3_data_reduction.background     import bkg_sub
+from .S3_data_reduction.niriss_extraction   import (dirty_mask, box_extract, 
                                               optimal_extraction_routine)
-from .wavelength   import wavelength
-from lib.simultaneous_order_fitting import fit_orders, fit_orders_fast
+from .S3_data_reduction.niriss  import wave_NIRISS as wavelength
+from .lib.simultaneous_order_fitting import fit_orders, fit_orders_fast
 
 
 __all__ = ['NIRISS_S3']
@@ -215,7 +215,7 @@ class NIRISS_S3(object):
         wavelength_map : np.ndarray
         """
         wmap = wavelength(os.path.join(self.data_dir, self.filename), 
-                          orders)
+                          orders, inclass=True)
         self.wavelength_map = wmap + 0.0
     
 

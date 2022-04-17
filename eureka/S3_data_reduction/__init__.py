@@ -4,9 +4,8 @@ from . import bright2flux
 from . import hst_scan
 from . import miri
 from . import nircam
-from . import niriss_cython
+#from . import niriss_cython
 from . import niriss_extraction
-from . import niriss_profiles
 from . import niriss
 from . import nirspec
 from . import optspex

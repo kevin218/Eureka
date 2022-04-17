@@ -4,7 +4,7 @@ import scipy.optimize as so
 
 import pyximport
 pyximport.install()
-from . import profiles
+from . import niriss_profiles as profiles
 
 
 __all__ = ['fit_orders_fast', 'fit_orders']

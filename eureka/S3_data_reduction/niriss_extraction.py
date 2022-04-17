@@ -13,11 +13,6 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 
-from . import niriss
-
-import pyximport
-pyximport.install()
-from . import profiles
 
 __all__ = ['box_extract', 'dirty_mask',
            'profile_niriss_median', 'profile_niriss_gaussian',

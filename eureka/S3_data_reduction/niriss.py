@@ -6,6 +6,7 @@
 #
 ####################################
 import os
+from tqdm import tqdm
 import itertools
 import numpy as np
 import ccdproc as ccdp
@@ -176,7 +177,7 @@ def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False,
         return tab
 
 
-def wave_NIRISS(wavefile, meta=None, inclass=False, filename=None):
+def wave_NIRISS(filename, orders=None, meta=None, inclass=False):
     """
     Adds the 2D wavelength solutions to the meta object.
     
@@ -207,19 +208,20 @@ def wave_NIRISS(wavefile, meta=None, inclass=False, filename=None):
     wavelength_map = np.zeros([3, rows, columns])
     
     # Loops through the three orders to retrieve the wavelength maps
-    for order in [1,2,3]:
+    if orders is None:
+        orders = [1,2,3]
+
+    for order in orders:
         for row in tqdm(range(rows)):
             for column in range(columns):
                 wavelength_map[order-1, row, column] = assign_wcs_results.meta.wcs(column, 
                                                                                    row, 
                                                                                    order)[-1]
     if inclass == False:
-        meta.wavelength_order1 = wavelength_map[0] + 0.0
-        meta.wavelength_order2 = wavelength_map[1] + 0.0
-        meta.wavelength_order3 = wavelength_map[2] + 0.0
+        meta.wavelength_order = wavelength_map
         return meta
     else:
-        return wavelength_map[0], wavelength_map[1], wavelength_map[2]
+        return wavelength_map
 
 
 def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], 
