@@ -9,6 +9,9 @@ from ..limb_darkening_fit import ld_profile
 from .Model import Model
 from ...lib.readEPF import Parameters
 
+from .KeplerOrbit import KeplerOrbit
+import astropy.constants as const
+
 class BatmanTransitModel(Model):
     """Transit Model"""
     def __init__(self, **kwargs):
@@ -112,6 +115,33 @@ class BatmanEclipseModel(Model):
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
 
+        log = kwargs.get('log')
+
+        # Get the parameters relevant to light travel time correction
+        ltt_params = np.array(['a', 'per',  'inc', 't0', 'ecc', 'w'])
+        # Check if able to do ltt correction
+        if np.all(np.in1d(ltt_params, self.paramtitles)) and 'Rs' in self.parameters.dict.keys():
+            self.compute_ltt = True
+            # Check if we need to do ltt correction for each wavelength or only one
+            if self.nchan > 1:
+                # Check whether the parameters are all either fixed or shared
+                self.compute_ltt_once = all([self.parameters.dict.get(name)[1] in ['shared', 'fixed'] for name in ltt_params])
+            else:
+                self.compute_ltt_once = True
+        else:
+            self.compute_ltt = False
+            missing_params = ltt_params[~np.any(ltt_params.reshape(-1,1)==np.array(self.paramtitles), axis=1)]
+            if 'Rs' not in self.parameters.dict.keys():
+                missing_params = np.append('Rs', missing_params)
+            if 't_secondary' not in self.parameters.dict.keys():
+                log.writelog(f"WARNING: Missing parameters [{', '.join(missing_params)}] in your EPF which are required to account for light-travel time.\n"+
+                              "         You should either add these parameters, or you should be fitting for t_secondary\n"+
+                              "         (but note that the fitted t_secondary will not be accounting for light-travel time).")
+            else:
+                log.writelog(f"WARNING: Missing parameters {', '.join(missing_params)} in your EPF which are required to account for light-travel time.\n"+
+                              "         While you are fitting for t_secondary which will help, note that the fitted t_secondary\n"+
+                              "         will not be accounting for light-travel time).")
+
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
         # Get the time
@@ -137,14 +167,71 @@ class BatmanEclipseModel(Model):
             bm_params.limb_dark = 'uniform'
             bm_params.u = []
 
+            if self.compute_ltt:
+                if c==0 or not self.compute_ltt_once:
+                    self.adjusted_time = correct_light_travel_time(self.time, bm_params)
+            else:
+                self.adjusted_time = self.time
+
             if not np.any(['t_secondary' in key for key in self.longparamlist[c]]):
                 # If not explicitly fitting for the time of eclipse, get the time of eclipse from the time of transit, period, eccentricity, and argument of periastron
-                m_transit = batman.TransitModel(bm_params, self.time, transittype='primary')
+                m_transit = batman.TransitModel(bm_params, self.adjusted_time, transittype='primary')
                 bm_params.t_secondary = m_transit.get_t_secondary(bm_params)
             
             # Make the eclipse model
-            m_eclipse = batman.TransitModel(bm_params, self.time, transittype='secondary')
+            m_eclipse = batman.TransitModel(bm_params, self.adjusted_time, transittype='secondary')
 
             lcfinal = np.append(lcfinal, m_eclipse.light_curve(bm_params))
 
         return lcfinal
+
+def correct_light_travel_time(time, bm_params):
+    '''Correct for the finite light travel speed.
+
+    This function uses the KeplerOrbit.py file from the Bell_EBM package
+    as that code includes a newer, faster method of solving Kepler's equation
+    based on Tommasini+2018.
+
+    Parameters
+    ----------
+    time:   ndarray
+        The times at which observations were collected
+    bm_params:  batman.TransitParams
+        The batman TransitParams object that contains information on the orbit.
+
+    Returns
+    -------
+    time:   ndarray
+        Updated times that can be put into batman transit and eclipse functions
+        that will give the expected results assuming a finite light travel speed.
+
+    Notes
+    -----
+    History:
+
+    - 2022-03-31 Taylor J Bell
+        Initial version based on the Bell_EMB KeplerOrbit.py file by Taylor J Bell
+        and the light travel time calculations of SPIDERMAN's web.c file by Tom Louden
+    '''
+    a = bm_params.a * (bm_params.Rs*const.R_sun.value) # Need to convert from a/Rs to a in meters
+
+    if bm_params.ecc>0:
+        # Need to solve Kepler's equation, so use the KeplerOrbit class for rapid computation
+        # In the SPIDERMAN notation z is the radial coordinate, while for Bell_EBM the radial coordinate is x
+        orbit = KeplerOrbit(a=a, Porb=bm_params.per, inc=bm_params.inc, t0=bm_params.t0, e=bm_params.ecc, argp=bm_params.w)
+        old_x, _, _ = orbit.xyz(time)
+        transit_x, _, _ = orbit.xyz(bm_params.t0)
+    else:
+        # No need to solve Kepler's equation for circular orbits, so save some computation time
+        transit_x = a*np.sin(bm_params.inc)
+        old_x = transit_x*np.cos(2*np.pi*(time-bm_params.t0)/bm_params.per)
+    
+    # Get the radial distance variations of the planet
+    delta_x = transit_x - old_x
+    
+    # Compute for light travel time (and convert to days)
+    delta_t = (delta_x/const.c.value)/(3600.*24.)
+
+    # Subtract light travel time as a first-order correction
+    # Batman will then calculate the model at a slightly earlier time
+    return time-delta_t

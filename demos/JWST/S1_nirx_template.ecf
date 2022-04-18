@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 1: Detector Processing
 
+# Stage 1 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-1
+
 suffix              uncal
 
 # Control ramp fitting method

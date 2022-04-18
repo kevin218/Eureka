@@ -2,15 +2,17 @@
 Installation
 ============
 
+Initial environment preparation
+-------------------------------
 It is **strongly** recommended that you install ``Eureka!`` in a new ``conda``environment as other packages you've previously
-installed could have conflicting requirements with ``Eureka!``. You can install a lightweight version of conda at
-`this link <https://docs.conda.io/en/latest/miniconda.html>`_. Once conda is installed, you can create a
+installed could have conflicting requirements with ``Eureka!``. You can install a lightweight version of conda at `this link <https://docs.conda.io/en/latest/miniconda.html>`_. Once conda is installed, you can create a
 new environment by doing:
 
 .. code-block:: bash
 
 	conda create -n eureka python==3.9.7
 	conda activate eureka
+
 
 a) With ``Git`` and ``conda``
 -----------------------------
@@ -31,7 +33,8 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 
 	git pull
 	conda env update --file environment.yml --prune
-	pip install --no-deps --upgrade --force-reinstall .
+	pip install --no-deps --upgrade .
+
 
 b) With ``pip``
 ---------------
@@ -55,7 +58,8 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 
 .. code-block:: bash
 
-	pip install --upgrade --force-reinstall git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
+	pip install --upgrade git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
+
 
 c) With ``Git`` and ``pip``
 ---------------------------
@@ -73,11 +77,10 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 .. code-block:: bash
 
 	git pull
-	conda env update --file environment.yml --prune
-	pip install --no-deps --upgrade --force-reinstall .
+	pip install --upgrade .[jwst]
 
 CRDS Environment Variables
---------------------------
+==========================
 
 ``Eureka!`` installs the JWST Calibration Pipeline as part of its requirements, and this also requires users to set the proper environment
 variables so that it can download the proper reference files needed to run the pipeline. For users not on the internal STScI network,
@@ -93,13 +96,12 @@ e.g. ``/Users/your_name/crds_cache`` for Mac users or ``/home/your_name/crds_cac
 
 If these environment variables are not set, Stages 1-3 of the pipeline will fail.
 
-Issues with installing the ``jwst`` dependency
-------------------------------------------
-
-If you have issues installing the ``jwst`` dependency, check out the debugging advice related to the jwst package on our
-`FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_.
+Issues with installing the jwst dependency
+==========================================
+If you have issues installing the jwst dependency, check out the debugging advice related to the jwst package on our
+:ref:`FAQ page <faq-install>`.
 
 For the JWST ERS Pre-Launch Data Hackathon
------------------------------------------------
+==========================================
 
 Check out the install instructions on the `ERS GitHub <https://github.com/ers-transit/hackathon-2021-day2>`_ if you want to use Eureka! during the hackathon.
