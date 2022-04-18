@@ -658,7 +658,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     
     # Create table of results
     t_results = table.Table([freenames, mean_params, q[0]-q[1],q[2]-q[1],q[0], fit_params, q[2]], 
-                            names=("Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th" "84th"))
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th", "84th"))
     
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
