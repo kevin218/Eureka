@@ -7,7 +7,7 @@ Want to get up and running with ``Eureka!``, but not really sure where to begin?
 1. Installation 📦
 ------------------
 
-The first thing you need to do is install the package, so if you haven't already, take a break from this page and follow the :ref:`installation` instructions (if you have issues be sure to visit the `FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_ first). 
+The first thing you need to do is install the package, so if you haven't already, take a break from this page and follow the :ref:`installation` instructions (if you have issues be sure to visit the :ref:`FAQ<faq>` first). 
 
 
 2. Download the data 💾
@@ -39,14 +39,7 @@ We're almost there, but before you can get things running you need to set up a d
 	mkdir /User/DataAnalysis/JWST/MyFirstEureka
 	cd /User/DataAnalysis/JWST/MyFirstEureka
 
-From here, the simplest way to set up all of the Eureka input files is to duplicate them from the JWST demos directory within ``Eureka!``. This can be done using your existing installation:
-
-.. code-block:: bash
-	
-	mkdir demos
-	cp -r User/Eureka/Install/Location/demos/JWST/* ./demos
-
-Or, if you're lost in the depths of your conda directory, you can also download the demos folder directly `here <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_ and copy them over:
+From here, the simplest way to set up all of the Eureka input files is to download them from the JWST demos directory on the Github repository (`direct download <https://downgit.github.io/#/home?url=https://github.com/kevin218/Eureka/tree/main/demos/JWST>`_). Then we can copy them over:
 
 .. code-block:: bash
 
@@ -55,8 +48,8 @@ Or, if you're lost in the depths of your conda directory, you can also download 
 
 This demos directory contains a selection of template files to run ``Eureka!``. There are three different types of files:
     
-    -  ``*.ecf``: These are ``Eureka!`` control files, and contain input parameters required to run each stage of the pipeline. For more detail on the ecf parameters for each stage, see :ref:`here<ecf>`.
-    -  ``*.epf``: This is a ``Eureka!`` parameter file, and describes the initial guesses and priors to be used when performing light curve fitting (Stage 5).
+    -  ``*.ecf``: These are ``Eureka!`` control files and contain input parameters required to run each stage of the pipeline. For more detail on the ecf parameters for each stage, see :ref:`here<ecf>`.
+    -  ``*.epf``: This is a ``Eureka!`` parameter file and describes the initial guesses and priors to be used when performing light curve fitting (Stage 5).
     -  ``run_eureka.py``: A script to run the ``Eureka!`` pipeline. 
 
 3.2 Customise the demo files
@@ -159,12 +152,11 @@ Similarly to Stage 3, the actual data for the produced light curves can be found
 Stage 5: Lightcurve Fitting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Stage 5 takes all of the lightcurves produced by the previous stage and performs a variety of fitting routines to estimate specific system and planetary properties. For this quickstart, the fitting was performed using nested sampling
-as implemented by ``dynesty``, for a model assuming a transit of WASP-39b plus an aribitrary linear polynomial trend. 
+Stage 5 takes all of the lightcurves produced by the previous stage and performs a variety of fitting routines to estimate specific system and planetary properties. For this quickstart, the fitting was performed using nested sampling as implemented by ``dynesty``, for a model assuming a transit of WASP-39b plus an aribitrary linear polynomial trend. 
 
 As a reminder, the input initial guesses and priors for the model properties are contained within the Stage 5 ``.epf`` file. To facilitate this quickstart demo, input parameters applicable to WASP-39b have already been assigned. For your own reductions, you'll need to tailor this file to the system you are observing and the type of fit you want to perform. 
 
-Additionally, nested sampling is not the only method of sampling the posterior distributions, and MCMC as implemented by ``emcee`` can also be used. Gaussian processes as implemented by ``george`` can also be included in the overall fitting routine. 
+Additionally, nested sampling is not the only method of sampling the posterior distributions, and MCMC as implemented by ``emcee`` can also be used. 
 
 An example figure demonstrating the best fit model lightcurve alongside the data is shown below, and corner plot representations of the fit posteriors can be found under the ``figs`` directory. Once again, the actual model light curve data can be found in the ``*Table_Save_ch*.txt`` files. 
 
@@ -173,7 +165,7 @@ An example figure demonstrating the best fit model lightcurve alongside the data
 Stage 6: Plot Spectra
 ~~~~~~~~~~~~~~~~~~~~~
 
-The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcurve fitting and produces transmission and/or emission spectra. As mentioned earlier, this quickstart only makes use of two different light curves from this dataset from 1.5-3.0 μm and 3.0-4.5 μm. In this case, our transmission spectrum for the transit of WASP-39b will only have two data points (see figure below). Note that the errors bars are not representative of what could be expected for true JWST data, as this dataset has been trimmed down from 8192 integrations, to only 32. Finally, the transmission spectrum data is saved in the ``*Table_Save.txt`` file. 
+The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcurve fitting and produces transmission and/or emission spectra. As mentioned earlier, this quickstart only makes use of two different light curves from this dataset from 1.5-3.0 μm and 3.0-4.5 μm. In this case, our transmission spectrum for the transit of WASP-39b will only have two data points (see figure below). Note that the errors bars are not representative of what could be expected for true JWST data, as to reduce the computational burden this dataset has been trimmed down from 8192 integrations to only 32. Finally, the transmission spectrum data is saved in the ``*Table_Save.txt`` file. 
 
 .. image:: ../media/stage6_quickstart.png
 
@@ -184,4 +176,4 @@ You made it! Congratulations, it's time to reward yourself with a break 😊
 
 However, if this quickstart guide wasn't enough to sate your appetite, consider taking a look at the different parameter settings within the ``*.ecf`` files :ref:`here<ecf>` and tweak away! If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_. Or, if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
 
-If any bugs / errors cropped up while you were working through this quickstart, or if they turn up in the future, take a look at our `FAQ page <https://eurekadocs.readthedocs.io/en/latest/installation.html#issues-installing-or-importing-jwst>`_ or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. Thanks!
+If any bugs / errors cropped up while you were working through this quickstart, or if they turn up in the future, take a look at our :ref:`FAQ<faq>`or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. Thanks!
