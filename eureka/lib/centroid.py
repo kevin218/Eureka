@@ -4,10 +4,8 @@
 # $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/centroid.py $
 # $Id: centroid.py 285 2010-06-18 21:59:25Z patricio $
 
-import sys
 import numpy as np
 from . import gaussian as g
-import matplotlib.pyplot as plt
 
 '''
 Stellar Centroiding Routines
@@ -156,21 +154,10 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
   if  indarr is None:
     indarr = np.indices(np.shape(image))
 
-#  print(np.shape(image))
-#  print(loc)
-#  print(fitguess[2])
-
-#  print(np.shape(image), roundguess)
-#  print(np.shape(indarr))
-
   # Fit the gaussian:
-  #(fw, fc, fh, err) = g.fitgaussian(image, indarr, guess=fitguess)
   p, err = g.fitgaussian(image, indarr, guess=fitguess)
   fw = p[0:2]
   fc = p[2:4]
   fh = p[4]
-  #FINDME: Hack below to get denoise_cenetering.py working
-  #foo = g.fitgaussian(image, indarr, guess=fitguess)
-  #fc = foo[0][2:4]
 
   return ( fc + roundguess - loc )

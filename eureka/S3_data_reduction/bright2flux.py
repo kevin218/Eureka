@@ -215,6 +215,10 @@ def convert_to_e(data, meta, log):
     meta:   MetaClass
         The metadata object.
     """
+    if data.shdr['BUNIT']=='ELECTRONS':
+        # HST/WFC3 spectra are in ELECTRONS already, so do nothing
+        return data, meta
+
     if data.shdr['BUNIT'] != 'ELECTRONS/S':
         log.writelog('  Automatically getting reference files to convert units to electrons', mute=(not meta.verbose))
         if data.mhdr['TELESCOP'] != 'JWST':
