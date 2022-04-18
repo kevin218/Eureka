@@ -97,7 +97,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
-                            names=("Parameter", "Value")  ) 
+                            names=("Parameter", "Mean")  ) 
 
     # Save transmission spectrum
     # indices of fitted rps for all channels
@@ -803,7 +803,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
-                            names=("Parameter", "Value")  )  
+                            names=("Parameter", "Mean")  )  
     
     # Save transmission spectrum
     # indices of fitted rps for all channels
