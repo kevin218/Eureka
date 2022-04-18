@@ -386,13 +386,8 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
     # Calculate variance assuming background dominated rather than read noise dominated
     bgerr       = np.std(bg[n], axis=0)/np.sqrt(np.sum(meta.subdiffmask[-1][n], axis=0))
     bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
-<<<<<<< HEAD
-    data.subv0[n]      += np.mean(bgerr**2)
-    data.subvariance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
-=======
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
->>>>>>> 7ee7466b8689910a8d9ab13252bdef83fa6340b9
 
     return (dataim, datamask, datav0, datavariance, n)
 
