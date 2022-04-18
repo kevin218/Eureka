@@ -83,21 +83,12 @@ def BGsubtraction(data, meta, log, isplots):
             iterfn = tqdm(iterfn)
         for n in iterfn:
             # Fit sky background with out-of-spectra data
-<<<<<<< HEAD
-            if meta.inst in ['niriss', 'wfc3']:
-                writeBG(inst.fit_bg(data, meta, n, isplots))
-            else:
-                dataim = data.subdata[n]
-                datamask = data.submask[n]
-                writeBG(inst.fit_bg(dataim, datamask, n, meta, isplots))
-=======
             if meta.inst == 'niriss':
                 writeBG(inst.fit_bg(data, meta, n, isplots))
             elif meta.inst == 'wfc3':
                 writeBG_WFC3(inst.fit_bg(data.subdata[n], data.submask[n], data.subv0[n], data.subvariance[n], n, meta, isplots))
             else:
                 writeBG(inst.fit_bg(data.subdata[n], data.submask[n], n, meta, isplots))
->>>>>>> 7ee7466b8689910a8d9ab13252bdef83fa6340b9
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
