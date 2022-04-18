@@ -376,20 +376,25 @@ def flag_bg(data, meta):
     '''
     return nircam.flag_bg(data, meta)
 
-def fit_bg(data, meta, n, isplots=False):
+def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
     '''Fit for a non-uniform background.
 
     Uses the code written for NIRCam, but adds on some extra steps 
     '''
-    bg, mask, n = nircam.fit_bg(data, meta, n, isplots=isplots)
+    bg, mask, n = nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than read noise dominated
     bgerr       = np.std(bg[n], axis=0)/np.sqrt(np.sum(meta.subdiffmask[-1][n], axis=0))
     bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
+<<<<<<< HEAD
     data.subv0[n]      += np.mean(bgerr**2)
     data.subvariance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
+=======
+    datav0 += np.mean(bgerr**2)
+    datavariance = abs(dataim) / meta.gain + datav0
+>>>>>>> 7ee7466b8689910a8d9ab13252bdef83fa6340b9
 
-    return (bg, mask, n)
+    return (dataim, datamask, datav0, datavariance, n)
 
 def correct_drift2D(data, meta, m):
     '''
