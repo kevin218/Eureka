@@ -1,3 +1,4 @@
+.. _faq:
 
 Eureka! FAQ
 ============================
@@ -27,6 +28,9 @@ Issues installing or importing batman
 Be sure that you are installing (or have installed) batman-package (not batman) from pip. If you have accidentally
 installed the wrong package you can try pip uninstalling it, but you may just need to make a whole new environment.
 In general, we strongly recommend you closely follow the instructions on the :ref:`installation` page.
+
+
+.. _faq-install:
 
 Issues installing or importing jwst
 '''''''''''''''''''''''''''''''''''
