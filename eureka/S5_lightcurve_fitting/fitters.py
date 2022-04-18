@@ -321,10 +321,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
     fit_params = q[1] # median
+    mean_params = np.mean(samples, axis=0)
 
     # Create table of results
-    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1],q[0],q[2]], 
-                            names=("Parameter", "50th", "-1sig", "+1sig", "16th", "84th"))
+    t_results = table.Table([freenames, mean_params, q[0]-q[1],q[2]-q[1],q[0],fit_params, q[2]], 
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th", "84th"))
 
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
@@ -653,10 +654,11 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
     fit_params = q[1] # median
+    mean_params = np.mean(samples, axis=0)
     
     # Create table of results
-    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1],q[0], q[2]], 
-                            names=("Parameter", "50th", "-1sig", "+1sig", "16th", "84th"))
+    t_results = table.Table([freenames, mean_params, q[0]-q[1],q[2]-q[1],q[0], fit_params, q[2]], 
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th" "84th"))
 
     # Save transmission spectrum
     # indices of fitted rps for all channels
