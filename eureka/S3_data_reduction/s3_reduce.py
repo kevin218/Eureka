@@ -439,7 +439,7 @@ def load_general_s2_meta_info(meta, ecf_path, s2_meta):
         Initial version.
     '''
     # Need to remove the topdir from the outputdir
-    s2_outputdir = s2_meta.outputdir[len(s2_meta.topdir):]
+    s2_outputdir = s2_meta.outputdir[len(meta.topdir):]
     if s2_outputdir[0]=='/':
         s2_outputdir = s2_outputdir[1:]
     if s2_outputdir[-1]!='/':

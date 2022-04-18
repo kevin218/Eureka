@@ -269,7 +269,7 @@ def read_s3_meta(meta):
 
 def load_general_s3_meta_info(meta, ecf_path, s3_meta):
     # Need to remove the topdir from the outputdir
-    s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
+    s3_outputdir = s3_meta.outputdir[len(meta.topdir):]
     if s3_outputdir[0]=='/':
         s3_outputdir = s3_outputdir[1:]
     if s3_outputdir[-1]!='/':

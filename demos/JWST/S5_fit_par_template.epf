@@ -10,7 +10,7 @@
 # ------------------
 # ** Transit/eclipse parameters **
 # ------------------
-rp           0.16          'free'         0.05         0.3          U
+rp           0.173010       'free'         0.1         0.3          U
 #fp           0.008         'free'         0            0.5          U
 # ----------------------
 # ** Phase curve parameters **
@@ -22,30 +22,31 @@ rp           0.16          'free'         0.05         0.3          U
 # ------------------
 # ** Orbital parameters **
 # ------------------
-per          0.813473978   'free'         0.813473978  0.000000035  N
-t0           55528.353027  'free'         55528.34     55528.36     U
-time_offset  0             'independent'
-inc          82.109        'free'         82.109       0.088        N
-a            4.97          'free'         4.97         0.14         N
-ecc          0.0           'fixed'        0            1            U
-w            90.           'fixed'        0            180          U
+per          4.055259   	'free'         4.055259   	1e-5		 N
+t0           0.5		 	'free'         0.4     0.6     U
+time_offset  0            	'independent'
+inc          87.93        	'free'         85       90        U
+a            11.612         'free'         10         13         U
+ecc          0.0           	'fixed'        0            1            U
+w            90.           	'fixed'        0            180          U
 # -------------------------
 # ** Limb darkening parameters **
 # Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']
 # -------------------------
-limb_dark    'kipping2013' 'independent'
-u1           0.3           'free'         0            1            U
-u2           0.1           'free'         0            1            U
+limb_dark    'kipping2013'	'independent'
+u1           0.5           	'free'         0            1            U
+u2           0.5           	'free'         0            1            U
 # --------------------
 # ** Systematic variables **
 # polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
 # expramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
 # GP model parameters (A, WN, m_1, m_2)
 # --------------------
-c0           1             'free'         0.95         1.05         U
+c0           1             	'free'         0.95         1.05         U
+c1           0           	'free'          -0.1         0.1         U
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
 # Use scatter_ppm to fit the noise level in ppm
 # -----------
-scatter_mult 1             'free'         1            0.1          N
+scatter_mult 1             	'free'         1            0.1          N
