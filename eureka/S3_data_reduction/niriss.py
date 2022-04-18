@@ -230,11 +230,9 @@ def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4],
     I think this is just a wrapper for fit_bg, because I perform outlier
     flagging at the same time as the background fitting.
     """
-    data, bkg, bkg_var = fit_bg(data, meta, readnoise, sigclip, 
-                                bkg_estimator=bkg_estimator, box=box, 
-                                filter_size=filter_size, isplots=isplots)
-    data.bkg = bkg
-    data.bkg_var = bkg_var
+    data = fit_bg(data, meta, readnoise, sigclip, 
+                  bkg_estimator=bkg_estimator, box=box, 
+                  filter_size=filter_size, isplots=isplots)
     return data
 
 
@@ -266,10 +264,13 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
     """
     box_mask = dirty_mask(data.median, meta, booltype=True,
                           return_together=True)
-    data, bkg, bkg_var = fitbg3(data, np.array(box_mask-1, dtype=bool), 
-                                readnoise, sigclip, bkg_estimator=bkg_estimator,
-                                box=box, filter_size=filter_size, isplots=isplots)
-    return data, bkg, bkg_var
+    bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool), 
+                                   readnoise, sigclip, bkg_estimator=bkg_estimator,
+                                   box=box, filter_size=filter_size, isplots=isplots)
+    data.bkg = bkg
+    data.bkg_var = bkg_var
+    data.bkg_removed = data.data - data.bkg
+    return data
 
 
 def set_which_table(i, meta):

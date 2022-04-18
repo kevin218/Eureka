@@ -427,12 +427,16 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
         bkg = MedianBackground()
     elif bkg_estimator.lower()=='mean':
         bkg = MeanBackground()
-        
+
+    
     b = Background2D(img, box,
                      filter_size=filter_size,
                      bkg_estimator=bkg,
-                     sigma_clip=sigma_clip, fill_value=0.0,
+                     sigma_clip=sigma_clip, 
+                     fill_value=0.0,
                      mask=mask)
+
+
     return b.background, np.sqrt(b.background_rms)
 
 
@@ -461,33 +465,34 @@ def fitbg3(data, order_mask, readnoise=11,
     bkg_var : np.ndarray
        Errors on the fitted backgrouns.
     """
+    if inclass is False:
+        data = data.data + 0.0
 
     # Removes cosmic rays
     # Loops through niters cycles to make sure all pesky
     #    cosmic rays are trashed
-    rm_crs = np.zeros(data.data.shape)
-    bkg_subbed = np.zeros(data.data.shape)
-    bkg = np.zeros(data.data.shape)
-    bkg_var = np.zeros(data.data.shape)
+    rm_crs = np.zeros(data.shape)
+    bkg = np.zeros(data.shape)
+    bkg_var = np.zeros(data.shape)
 
     # Does a first pass at CR removal in the time-direction
-    first_pass = clipping.time_removal(data.data, sigma=sigclip[0])
+    first_pass = clipping.time_removal(data, sigma=sigclip[0])
 
     # Loops through and removes more cosimc rays
-    for i in tqdm(range(len(data.data))):
+    for i in tqdm(range(len(data))):
 
         mask = np.array(first_pass[i], dtype=bool)
-        ccd = CCDData(data.data[i]*~mask*units.electron)
+        ccd = CCDData(data[i]*~mask*units.electron)
 
         # Second pass at removing cosmic rays, with ccdproc
         for n in range(len(sigclip)):
             m1  = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise, sigclip=sigclip[n])
             mask[m1.mask==True] = True
-            ccd = CCDData(data.data[i]*~mask*units.electron)
+            ccd = CCDData(data[i]*~mask*units.electron)
 
         rm_crs[i] = m1.data
         rm_crs[i][mask>=1] = np.nan
-        
+       
         v = np.zeros((len(bkg_estimator), rm_crs[i].shape[0], rm_crs[i].shape[1]))
         # Fits a 2D background (with the orders masked)
         for j in range(len(bkg_estimator)):
@@ -500,17 +505,7 @@ def fitbg3(data, order_mask, readnoise=11,
 
             if box[j][0]<5 or box[j][1]<5:
                 b1 *= order_mask
-
-            if j == 0:
-                bkg_subbed[i] = rm_crs[i] - b1
-            else:
-                bkg_subbed[i] -= b1
         
-        bkg_var[i] = np.sqrt(np.nansum(v**2.0, axis=0))
+        bkg_var[i] = np.nansum(v, axis=0)
         
-
-    if inclass == False:
-        data.bkg_removed = bkg_subbed
-        return data, bkg, bkg_var
-    else:
-        return bkg_subbed, bkg, bkg_var
+    return bkg, bkg_var, rm_crs

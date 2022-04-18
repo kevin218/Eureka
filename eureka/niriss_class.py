@@ -9,7 +9,7 @@ from .lib.tracing_niriss import mask_method_one, mask_method_two, ref_file
 from .lib.masking        import (interpolating_row, data_quality_mask,
                               interpolating_image)
 from .lib.clipping       import time_removal
-from .S3_data_reduction.background     import bkg_sub
+from .S3_data_reduction.background     import bkg_sub, fitbg3
 from .S3_data_reduction.niriss_extraction   import (dirty_mask, box_extract, 
                                               optimal_extraction_routine)
 from .S3_data_reduction.niriss  import wave_NIRISS as wavelength
@@ -389,13 +389,14 @@ class NIRISS_S3(object):
             ind = len(self.data)
 
 
-        bkg, bkg_var, cr_mask = fit_bkg(self.data[:ind], 
-                                        self.box_mask,
-                                        readnoise=readnoise, 
-                                        sigclip=sigclip, 
-                                        bkg_estimator=bkg_estimator,
-                                        box=box, 
-                                        filter_size=filter_size)
+        bkg, bkg_var, cr_mask = fitbg3(self.data[:ind], 
+                                       ~self.box_mask,
+                                       readnoise=readnoise, 
+                                       sigclip=sigclip, 
+                                       bkg_estimator=bkg_estimator,
+                                       box=box, 
+                                       filter_size=filter_size,
+                                       inclass=True)
 
         self.bkg = bkg + 0.0
         self.bkg_var = bkg_var + 0.0
