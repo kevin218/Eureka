@@ -102,6 +102,6 @@ def flag_bg(data, meta):
 def fit_bg(dataim, datamask, n, meta, isplots=False):
     '''Fit for a non-uniform background.
 
-    Uses the code written for NIRCam and untested for NIRSpec, but likely to still work
+    Uses the code written for NIRCam.
     '''
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)

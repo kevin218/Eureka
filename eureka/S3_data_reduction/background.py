@@ -94,7 +94,7 @@ def BGsubtraction(data, meta, log, isplots):
         pool = mp.Pool(meta.ncpu)
         args_list = []
 
-        # Todo, convert WFC3/NIRISS fit_bg to only accept individual frames (see nircam and below for example)
+        # Todo, convert NIRISS fit_bg to only accept individual frames (see nircam and below for example)
         if meta.inst == 'niriss':
             for n in range(meta.int_start,meta.n_int):
                 args_list.append((data, meta, n, isplots))

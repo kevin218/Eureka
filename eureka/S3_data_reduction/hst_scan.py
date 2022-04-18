@@ -537,7 +537,6 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         return cordata
 
 # Calulate drift2D
-import image_registration as imr
 def calcDrift2D(im1, im2, m, n, n_files):
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
