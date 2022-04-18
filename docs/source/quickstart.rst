@@ -13,7 +13,7 @@ The first thing you need to do is install the package, so if you haven't already
 2. Download the data 💾
 -----------------------------------
 
-With the installation complete, you'll need some data to run ``Eureka!`` on. For now let's use some simulated data that was produced for the Transiting Exoplanet Community ERS Data Challenge. Datasets for all four instruments are available on the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_, however, for the rest of this quickstart guide the `NIRSpec Tiny dataset <https://stsci.box.com/s/mgicm6yc5c7khljako7yswh619dn5e7a>`_ will be used. 
+With the installation complete, you'll need some data to run ``Eureka!`` on. For now let's use some simulated data that was produced for the `Transiting Exoplanet Community ERS <https://ers-transit.github.io/>`_ Data Challenge. Datasets for all four instruments are available on the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_, however, for the rest of this quickstart guide the `NIRSpec Tiny dataset <https://stsci.box.com/s/mgicm6yc5c7khljako7yswh619dn5e7a>`_ will be used. 
 
 Now, I'm sure you wouldn't just leave the data in your Downloads folder, but if so, let's make a new directory to store things instead. For example:
 
