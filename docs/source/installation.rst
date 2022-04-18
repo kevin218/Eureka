@@ -4,7 +4,7 @@ Installation
 
 Initial environment preparation
 -------------------------------
-It is **strongly** recommended that you install ``Eureka!`` in a new ``conda``environment as other packages you've previously
+It is **strongly** recommended that you install ``Eureka!`` in a new ``conda`` environment as other packages you've previously
 installed could have conflicting requirements with ``Eureka!``. You can install a lightweight version of conda at `this link <https://docs.conda.io/en/latest/miniconda.html>`_. Once conda is installed, you can create a
 new environment by doing:
 
@@ -14,10 +14,13 @@ new environment by doing:
 	conda activate eureka
 
 
-a) With ``Git`` and ``conda``
+Installation methods
+--------------------
+
+a) With ``git`` and ``conda``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-While ``Eureka!`` is under heavy development, the most stable way of installing ``Eureka!`` is using ``Git`` and ``conda``. This can be done following:
+While ``Eureka!`` is under heavy development, the most stable way of installing ``Eureka!`` is using ``git`` and ``conda``. This can be done following:
 
 .. code-block:: bash
 
@@ -61,10 +64,10 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 	pip install --upgrade git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
 
 
-c) With ``Git`` and ``pip``
+c) With ``git`` and ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once in your new conda environment, you can install ``Eureka!`` directly from source on
-`GitHub <http://github.com/kevin218/Eureka>`_ using ``Git`` and ``pip`` by running:
+`GitHub <http://github.com/kevin218/Eureka>`_ using ``git`` and ``pip`` by running:
 
 .. code-block:: bash
 
