@@ -97,7 +97,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
-                            names=("Parameter", "Median")  ) 
+                            names=("Parameter", "Value")  ) 
 
     # Save transmission spectrum
     # indices of fitted rps for all channels
@@ -323,8 +323,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     fit_params = q[1] # median
 
     # Create table of results
-    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
-                            names=("Parameter", "Median", "-1sig", "+1sig"))
+    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1],q[0],q[2]], 
+                            names=("Parameter", "50th", "-1sig", "+1sig", "16th", "84th"))
 
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
@@ -655,8 +655,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     fit_params = q[1] # median
     
     # Create table of results
-    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1]], 
-                            names=("Parameter", "Median", "-1sig", "+1sig"))
+    t_results = table.Table([freenames, fit_params, q[0]-q[1],q[2]-q[1],q[0], q[2]], 
+                            names=("Parameter", "50th", "-1sig", "+1sig", "16th", "84th"))
 
     # Save transmission spectrum
     # indices of fitted rps for all channels
@@ -799,7 +799,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     # Create table of results
     t_results = table.Table([freenames, fit_params], 
-                            names=("Parameter", "Median")  )  
+                            names=("Parameter", "Value")  )  
     
     # Save transmission spectrum
     # indices of fitted rps for all channels
