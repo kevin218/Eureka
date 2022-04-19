@@ -120,7 +120,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = meta.time - offset
-            time_units = meta.time_units+f' - {offset}'
+            if offset!=0:
+                time_units = meta.time_units+f' - {offset}'
+            else:
+                time_units = meta.time_units
 
             if sharedp:
                 #Make a long list of parameters for each channel
