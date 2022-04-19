@@ -938,7 +938,7 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[], upper_e
     if len(upper_errs)!=0 and len(lower_errs)!=0:
         data = np.append(data, -lower_errs.reshape(1,-1), axis=0)
         data = np.append(data, upper_errs.reshape(1,-1), axis=0)
-    np.savetxt(meta.outputdir+fname+'.csv', fit_params.reshape(1,-1), header=','.join(freenames), delimiter=',')
+    np.savetxt(meta.outputdir+fname+'.csv', data, header=','.join(freenames), delimiter=',')
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples)!=0:
