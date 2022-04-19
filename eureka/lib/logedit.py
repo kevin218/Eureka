@@ -106,7 +106,7 @@ class Logedit:
     if not mute:
       print(message, end=end, flush=True)
     # print to file:
-    print(message, file=self.log)
+    print(message, file=self.log, flush=True)
 
 
   def closelog(self):

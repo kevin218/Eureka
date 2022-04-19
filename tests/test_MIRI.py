@@ -42,7 +42,7 @@ def test_MIRI(capsys):
 
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        reload(s1)
+        # reload(s1)
         reload(s2)
     reload(s3)
     reload(s4)
@@ -50,7 +50,7 @@ def test_MIRI(capsys):
     reload(s6)
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
+        # s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
     else:
         s2_meta = None
@@ -62,9 +62,9 @@ def test_MIRI(capsys):
     # run assertions for S2
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage1/'
-        name = pathdirectory(meta, 'S1', 1)
-        assert os.path.exists(name)
+        # meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage1/'
+        # name = pathdirectory(meta, 'S1', 1)
+        # assert os.path.exists(name)
 
         meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage2/'
         name = pathdirectory(meta, 'S2', 1)
@@ -96,7 +96,7 @@ def test_MIRI(capsys):
     assert os.path.exists(name+'/figs')
 
     # remove temporary files
-    os.system("rm -r data/JWST-Sim/MIRI/Stage1/S1_*")
+    # os.system("rm -r data/JWST-Sim/MIRI/Stage1/S1_*")
     os.system("rm -r data/JWST-Sim/MIRI/Stage2/S2_*")
     os.system("rm -r data/JWST-Sim/MIRI/Stage3")
     os.system("rm -r data/JWST-Sim/MIRI/Stage4")

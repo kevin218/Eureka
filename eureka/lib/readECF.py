@@ -194,6 +194,15 @@ class MetaClass:
         for param, value in self.params.items():
             setattr(self, param, value)
 
+        if self.inputdir[0]=='/':
+            self.inputdir = self.inputdir[1:]
+        if self.inputdir[-1]!='/':
+            self.inputdir += '/'
+        if self.outputdir[0]=='/':
+            self.outputdir = self.outputdir[1:]
+        if self.outputdir[-1]!='/':
+            self.outputdir += '/'
+
         return
 
     def write(self, folder):
