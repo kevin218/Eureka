@@ -13,7 +13,6 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from ..lib.readEPF import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 from ..lib import astropytable
@@ -107,9 +106,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
-    end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
-    log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
-
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
@@ -170,26 +166,26 @@ def demcfitter(lc, model, meta, log, **kwargs):
 
     Parameters
     ----------
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    meta: MetaClass
+    meta : MetaClass
         The metadata object
-    log: logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
-    **kwargs:
+    **kwargs : dict
         Arbitrary keyword arguments.
 
     Returns
     -------
-    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
 
     Notes
     -----
     History:
-
+    
     - December 29, 2021 Taylor Bell
         Updated documentation and arguments
     """
@@ -327,7 +323,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     try:
         log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.verbose))
     except:
-        log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
+        log.writelog("WARNING: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
 
     if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)

@@ -14,7 +14,7 @@ from ..lib import readECF
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
-    
+
     def __init__(self):
         return
 
@@ -29,16 +29,16 @@ def rampfitJWST(eventlabel, ecf_path='./'):
         The unique identifier for these data.
     ecf_path:   str
         The absolute or relative path to where ecfs are stored
-    
+
     Returns
     -------
     meta: MetaClass
         The metadata object
-    
+
     Notes
     -----
     History:
-    
+
     - October 2021 Taylor Bell
         Code fragments
     - October 2021 Aarynn Carter and Eva-Maria Ahrer

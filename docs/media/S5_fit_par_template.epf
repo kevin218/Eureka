@@ -37,6 +37,7 @@ u2           0.1           'free'         0            1            U
 # ** Systematic variables **
 # polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
 # expramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# GP model variables (A, WN, m_1, m_2)
 # --------------------
 c0           1             'free'         0.95         1.05         U
 # -----------

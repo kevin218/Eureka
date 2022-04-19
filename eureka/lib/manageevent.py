@@ -1,60 +1,56 @@
-
 import h5py as h5
-try:
-    import cPickle as pickle
-except:
-    import _pickle as pickle
+import pickle
+
 
 """
-    Name
-    ----
-    Manage Event
+Name
+----
+Manage Event
 
-    File
-    ----
-    manageevnet.py
+File
+----
+manageevnet.py
 
-    Description
-    -----------
-    Routines for handling events.
+Description
+-----------
+Routines for handling events.
 
-    Package Contents
-    ----------------
-    saveevent(event, filename, save=['event'], delete=[])
-        Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
+Package Contents
+----------------
+saveevent(event, filename, save=['event'], delete=[])
+    Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
 
-    loadevent(filename, load):
-        Loads an event stored in .dat and .h5 files.
+loadevent(filename, load):
+    Loads an event stored in .dat and .h5 files.
 
-    updateevent(event, filename, add):
-        Adds parameters given by add from filename to event.
+updateevent(event, filename, add):
+    Adds parameters given by add from filename to event.
 
 
-    Examples:
-    ---------
-    >>> from manageevent import *
-    >>> # Save  hd209bs51_ini.dat and hd209bs51_ini.h5 files.
+Examples:
+---------
+>>> from manageevent import *
+>>> # Save  hd209bs51_ini.dat and hd209bs51_ini.h5 files.
 
-    >>> saveevent(event, 'd209bs51_ini', save=['data', 'head','uncd',
-                                            'bdmskd'])
+>>> saveevent(event, 'd209bs51_ini', save=['data', 'head','uncd',
+                                        'bdmskd'])
 
-    >>> # Load the event and its data frames
-    >>> event = loadevent('hd209bs51_ini', ['data'])
+>>> # Load the event and its data frames
+>>> event = loadevent('hd209bs51_ini', ['data'])
 
-    >>> # Load uncd and bdmsk into event:
-    >>> updateevent(event, 'hd209bs51_ini', ['uncd', 'bdmskd'])
+>>> # Load uncd and bdmsk into event:
+>>> updateevent(event, 'hd209bs51_ini', ['uncd', 'bdmskd'])
 
-    Revisions
-    ---------
-    2010-07-10  patricio  joined loadevent and       pcubillos@fulbrightmail.org
-                          saveevent into this package.
-                          updateevent added.
-    2010-11-12  patricio  reimplemented using exec()
+Revisions
+---------
+2010-07-10  patricio         pcubillos@fulbrightmail.org
+    joined loadevent and saveevent into this package. updateevent added.
+2010-11-12  patricio  reimplemented using exec()
 """
 
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):
-  """
+    """
     Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
 
     Parameters
@@ -85,34 +81,31 @@ def saveevent(event, filename, save=[], delete=[], protocol=3):
     Revisions
     ---------
     2010-07-10  patricio  Added documentation.     pcubillos@fulbrightmail.org
-  """
+    """
+    if save != []:
+        with h5.File(filename + '.h5', 'w') as handle:
+            for param in save:
+                exec('handle["'  + param + '"] = event.' + param)
+                exec('del(event.' + param + ')')
+                # calibration data
+                if event.havecalaor:
+                    exec('handle["pre'   + param + '"] = event.pre'  + param)
+                    exec('handle["post'  + param + '"] = event.post' + param)
+                    exec('del(event.pre' + param + ', event.post'    + param + ')')
 
-  if save != []:
-    handle = h5.File(filename + '.h5', 'w')
-    for param in save:
-      exec('handle["'  + param + '"] = event.' + param)
-      exec('del(event.' + param + ')')
-      # calibration data
-      if event.havecalaor:
-        exec('handle["pre'   + param + '"] = event.pre'  + param)
-        exec('handle["post'  + param + '"] = event.post' + param)
-        exec('del(event.pre' + param + ', event.post'    + param + ')')
-    handle.close()
+    # delete if requested
+    for param in delete:
+        exec('del(event.' + param + ')')
+        if event.havecalaor:
+            exec('del(event.pre' + param + ', event.post' + param + ')')
 
-  # delete if requested
-  for param in delete:
-    exec('del(event.' + param + ')')
-    if event.havecalaor:
-      exec('del(event.pre' + param + ', event.post' + param + ')')
-
-  # Pickle-Save the event
-  handle = open(filename + '.dat', 'wb')
-  pickle.dump(event, handle, protocol)
-  handle.close()
+    # Pickle-Save the event
+    with open(filename + '.dat', 'wb') as handle:
+        pickle.dump(event, handle, protocol)
 
 
 def loadevent(filename, load=[], loadfilename=None):
-  """
+    """
     Loads an event stored in .dat and .h5 files.
 
     Parameters
@@ -139,31 +132,26 @@ def loadevent(filename, load=[], loadfilename=None):
     Revisions
     ---------
     2010-07-10  patricio  Added documentation.     pcubillos@fulbrightmail.org
-  """
-  from astropy.io import fits
-  handle = open(filename + '.dat', 'rb')
-  event = pickle.load(handle, encoding='latin1')
-  handle.close()
+    """
+    with open(filename + '.dat', 'rb') as handle:
+        event = pickle.load(handle, encoding='latin1')
 
-  if loadfilename == None:
-    loadfilename = filename
+    if loadfilename == None:
+        loadfilename = filename
 
-  if load != []:
-    handle = h5.File(loadfilename + '.h5', 'r')
-    for param in load:
-      exec('event.' + param + ' = handle["' + param + '"][:]')
-      # calibration data:
-      if event.havecalaor:
-        exec('event.pre'  + param + ' = handle["pre'  + param + '"][:]')
-        exec('event.post' + param + ' = handle["post' + param + '"][:]')
+    if load != []:
+        with h5.File(loadfilename + '.h5', 'r') as handle:
+            for param in load:
+                exec('event.' + param + ' = handle["' + param + '"][:]')
+                # calibration data:
+                if event.havecalaor:
+                    exec('event.pre'  + param + ' = handle["pre'  + param + '"][:]')
+                    exec('event.post' + param + ' = handle["post' + param + '"][:]')
 
-    handle.close()
-
-  return event
-
+    return event
 
 def updateevent(event, filename, add):
-  """
+    """
     Adds parameters given by add from filename to event.
 
     Parameters
@@ -191,14 +179,14 @@ def updateevent(event, filename, add):
     Revisions
     ---------
     2010-07-10  patricio  Created.     pcubillos@fulbrightmail.org
-  """
-  event2 = loadevent(filename, load=add)
+    """
+    event2 = loadevent(filename, load=add)
 
-  for param in add:
-    exec('event.' + param + ' = event2.' + param)
-    # calibration data
-    if event.havecalaor:
-      exec('event.pre'  + param + ' = event2.pre'  + param)
-      exec('event.post' + param + ' = event2.post' + param)
+    for param in add:
+        exec('event.' + param + ' = event2.' + param)
+        # calibration data
+        if event.havecalaor:
+            exec('event.pre'  + param + ' = event2.pre'  + param)
+            exec('event.post' + param + ' = event2.post' + param)
 
-  return event
+    return event

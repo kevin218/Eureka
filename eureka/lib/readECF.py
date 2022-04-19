@@ -43,8 +43,11 @@ class MetaClass:
             Initial Version based on old readECF code.
         '''
         self.params = {}
-        if file is not None and folder is not None and os.path.exists(os.path.join(folder,file)):
-            self.read(folder, file)
+        if file is not None and folder is not None:
+            if os.path.exists(os.path.join(folder,file)):
+                self.read(folder, file)
+            else:
+                raise ValueError(f"The file {os.path.join(folder,file)} does not exist.")
 
         if kwargs is not None:
             # Add any kwargs to the parameter dict

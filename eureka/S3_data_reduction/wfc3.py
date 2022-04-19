@@ -4,7 +4,7 @@ import numpy as np
 import multiprocessing as mp
 from astropy.io import fits
 import scipy.interpolate as spi
-import scipy.ndimage.interpolation as spni
+import scipy.ndimage as spni
 from . import background, nircam
 from . import bright2flux as b2f
 from . import hst_scan as hst
@@ -285,7 +285,7 @@ def flatfield(data, meta):
     
     print('Loading flat frames...')
     print(meta.flatfile)
-    tempflat, tempmask = hst.makeflats(meta.flatfile, [np.mean(data.wave,axis=0),], [[0,meta.nx],], [[0,meta.ny],], meta.flatoffset, 1, meta.ny, meta.nx, sigma=meta.flatsigma)
+    tempflat, tempmask = hst.makeflats(meta.flatfile, [np.mean(data.wave,axis=0),], [[0,meta.nx],], [[0,meta.ny],], meta.flatoffset, 1, meta.ny, meta.nx, sigma=meta.flatsigma, isplots=meta.isplots_S3)
     subflat  = tempflat[0]
     flatmask = tempmask[0]
     
@@ -376,21 +376,20 @@ def flag_bg(data, meta):
     '''
     return nircam.flag_bg(data, meta)
 
-def fit_bg(data, meta, n, isplots=False):
+def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
     '''Fit for a non-uniform background.
 
     Uses the code written for NIRCam, but adds on some extra steps 
     '''
-    bg, mask, n = nircam.fit_bg(data, meta, n, isplots=isplots)
+    bg, mask, n = nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than read noise dominated
     bgerr       = np.std(bg[n], axis=0)/np.sqrt(np.sum(meta.subdiffmask[-1][n], axis=0))
     bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
-    data.subv0[n]      += np.mean(bgerr**2)
-    data.subvariance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
-    #variance    = abs(data.subdata*submask) / gain + v0
+    datav0 += np.mean(bgerr**2)
+    datavariance = abs(dataim) / meta.gain + datav0
 
-    return (bg, mask, n)
+    return (dataim, datamask, datav0, datavariance, n)
 
 def correct_drift2D(data, meta, m):
     '''
