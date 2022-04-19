@@ -70,15 +70,20 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - {fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
+        ax[0].set_xticks([])
 
         ax[1].errorbar(lc.time, flux/model_sys, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
         ax[1].plot(new_time, model_phys, color='0.3', zorder = 10)
         ax[1].set_ylabel('Calibrated Flux', size=14)
+        ax[1].set_xticks([])
 
         ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.', color='w', ecolor=color, mec=color)
         ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
+
+        fig.subplots_adjust(hspace=0)
+        fig.align_ylabels(ax)
 
         fname = 'figs/fig51{}_lc_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
