@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
 from ..lib import util
 
 def binned_lightcurve(meta, time, wavelength, i):
@@ -36,7 +35,7 @@ def binned_lightcurve(meta, time, wavelength, i):
     plt.xlabel(f'Time [{meta.time_units} - {time_modifier}]')
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
-    plt.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight')
+    plt.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -58,7 +57,7 @@ def drift1d(meta):
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig41{}-Drift.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight')
+    plt.savefig(meta.outputdir + 'figs/Fig41{}-Drift.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -93,13 +92,13 @@ def lc_driftcorr(meta, wave_1d, optspec):
         # Insert vertical dashed lines at spectroscopic channel edges
         secax = plt.gca().secondary_xaxis('top')
         xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
-        secax.set_xticks(xticks, np.round(xticks, 6), rotation=90, fontsize=rcParams['font.size']*0.5)
+        secax.set_xticks(xticks, np.round(xticks, 6), rotation=90, fontsize='xx-small')
         plt.vlines(xticks,0,n_int,'0.3','dashed')
     plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu m$)')
+    plt.xlabel(r'Wavelength ($\mu$m)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig42{}-2D_LC.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight')
+    plt.savefig(meta.outputdir + 'figs/Fig42{}-2D_LC.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight', dpi=300)
     if meta.hide_plots:
         plt.close()
     else:
@@ -132,7 +131,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.plot(np.arange(meta.drift_range,nx-meta.drift_range), fit_spec, '-', label='Current Spectrum')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig44{}-CC_Spec.png'.format(str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))), bbox_inches='tight')
+    plt.savefig(meta.outputdir + 'figs/Fig44{}-CC_Spec.png'.format(str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))), bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -157,6 +156,6 @@ def cc_vals(meta, vals, n):
     plt.title(f'Cross Correlation - Values {n}')
     plt.plot(np.arange(-meta.drift_range,meta.drift_range+1), vals, '.')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig45{}-CC_Vals.png'.format(str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))), bbox_inches='tight')
+    plt.savefig(meta.outputdir + 'figs/Fig45{}-CC_Vals.png'.format(str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))), bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
