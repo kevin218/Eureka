@@ -1,5 +1,7 @@
+import string
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 import corner
 from scipy import stats
 
@@ -187,15 +189,31 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    samples = np.copy(samples)
+    freenames=np.copy(freenames)
+    ndim = len(freenames)+1 # One extra for the 1D histogram
+    fig, axes = plt.subplots(ndim, ndim, num=int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(ndim*1.4, ndim*1.4))
     fig.clf()
-    fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
+    # Don't allow offsets or scientific notation in tick labels
+    old_useOffset = rcParams['axes.formatter.useoffset']
+    old_xtick_labelsize = rcParams['xtick.labelsize']
+    old_ytick_labelsize = rcParams['ytick.labelsize']
+    rcParams['axes.formatter.useoffset'] = False
+    rcParams['xtick.labelsize'] = 10
+    rcParams['ytick.labelsize'] = 10
+    fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84], max_n_ticks=3,
+                        labels=freenames, show_titles=True, title_fmt='.2',
+                        title_kwargs={"fontsize": 10}, label_kwargs={"fontsize": 10}, fontsize=10, labelpad=0.25)
     fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
     if meta.hide_plots:
         plt.close()
     else:
         plt.pause(0.2)
+
+    rcParams['axes.formatter.useoffset'] = old_useOffset
+    rcParams['xtick.labelsize'] = old_xtick_labelsize
+    rcParams['ytick.labelsize'] = old_ytick_labelsize
 
     return
 
