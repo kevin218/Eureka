@@ -24,7 +24,7 @@ def test_MIRI(capsys):
         with capsys.disabled():
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print('\nSkipping MIRI Stage 1-2 tests as could not import them.')
+            print('\nSkipping MIRI Stage 2 test as could not import eureka.S2_calibrations.s2_calibrate.')
             print("\nMIRI S3-6 test: ", end='', flush=True)
     else:
         with capsys.disabled():
@@ -32,7 +32,7 @@ def test_MIRI(capsys):
             # useful to leave messages for future users who run the tests
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print("\nMIRI S1-6 test: ", end='', flush=True)
+            print("\nMIRI S2-6 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
