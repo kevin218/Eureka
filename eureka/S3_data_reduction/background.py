@@ -419,22 +419,26 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     background_error : np.ndarray
        Error estimation on the background fitting.
     """
-    sigma_clip = SigmaClip(sigma=sigma)
+    sigma_clip = SigmaClip(sigma=sigma)        # Sigma clipping mask
     
-    if bkg_estimator.lower()=='mmmbackground':
+    # These are different ways to calculate the background noise
+    if bkg_estimator.lower()=='mmmbackground': # 3*mean + 2*median
         bkg = MMMBackground()
-    elif bkg_estimator.lower()=='median':
+    elif bkg_estimator.lower()=='median':      # median background
         bkg = MedianBackground()
-    elif bkg_estimator.lower()=='mean':
+    elif bkg_estimator.lower()=='mean':        # mean background
         bkg = MeanBackground()
 
     
     b = Background2D(img, box,
-                     filter_size=filter_size,
-                     bkg_estimator=bkg,
-                     sigma_clip=sigma_clip, 
-                     fill_value=0.0,
-                     mask=mask)
+                     filter_size=filter_size, # window size of the 
+                                              # background filter to
+                                              # apply low-res bkg map
+
+                     bkg_estimator=bkg,       # how to calculate the bkg
+                     sigma_clip=sigma_clip,   # performs sigma clipping
+                     fill_value=0.0,          # used to fill masked pixels
+                     mask=mask)               # masks the orders
 
 
     return b.background, np.sqrt(b.background_rms)
