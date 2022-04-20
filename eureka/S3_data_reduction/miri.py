@@ -68,7 +68,16 @@ def read(filename, data, meta):
         if meta.firstFile:
             print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
                   'because they are not in the .fits files themselves')
-        if 'new_drift' in data.filename:
+
+        if 'WASP_80b' in data.filename and 'transit' in data.filename:
+            # Time array for WASP-80b MIRISIM transit observations
+            # Assuming transit near August 1, 2022
+            data.time = np.linspace(2459791.3696221784, 2459791.6100991997, 4507, endpoint=True)[data.intstart - 1:data.intend-1]
+        elif 'WASP_80b' in data.filename and 'eclipse' in data.filename:
+            # Time array for WASP-80b MIRISIM eclipse observations
+            # Assuming eclipse near August 1, 2022
+            data.time = np.linspace(2459789.8356924183, 2459790.0761694396, 4506, endpoint=True)[data.intstart - 1:data.intend-1]
+        elif 'new_drift' in data.filename:
             # Time array for the newest MIRISIM observations
             data.time = np.linspace(0, 47.712*(1849)/3600/24, 1849, endpoint=True)[data.intstart - 1:data.intend-1]
         elif data.mhdr['EFFINTTM']==10.3376:
@@ -78,6 +87,8 @@ def read(filename, data, meta):
         elif data.mhdr['EFFINTTM']==47.712:
             # A new manually created time array for the new MIRI simulations
             data.time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44, endpoint=True)[data.intstart - 1:data.intend-1] # Need to subtract an extra 1 from intend for these data
+        else:
+            raise AssertionError('Eureka does not currently know how to generate the time array for these simulations.')
     else:
         data.time = int_times['int_mid_BJD_TDB']
 
