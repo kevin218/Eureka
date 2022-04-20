@@ -8,8 +8,15 @@ __all__ = ["lib", "S1_detector_processing", "S2_calibrations", "S3_data_reductio
 from .version import __version__
 
 from . import lib
-from . import S1_detector_processing
-from . import S2_calibrations
+try:
+    import jwst
+    success = True
+except ModuleNotFoundError as e:
+    print("WARNING: The package jwst has not been installed. As a result, Eureka!'s Stages 1 and 2 will not work.")
+    success = False
+if success:
+    from . import S1_detector_processing
+    from . import S2_calibrations
 from . import S3_data_reduction
 from . import S4_generate_lightcurves
 from . import S5_lightcurve_fitting    

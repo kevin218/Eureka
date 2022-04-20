@@ -38,7 +38,7 @@ def ld_profile(name='quadratic', latex=False):
     ----------
     name: str
         The name of the limb darkening profile function to use,
-        including 'uniform', 'linear', 'quadratic', 'square-root',
+        including 'uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
         'logarithmic', 'exponential', '3-parameter', and '4-parameter'
     latex: bool
         Return the function as a LaTeX formatted string

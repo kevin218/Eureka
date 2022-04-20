@@ -1,0 +1,36 @@
+# Eureka! Control File for Stage 6: Spectra Plotting
+
+allapers        False # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
+
+# Plotting parameters
+y_unit          (Rp/Rs)^2 # Options include Rp/Rs, (Rp/Rs)^2, Fp/Fs
+y_scalar        100 # Can be used to convert to percent (100), ppm (1e6), etc.
+x_unit          um # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
+
+# This section is relevant if isplots_S6>=3
+# Scale height parameters (if you want a second copy of the plot with a second y-axis with units of scale height)
+star_Rad        0.6506 # The radius of the star in units of solar radii
+planet_Teq      1400 # The equilibrium temperature of the planet in units of Kelvin
+planet_Mass     2 # The planet's mass in units of Jupiter radii (used to calculate surface gravity)
+planet_Rad      None # The planet's radius in units of Jupiter radii (used to calculate surface gravity); Set to None to use the average fitted radius
+planet_mu       2.3 # The mean molecular mass of the atmosphere (in atomic mass units)
+planet_R0       None # The reference radius (in Jupiter radii) for the scale height measurement; Set to None to use the mean fitted radius
+
+# Diagnostics
+isplots_S6      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+testing_S6      False
+hide_plots      False # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir          /home/User/
+
+# Model to plot as well (path relative to project dir of a csv with col 1 as wavelength in microns, col 2 in the same units as the plotted spectrum, any headers preceded by a #)
+model_spectrum  None # Set to None if no model should be plotted
+model_x_unit    um # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
+model_y_unit    Rp/Rs # Options include Rp/Rs, (Rp/Rs)^2, Fp/Fs
+model_y_scalar  1 # Indicate whether model y-values have already been scaled (e.g. write 1e6 if model_spectrum is in ppm)
+model_delimiter None #Delimiter between columns. Typical options: None (for space), ',' for comma
+
+# Directories relative to project dir
+inputdir        /Data/TargetName/WFC3/Stage5    # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
+outputdir       /Data/TargetName/WFC3/Stage6

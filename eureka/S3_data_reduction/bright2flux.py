@@ -2,8 +2,7 @@ import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
-from jwst import datamodels
-from jwst.photom import PhotomStep
+import crds
 
 def rate2count(data):
     """This function converts the data, uncertainty, and variance arrays from rate units (#/s) to counts (#).
@@ -45,7 +44,6 @@ def dn2electrons(data, meta):
     ----------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of DN.
-
     meta:   MetaClass
         The metadata object.
 
@@ -88,14 +86,13 @@ def dn2electrons(data, meta):
 
     return data
 
-def bright2dn(data, meta):
-    """This function converts the data, uncertainty, and variance arrays from brightness units (MJy/sr) to raw units (DN).
+def bright2dn(data, meta, mjy=False):
+    """This function converts the data, uncertainty, and variance arrays from brightness units (MJy/sr) or (MJy) to raw units (DN).
 
     Parameters
     ----------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of MJy/sr.
-
     meta:   MetaClass
         The metadata object.
 
@@ -121,8 +118,12 @@ def bright2dn(data, meta):
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     elif meta.inst == 'miri':
         ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['subarray'] == data.mhdr['SUBARRAY']))[0][0]
+    elif meta.inst == 'nirspec':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['grating'] == data.mhdr['GRATING']) * (foo['slit'] == data.shdr['SLTNAME']))[0][0] 
+    elif meta.inst == 'niriss':
+        ind = np.where((foo['filter'] == data.mhdr['FILTER']) * (foo['pupil'] == data.mhdr['PUPIL']) * (foo['order'] == 1))[0][0]
     else:
-        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst}, and can currently only handle miri and nircam observations.')
+        raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst},and can currently only handle JWST niriss, nirspec, nircam, and miri observations.')
 
     response_wave = foo['wavelength'][ind]
     response_vals = foo['relresponse'][ind]
@@ -130,16 +131,19 @@ def bright2dn(data, meta):
     response_wave = response_wave[igood]
     response_vals = response_vals[igood]
     # Interpolate response at desired wavelengths
-    f = spi.interp1d(response_wave, response_vals, 'cubic')
+    f = spi.interp1d(response_wave, response_vals, kind='cubic', bounds_error=False, fill_value='extrapolate')
     response = f(data.subwave)
 
     scalar = data.shdr['PHOTMJSR']
+    if mjy == True:
+        scalar *= data.shdr['PIXAR_SR']
     # Convert to DN/sec
     data.subdata /= scalar * response
     data.suberr  /= scalar * response
     data.subv0   /= (scalar * response)**2
 
     return data
+
 
 def bright2flux(data, pixel_area):
     """This function converts the data and uncertainty arrays from brightness units (MJy/sr) to flux units (Jy/pix).
@@ -199,10 +203,8 @@ def convert_to_e(data, meta, log):
     ----------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of MJy/sr or DN/s.
-
     meta:   MetaClass
         The metadata object.
-
     log:    logedit.Logedit
         The open log in which notes from this step can be added.
 
@@ -210,10 +212,13 @@ def convert_to_e(data, meta, log):
     -------
     data:   DataClass
         Data object containing data, uncertainty, and variance arrays in units of electrons.
-
     meta:   MetaClass
         The metadata object.
     """
+    if data.shdr['BUNIT']=='ELECTRONS':
+        # HST/WFC3 spectra are in ELECTRONS already, so do nothing
+        return data, meta
+
     if data.shdr['BUNIT'] != 'ELECTRONS/S':
         log.writelog('  Automatically getting reference files to convert units to electrons', mute=(not meta.verbose))
         if data.mhdr['TELESCOP'] != 'JWST':
@@ -227,6 +232,11 @@ def convert_to_e(data, meta, log):
         # Convert from brightness units (MJy/sr) to DN/s
         log.writelog('  Converting from brightness units (MJy/sr) to electrons')
         data = bright2dn(data, meta)
+        data = dn2electrons(data, meta)
+    elif data.shdr['BUNIT'] == 'MJy':
+        # Convert from brightness units (MJy) to DN/s
+        log.writelog('  Converting from brightness units MJy to electrons')
+        data = bright2dn(data, meta, mjy=True)
         data = dn2electrons(data, meta)
     elif data.shdr['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
@@ -242,10 +252,10 @@ def convert_to_e(data, meta, log):
     return data, meta
 
 def retrieve_ancil(fitsname):
-    '''Use code from the STScI's JWST pipeline to find/download the needed ancilliary files.
+    '''Use crds package to find/download the needed ancilliary files.
 
     This code requires that the CRDS_PATH and CRDS_SERVER_URL environment variables be set
-    in your .bashrc file (or equivalent, e.g. .bash_profile)
+    in your .bashrc file (or equivalent, e.g. .bash_profile or .zshrc)
 
     Parameters
     ----------
@@ -266,12 +276,24 @@ def retrieve_ancil(fitsname):
 
     - 2022-03-04 Taylor J Bell
         Initial code version.
+    - 2022-03-28 Taylor J Bell
+        Removed jwst dependency, using crds package now instead.
     '''
-    # Suppress logging output unless it is a warning or worse
-    import logging
-    logging.root.manager.disable = logging.INFO
-    step = PhotomStep(name=None)
-    with datamodels.open(fitsname) as model:
-        phot_filename = step.get_reference_file(model, 'photom')
-        gain_filename = step.get_reference_file(model, 'gain')
+    with fits.open(fitsname) as file:
+        # Automatically get the best reference files using the information contained in the FITS header and the crds package.
+        # The parameters below are easily obtained from model.get_crds_parameters(), but datamodels is a jwst sub-package.
+        # Instead, I've resorted to manually populating the required lines for finding gain and photom reference files.
+        parameters = {
+            "meta.ref_file.crds.context_used": file[0].header["CRDS_CTX"],
+            "meta.ref_file.crds.sw_version": file[0].header["CRDS_VER"],
+            "meta.instrument.name": file[0].header["INSTRUME"],
+            "meta.instrument.detector": file[0].header["DETECTOR"],
+            "meta.observation.date": file[0].header["DATE-OBS"],
+            "meta.observation.time": file[0].header["TIME-OBS"],
+            "meta.exposure.type": file[0].header["EXP_TYPE"],
+            }
+        refiles = crds.getreferences(parameters, ["gain", "photom"], observatory=file[0].header['TELESCOP'].lower())
+        gain_filename = refiles["gain"]
+        phot_filename = refiles["photom"]
+
     return phot_filename, gain_filename 

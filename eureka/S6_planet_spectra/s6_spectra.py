@@ -4,15 +4,13 @@ from astropy import units, constants
 import os, glob, h5py
 import time as time_pkg
 from ..lib import manageevent as me
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import util, logedit
 from ..lib import sort_nicely as sn
 
 from . import plots_s6 as plots
 from ..lib import astropytable
 
-#FINDME: Keep reload statements for easy testing
-from importlib import reload
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -47,14 +45,10 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
     '''
     print("\nStarting Stage 6: Light Curve Fitting\n")
 
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S6_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     # load savefile
     if s5_meta == None:
@@ -97,7 +91,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
 
             # Copy ecf
             log.writelog('Copying S6 control file')
-            rd.copy_ecf(meta, ecf_path, ecffile)
+            meta.copy_ecf()
 
             # Get the wavelength values
             meta.wave_low = np.array(meta.wave_low)
@@ -140,7 +134,7 @@ def plot_spectra(eventlabel, ecf_path='./', s5_meta=None):
                 meta.spectrum_median = []
                 meta.spectrum_err = []
                 for channel in range(meta.nspecchan):
-                    median, err = parse_s5_saves(meta, fit_methods, y_param, f'ch{channel}')
+                    median, err = parse_s5_saves(meta, fit_methods, y_param, f'ch{str(channel).zfill(len(str(meta.nspecchan)))}')
                     meta.spectrum_median.append(median[0])
                     meta.spectrum_err.append(np.array(err).reshape(-1))
                 meta.spectrum_median = np.array(meta.spectrum_median).reshape(-1)
@@ -334,6 +328,9 @@ def read_s5_meta(meta):
 
     s5_meta = me.loadevent(fname)
 
+    # Code to not break backwards compatibility with old MetaClass save files but also use the new MetaClass going forwards
+    s5_meta = readECF.MetaClass(**s5_meta.__dict__)
+
     return s5_meta
 
 def load_general_s5_meta_info(meta, ecf_path, s5_meta):
@@ -351,8 +348,7 @@ def load_general_s5_meta_info(meta, ecf_path, s5_meta):
 
     # Load Eureka! control file and store values in the S4 metadata object
     ecffile = 'S6_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S5
     meta.inputdir = s5_outputdir
@@ -380,8 +376,7 @@ def load_specific_s5_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     # Load S6 Eureka! control file and store values in the S5 metadata object
     ecffile = 'S6_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(new_meta, ecf)
+    new_meta.read(ecf_path, ecffile)
 
     # Save correctly identified folders from earlier
     new_meta.inputdir = meta.inputdir

@@ -2,19 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .source_pos import gauss
 
-def lc_nodriftcorr(meta, wave_1d, optspec, log):
+def lc_nodriftcorr(meta, wave_1d, optspec):
     '''Plot a 2D light curve without drift correction.
-    
+
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
-    wave_1d:    
+    wave_1d:
         Wavelength array with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
-    optspec:    
+    optspec:
         The optimally extracted spectrum.
-    log: logedit.Logedit
-        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -31,12 +29,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, log):
     normspec = optspec / np.ma.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
-    ediff = np.ma.zeros(n_int)
-    for m in range(n_int):
-        ediff[m] = 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(normspec[m])))
-    MAD = np.ma.mean(ediff)
-    log.writelog("MAD = " + str(np.round(MAD, 0).astype(int)) + " ppm")
-    plt.title("MAD = " + str(np.round(MAD, 0).astype(int)) + " ppm")
+    plt.title("MAD = " + str(np.round(meta.mad_s3, 0).astype(int)) + " ppm")
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
@@ -47,7 +40,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, log):
 
 def image_and_background(data, meta, n):
     '''Make image+background plot.
-    
+
     Parameters
     ----------
     data:   DataClass
@@ -56,7 +49,7 @@ def image_and_background(data, meta, n):
         The metadata object.
     n:  int
         The integration number.
-    
+
     Returns
     -------
     None
@@ -88,7 +81,7 @@ def image_and_background(data, meta, n):
 
 def optimal_spectrum(data, meta, n):
     '''Make optimal spectrum plot.
-    
+
     Parameters
     ----------
     data:   DataClass
@@ -97,7 +90,7 @@ def optimal_spectrum(data, meta, n):
         The metadata object.
     n:  int
         The integration number.
-    
+
     Returns
     -------
     None
@@ -107,8 +100,8 @@ def optimal_spectrum(data, meta, n):
     plt.figure(3302)
     plt.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
-    plt.semilogy(range(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
-    plt.errorbar(range(subnx), optspec[n], opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
+    plt.semilogy(np.arange(subnx), stdspec[n], '-', color='C1', label='Standard Spec')
+    plt.errorbar(np.arange(subnx), optspec[n], yerr=opterr[n], fmt='-', color='C2', ecolor='C2', label='Optimal Spec')
     plt.ylabel('Flux')
     plt.xlabel('Pixel Position')
     plt.legend(loc='best')
@@ -122,7 +115,7 @@ def source_position(meta, x_dim, pos_max, m,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
     '''Plot source position for MIRI data.
-    
+
     Parameters
     ----------
     meta:   MetaClass
@@ -145,7 +138,7 @@ def source_position(meta, x_dim, pos_max, m,
         Used a flux-weighted mean centring method.
     y_pos:  float
         The FWM central position of the star.
-    
+
     Returns
     -------
     None
@@ -193,18 +186,24 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
         Outlier mask.
     n:  int
         The current integration number.
-    hide_plots: 
+    hide_plots:
         If True, plots will automatically be closed rather than popping up.
 
     Returns
     -------
     None
     '''
-    vmax = 0.05*np.max(profile*submask)
+    profile = np.ma.masked_invalid(profile)
+    submask = np.ma.masked_invalid(submask)
+    mask = np.logical_or(np.ma.getmaskarray(profile), np.ma.getmaskarray(submask))
+    profile = np.ma.masked_where(mask, profile)
+    submask = np.ma.masked_where(mask, submask)
+    vmax = 0.05*np.ma.max(profile*submask)
+    vmin = np.ma.min(profile*submask)
     plt.figure(3305)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
-    plt.imshow(profile*submask, aspect='auto', origin='lower',vmax=vmax)
+    plt.imshow(profile*submask, aspect='auto', origin='lower',vmax=vmax, vmin=vmin)
     plt.ylabel('Pixel Postion')
     plt.xlabel('Pixel Position')
     plt.tight_layout()

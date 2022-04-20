@@ -13,7 +13,6 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from .parameters import Parameters
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 from ..lib import astropytable
@@ -150,7 +149,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat',cov_mat)
-    
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter=calling_function)
@@ -193,26 +192,26 @@ def demcfitter(lc, model, meta, log, **kwargs):
 
     Parameters
     ----------
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    meta: MetaClass
+    meta : MetaClass
         The metadata object
-    log: logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
-    **kwargs:
+    **kwargs : dict
         Arbitrary keyword arguments.
 
     Returns
     -------
-    best_model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model after fitting
 
     Notes
     -----
     History:
-
+    
     - December 29, 2021 Taylor Bell
         Updated documentation and arguments
     """
@@ -363,7 +362,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     try:
         log.writelog("Mean autocorrelation time: {0:.3f} steps".format(sampler.get_autocorr_time()), mute=(not meta.verbose))
     except:
-        log.writelog("Error: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
+        log.writelog("WARNING: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
 
     if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)
@@ -376,6 +375,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='emcee')
+
+    #Plot GP fit + components
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='emcee')
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
@@ -552,7 +555,6 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1, prior2,
                          'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim), mute=True)
             raise AssertionError('Error: Failed to initialize all walkers within the set bounds for all parameters!\n'+
                                  'Using {} walkers instead of the initially requested {} walkers is not permitted as there are {} fitted parameters'.format(nwalkers, old_nwalkers, ndim))
-
     return pos, nwalkers
 
 
@@ -703,6 +705,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
 
+    #Plot GP fit + components
+    if model.GP:
+        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
+
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='dynesty')
@@ -835,16 +841,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
 
     # Create new model with best fit parameters
-    params = Parameters()
-    # Store each as an attribute
-    for param in new_params:
-        setattr(params, param[0], param[1:])
-
-    # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
-    # best_model.parameters = params
-    # best_model.name = ', '.join(['{}:{}'.format(k, round(v[0], 2)) for k, v in params.dict.items()])
 
     # Plot fit
     if meta.isplots_S5 >= 1:
@@ -908,7 +906,7 @@ def group_variables(model):
                 if par[0] not in alreadylist:
                     all_params.append(par)
                     alreadylist.append(par[0])
-                        
+
     # Group the different variable types
     freenames = []
     freepars = []
@@ -993,7 +991,7 @@ def load_old_fitparams(meta, log, channel, freenames):
         channel_key = 'shared'
     else:
         channel_key = f'ch{channel}'
-    
+
     fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values.keys())
@@ -1006,8 +1004,9 @@ def load_old_fitparams(meta, log, channel, freenames):
         raise AssertionError('Old fit does not have the same fitted parameters and cannot be used to initialize the new fit.\n'+
                              'The old fit included:\n['+','.join(full_keys)+']\n'+
                              'The new fit included:\n['+','.join(freenames)+']')
-    
+
     return np.array(fitted_values)[0]
+
 
 def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec_table=None):
     """Save fitted parameters and chains
@@ -1035,28 +1034,26 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
 
         spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
 
+    # Save the chain from the sampler (if a chain was provided)
     if len(samples)!=0:
         if lc.share:
             fname = f'S5_{fitter}_samples_shared'
         else:
-            fname = f'S5_{fitter}_samples_ch{lc.channel}'
+            fname = f'S5_{fitter}_samples_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
         with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
             hf.create_dataset("samples",  data=samples)
 
+    # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel + "_ap" + str(meta.spec_hw) + '_bg' + str(meta.bg_hw)
     if lc.share:
         channel_tag = '_shared'
     else:
-        channel_tag = f'_ch{lc.channel}'
+        channel_tag = f'_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
     meta.tab_filename_s5 = meta.outputdir + 'S5_' + event_ap_bg + "_Table_Save"+channel_tag+".txt"
-    # temporary code
-    meta.wave_low = np.array(meta.wave_low)
-    meta.wave_hi = np.array(meta.wave_hi)
-    # end temporary code
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta.time, wavelengths[lc.fitted_channels], wave_errs[lc.fitted_channels], lc.flux, lc.unc_fit, model_lc, residuals)
-    
+
     return

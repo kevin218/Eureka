@@ -11,7 +11,7 @@ from astropy.stats import SigmaClip, sigma_clip
 from astropy.modeling.models import custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import MMMBackground, MedianBackground, Background2D
-from jwst import datamodels
+from astropy.io import fits
 import os
 
 from ..lib import clipping
@@ -96,15 +96,15 @@ def BGsubtraction(data, meta, log, isplots):
     data.subdata -= data.subbg
     
     if hasattr(meta, 'save_bgsub') and meta.save_bgsub:
-        log.writelog('  Saving background subtracted FITS files', mute=(not meta.verbose))
+        log.writelog('  Saving background subtracted FITS file', mute=(not meta.verbose))
         new_filename = data.filename.split(os.sep)[-1]
         new_folder = os.path.join(meta.outputdir, 'bgsub_FITS')
         if not os.path.isdir(new_folder):
             os.mkdir(new_folder)
         new_filename = os.path.join(new_folder, new_filename)
-        with datamodels.open(data.filename) as file:
-            file.data = data.subdata
-            file.save(new_filename)
+        with fits.open(data.filename) as file:
+            file["SCI"].data = data.subdata
+            file.writeto(new_filename)
 
     return data
 

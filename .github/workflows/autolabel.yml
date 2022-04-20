@@ -1,0 +1,14 @@
+name: "Set Issue Label and Assignee"
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Naturalclar/issue-action@v2.0.2
+        with:
+          title-or-body: "both"
+          parameters: '[ {"keywords": ["niriss","NIRISS"], "labels": ["NIRISS"], "assignees": ["afeinstein20","lpcoulombe"]}, {"keywords": ["nirspec","NIRSpec","NIRSPEC"], "labels": ["NIRSpec"], "assignees": ["AarynnCarter","cpiaulet"]}, {"keywords": ["nircam","NIRCAM","NIRCam"], "labels": ["NIRCam"], "assignees": ["kevin218","meganmansfield"]}, {"keywords": ["MIRI","miri"], "labels": ["MIRI"], "assignees": ["taylorbell57","sebastian-zieba"]}, {"keywords": ["Light curve fitting"], "labels": ["LC Fit"], "assignees": ["taylorbell57","meganmansfield","evamariaa","cpiaulet"]}, {"keywords": ["Other (any stage)"], "labels": [], "assignees": ["jbrande","taylorbell57"]}]'
+          github-token: "${{ secrets.GITHUB_TOKEN }}"

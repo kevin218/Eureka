@@ -16,7 +16,7 @@
 # 9.  Produce plots
 
 
-import sys, os, shutil, glob
+import os, glob
 import time as time_pkg
 import numpy as np
 import scipy.interpolate as spi
@@ -24,12 +24,11 @@ import matplotlib.pyplot as plt
 from . import plots_s4, drift
 from ..lib import sort_nicely as sn
 from ..lib import logedit
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import astropytable
 from ..lib import util
 from ..lib import clipping
-
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -65,14 +64,10 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
     - October 2021 Taylor Bell
         Updated to allow for inputs from new S3
     '''
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
-    ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    ecffile = 'S4_' + eventlabel + '.ecf'
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
     if s3_meta == None:
         #load savefile
@@ -114,7 +109,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
             # Copy ecf
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
-            rd.copy_ecf(meta, ecf_path, ecffile)
+            meta.copy_ecf()
 
             log.writelog("Loading S3 save file", mute=(not meta.verbose))
             table = astropytable.readtable(meta.tab_filename)
@@ -125,9 +120,15 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             wave_1d = table['wave_1d'].data[0:meta.subnx]
             meta.time = table['time'].data[::meta.subnx]
 
-            if meta.wave_min<np.min(wave_1d):
+            if meta.wave_min is None:
+                meta.wave_min = np.min(wave_1d)
+                log.writelog(f'No value was provided for meta.wave_min, so defaulting to {meta.wave_min}.', mute=(not meta.verbose))
+            elif meta.wave_min<np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min ({meta.wave_min}) is smaller than the shortest wavelength ({np.min(wave_1d)})')
-            if meta.wave_max>np.max(wave_1d):
+            if meta.wave_max is None:
+                meta.wave_max = np.max(wave_1d)
+                log.writelog(f'No value was provided for meta.wave_max, so defaulting to {meta.wave_max}.', mute=(not meta.verbose))
+            elif meta.wave_max>np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max ({meta.wave_max}) is larger than the longest wavelength ({np.max(wave_1d)})')
 
             #Replace NaNs with zero
@@ -146,13 +147,16 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             meta.wave_hi = np.array(meta.wave_hi)
             meta.wave_low = np.array(meta.wave_low)
 
+            if not hasattr(meta, 'boundary'):
+                meta.boundary = 'extend' # The default value before this was added as an option
+
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             optspec = np.ma.masked_array(optspec)
             if meta.sigma_clip:
                 log.writelog('Sigma clipping unbinned spectral time series', mute=(not meta.verbose))
                 outliers = 0
                 for l in range(meta.subnx):
-                    optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=meta.verbose)
+                    optspec[:,l], nout = clipping.clip_outliers(optspec[:,l], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=meta.verbose)
                     outliers += nout
                 log.writelog('Identified a total of {} outliers in time series, or an average of {} outliers per wavelength'.format(outliers, np.round(outliers/meta.subnx, 1)), mute=meta.verbose)
 
@@ -174,6 +178,10 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta)
 
+            # Compute MAD alue
+            meta.mad_s4 = util.get_mad(meta, wave_1d, optspec, meta.wave_min, meta.wave_max)
+            log.writelog("Stage 4 MAD = " + str(np.round(meta.mad_s4, 2).astype(int)) + " ppm")
+
             if meta.isplots_S4 >= 1:
                 plots_s4.lc_driftcorr(meta, wave_1d, optspec)
 
@@ -192,7 +200,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.fill_value, verbose=False)
+                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
                     log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
 
                 # Plot each spectroscopic light curve
@@ -254,6 +262,9 @@ def read_s3_meta(meta):
 
     s3_meta = me.loadevent(fname)
 
+    # Code to not break backwards compatibility with old MetaClass save files but also use the new MetaClass going forwards
+    s3_meta = readECF.MetaClass(**s3_meta.__dict__)
+
     return s3_meta
 
 def load_general_s3_meta_info(meta, ecf_path, s3_meta):
@@ -268,8 +279,7 @@ def load_general_s3_meta_info(meta, ecf_path, s3_meta):
 
     # Load S4 Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(meta, ecf)
+    meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
@@ -295,8 +305,7 @@ def load_specific_s3_meta_info(meta, ecf_path, run_i, spec_hw_val, bg_hw_val):
 
     # Load S4 Eureka! control file and store values in the S3 metadata object
     ecffile = 'S4_' + meta.eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecf_path, ecffile)
-    rd.store_ecf(new_meta, ecf)
+    new_meta.read(ecf_path, ecffile)
 
     # Save correctly identified folders from earlier
     new_meta.inputdir = meta.inputdir

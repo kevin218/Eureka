@@ -139,10 +139,10 @@ class LightCurve(m.Model):
 
         if fitter == 'lmfit':
             self.fitter_func = f.lmfitter
-        elif fitter == 'demc':
-            self.fitter_func = f.demcfitter
         elif fitter == 'lsq':
             self.fitter_func = f.lsqfitter
+        # elif fitter == 'demc':
+        #     self.fitter_func = f.demcfitter
         elif fitter == 'emcee':
             self.fitter_func = f.emceefitter
         elif fitter == 'dynesty':
@@ -184,7 +184,7 @@ class LightCurve(m.Model):
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
-            fig = plt.figure(int('54{}'.format(str(channel).zfill(len(str(self.nchannel))))), figsize=(8,6))
+            fig = plt.figure(int('54{}'.format(str(0).zfill(len(str(self.nchannel))))), figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()

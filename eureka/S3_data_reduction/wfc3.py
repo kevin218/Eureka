@@ -4,7 +4,7 @@ import numpy as np
 import multiprocessing as mp
 from astropy.io import fits
 import scipy.interpolate as spi
-import scipy.ndimage.interpolation as spni
+import scipy.ndimage as spni
 from . import background, nircam
 from . import bright2flux as b2f
 from . import hst_scan as hst
@@ -285,7 +285,7 @@ def flatfield(data, meta):
     
     print('Loading flat frames...')
     print(meta.flatfile)
-    tempflat, tempmask = hst.makeflats(meta.flatfile, [np.mean(data.wave,axis=0),], [[0,meta.nx],], [[0,meta.ny],], meta.flatoffset, 1, meta.ny, meta.nx, sigma=meta.flatsigma)
+    tempflat, tempmask = hst.makeflats(meta.flatfile, [np.mean(data.wave,axis=0),], [[0,meta.nx],], [[0,meta.ny],], meta.flatoffset, 1, meta.ny, meta.nx, sigma=meta.flatsigma, isplots=meta.isplots_S3)
     subflat  = tempflat[0]
     flatmask = tempmask[0]
     
@@ -388,7 +388,6 @@ def fit_bg(data, meta, n, isplots=False):
     bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
     data.subv0[n]      += np.mean(bgerr**2)
     data.subvariance[n]    = abs(data.subdata[n]) / meta.gain + data.subv0[n]
-    #variance    = abs(data.subdata*submask) / gain + v0
 
     return (bg, mask, n)
 

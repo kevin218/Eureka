@@ -361,8 +361,6 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
         # Set initial guess if none given
         guess = [ny/10.,np.argmax(dataslice),dataslice.max()]
         while (nobadpixels == False) and (iternum < maxiter):
-            #if guess == None:
-                #guess = g.old_gaussianguess(dataslice, np.arange(ny), mask=submask[:,i])
             # Fit Gaussian to each column
             if sum(submask[:,i]) >= 3:
                 params, err = g.fitgaussian(dataslice, np.arange(ny), mask=submask[:,i], fitbg=0, guess=guess)
@@ -486,13 +484,9 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
         else:
             print("Unknown normalized spatial profile method.")
             return
-        #
+
         if isplots >= 3:
             plots_s3.profile(eventdir, profile, submask, n, hide_plots=hide_plots)
-            # try:
-            #     plots_s3.profile(eventdir, profile, submask)
-            # except:
-            #     pass
 
         isnewprofile = False
         isoutliers   = True
