@@ -93,7 +93,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
         secax.set_xticks(xticks, np.round(xticks, 6), rotation=90, fontsize='xx-small')
         plt.vlines(xticks,0,n_int,'0.3','dashed')
     plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu$m)')
+    plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/Fig42{}-2D_LC.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))), bbox_inches='tight', dpi=300)
