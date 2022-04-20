@@ -7,7 +7,6 @@ import urllib
 import os
 import re
 import time
-import scipy.interpolate as si
 
 def leapdates(rundir):
     '''Generates an array of leap second dates which
@@ -40,6 +39,7 @@ def leapdates(rundir):
         
         if not use_fallback:
             newexp = doc.split('#@')[1].split('\n')[0][1:]
+            newexp = re.sub(r'\W+', '', newexp) # Remove non-alphanumeric characters with regular expressions
             with open(rundir+"leap-seconds."+newexp, 'w') as newfile:
                 newfile.write(doc)
             table = doc.split('#@')[1].split('\n#\r\n')[1].split('\n')
