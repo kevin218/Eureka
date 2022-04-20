@@ -39,7 +39,7 @@ from . import niriss_cython
 
 __all__ = ['read',
            'flag_bg', 'fit_bg', 'wave_NIRISS',
-           'mask_method_one', 'mask_method_two']
+           'mask_method_edges', 'mask_method_profile']
 
 
 def read(filename, data, meta, f277_filename=None):
@@ -85,12 +85,12 @@ def read(filename, data, meta, f277_filename=None):
     meta.time_units = 'BJD_TDB'
 
     # loads all the data into the data object
-    data.data = hdu['SCI',1].data * hdu[0].header['EFFINTTM']
+    data.data = hdu['SCI',1].data + 0.0
     data.err  = hdu['ERR',1].data + 0.0
     data.dq   = hdu['DQ' ,1].data + 0.0
 
-    data.var  = hdu['VAR_POISSON',1].data * hdu[0].header['EFFINTTM']**2.0
-    data.v0   = hdu['VAR_RNOISE' ,1].data * hdu[0].header['EFFINTTM']**2.0
+    data.var  = hdu['VAR_POISSON',1].data
+    data.v0   = hdu['VAR_RNOISE' ,1].data
 
     meta.meta = hdu[-1].data
 
@@ -104,7 +104,7 @@ def read(filename, data, meta, f277_filename=None):
     return data, meta
 
 
-def mask_method_one(data, meta=None, radius=1, gf=4,
+def mask_method_edges(data, meta=None, radius=1, gf=4,
                     isplots=0, save=False, inclass=False,
                     outdir=None):
     """
@@ -142,7 +142,7 @@ def mask_method_one(data, meta=None, radius=1, gf=4,
         return tab
 
 
-def mask_method_two(data, meta=None, isplots=0, save=False, inclass=False,
+def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
                     outdir=None):
     """
     A second method to extract the masks for the first and
