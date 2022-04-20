@@ -9,9 +9,9 @@ def plot_spectrum(meta, model_x=None, model_y=None,
                   scaleHeight=None, planet_R0=None):
 
     if scaleHeight is not None:
-        fig = plt.figure('6301', figsize=(8, 4))
+        fig = plt.figure(6301, figsize=(8, 4))
     else:
-        fig = plt.figure('6101', figsize=(8, 4))
+        fig = plt.figure(6101, figsize=(8, 4))
     plt.clf()
     ax = fig.subplots(1,1)
 
@@ -59,14 +59,17 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         ax2 = ax.secondary_yaxis('right', functions=(H, r))
         ax2.set_ylabel('Scale Height')
 
-        fname = 'figs/fig6301'+figure_filetype
+        fname = 'figs/fig6301'
     else:
-        fname = 'figs/fig6101'+figure_filetype
+        fname = 'figs/fig6101'
 
-    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-    if meta.hide_plots:
-        plt.close()
-    else:
+    if 'rp' in ylabel.lower():
+        fname += '_transmission'
+    elif 'fp' in ylabel.lower():
+        fname += '_emission'
+
+    fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
         plt.pause(0.2)
 
     return

@@ -253,7 +253,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
                         # make image+background plots
-                        plots_s3.image_and_background(data, meta, n)
+                        plots_s3.image_and_background(data, meta, n, m)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
@@ -289,13 +289,12 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
-                    data.optspec[n], data.opterr[n], mask = optspex.optimize(data.apdata[n], data.apmask[n], data.apbg[n],
+                    data.optspec[n], data.opterr[n], mask = optspex.optimize(meta, data.apdata[n], data.apmask[n], data.apbg[n],
                                                                              data.stdspec[n], gain, data.apv0[n],
                                                                              p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
                                                                              fittype=meta.fittype, window_len=meta.window_len,
                                                                              deg=meta.prof_deg, n=data.intstart + n,
-                                                                             isplots=meta.isplots_S3, eventdir=meta.outputdir,
-                                                                             meddata=data.medapdata, hide_plots=meta.hide_plots)
+                                                                             isplots=meta.isplots_S3, meddata=data.medapdata)
                 #Mask out NaNs
                 data.optspec = np.ma.masked_invalid(data.optspec)
                 data.opterr = np.ma.masked_invalid(data.opterr)
@@ -310,7 +309,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
                         # make optimal spectrum plot
-                        plots_s3.optimal_spectrum(data, meta, n)
+                        plots_s3.optimal_spectrum(data, meta, n, m)
 
                 # Append results
                 if len(stdspec) == 0:

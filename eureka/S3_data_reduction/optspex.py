@@ -415,11 +415,13 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, isplots=0, eventdir='.',meddata=None, hide_plots=False):
+def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fittype='smooth', window_len=21, deg=3, windowtype='hanning', n=0, m=0, isplots=0, meddata=None):
     '''Extract optimal spectrum with uncertainties.
 
     Parameters
     ----------
+    meta:   MetaClass
+        The metadata object.
     subdata:    ndarray
         Background subtracted data.
     mask:   ndarray
@@ -446,14 +448,12 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
         UNUSED. The type of window. A flat window will produce a moving average smoothing.
     n:  int
         Integration number.
+    m:  int
+        File number.
     isplots:    int
         The amount of plots saved; set in ecf.
-    eventdir:   str
-        Directory in which to save outupts.
     meddata:    ndarray
         The median of all data frames.
-    hide_plots: 
-        If True, plots will automatically be closed rather than popping up.
 
     Returns
     -------
@@ -487,7 +487,7 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
             return
 
         if isplots >= 3:
-            plots_s3.profile(eventdir, profile, submask, n, hide_plots=hide_plots)
+            plots_s3.profile(meta, profile, submask, n, m)
 
         isnewprofile = False
         isoutliers   = True
@@ -531,19 +531,7 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
                         submask[loc[i],i] = 0
                         # Generate plot
                         if isplots >= 5:
-                            plt.figure(3501)
-                            plt.clf()
-                            plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
-                            #plt.suptitle(str(n) + ", " + str(i) + "/" + str(nx))
-                            #print(np.where(submask[:,i])[0])
-                            plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
-                            plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')
-                            plt.plot((loc[i]), (subdata[loc[i],i]), 'ro')
-                            plt.savefig(eventdir + "figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata"+figure_filetype, dpi=300)
-                            if hide_plots:
-                                plt.close()
-                            else:
-                                plt.pause(0.1)
+                            plots_s3.subdata(meta, i, n, m, subdata, submask, expected, loc)
                         # Check for insufficient number of good points
                         if sum(submask[:,i]) < ny/2.:
                             submask[:,i] = 0
