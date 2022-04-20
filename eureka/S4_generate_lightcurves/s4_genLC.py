@@ -38,7 +38,7 @@ class MetaClass:
         return
 
 
-def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
+def getlc(eventlabel, ecf_path='./', s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
