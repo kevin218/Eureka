@@ -318,6 +318,8 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
        the `gaussian` or `moffat` profile types.
     sigma : float, optional
        Sigma to use when looking for cosmic rays. Default is 20.
+    Q : float, optional
+       Gain value.
     cr_mask : np.ndarray , optional
        A set of masks with cosmic rays already identified. This
        will be used in the very last step, when extracting the
