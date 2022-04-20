@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from ..lib import util
 from ..lib.plots import figure_filetype
 
-def binned_lightcurve(meta, time, i):
+def binned_lightcurve(meta, i):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
     Parameters
@@ -23,11 +23,11 @@ def binned_lightcurve(meta, time, i):
     plt.clf()
     plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
     ax = plt.subplot(111)
-    time_modifier = np.ma.floor(time[0])
+    time_modifier = np.ma.floor(meta.time[0])
     # Normalized light curve
     norm_lcdata = meta.lcdata[i] / np.ma.mean(meta.lcdata[i,:])
     norm_lcerr = meta.lcerr[i] / np.ma.mean(meta.lcdata[i,:])
-    plt.errorbar(time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
+    plt.errorbar(meta.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
     mad = 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(norm_lcdata)))
     plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm", transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')

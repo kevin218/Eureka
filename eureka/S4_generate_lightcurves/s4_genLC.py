@@ -205,7 +205,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, meta.time, wave_1d, i)
+                    plots_s4.binned_lightcurve(meta, i)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
