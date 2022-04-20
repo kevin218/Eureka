@@ -22,6 +22,7 @@ from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
+from ..lib.plots import figure_filetype
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -251,7 +252,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.title('Time Series Observation: Extracted spectra')
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
+                plt.savefig(meta.outputdir+'figs/'+fname+figure_filetype, bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()
                 else:

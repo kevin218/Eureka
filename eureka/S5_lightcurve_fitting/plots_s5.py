@@ -7,6 +7,7 @@ from scipy import stats
 
 from .likelihood import computeRMS
 from .utils import COLORS
+from ..lib.plots import figure_filetype
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Fig 5100)
@@ -87,7 +88,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         fig.subplots_adjust(hspace=0)
         fig.align_ylabels(ax)
 
-        fname = 'figs/fig51{}_lc_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fname = 'figs/fig51{}_lc_{}'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)+figure_filetype
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -153,7 +154,7 @@ def plot_rms(lc, model, meta, fitter):
         plt.xticks(size=12)
         plt.yticks(size=12)
         plt.legend()
-        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'allanplot_'+fitter+'.png'
+        fname = 'figs/fig52{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'allanplot_'+fitter+figure_filetype
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -204,8 +205,8 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84], max_n_ticks=3,
                         labels=freenames, show_titles=True, title_fmt='.2',
                         title_kwargs={"fontsize": 10}, label_kwargs={"fontsize": 10}, fontsize=10, labelpad=0.25)
-    fname = 'figs/fig53{}_corner_{}.png'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)
-    fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+    fname = 'figs/fig53{}_corner_{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))), fitter)+figure_filetype
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=300)
     if meta.hide_plots:
         plt.close()
     else:
@@ -295,8 +296,8 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
         fname += '_{}'.format(fitter)
         if nplots>1:
             fname += '_plot{}of{}'.format(plot_number+1,nplots)
-        fname += '.png'
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
+        fname += figure_filetype
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=300)
         if meta.hide_plots:
             plt.close()
         else:
@@ -359,7 +360,7 @@ def plot_res_distr(lc, model, meta, fitter):
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/Uncertainty", fontsize=14)
-        fname = 'figs/fig55{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+'.png'
+        fname = 'figs/fig55{}_'.format(str(channel).zfill(len(str(lc.nchannel))))+'res_distri_'+fitter+figure_filetype
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()
@@ -440,7 +441,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fname = 'figs/fig56{}_lc_GP_{}.png'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)
+        fname = 'figs/fig56{}_lc_GP_{}'.format(str(channel).zfill(len(str(lc.nchannel))), fitter)+figure_filetype
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if meta.hide_plots:
             plt.close()

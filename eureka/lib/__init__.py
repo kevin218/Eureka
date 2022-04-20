@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-#__all__ = ["QuadLimbDark", "ImpactParameter", "eccentricity"]
-
 from . import astropytable
 from . import centroid
 from . import clipping

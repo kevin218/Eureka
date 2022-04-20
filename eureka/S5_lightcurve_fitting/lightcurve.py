@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from . import models as m
 from . import fitters as f
 from .utils import COLORS, color_gen
+from ..lib.plots import figure_filetype
 
 from copy import deepcopy
 
@@ -205,7 +206,7 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig54{}_all_fits.png'.format(str(channel).zfill(len(str(self.nchannel))))
+            fname = 'figs/fig54{}_all_fits'.format(str(channel).zfill(len(str(self.nchannel))))+figure_filetype
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()

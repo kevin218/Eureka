@@ -2,6 +2,8 @@ from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 
+from ..lib.plots import figure_filetype
+
 def plot_spectrum(meta, model_x=None, model_y=None,
                   y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)',
                   scaleHeight=None, planet_R0=None):
@@ -57,9 +59,9 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         ax2 = ax.secondary_yaxis('right', functions=(H, r))
         ax2.set_ylabel('Scale Height')
 
-        fname = 'figs/fig6301.png'
+        fname = 'figs/fig6301'+figure_filetype
     else:
-        fname = 'figs/fig6101.png'
+        fname = 'figs/fig6101'+figure_filetype
 
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if meta.hide_plots:

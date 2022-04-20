@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ..lib import gaussian as g
 from ..lib import smooth
+from ..lib.plots import figure_filetype
 from . import plots_s3
 
 def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
@@ -538,7 +539,7 @@ def optimize(subdata, mask, bg, spectrum, Q, v0, p5thresh=10, p7thresh=10, fitty
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
                             plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')
                             plt.plot((loc[i]), (subdata[loc[i],i]), 'ro')
-                            plt.savefig(eventdir + "figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata.png")
+                            plt.savefig(eventdir + "figs/fig3501-"+str(n)+"-"+str(i)+"-Subdata"+figure_filetype, dpi=300)
                             if hide_plots:
                                 plt.close()
                             else:

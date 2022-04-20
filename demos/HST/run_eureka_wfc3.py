@@ -7,7 +7,7 @@ import eureka.S5_lightcurve_fitting.s5_fit as s5
 import eureka.S6_planet_spectra.s6_spectra as s6
 
 # Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
-eureka.lib.plots.set_rc(style='eureka', usetex=False)
+eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
 
 eventlabel = 'wfc3'
 ecf_path = './'

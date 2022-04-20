@@ -1,7 +1,9 @@
 from matplotlib import rcdefaults, rcParams
 
+# Default figure file type
+figure_filetype = '.png'
 
-def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
+def set_rc(style='preserve', usetex=False, filetype='.png', from_scratch=False, **kwargs):
     """Function to adjust matplotlib rcParams for plotting procedures.
 
     Parameters
@@ -14,6 +16,8 @@ def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
         By default uses 'preserve'.
     usetex : bool, optional
         Do you want to use LaTeX fonts (which requires LaTeX to be installed), by default False
+    filetype : str
+        The file type that all Eureka figures should be saved as (e.g. .png, .pdf).
     from_scratch : bool, optional
         Should the rcParams first be set to rcdefaults? By default False
     **kwargs : dict, optional
@@ -55,3 +59,7 @@ def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
 
     # TeX fonts may not work on all machines. 
     rcParams.update({'text.usetex': usetex})
+
+    # Update the figure filetype
+    global figure_filetype
+    figure_filetype = filetype
