@@ -111,7 +111,7 @@ class GPModel(Model):
             if self.gp_code_name == 'celerite':
                 gp.compute(self.kernel_input_arrays[0], self.lc.unc)
                 mu, cov = gp.predict(self.lc.flux-fit, self.kernel_input_arrays[0], return_var=True)
-
+                mu += gp.kernel.jitter*np.ones(len(self.lc.flux))
         #lcfinal = np.append(lcfinal, mu)
            
         return mu#, std
@@ -169,6 +169,7 @@ class GPModel(Model):
         
         if self.gp_code_name == 'celerite':
             kernel = celerite.terms.RealTerm(log_a = self.coeffs['A'], log_c = 0)*kernel
+            kernel += celerite.terms.JitterTerm(log_sigma = self.coeffs['WN'])
             gp = celerite.GP(kernel, mean=0, fit_mean=False)
         
         if self.gp_code_name == 'george':
