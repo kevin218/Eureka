@@ -192,7 +192,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     samples = np.copy(samples)
     freenames=np.copy(freenames)
     ndim = len(freenames)+1 # One extra for the 1D histogram
-    fig, axes = plt.subplots(ndim, ndim, num=int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(ndim*1.4, ndim*1.4))
+    fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(ndim*1.4, ndim*1.4))
     fig.clf()
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
@@ -259,8 +259,9 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
 
     k = 0
     for plot_number in range(nplots):
-        fig, axes = plt.subplots(nrows, ncols, num=int('54{}'.format(str(0).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
+        fig = plt.figure(int('54{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(6*ncols, 4*nrows))
         fig.clf()
+        axes = fig.subplots(nrows, ncols, sharex=True)
 
         for j in range(ncols):
             for i in range(nrows):
