@@ -10,8 +10,6 @@ def binned_lightcurve(meta, i):
     ----------
     meta:   MetaClass
         The metadata object.
-    time:  ndarray (1D)
-        The time in meta.time_units of each data point.
     i:  int
         The current bandpass number.
 
