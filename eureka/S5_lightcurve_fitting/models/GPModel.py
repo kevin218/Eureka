@@ -1,7 +1,7 @@
 import numpy as np
 import george
 from george import kernels
-
+import celerite
 from .Model import Model
 from ...lib.readEPF import Parameters
 
@@ -23,23 +23,26 @@ class GPModel(Model):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'GP'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
+        
+        #get GP parameters
         self.gp_code_name = gp_code
         self.kernel_types = kernel_classes
         self.kernel_input_names = kernel_inputs
         self.kernel_input_arrays = []
         self.nkernels = len(kernel_classes)
         self.lc = lc
+
+        # Check for Parameters instance
+        self.parameters = kwargs.get('parameters')
+
+        # Generate parameters from kwargs if necessary
         if self.parameters is None:
-            coeff_dict = kwargs.get('coeff_dict')
-            ## think about how to get coeff_dict ... 
-            #params = {rN: coeff for rN, coeff in coeff_dict.items()
-                      #if rN.startswith('r') and rN[1:].isdigit()}
-            self.parameters = Parameters(**params)
+            self.parameters = Parameters(**kwargs)
+        
+        # Set parameters for multi-channel fits
+        self.longparamlist = kwargs.get('longparamlist')
+        self.nchan = kwargs.get('nchan')
+        self.paramtitles = kwargs.get('paramtitles')
 
         # Update coefficients
         self._parse_coeffs()
@@ -63,7 +66,7 @@ class GPModel(Model):
         for k, v in self.parameters.dict.items():
             if k.startswith('A'):
                 self.coeffs['A'] = v[0]
-            if k.lower().startswith('m_') and k[2:].isdigit():
+            if k.lower().startswith('m') and k[1:].isdigit():
                 self.coeffs[self.kernel_types[kernel_no]] = v[0]
                 kernel_no += 1
             if k.startswith('WN'):
@@ -83,10 +86,9 @@ class GPModel(Model):
         -------
         predicted systematics model 
         """
-        # Get the time
-        #if self.time is None:
-            #self.time = kwargs.get('time')
-
+        lcfinal=np.array([])
+        #for c in np.arange(self.nchan):
+            
         # Create the GP object with current parameters
         if gp==None:
             gp = self.setup_GP()       
@@ -97,17 +99,21 @@ class GPModel(Model):
             if self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(self.kernel_input_arrays.T,self.lc.unc).gp
                 mu, cov = cond_gp.loc, cond_gp.variance
+            if self.gp_code_name == 'celerite':
+                raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
         else:
-            #print(y, y_err, fit)
             if self.gp_code_name == 'george':
                 gp.compute(self.kernel_input_arrays[0],self.lc.unc)
                 mu,cov = gp.predict(self.lc.flux-fit,self.kernel_input_arrays[0])
             if self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(self.kernel_inputs[0],self.lc.unc).gp
                 mu, cov = cond_gp.loc, cond_gp.variance
-        #std = np.sqrt(np.diag(cov))
+            if self.gp_code_name == 'celerite':
+                gp.compute(self.kernel_input_arrays[0], self.lc.unc)
+                mu, cov = gp.predict(self.lc.flux-fit, self.kernel_input_arrays[0], return_var=True)
 
-        #gp.evaluate() #tinygp           
+        #lcfinal = np.append(lcfinal, mu)
+           
         return mu#, std
 
     def set_inputs(self, normalise=False):
@@ -151,6 +157,7 @@ class GPModel(Model):
         GP object
 
         """
+        
         if len(self.kernel_input_arrays) == 0:
             self.set_inputs()
 
@@ -159,15 +166,19 @@ class GPModel(Model):
                 kernel = self.get_kernel(self.kernel_types[i],i)
             else:
                 kernel += self.get_kernel(self.kernel_types[i],i)
-
-        kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
-
-        if self.gp_code_name == 'george': 
+        
+        if self.gp_code_name == 'celerite':
+            kernel = celerite.terms.RealTerm(log_a = self.coeffs['A'], log_c = 0)*kernel
+            gp = celerite.GP(kernel, mean=0, fit_mean=False)
+        
+        if self.gp_code_name == 'george':
+            kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
             gp = george.GP(kernel, white_noise=self.coeffs['WN'],fit_white_noise=self.fit_white_noise, mean=0, fit_mean=False)#, solver=george.solvers.HODLRSolver)
+            
         if self.gp_code_name == 'tinygp':
+            kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
             gp = tinygp.GaussianProcess(kernel, diag=self.coeffs['WN']**2, mean=0)
-        #tiny gp code
-        #kernel = tinygp.kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
+
         return gp
 
     def loglikelihood(self, fit):
@@ -181,8 +192,14 @@ class GPModel(Model):
         log likelihood of the GP evaluated by george/tinygp
         """
         gp = self.setup_GP()
-        #gp_evaluated = self.eval(lc, fit, gp=gp)
-        # Create the GP object with current parameters
+        
+        if self.gp_code_name == 'celerite':
+            if self.nkernels > 1:
+                raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
+            else:
+                gp.compute(self.kernel_input_arrays[0], self.lc.unc)
+            loglike = gp.log_likelihood(self.lc.flux - fit)
+        
         if self.gp_code_name == 'george':
             if self.nkernels > 1:
                 gp.compute(self.kernel_input_arrays.T,self.lc.unc)
@@ -219,6 +236,12 @@ class GPModel(Model):
                 kernel = tinygp.kernels.RationalQuadratic(alpha=1,scale=metric,ndim=self.nkernels,axes=i)
             if kernel_name == 'Exp':
                 kernel = tinygp.kernels.Exp(metric,ndim=self.nkernels,axes=i) 
+                
+        if self.gp_code_name == 'celerite':
+            if kernel_name == 'Matern32':
+                kernel = celerite.terms.Matern32Term(log_sigma = 1, log_rho = metric, eps=1e-12)
+            else:
+                raise AssertionError('Celerite currently only supports a Matern32 kernel')
 
         return kernel
 
