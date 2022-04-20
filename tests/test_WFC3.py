@@ -7,9 +7,13 @@ from importlib import reload
 sys.path.insert(0, '../')
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
+import eureka.lib.plots
 from eureka.S3_data_reduction import s3_reduce as s3
 
 def test_WFC3(capsys):
+    # Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
+    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
+
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
