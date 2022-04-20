@@ -152,8 +152,6 @@ def profile_niriss_median(medprof, sigma=50):
         col = medprof[:,i]+0.0
         x = np.arange(0,len(col),1)
 
-        plt.plot(x, col, 'k')
-
         # fits the spatial profile with a savitsky-golay filter
         # window length needs to be quite small for the NIRISS columns
         filt = savgol_filter(col, window_length=15, polyorder=5)
