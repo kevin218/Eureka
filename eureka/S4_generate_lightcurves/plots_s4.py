@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ..lib import util
 
-def binned_lightcurve(meta, time, wavelength, i):
+def binned_lightcurve(meta, time, i):
     '''Plot each spectroscopic light curve. (Fig 4300)
 
     Parameters
@@ -11,8 +11,6 @@ def binned_lightcurve(meta, time, wavelength, i):
         The metadata object.
     time:  ndarray (1D)
         The time in meta.time_units of each data point.
-    wavelength: ndarray (1D)
-        The wavelength array
     i:  int
         The current bandpass number.
 
