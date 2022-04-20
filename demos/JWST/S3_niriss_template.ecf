@@ -13,7 +13,7 @@ sigclip	     	[4,4,4]		# Iterations and sigma to find & remove outliers
 
 # Spectral extraction parameters
 which_table	profile		# Which method used to find centers of orders
-proftype	gaussian	# What profilie shape to use
+proftype	gaussian	# What profile shape to use
 sigma		20		# Sigma outlier value
 per_quad	False		# Extracts orders in quadrants or not
 
@@ -27,4 +27,3 @@ topdir		/home/User
 # Directories relative to project dir
 inputdir      	/Data/JWST-Sim/NIRISS/Stage2
 outputdir	/Data/JWST-Sim/NIRISS/Stage3
-ancildir	/Data/JWST-Sim/NIRISS/ancil
