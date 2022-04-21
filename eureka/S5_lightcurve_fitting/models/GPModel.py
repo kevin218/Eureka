@@ -65,40 +65,39 @@ class GPModel(Model):
         """
         # Parse keyword arguments as coefficients
         self.coeffs = {}
-        if self.nchan > 1:
-            for i in range(self.nkernels):
-                self.coeffs[self.kernel_types[i]]=np.array([])
-            for k, v in self.parameters.dict.items():
-                if k.startswith('A'):
-                    remvisnum=k.split('_')
+        for i in range(self.nkernels):
+            self.coeffs[self.kernel_types[i]]=[]
+        for k, v in self.parameters.dict.items():
+            if k.startswith('A'):
+                remvisnum=k.split('_')
+                if len(remvisnum)>1:
                     self.coeffs['A_%i'%int(remvisnum[1])]  = v[0]
-                if k.lower().startswith('m') and k[2:].isdigit():
-                    remvisnum=k.split('_')
+                elif self.nchan > 1:
+                    self.coeffs['A_0']  = v[0]
+                else:
+                    self.coeffs['A'] = v[0]
+            if k.lower().startswith('m'):
+                remvisnum=k.split('_')
+                if len(remvisnum)>1 or self.nchan > 1:
                     no = int(remvisnum[0][1])-1
                     if no < 0:
-                        raise AssertionError('Please start your metric with m1.')
+                        raise AssertionError('Please start your metric enumeration with m1.')
                     self.coeffs[self.kernel_types[no]].append(v[0])
-                if k.startswith('WN_'):
-                    remvisnum = k.split('_')
+                else:
+                    no = int(remvisnum[1])-1
+                    self.coeffs[self.kernel_types[no]].append(v[0])
+            if k.startswith('WN'):
+                remvisnum = k.split('_')
+                if len(remvisnum)>1:
                     self.coeffs['WN_%i'%int(remvisnum[1])] = v[0]
-                    if 'fixed' in v:
-                        self.fit_white_noise = False
-                    else:
-                        self.fit_white_noise = True
-        else:
-            kernel_no = 0
-            for k, v in self.parameters.dict.items():
-                if k.startswith('A'):
-                    self.coeffs['A'] = v[0]
-                if k.lower().startswith('m') and k[1:].isdigit():
-                    self.coeffs[self.kernel_types[kernel_no]] = v[0]
-                    kernel_no += 1
-                if k.startswith('WN'):
+                elif self.nchan > 1:
+                    self.coeffs['WN_0']  = v[0]
+                else:
                     self.coeffs['WN'] = v[0]
-                    if 'fixed' in v:
-                        self.fit_white_noise = False
-                    else:
-                        self.fit_white_noise = True
+                if 'fixed' in v:
+                    self.fit_white_noise = False
+                else:
+                    self.fit_white_noise = True
                     
     
     def eval(self, fit, gp=None, **kwargs):
@@ -112,6 +111,7 @@ class GPModel(Model):
         predicted systematics model 
         """
         lcfinal=np.array([])
+        
         for c in np.arange(self.nchan):
             
             # Create the GP object with current parameters
@@ -269,12 +269,9 @@ class GPModel(Model):
                     
         return sum(logL)
 
-    def get_kernel(self, kernel_name, i, channel=None):
+    def get_kernel(self, kernel_name, i, channel=0):
         """get individual kernels"""
-        if channel == None:
-            metric = ( 1./np.exp(self.coeffs[kernel_name]) )**2
-        else:
-            metric = ( 1./np.exp(self.coeffs[kernel_name][channel]) )**2
+        metric = ( 1./np.exp(self.coeffs[kernel_name][channel]) )**2
         if self.gp_code_name == 'george':
             if kernel_name == 'Matern32':
                 kernel = kernels.Matern32Kernel(metric,ndim=self.nkernels,axes=i)
