@@ -161,7 +161,7 @@ class LightCurve(m.Model):
         return
 
     def plot(self, meta, fits=True):
-        """Plot the light curve with all available fits
+        """Plot the light curve with all available fits. (Figs 5103)
 
         Parameters
         ----------
@@ -185,7 +185,7 @@ class LightCurve(m.Model):
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
-            fig = plt.figure(int('54{}'.format(str(0).zfill(len(str(self.nchannel))))), figsize=(8,6))
+            fig = plt.figure(5103, figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
@@ -206,7 +206,8 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig54{}_all_fits'.format(str(channel).zfill(len(str(self.nchannel))))+figure_filetype
+            ch_number = str(channel).zfill(len(str(self.nchannel)))
+            fname = f'figs/fig5103_ch{ch_number}_all_fits'+figure_filetype
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()
