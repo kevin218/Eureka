@@ -38,7 +38,7 @@ class MetaClass:
         return
 
 
-def getlc(eventlabel, ecf_path='./', s3_meta=None):
+def genlc(eventlabel, ecf_path='./', s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters

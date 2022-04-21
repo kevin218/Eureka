@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
 	s3_meta = s3.reduce(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
 
-	s4_meta = s4.getlc(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+	s4_meta = s4.genlc(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
 
 	s5_meta = s5.fitlc(eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
