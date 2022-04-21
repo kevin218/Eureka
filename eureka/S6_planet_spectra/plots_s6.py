@@ -63,9 +63,9 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     else:
         fname = 'figs/fig6101'
 
-    if 'rp' in ylabel.lower():
+    if 'R_' in ylabel:
         fname += '_transmission'
-    elif 'fp' in ylabel.lower():
+    elif 'F_' in ylabel:
         fname += '_emission'
 
     fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight', dpi=300)
