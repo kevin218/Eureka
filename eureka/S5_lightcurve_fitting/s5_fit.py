@@ -122,7 +122,10 @@ def fitlc(eventlabel, ecf_path='./', s4_meta=None):
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = meta.time - offset
-            time_units = meta.time_units+f' - {offset}'
+            if offset!=0:
+                time_units = meta.time_units+f' - {offset}'
+            else:
+                time_units = meta.time_units
 
             # If any of the parameters' ptypes are set to 'white', enforce a Gaussian prior based on a white-light light curve fit
             if meta.whitep:
@@ -156,8 +159,8 @@ def fitlc(eventlabel, ecf_path='./', s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
-                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.mean(meta.lcdata[channel,:]))
-                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.mean(meta.lcdata[channel,:]))
+                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.ma.mean(meta.lcdata[channel,:]))
+                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.ma.mean(meta.lcdata[channel,:]))
 
                 meta, params = fit_channel(meta,time,flux,0,flux_err,eventlabel,params,log,longparamlist,time_units,paramtitles,chanrng)
 

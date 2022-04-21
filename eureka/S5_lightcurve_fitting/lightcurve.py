@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from . import models as m
 from . import fitters as f
 from .utils import COLORS, color_gen
+from ..lib.plots import figure_filetype
 
 from copy import deepcopy
 
@@ -163,7 +164,7 @@ class LightCurve(m.Model):
         return
 
     def plot(self, meta, fits=True):
-        """Plot the light curve with all available fits
+        """Plot the light curve with all available fits. (Figs 5103)
 
         Parameters
         ----------
@@ -187,7 +188,7 @@ class LightCurve(m.Model):
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
-            fig = plt.figure(int('54{}'.format(str(0).zfill(len(str(self.nchannel))))), figsize=(8,6))
+            fig = plt.figure(5103, figsize=(8,6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
@@ -208,14 +209,14 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            fname = 'figs/fig57{}'.format(str(channel).zfill(len(str(self.nchannel))))
             if self.white:
-                fname += '_white'
-            fname += '_all_fits.png'
-            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-            if meta.hide_plots:
-                plt.close()
+                fname_tag += 'white'
             else:
+                ch_number = str(channel).zfill(len(str(self.nchannel)))
+                fname_tag = f'ch{ch_number}'
+            fname = f'figs/fig5103_{fname_tag}_all_fits'+figure_filetype
+            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+            if not meta.hide_plots:
                 plt.pause(0.2)
 
         return

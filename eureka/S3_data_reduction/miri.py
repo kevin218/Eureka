@@ -55,8 +55,8 @@ def read(filename, data, meta):
     # Otherwise use the wavelength array from the header
     if np.all(hdulist['WAVELENGTH', 1].data == 0):
         if meta.firstFile:
-            print('  WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
-                  'because they are not in the .fits files themselves')
+            print('  WARNING: The wavelength for the simulated MIRI data are currently hardcoded\n'+
+                  '           because they are not in the .fits files themselves')
         data.wave = np.tile(wave_MIRI_hardcoded(),(data.data.shape[2],1))[:,::-1]
     else:
         data.wave = hdulist['WAVELENGTH', 1].data
@@ -66,8 +66,9 @@ def read(filename, data, meta):
     # Record integration mid-times in BJD_TDB
     if len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
-            print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
-                'because they are not in the .fits files themselves')
+            print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded\n'+
+                  '           because they are not in the .fits files themselves')
+
         if 'WASP_80b' in data.filename and 'transit' in data.filename:
             # Time array for WASP-80b MIRISIM transit observations
             # Assuming transit near August 1, 2022
@@ -86,6 +87,8 @@ def read(filename, data, meta):
         elif data.mhdr['EFFINTTM']==47.712:
             # A new manually created time array for the new MIRI simulations
             data.time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44, endpoint=True)[data.intstart - 1:data.intend-1] # Need to subtract an extra 1 from intend for these data
+        else:
+            raise AssertionError('Eureka does not currently know how to generate the time array for these simulations.')
     else:
         data.time = int_times['int_mid_BJD_TDB']
     meta.time_units = 'BJD_TDB'

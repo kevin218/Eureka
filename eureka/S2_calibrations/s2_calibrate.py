@@ -23,6 +23,7 @@ from ..lib import logedit, util
 from ..lib import sort_nicely as sn
 from ..lib import manageevent as me
 from ..lib import readECF
+from ..lib.plots import figure_filetype
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -412,11 +413,11 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             log.writelog('\nGenerating x1dints figure')
             m = np.where(meta.segment_list==filename)[0][0]+1
             max_m = meta.num_data_files
-            fig_number = '11'+str(m).zfill(int(np.floor(np.log10(max_m))+1))
-            fname = 'fig{}_'.format(fig_number)+'_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
+            fig_number = str(m).zfill(int(np.floor(np.log10(max_m))+1))
+            fname = f'fig2101_file{fig_number}_x1dints'
             x1d_fname = '_'.join(filename.split('/')[-1].split('_')[:-1])+'_x1dints'
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
-                plt.figure(int('11{}'.format(str(0).zfill(int(np.floor(np.log10(max_m))+1)))), figsize=[15,5])
+                plt.figure(2101, figsize=[15,5])
                 plt.clf()
                 
                 for i in range(len(sp1d.spec)):
@@ -425,7 +426,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.title('Time Series Observation: Extracted spectra')
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs/'+fname+'.png', bbox_inches='tight', dpi=300)
+                plt.savefig(meta.outputdir+'figs/'+fname+figure_filetype, bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()
                 else:

@@ -1,12 +1,16 @@
+import string
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 import corner
 from scipy import stats
 
 from .likelihood import computeRMS
+from .utils import COLORS
+from ..lib.plots import figure_filetype
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
-    """Plot the fitted model over the data. (Fig 5100)
+    """Plot the fitted model over the data. (Figs 5101)
 
     Parameters
     ----------
@@ -61,7 +65,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model_phys = model_phys[channel*len(new_time):(channel+1)*len(new_time)]
 
         residuals = flux - model
-        fig = plt.figure(int('51{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3,1)
         ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
@@ -69,30 +73,35 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - {fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
+        ax[0].set_xticks([])
 
         ax[1].errorbar(lc.time, flux/model_sys, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
         ax[1].plot(new_time, model_phys, color='0.3', zorder = 10)
         ax[1].set_ylabel('Calibrated Flux', size=14)
+        ax[1].set_xticks([])
 
         ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.', color='w', ecolor=color, mec=color)
         ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fname = 'figs/fig51{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+        fig.subplots_adjust(hspace=0)
+        fig.align_ylabels(ax)
+
         if lc.white:
-            fname += '_white'
-        fname += '_lc_{}.png'.format(fitter)
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if meta.hide_plots:
-            plt.close()
+            fname_tag += 'white'
         else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs/fig5101_{fname_tag}_lc_{fitter}'+figure_filetype
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
             plt.pause(0.2)
 
     return
 
 def plot_rms(lc, model, meta, fitter):
-    """Plot an Allan plot to look for red noise. (Fig 5200)
+    """Plot an Allan plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -148,20 +157,21 @@ def plot_rms(lc, model, meta, fitter):
         plt.xticks(size=12)
         plt.yticks(size=12)
         plt.legend()
-        fname = 'figs/fig52{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+
         if lc.white:
-            fname += '_white'
-        fname += '_allanplot_'+fitter+'.png'
-        plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if meta.hide_plots:
-            plt.close()
+            fname_tag += 'white'
         else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs/fig5301_{fname_tag}_allanplot_{fitter}'+figure_filetype
+        plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
             plt.pause(0.2)
 
     return
 
 def plot_corner(samples, lc, meta, freenames, fitter):
-    """Plot a corner plot. (Fig 5300)
+    """Plot a corner plot. (Figs 5501)
 
     Parameters
     ----------
@@ -187,23 +197,41 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    samples = np.copy(samples)
+    freenames=np.copy(freenames)
+    ndim = len(freenames)+1 # One extra for the 1D histogram
+    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
     fig.clf()
-    fig = corner.corner(samples, fig=fig, show_titles=True,quantiles=[0.16, 0.5, 0.84],title_fmt='.4', labels=freenames)
-    fname = 'figs/fig53{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
+
+    # Don't allow offsets or scientific notation in tick labels
+    old_useOffset = rcParams['axes.formatter.useoffset']
+    old_xtick_labelsize = rcParams['xtick.labelsize']
+    old_ytick_labelsize = rcParams['ytick.labelsize']
+    rcParams['axes.formatter.useoffset'] = False
+    rcParams['xtick.labelsize'] = 10
+    rcParams['ytick.labelsize'] = 10
+    fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84], max_n_ticks=3,
+                        labels=freenames, show_titles=True, title_fmt='.2',
+                        title_kwargs={"fontsize": 10}, label_kwargs={"fontsize": 10}, fontsize=10, labelpad=0.25)
+
     if lc.white:
-        fname += '_white'
-    fname += '_corner_{}.png'.format(fitter)
-    fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
-    if meta.hide_plots:
-        plt.close()
+        fname_tag += 'white'
     else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        fname_tag = f'ch{ch_number}'
+    fname = f'figs/fig5501_{fname_tag}_corner_{fitter}'+figure_filetype
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=300)
+    if not meta.hide_plots:
         plt.pause(0.2)
+
+    rcParams['axes.formatter.useoffset'] = old_useOffset
+    rcParams['xtick.labelsize'] = old_xtick_labelsize
+    rcParams['ytick.labelsize'] = old_ytick_labelsize
 
     return
 
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn=0, nrows=3, ncols=4, nthin=1):
-    """Plot the evolution of the chain to look for temporal trends (Fig 5400)
+    """Plot the evolution of the chain to look for temporal trends (Figs 5303)
 
     Parameters
     ----------
@@ -244,8 +272,9 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
 
     k = 0
     for plot_number in range(nplots):
-        fig, axes = plt.subplots(nrows, ncols, num=int('54{}'.format(str(0).zfill(len(str(lc.nchannel))))), sharex=True, figsize=(6*ncols, 4*nrows))
+        fig = plt.figure(5303, figsize=(6*ncols, 4*nrows))
         fig.clf()
+        axes = fig.subplots(nrows, ncols, sharex=True)
 
         for j in range(ncols):
             for i in range(nrows):
@@ -271,27 +300,28 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
                 k += 1
         fig.tight_layout(h_pad=0.0)
 
-        fname = 'figs/fig54{}'.format(str(lc.channel).zfill(len(str(lc.nchannel))))
         if lc.white:
-            fname += '_white'
+            fname_tag += 'white'
+        else:
+            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs/fig5303_{fname_tag}'
         if burnin:
             fname += '_burninchain'
         else:
             fname += '_chain'
-        fname += '_{}'.format(fitter)
+        fname += '_'+fitter
         if nplots>1:
-            fname += '_plot{}of{}'.format(plot_number+1,nplots)
-        fname += '.png'
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=250)
-        if meta.hide_plots:
-            plt.close()
-        else:
+            fname += f'_plot{plot_number+1}of{nplots}'
+        fname += figure_filetype
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=300)
+        if not meta.hide_plots:
             plt.pause(0.2)
 
     return
 
 def plot_res_distr(lc, model, meta, fitter):
-    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5500)
+    """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
 
     Parameters
     ----------
@@ -318,10 +348,9 @@ def plot_res_distr(lc, model, meta, fitter):
     if type(fitter)!=str:
         raise ValueError('Expected type str for fitter, instead received a {}'.format(type(fitter)))
 
-    time = lc.time
     model_lc = model.eval()
 
-    plt.figure(int('55{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+    plt.figure(5302, figsize=(8, 6))
     plt.clf()
 
     for channel in lc.fitted_channels:
@@ -344,20 +373,20 @@ def plot_res_distr(lc, model, meta, fitter):
         x=np.linspace(-4.,4.,200)
         px=stats.norm.pdf(x,loc=0,scale=1)
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
-        plt.xlabel("Residuals/scatter", fontsize=14)
-        fname = 'figs/fig55{}'.format(str(channel).zfill(len(str(lc.nchannel))))
+        plt.xlabel("Residuals/Uncertainty", fontsize=14)
         if lc.white:
-            fname += '_white'
-        fname += '_res_distri_'+fitter+'.png'
-        plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if meta.hide_plots:
-            plt.close()
+            fname_tag += 'white'
         else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs/fig5302_{fname_tag}_res_distri_{fitter}'+figure_filetype
+        plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
             plt.pause(0.2)
     return
 
 def plot_GP_components(lc, model, meta, fitter, isTitle=True):
-    """Plot the lightcurve + GP model + residuals (Fig 5600)
+    """Plot the lightcurve + GP model + residuals (Figs 5102)
 
     Parameters
     ----------
@@ -413,7 +442,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             model_GP_component = model_GP_component[channel*len(lc.time):(channel+1)*len(lc.time)]
 
         residuals = flux - model
-        fig = plt.figure(int('56{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(8, 6))
+        fig = plt.figure(5102, figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3,1)
         ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w', ecolor=color, mec=color)
@@ -429,14 +458,12 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fname = 'figs/fig56{}'.format(str(channel).zfill(len(str(lc.nchannel))))
         if lc.white:
-            fname += '_white'
-        fname += '_lc_GP_{}.png'.format(fitter)
-        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-        if meta.hide_plots:
-            plt.close()
+            fname_tag += 'white'
         else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs/fig5102_{fname_tag}_lc_GP_{fitter}'+figure_filetype
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
             plt.pause(0.2)
-
-    return
