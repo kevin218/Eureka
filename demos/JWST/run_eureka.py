@@ -18,10 +18,10 @@ if __name__ == '__main__':
 	
 	s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)#, s1_meta=s1_meta)
 
-	s3_meta = s3.reduceJWST(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+	s3_meta = s3.reduce(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
 
-	s4_meta = s4.lcJWST(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+	s4_meta = s4.genlc(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
 
-	s5_meta = s5.fitJWST(eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
+	s5_meta = s5.fitlc(eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 
 	s6_meta = s6.plot_spectra(eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)

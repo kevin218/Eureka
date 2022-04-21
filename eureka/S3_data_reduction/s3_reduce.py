@@ -55,7 +55,7 @@ class DataClass:
         return
 
 
-def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
+def reduce(eventlabel, ecf_path='./', s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters

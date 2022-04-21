@@ -15,7 +15,7 @@ class MetaClass:
     def __init__(self):
         return
 
-def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
+def fitlc(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
