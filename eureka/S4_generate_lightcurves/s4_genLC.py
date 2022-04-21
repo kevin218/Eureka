@@ -295,7 +295,7 @@ def read_s3_meta(meta):
 
 def load_general_s3_meta_info(meta, ecf_path, s3_meta):
     # Need to remove the topdir from the outputdir
-    s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
+    s3_outputdir = s3_meta.outputdir[len(meta.topdir):]
     if s3_outputdir[0]=='/':
         s3_outputdir = s3_outputdir[1:]
     if s3_outputdir[-1]!='/':
@@ -309,7 +309,7 @@ def load_general_s3_meta_info(meta, ecf_path, s3_meta):
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
-    meta.old_datetime = meta.datetime # Capture the date that the
+    meta.old_datetime = meta.datetime  # Capture the date that the S3 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir

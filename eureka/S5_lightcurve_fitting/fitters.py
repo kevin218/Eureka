@@ -159,6 +159,39 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     return best_model
 
+def demcfitter(lc, model, meta, log, **kwargs):
+    """Perform sampling using Differential Evolution Markov Chain.
+
+    This is an empty placeholder function to be filled later.
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model to fit
+    meta : MetaClass
+        The metadata object
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    **kwargs : dict
+        Arbitrary keyword arguments.
+
+    Returns
+    -------
+    best_model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The composite model after fitting
+
+    Notes
+    -----
+    History:
+    
+    - December 29, 2021 Taylor Bell
+        Updated documentation and arguments
+    """
+    best_model = None
+    return best_model
+
 def emceefitter(lc, model, meta, log, **kwargs):
     """Perform sampling using emcee.
 

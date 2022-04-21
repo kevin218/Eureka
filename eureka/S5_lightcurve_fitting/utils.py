@@ -323,6 +323,7 @@ def writeFITS(filename, extensions, headers=()):
     # Insert END card to prevent header error
     # hdulist[0].header.tofile(filename, endcard=True, clobber=True)
 
+
 def filter_table(table, **kwargs):
     """Retrieve the filtered rows
 

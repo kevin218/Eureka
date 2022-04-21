@@ -5,7 +5,7 @@ Eureka! Control File (.ecf)
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
 
-In the following, we look at the contents of the ecf for Stages 1, 2, 3, and 4.
+In the following, we look at the contents of the ecf for Stages 1, 2, 3, 4, and 5.
 
 
 Stage 1
@@ -71,6 +71,8 @@ In short this weights each pixel, :math:`i`, within a slope following :math:`w_i
 
 Stage 2
 --------
+
+ A full description of the Stage 2 Outputs is available here: :ref:`Stage 2 Output <s2-out>`
 
 .. include:: ../media/S2_template.ecf
    :literal:
@@ -267,36 +269,7 @@ Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It 
 
 isplots_S3
 '''''''''''
-Sets how many plots should be saved when running Stage 3.
-
-1. ``isplots_S3 >= 1``:
-
-   1.1  2D light curve without drift correction
-
-2. ``isplots_S3 >= 3``:
-
-   2.1  make optimal spectrum plot
-
-   2.2  make image+background plots
-
-   2.3  plot profile
-
-1.1: Normalized Flux over Time (Integration Number) as a function of Wavelength.
-
-.. image:: ../media/fig3101-2D_LC.png
-
-2.1: 1D Spectrum for an Integration using standard spectrum extraction (sum of the aperture; in orange) and optimal spectral extraction (in green).
-
-.. image:: ../media/fig3302-1-Spectrum.png
-
-2.2: *Upper Panel*: 2D Spectrum for an Integration; *Lower Panel*: Column-wise background for an Integration (here ``bg_deg = 0`` was set).
-
-.. image:: ../media/fig3301-1-Image+Background.png
-
-2.3: 2D spectrum for an Integration after Unit conversion
-
-.. image:: ../media/fig3305-1-Profile.png
-
+Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
 testing_S3
 '''''''''''
@@ -390,12 +363,7 @@ If True, subtract spectrum mean during cross correlation (can help with cross-co
 
 isplots_S4
 '''''''''''
-Sets how many plots should be saved when running Stage 4.
-
-- ``isplots_S4 >= 3``:
-   -  Plot each spectroscopic light curve. Below an example for a light curve using the Simulated NIRCam data for WASP-43b between 2.5 and 2.65 micron. Due to a bug in the Simulation pipeline the errorbars are currently way bigger than expected.
-
-.. image:: ../media/Fig4100-wasp43b-1D_LC.png
+Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
 
 
 hide_plots
@@ -505,7 +473,7 @@ The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 's
 
 run_tol
 '''''''
-Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume tot he total evidence falls below this threshold.
+Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
 
 
 interp
@@ -514,18 +482,7 @@ Boolean to determine whether the astrophysical model is interpolated when plotte
 
 isplots_S5
 '''''''''''
-Sets how many plots should be saved when running Stage 5.
-
-- ``isplots_S5 >= 1``:
-   - (All Fitters) Plots the fitted model for each spectroscopic lightcurve.
-
-- ``isplots_S5 >= 3``:
-   - (All Fitters) Plot RMS deviation, residuals distribution.
-   - (emcee) Plot chains from the emcee sampler.
-
-- ``isplots_S5 >= 5``:
-   - (emcee, dynesty) Plot posterior corner plots.
-
+Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
 
 hide_plots
 '''''''''''
@@ -545,16 +502,46 @@ The path to the directory in which to output the Stage 5 JWST data and plots.
 Stage 5 Fit Parameters
 ----------------------
 
-This file describes the transit/eclipse parameters and their prior distributions. Each line describes a new parameter, with the following basic format:
+.. warning::
+   The Stage 5 fit parameter file has the file extension ``.epf``, not ``.ecf``. These have different formats, and are not interchangeable.
+
+This file describes the transit/eclipse and systematics parameters and their prior distributions. Each line describes a new parameter, with the following basic format:
 
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
-The ``PriorType`` can be U (Uniform), LU (Log Uniform), or N (Normal). If U/LU, then ``PriorPar1`` and ``PriorPar2`` are the lower and upper limits of the prior distribution. If N, then ``PriorPar1`` is the mean and ``PriorPar2`` is the stadard deviation of the Gaussian prior.
+``Name`` defines the specific parameter being fit for. Available options are:
+   - Transit and Eclipse Parameters
+      - ``rp`` - planet-to-star radius ratio, for the transit models.
+      - ``fp`` - planet/star flux ratio, for the eclipse models.
+   - Orbital Parameters
+      - ``per`` - orbital period (in days)
+      - ``t0`` - transit time (in days)
+      - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
+      - ``inc`` - orbital inclination (in degrees)
+      - ``a`` - a/R*, the ratio of the semimajor axis to the stellar radius
+      - ``ecc`` - orbital eccentricity
+      - ``w`` - argument of periapsis (degrees)
+   - Phase Curve Parameters - the phase curve model allows for the addition of up to four sinusoids into a single phase curve
+      - ``AmpCos1`` - Amplitude of the first cosine 
+      - ``AmpSin1`` - Amplitude of the first sine
+      - ``AmpCos2`` - Amplitude of the second cosine
+      - ``AmpSin2`` - Amplitude of the second sine
+   - Limb Darkening Parameters
+      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']``
+      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``square-root``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
+   - Systematics Parameters - Depending on the model specified in the Stage 5 ECF, set either polynomial model coefficients ``c0--c9`` for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them to ``0``.
+   - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm
 
-``Free`` determines whether the parameter is fixed, free, independent, or shared. Fixed parameters are fixed in the fitting routine and not fit for. Free parameters are fit for according to the specified prior distribution, independently for each wavelength channel. Shared parameters are fit for according to the specified prior distribution, but are common to all wavelength channels. Independent variables set auxiliary functions needed for the fitting routines.
+
+
+``Free`` determines whether the parameter is ``fixed``, ``free``, ``independent``, or ``shared``. ``fixed`` parameters are fixed in the fitting routine and not fit for. ``free`` parameters are fit for according to the specified prior distribution, independently for each wavelength channel. ``shared`` parameters are fit for according to the specified prior distribution, but are common to all wavelength channels. ``independent`` variables set auxiliary functions needed for the fitting routines.
+
+
+
+The ``PriorType`` can be U (Uniform), LU (Log Uniform), or N (Normal). If U/LU, then ``PriorPar1`` and ``PriorPar2`` are the lower and upper limits of the prior distribution. If N, then ``PriorPar1`` is the mean and ``PriorPar2`` is the stadard deviation of the Gaussian prior.
 
 Here's an example fit parameter file:
 
 
-.. include:: ../media/S5_fit_par_template.ecf
+.. include:: ../media/S5_fit_par_template.epf
    :literal:

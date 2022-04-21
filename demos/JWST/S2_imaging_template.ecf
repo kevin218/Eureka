@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 2: Data Reduction
 
+# Stage 2 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-2
+
 suffix              rateints     # Data file suffix
 
 # Note: different instruments and modes will use different steps by default

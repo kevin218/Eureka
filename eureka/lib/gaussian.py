@@ -589,3 +589,103 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
   res = (model - data) * weights
   # Return only unmasked values:
   return res[np.where(mask)]
+
+
+def gaussians(x, param):
+  """
+    Evaluate more than 1 gaussian.
+  """
+
+  ndim = x.ndim - 1
+  if ndim == 0:    # We use an indexing trick below that fails for 1D case.
+    ndim = 1
+    oldshape = x.shape
+    x.shape = (1, x.shape[0])
+
+  # The number of gaussians:
+  ngauss = np.shape(param)[0]
+  if ngauss == 1:
+    param = [param]
+
+  result = np.zeros(x[0].shape)
+  for k in np.arange(ngauss):  # Unpack parameters
+    pdim = len(param[k])
+    if pdim % 2:  # pdim is odd (when height is specified)
+      pdim = (pdim - 1) / 2
+      height = param[k][-1]
+    else:         # pdim is even
+      pdim = pdim / 2
+      height = None
+    width  = param[k][     :     pdim]
+    center = param[k][pdim : 2 * pdim]
+
+    if type(center) != np.ndarray:
+      center += np.zeros(ndim)
+    if type(width) != np.ndarray:
+      width  += np.zeros(ndim)
+    if height is None:
+      height = np.product(1.0 / (width * np.sqrt(2.0 * np.pi)))
+    ponent = 0.0
+    for i in np.arange(ndim):
+      ponent += ( (x[i] - center[i]) / width[i] )**2.0
+    result += height * np.exp(-0.5 * ponent)
+
+  if 'oldshape' in locals():  # reshape it back if necessary
+    x.shape = oldshape
+  return result
+
+
+def fitgaussians(y, x=None, guess=None, sigma=1.0):
+  """
+    Fit position and flux of a data image with gaussians, same sigma
+    is applied to all dispersions.
+    Parameters:
+    -----------
+    y : array_like
+        Array giving the values of the function.
+    x : array_like
+        (optional) Array (any shape) giving the abcissas of y (if
+        missing, uses np.indices(y).
+    guess : 2D-tuple, [[width1, center1, height1],
+                       [width2, center2, height2],
+                       ...                       ]
+        Tuple giving an initial guess of the Gaussian parameters for
+        the optimizer.  If supplied, x and y can be any shape and need
+        not be sorted.  See gaussian() for meaning and format of this
+        tuple.
+  """
+  if x is None:
+    x = np.indices(y.shape)[0]
+  else:
+    if (   ((x.ndim == 1) and (x.shape     != y.shape))
+        or ((x.ndim >  1) and (x.shape[1:] != y.shape))):
+      raise ValueError("x must give coordinates of points in y.")
+
+  # "ravel" the guess
+  ngauss = np.shape(guess)[0]
+  params = np.ravel(guess)
+  params = np.append(guess, sigma)
+
+  # Minimize residuals of the fit:
+  p, cov, info, mesg, success = so.leastsq(resids, params, args=(x,ngauss,y),
+                                           full_output=True)
+
+  sigma = p[-1]
+  p   = np.reshape(p  [0:-1], (ngauss, len(p  [0:-1])/ngauss))
+
+  iscov = 0 if cov==None else 1
+  extra = (p, sigma, iscov, cov, info, mesg)
+
+  return np.array(p[0,0:2]), extra
+
+
+def resids(param, x, ngauss, y):
+  sigma = param[-1]
+  param = np.reshape(param[0:-1], (ngauss, len(param[0:-1])/ngauss))
+
+  gss = []
+  for k in np.arange(ngauss):
+    gauss = np.append(sigma, np.append(sigma, param[k]))
+    gss = np.append(gss,gauss)
+  p = np.reshape(gss, (ngauss,len(gss)/ngauss))
+  return np.ravel(gaussians(x,param=p)-y)
