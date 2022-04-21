@@ -191,7 +191,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     samples = np.copy(samples)
     freenames=np.copy(freenames)
     ndim = len(freenames)+1 # One extra for the 1D histogram
-    fig = plt.figure(int('53{}'.format(str(0).zfill(len(str(lc.nchannel))))), figsize=(ndim*1.4, ndim*1.4))
+    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
     fig.clf()
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
