@@ -2,6 +2,7 @@ import numpy as np
 import george
 from george import kernels
 import celerite
+from copy import deepcopy
 from .Model import Model
 from ...lib.readEPF import Parameters
 
@@ -30,7 +31,9 @@ class GPModel(Model):
         self.kernel_input_names = kernel_inputs
         self.kernel_input_arrays = []
         self.nkernels = len(kernel_classes)
-        self.lc = lc
+        self.flux = np.array([lc.flux])
+        self.unc_fit = np.array([lc.unc])
+        self.time = lc.time
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
@@ -43,9 +46,10 @@ class GPModel(Model):
         self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
-
+        
         # Update coefficients
         self._parse_coeffs()
+        
 
     def _parse_coeffs(self):
         """Convert dict of coefficients into a list
@@ -61,20 +65,41 @@ class GPModel(Model):
         """
         # Parse keyword arguments as coefficients
         self.coeffs = {}
-        kernel_no = 0
-
-        for k, v in self.parameters.dict.items():
-            if k.startswith('A'):
-                self.coeffs['A'] = v[0]
-            if k.lower().startswith('m') and k[1:].isdigit():
-                self.coeffs[self.kernel_types[kernel_no]] = v[0]
-                kernel_no += 1
-            if k.startswith('WN'):
-                self.coeffs['WN'] = v[0]
-                if 'fixed' in v:
-                    self.fit_white_noise = False
-                else:
-                    self.fit_white_noise = True
+        if self.nchan > 1:
+            for i in range(self.nkernels):
+                self.coeffs[self.kernel_types[i]]=np.array([])
+            for k, v in self.parameters.dict.items():
+                if k.startswith('A'):
+                    remvisnum=k.split('_')
+                    self.coeffs['A_%i'%int(remvisnum[1])]  = v[0]
+                if k.lower().startswith('m') and k[2:].isdigit():
+                    remvisnum=k.split('_')
+                    no = int(remvisnum[0][1])-1
+                    if no < 0:
+                        raise AssertionError('Please start your metric with m1.')
+                    self.coeffs[self.kernel_types[no]].append(v[0])
+                if k.startswith('WN_'):
+                    remvisnum = k.split('_')
+                    self.coeffs['WN_%i'%int(remvisnum[1])] = v[0]
+                    if 'fixed' in v:
+                        self.fit_white_noise = False
+                    else:
+                        self.fit_white_noise = True
+        else:
+            kernel_no = 0
+            for k, v in self.parameters.dict.items():
+                if k.startswith('A'):
+                    self.coeffs['A'] = v[0]
+                if k.lower().startswith('m') and k[1:].isdigit():
+                    self.coeffs[self.kernel_types[kernel_no]] = v[0]
+                    kernel_no += 1
+                if k.startswith('WN'):
+                    self.coeffs['WN'] = v[0]
+                    if 'fixed' in v:
+                        self.fit_white_noise = False
+                    else:
+                        self.fit_white_noise = True
+                    
     
     def eval(self, fit, gp=None, **kwargs):
         """Compute GP with the given parameters
@@ -87,34 +112,34 @@ class GPModel(Model):
         predicted systematics model 
         """
         lcfinal=np.array([])
-        #for c in np.arange(self.nchan):
+        for c in np.arange(self.nchan):
             
-        # Create the GP object with current parameters
-        if gp==None:
-            gp = self.setup_GP()       
-        if self.nkernels > 1:
-            if self.gp_code_name == 'george':
-                gp.compute(self.kernel_input_arrays.T,self.lc.unc)
-                mu,cov = gp.predict(self.lc.flux-fit,self.kernel_input_arrays.T)
-            if self.gp_code_name == 'tinygp':
-                cond_gp = gp.condition(self.kernel_input_arrays.T,self.lc.unc).gp
-                mu, cov = cond_gp.loc, cond_gp.variance
-            if self.gp_code_name == 'celerite':
-                raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
-        else:
-            if self.gp_code_name == 'george':
-                gp.compute(self.kernel_input_arrays[0],self.lc.unc)
-                mu,cov = gp.predict(self.lc.flux-fit,self.kernel_input_arrays[0])
-            if self.gp_code_name == 'tinygp':
-                cond_gp = gp.condition(self.kernel_inputs[0],self.lc.unc).gp
-                mu, cov = cond_gp.loc, cond_gp.variance
-            if self.gp_code_name == 'celerite':
-                gp.compute(self.kernel_input_arrays[0], self.lc.unc)
-                mu, cov = gp.predict(self.lc.flux-fit, self.kernel_input_arrays[0], return_var=True)
-                mu += gp.kernel.jitter*np.ones(len(self.lc.flux))
-        #lcfinal = np.append(lcfinal, mu)
-           
-        return mu#, std
+            # Create the GP object with current parameters
+            if gp==None:
+                gp = self.setup_GP(c)       
+            if self.nkernels > 1:
+                if self.gp_code_name == 'george':
+                    gp.compute(self.kernel_input_arrays.T,self.unc_fit[c])
+                    mu,cov = gp.predict(self.flux[c]-fit[c],self.kernel_input_arrays.T)
+                if self.gp_code_name == 'tinygp':
+                    cond_gp = gp.condition(self.kernel_input_arrays.T,self.unc_fit[c]).gp
+                    mu, cov = cond_gp.loc, cond_gp.variance
+                if self.gp_code_name == 'celerite':
+                    raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
+            else:
+                if self.gp_code_name == 'george':
+                    gp.compute(self.kernel_input_arrays[0],self.unc_fit[c])
+                    mu,cov = gp.predict(self.flux[c]-fit[c],self.kernel_input_arrays[0])
+                if self.gp_code_name == 'tinygp':
+                    cond_gp = gp.condition(self.kernel_inputs[0],self.unc_fit[c]).gp
+                    mu, cov = cond_gp.loc, cond_gp.variance
+                if self.gp_code_name == 'celerite':
+                    gp.compute(self.kernel_input_arrays[0], self.unc_fit[c])
+                    mu, cov = gp.predict(self.flux[c]-fit[c], self.kernel_input_arrays[0], return_var=True)
+                    mu += gp.kernel.jitter*np.ones(len(self.flux[c]))
+            lcfinal = np.append(lcfinal, mu)
+
+        return lcfinal#, cov
 
     def set_inputs(self, normalise=False):
         """Setting up kernel inputs as array and standardizing them 
@@ -130,7 +155,7 @@ class GPModel(Model):
         kernel_inputs = []
         for i in self.kernel_input_names:
             if i == 'time':
-                x = self.lc.time
+                x = self.time
                 #x = np.linspace(0.10, 0.22, num=1287)
                 kernel_inputs.append(x)
                 #kernel_inputs.append(self.time)
@@ -145,7 +170,7 @@ class GPModel(Model):
             self.kernel_input_arrays = np.array(kernel_inputs)
         return
 
-    def setup_GP(self, **kwargs):
+    def setup_GP(self,channel, **kwargs):
         """Set up GP kernels and GP object.
         
         Parameters
@@ -158,31 +183,53 @@ class GPModel(Model):
 
         """
         
+        
         if len(self.kernel_input_arrays) == 0:
             self.set_inputs()
+        
+        if channel > 1:
+            for i in range(self.nkernels):
+                if i == 0:
+                    kernel = self.get_kernel(self.kernel_types[i],i, channel)
+                else:
+                    kernel += self.get_kernel(self.kernel_types[i],i, channel)
 
-        for i in range(self.nkernels):
-            if i == 0:
-                kernel = self.get_kernel(self.kernel_types[i],i)
-            else:
-                kernel += self.get_kernel(self.kernel_types[i],i)
-        
-        if self.gp_code_name == 'celerite':
-            kernel = celerite.terms.RealTerm(log_a = self.coeffs['A'], log_c = 0)*kernel
-            kernel += celerite.terms.JitterTerm(log_sigma = self.coeffs['WN'])
-            gp = celerite.GP(kernel, mean=0, fit_mean=False)
-        
-        if self.gp_code_name == 'george':
-            kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
-            gp = george.GP(kernel, white_noise=self.coeffs['WN'],fit_white_noise=self.fit_white_noise, mean=0, fit_mean=False)#, solver=george.solvers.HODLRSolver)
-            
-        if self.gp_code_name == 'tinygp':
-            kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
-            gp = tinygp.GaussianProcess(kernel, diag=self.coeffs['WN']**2, mean=0)
+            if self.gp_code_name == 'celerite':
+                kernel = celerite.terms.RealTerm(log_a = self.coeffs['A_%i'%channel], log_c = 0)*kernel
+                kernel += celerite.terms.JitterTerm(log_sigma = self.coeffs['WN_%i'%channel])
+                gp = celerite.GP(kernel, mean=0, fit_mean=False)
+
+            if self.gp_code_name == 'george':
+                kernel = kernels.ConstantKernel(self.coeffs['A_%i'%channel],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
+                gp = george.GP(kernel, white_noise=self.coeffs['WN_%i'%channel],fit_white_noise=self.fit_white_noise, mean=0, fit_mean=False)#, solver=george.solvers.HODLRSolver)
+
+            if self.gp_code_name == 'tinygp':
+                kernel = kernels.ConstantKernel(self.coeffs['A_%i'%channel],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
+                gp = tinygp.GaussianProcess(kernel, diag=self.coeffs['WN_%i'%channel]**2, mean=0)
+                
+        else:
+            for i in range(self.nkernels):
+                if i == 0:
+                    kernel = self.get_kernel(self.kernel_types[i],i)
+                else:
+                    kernel += self.get_kernel(self.kernel_types[i],i)
+
+            if self.gp_code_name == 'celerite':
+                kernel = celerite.terms.RealTerm(log_a = self.coeffs['A'], log_c = 0)*kernel
+                kernel += celerite.terms.JitterTerm(log_sigma = self.coeffs['WN'])
+                gp = celerite.GP(kernel, mean=0, fit_mean=False)
+
+            if self.gp_code_name == 'george':
+                kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
+                gp = george.GP(kernel, white_noise=self.coeffs['WN'],fit_white_noise=self.fit_white_noise, mean=0, fit_mean=False)#, solver=george.solvers.HODLRSolver)
+
+            if self.gp_code_name == 'tinygp':
+                kernel = kernels.ConstantKernel(self.coeffs['A'],ndim=self.nkernels,axes=np.arange(self.nkernels))*kernel
+                gp = tinygp.GaussianProcess(kernel, diag=self.coeffs['WN']**2, mean=0)
 
         return gp
 
-    def loglikelihood(self, fit):
+    def loglikelihood(self, fit, unc_fit):
         """Compute log likelihood of GP
         Parameters 
         ----------
@@ -192,32 +239,42 @@ class GPModel(Model):
         -------
         log likelihood of the GP evaluated by george/tinygp
         """
-        gp = self.setup_GP()
+        #update uncertainty
+        self.unc_fit = np.array(unc_fit)
         
-        if self.gp_code_name == 'celerite':
-            if self.nkernels > 1:
-                raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
-            else:
-                gp.compute(self.kernel_input_arrays[0], self.lc.unc)
-            loglike = gp.log_likelihood(self.lc.flux - fit)
+        logL = []
         
-        if self.gp_code_name == 'george':
-            if self.nkernels > 1:
-                gp.compute(self.kernel_input_arrays.T,self.lc.unc)
-            else:
-                gp.compute(self.kernel_input_arrays[0],self.lc.unc)
-            loglike = gp.lnlikelihood(self.lc.flux - fit,quiet=True)
+        for c in np.arange(self.nchan):
+            gp = self.setup_GP(c)
+        
+            if self.gp_code_name == 'celerite':
+                if self.nkernels > 1:
+                    raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
+                else:
+                    gp.compute(self.kernel_input_arrays[0], self.unc_fit[c])
+                logL.append(gp.log_likelihood(self.flux[c] - fit[c]))
 
-        if self.gp_code_name == 'tinygp':
-            if self.nkernels > 1:
-                loglike = gp.condition(self.lc.flux - fit, X_test = self.kernel_input_arrays.T).log_probability
-            else:
-                loglike = gp.condition(self.lc.flux - fit, X_test = self.kernel_input_arrays[0]).log_probability  
-        return loglike
+            if self.gp_code_name == 'george':
+                if self.nkernels > 1:
+                    gp.compute(self.kernel_input_arrays.T,self.unc_fit[c])
+                else:
+                    gp.compute(self.kernel_input_arrays[0],self.unc_fit[c])
+                logL.append(gp.lnlikelihood(self.flux[c] - fit[c],quiet=True))
 
-    def get_kernel(self, kernel_name, i):
+            if self.gp_code_name == 'tinygp':
+                if self.nkernels > 1:
+                    logL.append(gp.condition(self.flux[c] - fit[c], X_test = self.kernel_input_arrays.T).log_probability)
+                else:
+                    logL.append(gp.condition(self.flux[c] - fit[c], X_test = self.kernel_input_arrays[0]).log_probability) 
+                    
+        return sum(logL)
+
+    def get_kernel(self, kernel_name, i, channel=None):
         """get individual kernels"""
-        metric = ( 1./np.exp(self.coeffs[kernel_name]) )**2
+        if channel == None:
+            metric = ( 1./np.exp(self.coeffs[kernel_name]) )**2
+        else:
+            metric = ( 1./np.exp(self.coeffs[kernel_name][channel]) )**2
         if self.gp_code_name == 'george':
             if kernel_name == 'Matern32':
                 kernel = kernels.Matern32Kernel(metric,ndim=self.nkernels,axes=i)
