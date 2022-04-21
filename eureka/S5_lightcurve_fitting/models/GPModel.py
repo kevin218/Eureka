@@ -84,7 +84,7 @@ class GPModel(Model):
                         raise AssertionError('Please start your metric enumeration with m1.')
                     self.coeffs[self.kernel_types[no]].append(v[0])
                 else:
-                    no = int(remvisnum[1])-1
+                    no = int(remvisnum[0][1])-1
                     self.coeffs[self.kernel_types[no]].append(v[0])
             if k.startswith('WN'):
                 remvisnum = k.split('_')
@@ -139,7 +139,7 @@ class GPModel(Model):
                 if self.gp_code_name == 'celerite':
                     gp.compute(self.kernel_input_arrays[0], c_unc_fit)
                     mu, cov = gp.predict(c_flux- c_fit, self.kernel_input_arrays[0], return_var=True)
-                    mu += gp.kernel.jitter*np.ones(len(self.flux[c]))
+                    mu += gp.kernel.jitter*np.ones(len(c_flux))
             lcfinal = np.append(lcfinal, mu)
 
         return lcfinal#, cov
@@ -300,7 +300,7 @@ class GPModel(Model):
                 
         if self.gp_code_name == 'celerite':
             if kernel_name == 'Matern32':
-                kernel = celerite.terms.Matern32Term(log_sigma = 1, log_rho = metric, eps=1e-12)
+                kernel = celerite.terms.Matern32Term(log_sigma = 1, log_rho = metric)
             else:
                 raise AssertionError('Celerite currently only supports a Matern32 kernel')
 
