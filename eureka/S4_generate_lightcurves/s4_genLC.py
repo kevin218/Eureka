@@ -225,9 +225,9 @@ def genlc(eventlabel, ecf_path='./', s3_meta=None):
                     meta.lcdata_white[0], outliers = clipping.clip_outliers(meta.lcdata_white[0], log, np.mean([meta.wave_min, meta.wave_max]), meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
                     log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
 
-                # Plot each spectroscopic light curve
+                # Plot the white-light light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, meta.time, 0, white=True)
+                    plots_s4.binned_lightcurve(meta, 0, white=True)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
