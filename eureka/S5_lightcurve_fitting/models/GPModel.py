@@ -31,8 +31,8 @@ class GPModel(Model):
         self.kernel_input_names = kernel_inputs
         self.kernel_input_arrays = []
         self.nkernels = len(kernel_classes)
-        self.flux = np.array([lc.flux])
-        self.unc_fit = np.array([lc.unc])
+        self.flux = lc.flux
+        self.unc_fit = lc.unc
         self.time = lc.time
 
         # Check for Parameters instance
@@ -113,29 +113,32 @@ class GPModel(Model):
         lcfinal=np.array([])
         
         for c in np.arange(self.nchan):
-            
+            #get flux and uncertainties for current channel
+            c_flux = self.flux[len(self.time)*c:len(self.time)*(c+1)]
+            c_fit = fit[len(self.time)*c:len(self.time)*(c+1)]
+            c_unc_fit = self.unc_fit[len(self.time)*c:len(self.time)*(c+1)]
             # Create the GP object with current parameters
             if gp==None:
                 gp = self.setup_GP(c)       
             if self.nkernels > 1:
                 if self.gp_code_name == 'george':
-                    gp.compute(self.kernel_input_arrays.T,self.unc_fit[c])
-                    mu,cov = gp.predict(self.flux[c]-fit[c],self.kernel_input_arrays.T)
+                    gp.compute(self.kernel_input_arrays.T,c_unc_fit)
+                    mu,cov = gp.predict(c_flux- c_fit,self.kernel_input_arrays.T)
                 if self.gp_code_name == 'tinygp':
-                    cond_gp = gp.condition(self.kernel_input_arrays.T,self.unc_fit[c]).gp
+                    cond_gp = gp.condition(self.kernel_input_arrays.T,c_unc_fit).gp
                     mu, cov = cond_gp.loc, cond_gp.variance
                 if self.gp_code_name == 'celerite':
                     raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
             else:
                 if self.gp_code_name == 'george':
-                    gp.compute(self.kernel_input_arrays[0],self.unc_fit[c])
-                    mu,cov = gp.predict(self.flux[c]-fit[c],self.kernel_input_arrays[0])
+                    gp.compute(self.kernel_input_arrays[0],c_unc_fit)
+                    mu,cov = gp.predict(c_flux- c_fit,self.kernel_input_arrays[0])
                 if self.gp_code_name == 'tinygp':
-                    cond_gp = gp.condition(self.kernel_inputs[0],self.unc_fit[c]).gp
+                    cond_gp = gp.condition(self.kernel_inputs[0],c_unc_fit).gp
                     mu, cov = cond_gp.loc, cond_gp.variance
                 if self.gp_code_name == 'celerite':
-                    gp.compute(self.kernel_input_arrays[0], self.unc_fit[c])
-                    mu, cov = gp.predict(self.flux[c]-fit[c], self.kernel_input_arrays[0], return_var=True)
+                    gp.compute(self.kernel_input_arrays[0], c_unc_fit)
+                    mu, cov = gp.predict(c_flux- c_fit, self.kernel_input_arrays[0], return_var=True)
                     mu += gp.kernel.jitter*np.ones(len(self.flux[c]))
             lcfinal = np.append(lcfinal, mu)
 
@@ -187,7 +190,7 @@ class GPModel(Model):
         if len(self.kernel_input_arrays) == 0:
             self.set_inputs()
         
-        if channel > 1:
+        if self.nchan > 1:
             for i in range(self.nkernels):
                 if i == 0:
                     kernel = self.get_kernel(self.kernel_types[i],i, channel)
@@ -240,32 +243,35 @@ class GPModel(Model):
         log likelihood of the GP evaluated by george/tinygp
         """
         #update uncertainty
-        self.unc_fit = np.array(unc_fit)
-        
+        self.unc_fit = unc_fit
+
         logL = []
         
         for c in np.arange(self.nchan):
             gp = self.setup_GP(c)
+            c_flux = self.flux[len(self.time)*c:len(self.time)*(c+1)]
+            c_fit = fit[len(self.time)*c:len(self.time)*(c+1)]
+            c_unc_fit = self.unc_fit[len(self.time)*c:len(self.time)*(c+1)]
         
             if self.gp_code_name == 'celerite':
                 if self.nkernels > 1:
                     raise AssertionError('Celerite cannot compute multi-dimensional GPs, please choose a different GP code')
                 else:
-                    gp.compute(self.kernel_input_arrays[0], self.unc_fit[c])
-                logL.append(gp.log_likelihood(self.flux[c] - fit[c]))
+                    gp.compute(self.kernel_input_arrays[0], c_unc_fit)
+                logL.append(gp.log_likelihood(c_flux - c_fit))
 
             if self.gp_code_name == 'george':
                 if self.nkernels > 1:
-                    gp.compute(self.kernel_input_arrays.T,self.unc_fit[c])
+                    gp.compute(self.kernel_input_arrays.T,c_unc_fit)
                 else:
-                    gp.compute(self.kernel_input_arrays[0],self.unc_fit[c])
-                logL.append(gp.lnlikelihood(self.flux[c] - fit[c],quiet=True))
+                    gp.compute(self.kernel_input_arrays[0],c_unc_fit)
+                logL.append(gp.lnlikelihood(c_flux - c_fit,quiet=True))
 
             if self.gp_code_name == 'tinygp':
                 if self.nkernels > 1:
-                    logL.append(gp.condition(self.flux[c] - fit[c], X_test = self.kernel_input_arrays.T).log_probability)
+                    logL.append(gp.condition(c_flux - c_fit, X_test = self.kernel_input_arrays.T).log_probability)
                 else:
-                    logL.append(gp.condition(self.flux[c] - fit[c], X_test = self.kernel_input_arrays[0]).log_probability) 
+                    logL.append(gp.condition(c_flux - c_fit, X_test = self.kernel_input_arrays[0]).log_probability) 
                     
         return sum(logL)
 
