@@ -26,15 +26,15 @@ def binned_lightcurve(meta, i, white=False):
     if white:
         fig.suptitle(f"White-light Bandpass = %.3f - %.3f" % (meta.wave_min, meta.wave_max))
         # Normalized light curve
-        norm_lcdata = meta.lcdata_white[0] / meta.lcdata_white[0, -1]
-        norm_lcerr = meta.lcerr_white[0] / meta.lcdata_white[0, -1]
+        norm_lcdata = meta.lcdata_white[0] / np.ma.mean(meta.lcdata_white[i,:])
+        norm_lcerr = meta.lcerr_white[0] / np.ma.mean(meta.lcdata_white[i,:])
         i = 0
         fname_tag = 'white'
     else:
         fig.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
         # Normalized light curve
-        norm_lcdata = meta.lcdata[i] / meta.lcdata[i, -1]
-        norm_lcerr = meta.lcerr[i] / meta.lcdata[i, -1]
+        norm_lcdata = meta.lcdata[i] / np.ma.mean(meta.lcdata[i,:])
+        norm_lcerr = meta.lcerr[i] / np.ma.mean(meta.lcdata[i,:])
         ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
         fname_tag = f'ch{ch_number}'
     
@@ -99,12 +99,11 @@ def lc_driftcorr(meta, wave_1d, optspec):
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(meta.mad_s4).astype(int)) + " ppm")
-    if meta.nspecchan > 1:
-        # Insert vertical dashed lines at spectroscopic channel edges
-        secax = plt.gca().secondary_xaxis('top')
-        xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
-        secax.set_xticks(xticks, np.round(xticks, 6), rotation=90, fontsize='xx-small')
-        plt.vlines(xticks,0,n_int,'0.3','dashed')
+    # Insert vertical dashed lines at spectroscopic channel edges
+    secax = plt.gca().secondary_xaxis('top')
+    xticks = np.unique(np.concatenate([meta.wave_low,meta.wave_hi]))
+    secax.set_xticks(xticks, np.round(xticks, 6), rotation=90, fontsize='xx-small')
+    plt.vlines(xticks,0,n_int,'0.3','dashed')
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
