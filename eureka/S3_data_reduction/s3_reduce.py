@@ -225,7 +225,6 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
-                    #data.attrs['wave_1d'] = data.attrs['wave_2d'][meta.src_ypos]
                     data['wave_1d'] = (['x'], data.wave_2d[meta.src_ypos].values)
                     data['wave_1d'].attrs['wave_units'] = data.wave_2d.attrs['wave_units']
 
@@ -256,7 +255,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 log.writelog('  Performing background outlier rejection', mute=(not meta.verbose))
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
-                data = inst.flag_bg(data, meta) #FINDME: This step seems slower than usual
+                data = inst.flag_bg(data, meta)
 
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
