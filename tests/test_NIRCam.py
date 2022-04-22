@@ -34,9 +34,9 @@ def test_NIRCam(capsys):
     reload(s4)
     reload(s5)
     reload(s6)
-    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
-    s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
-    s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
+    s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
     s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)
 
     # run assertions for S3
