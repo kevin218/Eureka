@@ -106,28 +106,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
-    # Save the covariance matrix in case it's needed to estimate step size for a sampler
-    # FINDME
-    # Commented out for now because op.least_squares() doesn't provide covariance matrix
-    # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
-    # model_lc = model.eval()
-    # if results[1] is not None:
-    #     residuals = (lc.flux - model_lc)
-    #     cov_mat = results[1]*np.var(residuals)
-    # else:
-    #     # Sometimes lsq will fail to converge and will return a None covariance matrix
-    #     cov_mat = None
-    cov_mat = None
-    best_model.__setattr__('cov_mat',cov_mat)
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter=calling_function)
-
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
     
@@ -145,6 +123,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             log.writelog('{0}: {1}'.format(freenames[i], fit_params[i]))
     log.writelog('')
 
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter=calling_function)
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3 and calling_function=='lsq':
         # This plot is only really useful if you're actually using the lsq fitter, otherwise don't make it
@@ -154,6 +136,23 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     if meta.isplots_S5 >= 3 and calling_function=='lsq':
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
+
+    # Save the covariance matrix in case it's needed to estimate step size for a sampler
+    # FINDME
+    # Commented out for now because op.least_squares() doesn't provide covariance matrix
+    # Need to compute using Jacobian matrix instead (hess_inv = (J.T J)^{-1})
+    # model_lc = model.eval()
+    # if results[1] is not None:
+    #     residuals = (lc.flux - model_lc)
+    #     cov_mat = results[1]*np.var(residuals)
+    # else:
+    #     # Sometimes lsq will fail to converge and will return a None covariance matrix
+    #     cov_mat = None
+    cov_mat = None
+    best_model.__setattr__('cov_mat',cov_mat)
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -328,22 +327,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     except:
         log.writelog("WARNING: Unable to estimate the autocorrelation time!", mute=(not meta.verbose))
 
-    if meta.isplots_S5 >= 3:
-        plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)
-        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', burnin=False)
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='emcee')
-
-    #Plot GP fit + components
-    if model.GP and meta.isplots_S5 >= 1:
-        plots.plot_GP_components(lc, model, meta, fitter='emcee')
-
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
@@ -362,6 +345,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
         else:
             log.writelog('{0}: {1} (+{2}, -{3})'.format(freenames[i], fit_params[i], upper_errs[i], lower_errs[i]))
     log.writelog('')
+
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter='emcee')
+
+    #Plot GP fit + components
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='emcee')
     
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -371,9 +362,16 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
+    if meta.isplots_S5 >= 3:
+        plots.plot_chain(sampler.get_chain(), lc, meta, freenames, fitter='emcee', burnin=True, nburn=meta.run_nburn)
+        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta, freenames, fitter='emcee', burnin=False)
+
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
@@ -645,22 +643,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
-    # plot using corner.py
-    if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
-    #Plot GP fit + components
-    if model.GP and meta.isplots_S5 >= 1:
-        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
-
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
@@ -680,6 +662,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             log.writelog('{0}: {1} (+{2}, -{3})'.format(freenames[i], fit_params[i], upper_errs[i], lower_errs[i]))
     log.writelog('')
 
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter='dynesty')
+    
+    #Plot GP fit + components
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='dynesty')
@@ -688,6 +678,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='dynesty')
 
+    # plot using corner.py
+    if meta.isplots_S5 >= 5:
+        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red',chi2red)
     best_model.__setattr__('fit_params',fit_params)
 
