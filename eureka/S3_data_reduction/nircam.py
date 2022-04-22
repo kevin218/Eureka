@@ -65,10 +65,8 @@ def read(filename, data, meta):
     data['err']  = xrio.makeFluxLikeDA( err, time, flux_units, time_units, name='err')
     data['dq']   = xrio.makeFluxLikeDA(  dq, time,     "None", time_units, name='dq')
     data['v0']   = xrio.makeFluxLikeDA(  v0, time, flux_units, time_units, name='v0')
-    #data['wave'] = xrio.makeWaveLikeDA(wave[0], wave[0], wave_units, wave_units, name='wave')
     data['wave_2d'] = (['y','x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
-    #data.attrs['wave_2d'] = wave_2d
 
     return data, meta
 
