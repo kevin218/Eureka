@@ -201,7 +201,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['xtick.labelsize'] = 10
     rcParams['ytick.labelsize'] = 10
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84], max_n_ticks=3,
-                        labels=freenames, show_titles=True, title_fmt='.2',
+                        labels=freenames, show_titles=True, title_fmt='.3',
                         title_kwargs={"fontsize": 10}, label_kwargs={"fontsize": 10}, fontsize=10, labelpad=0.25)
     ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
     fname = f'figs/fig5501_ch{ch_number}_corner_{fitter}'+figure_filetype
