@@ -26,7 +26,7 @@
 import os, glob
 import time as time_pkg
 import numpy as np
-import astreus.xarrayIO as xrio
+import astraeus.xarrayIO as xrio
 from astropy.io import fits
 from tqdm import tqdm
 from . import optspex

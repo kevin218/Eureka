@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from astropy.io import fits
+import astraeus.xarrayIO as xrio
 from . import nircam
 
 
@@ -24,79 +25,90 @@ def read(filename, data, meta):
     Notes
     -----
     History:
-    
+
     - Nov 2012 Kevin Stevenson
         Initial Version
     - May 2021  Kevin Stevenson
-        Updated for NIRCam          
+        Updated for NIRCam
     - Jun 2021  Taylor Bell
-        Updated docs for MIRI        
+        Updated docs for MIRI
     - Jun 2021  Sebastian Zieba
-        Updated for MIRI 
+        Updated for MIRI
     - Apr 2022  Sebastian Zieba
         Updated wavelength array
+    - Apr 21, 2022 Kevin Stevenson
+        Convert to using Xarray Dataset
     '''
     assert isinstance(filename, str)
 
     hdulist = fits.open(filename)
 
     # Load main and science headers
-    data.filename = filename
-    data.mhdr    = hdulist[0].header
-    data.shdr    = hdulist['SCI',1].header
+    data.attrs['filename'] = filename
+    data.attrs['mhdr']     = hdulist[0].header
+    data.attrs['shdr']     = hdulist['SCI',1].header
+    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+    data.attrs['intend']   = data.attrs['mhdr']['INTEND']
 
-    data.intstart    = data.mhdr['INTSTART']
-    data.intend      = data.mhdr['INTEND']
-    data.data = hdulist['SCI', 1].data
-    data.err = hdulist['ERR', 1].data
-    data.dq = hdulist['DQ', 1].data
-
+    sci     = hdulist['SCI',1].data
+    err     = hdulist['ERR',1].data
+    dq      = hdulist['DQ',1].data
+    v0      = hdulist['VAR_RNOISE', 1].data
     # If wavelengths are all zero --> use hardcoded wavelengths
     # Otherwise use the wavelength array from the header
     if np.all(hdulist['WAVELENGTH', 1].data == 0):
         if meta.firstFile:
             print('  WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
                   'because they are not in the .fits files themselves')
-        data.wave = np.tile(wave_MIRI_hardcoded(),(data.data.shape[2],1))[:,::-1]
+        wave_2d = np.tile(wave_MIRI_hardcoded(),(sci.shape[2],1))[:,::-1]
     else:
-        data.wave = hdulist['WAVELENGTH', 1].data
-    data.v0 = hdulist['VAR_RNOISE', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.intstart - 1:data.intend]
+        wave_2d = hdulist['WAVELENGTH', 1].data
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
     if len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
             print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
                   'because they are not in the .fits files themselves')
-        if 'new_drift' in data.filename:
+        if 'new_drift' in data.attrs['filename']:
             # Time array for the newest MIRISIM observations
-            data.time = np.linspace(0, 47.712*(1849)/3600/24, 1849, endpoint=True)[data.intstart - 1:data.intend-1]
-        elif data.mhdr['EFFINTTM']==10.3376:
+            time = np.linspace(0, 47.712*(1849)/3600/24, 1849, endpoint=True)[data.attrs['intstart']-1:data.attrs['intend']]
+        elif data.attrs['mhdr']['EFFINTTM']==10.3376:
             # There is no time information in the old simulated MIRI data
             # As a placeholder, I am creating timestamps indentical to the ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt converted to days
-            data.time = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.intstart - 1:data.intend]
-        elif data.mhdr['EFFINTTM']==47.712:
+            time = np.linspace(0, 17356.28742796742/3600/24, 1680, endpoint=True)[data.attrs['intstart']-1:data.attrs['intend']]
+        elif data.attrs['mhdr']['EFFINTTM']==47.712:
             # A new manually created time array for the new MIRI simulations
-            data.time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44, endpoint=True)[data.intstart - 1:data.intend-1] # Need to subtract an extra 1 from intend for these data
+            time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44, endpoint=True)[data.attrs['intstart']-1:data.attrs['intend']-1] # Need to subtract an extra 1 from intend for these data
     else:
-        data.time = int_times['int_mid_BJD_TDB']
+        time = int_times['int_mid_BJD_TDB']
 
-    meta.time_units = 'BJD_TDB'
+    # Record units
+    flux_units  = data.attrs['shdr']['BUNIT']
+    time_units = 'BJD_TDB'
+    wave_units = 'microns'
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code
     # Having wavelengths increase from left to right on the rotated frame makes life easier
-    if data.shdr['DISPAXIS']==2:
-        data.data    = np.swapaxes(data.data, 1, 2)[:,:,::-1]
-        data.err     = np.swapaxes(data.err , 1, 2)[:,:,::-1]
-        data.dq      = np.swapaxes(data.dq  , 1, 2)[:,:,::-1]
+    if data.attrs['shdr']['DISPAXIS']==2:
+        sci     = np.swapaxes(sci, 1, 2)[:,:,::-1]
+        err     = np.swapaxes(err , 1, 2)[:,:,::-1]
+        dq      = np.swapaxes(dq  , 1, 2)[:,:,::-1]
+        v0      = np.swapaxes(v0  , 1, 2)[:,:,::-1]
         if not np.all(hdulist['WAVELENGTH', 1].data == 0):
-            data.wave    = np.swapaxes(data.wave, 0, 1)[:,:,::-1]
-        data.v0      = np.swapaxes(data.v0  , 1, 2)[:,:,::-1]
+            wave_2d    = np.swapaxes(wave_2d, 0, 1)[:,:,::-1]
         if meta.firstFile:
             # If not, we've already done this and don't want to switch it back
             temp         = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
-            meta.xwindow = data.data.shape[2] - temp[::-1]
+            meta.xwindow = sci.shape[2] - temp[::-1]
+
+    data['flux'] = xrio.makeFluxLikeDA( sci, time, flux_units, time_units, name='flux')
+    data['err']  = xrio.makeFluxLikeDA( err, time, flux_units, time_units, name='err')
+    data['dq']   = xrio.makeFluxLikeDA(  dq, time,     "None", time_units, name='dq')
+    data['v0']   = xrio.makeFluxLikeDA(  v0, time, flux_units, time_units, name='v0')
+    data['wave_2d'] = (['y','x'], wave_2d)
+    data['wave_2d'].attrs['wave_units'] = wave_units
 
     return data, meta
 
@@ -112,7 +124,7 @@ def wave_MIRI_hardcoded():
     Notes
     -----
     History:
-            
+
     - Apr 2022  Sebastian Zieba
         Initial Version
     '''
@@ -230,4 +242,3 @@ def fit_bg(dataim, datamask, n, meta, isplots=False):
     Uses the code written for NIRCam which works for MIRI as long as MIRI data gets rotated.
     '''
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
-

@@ -1,7 +1,7 @@
 # NIRCam specific rountines go here
 import numpy as np
 from astropy.io import fits
-import astreus.xarrayIO as xrio
+import astraeus.xarrayIO as xrio
 from . import sigrej, background
 
 # Read FITS file from JWST's NIRCam instrument
