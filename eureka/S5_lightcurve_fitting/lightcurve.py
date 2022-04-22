@@ -210,7 +210,7 @@ class LightCurve(m.Model):
             fig.tight_layout()
 
             if self.white:
-                fname_tag += 'white'
+                fname_tag = 'white'
             else:
                 ch_number = str(channel).zfill(len(str(self.nchannel)))
                 fname_tag = f'ch{ch_number}'

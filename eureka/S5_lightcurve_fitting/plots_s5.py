@@ -89,7 +89,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         fig.align_ylabels(ax)
 
         if lc.white:
-            fname_tag += 'white'
+            fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
@@ -159,7 +159,7 @@ def plot_rms(lc, model, meta, fitter):
         plt.legend()
 
         if lc.white:
-            fname_tag += 'white'
+            fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
@@ -211,11 +211,11 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['xtick.labelsize'] = 10
     rcParams['ytick.labelsize'] = 10
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84], max_n_ticks=3,
-                        labels=freenames, show_titles=True, title_fmt='.2',
+                        labels=freenames, show_titles=True, title_fmt='.3',
                         title_kwargs={"fontsize": 10}, label_kwargs={"fontsize": 10}, fontsize=10, labelpad=0.25)
 
     if lc.white:
-        fname_tag += 'white'
+        fname_tag = 'white'
     else:
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         fname_tag = f'ch{ch_number}'
@@ -301,7 +301,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
         fig.tight_layout(h_pad=0.0)
 
         if lc.white:
-            fname_tag += 'white'
+            fname_tag = 'white'
         else:
             ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
@@ -375,7 +375,7 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/Uncertainty", fontsize=14)
         if lc.white:
-            fname_tag += 'white'
+            fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
@@ -459,7 +459,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
         if lc.white:
-            fname_tag += 'white'
+            fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
