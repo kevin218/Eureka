@@ -15,6 +15,7 @@ from astropy.io import fits
 import os
 
 from ..lib import clipping
+from ..lib.plots import figure_filetype
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
@@ -247,7 +248,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+'.png')
+                    plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+figure_filetype, dpi=300)
                     plt.pause(0.01)
 
     if isrotate == 1:
@@ -355,7 +356,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                         plt.title(str(j))
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
-                        plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+'.png')
+                        plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+figure_filetype, dpi=300)
                         plt.pause(0.01)
 
                     # Calculate residuals

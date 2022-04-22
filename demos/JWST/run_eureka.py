@@ -1,11 +1,15 @@
 import sys
 sys.path.insert(0, '../../')
+import eureka.lib.plots
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4
 import eureka.S5_lightcurve_fitting.s5_fit as s5
 import eureka.S6_planet_spectra.s6_spectra as s6
+
+# Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
+eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
 
 # eventlabel = 'imaging_template'
 # eventlabel = 'miri_lrs_template'

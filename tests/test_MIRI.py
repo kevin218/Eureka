@@ -7,6 +7,7 @@ from importlib import reload
 sys.path.insert(0, '../')
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
+import eureka.lib.plots
 try:
     from eureka.S1_detector_processing import s1_process as s1
     from eureka.S2_calibrations import s2_calibrate as s2
@@ -18,6 +19,8 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
 def test_MIRI(capsys):
+    # Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
+    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
     
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:

@@ -1,7 +1,9 @@
-from matplotlib import rc, rcdefaults, rcParams
+from matplotlib import rcdefaults, rcParams
 
+# Default figure file type
+figure_filetype = '.png'
 
-def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
+def set_rc(style='preserve', usetex=False, filetype='.png', from_scratch=False, **kwargs):
     """Function to adjust matplotlib rcParams for plotting procedures.
 
     Parameters
@@ -14,10 +16,12 @@ def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
         By default uses 'preserve'.
     usetex : bool, optional
         Do you want to use LaTeX fonts (which requires LaTeX to be installed), by default False
+    filetype : str
+        The file type that all Eureka figures should be saved as (e.g. .png, .pdf).
     from_scratch : bool, optional
         Should the rcParams first be set to rcdefaults? By default False
     **kwargs : dict, optional
-        Any additional parameters to passed to the 'font' rcParams group.
+        Any additional parameters to be passed to rcParams.update.
 
     Raises
     ------
@@ -35,16 +39,15 @@ def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
 
     # Apply the desired style...
     if style == 'custom':
-        # Custom user font, kwargs must be from the 'font' rcParams group at the moment. 
-        # https://matplotlib.org/stable/api/matplotlib_configuration_api.html#matplotlib.rcParams
-        rc('font', **kwargs)
+        rcParams.update(**kwargs)
     elif style == 'eureka':
         # Apply default Eureka! font settings.
-        family='sans-serif'
-        font='Helvetica'
-        fontsize=16
-        rc('font', **{'family': family, family: [font], 'size': fontsize})
-        params = {'legend.fontsize': 11}
+        family = 'serif'
+        fontfamily = ['Computer Modern Roman', *rcParams['font.serif']]
+        fontsize = 14
+        params = {'font.family': [family,], 'font.'+family: fontfamily, 'font.size': fontsize,
+                  'legend.fontsize': 11, 'mathtext.fontset': 'dejavuserif', 'mathtext.it': 'serif:italic',
+                  'mathtext.rm': 'serif', 'mathtext.sf': 'serif', 'mathtext.bf': 'serif:bold'}
         rcParams.update(params)
     elif style == 'default':
         # Use default matplotlib settings
@@ -54,4 +57,9 @@ def set_rc(style='preserve', usetex=False, from_scratch=False, **kwargs):
     else:
         raise ValueError('Input style must be one of: "custom", "eureka", "preserve", or "default".')
 
-    rc('text', usetex=usetex) # TeX fonts may not work on all machines. 
+    # TeX fonts may not work on all machines. 
+    rcParams.update({'text.usetex': usetex})
+
+    # Update the figure filetype
+    global figure_filetype
+    figure_filetype = filetype

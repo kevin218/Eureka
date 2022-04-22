@@ -7,6 +7,7 @@ from importlib import reload
 sys.path.insert(0, '../')
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
+import eureka.lib.plots
 try:
     from eureka.S2_calibrations import s2_calibrate as s2
 except ModuleNotFoundError as e:
@@ -17,6 +18,9 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
 def test_NIRCam(capsys):
+    # Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
+    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
+
     with capsys.disabled():
         # is able to display any message without failing a test
         # useful to leave messages for future users who run the tests
