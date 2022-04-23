@@ -6,14 +6,14 @@ from astropy.convolution import Box1DKernel, convolve
 from astropy.stats import sigma_clip
 
 __all__ = ['clip_outliers', 'gauss_removal']
- 
+
 def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, boundary='extend', fill_value='mask', verbose=False):
     '''Find outliers in 1D time series.
-  
+
     Be careful when using this function on a time-series with known astrophysical variations. The variable
     box_width should be set to be significantly smaller than any astrophysical variation timescales otherwise
     these signals may be clipped.
-   
+
     Parameters
     ----------
     data: ndarray (1D, float)
@@ -30,16 +30,16 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, boun
         The number of iterations of sigma clipping that should be performed.
     fill_value: string or float
         Either the string 'mask' to mask the outlier values, 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
-  
+
     Returns
     -------
     data:   ndarray (1D, boolean)
         An array with the same dimensions as the input array with outliers replaced with fill_value.
-  
+
     Notes
     -----
     History:
-  
+
     - Jan 29-31, 2022 Taylor Bell
         Initial version, added logging
     '''
@@ -52,10 +52,10 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, boun
     # Sigma clip residuals to find bad points in data
     residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, cenfunc=np.ma.median)
     outliers = np.ma.getmaskarray(residuals)
-  
+
     if np.any(outliers):
-        log.writelog('Identified {} outliers for wavelength {}'.format(np.sum(outliers), wavelength), mute=(not verbose))
-  
+        log.writelog('Identified {} outlier(s) at {:.4f} {}.'.format(np.sum(outliers), wavelength.values, wavelength.attrs['wave_units']), mute=(not verbose))
+
     # Replace clipped data
     if fill_value=='mask':
         data = np.ma.masked_where(outliers, data)
@@ -63,12 +63,12 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5, boun
         data = replace_moving_mean(data, outliers, kernel)
     else:
         data[outliers] = fill_value
-  
+
     return data, np.sum(outliers)
- 
+
 def replace_moving_mean(data, outliers, kernel):
     '''Replace clipped values with the mean from a moving mean.
-   
+
     Parameters
     ----------
     data: ndarray (1D, float)
@@ -77,16 +77,16 @@ def replace_moving_mean(data, outliers, kernel):
         The input array in which to replace outliers
     kernel: astropy.convolution.Kernel1D
         The kernel used to compute the moving mean.
-  
+
     Returns
     -------
     data:   ndarray (boolean)
         An array with the same dimensions as the input array with outliers replaced with fill_value.
-  
+
     Notes
     -----
     History:
-  
+
     - Jan 29, 2022 Taylor Bell
         Initial version
     '''
@@ -95,44 +95,44 @@ def replace_moving_mean(data, outliers, kernel):
     smoothed_data = convolve(data, kernel, boundary='extend')
     # Replace outliers with value of moving mean
     data[outliers] = smoothed_data[outliers]
-  
+
     return data
 
 
 def skewed_gaussian(x, eta=0, omega=1, alpha=0,scale=1):
-    """                     
+    """
     A skewed gaussian model.
     """
     t = alpha * (x - eta) / omega
     Psi = 0.5 * (1 + erf(t / np.sqrt(2)))
     psi = 2.0 / (omega * np.sqrt(2 * np.pi)) * np.exp(- (x-eta)**2 / (2.0 * omega**2))
     return (psi * Psi)*scale
- 
+
 
 def gauss_removal(img, mask, linspace, where='bkg'):
     """
     An additional step to remove cosmic rays. This fits a Gaussian to
     the background (or a skewed Gaussian to the orders) and masks data
-    points which are above a certain sigma.   
+    points which are above a certain sigma.
 
     Parameters
     ----------
     img : np.ndarray
        Single exposure image.
-    mask : np.ndarray       
+    mask : np.ndarray
        An approximate mask for the orders.
-    linspace : array               
+    linspace : array
        Sets the lower and upper bin bounds for the
-       pixel values. Should be of length = 2.    
-    where : str, optional                        
+       pixel values. Should be of length = 2.
+    where : str, optional
        Sets where the mask is covering. Default is `bkg`.
-       Other option is `order`.  
+       Other option is `order`.
 
-    Returns    
-    -------    
+    Returns
+    -------
     img : np.ndarray
        The same input image, now masked for newly identified
-       outliers.   
+       outliers.
     """
     n, bins = np.histogram((img*mask).flatten(),
                                     bins=np.linspace(linspace[0],linspace[1],100))
@@ -159,6 +159,6 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     elif where=='order':
         xcr, ycr = np.where(img*mask<=gfit.eta-1*gfit.omega)
 
-    # returns an image that is nan-masked  
+    # returns an image that is nan-masked
     img[xcr,ycr] = np.nan
     return img

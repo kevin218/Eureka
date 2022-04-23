@@ -12,15 +12,17 @@ def read(filename, data, meta):
     ----------
     filename:   str
         Single filename to read
-    data:   DataClass
-        The data object in which the fits data will stored
-    meta:   MetaData
+    data:   Xarray Dataset
+        The Dataset object in which the fits data will be stored
+    meta:   MetaClass
         The metadata object
 
     Returns
     -------
-    data: DataClass
-        The updated data object with the fits data stored inside
+    data: Xarray Dataset
+        The updated Dataset object with the fits data stored inside
+    meta:   MetaClass
+        The metadata object
 
     Notes
     -----

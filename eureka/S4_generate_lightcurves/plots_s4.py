@@ -2,15 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def binned_lightcurve(meta, time, i):
+def binned_lightcurve(meta, lc, i):
     '''Plot each spectroscopic light curve. (Fig 4300)
 
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
-    time:  ndarray (1D)
-        The time in meta.time_units of each data point.
+    lc:     Xarray Dataset
+        The Dataset object containing light curve and time data.
     i:  int
         The current bandpass number.
 
@@ -22,28 +22,30 @@ def binned_lightcurve(meta, time, i):
     plt.clf()
     plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
     ax = plt.subplot(111)
-    time_modifier = np.floor(time[0])
+    time_modifier = np.floor(lc.time[0])
     # Normalized light curve
-    norm_lcdata = meta.lcdata[i] / meta.lcdata[i, -1]
-    norm_lcerr = meta.lcerr[i] / meta.lcdata[i, -1]
-    plt.errorbar(time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
+    norm_lcdata = lc['data'][i] / lc['data'][i, -1]
+    norm_lcerr = lc['err'][i] / lc['data'][i, -1]
+    plt.errorbar(lc.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
     plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
-    plt.xlabel(f'Time [{meta.time_units} - {time_modifier}]')
+    #plt.xlabel(f'Time [{lc.data.attrs['time_units']} - {time_modifier}]')
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     plt.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def drift1d(meta):
+def drift1d(meta, ds):
     '''Plot the 1D drift/jitter results. (Fig 4100)
 
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
+    ds:     Xarray Dataset
+        The Dataset object containing drift arrays.
 
     Returns
     -------
@@ -51,9 +53,11 @@ def drift1d(meta):
     '''
     plt.figure(int('41{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
+    plt.plot(np.arange(meta.n_int)[np.where(~ds.driftmask)], ds.drift1d[np.where(~ds.driftmask)], '.', label='Good Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(ds.driftmask)], ds.drift1d[np.where(ds.driftmask)], '.', label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
+    plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs/Fig41{}-Drift.png'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))
     if not meta.hide_plots:
@@ -82,7 +86,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
     n_int, nx = optspec.shape
     vmin = 0.97
     vmax = 1.03
-    normspec = optspec / np.mean(optspec, axis=0)
+    normspec = optspec / np.ma.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto', extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(meta.mad_s4, 0).astype(int)) + " ppm")

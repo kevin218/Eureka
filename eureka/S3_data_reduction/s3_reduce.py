@@ -350,10 +350,6 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
                 # Append results for future concatenation
                 datasets.append(data)
-                # if len(ds) == 0:
-                #     optspec = data.optspec
-                # else:
-                #     optspec = np.append(optspec, data.optspec, axis=0)
 
             if meta.inst == 'wfc3':
                 # WFC3 needs a conclusion step to convert lists into arrays before saving
@@ -366,10 +362,9 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-            if meta.save_output == True:
-                # Append spectra from current segement to save file
-                meta.filename_S3_SpecData = meta.outputdir + 'S3_' + event_ap_bg + "_SpecData.h5"
-                success = xrio.writeXR(meta.filename_S3_SpecData, ds, verbose=True, append=True)
+            # Save Dataset object containing time-series of 1D spectra
+            meta.filename_S3_SpecData = meta.outputdir + 'S3_' + event_ap_bg + "_SpecData.h5"
+            success = xrio.writeXR(meta.filename_S3_SpecData, ds, verbose=True)
 
             # Compute MAD value
             meta.mad_s3 = util.get_mad(meta, ds.wave_1d, ds.optspec)

@@ -19,8 +19,10 @@ def read(filename, data, meta):
 
     Returns
     -------
-    data: DataClass
-        The updated data object with the fits data stored inside
+    data: Xarray Dataset
+        The updated Dataset object with the fits data stored inside
+    meta:   MetaClass
+        The metadata object
 
     Notes
     -----
