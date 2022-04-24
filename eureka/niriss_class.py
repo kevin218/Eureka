@@ -5,7 +5,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.table import Table
 
-from .lib.tracing_niriss import mask_method_one, mask_method_two, ref_file
+from .lib.tracing_niriss import mask_method_edges, mask_method_profile, ref_file
 from .lib.masking        import (interpolating_row, data_quality_mask,
                               interpolating_image)
 from .lib.clipping       import time_removal
@@ -62,6 +62,7 @@ class NIRISS_S3(object):
         # Opens the science FITS file and sets up all proper
         #   data attributes for the reduction steps.
         self.setup()
+
         self.dq_mask = data_quality_mask(self.dq)
 
         if f277_filename is not None:
@@ -150,7 +151,9 @@ class NIRISS_S3(object):
         self.err[ np.isnan(self.err )==True] = 0.0
         self.var[ np.isnan(self.var )==True] = 0.0
         self.v0[  np.isnan(self.v0  )==True] = 0.0
-
+        
+        print(hdu['DQ', 1].data.shape)
+        
         self.median = np.nanmedian(self.data, axis=0)
         hdu.close()
         
@@ -246,11 +249,11 @@ class NIRISS_S3(object):
            `tab2` is initialized when using the method `centers`.
         """
         if method.lower() == 'edges':
-            self.tab1 = mask_method_one(self)
+            self.tab1 = mask_method_edges(self)
 
         elif method.lower() == 'centers':
             if self.f277 is not None:
-                self.tab2 = mask_method_two(self)
+                self.tab2 = mask_method_profile(self)
             else:
                 return('Need F277W filter to run this trace finding method.')
 

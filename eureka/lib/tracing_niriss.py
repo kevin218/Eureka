@@ -9,7 +9,7 @@ from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
 __all__ = ['image_filtering', 'simplify_niriss_img',
-           'mask_method_one', 'mask_method_two', 'f277_mask',
+           'mask_method_edges', 'mask_method_profile', 'f277_mask',
            'ref_file']
 
 
@@ -109,9 +109,9 @@ def f277_mask(f277, radius=1, gf=4):
     return new_mask, mid[q]
 
 
-def mask_method_one(data, radius=1, gf=4,
-                    save=False,
-                    outdir=None):
+def mask_method_edges(data, radius=1, gf=4,
+                      save=False,
+                      outdir=None):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -210,7 +210,7 @@ def mask_method_one(data, radius=1, gf=4,
     return tab
 
 
-def mask_method_two(data, save=False, outdir=None):
+def mask_method_profile(data, save=False, outdir=None):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
