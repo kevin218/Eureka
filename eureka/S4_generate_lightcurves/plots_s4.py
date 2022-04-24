@@ -22,7 +22,7 @@ def binned_lightcurve(meta, lc, i):
     plt.clf()
     plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
     ax = plt.subplot(111)
-    time_modifier = np.floor(lc.time[0])
+    time_modifier = np.floor(lc.time.values[0])
     # Normalized light curve
     norm_lcdata = lc['data'][i] / lc['data'][i, -1]
     norm_lcerr = lc['err'][i] / lc['data'][i, -1]
@@ -30,7 +30,8 @@ def binned_lightcurve(meta, lc, i):
     plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
-    #plt.xlabel(f'Time [{lc.data.attrs['time_units']} - {time_modifier}]')
+    time_units = lc.data.attrs['time_units']
+    plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     plt.savefig(meta.outputdir + 'figs/Fig43{}-1D_LC.png'.format(str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))))

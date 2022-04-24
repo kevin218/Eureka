@@ -65,6 +65,8 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
         Initial version
     - October 2021 Taylor Bell
         Updated to allow for inputs from new S3
+    - April 2022 Kevin Stevenson
+        Enabled Astraeus
     '''
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'
@@ -217,9 +219,8 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             lc.wave_low.attrs['wave_units'] = ds.wave_1d.attrs['wave_units']
             lc.wave_hi.attrs['wave_units'] = ds.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = ds.wave_1d.attrs['wave_units']
-            # meta.lcdata   = np.ma.zeros((meta.nspecchan, meta.n_int))
-            # meta.lcerr    = np.ma.zeros((meta.nspecchan, meta.n_int))
-            # ev.eventname2 = ev.eventname
+
+            # Loop over spectroscopic channels
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
                 # Compute valid indeces within wavelength range

@@ -1,6 +1,7 @@
 import numpy as np
 import glob, os, shutil
 import time as time_pkg
+import astraeus.xarrayIO as xrio
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -46,6 +47,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
         Adding ability to do a single shared fit across all channels
     - January - February, 2022 Eva-Maria Ahrer
         Adding GP functionality
+    - April 2022 Kevin Stevenson
+        Enabled Astraeus
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
@@ -89,6 +92,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
             meta = load_specific_s4_meta_info(old_meta, ecf_path, run_i, spec_hw_val, bg_hw_val)
 
+            lc = xrio.readXR(meta.filename_S4_LCData)
+
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.runs_s5[run_i], ap=spec_hw_val, bg=bg_hw_val)
             run_i += 1
@@ -119,8 +124,9 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
 
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
-            time = meta.time - offset
-            time_units = meta.time_units+f' - {offset}'
+            time = lc.time.values - offset
+            time_units = lc.data.attrs['time_units']+f' - {offset}'
+            meta.time = lc.time.values
 
             if sharedp:
                 #Make a long list of parameters for each channel
@@ -131,8 +137,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
-                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.mean(meta.lcdata[channel,:]))
-                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.mean(meta.lcdata[channel,:]))
+                    flux = np.ma.append(flux,lc.data.values[channel,:] / \
+                                np.mean(lc.data.values[channel,:]))
+                    flux_err = np.ma.append(flux_err,lc.err.values[channel,:] / \
+                                np.mean(lc.data.values[channel,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 
@@ -147,8 +155,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                     log.writelog("\nStarting Channel {} of {}\n".format(channel+1, chanrng))
 
                     # Get the flux and error measurements for the current channel
-                    flux = meta.lcdata[channel,:]
-                    flux_err = meta.lcerr[channel,:]
+                    flux = lc.data.values[channel,:]
+                    flux_err = lc.err.values[channel,:]
 
                     # Normalize flux and uncertainties to avoid large flux values (FINDME: replace when constant offset is implemented)
                     flux_err = flux_err/ flux.mean()
