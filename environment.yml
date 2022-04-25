@@ -16,6 +16,7 @@ dependencies:
     - george
     - gwcs
     - h5py
+    - image_registration
     - ipython
     - lmfit
     - matplotlib
