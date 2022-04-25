@@ -307,9 +307,6 @@ def load_specific_s5_meta_info(meta):
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S5 outputs for this aperture pair
     inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
-    inputdir_raw = inputdir[len(meta.topdir):]
-    # Save the meta values already calculated for this stage
-    runs_s6 = meta.runs_s6
     # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
     meta.inputdir = inputdir
     s5_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S5', allowFail=False)
