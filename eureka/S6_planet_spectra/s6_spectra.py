@@ -86,7 +86,6 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
 
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.run_s6, ap=spec_hw_val, bg=bg_hw_val)
-            run_i += 1
 
             # Copy existing S5 log file and resume log
             meta.s6_logname  = meta.outputdir + 'S6_' + meta.eventlabel + ".log"
