@@ -15,7 +15,7 @@ class MetaClass:
     def __init__(self):
         return
 
-def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
+def fitlc(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -120,7 +120,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = meta.time - offset
-            time_units = meta.time_units+f' - {offset}'
+            if offset!=0:
+                time_units = meta.time_units+f' - {offset}'
+            else:
+                time_units = meta.time_units
 
             if sharedp:
                 #Make a long list of parameters for each channel
@@ -131,8 +134,8 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
-                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.mean(meta.lcdata[channel,:]))
-                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.mean(meta.lcdata[channel,:]))
+                    flux = np.ma.append(flux,meta.lcdata[channel,:] / np.ma.mean(meta.lcdata[channel,:]))
+                    flux_err = np.ma.append(flux_err,meta.lcerr[channel,:] / np.ma.mean(meta.lcdata[channel,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 
@@ -217,7 +220,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
                                 longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
     if 'GP' in meta.run_myfuncs:
-        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--', log=log)
+        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--', log=log, gp_code=meta.GP_package, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_GP)
     model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
 
@@ -334,7 +337,7 @@ def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Overwrite the inputdir with the exact output directory from S4
     meta.inputdir = s4_outputdir
-    meta.old_datetime = s4_meta.datetime # Capture the date that the
+    meta.old_datetime = s4_meta.datetime # Capture the date that the S4 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir

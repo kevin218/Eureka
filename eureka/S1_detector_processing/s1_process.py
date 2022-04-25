@@ -72,8 +72,8 @@ def rampfitJWST(eventlabel, ecf_path='./'):
         os.makedirs(meta.workdir+'figs')
 
     # Output S2 log file
-    meta.logname = meta.workdir + 'S1_' + meta.eventlabel + ".log"
-    log = logedit.Logedit(meta.logname)
+    meta.s1_logname = meta.workdir + 'S1_' + meta.eventlabel + ".log"
+    log = logedit.Logedit(meta.s1_logname)
     log.writelog("\nStarting Stage 1 Processing")
 
     # Copy ecf

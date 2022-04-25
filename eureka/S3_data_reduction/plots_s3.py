@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from .source_pos import gauss
+from ..lib.plots import figure_filetype
 
 def lc_nodriftcorr(meta, wave_1d, optspec):
-    '''Plot a 2D light curve without drift correction.
+    '''Plot a 2D light curve without drift correction. (Fig 3101)
 
     Parameters
     ----------
@@ -34,12 +35,12 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/fig3101-2D_LC.png')
+    plt.savefig(meta.outputdir + 'figs/fig3101-2D_LC'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def image_and_background(data, meta, n):
-    '''Make image+background plot.
+def image_and_background(data, meta, n, m):
+    '''Make image+background plot. (Figs 3301)
 
     Parameters
     ----------
@@ -49,6 +50,8 @@ def image_and_background(data, meta, n):
         The metadata object.
     n:  int
         The integration number.
+    m:  int
+        The file number.
 
     Returns
     -------
@@ -74,13 +77,15 @@ def image_and_background(data, meta, n):
     plt.ylabel('Pixel Position')
     plt.xlabel('Pixel Position')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/fig3301-' + str(intstart + n) + '-Image+Background.png')
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.savefig(meta.outputdir + f'figs/fig3301_file{file_number}_int{int_number}_ImageAndBackground'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def optimal_spectrum(data, meta, n):
-    '''Make optimal spectrum plot.
+def optimal_spectrum(data, meta, n, m):
+    '''Make optimal spectrum plot. (Figs 3302)
 
     Parameters
     ----------
@@ -90,6 +95,8 @@ def optimal_spectrum(data, meta, n):
         The metadata object.
     n:  int
         The integration number.
+    m:  int
+        The file number.
 
     Returns
     -------
@@ -106,7 +113,9 @@ def optimal_spectrum(data, meta, n):
     plt.xlabel('Pixel Position')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/fig3302-' + str(intstart + n) + '-Spectrum.png')
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.savefig(meta.outputdir + f'figs/fig3302_file{file_number}_int{int_number}_Spectrum'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -114,7 +123,7 @@ def optimal_spectrum(data, meta, n):
 def source_position(meta, x_dim, pos_max, m,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
-    '''Plot source position for MIRI data.
+    '''Plot source position for MIRI data. (Figs 3303)
 
     Parameters
     ----------
@@ -168,26 +177,26 @@ def source_position(meta, x_dim, pos_max, m,
     plt.xlabel('Row Pixel Position')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/fig3303-file' + str(m+1) + '-source_pos.png')
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    plt.savefig(meta.outputdir + f'figs/fig3303_file{file_number}_source_pos'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def profile(eventdir, profile, submask, n, hide_plots=False):
-    '''
-    Plot weighting profile from optimal spectral extraction routine
+def profile(meta, profile, submask, n, m):
+    '''Plot weighting profile from optimal spectral extraction routine. (Figs 3304)
 
     Parameters
     ----------
-    eventdir:   str
-        Directory in which to save outupts.
+    meta:   MetaClass
+        The metadata object.
     profile:    ndarray
         Fitted profile in the same shape as the data array.
     submask:   ndarray
         Outlier mask.
     n:  int
         The current integration number.
-    hide_plots:
-        If True, plots will automatically be closed rather than popping up.
+    m:  int
+        The file number.
 
     Returns
     -------
@@ -200,13 +209,55 @@ def profile(eventdir, profile, submask, n, hide_plots=False):
     submask = np.ma.masked_where(mask, submask)
     vmax = 0.05*np.ma.max(profile*submask)
     vmin = np.ma.min(profile*submask)
-    plt.figure(3305)
+    plt.figure(3304)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',vmax=vmax, vmin=vmin)
     plt.ylabel('Pixel Postion')
     plt.xlabel('Pixel Position')
     plt.tight_layout()
-    plt.savefig(eventdir+'figs/fig3305-'+str(n)+'-Profile.png')
-    if not hide_plots:
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.savefig(meta.outputdir + f'figs/fig3304_file{file_number}_int{int_number}_Profile'+figure_filetype, dpi=300)
+    if not meta.hide_plots:
         plt.pause(0.2)
+
+def subdata(meta, i, n, m, subdata, submask, expected, loc):
+    '''Show 1D view of profile for each column. (Figs 3501)
+
+    Parameters
+    ----------
+    meta:   MetaClass
+        The metadata object.
+    i:  int
+        The column number.
+    n:  int
+        The current integration number.
+    m:  int
+        The file number.
+    subdata:    ndarray
+        Background subtracted data.
+    submask:    ndarray
+        Outlier mask.
+    expected:   ndarray
+        Expected profile
+    loc:    ndarray
+        Location of worst outliers.    
+
+    Returns
+    -------
+    None
+    '''
+    ny, nx = subdata.shape
+    plt.figure(3501)
+    plt.clf()
+    plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
+    plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], subdata[np.where(submask[:,i])[0],i], 'bo')
+    plt.plot(np.arange(ny)[np.where(submask[:,i])[0]], expected[np.where(submask[:,i])[0],i], 'g-')
+    plt.plot((loc[i]), (subdata[loc[i],i]), 'ro')
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
+    plt.savefig(meta.outputdir + f"figs/fig3501_file{file_number}_int{int_number}_col{col_number}_subdata"+figure_filetype, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)

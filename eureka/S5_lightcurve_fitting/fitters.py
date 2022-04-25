@@ -377,7 +377,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='emcee')
 
     #Plot GP fit + components
-    if model.GP:
+    if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter='emcee')
 
     # Compute reduced chi-squared
@@ -706,7 +706,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     best_model.components[0].update(fit_params, freenames)
 
     #Plot GP fit + components
-    if model.GP:
+    if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter='dynesty')
 
     # Plot fit
@@ -1033,6 +1033,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
             spec_fname = f'S5_{fitter}_trspec_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
 
         spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
+
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples)!=0:

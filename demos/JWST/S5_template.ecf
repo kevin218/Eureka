@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
+# Stage 5 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5
+
 ncpu            1 # The number of CPU threads to use when running emcee or dynesty in parallel
 
 allapers        False                   # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
@@ -35,8 +37,9 @@ run_sample      'auto'
 run_tol         0.1
 
 #GP inputs
-kernel_inputs   ['time','time'] #options: time
-kernel_class    ['ExpSquared','Exp'] #options: ExpSquared, Matern32, Exp, RationalQuadratic
+kernel_inputs   ['time'] #options: time
+kernel_class    ['Matern32'] #options: ExpSquared, Matern32, Exp, RationalQuadratic for george, Matern32 for celerite (sums of kernels possible for george separated by commas)
+GP_package      'celerite' #options: george, celerite
 
 # Plotting controls
 interp          False   # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)

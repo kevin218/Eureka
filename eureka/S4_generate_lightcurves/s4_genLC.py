@@ -38,7 +38,7 @@ class MetaClass:
         return
 
 
-def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
+def genlc(eventlabel, ecf_path='./', s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
@@ -163,7 +163,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             # Apply 1D drift/jitter correction
             if meta.correctDrift:
                 #Calculate drift over all frames and non-destructive reads
-                log.writelog('Applying drift/jitter correction', mute=(not meta.verbose))
+                log.writelog('Applying drift/jitter correction') # This can take a long time, so always print this message
                 # Compute drift/jitter
                 meta = drift.spec1D(optspec, meta, log)
                 # Correct for drift/jitter
@@ -172,15 +172,15 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                     weights = (~np.ma.getmaskarray(optspec[n])).astype(int)
                     spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0, w=weights)
                     spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0, w=weights)
-                    optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
-                    opterr[n]  = spline2(np.arange(meta.subnx)+meta.drift1d[n])
+                    optspec[n] = np.ma.masked_invalid(spline(np.arange(meta.subnx)+meta.drift1d[n]))
+                    opterr[n]  = np.ma.masked_invalid(spline2(np.arange(meta.subnx)+meta.drift1d[n]))
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta)
 
             # Compute MAD alue
             meta.mad_s4 = util.get_mad(meta, wave_1d, optspec, meta.wave_min, meta.wave_max)
-            log.writelog("Stage 4 MAD = " + str(np.round(meta.mad_s4, 2).astype(int)) + " ppm")
+            log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
             if meta.isplots_S4 >= 1:
                 plots_s4.lc_driftcorr(meta, wave_1d, optspec)
@@ -194,9 +194,9 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                 # Compute valid indeces within wavelength range
                 index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d < meta.wave_hi[i]))[0]
                 # Sum flux for each spectroscopic channel
-                meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
+                meta.lcdata[i]    = np.ma.sum(optspec[:,index],axis=1)
                 # Add uncertainties in quadrature
-                meta.lcerr[i]     = np.sqrt(np.sum(opterr[:,index]**2,axis=1))
+                meta.lcerr[i]     = np.ma.sqrt(np.ma.sum(opterr[:,index]**2,axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
@@ -205,7 +205,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, meta.time, i)
+                    plots_s4.binned_lightcurve(meta, i)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -269,7 +269,7 @@ def read_s3_meta(meta):
 
 def load_general_s3_meta_info(meta, ecf_path, s3_meta):
     # Need to remove the topdir from the outputdir
-    s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
+    s3_outputdir = s3_meta.outputdir[len(meta.topdir):]
     if s3_outputdir[0]=='/':
         s3_outputdir = s3_outputdir[1:]
     if s3_outputdir[-1]!='/':
@@ -283,7 +283,7 @@ def load_general_s3_meta_info(meta, ecf_path, s3_meta):
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
-    meta.old_datetime = meta.datetime # Capture the date that the
+    meta.old_datetime = meta.datetime  # Capture the date that the S3 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir

@@ -5,7 +5,11 @@ import scipy.signal as sps
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import sys
-import image_registration as imr
+try:
+    import image_registration as imr
+    imported_image_registration = True
+except ModuleNotFoundError as e:
+    imported_image_registration = False
 from ..lib import gaussian as g
 from ..lib import smooth, centroid, smoothing
 
@@ -538,6 +542,9 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
 
 # Calulate drift2D
 def calcDrift2D(im1, im2, m, n, n_files):
+    if not imported_image_registration:
+        raise ModuleNotFoundError("The image-registration package was not installed with Eureka and is required for HST analyses.\n"+
+                                  "You can install all HST-related dependencies with `pip install .[hst]`")
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
     return (drift2D, m, n)

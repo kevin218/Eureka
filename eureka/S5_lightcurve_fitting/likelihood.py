@@ -48,7 +48,7 @@ def ln_like(theta, lc, model, freenames):
     else:
         lc.unc_fit = deepcopy(lc.unc)
     if model.GP:
-        ln_like_val = GP_loglikelihood(model, model_lc)
+        ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)
     else:
         residuals = (lc.flux - model_lc) 
         ln_like_val = (-0.5 * (np.ma.sum((residuals / lc.unc_fit) ** 2+ np.ma.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
@@ -286,7 +286,7 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     else:
         return rms, stderr, binsz
 
-def GP_loglikelihood(model, fit):
+def GP_loglikelihood(model, fit, unc_fit):
     """Compute likelihood, when model fit includes GP
 
     Parameters
@@ -309,5 +309,5 @@ def GP_loglikelihood(model, fit):
     """
     for m in model.components:
         if m.modeltype == 'GP':
-            return m.loglikelihood( fit)
+            return m.loglikelihood( fit, unc_fit)
     return 0

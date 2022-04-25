@@ -15,6 +15,7 @@ from astropy.io import fits
 import os
 
 from ..lib import clipping
+from ..lib.plots import figure_filetype
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
@@ -65,6 +66,13 @@ def BGsubtraction(data, meta, log, isplots):
         data.subbg[n] = bg_data
         data.submask[n] = bg_mask
         return
+    def writeBG_WFC3(arg):
+        bg_data, bg_mask, datav0, datavariance, n = arg
+        data.subbg[n] = bg_data
+        data.submask[n] = bg_mask
+        data.subv0[n] = datav0
+        data.subvariance[n] = datavariance
+        return
 
     # Compute background for each integration
     log.writelog('  Performing background subtraction', mute=(not meta.verbose))
@@ -76,14 +84,27 @@ def BGsubtraction(data, meta, log, isplots):
             iterfn = tqdm(iterfn)
         for n in iterfn:
             # Fit sky background with out-of-spectra data
-            writeBG(inst.fit_bg(data, meta, n, isplots))
+            if meta.inst == 'niriss':
+                writeBG(inst.fit_bg(data, meta, n, isplots))
+            elif meta.inst == 'wfc3':
+                writeBG_WFC3(inst.fit_bg(data.subdata[n], data.submask[n], data.subv0[n], data.subvariance[n], n, meta, isplots))
+            else:
+                writeBG(inst.fit_bg(data.subdata[n], data.submask[n], n, meta, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         args_list = []
-        for n in range(meta.int_start,meta.n_int):
-            args_list.append((data, meta, n, isplots))
-        jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
+
+        # Todo, convert NIRISS fit_bg to only accept individual frames (see nircam and below for example)
+        if meta.inst == 'niriss':
+            for n in range(meta.int_start,meta.n_int):
+                args_list.append((data, meta, n, isplots))
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
+        elif meta.inst =='wfc3':
+            # The WFC3 background subtraction needs a few more inputs and outputs
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.subdata[n], data.submask[n], data.subv0[n], data.subvariance[n], n, meta, isplots,), callback=writeBG_WFC3) for n in range(meta.int_start,meta.n_int)]
+        else: 
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.subdata[n], data.submask[n], n, meta, isplots,), callback=writeBG) for n in range(meta.int_start,meta.n_int)]
         pool.close()
         iterfn = jobs
         if meta.verbose:
@@ -227,7 +248,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+'.png')
+                    plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+figure_filetype, dpi=300)
                     plt.pause(0.01)
 
     if isrotate == 1:
@@ -335,7 +356,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                         plt.title(str(j))
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
-                        plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+'.png')
+                        plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+figure_filetype, dpi=300)
                         plt.pause(0.01)
 
                     # Calculate residuals

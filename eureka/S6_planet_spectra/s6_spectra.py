@@ -352,7 +352,7 @@ def load_general_s5_meta_info(meta, ecf_path, s5_meta):
 
     # Overwrite the inputdir with the exact output directory from S5
     meta.inputdir = s5_outputdir
-    meta.old_datetime = s5_meta.datetime # Capture the date that the
+    meta.old_datetime = s5_meta.datetime # Capture the date that the S5 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir

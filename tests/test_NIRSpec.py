@@ -7,6 +7,7 @@ from importlib import reload
 sys.path.insert(0, '../')
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
+import eureka.lib.plots
 try:
     from eureka.S2_calibrations import s2_calibrate as s2
 except ModuleNotFoundError as e:
@@ -16,6 +17,8 @@ from eureka.S4_generate_lightcurves import s4_genLC as s4
 from eureka.S5_lightcurve_fitting import s5_fit as s5
 
 def test_NIRSpec(capsys):
+    # Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
+    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
 
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
@@ -47,9 +50,9 @@ def test_NIRSpec(capsys):
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
-    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
-    s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
-    s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
+    s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
     
     # run assertions for S2
     if s2_installed:

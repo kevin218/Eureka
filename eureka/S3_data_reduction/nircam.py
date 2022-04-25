@@ -1,4 +1,3 @@
-
 # NIRCam specific rountines go here
 import numpy as np
 from astropy.io import fits
@@ -90,10 +89,10 @@ def flag_bg(data, meta):
     return data
 
 
-def fit_bg(data, meta, n, isplots=False):
+def fit_bg(dataim, datamask, n, meta, isplots=False):
     '''Fit for a non-uniform background.
     '''
 
-    bg, mask = background.fitbg(data.subdata[n], meta, data.submask[n], meta.bg_y1, meta.bg_y2, deg=meta.bg_deg,
+    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1, meta.bg_y2, deg=meta.bg_deg,
                                 threshold=meta.p3thresh, isrotate=2, isplots=isplots)
     return (bg, mask, n)

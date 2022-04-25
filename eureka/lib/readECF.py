@@ -194,6 +194,15 @@ class MetaClass:
         for param, value in self.params.items():
             setattr(self, param, value)
 
+        if self.inputdir[0]=='/':
+            self.inputdir = self.inputdir[1:]
+        if self.inputdir[-1]!='/':
+            self.inputdir += '/'
+        if self.outputdir[0]=='/':
+            self.outputdir = self.outputdir[1:]
+        if self.outputdir[-1]!='/':
+            self.outputdir += '/'
+
         return
 
     def write(self, folder):
@@ -253,7 +262,11 @@ class MetaClass:
                 else:
                     line_segs = line.strip().split()
                     if line_segs[0]=='inputdir':
-                        new_file.write(line_segs[0]+'\t\t/'+self.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
+                        if self.topdir in self.inputdir:
+                            inputdir_string = self.inputdir[len(self.topdir):]
+                        else:
+                            inputdir_string = self.inputdir
+                        new_file.write(line_segs[0]+'\t\t'+inputdir_string+'\t'+' '.join(line_segs[2:])+'\n')
                     else:
                         new_file.write(line)
         return
