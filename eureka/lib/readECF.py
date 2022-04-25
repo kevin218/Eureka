@@ -272,11 +272,7 @@ class MetaClass:
                 else:
                     line_segs = line.strip().split()
                     if line_segs[0]=='inputdir':
-                        if self.topdir in self.inputdir:
-                            inputdir_string = self.inputdir[len(self.topdir):]
-                        else:
-                            inputdir_string = self.inputdir
-                        new_file.write(line_segs[0]+'\t\t'+inputdir_string+'\t'+' '.join(line_segs[2:])+'\n')
+                        new_file.write(line_segs[0]+'\t\t'+self.inputdir_raw+'\t'+' '.join(line_segs[2:])+'\n')
                     else:
                         new_file.write(line)
         return
