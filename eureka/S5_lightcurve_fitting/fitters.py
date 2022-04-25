@@ -1021,7 +1021,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
-        fname = f'S5_{fitter}_fitparams_ch{lc.channel}'
+        fname = f'S5_{fitter}_fitparams_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
     results_table.write(meta.outputdir+fname+'.csv', format='csv', overwrite=False)
 
     # Save transmission spectrum
@@ -1030,7 +1030,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
         if lc.share:
             spec_fname = f'S5_{fitter}_trspec_shared'
         else:
-            spec_fname = f'S5_{fitter}_trspec_ch{lc.channel}'
+            spec_fname = f'S5_{fitter}_trspec_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
 
         spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
 
