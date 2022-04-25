@@ -97,7 +97,6 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model, re
     Revisions
     ---------
     """
-
     dims = [len(time), len(wavelength)]
 
     orig_shapes = [str(time.shape), str(wavelength.shape), str(bin_width.shape), str(lcdata.shape), str(lcerr.shape), str(model.shape), str(residuals.shape)]
