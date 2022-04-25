@@ -147,14 +147,21 @@ class Parameter:
 class Parameters:
     """A class to hold the Parameter instances
     """
-    def __init__(self, param_path='./', param_file=None, **kwargs):
+    def __init__(self, param_path=None, param_file=None, **kwargs):
         """Initialize the parameter object
 
         Parameters
         ----------
-        param_file: str
-            A text file of the parameters to parse
+        param_path : str
+            The path to the parameters.
+        param_file : str
+            A text file of the parameters to parse.
+        **kwargs : dict
+            Any additional settings to set in the Parameters object.
         """
+
+        if param_path is None:
+            param_path = '.'+os.sep
 
         # Make an empty params dict
         self.params = {}

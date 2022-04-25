@@ -84,7 +84,7 @@ class ModelGrid(object):
 
         # Check for a precomputed pickle of this ModelGrid
         model_grid = None
-        if model_directory.endswith('/*'):
+        if model_directory.endswith(os.sep+'*'):
             # Location of model_grid pickle
             file = model_directory.replace('*', 'model_grid.p')
 
@@ -108,12 +108,12 @@ class ModelGrid(object):
         else:
 
             # Print update...
-            if model_directory.endswith('/*'):
+            if model_directory.endswith(os.sep+'*'):
 
                 print("Indexing models...")
 
             # Create some attributes
-            self.path = os.path.dirname(model_directory)+'/'
+            self.path = os.path.dirname(model_directory)+os.sep
             self.refs = None
             self.wave_rng = (0*q.um, 40*q.um)
             self.flux_file = os.path.join(self.path, 'model_grid_flux.hdf5')
@@ -149,7 +149,7 @@ class ModelGrid(object):
                         keys = np.array(header.cards).T[0]
                         dtypes = [type(i[1]) for i in header.cards]
                         vals.append([header.get(k) for k in keys])
-                        filenames.append(f.split('/')[-1])
+                        filenames.append(f.split(os.sep)[-1])
                     except:
                         print(f, 'could not be read into the model grid.')
 
@@ -186,7 +186,7 @@ class ModelGrid(object):
             self.FeH_vals = np.asarray(np.unique(table['FeH']))
 
             # Write an inventory file to this directory for future table loads
-            if model_directory.endswith('/*'):
+            if model_directory.endswith(os.sep+'*'):
                 self.file = file
                 try:
                     pickle.dump(self.__dict__, open(self.file, 'wb'))
@@ -229,7 +229,7 @@ class ModelGrid(object):
         model = self.get(**kwargs)
 
         # Get a dummy FITS file
-        ffile = resource_filename('ExoCTK', 'data/core/ModelGrid_tmp.fits')
+        ffile = resource_filename('ExoCTK', f'data{os.sep}core{os.sep}ModelGrid_tmp.fits')
         hdu = fits.open(ffile)
 
         # Replace the data

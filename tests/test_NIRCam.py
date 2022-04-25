@@ -4,7 +4,7 @@ import numpy as np
 import sys, os
 from importlib import reload
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '..'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
@@ -31,8 +31,8 @@ def test_NIRCam(capsys):
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel='NIRCam'
-    meta.topdir='../tests'
-    ecf_path='./NIRCam_ecfs/'
+    meta.topdir=f'..{os.sep}tests'
+    ecf_path=f'.{os.sep}NIRCam_ecfs{os.sep}'
 
     reload(s3)
     reload(s4)
@@ -44,31 +44,31 @@ def test_NIRCam(capsys):
     s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)
 
     # run assertions for S3
-    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage3/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3{os.sep}'
     name = pathdirectory(meta, 'S3', 1, ap=20, bg=20)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S4
-    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage4/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage4{os.sep}'
     name = pathdirectory(meta, 'S4', 1, ap=20, bg=20)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S5
-    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage5/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5{os.sep}'
     name = pathdirectory(meta, 'S5', 1, ap=20, bg=20)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S6
-    meta.outputdir_raw='data/JWST-Sim/NIRCam/Stage6/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6{os.sep}'
     name = pathdirectory(meta, 'S6', 1, ap=20, bg=20)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    os.system("rm -r data/JWST-Sim/NIRCam/Stage3")   
-    os.system("rm -r data/JWST-Sim/NIRCam/Stage4")
-    os.system("rm -r data/JWST-Sim/NIRCam/Stage5")
-    os.system("rm -r data/JWST-Sim/NIRCam/Stage6")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage4")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")

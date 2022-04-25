@@ -1,9 +1,9 @@
 # Last Updated: 2022-04-05
 
 import numpy as np
-import sys
+import sys, os
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '..'+os.sep)
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
 from eureka.lib.medstddev import medstddev
