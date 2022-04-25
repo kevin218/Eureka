@@ -56,7 +56,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
-        s4_meta, meta.inputdir, meta.inputdir_raw = me.findevent, meta.inputdir(meta, 'S4', allowFail=False)
+        s4_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S4', allowFail=False)
     else:
         # Running these stages sequentially, so can safely assume the path hasn't changed
         meta.inputdir = s4_meta.outputdir
