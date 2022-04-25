@@ -83,7 +83,7 @@ def check_nans(data, mask, log, name=''):
         mask[inan]  = 0
     return mask
 
-def makedirectory(meta, stage, **kwargs):
+def makedirectory(meta, stage, counter=None, **kwargs):
     """Creates a directory for the current stage
 
     Parameters
@@ -92,6 +92,9 @@ def makedirectory(meta, stage, **kwargs):
         The metadata object.
     stage:  str
         'S#' string denoting stage number (i.e. 'S3', 'S4')
+    counter : int
+        The run number if you want to force a particular run number.
+        Defaults to None which automatically finds the run number.
     **kwargs
 
     Returns
@@ -110,10 +113,13 @@ def makedirectory(meta, stage, **kwargs):
 
     outputdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel + '_run'
 
-    counter = 1
-    while os.path.exists(outputdir+str(counter)):
-        counter += 1
-    outputdir = outputdir+str(counter)+os.sep
+    if counter is None:
+        counter = 1
+        while os.path.exists(outputdir+str(counter)):
+            counter += 1
+        outputdir += str(counter)+os.sep
+    else:
+        outputdir += str(counter)+os.sep
 
     # Nest the different folders underneath one main folder for this run
     for key, value in kwargs.items():
