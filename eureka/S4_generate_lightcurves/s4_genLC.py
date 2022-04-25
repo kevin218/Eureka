@@ -204,7 +204,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, wave_1d[l], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
+                    meta.lcdata[i], outliers = clipping.clip_outliers(meta.lcdata[i], log, np.mean([meta.wave_low[i], meta.wave_hi[i]]), meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
                     log.writelog('  Sigma clipped {} outliers in time series'.format(outliers))
 
                 # Plot each spectroscopic light curve

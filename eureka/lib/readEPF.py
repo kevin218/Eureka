@@ -102,7 +102,7 @@ class Parameter:
         # Get the fully qualified name of the class
         output = type(self).__module__+'.'+type(self).__qualname__+'('
         # Get the list of Parameter.__init__ arguments (excluding self)
-        keys = inspect.getargspec(self.__init__)[0].remove('self')
+        keys = inspect.getfullargspec(Parameter.__init__).args[1:]
         # Show how the Parameter could be initialized (e.g. name='rp', val=0.01, ptype='free')
         for name in keys:
             val = getattr(self, name)
