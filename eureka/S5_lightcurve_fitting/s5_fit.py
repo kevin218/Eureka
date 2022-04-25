@@ -103,15 +103,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
-            # Copy ecf
+            # Copy ECF
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
             meta.copy_ecf()
-            # Copy parameter ecf
-            log.writelog('Copying S5 parameter control file', mute=(not meta.verbose))
-            shutil.copy(os.path.join(ecf_path, meta.fit_par), meta.outputdir)
-
+            
             # Set the intial fitting parameters
-            params = Parameters(ecf_path, meta.fit_par)
+            params = Parameters(meta.folder, meta.fit_par)
+            # Copy EPF
+            log.writelog('Copying S5 parameter control file', mute=(not meta.verbose))
+            params.write(meta.outputdir)
             sharedp = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
@@ -291,9 +291,6 @@ def load_specific_s4_meta_info(meta):
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S4 outputs for this aperture pair
     inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
-    inputdir_raw = inputdir[len(meta.topdir):]
-    # Save the meta values already calculated for this stage
-    runs_s5 = meta.runs_s5
     # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
     meta.inputdir = inputdir
     s4_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S4', allowFail=False)
