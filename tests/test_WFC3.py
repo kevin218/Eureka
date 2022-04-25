@@ -24,7 +24,7 @@ def test_WFC3(capsys):
     ecf_path='./WFC3_ecfs/'
 
     reload(s3)
-    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
+    s3_spec, s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
 
     # run assertions for S3
     meta.outputdir_raw='data/WFC3/Stage3/'

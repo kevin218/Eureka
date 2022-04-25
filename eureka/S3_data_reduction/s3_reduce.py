@@ -356,7 +356,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 meta, log = inst.conclusion_step(meta, log)
 
             # Concatenate results along time axis (default)
-            ds = xrio.concat(datasets)
+            spec = xrio.concat(datasets)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -364,16 +364,16 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S3_SpecData = meta.outputdir + 'S3_' + event_ap_bg + "_SpecData.h5"
-            success = xrio.writeXR(meta.filename_S3_SpecData, ds, verbose=True)
+            success = xrio.writeXR(meta.filename_S3_SpecData, spec, verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, ds.wave_1d, ds.optspec)
+            meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
             log.writelog("Stage 3 MAD = " + str(np.round(meta.mad_s3, 2).astype(int)) + " ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, ds.wave_1d, ds.optspec)
+                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
 
             # Save results
             if meta.save_output == True:
@@ -382,7 +382,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
 
             log.closelog()
 
-    return ds, meta
+    return spec, meta
 
 def read_s2_meta(meta):
     '''Loads in an S2 meta file.

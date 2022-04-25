@@ -38,15 +38,15 @@ def binned_lightcurve(meta, lc, i):
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def drift1d(meta, ds):
+def drift1d(meta, spec):
     '''Plot the 1D drift/jitter results. (Fig 4100)
 
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
-    ds:     Xarray Dataset
-        The Dataset object containing drift arrays.
+    spec:     Xarray Dataset
+        The spectra object containing drift arrays.
 
     Returns
     -------
@@ -54,8 +54,8 @@ def drift1d(meta, ds):
     '''
     plt.figure(int('41{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(~ds.driftmask)], ds.drift1d[np.where(~ds.driftmask)], '.', label='Good Drift Points')
-    plt.plot(np.arange(meta.n_int)[np.where(ds.driftmask)], ds.drift1d[np.where(ds.driftmask)], '.', label='Interpolated Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(~spec.driftmask)], spec.drift1d[np.where(~spec.driftmask)], '.', label='Good Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(spec.driftmask)], spec.drift1d[np.where(spec.driftmask)], '.', label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')

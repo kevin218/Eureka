@@ -15,12 +15,12 @@ ecf_path = './'
 
 if __name__ == '__main__':
 	#s1_meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
-	
+
 	s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
 
-	s3_meta = s3.reduceJWST(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+	s3_spec, s3_meta = s3.reduceJWST(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
 
-	s4_meta = s4.lcJWST(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+	s4_spec, s4_lc, s4_meta = s4.lcJWST(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
 
 	s5_meta = s5.fitJWST(eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 

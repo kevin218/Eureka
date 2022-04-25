@@ -47,10 +47,10 @@ def test_NIRSpec(capsys):
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
-    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
-    s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s3_spec, s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path)
+    s4_spec, s4_lc, s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
     s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
-    
+
     # run assertions for S2
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
@@ -58,7 +58,7 @@ def test_NIRSpec(capsys):
         name = pathdirectory(meta, 'S2', 1)
         assert os.path.exists(name)
         assert os.path.exists(name+'/figs')
-    
+
     # run assertions for S3
     meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage3/'
     name = pathdirectory(meta, 'S3', 1, ap=8, bg=10)
@@ -76,7 +76,7 @@ def test_NIRSpec(capsys):
     name = pathdirectory(meta, 'S5', 1, ap=8, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+'/figs')
-    
+
     # remove temp files
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed

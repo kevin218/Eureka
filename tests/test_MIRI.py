@@ -18,7 +18,7 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
 def test_MIRI(capsys):
-    
+
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():
@@ -54,8 +54,8 @@ def test_MIRI(capsys):
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
     else:
         s2_meta = None
-    s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
-    s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s3_spec, s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+    s4_spec, s4_lc, s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
     s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
     s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)
 
