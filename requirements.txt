@@ -2,6 +2,7 @@ astropy
 batman-package
 bokeh
 ccdproc
+celerite
 corner
 crds
 cython
