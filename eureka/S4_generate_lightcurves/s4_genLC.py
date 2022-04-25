@@ -115,7 +115,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog("Loading S3 save file", mute=(not meta.verbose))
+            log.writelog(f"Loading S3 save file:\n{meta.tab_filename}", mute=(not meta.verbose))
             table = astropytable.readtable(meta.tab_filename)
 
             # Reverse the reshaping which has been done when saving the astropy table
@@ -241,7 +241,9 @@ def load_specific_s3_meta_info(meta):
     # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
     meta.inputdir = inputdir
     s3_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S3', allowFail=False)
+    tab_filename = s3_meta.tab_filename
     # Merge S4 meta into old S3 meta
     meta = me.mergeevents(meta, s3_meta)
+    meta.tab_filename = tab_filename
 
     return meta
