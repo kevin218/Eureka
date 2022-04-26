@@ -194,6 +194,7 @@ class NIRISS_S3(object):
         """
         print('Cleaning data . . .')
         self.data = interpolating_image(self.data, mask=self.dq)
+        self.median = np.nanmedian(self.data, axis=0)
         print('Cleaning error . . .')
         self.err  = interpolating_image(self.err,  mask=self.dq)
         print('Cleaning variance . . .')
