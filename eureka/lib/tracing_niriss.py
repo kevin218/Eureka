@@ -24,10 +24,10 @@ def image_filtering(img, radius=1, gf=4):
     img : np.ndarray
        2D image array.
     radius : np.float, optional
-       Default is 1. 
+       Default is 1.
     gf : np.float, optional
        The standard deviation by which to Gaussian
-       smooth the image. Default is 4. 
+       smooth the image. Default is 4.
 
     Returns
     -------
@@ -71,7 +71,7 @@ def simplify_niriss_img(data):
        and second orders are.
     """
     perc  = np.nanmax(data, axis=0)
-    # creates data img mask 
+    # creates data img mask
     z,g = image_filtering(perc)
     return g
 
@@ -88,7 +88,7 @@ def f277_mask(f277, radius=1, gf=4):
     -------
     mask : np.ndarray
        2D mask for the f277w filter.
-    mid : np.ndarray 
+    mid : np.ndarray
        (x,y) anchors for where the overlap region is located.
     """
     img = np.nanmax(f277, axis=(0,1))
@@ -115,7 +115,7 @@ def mask_method_edges(data, radius=1, gf=4,
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
-    have to actually call this function and we'll provide a CSV    
+    have to actually call this function and we'll provide a CSV
     of a good initial guess for each order. This method uses some fun
     image processing to identify the boundaries of the orders and fits
     the edges of the first and second orders with a 4th degree polynomial.
@@ -128,7 +128,7 @@ def mask_method_edges(data, radius=1, gf=4,
        is True. Output table is saved under `niriss_order_guesses.csv`.
 
     Returns
-    ------- 
+    -------
     tab : astropy.table.Table
        Table with the x, y center values for the first
        and second orders.
@@ -165,8 +165,8 @@ def mask_method_edges(data, radius=1, gf=4,
         fit = np.poly1d(poly)
         return fit
 
-    g = simplify_niriss_img(data)
-    f,_ = f277_mask(data, radius, gf)
+    g = simplify_niriss_img(data.data)
+    f,_ = f277_mask(data.f277, radius, gf)
 
     g_centers = find_centers(g,cutends=None)
     f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
@@ -214,7 +214,7 @@ def mask_method_profile(data, save=False, outdir=None):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
-    profile of a summed image to identify the borders of each 
+    profile of a summed image to identify the borders of each
     order.
 
     Parameters
@@ -231,12 +231,12 @@ def mask_method_profile(data, save=False, outdir=None):
        Table with x,y positions for the first and second NIRISS
        orders.
     """
+    import matplotlib.pyplot as plt
 
     def identify_peaks(column, height, distance):
         p,_ = find_peaks(column, height=height, distance=distance)
         return p
 
-    
     summed = np.nansum(data.data, axis=0)
     ccd = CCDData(summed*units.electron)
 
@@ -253,20 +253,20 @@ def mask_method_profile(data, save=False, outdir=None):
 
         # Identifies peaks in the F277W filtered image
         fp = identify_peaks(summed_f277[:,i], height=100000, distance=10)
+
         if len(fp)==2:
             f277_peaks[i] = fp
 
-        if i < double_peaked[0]:
+        if i < double_peaked[1]:
             height=200
-        elif i >= double_peaked[0] and i < double_peaked[1]:
-            height = 200
         elif i >= double_peaked[1]:
             height = 500
 
-        p = identify_peaks(new_ccd_no_premask[:,i].data, height=height, distance=10)
+        p = identify_peaks(new_ccd_no_premask[:,i].data,
+        height=height, distance=10)
 
         if i < 900:
-            p = p[p>40] # sometimes catches an upper edge that doesn't exist 
+            p = p[p>40] # sometimes catches an upper edge that doesn't exist
 
         peaks[i][:len(p)] = p
 
@@ -284,12 +284,18 @@ def mask_method_profile(data, save=False, outdir=None):
     for ind in range(4): # CHANGE THIS TO 6 TO ADD THE THIRD ORDER
         q = peaks[:,ind] > 0
 
-        # removes outliers 
+        # removes outliers
         diff = np.diff(peaks[:,ind][q])
         good = np.where(np.abs(diff)<=np.nanmedian(diff)+2*np.nanstd(diff))
         good = good[5:-5]
         y = peaks[:,ind][q][good] + 0
-        y = y[x[q][good]>xf[-1]]
+
+        try:
+            y = y[x[q][good]>xf[-1]]
+            newx = x[q][good][x[q][good]>xf[-1]]
+        except:
+            y = y + 0.0
+            newx = x[q][good]
 
         # removes some of the F277W points to better fit the 2nd order
         if ind < 2:
@@ -297,7 +303,7 @@ def mask_method_profile(data, save=False, outdir=None):
         else:
             cutoff=250
 
-        xtot = np.append(xf[:cutoff], x[q][good][x[q][good]>xf[-1]])
+        xtot = np.append(xf[:cutoff], newx)
         if ind == 0 or ind == 2:
             ytot = np.append(f277_peaks[:,0][:cutoff], y)
         else:
@@ -308,6 +314,7 @@ def mask_method_profile(data, save=False, outdir=None):
         fit = np.poly1d(poly)
 
         avg[:,ind] = fit(x)
+
 
     tab = Table()
     tab['x'] = x
@@ -335,7 +342,7 @@ def ref_file(filename):
     ----------
     filename : str
        Name of the local trace reference file.
-    
+
     Returns
     -------
     tab : astropy.table.Table
