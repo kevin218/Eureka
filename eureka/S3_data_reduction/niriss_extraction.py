@@ -13,6 +13,10 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 
+import pyximport
+pyximport.install()
+from . import niriss_cython as profiles
+
 
 __all__ = ['box_extract', 'dirty_mask',
            'profile_niriss_median', 'profile_niriss_gaussian',
@@ -38,7 +42,7 @@ def box_extract(data, var, boxmask):
     spec1 : np.ndarray
        Extracted spectra for the first order.
     spec2 : np.ndarray
-       Extracted spectra for the second order.  
+       Extracted spectra for the second order.
     """
 
     spec1 = np.zeros((data.shape[0],
@@ -50,10 +54,19 @@ def box_extract(data, var, boxmask):
 
     m1, m2 = boxmask
 
+    summed = (m1+0)+(m2*2)
+    masked_second = summed+0.0
+    masked_second[summed==2] = 0
+    masked_second[masked_second>0] = 1
+
+    masked_first = summed+0.0
+    masked_first[summed==1] = 0
+    masked_first[masked_first>0] = 1
+
     for i in range(len(data)):
-        spec1[i] = np.nansum(data[i], # I think this needs to mask 2nd order?
+        spec1[i] = np.nansum(data[i]*masked_second,
                              axis=0)
-        spec2[i] = np.nansum(data[i], # I think this needs to mask 1st order?
+        spec2[i] = np.nansum(data[i]*masked_first,
                              axis=0)
 
         var1[i] = np.nansum(var[i] * m1, axis=0)
@@ -66,7 +79,7 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
                return_together=True, pos1=None, pos2=None):
     """
     Really dirty box mask for background purposes.
-    
+
     Parameters
     ----------
     img : np.ndarray
@@ -92,7 +105,7 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
     order1 = np.zeros((boxsize1, len(img[0])))
     order2 = np.zeros((boxsize2, len(img[0])))
     mask = np.zeros(img.shape)
-    
+
     if tab is not None:
         pos1 = tab['order_1'] + 0.0
         pos2 = tab['order_2'] + 0.0
@@ -119,7 +132,7 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
         m1, m2 = np.zeros(mask.shape), np.zeros(mask.shape)
         m1[(mask==1) | (mask==3)] = 1
         m2[mask>=2] = 1
-    
+
         if booltype==True:
             return np.array(m1,dtype=bool), np.array(m2,dtype=bool)
         else:
@@ -127,19 +140,19 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
 
 
 def profile_niriss_median(medprof, sigma=50):
-    """                         
+    """
     Builds a median profile for the NIRISS images.
 
-    Parameters          
-    ----------          
-    data : object  
+    Parameters
+    ----------
+    data : object
     medprof : np.ndarray
        A median image from all NIRISS images. This
-       is a first pass attempt, and optimized in  
-       the optimal extraction routine. 
-    sigma : float, optional 
+       is a first pass attempt, and optimized in
+       the optimal extraction routine.
+    sigma : float, optional
        Sigma for which to remove outliers above.
-       Default is 50.  
+       Default is 50.
 
     Returns
     -------
@@ -157,20 +170,20 @@ def profile_niriss_median(medprof, sigma=50):
         filt = savgol_filter(col, window_length=15, polyorder=5)
         resid = np.abs(col-filt)
 
-        # finds outliers 
+        # finds outliers
         inliers = np.where(resid<=sigma)[0]
         outliers = np.delete(x,inliers)
-        
+
         # removes outliers
         if len(outliers)>0:
             filt = savgol_filter(col[inliers], window_length=7, polyorder=2)
 
-            # finds values that are above/below the interpolation range    
+            # finds values that are above/below the interpolation range
             # these need to be masked first, otherwise it will raise an error
             above = np.where(x[outliers]>x[inliers][-1])[0]
             below = np.where(x[outliers]<x[inliers][0])[0]
 
-            # fills pixels that are above/below the interpolation range 
+            # fills pixels that are above/below the interpolation range
             # with 0s
             if len(above)>0:
                 medprof[:,i][outliers[above]]=0
@@ -214,13 +227,13 @@ def profile_niriss_gaussian(data, pos1, pos2):
     def residuals(params, data, y1_pos, y2_pos):
         """ Calcualtes residuals for best-fit profile. """
         A, B, sig1 = params
-        # Produce the model: 
+        # Produce the model:
         model,_ = profiles.build_gaussian_images(data, [A], [B], [sig1], y1_pos, y2_pos)
         # Calculate residuals:
         res = (model[0] - data)
         return res.flatten()
 
-    # fits the mask  
+    # fits the mask
     results = so.least_squares( residuals,
                                 x0=np.array([2,3,30]),
                                 args=(data, pos1, pos2),
@@ -247,13 +260,13 @@ def profile_niriss_moffat(data, pos1, pos2):
     ----------
     data : np.ndarray
        Image to fit a Moffat profile to.
-    pos1 : np.array  
+    pos1 : np.array
       x-values for the center of the first order.
-    pos2 : np.array  
+    pos2 : np.array
        x-values for the center of the second order.
 
-    Returns  
-    -------  
+    Returns
+    -------
     out_img1 : np.ndarray
        Moffat profile mask for the first order.
     out_img2 : np.ndarray
@@ -269,7 +282,7 @@ def profile_niriss_moffat(data, pos1, pos2):
         res = (model[0] - data)
         return res.flatten()
 
-    # fits the mask  
+    # fits the mask
     results = so.least_squares( residuals,
                                 x0=np.array([2,3,3]),
                                 args=(data, pos1, pos2),
@@ -288,9 +301,9 @@ def profile_niriss_moffat(data, pos1, pos2):
 
 def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medframe=None,
                                pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
-                               proftype='gaussian', isplots=0, per_quad=False):
+                               proftype='gaussian', isplots=0, per_quad=False, test=False):
     """
-    Optimal extraction routine for NIRISS. This is different from the 
+    Optimal extraction routine for NIRISS. This is different from the
     general `optspex.optimize` since there are two ways to extract the
     NIRISS data. The first is breaking up the image into quadrants. The
     second is extracting the spectra all together.
@@ -300,15 +313,15 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
     data : np.ndarray
        Set of raw NIRISS 2D images.
     spectrum : np.ndarray
-       Box-extracted spectra for each image to use in the 
+       Box-extracted spectra for each image to use in the
        optimal extraction routine.
     spectrum_var : np.ndarray
        Variance array for the box-extracted spectra.
     sky_bkg : np.ndarray
        Images of the estimated sky background.
     pos1 : np.ndarray, optional
-       Initial guesses for the center of the first order. These 
-       can be taken from `tab1` or `tab2`. 
+       Initial guesses for the center of the first order. These
+       can be taken from `tab1` or `tab2`.
        Default is None. This is not optional if you are using
        the `gaussian` or `moffat` profile types.
     pos2 : np.ndarray
@@ -331,7 +344,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
        Allows the extraction to happen via quadrants of the image.
        Default is False.
     isplots : int, optional
-       A key to decide which diagnostic plots to save. Default is 0 
+       A key to decide which diagnostic plots to save. Default is 0
        (no plots are saved).
     """
     block_extra = np.ones(data[0].shape)
@@ -350,7 +363,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
             # Figures out which quadrant location to use
             if quad == 1: # Isolated first order (top right)
                 x1,x2 = 1000, data.shape[2]
-                y1,y2 = 0, 100
+                y1,y2 = 0, 90
                 block_extra[80:y2,x1:x1+250]=0 # there's a bit of 2nd order
                                                # that needs to be masked
                 newdata = (data * block_extra)[:,y1:y2, x1:x2]
@@ -360,13 +373,14 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
             elif quad == 2: # Isolated second order (bottom right)
                 x1,x2 = 1000, 1900
                 y1,y2 = 70, data.shape[1]
-                newdata = np.copy(data)[:,y1:y2, x1:x2] # Takes the proper data slice 
+                newdata = np.copy(data)[:,y1:y2, x1:x2] # Takes the proper data slice
 
                 index = 1 # Index for the box extracted spectra
-    
+
             elif quad == 3: # Overlap region (left-hand side)
                 x1,x2 = 0, 1000
                 y1,y2 = 0, data.shape[1]
+                print(x1,x2, y1,y2)
                 newdata = np.copy(data)[:,y1:y2, x1:x2] # Takes the proper data slice
 
                 index = 0 # Index for the box extracted spectra
@@ -379,16 +393,16 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
                 new_cr_mask = None
 
             # Clip 1D arrays to the length of the quadrant
-            new_spectrum = np.copy(spectrum[index,:,x1:x2]) + 0.0
+            new_spectrum = np.copy(np.array(spectrum)[index,:,x1:x2]) + 0.0
             newvar = np.copy(var[:,y1:y2,x1:x2]) + 0.0
-            new_spectrum_var = np.copy(spectrum_var[index,:,x1:x2]) + 0.0
+            new_spectrum_var = np.copy(np.array(spectrum_var)[index,:,x1:x2]) + 0.0
 
             # Run the optimal extraction routine on the quadrant
             es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2],
                                            newvar,
-                                           new_spectrum, 
+                                           new_spectrum,
                                            new_spectrum_var,
-                                           new_sky_bkg, 
+                                           new_sky_bkg,
                                            medframe=medframe[y1:y2, x1:x2],
                                            pos1=pos1[x1:x2],
                                            pos2=pos2[x1:x2],
@@ -396,7 +410,8 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
                                            cr_mask=new_cr_mask,
                                            Q=Q,
                                            proftype=proftype,
-                                           isplots=isplots)
+                                           isplots=isplots,
+                                           test=test)
             es_all[quad-1] = es + 0.0
             ev_all[quad-1] = ev + 0.0
             p_all[quad-1] = p + 0.0
@@ -405,7 +420,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
 
     else: # Full image
         es, ev, p = extraction_routine(data, var,
-                                       spectrum, 
+                                       spectrum,
                                        spectrum_var,
                                        sky_bkg,
                                        medframe=medframe,
@@ -415,31 +430,50 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
                                        cr_mask=cr_mask,
                                        Q=Q,
                                        proftype=proftype,
-                                       isplots=isplots)
-    
+                                       isplots=isplots,
+                                       test=test)
+
         return es, ev, p
 
 
-def extraction_routine(data, var, 
+def extraction_routine(data, var,
                        spectrum, spectrum_var, sky_bkg, medframe=None,
                        pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
-                       proftype='gaussian', isplots=0):
+                       proftype='gaussian', isplots=0, test=False):
     """
     The actual extraction routine. `optimal extraction` is a wrapper
     for this function, since it needs to loop through *if* you want
     to extract the data via quadrants.
+
+    Parameters
+    ----------
+    data : np.array
+       Raw data frames.
+    var : np.array
+       Variance frames.
+    spectrum : np.array
+       Box-extracted spectrum.
+    spectrum_var : np.array
+       Variance on box-extracted spectrum.
+    sky_bkg : np.array
+       Modeled sky background frames.
     """
     # initialize arrays
     extracted_spectra = np.zeros((len(data), data.shape[2]))
     extracted_error   = np.zeros((len(data), data.shape[2]))
     best_fit_prof     = np.zeros(data.shape)
-    
+
+    if test:
+        frames = 5
+    else:
+        frames = len(data)
+
     # Loop through each frame
-    for i in tqdm(range(len(data))):
-    
+    for i in tqdm(range(frames)):
+
         ny, nx = data[i].shape
         x = np.arange(0,ny,1)
-        
+
         median = np.nanmedian(data,axis=0)
         median[median<0]=0
 
@@ -455,16 +489,16 @@ def extraction_routine(data, var,
             # Median mask creation
             if proftype.lower() == 'median':
                 P = medframe*M + 0.0
-                
+
             # Gaussian mask creation
             elif proftype.lower() == 'gaussian':
                 if (pos1 is not None) and (pos2 is not None):
-                    P,_ = profile_niriss_gaussian((median-sky_bkg[i])*M, 
+                    P,_ = profile_niriss_gaussian((median-sky_bkg[i])*M,
                                                   pos1,
                                                   pos2)
                 else:
                     return('Please pass in `pos1` and `pos2` arguments.')
-                
+
             # Moffat mask creation
             elif proftype.lower() == 'moffat':
                 if (pos1 is not None) and (pos2 is not None):
@@ -473,13 +507,13 @@ def extraction_routine(data, var,
                                                 pos2)
                 else:
                     return('Please pass in `pos1` and `pos2` arguments.')
-                
+
             else:
                 return('Mask profile type not implemeted.')
 
             P = P/np.nansum(P,axis=0) # profile normalized along columns
             P = np.abs(P)
-            
+
             # 6. Revise variance estimates
             V = spectrum_var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
             #V = var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
@@ -489,7 +523,7 @@ def extraction_routine(data, var,
 
             # this needs to be the *worst* pixel in a *single column*
             yy1,xx1 = np.where((stdevs*M)>sigma)
-            
+
             if isplots>=9:
                 plt.title('check')
                 plt.imshow(stdevs*M, vmin=sigma-2, vmax=sigma)
@@ -499,7 +533,7 @@ def extraction_routine(data, var,
                 plt.imshow(P)
                 plt.show()
 
-            # If cosmic rays found, continue looping through untl 
+            # If cosmic rays found, continue looping through untl
             # they are all masked
             if len(yy1)>0 or len(xx1)>0:
 
@@ -509,10 +543,12 @@ def extraction_routine(data, var,
                     r = np.where(xx1==u)[0]
                     o = np.argmax(data[0,yy1[r], xx1[r]])
                     M[yy1[r][o], xx1[r][0]] *= 0.0 # Set bad pixels to 0
-                    
-                    fv = np.nanmedian(data[i,yy1[r][o-1:o+2], xx1[r][0]] * M[yy1[r][o-1:o+2], xx1[r][0]])
+
+                    fv = np.nanmedian(data[i,yy1[r][o-1:o+2],
+                                           xx1[r][0]] * M[yy1[r][o-1:o+2],
+                                           xx1[r][0]])
                     fill_vals[yy1[r][o], xx1[r][0]] += fv
-                    
+
                     if isplots==14:
                         l = len(data[i][:,xx1[r][0]])
                         plt.plot(np.arange(0,l,1), P[:,xx1[r][0]], 'red')
@@ -534,9 +570,9 @@ def extraction_routine(data, var,
                     f = np.nansum(M*P*( (cr_mask[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
                     var_f = np.nansum( (M*P)*cr_mask[i], axis=0) / denom # This may need a sqrt ?
                 else:
-                    f = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom                    
+                    f = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
                     var_f = np.nansum(M*P,axis=0) / denom # This may need a sqrt ?
-                
+
                 if isplots>=8:
                     plt.imshow(P)
                     plt.colorbar()
