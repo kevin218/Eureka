@@ -10,7 +10,7 @@ from .lib.masking        import (interpolating_row, data_quality_mask,
                               interpolating_image)
 from .lib.clipping       import time_removal
 from .S3_data_reduction.background     import bkg_sub, fitbg3
-from .S3_data_reduction.niriss_extraction   import (dirty_mask, box_extract, 
+from .S3_data_reduction.niriss_extraction   import (dirty_mask, box_extract,
                                               optimal_extraction_routine)
 from .S3_data_reduction.niriss  import wave_NIRISS as wavelength
 from .lib.simultaneous_order_fitting import fit_orders, fit_orders_fast
@@ -84,7 +84,7 @@ class NIRISS_S3(object):
 
         return
 
-    
+
     def setup(self):
         """
         Sets up all proper attributes from the FITS file.
@@ -151,17 +151,17 @@ class NIRISS_S3(object):
         self.err[ np.isnan(self.err )==True] = 0.0
         self.var[ np.isnan(self.var )==True] = 0.0
         self.v0[  np.isnan(self.v0  )==True] = 0.0
-        
+
         print(hdu['DQ', 1].data.shape)
-        
+
         self.median = np.nanmedian(self.data, axis=0)
         hdu.close()
-        
-        return 
+
+        return
 
     def setup_f277(self, filename):
         """
-        Opens and assigns proper attributes for the F277W 
+        Opens and assigns proper attributes for the F277W
         filter observations.
 
         Parameters
@@ -185,7 +185,7 @@ class NIRISS_S3(object):
     def clean_up(self):
         """
         The `clean_up` routine interpolated over bad pixel values,
-        which are marked in the data quality images (`self.dq`). 
+        which are marked in the data quality images (`self.dq`).
         This routine removes bad quality pixels from the following
         images:
            - `self.data`
@@ -217,10 +217,10 @@ class NIRISS_S3(object):
         ----------
         wavelength_map : np.ndarray
         """
-        wmap = wavelength(os.path.join(self.data_dir, self.filename), 
+        wmap = wavelength(os.path.join(self.data_dir, self.filename),
                           orders, inclass=True)
         self.wavelength_map = wmap + 0.0
-    
+
 
     def map_trace(self, method='centers', ref_filename=None):
         """
@@ -231,12 +231,12 @@ class NIRISS_S3(object):
         ----------
         method : str, optional
            Decision on which trace extraction routine to run.
-           Options are: `edges` (uses a canny-edge detection 
-           routine), `centers` (uses the spatial profile), and 
+           Options are: `edges` (uses a canny-edge detection
+           routine), `centers` (uses the spatial profile), and
            `ref` (uses the STScI JWST reference frame).
         ref_filename : str, optional
            The name of the reference frame containing the order
-           trace x,y position values. Default is None. This is 
+           trace x,y position values. Default is None. This is
            a required parameter if you are running `method=='ref'`.
 
         Attributes
@@ -264,10 +264,10 @@ class NIRISS_S3(object):
             return('Trace method not implemented. Options are `edges` and `centers`.')
 
 
-    def create_box_mask(self, boxsize1=60, boxsize2=50, booltype=True, 
+    def create_box_mask(self, boxsize1=60, boxsize2=50, booltype=True,
                         return_together=True):
         """
-        Creates a box mask to extract the first and second NIRISS orders. 
+        Creates a box mask to extract the first and second NIRISS orders.
         Can set different box sizes for each order and also return a single
         mask with both orders (`return_together==True`) or return masks for each
         order (`return_together==False`).
@@ -349,21 +349,21 @@ class NIRISS_S3(object):
         s1, s2, v1, v2 = box_extract(d,
                                      self.var,
                                      self.box_mask_separate)
-        
+
         self.box_var1     = v1 + 0.0
         self.box_var2     = v2 + 0.0
         self.box_spectra1 = s1 + 0.0
         self.box_spectra2 = s2 + 0.0
-        
-        return
-    
 
-    def fit_background(self, readnoise=11, sigclip=[4,4,4], 
-                       box=(5,2), filter_size=(2,2), 
+        return
+
+
+    def fit_background(self, readnoise=11, sigclip=[4,4,4],
+                       box=(5,2), filter_size=(2,2),
                        bkg_estimator=['median'], test=True):
         """
         Subtracts background from non-spectral regions.
-        
+
         Parameters
         ----------
         data : object
@@ -392,12 +392,12 @@ class NIRISS_S3(object):
             ind = len(self.data)
 
 
-        bkg, bkg_var, cr_mask = fitbg3(self.data[:ind], 
+        bkg, bkg_var, cr_mask = fitbg3(self.data[:ind],
                                        ~self.box_mask,
-                                       readnoise=readnoise, 
-                                       sigclip=sigclip, 
+                                       readnoise=readnoise,
+                                       sigclip=sigclip,
                                        bkg_estimator=bkg_estimator,
-                                       box=box, 
+                                       box=box,
                                        filter_size=filter_size,
                                        inclass=True)
 
@@ -415,10 +415,10 @@ class NIRISS_S3(object):
         m[x,y,z] = 1
         self.bkg_removed = interpolating_image(self.bkg_removed,
                                                mask=m)
-                                               
 
 
-    def optimal_extraction(self, proftype='median', sigma=20, Q=1.8, 
+
+    def optimal_extraction(self, proftype='median', sigma=20, Q=1.8,
                            per_quad=True, test=False):
         """
         Runs the optimal extraction routine for the NIRISS orders.
@@ -432,7 +432,7 @@ class NIRISS_S3(object):
         2. Extracting the orders by orders. This will extract the
         *entire* first order and the *entire* second order, including
         the overlapping contaminated region for both orders.
-        
+
         Parameters
         ----------
         proftype : str, optional
@@ -458,11 +458,11 @@ class NIRISS_S3(object):
         ----------
         opt_order1_flux : np.array
            Optimally extracted flux for the first order.
-        opt_order2_flux : np.array 
+        opt_order2_flux : np.array
            Optimally extracted flux for the second order.
-        opt_order1_err : np.array 
+        opt_order1_err : np.array
            Optimally extracted flux error for the first order.
-        opt_order2_err : np.array 
+        opt_order2_err : np.array
            Optimally extracted flux error for the second order.
         """
         if self.box_spectra1 is None:
@@ -488,9 +488,9 @@ class NIRISS_S3(object):
 
         all_fluxes, all_errs, all_profs = optimal_extraction_routine(self.data[start:end],
                                                                      self.var[start:end],
-                                                                     spectrum=np.array([self.box_spectra1[start:end], 
+                                                                     spectrum=np.array([self.box_spectra1[start:end],
                                                                                         self.box_spectra2[start:end]]),
-                                                                     spectrum_var=np.array([self.box_var1[start:end], 
+                                                                     spectrum_var=np.array([self.box_var1[start:end],
                                                                                             self.box_var2[start:end]]),
                                                                      sky_bkg=self.bkg[start:end],
                                                                      medframe=self.median,
@@ -502,4 +502,3 @@ class NIRISS_S3(object):
                                                                      proftype=proftype,
                                                                      per_quad=per_quad)
         return all_fluxes, all_errs, all_profs
-        
