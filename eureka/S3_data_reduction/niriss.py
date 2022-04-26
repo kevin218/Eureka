@@ -79,8 +79,8 @@ def read(filename, data, meta, f277_filename=None):
     data.shdr = hdu['SCI',1].header
 
     data.intend = hdu[0].header['NINTS'] + 0.0
-    data.time = np.linspace(data.mhdr['EXPSTART'], 
-                              data.mhdr['EXPEND'], 
+    data.time = np.linspace(data.mhdr['EXPSTART'],
+                              data.mhdr['EXPEND'],
                               int(data.intend))
     meta.time_units = 'BJD_TDB'
 
@@ -115,8 +115,8 @@ def mask_method_edges(data, meta=None, radius=1, gf=4,
     image processing to identify the boundaries of the orders and fits
     the edges of the first and second orders with a 4th degree polynomial.
 
-    Parameters  
-    ----------  
+    Parameters
+    ----------
     data : object
     meta : object
     isplots : int, optional
@@ -149,7 +149,7 @@ def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
     second orders in NIRISS data. This method uses the vertical
     profile of a summed image to identify the borders of each
     order.
-    
+
     ""
     Parameters
     -----------
@@ -180,7 +180,7 @@ def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
 def wave_NIRISS(filename, orders=None, meta=None, inclass=False):
     """
     Adds the 2D wavelength solutions to the meta object.
-    
+
     Parameters
     ----------
     wavefile : str
@@ -206,7 +206,7 @@ def wave_NIRISS(filename, orders=None, meta=None, inclass=False):
     # Extract 2D wavelenght map for order 1:
     rows, columns = assign_wcs_results.data[0,:,:].shape
     wavelength_map = np.zeros([3, rows, columns])
-    
+
     # Loops through the three orders to retrieve the wavelength maps
     if orders is None:
         orders = [1,2,3]
@@ -214,8 +214,8 @@ def wave_NIRISS(filename, orders=None, meta=None, inclass=False):
     for order in orders:
         for row in tqdm(range(rows)):
             for column in range(columns):
-                wavelength_map[order-1, row, column] = assign_wcs_results.meta.wcs(column, 
-                                                                                   row, 
+                wavelength_map[order-1, row, column] = assign_wcs_results.meta.wcs(column,
+                                                                                   row,
                                                                                    order)[-1]
     if inclass == False:
         meta.wavelength_order = wavelength_map
@@ -224,20 +224,20 @@ def wave_NIRISS(filename, orders=None, meta=None, inclass=False):
         return wavelength_map
 
 
-def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4], 
+def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4],
             box=(5,2), filter_size=(2,2), bkg_estimator=['median'], isplots=0):
-    """ 
+    """
     I think this is just a wrapper for fit_bg, because I perform outlier
     flagging at the same time as the background fitting.
     """
-    data = fit_bg(data, meta, readnoise, sigclip, 
-                  bkg_estimator=bkg_estimator, box=box, 
+    data = fit_bg(data, meta, readnoise, sigclip,
+                  bkg_estimator=bkg_estimator, box=box,
                   filter_size=filter_size, isplots=isplots)
     return data
 
 
 
-def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2), 
+def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2),
            bkg_estimator=['median'], isplots=0):
     """
     Subtracts background from non-spectral regions.
@@ -254,7 +254,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
        sigma-level which should be clipped in the cosmic
        ray removal routine. Default is [4,2,3].
     isplots : int, optional
-       The level of output plots to display. Default is 0 
+       The level of output plots to display. Default is 0
        (no plots).
 
     Returns
@@ -264,7 +264,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
     """
     box_mask = dirty_mask(data.median, meta, booltype=True,
                           return_together=True)
-    bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool), 
+    bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,
                                    box=box, filter_size=filter_size, isplots=isplots)
     data.bkg = bkg
@@ -274,7 +274,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
 
 
 def set_which_table(i, meta):
-    """ 
+    """
     A little routine to return which table to
     use for the positions of the orders.
 
