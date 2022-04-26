@@ -56,7 +56,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Adding scatter_ppm parameter
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for param values
-         Save transmission spectrum
+         Save transmission spectrum (commented out)
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -100,20 +100,20 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Save transmission spectrum
     # indices of fitted rps for all channels
-    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    # get wavelengths at middle of bin
-    wave_low = meta.wave_low[lc.fitted_channels]
-    wave_hi = meta.wave_hi[lc.fitted_channels]
-    wave_mid = (wave_hi+wave_low)/2.
-    # Save transmission spectrum
-    # indices of fitted rps for all channels
-    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    if len(ind_spec):
-        t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
-                          np.zeros_like(wave_low), np.zeros_like(wave_low)],
-                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    else:
-        t_spec = None
+    # ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # # get wavelengths at middle of bin
+    # wave_low = meta.wave_low[lc.fitted_channels]
+    # wave_hi = meta.wave_hi[lc.fitted_channels]
+    # wave_mid = (wave_hi+wave_low)/2.
+    # # Save transmission spectrum
+    # # indices of fitted rps for all channels
+    # ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # if len(ind_spec):
+    #     t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+    #                       np.zeros_like(wave_low), np.zeros_like(wave_low)],
+    #                      names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    # else:
+        # t_spec = None
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
@@ -127,7 +127,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = fit_params[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, calling_function, t_results, freenames, spec_table=t_spec)
+    # save_fit(meta, lc, model, calling_function, t_results, freenames, spec_table=t_spec)
+    save_fit(meta, lc, model, calling_function, t_results, freenames)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
@@ -254,7 +255,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         state issues.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for mean, median, percentiles, +/- 1 sigma, all params
-         Save transmission spectrum
+         Save transmission spectrum (commented out)
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -331,14 +332,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
     
     # Save transmission spectrum
     # indices of fitted rps for all channels
-    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    # get wavelengths at middle of bin
-    wave_low = meta.wave_low[lc.fitted_channels]
-    wave_hi = meta.wave_hi[lc.fitted_channels]
-    wave_mid = (wave_hi+wave_low)/2.
-    t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
-                          (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
-                         names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    # ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # # get wavelengths at middle of bin
+    # wave_low = meta.wave_low[lc.fitted_channels]
+    # wave_hi = meta.wave_hi[lc.fitted_channels]
+    # wave_mid = (wave_hi+wave_low)/2.
+    # t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+    #                       (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+    #                      names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
     
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -353,7 +354,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'emcee', t_results, freenames, samples, spec_table=t_spec)
+    # save_fit(meta, lc, model, 'emcee', t_results, freenames, samples, spec_table=t_spec)
+    save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
 
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
@@ -593,7 +595,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Adding scatter_ppm parameter. 
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for mean, median, percentiles, +/- 1 sigma, all params
-         Save transmission spectrum
+         Save transmission spectrum (commented out)
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = group_variables(model)
@@ -666,17 +668,17 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     lower_errs = q[1]-q[0]
     # Save transmission spectrum
     # indices of fitted rps for all channels
-    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    if len(ind_spec):
-        # get wavelengths at middle of bin
-        wave_low = meta.wave_low[lc.fitted_channels]
-        wave_hi = meta.wave_hi[lc.fitted_channels]
-        wave_mid = (wave_hi+wave_low)/2.
-        t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
-                              (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
-                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    else:
-        t_spec = None
+    # ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # if len(ind_spec):
+    #     # get wavelengths at middle of bin
+    #     wave_low = meta.wave_low[lc.fitted_channels]
+    #     wave_hi = meta.wave_hi[lc.fitted_channels]
+    #     wave_mid = (wave_hi+wave_low)/2.
+    #     t_spec = table.Table([wave_low, wave_mid, wave_hi, q[1][ind_spec]**2.*1e6, \
+    #                           (q[0][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6), (q[2][ind_spec]**2.*1e6-q[1][ind_spec]**2.*1e6)],
+    #                          names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    # else:
+    #     t_spec = None
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -691,7 +693,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
     
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples, spec_table = t_spec)
+    # save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples, spec_table = t_spec)
+    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype, freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
@@ -776,7 +779,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         Adding scatter_ppm parameter. 
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for parameter values
-         Save transmission spectrum
+         Save transmission spectrum (commented out)
     """
         #TODO: Do something so that duplicate param names can all be handled (e.g. two Polynomail models with c0). Perhaps append something to the parameter name like c0_1 and c0_2?)
 
@@ -813,17 +816,17 @@ def lmfitter(lc, model, meta, log, **kwargs):
     
     # Save transmission spectrum
     # indices of fitted rps for all channels
-    ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
-    if len(ind_spec):
-        # get wavelengths at middle of bin
-        wave_low = meta.wave_low[lc.fitted_channels]
-        wave_hi = meta.wave_hi[lc.fitted_channels]
-        wave_mid = (wave_hi+wave_low)/2.
-        t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
-                              np.zeros_like(wave_low), np.zeros_like(wave_low)],
-                             names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
-    else:
-        t_spec = None
+    # ind_spec = np.array([i for i in range(len(freenames)) if 'rp' in freenames[i]])
+    # if len(ind_spec):
+    #     # get wavelengths at middle of bin
+    #     wave_low = meta.wave_low[lc.fitted_channels]
+    #     wave_hi = meta.wave_hi[lc.fitted_channels]
+    #     wave_mid = (wave_hi+wave_low)/2.
+    #     t_spec = table.Table([wave_low, wave_mid, wave_hi, fit_params[ind_spec]**2.*1e6, \
+    #                           np.zeros_like(wave_low), np.zeros_like(wave_low)],
+    #                          names=("wave_low_um", "wave_mid_um", "wave_upp_um", "RpRs2_ppm", "err_low_ppm", "err_upp_ppm"))
+    # else:
+    #     t_spec = None
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
@@ -837,7 +840,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, 'lmfitter', t_results, freenames, spec_table=t_spec)
+    # save_fit(meta, lc, model, 'lmfitter', t_results, freenames, spec_table=t_spec)
+    save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
 
 
     # Create new model with best fit parameters
@@ -1016,7 +1020,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
     History:
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for mean, median, percentiles, +/- 1 sigma, all params
-         Save transmission spectrum
+         Save transmission spectrum (commented out)
     """
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
@@ -1026,13 +1030,13 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
 
     # Save transmission spectrum
     # indices of fitted rps for all channels
-    if spec_table is not None:
-        if lc.share:
-            spec_fname = f'S5_{fitter}_trspec_shared'
-        else:
-            spec_fname = f'S5_{fitter}_trspec_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
+    # if spec_table is not None:
+    #     if lc.share:
+    #         spec_fname = f'S5_{fitter}_trspec_shared'
+    #     else:
+    #         spec_fname = f'S5_{fitter}_trspec_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
 
-        spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
+    #     spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
 
 
     # Save the chain from the sampler (if a chain was provided)
