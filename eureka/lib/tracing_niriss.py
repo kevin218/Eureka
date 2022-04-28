@@ -7,6 +7,7 @@ from scipy.signal import find_peaks
 from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
+from astropy.modeling.models import Moffat1D
 
 __all__ = ['image_filtering', 'simplify_niriss_img',
            'mask_method_edges', 'mask_method_profile', 'f277_mask',
@@ -210,7 +211,8 @@ def mask_method_edges(data, radius=1, gf=4,
     return tab
 
 
-def mask_method_profile(data, save=False, outdir=None):
+def mask_method_profile(data, degree=4, save=False,
+                        outdir=None, isplots=0):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
@@ -220,6 +222,9 @@ def mask_method_profile(data, save=False, outdir=None):
     Parameters
     ----------
     data : object
+    degree : int, optional
+       The degree of the polynomial to fit to the orders.
+       Default is 4.
     save : bool, optional
        Has the option to save the initial guesses for the location
        of the NIRISS orders. This is set in the .ecf control files.
@@ -233,93 +238,103 @@ def mask_method_profile(data, save=False, outdir=None):
     """
     import matplotlib.pyplot as plt
 
+    def define_peak_params(column, which_std=1):
+        height = np.nanmax(column) # used to find peak in profile
+        std    = np.nanstd(column) # used to find second peak
+        return height - which_std*std
+
+
     def identify_peaks(column, height, distance):
+        """ Identifies peaks in the spatial profile. """
         p,_ = find_peaks(column, height=height, distance=distance)
         return p
+
+    def fit_function(x, y, deg=4):
+        """ Fits a n-degree polynomial to x and y data. """
+        poly = np.polyfit(x, y, deg=deg)
+        fit = np.poly1d(poly)
+        return fit
+
+    def find_fit_outliers(x, y, m, deg=4, which_std=2):
+        """ Uses difference between data and model to remove outliers. """
+        diff = np.abs(y - m)
+        outliers = np.where(diff>=np.nanmedian(diff)+which_std*np.nanstd(diff))
+        tempx = np.delete(x, outliers)
+        tempy = np.delete(y, outliers)
+        return tempx, tempy
+
+    def diagnostic_plotting(x, y, model, model_final):
+        """ Plots the data, the first fit, and the final best-fit. """
+        plt.plot(x, y, 'k.', label='Data')
+        plt.plot(x, model(x), 'darkorange', label='First Fit Attempt')
+        plt.plot(x, model_final(x), 'deepskyblue', lw=2, label='Final Fit')
+        plt.legend(ncol=3)
+        plt.show()
 
     summed = np.nansum(data.data, axis=0)
     ccd = CCDData(summed*units.electron)
 
     new_ccd_no_premask = ccdp.cosmicray_lacosmic(ccd, readnoise=150,
-                                                 sigclip=5, verbose=False)
+                                                 sigclip=4, verbose=False)
 
     summed_f277 = np.nansum(data.f277, axis=(0,1))
 
-    f277_peaks = np.zeros((summed_f277.shape[1],2))
-    peaks = np.zeros((new_ccd_no_premask.shape[1], 6))
-    double_peaked = [500, 700, 1850] # hard coded numbers to help set height bounds
+    x = np.arange(0, new_ccd_no_premask.data.shape[1], 1)
 
-    for i in range(summed.shape[1]):
-
-        # Identifies peaks in the F277W filtered image
-        fp = identify_peaks(summed_f277[:,i], height=100000, distance=10)
-
-        if len(fp)==2:
-            f277_peaks[i] = fp
-
-        if i < double_peaked[1]:
-            height=200
-        elif i >= double_peaked[1]:
-            height = 500
-
-        p = identify_peaks(new_ccd_no_premask[:,i].data,
-        height=height, distance=10)
-
-        if i < 900:
-            p = p[p>40] # sometimes catches an upper edge that doesn't exist
-
-        peaks[i][:len(p)] = p
-
-
-    # Removes 0s from the F277W boundaries
-    xf = np.arange(0,summed_f277.shape[1],1)
-    good = f277_peaks[:,0]!=0
-    xf=xf[good]
-    f277_peaks=f277_peaks[good]
-
-    # Fitting a polynomial to the boundary of each order
-    x = np.arange(0,new_ccd_no_premask.shape[1],1)
-    avg = np.zeros((new_ccd_no_premask.shape[1], 6))
-
-    for ind in range(4): # CHANGE THIS TO 6 TO ADD THE THIRD ORDER
-        q = peaks[:,ind] > 0
-
-        # removes outliers
-        diff = np.diff(peaks[:,ind][q])
-        good = np.where(np.abs(diff)<=np.nanmedian(diff)+2*np.nanstd(diff))
-        good = good[5:-5]
-        y = peaks[:,ind][q][good] + 0
-
-        try:
-            y = y[x[q][good]>xf[-1]]
-            newx = x[q][good][x[q][good]>xf[-1]]
-        except:
-            y = y + 0.0
-            newx = x[q][good]
-
-        # removes some of the F277W points to better fit the 2nd order
-        if ind < 2:
-            cutoff=-1
-        else:
-            cutoff=250
-
-        xtot = np.append(xf[:cutoff], newx)
-        if ind == 0 or ind == 2:
-            ytot = np.append(f277_peaks[:,0][:cutoff], y)
-        else:
-            ytot = np.append(f277_peaks[:,1][:cutoff], y)
-
-        # Fits a 4th degree polynomial
-        poly= np.polyfit(xtot, ytot, deg=4)
-        fit = np.poly1d(poly)
-
-        avg[:,ind] = fit(x)
-
-
+    # Initializes astropy.table.Table to save traces to
     tab = Table()
     tab['x'] = x
-    tab['order_1'] = np.nanmedian(avg[:,:2],axis=1)
-    tab['order_2'] = np.nanmedian(avg[:,2:4],axis=1)
+
+    # Extraction for the first order
+    center_1 = np.zeros(new_ccd_no_premask.data.shape[1])
+    for i in range(len(center_1)):
+        height = define_peak_params(new_ccd_no_premask.data[:,i])
+        p = identify_peaks(new_ccd_no_premask.data[:,i],
+                           height=height,
+                           distance=10.0)
+        center_1[i] = np.nanmedian(x[p]) # Takes the median between peaks
+    # Iterate on fitting a profile to remove outliers from the first go
+    fit1 = fit_function(x, center_1, deg=degree)
+    x1, y1 = find_fit_outliers(x, center_1, fit1(x)) # Finds bad points
+    fit1_final = fit_function(x1, y1, deg=degree)
+
+    if isplots>=6:
+        diagnostic_plotting(x, center_1, fit1, fit1_final)
+
+    tab['order_1'] = fit1_final(x) # Adds fit of 1st order to output table
+
+    if new_ccd_no_premask.shape[0]==256: # Checks to see if 2nd order available
+        center_2 = np.zeros(new_ccd_no_premask.data.shape[1])
+        colx = np.arange(0,new_ccd_no_premask.data.shape[0],1)
+
+        for i in range(500,2048): # Can't get a good guesstimate for 2nd order
+                                  #    past pixel ~500
+            col = new_ccd_no_premask.data[:,i]
+            m1  = Moffat1D(x_0=tab['order_1'][i], alpha=3, gamma=13) # approx
+            rmv = np.where( (m1(colx)*np.nanmax(col) < 30) &    # removes points under model
+                            (colx>50))[0]                       #  and points beyond the 1st orders
+            newx, newcol = colx[rmv] + 0.0, col[rmv] + 0.0
+            height = define_peak_params(newcol, which_std=2)
+            p = identify_peaks(newcol, height=height, distance=10.0)
+            center_2[i] = np.nanmedian(newx[p])
+
+        rmv_nans = ((np.isnan(center_2)==False) &
+                    (center_2 > 0) & (x < 1760)) # removes first 500 and last 268 points
+        fit2 = fit_function(x[rmv_nans], center_2[rmv_nans], deg=degree)
+        x2, y2 = find_fit_outliers(x[rmv_nans],
+                                   center_2[rmv_nans], fit2(x[rmv_nans]),
+                                   which_std=1)
+        # Need some points from the first order to anchor second order
+        #x2 = np.append(x[:300], x2)
+        #y2 = np.append(tab['order_1'][:300], y2)
+
+        fit2_final = fit_function(x2, y2, deg=degree)
+
+        if isplots>=6:
+            diagnostic_plotting(x, center_2, fit2, fit2_final)
+
+        tab['order_2'] = fit2_final(x) # Adds fit of 2nd order to output table
+
 
     if save:
         fn = 'niriss_order_fits_method2.csv'
