@@ -10,7 +10,6 @@ emcee>3.0.0
 george
 gwcs
 h5py
-image_registration
 ipython
 lmfit
 matplotlib
