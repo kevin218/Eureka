@@ -4,7 +4,7 @@ import numpy as np
 import sys, os
 from importlib import reload
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '..'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
@@ -40,8 +40,8 @@ def test_MIRI(capsys):
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel='MIRI'
-    meta.topdir='../tests'
-    ecf_path='./MIRI_ecfs/'
+    meta.topdir=f'..{os.sep}tests'
+    ecf_path=f'.{os.sep}MIRI_ecfs{os.sep}'
 
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
@@ -65,43 +65,44 @@ def test_MIRI(capsys):
     # run assertions for S2
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        # meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage1/'
+        # meta.outputdir_raw=f'{os.sep}data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage1{os.sep}'
         # name = pathdirectory(meta, 'S1', 1)
         # assert os.path.exists(name)
 
-        meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage2/'
+        meta.outputdir_raw=f'{os.sep}data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage2{os.sep}'
         name = pathdirectory(meta, 'S2', 1)
         assert os.path.exists(name)
-        assert os.path.exists(name+'/figs')
+        assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S3
-    meta.outputdir_raw='data/JWST-Sim/MIRI/Stage3/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage3{os.sep}'
     name = pathdirectory(meta, 'S3', 1, ap=2, bg=4)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S4
-    meta.outputdir_raw='data/JWST-Sim/MIRI/Stage4/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage4{os.sep}'
     name = pathdirectory(meta, 'S4', 1, ap=2, bg=4)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S5
-    meta.outputdir_raw='data/JWST-Sim/MIRI/Stage5/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage5{os.sep}'
     name = pathdirectory(meta, 'S5', 1, ap=2, bg=4)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S6
-    meta.outputdir_raw='data/JWST-Sim/MIRI/Stage6/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage6{os.sep}'
     name = pathdirectory(meta, 'S6', 1, ap=2, bg=4)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    # os.system("rm -r data/JWST-Sim/MIRI/Stage1/S1_*")
-    os.system("rm -r data/JWST-Sim/MIRI/Stage2/S2_*")
-    os.system("rm -r data/JWST-Sim/MIRI/Stage3")
-    os.system("rm -r data/JWST-Sim/MIRI/Stage4")
-    os.system("rm -r data/JWST-Sim/MIRI/Stage5")
-    os.system("rm -r data/JWST-Sim/MIRI/Stage6")
+    if s2_installed:
+        # os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage1{os.sep}S1_*")
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage2{os.sep}S2_*")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage3")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage4")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage5")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}Stage6")

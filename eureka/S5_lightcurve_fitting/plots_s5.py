@@ -1,4 +1,4 @@
-import string
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -89,7 +89,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         fig.align_ylabels(ax)
 
         ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = f'figs/fig5101_ch{ch_number}_lc_{fitter}'+figure_filetype
+        fname = 'figs'+os.sep+f'fig5101_ch{ch_number}_lc_{fitter}'+figure_filetype
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -154,7 +154,7 @@ def plot_rms(lc, model, meta, fitter):
         plt.yticks(size=12)
         plt.legend()
         ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = f'figs/fig5301_ch{ch_number}_allanplot_{fitter}'+figure_filetype
+        fname = 'figs'+os.sep+f'fig5301_ch{ch_number}_allanplot_{fitter}'+figure_filetype
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -204,7 +204,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
                         labels=freenames, show_titles=True, title_fmt='.3',
                         title_kwargs={"fontsize": 10}, label_kwargs={"fontsize": 10}, fontsize=10, labelpad=0.25)
     ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-    fname = f'figs/fig5501_ch{ch_number}_corner_{fitter}'+figure_filetype
+    fname = 'figs'+os.sep+f'fig5501_ch{ch_number}_corner_{fitter}'+figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -286,7 +286,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False, nburn
         fig.tight_layout(h_pad=0.0)
 
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        fname = f'figs/fig5303_ch{ch_number}'
+        fname = 'figs'+os.sep+f'fig5303_ch{ch_number}'
         if burnin:
             fname += '_burninchain'
         else:
@@ -356,7 +356,7 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.plot(x,px*(bins[1]-bins[0])*len(residuals),'k-',lw=2)
         plt.xlabel("Residuals/Uncertainty", fontsize=14)
         ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = f'figs/fig5302_ch{ch_number}_res_distri_{fitter}'+figure_filetype
+        fname = 'figs'+os.sep+f'fig5302_ch{ch_number}_res_distri_{fitter}'+figure_filetype
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -436,7 +436,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
         ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = f'figs/fig5102_ch{ch_number}_lc_GP_{fitter}'+figure_filetype
+        fname = 'figs'+os.sep+f'fig5102_ch{ch_number}_lc_GP_{fitter}'+figure_filetype
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)

@@ -4,6 +4,7 @@ Author: Joe Filippazzo
 Email: jfilippazzo@stsci.edu
 """
 import numpy as np
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -207,7 +208,7 @@ class LightCurve(m.Model):
             fig.tight_layout()
 
             ch_number = str(channel).zfill(len(str(self.nchannel)))
-            fname = f'figs/fig5103_ch{ch_number}_all_fits'+figure_filetype
+            fname = 'figs'+os.sep+f'fig5103_ch{ch_number}_all_fits'+figure_filetype
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()

@@ -23,7 +23,7 @@ import numpy as np
 
 import os
 import sys
-sys.path.insert(0, '../')
+sys.path.insert(0, '..'+os.sep)
 from eureka.S5_lightcurve_fitting import lightcurve, models, simulations
 from eureka.lib.readEPF import Parameters, Parameter
 from eureka.lib.readECF import MetaClass
@@ -150,12 +150,12 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        log = logedit.Logedit('./data/test.log')
+        log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.e_model = models.BatmanEclipseModel(parameters=params, name='transit', fmt='r--', log=log,
                                                  longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
 
         # Remove the temporary log file
-        os.system("rm ./data/test.log")
+        os.system(f"rm .{os.sep}data{os.sep}test.log")
 
         # Evaluate and test output
         self.e_model.time = self.time
@@ -189,7 +189,7 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        log = logedit.Logedit('./data/test.log')
+        log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.BatmanTransitModel(parameters=params, name='transit', fmt='r--',
                                                  longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
         self.e_model = models.BatmanEclipseModel(parameters=params, name='transit', fmt='r--', log=log,
@@ -199,7 +199,7 @@ class TestModels(unittest.TestCase):
                                                          transit_model=self.t_model, eclipse_model=self.e_model)
 
         # Remove the temporary log file
-        os.system("rm ./data/test.log")
+        os.system(f"rm .{os.sep}data{os.sep}test.log")
 
         # Evaluate and test output
         self.phasecurve.time = self.time

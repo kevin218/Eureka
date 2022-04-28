@@ -13,7 +13,6 @@
 import os
 import shutil
 import time
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -21,7 +20,6 @@ from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
-from ..lib import sort_nicely as sn
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib.plots import figure_filetype
@@ -35,7 +33,7 @@ class MetaClass:
         return
 
 
-def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
+def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
     pipeline into calints and x1dints.
 
@@ -44,13 +42,14 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
 
     Parameters
     ----------
-    eventlabel: str
+    eventlabel : str
         Unique label for this dataset
-    ecf_path:   str
-        The absolute or relative path to where ecfs are stored
-    s1_meta:    MetaClass
+    ecf_path : str, optional
+        The absolute or relative path to where ecfs are stored. Defaults
+        to None which resolves to './'.
+    s1_meta : MetaClass, optional
         The metadata object from Eureka!'s S1 step (if running S1 and S2
-        sequentially).
+        sequentially). Defaults to None.
 
     Returns
     -------
@@ -72,22 +71,21 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
     meta.eventlabel = eventlabel
 
     if s1_meta is None:
-        # load savefile
-        s1_meta = read_s1_meta(meta)
-
-    if s1_meta is not None:
-        meta = load_general_s1_meta_info(meta, ecf_path, s1_meta)
+        # Locate the old MetaClass savefile, and load new ECF into
+        # that old MetaClass
+        s1_meta, meta.inputdir, meta.inputdir_raw = \
+            me.findevent(meta, 'S2', allowFail=True)
     else:
-        # Attempt to find subdirectory containing S1 FITS files
-        meta = find_s1_files(meta)
+        # Running these stages sequentially, so can safely assume
+        # that the path hasn't changed
+        meta.inputdir = s1_meta.outputdir
+        meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-        # Create directories for Stage 2 processing outputs
-        meta.inputdir_raw = meta.inputdir
-        meta.outputdir_raw = meta.outputdir
-        meta.inputdir = os.path.join(meta.topdir,
-                                     *meta.inputdir_raw.split(os.sep))
-        meta.outputdir = os.path.join(meta.topdir,
-                                      *meta.outputdir_raw.split(os.sep))
+    if s1_meta is None:
+        # Attempt to find subdirectory containing S1 FITS files
+        meta = util.find_fits(meta)
+    else:
+        meta = me.mergeevents(meta, s1_meta)
 
     run = util.makedirectory(meta, 'S2')
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
@@ -177,180 +175,6 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
                      save=[])
 
     log.closelog()
-
-    return meta
-
-
-def read_s1_meta(meta):
-    '''Loads in an S1 meta file.
-
-    Parameters
-    ----------
-    meta:    MetaClass
-        The new meta object for the current S2 processing.
-
-    Returns
-    -------
-    s1_meta:   MetaClass
-        The S1 metadata object.
-
-    Notes
-    -----
-    History:
-
-    - April 15, 2022 Taylor Bell
-        Initial version.
-    '''
-    # Search for the S1 output metadata in the inputdir provided in
-    # First just check the specific inputdir folder
-    rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-    if rootdir[-1] != '/':
-        rootdir += '/'
-    fnames = glob.glob(rootdir+'S1_'+meta.eventlabel+'*_Meta_Save.dat')
-    if len(fnames) == 0:
-        # There were no metadata files in that folder, so let's see if there
-        # are in children folders
-        fnames = glob.glob(rootdir+'**/S1_'+meta.eventlabel+'*_Meta_Save.dat',
-                           recursive=True)
-
-    if len(fnames) >= 1:
-        # get the folder with the latest modified time
-        fname = max(fnames, key=os.path.getmtime)
-
-    if len(fnames) == 0:
-        # There may be no rateints files in the inputdir or any of its
-        # children directories - raise an error and give a helpful message
-        print('WARNING: Unable to find an output metadata file from Eureka!\'s'
-              f' S1 step in the inputdir: \n"{meta.inputdir}"!\n'
-              'Assuming this data was produced by the JWST pipeline instead.')
-        return None
-    elif len(fnames) > 1:
-        # There may be multiple runs - use the most recent but warn the user
-        print('WARNING: There are multiple metadata save files in your '
-              f'inputdir: \n"{rootdir}"\n'
-              f'Using the metadata file: \n{fname}\n'
-              'and will consider aperture ranges listed there. If this '
-              'metadata file is not a part\nof the run you intended, please '
-              'provide a more precise folder for the metadata file.')
-
-    fname = fname[:-4]  # Strip off the .dat ending
-
-    s1_meta = me.loadevent(fname)
-
-    # Code to not break backwards compatibility with old MetaClass save files
-    # but also use the new MetaClass going forwards
-    s1_meta = readECF.MetaClass(**s1_meta.__dict__)
-
-    return s1_meta
-
-
-def find_s1_files(meta):
-    '''Locates S1 output FITS files if not running S1 and S2 sequentially.
-
-    Parameters
-    ----------
-    meta:    MetaClass
-        The new meta object for the current S2 processing.
-
-    Returns
-    -------
-    meta:   MetaClass
-        The meta object with the updated inputdir pointing to the location of
-        the input files to use.
-
-    Notes
-    -----
-    History:
-
-    - April 15, 2022 Taylor Bell
-        Initial version.
-    '''
-    rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-    if rootdir[-1] != '/':
-        rootdir += '/'
-    fnames = glob.glob(rootdir+'*'+meta.suffix + '.fits')
-    if len(fnames) == 0:
-        # There were no rateints files in that folder, so let's see if there
-        # are in children folders
-        fnames = glob.glob(rootdir+'**/*'+meta.suffix + '.fits',
-                           recursive=True)
-        fnames = sn.sort_nicely(fnames)
-
-    if len(fnames) == 0:
-        # If the code can't find any of the reqested files, raise an error and
-        # give a helpful message
-        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
-                             f'in the inputdir: \n"{meta.inputdir}"!\n'
-                             f'You likely need to change the inputdir in '
-                             f'{meta.filename} to point to the folder '
-                             f'containing the "{meta.suffix}.fits" files.')
-
-    folders = np.unique([os.sep.join(fname.split(os.sep)[:-1])
-                         for fname in fnames])
-    if len(folders) >= 1:
-        # get the file with the latest modified time
-        folder = max(folders, key=os.path.getmtime)
-
-    if len(folders) > 1:
-        # There may be multiple runs - use the most recent but warn the user
-        print(f'WARNING: There are multiple folders containing '
-              f'"{meta.suffix}.fits" files in your inputdir: '
-              f'\n"{meta.inputdir}"\n'
-              f'Using the files in: \n{folder}\n'
-              f'and will consider aperture ranges listed there. If this '
-              f'metadata file is not a part\n of the run you intended, please '
-              f'provide a more precise folder for the metadata file.')
-
-    meta.inputdir = folder[len(meta.topdir):]
-    if meta.inputdir[-1] != '/':
-        meta.inputdir += '/'
-
-    return meta
-
-
-def load_general_s1_meta_info(meta, ecf_path, s1_meta):
-    '''Loads in the S1 meta save file and adds in attributes from the S2 ECF.
-
-    Parameters
-    ----------
-    meta:    MetaClass
-        The new meta object for the current S2 processing.
-    ecf_path:
-        The absolute path to where the S2 ECF is stored.
-
-    Returns
-    -------
-    meta:   MetaClass
-        The S1 metadata object with attributes added by S2.
-
-    Notes
-    -----
-    History:
-
-    - April 15, 2022 Taylor Bell
-        Initial version.
-    '''
-    # Need to remove the topdir from the outputdir
-    s1_outputdir = s1_meta.outputdir[len(meta.topdir):]
-    if s1_outputdir[0] == '/':
-        s1_outputdir = s1_outputdir[1:]
-    if s1_outputdir[-1] != '/':
-        s1_outputdir += '/'
-    s1_topdir = s1_meta.topdir
-
-    # Load S2 Eureka! control file and store values in the S1 metadata object
-    ecffile = 'S2_' + meta.eventlabel + '.ecf'
-    meta = s1_meta
-    meta.read(ecf_path, ecffile)
-
-    # Overwrite the inputdir with the exact output directory from S1
-    meta.inputdir = os.path.join(s1_topdir, s1_outputdir)
-    # Capture the date that the S1 data was made (to find it's foldername)
-    meta.old_datetime = meta.datetime
-    # Reset the datetime in case we're running this on a different day
-    meta.datetime = None
-    meta.inputdir_raw = s1_outputdir
-    meta.outputdir_raw = meta.outputdir
 
     return meta
 
@@ -461,7 +285,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             max_m = meta.num_data_files
             fig_number = str(m).zfill(int(np.floor(np.log10(max_m))+1))
             fname = f'fig2101_file{fig_number}_x1dints'
-            x1d_fname = ('_'.join(filename.split('/')[-1].split('_')[:-1]) +
+            x1d_fname = ('_'.join(filename.split(os.sep)[-1].split('_')[:-1]) +
                          '_x1dints')
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
                 plt.figure(2101, figsize=[15, 5])
@@ -474,7 +298,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.title('Time Series Observation: Extracted spectra')
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs/'+fname+figure_filetype,
+                plt.savefig(meta.outputdir+'figs'+os.sep+fname+figure_filetype,
                             bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()
