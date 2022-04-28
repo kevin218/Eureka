@@ -2,7 +2,6 @@
 
 # Eureka! Stage 2 calibration pipeline
 
-
 # Proposed Steps
 # --------------
 # 1.  Read in Stage 1 data products
@@ -10,7 +9,6 @@
 # 3.  Run the JWST pipeline with any requested modifications
 # 4.  Save Stage 2 data products
 # 5.  Produce plots
-
 
 import os
 import shutil
@@ -60,7 +58,7 @@ def calibrateJWST(eventlabel, ecf_path='./', s1_meta=None):
         The metadata object
 
     Notes
-    ------
+    -----
     History:
 
     - 03 Nov 2021 Taylor Bell
@@ -197,7 +195,7 @@ def read_s1_meta(meta):
         The S1 metadata object.
 
     Notes
-    -------
+    -----
     History:
 
     - April 15, 2022 Taylor Bell
@@ -261,7 +259,7 @@ def find_s1_files(meta):
         the input files to use.
 
     Notes
-    -------
+    -----
     History:
 
     - April 15, 2022 Taylor Bell
@@ -326,7 +324,7 @@ def load_general_s1_meta_info(meta, ecf_path, s1_meta):
         The S1 metadata object with attributes added by S2.
 
     Notes
-    -------
+    -----
     History:
 
     - April 15, 2022 Taylor Bell
@@ -363,7 +361,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
     This wrapper class allows non-standard changes to Stage 2 for Eureka!.
 
     Notes
-    ------
+    -----
     History:
 
     - October 2021 Taylor Bell
@@ -388,7 +386,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         None
 
         Notes
-        ------
+        -----
         History:
 
         - June 2021 Eva-Maria Ahrer and Aarynn Carter
@@ -492,7 +490,7 @@ class EurekaImage2Pipeline(Image2Pipeline):
     This wrapper class allows non-standard changes to Stage 2 for Eureka!.
 
     Notes
-    ------
+    -----
     History:
 
     - October 2021 Taylor Bell
@@ -517,7 +515,7 @@ class EurekaImage2Pipeline(Image2Pipeline):
         None
 
         Notes
-        ------
+        -----
         History:
 
         - 03 Nov 2021 Taylor Bell

@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 
 from ..lib.plots import figure_filetype
 
+
 def plot_spectrum(meta, model_x=None, model_y=None,
-                  y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$', xlabel=r'Wavelength ($\mu$m)',
+                  y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$',
+                  xlabel=r'Wavelength ($\mu$m)',
                   scaleHeight=None, planet_R0=None):
 
     if scaleHeight is not None:
@@ -13,7 +15,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     else:
         fig = plt.figure(6101, figsize=(8, 4))
     plt.clf()
-    ax = fig.subplots(1,1)
+    ax = fig.subplots(1, 1)
 
     wavelength = deepcopy(meta.wavelengths)
     wavelength_error = deepcopy(meta.wave_errs)
@@ -26,19 +28,29 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     if err is not None:
         err *= y_scalar
 
-    ax.errorbar(wavelength, spectrum, fmt='o', capsize=3, ms=3, xerr=wavelength_error, yerr=err, color='k')
+    ax.errorbar(wavelength, spectrum, fmt='o', capsize=3, ms=3,
+                xerr=wavelength_error, yerr=err, color='k')
     if (model_x is not None) and (model_y is not None):
-        in_range = np.logical_and(model_x>=wavelength[0]-wavelength_error[0], model_x<=wavelength[-1]+wavelength_error[-1])
+        in_range = np.logical_and(model_x >= wavelength[0]-wavelength_error[0],
+                                  model_x <= (wavelength[-1] +
+                                              wavelength_error[-1]))
         ax.plot(model_x[in_range], model_y[in_range], color='r', zorder=0)
         if wavelength_error is not None:
+            # Compute the binned model for easlier comparisons
             binned_model = []
             for wav, width in zip(wavelength, wavelength_error):
-                binned_model.append(np.mean(model_y[np.logical_and(model_x>=wav-width, model_x<wav+width)]))
-            ax.plot(wavelength, binned_model, 'o', ms=3, color='r', mec='k', mew=0.5, zorder=0)
+                inds = np.logical_and(model_x >= wav-width,
+                                      model_x < wav+width)
+                model_val = np.mean(model_y[inds])
+                binned_model.append(model_val)
+            # Plot the binned model as well
+            ax.plot(wavelength, binned_model, 'o', ms=3, color='r', mec='k',
+                    mew=0.5, zorder=0)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
 
     if scaleHeight is not None:
+        # Make a copy of the figure with scale height as the second y axis
         if r'^2' in ylabel:
             # We're dealing with transit depth, so need to convert accordingly
             expFactor = 2
@@ -68,7 +80,8 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     elif 'F_' in ylabel:
         fname += '_emission'
 
-    fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight', dpi=300)
+    fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight',
+                dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
