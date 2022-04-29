@@ -4,12 +4,12 @@
 # $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/sigrej.py $
 # $Id: sigrej.py 267 2010-06-09 02:33:22Z carthik $
 
-
 import numpy as np
 from ..lib import medstddev as msd
 
+
 def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
-            fmean=False, fstddev=False, fmedian=False, fmedstddev=False):
+           fmean=False, fstddev=False, fmedian=False, fmedstddev=False):
   '''This function flags outlying points in a data set using sigma rejection.
 
     Parameters

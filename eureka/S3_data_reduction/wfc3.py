@@ -5,21 +5,24 @@ import multiprocessing as mp
 from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
-from . import background, nircam
-from . import bright2flux as b2f
+from . import nircam
 from . import hst_scan as hst
 from ..lib import suntimecorr, utc_tt
+
 
 def preparation_step(meta, log):
 
     meta.gain = 1
 
-    obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log = separate_direct(meta, log)
+    obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log = \
+        separate_direct(meta, log)
     meta, log = separate_scan_direction(obstimes, postarg2, meta, log)
-    
+
     # Calculate centroid of direct image(s)
-    meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess, meta.centroidtrim, ny, CRPIX1, CRPIX2, postarg1, postarg2)
-    
+    meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
+                                      meta.centroidtrim, ny, CRPIX1, CRPIX2,
+                                      postarg1, postarg2)
+
     # Initialize listto hold centroid positions from later steps in this stage
     meta.centroids = []
     meta.subflat = []
@@ -33,6 +36,7 @@ def preparation_step(meta, log):
     meta.diffmask_ref = []
 
     return meta, log
+
 
 def conclusion_step(meta, log):
     # Convert these lists to arrays
@@ -48,6 +52,7 @@ def conclusion_step(meta, log):
     meta.diffmask_ref = np.array(meta.diffmask_ref)
 
     return meta, log
+
 
 def separate_direct(meta, log):
 
@@ -122,6 +127,7 @@ def separate_direct(meta, log):
 
     return obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log
 
+
 def separate_scan_direction(obstimes, postarg2, meta, log):
 
     if meta.num_data_files==1:
@@ -152,6 +158,7 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
     meta.framenum, meta.batchnum, meta.orbitnum = hst.groupFrames(obstimes)
 
     return meta, log
+
 
 def read(filename, data, meta):
     '''Reads single FITS file from HST's WFC3 instrument.
@@ -248,7 +255,7 @@ def read(filename, data, meta):
                             data.mhdr['READNSEC'],
                             data.mhdr['READNSED']))
     data.v0 = readNoise**2*np.ones_like(data.data)   #Units of electrons
-    
+
     # Calculate centroids for each frame
     centroids = np.zeros((meta.nreads-1,2))
     # Figure out which direct image is the relevant one for this observation
@@ -258,51 +265,50 @@ def read(filename, data, meta):
     centroids[:,0] = meta.centroid[centroid_index][0]
     centroids[:,1] = meta.centroid[centroid_index][1]
     meta.centroids.append(centroids)
-    
+
     # Calculate trace
     print("Calculating wavelength assuming " + meta.grism + " filter/grism...")
     xrange   = np.arange(0,meta.nx)
     data.wave  = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4   #wavelength in microns
     data.wave = data.wave*np.ones((meta.ny,1)) # Assume no skew over the detector
-    
+
     # Figure out which read this file starts and ends with
     data.intstart = image_number*(meta.nreads-1)
     data.intend = (image_number+1)*(meta.nreads-1)
-    
+
     if meta.flatfile == None:
         print('No flat frames found.')
     else:
         data, meta = flatfield(data, meta)
-    
+
     data, meta = difference_frames(data,meta)
-    
+
     data.variance = np.zeros_like(data.data)
-    
+
     return data, meta
+
 
 def flatfield(data, meta):
     # Make list of master flat field frames
-    
+
     print('Loading flat frames...')
     print(meta.flatfile)
     tempflat, tempmask = hst.makeflats(meta.flatfile, [np.mean(data.wave,axis=0),], [[0,meta.nx],], [[0,meta.ny],], meta.flatoffset, 1, meta.ny, meta.nx, sigma=meta.flatsigma, isplots=meta.isplots_S3)
     subflat  = tempflat[0]
     flatmask = tempmask[0]
-    
+
     meta.subflat.append(subflat)
     meta.flatmask.append(flatmask)
-    
+
     # Calculate reduced image
     subflat[np.where(flatmask==0)] = 1
     subflat[np.where(subflat==0)] = 1
     data.data /= subflat
-    
+
     return data, meta
 
+
 def difference_frames(data, meta):
-
-    import matplotlib.pyplot as plt
-
     if meta.nreads > 1:
         # Subtract pairs of subframes
         diffdata = np.zeros((meta.nreads-1,meta.ny,meta.nx))
@@ -314,7 +320,7 @@ def difference_frames(data, meta):
         # FLT data has already been differenced
         diffdata    = data.data
         differr     = data.err
-    
+
     diffmask = np.zeros((meta.nreads-1,meta.ny,meta.nx))
     data.guess    = np.zeros((meta.nreads-1),dtype=int)
     for n in range(meta.nreads-1):
@@ -325,13 +331,13 @@ def difference_frames(data, meta):
         except:
             # May fail for FLT files
             print("Diffthresh failed - this may happen for FLT files.")
-        
+
         masked_data = diffdata[n]*diffmask[n]
         data.guess[n]  = np.median(np.where(masked_data > np.mean(masked_data))[0]).astype(int)
     # Guess may be skewed if first read is zeros
     if data.guess[0] < 0 or data.guess[0] > meta.ny:
         data.guess[0] = data.guess[1]
-    
+
     # Compute full scan length
     scannedData = np.sum(data.data[-1], axis=1)
     xmin        = np.min(data.guess)
@@ -357,6 +363,7 @@ def difference_frames(data, meta):
 
     return data, meta
 
+
 def flag_bg(data, meta):
     '''Outlier rejection of sky background along time axis.
 
@@ -364,17 +371,18 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         The data object in which the fits data will stored
-    meta:   MetaData
+    meta : MetaData
         The metadata object
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         The updated data object with outlier background pixels flagged.
     '''
     return nircam.flag_bg(data, meta)
+
 
 def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
     '''Fit for a non-uniform background.
@@ -390,6 +398,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
     datavariance = abs(dataim) / meta.gain + datav0
 
     return (dataim, datamask, datav0, datavariance, n)
+
 
 def correct_drift2D(data, meta, m):
     '''
@@ -485,16 +494,16 @@ def correct_drift2D(data, meta, m):
         spline = spi.RectBivariateSpline(iy, ix, data.subdata[n], kx=kx, ky=ky, s=0)
         # Need to subtract drift2D since documentation says (where im1 is the reference image)
         # "Measures the amount im2 is offset from im1 (i.e., shift im2 by -1 * these #'s to match im1)"
-        data.subdata[n]  = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
-                                  (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
+        data.subdata[n]  = spline((iy-meta.drift2D[-1][n, 1]+meta.drift2D_int[-1][n, 1]).flatten(),
+                                  (ix-meta.drift2D[-1][n, 0]+meta.drift2D_int[-1][n, 0]).flatten())
         spline = spi.RectBivariateSpline(iy, ix, data.submask[n], kx=kx, ky=ky, s=0)
-        data.submask[n]  = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
-                                  (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
+        data.submask[n]  = spline((iy-meta.drift2D[-1][n, 1]+meta.drift2D_int[-1][n, 1]).flatten(),
+                                  (ix-meta.drift2D[-1][n, 0]+meta.drift2D_int[-1][n, 0]).flatten())
         spline = spi.RectBivariateSpline(iy, ix, data.subvariance[n], kx=kx, ky=ky, s=0)
-        data.subvariance[n] = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
-                                     (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
+        data.subvariance[n] = spline((iy-meta.drift2D[-1][n, 1]+meta.drift2D_int[-1][n, 1]).flatten(),
+                                     (ix-meta.drift2D[-1][n, 0]+meta.drift2D_int[-1][n, 0]).flatten())
         spline = spi.RectBivariateSpline(iy, ix, data.subbg[n], kx=kx, ky=ky, s=0)
-        data.subbg[n]    = spline((iy-meta.drift2D[-1][n,1]+meta.drift2D_int[-1][n,1]).flatten(),
-                                  (ix-meta.drift2D[-1][n,0]+meta.drift2D_int[-1][n,0]).flatten())
+        data.subbg[n]    = spline((iy-meta.drift2D[-1][n, 1]+meta.drift2D_int[-1][n, 1]).flatten(),
+                                  (ix-meta.drift2D[-1][n, 0]+meta.drift2D_int[-1][n, 0]).flatten())
 
     return data, meta
