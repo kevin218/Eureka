@@ -1,63 +1,59 @@
-# $Author: carthik $
-# $Revision: 267 $
-# $Date: 2010-06-08 22:33:22 -0400 (Tue, 08 Jun 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/sigrej.py $
-# $Id: sigrej.py 267 2010-06-09 02:33:22Z carthik $
-
 import numpy as np
 from ..lib import medstddev as msd
 
 
 def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
            fmean=False, fstddev=False, fmedian=False, fmedstddev=False):
-  '''This function flags outlying points in a data set using sigma rejection.
+    '''This function flags outlying points in a data set using sigma rejection.
 
     Parameters
     ----------
     data:   ndarray
-      Array of points to apply sigma rejection to.
+        Array of points to apply sigma rejection to.
     sigma:  ndarray (1D)
-      1D array of sigma values for each iteration of sigma rejection.
-      Number of elements determines number of iterations.
+        1D array of sigma values for each iteration of sigma rejection.
+        Number of elements determines number of iterations.
     mask: (optional) byte array
-      Same shape as Data, where 1 indicates the corresponding element in
-      Data is good and 0 indicates it is bad.  Only
-      rejection of good-flagged data will be further
-      considered.  This input mask is NOT modified in the caller.
+        Same shape as Data, where 1 indicates the corresponding element in
+        Data is good and 0 indicates it is bad.  Only
+        rejection of good-flagged data will be further
+        considered.  This input mask is NOT modified in the caller.
     estsig: ndarray
-      [nsig] array of estimated standard deviations to
-      use instead of calculated ones in each iteration.
-      This is useful in the case of small datasets with
-      outliers, in which case the calculated standard
-      deviation can be large if there is an outlier and
-      small if there is not, leading to rejection of
-      good elements in a clean dataset and acceptance of
-      all elements in a dataset with one bad element.
-      Set any element of estsig to a negative value to
-      use the calculated standard deviation for that iteration.
+        [nsig] array of estimated standard deviations to
+        use instead of calculated ones in each iteration.
+        This is useful in the case of small datasets with
+        outliers, in which case the calculated standard
+        deviation can be large if there is an outlier and
+        small if there is not, leading to rejection of
+        good elements in a clean dataset and acceptance of
+        all elements in a dataset with one bad element.
+        Set any element of estsig to a negative value to
+        use the calculated standard deviation for that iteration.
     ival: ndarray (2D)
-      (returned) 2D array giving the median and standard deviation (with
-      respect to the median) at each iteration.
+        (returned) 2D array giving the median and standard deviation (with
+        respect to the median) at each iteration.
     axis: int
-      The axis along which to compute the mean/median.
+        The axis along which to compute the mean/median.
     fmean:  ndarray
-      (returned) the mean of the accepted data.
+        (returned) the mean of the accepted data.
     fstddev:  ndarray
-      (returned) the standard deviation of the accepted data with respect to the mean.
+        (returned) the standard deviation of the accepted data with respect
+        to the mean.
     fmedian:  ndarray
-      (returned) the median of the accepted data.
+       (returned) the median of the accepted data.
     fmedstddev: ndarray
-      (returned) the standard deviation of the accepted data with respect to the median.
+       (returned) the standard deviation of the accepted data with respect
+       to the median.
 
     Returns
     -------
     ret:  tuple
-      This function returns a mask of accepted values in the data.  The
-      mask is a byte array of the same shape as Data.  In the mask, 1
-      indicates good data, 0 indicates an outlier in the corresponding
-      location of Data. fmean, fstddev, fmedian, and fmedstddev will also
-      be updated and returned if they were passed in. All of these will be
-      packaged together into a tuple.
+        This function returns a mask of accepted values in the data.  The
+        mask is a byte array of the same shape as Data.  In the mask, 1
+        indicates good data, 0 indicates an outlier in the corresponding
+        location of Data. fmean, fstddev, fmedian, and fmedstddev will also
+        be updated and returned if they were passed in. All of these will be
+        packaged together into a tuple.
 
     Notes
     -----
@@ -97,9 +93,9 @@ def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
     >>> sr.sigrej(x, [9,3]), ival=ival, fmean=fmean, fmedian=fmedian)
 
     >>> x = np.array([65., 667, 84, 968, 62, 70, 66, 78, 47, 71, 56, 65, 60])
-    >>> q,w,e,r,t,y = sr.sigrej(x, [2,1], ival=True, fmean=True, 
+    >>> q,w,e,r,t,y = sr.sigrej(x, [2,1], ival=True, fmean=True,
     >>>                         fstddev=True, fmedian=True, fmedstddev=True)
-    
+
     >>> print(q)
     [ True False  True False  True  True  True  True  True  True  True  True
     True]
@@ -116,100 +112,98 @@ def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
     10.1538170163
     >>> print(fmean, fmedian)
     67.0000      67.0000
-  '''
-  # Get sizes
-  dims = list(np.shape(data))
-  nsig = np.size(sigma)
-  if nsig == 0:
-    nsig  = 1
-    sigma = [sigma]
+    '''
+    # Get sizes
+    dims = list(np.shape(data))
+    nsig = np.size(sigma)
+    if nsig == 0:
+        nsig = 1
+        sigma = [sigma]
 
-  if mask is None:
-    mask = np.ones(dims, bool)
+    if mask is None:
+        mask = np.ones(dims, bool)
 
-  # defining estsig makes the logic below easier
-  #if estsig is None:
-  #  estsig = - np.ones(nsig)
+    # defining estsig makes the logic below easier
+    # if estsig is None:
+    #     estsig = - np.ones(nsig)
 
-  # Return parameters:
-  retival       = ival
-  retfmean      = fmean
-  retfstddev    = fstddev
-  retfmedian    = fmedian
-  retfmedstddev = fmedstddev
+    # Return parameters:
+    retival = ival
+    retfmean = fmean
+    retfstddev = fstddev
+    retfmedian = fmedian
+    retfmedstddev = fmedstddev
 
-  # Remove axis
-  del(dims[axis])
-  ival = np.empty( (2, nsig) + tuple(dims) )
-  ival[:] = np.nan
+    # Remove axis
+    del(dims[axis])
+    ival = np.empty((2, nsig) + tuple(dims))
+    ival[:] = np.nan
 
-  # Iterations
-  for iter in np.arange(nsig):
-    
-    if estsig is None:
-    #else:
-      # note: ival is slicing
-      ival[1,iter], ival[0,iter] = msd.medstddev(data, mask, axis=axis,
-                                                     medi=True)
-    #if estsig[iter] > 0:   # if we dont have an estimated std dev.
-    else:
-      # Calculations
-      for   j in np.arange(dims[0]):
-        for i in np.arange(dims[1]):
-          ival[0, iter, j, i] = np.median(data[:,j,i][np.where(mask[:,j,i])])
-      # note: ival is slicing
-      ival[1,iter] = estsig[iter]
+    # Iterations
+    for iter in np.arange(nsig):
+        if estsig is None:
+            # note: ival is slicing
+            ival[1, iter], ival[0, iter] = msd.medstddev(data, mask, axis=axis,
+                                                         medi=True)
+        # if estsig[iter] > 0:   # if we dont have an estimated std dev.
+        else:
+            # Calculations
+            for j in np.arange(dims[0]):
+                for i in np.arange(dims[1]):
+                    ival[0, iter, j, i] = \
+                        np.median(data[:, j, i][np.where(mask[:, j, i])])
+            # note: ival is slicing
+            ival[1, iter] = estsig[iter]
 
-      # Fixes
-      count = np.sum(mask, axis=axis)
-      # note: ival is slicing
-      (ival[1,iter])[np.where(count == 0)] = np.nan
+            # Fixes
+            count = np.sum(mask, axis=axis)
+            # note: ival is slicing
+            (ival[1, iter])[np.where(count == 0)] = np.nan
 
-    # Update mask
-    # note: ival is slicing
-    mask *= ( (data >= (ival[0,iter] - sigma[iter] * ival[1,iter])) &
-              (data <= (ival[0,iter] + sigma[iter] * ival[1,iter])) )
+        # Update mask
+        # note: ival is slicing
+        mask *= ((data >= (ival[0, iter] - sigma[iter] * ival[1, iter])) &
+                 (data <= (ival[0, iter] + sigma[iter] * ival[1, iter])))
 
+    # the return arrays
+    ret = (mask,)
+    if retival:
+        ret = ret + (ival, )
 
-  # the return arrays
-  ret = (mask,)
-  if retival:
-    ret = ret + (ival,)
+    # final calculations
+    if retfmean or retfstddev:
+        count = np.sum(mask, axis=axis)
+        fmean = np.nansum(data*mask, axis=axis)
 
-  # final calculations
-  if retfmean or retfstddev:
-    count   = np.sum(mask, axis=axis)
-    fmean   = np.nansum(data*mask, axis=axis)
+        # calculate only where there are good pixels
+        goodvals = np.isfinite(fmean) * (count > 0)
+        if np.ndim(fmean) == 0 and goodvals:
+            fmean /= count
+        else:
+            fmean[np.where(goodvals)] /= count[np.where(goodvals)]
 
-    # calculate only where there are good pixels
-    goodvals = np.isfinite(fmean) * (count>0)
-    if np.ndim(fmean) == 0 and goodvals:
-      fmean /= count
-    else:
-      fmean[np.where(goodvals)] /= count[np.where(goodvals)]
+        if retfstddev:
+            resid = (data-fmean)*mask
+            fstddev = np.sqrt(np.sum(resid**2, axis=axis)/(count-1))
+            if np.ndim(fstddev) == 0:
+                if count == 1:
+                    fstddev = 0.0
+            else:
+                fstddev[np.where(count == 1)] = 0.0
 
+    if retfmedian or retfmedstddev:
+        fmedstddev, fmedian = msd.medstddev(data, mask, axis=axis, medi=True)
+
+    # the returned final arrays
+    if retfmean:
+        ret = ret + (fmean,)
     if retfstddev:
-      resid   = (data-fmean)*mask
-      fstddev = np.sqrt( np.sum( resid**2, axis=axis ) /(count - 1) )  
-      if np.ndim(fstddev) == 0:
-        if count == 1:
-          fstddev = 0.0
-      else:
-        fstddev[np.where(count == 1)] = 0.0
+        ret = ret + (fstddev,)
+    if retfmedian:
+        ret = ret + (fmedian,)
+    if retfmedstddev:
+        ret = ret + (fmedstddev,)
 
-  if retfmedian or retfmedstddev:
-    fmedstddev, fmedian = msd.medstddev(data, mask, axis=axis, medi=True)
-
-  # the returned final arrays
-  if retfmean:
-    ret= ret + (fmean,)
-  if retfstddev:
-    ret= ret + (fstddev,)
-  if retfmedian: 
-    ret= ret + (fmedian,)
-  if retfmedstddev:
-    ret= ret + (fmedstddev,)
-
-  if len(ret) == 1:
-    return ret[0]
-  return ret
+    if len(ret) == 1:
+        return ret[0]
+    return ret
