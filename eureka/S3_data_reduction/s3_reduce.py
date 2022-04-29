@@ -451,7 +451,7 @@ def load_general_s2_meta_info(meta, ecf_path, s2_meta):
     meta.read(ecf_path, ecffile)
 
     # Overwrite the inputdir with the exact output directory from S2
-    meta.inputdir = os.path.join(s2_topdir, s2_outputdir)
+    meta.inputdir = os.path.join(meta.topdir, s2_outputdir)
     meta.old_datetime = meta.datetime # Capture the date that the S2 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = s2_outputdir
