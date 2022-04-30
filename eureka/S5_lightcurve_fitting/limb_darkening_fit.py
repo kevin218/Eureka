@@ -7,11 +7,9 @@ import inspect
 import warnings
 
 import astropy.table as at
-import astropy.units as q
 from astropy.utils.exceptions import AstropyWarning
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import rc
 import numpy as np
 from scipy.optimize import curve_fit
 from svo_filters import svo
@@ -20,26 +18,22 @@ from bokeh.models import Range1d
 from bokeh.models.widgets import Panel, Tabs
 
 from . import utils
-from . import modelgrid
+# from . import modelgrid
 
 warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', category=FutureWarning)
 
 
 def ld_profile(name='quadratic', latex=False):
-    """
-    Define the function to fit the limb darkening profile
-
-    Reference:
-        https://www.cfa.harvard.edu/~lkreidberg/batman/
-        tutorial.html#limb-darkening-options
+    """Define the function to fit the limb darkening profile
 
     Parameters
     ----------
     name: str
         The name of the limb darkening profile function to use,
-        including 'uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
-        'logarithmic', 'exponential', '3-parameter', and '4-parameter'
+        including 'uniform', 'linear', 'quadratic', 'kipping2013',
+        'square-root', 'logarithmic', 'exponential', '3-parameter',
+        and '4-parameter'
     latex: bool
         Return the function as a LaTeX formatted string
 
@@ -48,6 +42,9 @@ def ld_profile(name='quadratic', latex=False):
     function, str
         The corresponding function for the given profile
 
+    Reference
+    ---------
+        https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
     """
     # Supported profiles a la BATMAN
     names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
@@ -56,53 +53,24 @@ def ld_profile(name='quadratic', latex=False):
     # Check that the profile is supported
     if name in names:
 
-        # Uniform
         if name == 'uniform':
-            def profile(m):
-                return 1.
-
-        # Linear
-        if name == 'linear':
-            def profile(m, c1):
-                return 1. - c1*(1.-m)
-
-        # Quadratic
-        if name == 'quadratic':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2*(1.-m)**2
-
-        # Reparameterized Quadratic (Kipping 2013)
-        if name == 'kipping2013':
-            def profile(m, c1, c2):
-                u1  = 2*np.sqrt(c1)*c2
-                u2  = np.sqrt(c1)*(1-2*c2)
-                return 1. - u1*(1.-m) - u2*(1.-m)**2
-
-        # Square-root
-        if name == 'square-root':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2*(1.-np.sqrt(m))
-
-        # Logarithmic
-        if name == 'logarithmic':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2*m*np.log(m)
-
-        # Exponential
-        if name == 'exponential':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2/(1.-np.e**m)
-
-        # 3-parameter
-        if name == '3-parameter':
-            def profile(m, c1, c2, c3):
-                return 1. - c1*(1.-m) - c2*(1.-m**1.5) - c3*(1.-m**2)
-
-        # 4-parameter
-        if name == '4-parameter':
-            def profile(m, c1, c2, c3, c4):
-                return 1. - c1*(1.-m**0.5) - c2*(1.-m) \
-                          - c3*(1.-m**1.5) - c4*(1.-m**2)
+            profile = uniform
+        elif name == 'linear':
+            profile = linear
+        elif name == 'quadratic':
+            profile = quadratic
+        elif name == 'kipping2013':
+            profile = kipping2013
+        elif name == 'square-root':
+            profile = square_root
+        elif name == 'logarithmic':
+            profile = logarithmic
+        elif name == 'exponential':
+            profile = exponential
+        elif name == '3-parameter':
+            profile = three_parameter
+        elif name == '4-parameter':
+            profile = four_parameter
 
         if latex:
             profile = inspect.getsource(profile).replace('\n', '')
@@ -113,10 +81,56 @@ def ld_profile(name='quadratic', latex=False):
                 profile = profile.replace(i, j)
 
         return profile
-
     else:
-        raise Exception("'{}' is not a supported profile. Try".format(name), names)
-        return
+        raise Exception(f"'{name}' is not a supported profile. Try {names}")
+
+
+def uniform(m):
+    # Uniform
+    return 1.
+
+
+def linear(m, c1):
+    # Linear
+    return 1. - c1*(1.-m)
+
+
+def quadratic(m, c1, c2):
+    # Quadratic
+    return 1. - c1*(1.-m) - c2*(1.-m)**2
+
+
+def kipping2013(m, c1, c2):
+    # Reparameterized Quadratic (Kipping 2013)
+    u1 = 2*np.sqrt(c1)*c2
+    u2 = np.sqrt(c1)*(1-2*c2)
+    return 1. - u1*(1.-m) - u2*(1.-m)**2
+
+
+def square_root(m, c1, c2):
+    # Square-root
+    return 1. - c1*(1.-m) - c2*(1.-np.sqrt(m))
+
+
+def logarithmic(m, c1, c2):
+    # Logarithmic
+    return 1. - c1*(1.-m) - c2*m*np.log(m)
+
+
+def exponential(m, c1, c2):
+    # Exponential
+    return 1. - c1*(1.-m) - c2/(1.-np.e**m)
+
+
+def three_parameter(m, c1, c2, c3):
+    # 3-parameter
+    return 1. - c1*(1.-m) - c2*(1.-m**1.5) - c3*(1.-m**2)
+
+
+def four_parameter(m, c1, c2, c3, c4):
+    # 4-parameter
+    return (1. - c1*(1.-m**0.5) - c2*(1.-m)
+            - c3*(1.-m**1.5) - c4*(1.-m**2))
 
 
 class LDC:
@@ -147,17 +161,18 @@ class LDC:
         """
         # Set the model grid
         # if not isinstance(model_grid, modelgrid.ModelGrid):
-        #     raise TypeError("'model_grid' must be a exoctk.modelgrid.ModelGrid object.")
+        #     raise TypeError("'model_grid' must be a "
+        #                     "exoctk.modelgrid.ModelGrid object.")
 
         self.model_grid = model_grid
 
         # Table for results
-        columns = ['name', 'Teff', 'logg', 'FeH', 'profile', 'filter', 'coeffs',
-                   'errors', 'wave', 'wave_min', 'wave_eff', 'wave_max',
-                   'scaled_mu', 'raw_mu', 'mu_min', 'scaled_ld', 'raw_ld',
-                   'ld_min', 'ldfunc', 'flux', 'bandpass', 'color']
-        dtypes = ['|S20', float, float, float, '|S20', '|S20', object, object, object,
-                  np.float16, np.float16, np.float16, object, object,
+        columns = ['name', 'Teff', 'logg', 'FeH', 'profile', 'filter',
+                   'coeffs', 'errors', 'wave', 'wave_min', 'wave_eff',
+                   'wave_max', 'scaled_mu', 'raw_mu', 'mu_min', 'scaled_ld',
+                   'raw_ld', 'ld_min', 'ldfunc', 'flux', 'bandpass', 'color']
+        dtypes = ['|S20', float, float, float, '|S20', '|S20', object, object,
+                  object, np.float16, np.float16, np.float16, object, object,
                   np.float16, object, object, np.float16, object, object,
                   object, '|S20']
         self.results = at.Table(names=columns, dtype=dtypes)
@@ -165,7 +180,8 @@ class LDC:
         self.ld_color = {'quadratic': 'blue', '4-parameter': 'red',
                          'exponential': 'green', 'linear': 'orange',
                          'square-root': 'cyan', '3-parameter': 'magenta',
-                         'logarithmic': 'pink', 'uniform': 'purple'}
+                         'logarithmic': 'pink', 'uniform': 'purple',
+                         'kipping2013': 'brown'}
 
         self.count = 1
 
@@ -275,9 +291,11 @@ class LDC:
 
         # Apply the filter
         try:
-            flux, _ = bandpass.apply([wave, flux])  # Sometimes this returns a tuple
+            # Sometimes this returns a tuple
+            flux, _ = bandpass.apply([wave, flux])
         except ValueError:
-            flux = bandpass.apply([wave, flux])  # Sometimes it returns one value
+            # Sometimes it returns one value
+            flux = bandpass.apply([wave, flux])
 
         # Make rsr curve 3 dimensions if there is only one
         # wavelength bin, then get wavelength only
@@ -322,7 +340,8 @@ class LDC:
             result['name'] = name or 'Calculation {}'.format(self.count)
             self.count += 1
             if len(bandpass.centers[0]) == len(scaled_ld) and name is None:
-                result['name'] = '{} {}'.format(str(round(bandpass.centers[0][n], 2)), self.model_grid.wave_units)
+                result['name'] = (f'{round(bandpass.centers[0][n], 2)} '
+                                  f'{self.model_grid.wave_units}')
 
             # Set a color if possible
             result['color'] = color or self.ld_color[profile]
@@ -388,8 +407,9 @@ class LDC:
 
             # Plot it
             TOOLS = 'box_zoom, box_select, crosshair, reset, hover'
-            fig = bkp.figure(tools=TOOLS, x_range=Range1d(0, 1), y_range=Range1d(0, 1),
-                        plot_width=800, plot_height=400)
+            fig = bkp.figure(tools=TOOLS, x_range=Range1d(0, 1),
+                             y_range=Range1d(0, 1),
+                             plot_width=800, plot_height=400)
             self.plot(wave_eff=wav, fig=fig)
 
             # Plot formatting

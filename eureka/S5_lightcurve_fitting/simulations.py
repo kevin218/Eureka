@@ -13,24 +13,25 @@ except ImportError:
 from . import utils
 
 
-def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None, ldcs=('quadratic', [0.1, 0.1]), plot=False):
+def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None,
+                        ldcs=('quadratic', [0.1, 0.1]), plot=False):
     """Simulate lightcurve data for the given target exoplanet
 
     Parameters
     ----------
-    target: str
+    target : str
         The name of the target to simulate
-    snr: float
+    snr : float (optional)
         The signal to noise to use
-    npts: int
+    npts : int (optional)
         The number of points in each lightcurve
-    nbins: int
+    nbins : int (optional)
         The number of lightcurves
-    radius: array-like, float (optional)
+    radius : array-like, float (optional)
         The radius or radii value(s) to use
-    ldcs: sequence
+    ldcs : sequence (optional)
         The limb darkening profile name and coefficients
-    plot: bool
+    plot : bool (optional)
         Plot the figure
 
     Returns
@@ -90,4 +91,5 @@ def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None, ldc
         return time, flux, unc, targ
 
     except IOError:
-        raise ValueError('{}: Could not simulate light curve for this target'.format(target))
+        raise ValueError(f'{target}: Could not simulate light curve for this '
+                         f'target')

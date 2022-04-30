@@ -5,18 +5,19 @@ Email: jfilippazzo@stsci.edu
 """
 import numpy as np
 import os
-import pandas as pd
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 from . import models as m
 from . import fitters as f
 from .utils import COLORS, color_gen
 from ..lib.plots import figure_filetype
 
-from copy import deepcopy
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False):
+    def __init__(self, time, flux, channel, nchannel, log, longparamlist,
+                 unc=None, parameters=None, time_units='BJD',
+                 name='My Light Curve', share=False):
         """
         A class to store the actual light curve
 
@@ -85,7 +86,8 @@ class LightCurve(m.Model):
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
-                log.writelog('Warning: Only one uncertainty input, assuming constant uncertainty.')
+                log.writelog('Warning: Only one uncertainty input, assuming '
+                             'constant uncertainty.')
             elif len(time)*self.nchannel_fitted != len(unc):
                 raise ValueError('Time and unc axes must be the same length.')
 
@@ -99,7 +101,8 @@ class LightCurve(m.Model):
 
         self.longparamlist = longparamlist
 
-        self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
+        self.colors = np.array([next(COLORS)
+                                for i in range(self.nchannel_fitted)])
 
         return
 
@@ -186,11 +189,12 @@ class LightCurve(m.Model):
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
-            fig = plt.figure(5103, figsize=(8,6))
+            fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i], zorder=0)
+            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i],
+                        zorder=0)
 
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
@@ -198,7 +202,8 @@ class LightCurve(m.Model):
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf, share=self.share, chan=channel)
+                    model.plot(self.time, ax=ax, color=next(plot_COLORS),
+                               zorder=np.inf, share=self.share, chan=channel)
 
             # Format axes
             ax.set_title(f'{meta.eventlabel} - Channel {channel}')
@@ -208,7 +213,8 @@ class LightCurve(m.Model):
             fig.tight_layout()
 
             ch_number = str(channel).zfill(len(str(self.nchannel)))
-            fname = 'figs'+os.sep+f'fig5103_ch{ch_number}_all_fits'+figure_filetype
+            fname = ('figs'+os.sep+f'fig5103_ch{ch_number}_all_fits' +
+                     figure_filetype)
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if meta.hide_plots:
                 plt.close()

@@ -26,41 +26,52 @@ PROFILES = ['uniform', 'linear', 'quadratic',
 # Supported filters
 FILTERS = svo.filters()
 
-# Get the location of EXOCTK_DATA environvment variable and check that it is valid
+# Get the location of EXOCTK_DATA environvment variable
+# and check that it is valid
 EXOCTK_DATA = os.environ.get('EXOCTK_DATA')
 
 # If the variable is blank or doesn't exist
 HOME_DIR = os.path.expanduser('~')
-ON_TRAVIS_OR_RTD = HOME_DIR == '/home/travis' or HOME_DIR == '/Users/travis' or HOME_DIR == '/home/docs'
+ON_TRAVIS_OR_RTD = (HOME_DIR == '/home/travis' or HOME_DIR == '/Users/travis'
+                    or HOME_DIR == '/home/docs')
 if not ON_TRAVIS_OR_RTD:
     # if not EXOCTK_DATA:
     #     print(
-    #         'WARNING (only important for Stage 5): The $EXOCTK_DATA environment variable is not set.  Please set the '
-    #         'value of this variable to point to the location of the exoctk_data '
-    #         'download folder.  Users may retreive this folder by clicking the '
-    #         '"ExoCTK Data Download" button on the ExoCTK website, or by using '
-    #         'the exoctk.utils.download_exoctk_data() function.')
+    #         'WARNING (only important for Stage 5): The $EXOCTK_DATA '
+    #         'environment variable is not set.  Please set the '
+    #         'value of this variable to point to the location of the
+    #         'exoctk_data download folder.  Users may retreive this folder by'
+    #         ' clicking the "ExoCTK Data Download" button on the ExoCTK '
+    #         'website, or by using the exoctk.utils.download_exoctk_data() '
+    #         'function.')
     if EXOCTK_DATA:
         # If the variable exists but doesn't point to a real location
         if not os.path.exists(EXOCTK_DATA):
-            print(
-                'WARNING (only important for Stage 5): The $EXOCTK_DATA environment variable is set to a location that '
-                'cannot be accessed.')
+            print('WARNING (only important for Stage 5): The $EXOCTK_DATA '
+                  'environment variable is set to a location that '
+                  'cannot be accessed.')
 
-        # If the variable exists, points to a real location, but is missing contents
-        for item in ['exoctk_contam', 'exoctk_log', 'fortney', 'generic', 'groups_integrations', 'modelgrid']:
-            if item not in [os.path.basename(item) for item in glob.glob(os.path.join(EXOCTK_DATA, '*'))]:
-                print(
-                    'WARNING (only important for Stage 5): Missing {}/ directory from {}. Please ensure that the ExoCTK data package has been '
-                    'downloaded. Users may retrieve this package by clicking the "ExoCTK Data Download" '
-                    'button on the ExoCTK website, or by using the exoctk.utils.download_exoctk_data() '
-                    'function'.format(item, EXOCTK_DATA))
+        # If the variable exists, points to a real location, but
+        # is missing contents
+        for item in ['exoctk_contam', 'exoctk_log', 'fortney', 'generic',
+                     'groups_integrations', 'modelgrid']:
+            if item not in [os.path.basename(item)
+                            for item in
+                            glob.glob(os.path.join(EXOCTK_DATA, '*'))]:
+                print('WARNING (only important for Stage 5): Missing {}/ '
+                      'directory from {}. Please ensure that the ExoCTK data '
+                      'package has been downloaded. Users may retrieve this '
+                      'package by clicking the "ExoCTK Data Download" button '
+                      'on the ExoCTK website, or by using the '
+                      'exoctk.utils.download_exoctk_data() '
+                      'function'.format(item, EXOCTK_DATA))
 
         EXOCTK_CONTAM_DIR = os.path.join(EXOCTK_DATA, 'exoctk_contam/')
         EXOCTKLOG_DIR = os.path.join(EXOCTK_DATA, 'exoctk_log/')
         FORTGRID_DIR = os.path.join(EXOCTK_DATA, 'fortney/')
         GENERICGRID_DIR = os.path.join(EXOCTK_DATA, 'generic/')
-        GROUPS_INTEGRATIONS_DIR = os.path.join(EXOCTK_DATA, 'groups_integrations/')
+        GROUPS_INTEGRATIONS_DIR = os.path.join(EXOCTK_DATA,
+                                               'groups_integrations/')
         MODELGRID_DIR = os.path.join(EXOCTK_DATA, 'modelgrid/')
 
 
@@ -76,8 +87,9 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
         The default setting is the user's $HOME directory.
     """
 
-    print('\nDownloading ExoCTK data package.  This may take a few minutes.')
-    print('Materials will be downloaded to {}/exoctk_data/\n'.format(download_location))
+    print('\nDownloading ExoCTK data package. This may take a few minutes.')
+    print(f'Materials will be downloaded to {download_location}/exoctk_data/')
+    print()
 
     # Ensure the exoctk_data/ directory exists in user's home directory
     exoctk_data_dir = os.path.join(download_location, 'exoctk_data')
@@ -85,25 +97,29 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
         if not os.path.exists(exoctk_data_dir):
             os.makedirs(exoctk_data_dir)
     except PermissionError:
-        print('Data download failed.  Unable to create {}.  Please check permissions.')
+        print(f'Data download failed. Unable to create {exoctk_data_dir}. '
+              f'Please check permissions.')
 
     # URLs to download contents
-    urls = ['https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/exoctk_contam.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/exoctk_log.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/groups_integrations.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/fortney.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/generic.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/modelgrid_ATLAS9.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/modelgrid_ACES_1.tar.gz',
-            'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed/modelgrid_ACES_2.tar.gz']
+    url_base = 'https://data.science.stsci.edu/redirect/JWST/ExoCTK/compressed'
+    urls = [url_base+'/exoctk_contam.tar.gz',
+            url_base+'/exoctk_log.tar.gz',
+            url_base+'/groups_integrations.tar.gz',
+            url_base+'/fortney.tar.gz',
+            url_base+'/generic.tar.gz',
+            url_base+'/modelgrid_ATLAS9.tar.gz',
+            url_base+'/modelgrid_ACES_1.tar.gz',
+            url_base+'/modelgrid_ACES_2.tar.gz']
 
     # Build landing paths for downloads
-    download_paths = [os.path.join(exoctk_data_dir, os.path.basename(url)) for url in urls]
+    download_paths = [os.path.join(exoctk_data_dir, os.path.basename(url))
+                      for url in urls]
 
     # Perform the downloads
     for i, url in enumerate(urls):
         landing_path = os.path.join(exoctk_data_dir, os.path.basename(url))
-        print('({}/{}) Downloading data to {} from {}'.format(i+1, len(urls), landing_path, url))
+        print(f'({i+1}/{len(urls)}) Downloading data to {landing_path} from '
+              f'{url}')
         with requests.get(url, stream=True) as response:
             with open(landing_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=2048):
@@ -127,7 +143,8 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
         os.makedirs(os.path.join(exoctk_data_dir, 'modelgrid', 'ACES'))
     except FileExistsError:
         pass
-    modelgrid_files = glob.glob(os.path.join(exoctk_data_dir, 'modelgrid.*', '*'))
+    modelgrid_files = glob.glob(os.path.join(exoctk_data_dir, 'modelgrid.*',
+                                             '*'))
     for src in modelgrid_files:
         if 'ATLAS9' in src:
             dst = os.path.join(exoctk_data_dir, 'modelgrid', 'ATLAS9')
@@ -149,7 +166,7 @@ def color_gen(colormap='viridis', key=None, n=10):
 
     Parameters
     ----------
-    colormap: str, sequence
+    colormap : str, sequence
         The name of the color map
 
     Returns
@@ -169,13 +186,15 @@ def color_gen(colormap='viridis', key=None, n=10):
             palette = palette(n)
 
         else:
-            raise TypeError("pallette must be a bokeh palette name or a sequence of color hex values.")
+            raise TypeError("pallette must be a bokeh palette name or a "
+                            "sequence of color hex values.")
 
     elif isinstance(colormap, (list, tuple)):
         palette = colormap
 
     else:
-        raise TypeError("pallette must be a bokeh palette name or a sequence of color hex values.")
+        raise TypeError("pallette must be a bokeh palette name or a sequence "
+                        "of color hex values.")
 
     yield from itertools.cycle(palette)
 
@@ -184,25 +203,24 @@ COLORS = color_gen('Category10', 10)
 
 
 def interp_flux(mu, flux, params, values):
-    """
-    Interpolate a cube of synthetic spectra for a
+    """Interpolate a cube of synthetic spectra for a
     given index of mu
 
     Parameters
     ----------
-    mu: int
+    mu : int
         The index of the (Teff, logg, FeH, *mu*, wavelength)
         data cube to interpolate
-    flux: np.ndarray
+    flux : np.ndarray
         The 5D data array
-    params: list
+    params : list
         A list of each free parameter range
-    values: list
+    values : list
         A list of each free parameter values
 
     Returns
     -------
-    tu
+    tuple
         The array of new flux values
     """
     # Iterate over each wavelength (-1 index of flux array)
@@ -220,16 +238,20 @@ def interp_flux(mu, flux, params, values):
 
 
 def calc_zoom(R_f, arr):
-    """
-    Calculate the zoom factor required to make the given
+    """Calculate the zoom factor required to make the given
     array into the given resolution
 
     Parameters
     ----------
-    R_f: int
+    R_f : int
         The desired final resolution of the wavelength array
-    arr: array-like
+    arr : array-like
         The array to zoom
+
+    Returns
+    -------
+    z : float
+        The zoom factor
     """
     # Get initial resolution
     lam = arr[-1]-arr[0]
@@ -244,22 +266,20 @@ def calc_zoom(R_f, arr):
 
 
 def rebin_spec(spec, wavnew, oversamp=100, plot=False):
-    """
-    Rebin a spectrum to a new wavelength array while preserving
+    """Rebin a spectrum to a new wavelength array while preserving
     the total flux
 
     Parameters
     ----------
-    spec: array-like
+    spec : array-like
         The wavelength and flux to be binned
-    wavenew: array-like
+    wavenew : array-like
         The new wavelength array
 
     Returns
     -------
     np.ndarray
         The rebinned flux
-
     """
     wave, flux = spec
     nlam = len(wave)
@@ -289,20 +309,18 @@ def rebin_spec(spec, wavnew, oversamp=100, plot=False):
 
 
 def writeFITS(filename, extensions, headers=()):
-    """
-    Write some data to a new FITS file
+    """Write some data to a new FITS file
 
     Parameters
     ----------
-    filename: str
+    filename : str
         The filename of the output FITS file
-    extensions: dict
+    extensions : dict
         The extension name and associated data to include
         in the file
-    headers: array-like
+    headers : array-like
         The (keyword, value, comment) groups for the PRIMARY
         header extension
-
     """
     # Write the arrays to a FITS file
     prihdu = fits.PrimaryHDU()
@@ -329,11 +347,11 @@ def filter_table(table, **kwargs):
 
     Parameters
     ----------
-    table: astropy.table.Table, pandas.DataFrame
+    table : astropy.table.Table, pandas.DataFrame
         The table to filter
-    param: str
+    param : str
         The parameter to filter by, e.g. 'Teff'
-    value: str, float, int, sequence
+    value : str, float, int, sequence
         The criteria to filter by,
         which can be single valued like 1400
         or a range with operators [<,<=,>,>=],
@@ -399,7 +417,7 @@ def filter_table(table, **kwargs):
                 # Equality
                 if cond.startswith('='):
                     v = cond.replace('=', '')
-                    if v.replace('.','',1).isdigit():
+                    if v.replace('.', '', 1).isdigit():
                         table = table[table[param] == eval(v)]
                     else:
                         table = table[table[param] == v]
@@ -431,16 +449,15 @@ def filter_table(table, **kwargs):
 
 
 def find_closest(axes, points, n=1, values=False):
-    """
-    Find the n-neighboring elements of a given value in an array
+    """Find the n-neighboring elements of a given value in an array
 
     Parameters
     ----------
-    axes: list, np.array
+    axes : list, np.array
         The array(s) to search
-    points: array-like, float
+    points : array-like, float
         The point(s) to search for
-    n: int
+    n : int
         The number of values to the left and right of the points
     Returns
     -------
@@ -471,47 +488,51 @@ def find_closest(axes, points, n=1, values=False):
 
     return results
 
+
 def build_target_url(target_name):
     '''Build restful api url based on target name.
 
     Parameters
-        ----------
-        target_name : string
-            The name of the target transit.
+    ----------
+    target_name : string
+        The name of the target transit.
 
-        Returns
-        -------
-        target_url : string
+    Returns
+    -------
+    target_url : string
     '''
     # Encode the target name string.
     encode_target_name = urllib.parse.quote(target_name, encoding='utf-8')
-    target_url = "https://exo.mast.stsci.edu/api/v0.1/exoplanets/{}/properties/".format(encode_target_name)
+    target_url = (f"https://exo.mast.stsci.edu/api/v0.1/exoplanets/"
+                  f"{encode_target_name}/properties/")
 
     return target_url
+
 
 def get_canonical_name(target_name):
     '''Get ExoMAST prefered name for exoplanet.
 
-        Parameters
-        ----------
-        target_name : string
-            The name of the target transit.
+    Parameters
+    ----------
+    target_name : string
+        The name of the target transit.
 
-        Returns
-        -------
-        canonical_name : string
+    Returns
+    -------
+    canonical_name : string
     '''
-
     target_url = "https://exo.mast.stsci.edu/api/v0.1/exoplanets/identifiers/"
 
-    # Create params dict for url parsing. Easier than trying to format yourself.
-    params = {"name":target_name}
+    # Create params dict for url parsing. Easier than trying
+    # to format yourself.
+    params = {"name": target_name}
 
     r = requests.get(target_url, params=params)
     planetnames = r.json()
     canonical_name = planetnames['canonicalName']
 
     return canonical_name
+
 
 def get_env_variables():
     """Returns a dictionary containing various environment variable
@@ -522,45 +543,55 @@ def get_env_variables():
     env_variables : dict
         A dictionary containing various environment variable data
     """
-
     env_variables = {}
 
-    # Get the location of EXOCTK_DATA environvment variable and check that it is valid
+    # Get the location of EXOCTK_DATA environvment variable and check
+    # that it is valid
     env_variables['exoctk_data'] = os.environ.get('EXOCTK_DATA')
 
     # If the variable is blank or doesn't exist
-    ON_TRAVIS = os.path.expanduser('~') == '/home/travis' or os.path.expanduser('~') == '/Users/travis'
+    ON_TRAVIS = (os.path.expanduser('~') == '/home/travis' or
+                 os.path.expanduser('~') == '/Users/travis')
     if not ON_TRAVIS:
         if not env_variables['exoctk_data']:
             raise ValueError(
-                'The $EXOCTK_DATA environment variable is not set.  Please set the '
-                'value of this variable to point to the location of the ExoCTK data '
-                'download folder.  Users may retreive this folder by clicking the '
-                '"ExoCTK Data Download" button on the ExoCTK website.'
+                'The $EXOCTK_DATA environment variable is not set. Please set '
+                'the value of this variable to point to the location of the '
+                'ExoCTK data download folder.  Users may retreive this folder '
+                'by clicking the "ExoCTK Data Download" button on the ExoCTK '
+                'website.'
             )
 
         # If the variable exists but doesn't point to a real location
         if not os.path.exists(env_variables['exoctk_data']):
-            raise FileNotFoundError(
-                'The $EXOCTK_DATA environment variable is set to a location that '
-                'cannot be accessed.')
+            raise FileNotFoundError('The $EXOCTK_DATA environment variable is '
+                                    'set to a location that cannot be '
+                                    'accessed.')
 
-        # If the variable exists, points to a real location, but is missing contents
+        # If the variable exists, points to a real location,
+        # but is missing contents
         for item in ['modelgrid', 'fortney', 'exoctk_log', 'generic']:
-            if item not in [os.path.basename(item) for item in glob.glob(os.path.join(env_variables['exoctk_data'], '*'))]:
-                raise KeyError('Missing {}/ directory from {}'.format(item, env_variables['exoctk_data']))
+            dirs = [os.path.basename(item)
+                    for item in
+                    glob.glob(os.path.join(env_variables['exoctk_data'], '*'))]
+            if item not in dirs:
+                raise KeyError(f'Missing {item}/ directory from '
+                               f'{env_variables["exoctk_data"]}')
 
-    env_variables['modelgrid_dir'] = os.path.join(env_variables['exoctk_data'], 'modelgrid/')
-    env_variables['fortgrid_dir'] = os.path.join(env_variables['exoctk_data'], 'fortney/')
-    env_variables['exoctklog_dir'] = os.path.join(env_variables['exoctk_data'], 'exoctk_log/')
-    env_variables['genericgrid_dir'] = os.path.join(env_variables['exoctk_data'], 'generic/')
+    env_variables['modelgrid_dir'] = \
+        os.path.join(env_variables['exoctk_data'], 'modelgrid/')
+    env_variables['fortgrid_dir'] = \
+        os.path.join(env_variables['exoctk_data'], 'fortney/')
+    env_variables['exoctklog_dir'] = \
+        os.path.join(env_variables['exoctk_data'], 'exoctk_log/')
+    env_variables['genericgrid_dir'] = \
+        os.path.join(env_variables['exoctk_data'], 'generic/')
 
     return env_variables
 
 
 def get_target_data(target_name):
-    """
-    Send request to exomast restful api for target information.
+    """Send request to exomast restful api for target information.
 
     Parameters
     ----------
@@ -572,7 +603,6 @@ def get_target_data(target_name):
     target_data: json:
         json object with target data.
     """
-
     canonical_name = get_canonical_name(target_name)
 
     target_url = build_target_url(canonical_name)
@@ -589,7 +619,8 @@ def get_target_data(target_name):
     if len(target_data) > 1:
         # Get catalog names from exomast and make then the keys of a dictionary
         # and the values are its position in the json object.
-        catalog_dict = {data['catalog_name']: index for index, data in enumerate(target_data)}
+        catalog_dict = {data['catalog_name']: index
+                        for index, data in enumerate(target_data)}
 
         # Parse based on catalog accuracy.
         if 'nexsci' in list(catalog_dict.keys()):
@@ -602,6 +633,7 @@ def get_target_data(target_name):
         target_data = target_data[0]
 
     # Strip spaces and non numeric or alphabetic characters and combine.
-    url = 'https://exo.mast.stsci.edu/exomast_planet.html?planet={}'.format(re.sub(r'\W+', '', canonical_name))
+    name = re.sub(r'\W+', '', canonical_name)
+    url = f'https://exo.mast.stsci.edu/exomast_planet.html?planet={name}'
 
     return target_data, url

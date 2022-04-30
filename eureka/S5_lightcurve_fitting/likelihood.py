@@ -2,23 +2,24 @@ import numpy as np
 from scipy.stats import norm
 from copy import deepcopy
 
+
 def ln_like(theta, lc, model, freenames):
     """Compute the log-likelihood.
 
     Parameters
     ----------
-    theta: ndarray
+    theta : ndarray
         The current estimate of the fitted parameters
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    freenames: iterable
+    freenames : iterable
         The names of the fitted parameters.
 
     Returns
     -------
-    ln_like_val: ndarray
+    ln_like_val : ndarray
         The log-likelihood value at the position theta.
 
     Notes
@@ -35,37 +36,46 @@ def ln_like(theta, lc, model, freenames):
     model.update(theta, freenames)
     model_lc = model.eval()
     if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:11] == "scatter_ppm"]
+        ind = [i for i in np.arange(len(freenames))
+               if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * 1e-6
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
+                theta[ind[chan]] * 1e-6
     elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames)) if freenames[i][0:12] == "scatter_mult"]
+        ind = [i for i in np.arange(len(freenames))
+               if freenames[i][0:12] == "scatter_mult"]
         if np.any(theta[ind] < 0):
             # Force noise multiplier to be positive
             return -np.inf
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = theta[ind[chan]] * lc.unc[chan*lc.time.size:(chan+1)*lc.time.size]
+            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
+                theta[ind[chan]] * lc.unc[chan*lc.time.size:
+                                          (chan+1)*lc.time.size]
     else:
         lc.unc_fit = deepcopy(lc.unc)
     if model.GP:
         ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)
     else:
-        residuals = (lc.flux - model_lc) 
-        ln_like_val = (-0.5 * (np.ma.sum((residuals / lc.unc_fit) ** 2+ np.ma.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
+        residuals = (lc.flux - model_lc)
+        ln_like_val = (-0.5*(np.ma.sum((residuals/lc.unc_fit)**2
+                       + np.ma.log(2.0 * np.pi * (lc.unc_fit) ** 2))))
     return ln_like_val
+
 
 def lnprior(theta, prior1, prior2, priortype):
     """Compute the log-prior.
 
     Parameters
     ----------
-    theta: ndarray
+    theta : ndarray
         The current estimate of the fitted parameters
-    prior1: ndarray
-        The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    prior2: ndarray
-        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
-    priortype: ndarray
+    prior1 : ndarray
+        The lower-bound for uniform/log uniform priors, or mean for
+        normal priors.
+    prior2 : ndarray
+        The upper-bound for uniform/log uniform priors, or std. dev. for
+        normal priors.
+    priortype : ndarray
         Keywords indicating the type of prior for each free parameter.
 
     Returns
@@ -84,39 +94,46 @@ def lnprior(theta, prior1, prior2, priortype):
     """
     lnprior_prob = 0.
     for i in range(len(theta)):
-        if priortype[i]=='U' and np.logical_or(theta[i] < prior1[i], theta[i] > prior2[i]):
+        if (priortype[i] == 'U' and np.logical_or(theta[i] < prior1[i],
+                                                  theta[i] > prior2[i])):
             return -np.inf
-        elif priortype[i]=='LU' and np.logical_or(np.log(theta[i]) < prior1[i], np.log(theta[i]) > prior2[i]):
+        elif (priortype[i] == 'LU' and
+              np.logical_or(np.log(theta[i]) < prior1[i],
+                            np.log(theta[i]) > prior2[i])):
             return - np.inf
-        elif priortype[i]=='N':
-            lnprior_prob -= 0.5*(np.sum(((theta[i] - prior1[i])/prior2[i])**2 + np.log(2.0*np.pi*(prior2[i])**2)))
+        elif priortype[i] == 'N':
+            lnprior_prob -= (0.5*(np.sum(((theta[i]-prior1[i])/prior2[i])**2
+                             + np.log(2.0*np.pi*(prior2[i])**2))))
         elif priortype[i] not in ['U', 'LU', 'N']:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return lnprior_prob
+
 
 def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     """Compute the log-probability.
 
     Parameters
     ----------
-    theta: ndarray
+    theta : ndarray
         The current estimate of the fitted parameters
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    prior1: ndarray
-        The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    prior2: ndarray
-        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
-    priortype: ndarray
+    prior1 : ndarray
+        The lower-bound for uniform/log uniform priors, or mean for
+        normal priors.
+    prior2 : ndarray
+        The upper-bound for uniform/log uniform priors, or std. dev. for
+        normal priors.
+    priortype : ndarray
         Keywords indicating the type of prior for each free parameter.
-    freenames:
+    freenames : iterable
         The names of the fitted parameters.
 
     Returns
     -------
-    ln_prob_val: ndarray
+    ln_prob_val : ndarray
         The log-probability value at the position theta.
 
     Notes
@@ -138,34 +155,38 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     else:
         return lnprob
 
+
 def transform_uniform(x, a, b):
     return a + (b - a) * x
+
 
 def transform_log_uniform(x, a, b):
     return a*(b/a)**x
 
+
 def transform_normal(x, mu, sigma):
     return norm.ppf(x, loc=mu, scale=sigma)
+
 
 def ptform(theta, prior1, prior2, priortype):
     """Compute the prior transform for nested sampling.
 
     Parameters
     ----------
-    theta: ndarray
+    theta : ndarray
         The current estimate of the fitted parameters
-    prior1: ndarray
-        The lower-bound for uniform/log uniform priors, or mean for normal priors.
-    prior2: ndarray
-        The upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
-    priortype: ndarray
+    prior1 : ndarray
+        The lower-bound for uniform/log uniform priors, or mean for
+        normal priors.
+    prior2 : ndarray
+        The upper-bound for uniform/log uniform priors, or std. dev. for
+        normal priors.
+    priortype : ndarray
         Keywords indicating the type of prior for each free parameter.
-    freenames:
-        The names of the fitted parameters.
 
     Returns
     -------
-    p: ndarray
+    p : ndarray
         The prior transform.
 
     Notes
@@ -173,42 +194,41 @@ def ptform(theta, prior1, prior2, priortype):
     History:
 
     - February 23-25, 2022 Megan Mansfield
-        Added log-uniform and Gaussian priors.    
+        Added log-uniform and Gaussian priors.
     """
     p = np.zeros_like(theta)
     n = len(theta)
     for i in range(n):
-        if priortype[i]=='U':
+        if priortype[i] == 'U':
             p[i] = transform_uniform(theta[i], prior1[i], prior2[i])
-        elif priortype[i]=='LU':
+        elif priortype[i] == 'LU':
             p[i] = transform_log_uniform(theta[i], prior1[i], prior2[i])
-        elif priortype[i]=='N':
+        elif priortype[i] == 'N':
             p[i] = transform_normal(theta[i], prior1[i], prior2[i])
         else:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
     return p
+
 
 def computeRedChiSq(lc, log, model, meta, freenames):
     """Compute the reduced chi-squared value.
 
     Parameters
     ----------
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object
-    log: logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    meta: MetaObject
+    meta : MetaObject
         The metadata object.
-    freenames: iterable
+    freenames : iterable
         The names of the fitted parameters.
-    log: logedit.Logedit
-        The open log in which notes from this step can be added.
 
     Returns
     -------
-    chi2red: float
+    chi2red : float
         The reduced chi-squared value.
 
     Notes
@@ -229,29 +249,30 @@ def computeRedChiSq(lc, log, model, meta, freenames):
 
     return chi2red
 
+
 def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
-    """Compute the root-mean-squared and standard error of data for various bin sizes.
+    """Compute the root-mean-squared and standard error for various bin sizes.
 
     Parameters
     ----------
-    data: ndarray
+    data : ndarray
         The residuals after fitting.
-    maxnbins: int, optional
+    maxnbins : int, optional
         The maximum number of bins. Use None to default to 10 points per bin.
-    binstep: int, optional
+    binstep : int, optional
         Bin step size.
-    isrmserr: bool
+    isrmserr : bool
         True if return rmserr, else False.
 
     Returns
     -------
-    rms: ndarray
+    rms : ndarray
         The RMS for each bin size.
-    stderr: ndarray
+    stderr : ndarray
         The standard error for each bin size.
-    binsz: ndarray
+    binsz : ndarray
         The different bin sizes.
-    rmserr: ndarray, optional
+    rmserr : ndarray, optional
         The uncertainty in the RMS.
 
     Notes
@@ -286,19 +307,23 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     else:
         return rms, stderr, binsz
 
+
 def GP_loglikelihood(model, fit, unc_fit):
     """Compute likelihood, when model fit includes GP
 
     Parameters
     ----------
-    model: CompositeModel object
+    model : CompositeModel object
         The model including the GP model
-    fit: ndarray
-        the evaluated model without the GP
+    fit : ndarray
+        The evaluated model without the GP
+    unc_fit : ndarray
+        The fitted (or initially provided) uncertainty on each data point.
 
     Returns
     -------
-    likelihood of the model
+    loglikelihood : float
+        The likelihood of the model.
 
     Notes
     -----
@@ -309,5 +334,5 @@ def GP_loglikelihood(model, fit, unc_fit):
     """
     for m in model.components:
         if m.modeltype == 'GP':
-            return m.loglikelihood( fit, unc_fit)
+            return m.loglikelihood(fit, unc_fit)
     return 0

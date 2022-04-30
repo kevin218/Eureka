@@ -32,27 +32,26 @@ class ModelGrid(object):
     Creates a ModelGrid object which contains a multi-parameter
     grid of model spectra and its references
 
-    Attributes
+    Parameters
     ----------
-    path: str
+    path : str
         The path to the directory of FITS files used to create the ModelGrid
-    refs: list, str
+    refs : list, str
         The references for the data contained in the ModelGrid
-    teff_rng: tuple
+    teff_rng : tuple
         The range of effective temperatures [K]
-    logg_rng: tuple
+    logg_rng : tuple
         The range of surface gravities [dex]
-    FeH_rng: tuple
+    FeH_rng : tuple
         The range of metalicities [dex]
-    wave_rng: array-like
+    wave_rng : array-like
         The wavelength range of the models [um]
-    n_bins: int
+    n_bins : int
         The number of bins for the ModelGrid wavelength array
-    data: astropy.table.Table
+    data : astropy.table.Table
         The table of parameters for the ModelGrid
-    inv_file: str
+    inv_file : str
         An inventory file to more quickly load the database
-
     """
     def __init__(self, model_directory, bibcode='2013A & A...553A...6H',
                  names={'Teff': 'PHXTEFF', 'logg': 'PHXLOGG',
@@ -64,18 +63,18 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        model_directory: str
+        model_directory : str
             The path to the directory of FITS files of spectra,
             which may include a filename with a wildcard caharacter
-        bibcode: str, array-like (optional)
+        bibcode : str, array-like (optional)
             The bibcode or list of bibcodes for this data set
-        names: dict (optional)
+        names : dict (optional)
             A dictionary to rename the table columns. The Phoenix
             model keywords are given as an example
-        resolution: int (optional)
+        resolution : int (optional)
             The desired wavelength resolution (lambda/d_lambda)
             of the grid spectra
-        wave_units: astropy.units.quantity
+        wave_units : astropy.units.quantity
         """
         # Make sure we can use glob if a directory
         # is given without a wildcard
@@ -151,6 +150,7 @@ class ModelGrid(object):
                         vals.append([header.get(k) for k in keys])
                         filenames.append(f.split(os.sep)[-1])
                     except:
+                        # FINDME: Need to only catch the expected exception.
                         print(f, 'could not be read into the model grid.')
 
             # Fix data types, trim extraneous values, and make the table
@@ -166,6 +166,7 @@ class ModelGrid(object):
                 try:
                     table.rename_column(old, new)
                 except:
+                    # FINDME: Need to only catch the expected exception.
                     print('No column named', old)
 
             # Remove columns where the values are all the same
@@ -219,7 +220,7 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        filepath: str
+        filepath : str
             The path to the target FITS file
         """
         if not filepath.endswith('.fits'):
@@ -229,7 +230,9 @@ class ModelGrid(object):
         model = self.get(**kwargs)
 
         # Get a dummy FITS file
-        ffile = resource_filename('ExoCTK', f'data{os.sep}core{os.sep}ModelGrid_tmp.fits')
+        ffile = resource_filename('ExoCTK',
+                                  f'data{os.sep}core{os.sep}' +
+                                  'ModelGrid_tmp.fits')
         hdu = fits.open(ffile)
 
         # Replace the data
@@ -249,27 +252,26 @@ class ModelGrid(object):
         hdu.writeto(filepath)
 
     def get(self, Teff, logg, FeH, resolution=None, interp=True):
-        """
-        Retrieve the wavelength, flux, and effective radius
+        """Retrieve the wavelength, flux, and effective radius
         for the spectrum of the given parameters
 
         Parameters
         ----------
-        Teff: int
+        Teff : int
             The effective temperature (K)
-        logg: float
+        logg : float
             The logarithm of the surface gravity (dex)
-        FeH: float
+        FeH : float
             The logarithm of the ratio of the metallicity
             and solar metallicity (dex)
-        resolution: int (optional)
+        resolution : int (optional)
             The desired wavelength resolution (lambda/d_lambda)
-        interp: bool
+        interp : bool
             Interpolate the model if possible
 
         Returns
         -------
-        dict
+        spec_dict : dict
             A dictionary of arrays of the wavelength, flux, and
             mu values and the effective radius for the given model
 
@@ -319,8 +321,10 @@ class ModelGrid(object):
                 raw_wave *= self.const
 
                 # Trim the wavelength and flux arrays
-                idx, = np.where(np.logical_and(raw_wave*self.wave_units >= self.wave_rng[0],
-                                               raw_wave*self.wave_units <= self.wave_rng[1]))
+                idx, = np.where(np.logical_and(raw_wave*self.wave_units >=
+                                               self.wave_rng[0],
+                                               raw_wave*self.wave_units <=
+                                               self.wave_rng[1]))
                 flux = raw_flux[:, idx]
                 wave = raw_wave[idx]
 
@@ -356,25 +360,24 @@ class ModelGrid(object):
             return
 
     def grid_interp(self, Teff, logg, FeH, plot=False):
-        """
-        Interpolate the grid to the desired parameters
+        """Interpolate the grid to the desired parameters
 
         Parameters
         ----------
-        Teff: int
+        Teff : int
             The effective temperature (K)
-        logg: float
+        logg : float
             The logarithm of the surface gravity (dex)
-        FeH: float
+        FeH : float
             The logarithm of the ratio of the metallicity
             and solar metallicity (dex)
-        plot: bool
+        plot : bool
             Plot the interpolated spectrum along
             with the 8 neighboring grid spectra
 
         Returns
         -------
-        dict
+        grid_point : dict
             A dictionary of arrays of the wavelength, flux, and
             mu values and the effective radius for the given model
         """
@@ -430,20 +433,23 @@ class ModelGrid(object):
             return
 
     def load_flux(self, reset=False):
-        """
-        Retrieve the flux arrays for all models
+        """Retrieve the flux arrays for all models
         and load into the ModelGrid.array attribute
         with shape (Teff, logg, FeH, mu, wavelength)
+
+        Parameters
+        ----------
+        reset : bool, optional
+            Delete the old file and clear the flux attribute.
+            Defaults to False.
         """
         if reset:
-
             # Delete the old file and clear the flux attribute
             if os.path.isfile(self.flux_file):
                 os.remove(self.flux_file)
             self.flux = None
 
         if self.flux is None:
-
             print('Loading flux into table...')
 
             if os.path.isfile(self.flux_file):
@@ -516,27 +522,25 @@ class ModelGrid(object):
 
     def customize(self, Teff_rng=(2300, 8000), logg_rng=(0, 6),
                   FeH_rng=(-2, 1), wave_rng=(0*q.um, 40*q.um), n_bins=''):
-        """
-        Trims the model grid by the given ranges in effective temperature,
+        """Trims the model grid by the given ranges in effective temperature,
         surface gravity, and metallicity. Also sets the wavelength range
         and number of bins for retrieved model spectra.
 
         Parameters
         ----------
-        Teff_rng: array-like
+        Teff_rng : array-like
             The lower and upper inclusive bounds for the effective
             temperature (K)
-        logg_rng: array-like
+        logg_rng : array-like
             The lower and upper inclusive bounds for the logarithm of the
             surface gravity (dex)
-        FeH_rng: array-like
+        FeH_rng : array-like
             The lower and upper inclusive bounds for the logarithm of the
             ratio of the metallicity and solar metallicity (dex)
-        wave_rng: array-like
+        wave_rng : array-like
             The lower and upper inclusive bounds for the wavelength (microns)
-        n_bins: int
+        n_bins : int
             The number of bins for the wavelength axis
-
         """
         # Make a copy of the grid
         grid = self.data.copy()
@@ -598,9 +602,7 @@ class ModelGrid(object):
         del grid
 
     def info(self):
-        """
-        Print a table of info about the current ModelGrid
-        """
+        """Print a table of info about the current ModelGrid"""
         # Get the info from the class
         tp = (int, bytes, bool, str, float, tuple, list, np.ndarray)
         info = [[k, str(v)] for k, v in vars(self).items()
@@ -615,9 +617,7 @@ class ModelGrid(object):
         table.pprint(max_width=-1, align=['>', '<'])
 
     def reset(self):
-        """
-        Reset the current grid to the original state
-        """
+        """Reset the current grid to the original state"""
         file = os.path.join(self.path+'model_grid_flux.hdf5')
 
         if os.path.isfile(file):
@@ -626,12 +626,11 @@ class ModelGrid(object):
         self.__init__(self.path)
 
     def set_units(self, wave_units=q.um):
-        """
-        Set the wavelength and flux units
+        """Set the wavelength and flux units
 
         Parameters
         ----------
-        wave_units: str, astropy.units.core.PrefixUnit/CompositeUnit
+        wave_units : str, astropy.units.core.PrefixUnit/CompositeUnit
             The wavelength units
         """
         # Set wavelength units
