@@ -682,10 +682,11 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
                                        ]).reshape(-1, ndim), axis=0)
         if remove_zeroth:
             pos = pos[1:]
-        in_range = np.array([((prior1[u] <= ii) and (ii <= prior2[u])).all()
+        in_range = np.array([((prior1[u] <= ii).all() and
+                              (ii <= prior2[u]).all())
                              for ii in pos[:, u]])
-        in_range2 = np.array([((prior1[lu] <= np.log(ii)) and
-                               (np.log(ii) <= prior2[lu])).all()
+        in_range2 = np.array([((prior1[lu] <= np.log(ii)).all() and
+                               (np.log(ii) <= prior2[lu]).all())
                               for ii in pos[:, lu]])
     if not np.any(in_range) and not np.any(in_range2):
         raise AssertionError('Failed to initialize any walkers within the set '

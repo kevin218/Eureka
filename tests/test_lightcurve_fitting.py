@@ -24,14 +24,14 @@ import numpy as np
 import os
 import sys
 sys.path.insert(0, '..'+os.sep)
-from eureka.S5_lightcurve_fitting import lightcurve, models, simulations
+from eureka.S5_lightcurve_fitting import models, simulations
 from eureka.lib.readEPF import Parameters, Parameter
 from eureka.lib.readECF import MetaClass
 from eureka.lib import logedit
 from eureka.S5_lightcurve_fitting import s5_fit
 
 meta = MetaClass()
-meta.eventlabel='NIRCam'
+meta.eventlabel = 'NIRCam'
 
 '''
 NOTE: Currently does not run. Since only a single function of Stage 5 is
@@ -51,7 +51,8 @@ class TestLightcurve(unittest.TestCase):
 
     def test_lightcurve(self):
         """Test that a LightCurve object can be created"""
-        self.lc = lightcurve.LightCurve(self.time, self.flux, self.unc, self.nchannel, name='Data')
+        self.lc = lightcurve.LightCurve(self.time, self.flux, self.unc,
+                                        self.nchannel, name='Data')
 
         # Test that parameters can be assigned
         params1 = {"c1" : 0.0005, "c0": 0.997, "name": 'linear'}
@@ -62,6 +63,7 @@ class TestLightcurve(unittest.TestCase):
         # Test the fitting routine
         self.lc.fit(comp_model, meta.eventlabel, verbose=False)
 '''
+
 
 class TestModels(unittest.TestCase):
     """Tests for the models.py module"""
@@ -93,10 +95,12 @@ class TestModels(unittest.TestCase):
     def test_polynomialmodel(self):
         """Tests for the PolynomialModel class"""
         # create dictionary
-        params = {"c1" : [0.0005, 'free'], "c0": [0.997, 'free'], "name": 'linear'}
+        params = {"c1": [0.0005, 'free'], "c0": [0.997, 'free'],
+                  "name": 'linear'}
 
         # Create the model
-        self.lin_model = models.PolynomialModel(parameters=None,coeff_dict=params,nchan=1)
+        self.lin_model = models.PolynomialModel(parameters=None,
+                                                coeff_dict=params, nchan=1)
 
         # Evaluate and test output
         self.lin_model.time = self.time
@@ -124,8 +128,11 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        self.t_model = models.BatmanTransitModel(parameters=params, name='transit', fmt='r--',
-                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
+        self.t_model = models.BatmanTransitModel(parameters=params,
+                                                 name='transit', fmt='r--',
+                                                 longparamlist=longparamlist,
+                                                 nchan=1,
+                                                 paramtitles=paramtitles)
 
         # Evaluate and test output
         self.t_model.time = self.time
@@ -136,14 +143,14 @@ class TestModels(unittest.TestCase):
         """Tests for the BatmanEclipseModel class"""
         # Set the intial parameters
         params = Parameters()
-        params.rp = 0.22, 'fixed' # rprs
+        params.rp = 0.22, 'fixed'  # rprs
         params.fp = 0.08, 'free', 0.0, 0.1, 'U'  # fprs
         params.per = 10.721490, 'fixed'
         params.t0 = 0.48, 'free', 0, 1, 'U'
         params.inc = 89.7, 'free', 80., 90., 'U'
-        params.a = 18.2, 'free', 15., 20., 'U'    # aprs
+        params.a = 18.2, 'free', 15., 20., 'U'  # aprs
         params.ecc = 0., 'fixed'
-        params.w = 90., 'fixed'             # omega
+        params.w = 90., 'fixed'  # omega
         params.Rs = 1., 'independent'
 
         # Make the eclipse model
@@ -151,8 +158,12 @@ class TestModels(unittest.TestCase):
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
-        self.e_model = models.BatmanEclipseModel(parameters=params, name='transit', fmt='r--', log=log,
-                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
+        self.e_model = models.BatmanEclipseModel(parameters=params,
+                                                 name='transit', fmt='r--',
+                                                 log=log,
+                                                 longparamlist=longparamlist,
+                                                 nchan=1,
+                                                 paramtitles=paramtitles)
 
         # Remove the temporary log file
         os.system(f"rm .{os.sep}data{os.sep}test.log")
@@ -184,19 +195,30 @@ class TestModels(unittest.TestCase):
         params.AmpSin2 = 0.01, 'free', -1, 1, 'U'
         params.AmpCos2 = 0.01, 'free', -1, 1, 'U'
         params.Rs = 1., 'independent'
-        
+
         # Create the model
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
-        self.t_model = models.BatmanTransitModel(parameters=params, name='transit', fmt='r--',
-                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
-        self.e_model = models.BatmanEclipseModel(parameters=params, name='transit', fmt='r--', log=log,
-                                                 longparamlist=longparamlist, nchan=1, paramtitles=paramtitles)
-        self.phasecurve = models.SinusoidPhaseCurveModel(parameters=params, name='phasecurve', fmt='r--',
-                                                         longparamlist=longparamlist, nchan=1, paramtitles=paramtitles,
-                                                         transit_model=self.t_model, eclipse_model=self.e_model)
+        self.t_model = models.BatmanTransitModel(parameters=params,
+                                                 name='transit', fmt='r--',
+                                                 longparamlist=longparamlist,
+                                                 nchan=1,
+                                                 paramtitles=paramtitles)
+        self.e_model = models.BatmanEclipseModel(parameters=params,
+                                                 name='transit', fmt='r--',
+                                                 log=log,
+                                                 longparamlist=longparamlist,
+                                                 nchan=1,
+                                                 paramtitles=paramtitles)
+        self.phasecurve = \
+            models.SinusoidPhaseCurveModel(parameters=params,
+                                           name='phasecurve', fmt='r--',
+                                           longparamlist=longparamlist,
+                                           nchan=1, paramtitles=paramtitles,
+                                           transit_model=self.t_model,
+                                           eclipse_model=self.e_model)
 
         # Remove the temporary log file
         os.system(f"rm .{os.sep}data{os.sep}test.log")
@@ -209,7 +231,10 @@ class TestModels(unittest.TestCase):
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
-        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':[1., 'free'], 'r1':[0.05, 'free'], 'r2':[0.01, 'free']}, nchan=1)
+        self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
+                                                         'r1': [0.05, 'free'],
+                                                         'r2': [0.01, 'free']},
+                                             nchan=1)
 
         # Evaluate and test output
         self.exp_model.time = self.time
@@ -217,8 +242,13 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
         # Create the model
-        self.exp_model = models.ExpRampModel(coeff_dict = {'r0':[1., 'free'], 'r1':[0.05, 'free'], 'r2':[0.01, 'free'],
-                                                           'r3':[1., 'free'], 'r4':[0.05, 'free'], 'r5':[0.01, 'free']}, nchan=1)
+        self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
+                                                         'r1': [0.05, 'free'],
+                                                         'r2': [0.01, 'free'],
+                                                         'r3': [1., 'free'],
+                                                         'r4': [0.05, 'free'],
+                                                         'r5': [0.01, 'free']},
+                                             nchan=1)
 
         # Evaluate and test output
         self.exp_model.time = self.time
@@ -254,7 +284,8 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(self.param.priorpar1, priorpar1)
         self.assertEqual(self.param.priorpar2, priorpar2)
         self.assertEqual(self.param.prior, prior)
-        self.assertEqual(self.param.values, [pname, pval, ptype, priorpar1, priorpar2, prior])
+        self.assertEqual(self.param.values, [pname, pval, ptype, priorpar1,
+                                             priorpar2, prior])
 
     def test_parameters(self):
         """Test that a Parameters object can be created"""
@@ -263,8 +294,10 @@ class TestParameters(unittest.TestCase):
         self.params.param2 = 234.567, 'free', 200, 300
 
         # Test the auto attribute assignment
-        self.assertEqual(self.params.param1.values, ['param1', 123.456, 'free'])
-        self.assertEqual(self.params.param2.values, ['param2', 234.567, 'free', 200, 300])
+        self.assertEqual(self.params.param1.values,
+                         ['param1', 123.456, 'free'])
+        self.assertEqual(self.params.param2.values,
+                         ['param2', 234.567, 'free', 200, 300])
 
 
 class TestSimulations(unittest.TestCase):
@@ -277,8 +310,10 @@ class TestSimulations(unittest.TestCase):
         """Test the simulations can be made properly"""
         # Test to pass
         npts = 1234
-        time, flux, unc, params = simulations.simulate_lightcurve('WASP-107b', 0.1, npts=npts, plot=False)
+        time, _, _, _ = simulations.simulate_lightcurve('WASP-107b', 0.1,
+                                                        npts=npts, plot=False)
         self.assertEqual(len(time), npts)
 
         # Test to fail
-        self.assertRaises(KeyError, simulations.simulate_lightcurve, 'foobar', 0.1)
+        self.assertRaises(KeyError, simulations.simulate_lightcurve,
+                          'foobar', 0.1)
