@@ -13,7 +13,7 @@ from . import lib
 try:
     import jwst
     success = True
-except ModuleNotFoundError as e:
+except ModuleNotFoundError:
     print("WARNING: The package jwst has not been installed. As a result, "
           "Eureka!'s Stages 1 and 2 will not work.")
     success = False

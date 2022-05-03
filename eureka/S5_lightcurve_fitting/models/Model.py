@@ -14,6 +14,7 @@ import astropy.units as q
 from ...lib.readEPF import Parameters
 from ..utils import COLORS
 
+
 class Model:
     def __init__(self, **kwargs):
         """
@@ -36,7 +37,7 @@ class Model:
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
-            if arg!='log':
+            if arg != 'log':
                 setattr(self, arg, val)
 
     def __mul__(self, other):
@@ -94,10 +95,10 @@ class Model:
         # Check the type
         if not isinstance(new_time, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array")
-        
+
         # Save the current time array
         old_time = copy.deepcopy(self.time)
-        
+
         # Evaluate the model on the new time array
         self.time = new_time
         interp_flux = self.eval(**kwargs)
@@ -109,18 +110,20 @@ class Model:
 
     def update(self, newparams, names, **kwargs):
         """Update parameter values"""
-        for ii,arg in enumerate(names):
-            if hasattr(self.parameters,arg):
-                val = getattr(self.parameters,arg).values[1:]
+        for ii, arg in enumerate(names):
+            if hasattr(self.parameters, arg):
+                val = getattr(self.parameters, arg).values[1:]
                 val[0] = newparams[ii]
                 setattr(self.parameters, arg, val)
         self._parse_coeffs()
         return
-    
+
     def _parse_coeffs(self):
-        """A placeholder function to do any additional processing when calling update"""
+        """A placeholder function to do any additional processing when
+        calling update.
+        """
         return
-    
+
     @property
     def parameters(self):
         """A getter for the parameters"""
@@ -134,13 +137,16 @@ class Model:
             params = Parameters(params)
 
         # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ != Parameters.__name__):
-            raise TypeError("'params' argument must be a JSON file, ascii file, or parameters.Parameters instance.")
+        if (params is not None) and (type(params).__name__ !=
+                                     Parameters.__name__):
+            raise TypeError("'params' argument must be a JSON file, "
+                            "ascii file, or parameters.Parameters instance.")
 
         # Set the parameters attribute
         self._parameters = params
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue', zorder=np.inf, share=False, chan=0, **kwargs):
+    def plot(self, time, components=False, ax=None, draw=False, color='blue',
+             zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model
 
         Parameters
@@ -159,7 +165,7 @@ class Model:
         """
         # Make the figure
         if ax is None:
-            fig = plt.figure(figsize=(8,6))
+            fig = plt.figure(figsize=(8, 6))
             ax = fig.gca()
 
         # Set the time
@@ -167,18 +173,20 @@ class Model:
 
         # Plot the model
         label = self.fitter
-        if self.name!='New Model':
+        if self.name != 'New Model':
             label += ': '+self.name
-        
+
         flux = self.eval(**kwargs)
         if share:
             flux = flux[chan*len(self.time):(chan+1)*len(self.time)]
-        
-        ax.plot(self.time, flux, '.', ls='', ms=2, label=label, color=color, zorder=zorder)
+
+        ax.plot(self.time, flux, '.', ls='', ms=2, label=label, color=color,
+                zorder=zorder)
 
         if components and self.components is not None:
             for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS), zorder=zorder, share=share, chan=chan, **kwargs)
+                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS),
+                          zorder=zorder, share=share, chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))
@@ -235,6 +243,7 @@ class Model:
 
         self._units = units
 
+
 class CompositeModel(Model):
     """A class to create composite models"""
     def __init__(self, models, **kwargs):
@@ -256,7 +265,7 @@ class CompositeModel(Model):
             if model.modeltype == 'GP':
                 self.GP = True
 
-    def eval(self, incl_GP = False, **kwargs):
+    def eval(self, incl_GP=False, **kwargs):
         """Evaluate the model components"""
         # Get the time
         if self.time is None:
@@ -268,10 +277,10 @@ class CompositeModel(Model):
         for model in self.components:
             if model.time is None:
                 model.time = self.time
-            if model.modeltype != 'GP':            
+            if model.modeltype != 'GP':
                 flux *= model.eval(**kwargs)
 
-        if incl_GP == True:
+        if incl_GP:
             flux += self.GPeval(flux)
 
         return flux
@@ -292,7 +301,7 @@ class CompositeModel(Model):
                 flux *= model.eval(**kwargs)
 
         return flux
-    
+
     def GPeval(self,  fit, **kwargs):
         """Evaluate the GP model components only"""
         # Get the time
@@ -317,7 +326,8 @@ class CompositeModel(Model):
         if interp:
             dt = self.time[1]-self.time[0]
             steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps, endpoint=True)
+            new_time = np.linspace(self.time[0], self.time[-1], steps,
+                                   endpoint=True)
         else:
             new_time = self.time
 

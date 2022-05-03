@@ -3,6 +3,7 @@ import numpy as np
 from .Model import Model
 from ...lib.readEPF import Parameters
 
+
 class PolynomialModel(Model):
     """Polynomial Model"""
     def __init__(self, **kwargs):
@@ -47,19 +48,20 @@ class PolynomialModel(Model):
         """
 
         # Parse 'c#' keyword arguments as coefficients
-        coeffs = np.zeros((self.nchan,10))
+        coeffs = np.zeros((self.nchan, 10))
         for k, v in self.parameters.dict.items():
-            remvisnum=k.split('_')
+            remvisnum = k.split('_')
             if k.lower().startswith('c') and k[1:].isdigit():
-                coeffs[0,int(k[1:])] = v[0]
-            elif len(remvisnum)>1 and self.nchan>1:
-                if remvisnum[0].lower().startswith('c') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
-                    coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
+                coeffs[0, int(k[1:])] = v[0]
+            elif (len(remvisnum) > 1 and self.nchan > 1 and
+                  remvisnum[0].lower().startswith('c') and
+                  remvisnum[0][1:].isdigit() and remvisnum[1].isdigit()):
+                coeffs[int(remvisnum[1]), int(remvisnum[0][1:])] = v[0]
 
         # Trim zeros and reverse
-        coeffs=coeffs[:,~np.all(coeffs==0,axis=0)]
-        coeffs=np.flip(coeffs,axis=1)
-        self.coeffs=coeffs
+        coeffs = coeffs[:, ~np.all(coeffs == 0, axis=0)]
+        coeffs = np.flip(coeffs, axis=1)
+        self.coeffs = coeffs
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -71,10 +73,9 @@ class PolynomialModel(Model):
         time_local = self.time - self.time.mean()
 
         # Create the polynomial from the coeffs
-        lcfinal=np.array([])
+        lcfinal = np.array([])
         for c in np.arange(self.nchan):
             poly = np.poly1d(self.coeffs[c])
             lcpiece = np.polyval(poly, time_local)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
-

@@ -3,6 +3,7 @@ import numpy as np
 from .Model import Model
 from ...lib.readEPF import Parameters
 
+
 class ExpRampModel(Model):
     """Model for single or double exponential ramps"""
     def __init__(self, **kwargs):
@@ -48,12 +49,15 @@ class ExpRampModel(Model):
         # Parse 'r#' keyword arguments as coefficients
         self.coeffs = np.zeros((self.nchan, 6))
         for k, v in self.parameters.dict.items():
-            remvisnum=k.split('_')
+            remvisnum = k.split('_')
             if k.lower().startswith('r') and k[1:].isdigit():
-                self.coeffs[0,int(k[1:])] = v[0]
-            elif len(remvisnum)>1 and self.nchan>1:
-                if remvisnum[0].lower().startswith('r') and remvisnum[0][1:].isdigit() and remvisnum[1].isdigit():
-                    self.coeffs[int(remvisnum[1]),int(remvisnum[0][1:])] = v[0]
+                self.coeffs[0, int(k[1:])] = v[0]
+            elif (len(remvisnum) > 1 and self.nchan > 1 and
+                  remvisnum[0].lower().startswith('r') and
+                  remvisnum[0][1:].isdigit() and
+                  remvisnum[1].isdigit()):
+                self.coeffs[int(remvisnum[1]),
+                            int(remvisnum[0][1:])] = v[0]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values"""
@@ -65,10 +69,10 @@ class ExpRampModel(Model):
         time_local = self.time - self.time[0]
 
         # Create the ramp from the coeffs
-        lcfinal=np.array([])
+        lcfinal = np.array([])
         for c in np.arange(self.nchan):
             r0, r1, r2, r3, r4, r5 = self.coeffs[c]
-            lcpiece = r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1
+            lcpiece = (1+r0*np.exp(-r1*time_local + r2)
+                       + r3*np.exp(-r4*time_local + r5))
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
-
