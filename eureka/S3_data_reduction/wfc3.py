@@ -12,7 +12,7 @@ from ..lib import suntimecorr, utc_tt
 
 def preparation_step(meta, log):
     """Perform preperatory steps which require many frames.
-    
+
     Separate imaging and spectroscopy, separate observations into different
     scan directions, and calculate centroid for each frame.
 

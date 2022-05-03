@@ -210,7 +210,7 @@ class KeplerOrbit(object):
     @m1.setter
     def m1(self, m1):
         """m1 setter.
-        
+
         Updates Porb if not explicity set during init."""
         self._m1 = m1
         if self.Porb_input is None:
