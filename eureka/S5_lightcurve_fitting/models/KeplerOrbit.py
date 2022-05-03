@@ -146,29 +146,37 @@ class KeplerOrbit(object):
         Parameters
         ----------
         a : float, optional
-            The semi-major axis in m.
+            The semi-major axis in m. Detaults to 1 au.
         Porb : float, optional
-            The orbital period in days.
+            The orbital period in days. Defaults to None which
+            computes the period using the m1 and m2 masses.
         inc : float, optional
-            The orbial inclination (in degrees above face-on)
+            The orbial inclination (in degrees above face-on).
+            Defaults to 90.
         t0 : float, optional
-            The linear ephemeris in days.
+            The linear ephemeris in days. Defaults to 0.
         e : float, optional
-            The orbital eccentricity.
+            The orbital eccentricity. Defaults to 0.
         Omega : float, optional
             The longitude of ascending node (in degrees CCW from
-            line-of-sight).
+            line-of-sight). Defaults to 270.
         argp : float, optional
             The argument of periastron (in degrees CCW from Omega).
-        m1 : float, optional
-            The mass of body 1 in kg.
-        m2 : float, optional
-            The mass of body 2 in kg.
+            Defaults to 90.
         obliq : float, optional
             The obliquity (axial tilt) of body 2 (in degrees toward body 1).
+            Defaults to 0.
         argobliq : float, optional
             The reference orbital angle used for obliq (in degrees from
-            inferior conjunction).
+            inferior conjunction). Defaults to 0.
+        Prot : float, optional.
+            The rotational period of body 2. Defaults to None which
+            sets Prot equal to Porb (and will be updated when Porb is
+            updated).
+        m1 : float, optional
+            The mass of body 1 in kg. Defaults to Msun.
+        m2 : float, optional
+            The mass of body 2 in kg. Defaults to 0.
         """
         self.e = e
         self.a = a
@@ -201,6 +209,9 @@ class KeplerOrbit(object):
 
     @m1.setter
     def m1(self, m1):
+        """m1 setter.
+        
+        Updates Porb if not explicity set during init."""
         self._m1 = m1
         if self.Porb_input is None:
             self.Porb = self.solve_period()
@@ -208,6 +219,9 @@ class KeplerOrbit(object):
 
     @m2.setter
     def m2(self, m2):
+        """m2 setter.
+
+        Updates Porb if not explicity set during init."""
         self._m2 = m2
         if self.Porb_input is None and self.m1 is not None:
             self.Porb = self.solve_period()
@@ -215,6 +229,10 @@ class KeplerOrbit(object):
 
     @Porb.setter
     def Porb(self, Porb):
+        """Porb setter.
+
+        Updates other computed parameters as needed.
+        """
         self._Porb = Porb
 
         # Update self.Prot if needed
@@ -315,10 +333,11 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        useFSSI : bool
+        useFSSI : bool, optional
             Whether or not to use FSSI to invert Kepler's equation.
-        xtol : float
-            tolarance on error in eccentric anomaly.
+            Defaults to None which uses FSSI if t.size > 8.
+        xtol : float, optional
+            tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
         Returns
         -------
@@ -357,8 +376,8 @@ class KeplerOrbit(object):
         ----------
         M : ndarray
             The mean anomaly in radians.
-        xtol : float
-            tolarance on error in eccentric anomaly.
+        xtol : float, optional
+            tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
         Returns
         -------
@@ -382,8 +401,8 @@ class KeplerOrbit(object):
         ----------
         M : ndarray
             The mean anomaly in radians.
-        xtol : float
-            tolarance on error in eccentric anomaly.
+        xtol : float, optional
+            tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
         Returns
         -------
@@ -455,8 +474,9 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        xtol : float
+        xtol : float, optional
             tolarance on error in eccentric anomaly (calculated along the way).
+            Defaults to 1e-10.
         Returns
         -------
         ndarray
@@ -475,8 +495,9 @@ class KeplerOrbit(object):
         TA : ndarray
             The true anomaly in radians (if t and TA are given, only TA
             will be used).
-        xtol : float
+        xtol : float, optional
             tolarance on error in eccentric anomaly (calculated along the way).
+            Defaults to 1e-10.
 
         Returns
         -------
@@ -497,8 +518,9 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        xtol : float
+        xtol : float, optional
             tolarance on error in eccentric anomaly (calculated along the way).
+            Defaults to 1e-10.
 
         Returns
         -------
@@ -544,6 +566,9 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
+        TA : ndarray, optional
+            The true anomaly. Defaults to None which calculates the TA
+            using self.true_anomaly(t).
 
         Returns
         -------
@@ -564,6 +589,9 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
+        TA : ndarray, optional
+            The true anomaly. Defaults to None which calculates the TA
+            using self.true_anomaly(t).
 
         Returns
         -------

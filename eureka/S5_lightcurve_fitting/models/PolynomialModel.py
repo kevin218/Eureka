@@ -7,7 +7,15 @@ from ...lib.readEPF import Parameters
 class PolynomialModel(Model):
     """Polynomial Model"""
     def __init__(self, **kwargs):
-        """Initialize the polynomial model
+        """Initialize the polynomial model.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
         """
         # Inherit from Model class
         super().__init__(**kwargs)
@@ -33,20 +41,15 @@ class PolynomialModel(Model):
         # Update coefficients
         self._parse_coeffs()
 
-    def _parse_coeffs(self, **kwargs):
+    def _parse_coeffs(self):
         """Convert dict of 'c#' coefficients into a list
-        of coefficients in decreasing order, i.e. ['c2','c1','c0']
-
-        Parameters
-        ----------
-        None
+        of coefficients in decreasing order, i.e. ['c2','c1','c0'].
 
         Returns
         -------
         np.ndarray
             The sequence of coefficient values
         """
-
         # Parse 'c#' keyword arguments as coefficients
         coeffs = np.zeros((self.nchan, 10))
         for k, v in self.parameters.dict.items():
@@ -64,7 +67,18 @@ class PolynomialModel(Model):
         self.coeffs = coeffs
 
     def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')

@@ -9,11 +9,11 @@ def ln_like(theta, lc, model, freenames):
     Parameters
     ----------
     theta : ndarray
-        The current estimate of the fitted parameters
+        The current estimate of the fitted parameters.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
+        The composite model to fit.
     freenames : iterable
         The names of the fitted parameters.
 
@@ -68,7 +68,7 @@ def lnprior(theta, prior1, prior2, priortype):
     Parameters
     ----------
     theta : ndarray
-        The current estimate of the fitted parameters
+        The current estimate of the fitted parameters.
     prior1 : ndarray
         The lower-bound for uniform/log uniform priors, or mean for
         normal priors.
@@ -115,11 +115,11 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     Parameters
     ----------
     theta : ndarray
-        The current estimate of the fitted parameters
+        The current estimate of the fitted parameters.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
+        The composite model to fit.
     prior1 : ndarray
         The lower-bound for uniform/log uniform priors, or mean for
         normal priors.
@@ -157,14 +157,62 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
 
 
 def transform_uniform(x, a, b):
+    """The uniform prior transform function needed for dynesty.
+
+    Parameters
+    ----------
+    x : float
+        The position at which to calculate the prior.
+    a : float
+        The lower limit.
+    b : float
+        The upper limit.
+
+    Returns
+    -------
+    float
+        The uniform prior transform.
+    """
     return a + (b - a) * x
 
 
 def transform_log_uniform(x, a, b):
+    """The log-uniform prior transform function needed for dynesty.
+
+    Parameters
+    ----------
+    x : float
+        The position at which to calculate the prior.
+    a : float
+        The log lower limit.
+    b : float
+        The log upper limit.
+
+    Returns
+    -------
+    float
+        The log-uniform prior transform.
+    """
     return a*(b/a)**x
 
 
 def transform_normal(x, mu, sigma):
+    """The normal prior transform function needed for dynesty.
+
+    Parameters
+    ----------
+    x : float
+        The position at which to calculate the prior.
+    mu : float
+        The prior mean.
+    sigma : float
+        The prior standard deviation.
+
+    Returns
+    -------
+    float
+        The normal prior transform.
+    """
     return norm.ppf(x, loc=mu, scale=sigma)
 
 
@@ -174,7 +222,7 @@ def ptform(theta, prior1, prior2, priortype):
     Parameters
     ----------
     theta : ndarray
-        The current estimate of the fitted parameters
+        The current estimate of the fitted parameters.
     prior1 : ndarray
         The lower-bound for uniform/log uniform priors, or mean for
         normal priors.
@@ -221,7 +269,7 @@ def computeRedChiSq(lc, log, model, meta, freenames):
         The open log in which notes from this step can be added.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    meta : MetaObject
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     freenames : iterable
         The names of the fitted parameters.
@@ -260,9 +308,9 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     maxnbins : int, optional
         The maximum number of bins. Use None to default to 10 points per bin.
     binstep : int, optional
-        Bin step size.
+        Bin step size. Defaults to 1.
     isrmserr : bool
-        True if return rmserr, else False.
+        True if return rmserr, else False. Defaults to False.
 
     Returns
     -------
@@ -273,7 +321,7 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     binsz : ndarray
         The different bin sizes.
     rmserr : ndarray, optional
-        The uncertainty in the RMS.
+        The uncertainty in the RMS. Only returned if isrmserr==True.
 
     Notes
     -----
@@ -313,7 +361,7 @@ def GP_loglikelihood(model, fit, unc_fit):
 
     Parameters
     ----------
-    model : CompositeModel object
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The model including the GP model
     fit : ndarray
         The evaluated model without the GP

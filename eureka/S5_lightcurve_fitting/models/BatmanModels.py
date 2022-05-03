@@ -17,6 +17,14 @@ class BatmanTransitModel(Model):
     """Transit Model"""
     def __init__(self, **kwargs):
         """Initialize the transit model
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
         """
         # Inherit from Model calss
         super().__init__(**kwargs)
@@ -42,7 +50,18 @@ class BatmanTransitModel(Model):
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
     def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -105,7 +124,13 @@ class BatmanTransitModel(Model):
 class BatmanEclipseModel(Model):
     """Eclipse Model"""
     def __init__(self, **kwargs):
-        """Initialize the eclipse model
+        """Initialize the transit model
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
         # Inherit from Model calss
         super().__init__(**kwargs)
@@ -171,7 +196,18 @@ class BatmanEclipseModel(Model):
                              f"light-travel time).")
 
     def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -235,14 +271,14 @@ def correct_light_travel_time(time, bm_params):
 
     Parameters
     ----------
-    time:   ndarray
+    time : ndarray
         The times at which observations were collected
-    bm_params:  batman.TransitParams
+    bm_params : batman.TransitParams
         The batman TransitParams object that contains information on the orbit.
 
     Returns
     -------
-    time:   ndarray
+    time : ndarray
         Updated times that can be put into batman transit and eclipse functions
         that will give the expected results assuming a finite light travel
         speed.

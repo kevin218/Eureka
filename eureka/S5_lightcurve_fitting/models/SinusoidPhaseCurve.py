@@ -11,7 +11,21 @@ from ...lib.readEPF import Parameters
 class SinusoidPhaseCurveModel(Model):
     """A sinusoidal phase curve model"""
     def __init__(self, transit_model=None, eclipse_model=None, **kwargs):
-        """Initialize the phase curve model
+        """Initialize the phase curve model.
+
+        Parameters
+        ----------
+        transit_model : eureka.S5_lightcurve_fitting.models.Model, optional
+            The transit model to use for this phase curve model.
+            Defaults to None.
+        eclipse_model : eureka.S5_lightcurve_fitting.models.Model, optional
+            The eclipse model to use for this phase curve model.
+            Defaults to None.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
         """
         # Inherit from Model calss
         super().__init__(**kwargs)
@@ -44,11 +58,12 @@ class SinusoidPhaseCurveModel(Model):
 
     @property
     def time(self):
-        """A getter for the time"""
+        """A getter for the time."""
         return self._time
 
     @time.setter
     def time(self, time_array):
+        """A setter for the time."""
         self._time = time_array
         if self.transit_model is not None:
             self.transit_model.time = time_array
@@ -56,15 +71,37 @@ class SinusoidPhaseCurveModel(Model):
             self.eclipse_model.time = time_array
 
     def update(self, newparams, names, **kwargs):
+        """Update the model with new parameter values.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
+        names : list
+            Parameter names.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.update().
+        """
         super().update(newparams, names, **kwargs)
         if self.transit_model is not None:
             self.transit_model.update(newparams, names, **kwargs)
         if self.eclipse_model is not None:
             self.eclipse_model.update(newparams, names, **kwargs)
-        return
 
     def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')

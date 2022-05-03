@@ -82,11 +82,10 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
 
     Parameters
     ----------
-    download_location : string
+    download_location : string, optional
         The path to where the ExoCTK data package will be downloaded.
         The default setting is the user's $HOME directory.
     """
-
     print('\nDownloading ExoCTK data package. This may take a few minutes.')
     print(f'Materials will be downloaded to {download_location}/exoctk_data/')
     print()
@@ -162,17 +161,21 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
 
 
 def color_gen(colormap='viridis', key=None, n=10):
-    """Color generator for Bokeh plots
+    """Color generator for Bokeh plots.
 
     Parameters
     ----------
     colormap : str, sequence
-        The name of the color map
+        The name of the color map.
+    key : str, optional
+        The palette key. Defaults to None which uses the first palette key.
+    n : int, optional
+        If palette is callable, the argument to that function. Defaults to 10.
 
     Returns
     -------
     generator
-        A generator for the color palette
+        A generator for the color palette.
     """
     if colormap in dir(bpal):
         palette = getattr(bpal, colormap)
@@ -204,24 +207,24 @@ COLORS = color_gen('Category10', 10)
 
 def interp_flux(mu, flux, params, values):
     """Interpolate a cube of synthetic spectra for a
-    given index of mu
+    given index of mu.
 
     Parameters
     ----------
     mu : int
         The index of the (Teff, logg, FeH, *mu*, wavelength)
-        data cube to interpolate
+        data cube to interpolate.
     flux : np.ndarray
-        The 5D data array
+        The 5D data array.
     params : list
-        A list of each free parameter range
+        A list of each free parameter range.
     values : list
-        A list of each free parameter values
+        A list of each free parameter values.
 
     Returns
     -------
     tuple
-        The array of new flux values
+        The array of new flux values, and the generators.
     """
     # Iterate over each wavelength (-1 index of flux array)
     shp = flux.shape[-1]
@@ -239,14 +242,14 @@ def interp_flux(mu, flux, params, values):
 
 def calc_zoom(R_f, arr):
     """Calculate the zoom factor required to make the given
-    array into the given resolution
+    array into the given resolution.
 
     Parameters
     ----------
     R_f : int
-        The desired final resolution of the wavelength array
+        The desired final resolution of the wavelength array.
     arr : array-like
-        The array to zoom
+        The array to zoom.
 
     Returns
     -------
@@ -267,14 +270,18 @@ def calc_zoom(R_f, arr):
 
 def rebin_spec(spec, wavnew, oversamp=100, plot=False):
     """Rebin a spectrum to a new wavelength array while preserving
-    the total flux
+    the total flux.
 
     Parameters
     ----------
     spec : array-like
-        The wavelength and flux to be binned
+        The wavelength and flux to be binned.
     wavenew : array-like
-        The new wavelength array
+        The new wavelength array.
+    oversamp : int, optional
+        The oversampling factor. Defaults to 100.
+    plot : bool, optional
+        Unused. Defaults to False.
 
     Returns
     -------
@@ -309,18 +316,18 @@ def rebin_spec(spec, wavnew, oversamp=100, plot=False):
 
 
 def writeFITS(filename, extensions, headers=()):
-    """Write some data to a new FITS file
+    """Write some data to a new FITS file.
 
     Parameters
     ----------
     filename : str
-        The filename of the output FITS file
+        The filename of the output FITS file.
     extensions : dict
-        The extension name and associated data to include
+        The extension name and associated data to include.
         in the file
-    headers : array-like
+    headers : array-like, optional
         The (keyword, value, comment) groups for the PRIMARY
-        header extension
+        header extension. Defaults to ().
     """
     # Write the arrays to a FITS file
     prihdu = fits.PrimaryHDU()
@@ -343,24 +350,25 @@ def writeFITS(filename, extensions, headers=()):
 
 
 def filter_table(table, **kwargs):
-    """Retrieve the filtered rows
+    """Retrieve the filtered rows.
 
     Parameters
     ----------
     table : astropy.table.Table, pandas.DataFrame
-        The table to filter
-    param : str
-        The parameter to filter by, e.g. 'Teff'
-    value : str, float, int, sequence
-        The criteria to filter by,
-        which can be single valued like 1400
-        or a range with operators [<,<=,>,>=],
-        e.g. ('>1200','<=1400')
+        The table to filter.
+    **kwargs : dict
+        param : str
+            The parameter to filter by, e.g. 'Teff'.
+        value : str, float, int, sequence
+            The criteria to filter by,
+            which can be single valued like 1400
+            or a range with operators [<,<=,>,>=],
+            e.g. ('>1200','<=1400').
 
     Returns
     -------
     astropy.table.Table, pandas.DataFrame
-        The filtered table
+        The filtered table.
     """
     for param, value in kwargs.items():
 
@@ -449,20 +457,24 @@ def filter_table(table, **kwargs):
 
 
 def find_closest(axes, points, n=1, values=False):
-    """Find the n-neighboring elements of a given value in an array
+    """Find the n-neighboring elements of a given value in an array.
 
     Parameters
     ----------
     axes : list, np.array
-        The array(s) to search
+        The array(s) to search.
     points : array-like, float
-        The point(s) to search for
-    n : int
-        The number of values to the left and right of the points
+        The point(s) to search for.
+    n : int, optional
+        The number of values to the left and right of the points.
+        Defaults to 1.
+    values : bool, optional
+        Defaults to False.
+
     Returns
     -------
     np.ndarray
-        The n-values to the left and right of 'points' in 'axes'
+        The n-values to the left and right of 'points' in 'axes'.
     """
     results = []
     if not isinstance(axes, list):
@@ -600,7 +612,7 @@ def get_target_data(target_name):
 
     Returns
     -------
-    target_data: json:
+    target_data: json
         json object with target data.
     """
     canonical_name = get_canonical_name(target_name)

@@ -25,22 +25,26 @@ warnings.simplefilter('ignore', category=FutureWarning)
 
 
 def ld_profile(name='quadratic', latex=False):
-    """Define the function to fit the limb darkening profile
+    """Define the function to fit the limb darkening profile.
 
     Parameters
     ----------
-    name: str
+    name : str, optional
         The name of the limb darkening profile function to use,
         including 'uniform', 'linear', 'quadratic', 'kipping2013',
         'square-root', 'logarithmic', 'exponential', '3-parameter',
-        and '4-parameter'
-    latex: bool
-        Return the function as a LaTeX formatted string
+        and '4-parameter'. Detaults to 'quadratic'.
+    latex: bool, optional
+        Return the function as a LaTeX formatted string. Defaults to False.
 
     Returns
     -------
-    function, str
-        The corresponding function for the given profile
+    function
+        The corresponding function for the given profile.
+        Returned if latex==False.
+    OR str
+        A string representation of the corresponding function
+        for the given profile. Returned if latex==True.
 
     Reference
     ---------
@@ -86,55 +90,190 @@ def ld_profile(name='quadratic', latex=False):
 
 
 def uniform(m):
-    # Uniform
+    """Uniform limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1.
 
 
 def linear(m, c1):
-    # Linear
+    """Linear limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1. - c1*(1.-m)
 
 
 def quadratic(m, c1, c2):
-    # Quadratic
+    """Quadratic limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1. - c1*(1.-m) - c2*(1.-m)**2
 
 
 def kipping2013(m, c1, c2):
-    # Reparameterized Quadratic (Kipping 2013)
+    """Reparameterized Quadratic (Kipping 2013) limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     u1 = 2*np.sqrt(c1)*c2
     u2 = np.sqrt(c1)*(1-2*c2)
     return 1. - u1*(1.-m) - u2*(1.-m)**2
 
 
 def square_root(m, c1, c2):
-    # Square-root
+    """Square-root limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1. - c1*(1.-m) - c2*(1.-np.sqrt(m))
 
 
 def logarithmic(m, c1, c2):
-    # Logarithmic
+    """Logarithmic limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1. - c1*(1.-m) - c2*m*np.log(m)
 
 
 def exponential(m, c1, c2):
-    # Exponential
+    """Exponential limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1. - c1*(1.-m) - c2/(1.-np.e**m)
 
 
 def three_parameter(m, c1, c2, c3):
-    # 3-parameter
+    """3-parameter limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+    c3 : float
+        The third limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return 1. - c1*(1.-m) - c2*(1.-m**1.5) - c3*(1.-m**2)
 
 
 def four_parameter(m, c1, c2, c3, c4):
-    # 4-parameter
+    """4-parameter limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+    c3 : float
+        The third limb darkening coefficient.
+    c4 : float
+        The fourth limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
     return (1. - c1*(1.-m**0.5) - c2*(1.-m)
             - c3*(1.-m**1.5) - c4*(1.-m**2))
 
 
 class LDC:
-    """A class to hold all the LDCs you want to run
+    """A class to hold all the LDCs you want to run.
 
     Example
     -------
@@ -150,14 +289,15 @@ class LDC:
     ld.calculate(4000, 4.5, 0.0, '4-parameter', bandpass=bp)
     ld.plot(show=True)
     """
+
     def __init__(self, model_grid):
-        """Initialize an LDC object
+        """Initialize an LDC object.
 
         Parameters
         ----------
-        model_grid: exoctk.modelgrid.ModelGrid
+        model_grid : exoctk.modelgrid.ModelGrid
             The grid of synthetic spectra from which the coefficients will
-            be calculated
+            be calculated.
         """
         # Set the model grid
         # if not isinstance(model_grid, modelgrid.ModelGrid):
@@ -187,26 +327,25 @@ class LDC:
 
     @staticmethod
     def bootstrap_errors(mu_vals, func, coeffs, errors, n_samples=1000):
-        """
-        Bootstrapping LDC errors
+        """Bootstrapping LDC errors.
 
         Parameters
         ----------
-        mu_vals: sequence
-            The mu values
-        func: callable
-            The LD profile function
-        coeffs: sequence
-            The coefficients
-        errors: sequence
-            The errors on each coeff
-        n_samples: int
-            The number of samples
+        mu_vals : sequence
+            The mu values.
+        func : callable
+            The LD profile function.
+        coeffs : sequence
+            The coefficients.
+        errors : sequence
+            The errors on each coeff.
+        n_samples : int, optional
+            The number of samples. Defaults to 1000.
 
         Returns
         -------
         tuple
-            The lower and upper errors
+            The lower and upper errors.
         """
         # Generate n_samples
         vals = []
@@ -232,27 +371,29 @@ class LDC:
 
         Parameters
         ----------
-        Teff: int
-            The effective temperature of the model
-        logg: float
-            The logarithm of the surface gravity
-        FeH: float
-            The logarithm of the metallicity
-        profile: str
+        Teff : int
+            The effective temperature of the model.
+        logg : float
+            The logarithm of the surface gravity.
+        FeH : float
+            The logarithm of the metallicity.
+        profile : str
             The name of the limb darkening profile function to use,
             including 'uniform', 'linear', 'quadratic', 'square-root',
-            'logarithmic', 'exponential', and '4-parameter'
-        mu_min: float
-            The minimum mu value to consider
-        ld_min: float
-            The minimum limb darkening value to consider
-        bandpass: svo_filters.svo.Filter() (optional)
+            'logarithmic', 'exponential', and '4-parameter'.
+        mu_min : float, optional
+            The minimum mu value to consider. Defaults to 0.05.
+        ld_min : float, optional
+            The minimum limb darkening value to consider. Defaults to 0.01.
+        bandpass : svo_filters.svo.Filter(), optional
             The photometric filter through which the limb darkening
-            is to be calculated
-        name: str (optional)
-            A name for the calculation
-        color: str (optional)
-            A color for the plotted result
+            is to be calculated. Defaults to None.
+        name : str, optional
+            A name for the calculation. Defaults to None.
+        color : str, optional
+            A color for the plotted result. Defaults to None.
+        **kwargs : dict
+            Unused.
         """
         # Define the limb darkening profile function
         ldfunc = ld_profile(profile)
@@ -391,10 +532,15 @@ class LDC:
 
         Parameters
         ----------
-        fig: matplotlib.pyplot.figure, bokeh.plotting.figure (optional)
-            An existing figure to plot on
-        show: bool
-            Show the figure
+        show : bool, optional
+            Show the figure. Defaults to False.
+        **kwargs : dict
+            Unused.
+
+        Returns
+        -------
+        final : bokeh.models.widgets.Tabs, optional
+            The final tabbed figure. Only returned if show==False.
         """
         # Change names to reflect ld profile
         old_names = self.results['name']
@@ -435,10 +581,18 @@ class LDC:
 
         Parameters
         ----------
-        fig: matplotlib.pyplot.figure, bokeh.plotting.figure (optional)
-            An existing figure to plot on
-        show: bool
-            Show the figure
+        fig : matplotlib.pyplot.figure, bokeh.plotting.figure, optional
+            An existing figure to plot on. Defaults to None.
+        show : bool, optional
+            Show the figure. Defaults to False.
+        **kwargs : dict
+            Additional parameters to be passed into plotting
+            and utils.filter_table().
+
+        Returns
+        -------
+        fig : matplotlib.pyplot.figure, bokeh.plotting.figure, optional
+            The resulting figure. Only returned if show==False.
         """
         # Separate plotting kwargs from parameter kwargs
         pwargs = {i: j for i, j in kwargs.items() if i in self.results.columns}

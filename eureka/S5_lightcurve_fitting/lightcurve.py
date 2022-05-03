@@ -23,27 +23,27 @@ class LightCurve(m.Model):
 
         Parameters
         ----------
-        time: sequence
-            The time axis in days, [MJD or BJD]
-        flux: sequence
-            The flux in electrons (not ADU)
-        channel: int
+        time : sequence
+            The time axis in days.
+        flux : sequence
+            The flux in electrons (not ADU).
+        channel : int
             The channel number.
-        nChannel: int
+        nChannel : int
             The total number of channels.
-        log: logedit.Logedit
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
-        unc: sequence
-            The uncertainty on the flux
-        parameters: str, object (optional)
-            The orbital parameters of the star/planet system,
-            may be a path to a JSON file or a parameter object
-        time_units: str
-            The time units
-        name: str
-            A name for the object
-        share: bool
-            Whether the fit shares parameters between spectral channels
+        unc : sequence
+            The uncertainty on the flux.
+        parameters : str or object, optional
+            Unused. The orbital parameters of the star/planet system,
+            may be a path to a JSON file or a parameter object.
+        time_units : str, optional
+            The time units.
+        name : str, optional
+            A name for the object.
+        share : bool, optional
+            Whether the fit shares parameters between spectral channels.
 
         Returns
         -------
@@ -111,15 +111,15 @@ class LightCurve(m.Model):
 
         Parameters
         ----------
-        model: eureka.S5_lightcurve_fitting.models.CompositeModel
-            The model to fit to the data
-        meta: MetaClass
-            The metadata object
-        log: logedit.Logedit
+        model : eureka.S5_lightcurve_fitting.models.CompositeModel
+            The model to fit to the data.
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
-        fitter: str
-            The name of the fitter to use
-        **kwargs:
+        fitter : str
+            The name of the fitter to use.
+        **kwargs : dict
             Arbitrary keyword arguments.
 
         Returns
@@ -162,17 +162,15 @@ class LightCurve(m.Model):
         if fit_model is not None:
             self.results.append(fit_model)
 
-        return
-
     def plot(self, meta, fits=True):
         """Plot the light curve with all available fits. (Figs 5103)
 
         Parameters
         ----------
-        fits: bool
-            Plot the fit models
-        draw: bool
-            Show the figure, else return it
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        fits : bool, optional
+            Plot the fit models. Defaults to True.
 
         Returns
         -------
@@ -221,10 +219,6 @@ class LightCurve(m.Model):
             else:
                 plt.pause(0.2)
 
-        return
-
     def reset(self):
         """Reset the results"""
         self.results = []
-
-        return

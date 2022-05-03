@@ -15,19 +15,15 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     Parameters
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The fitted composite model
-    meta : MetaClass
-        The metadata object
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     fitter : str
-        The name of the fitter (for plot filename)
-    isTitle : bool
+        The name of the fitter (for plot filename).
+    isTitle : bool, optional
         Should figure have a title. Defaults to True.
-
-    Returns
-    -------
-    None
 
     Notes
     -----
@@ -103,8 +99,6 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         if not meta.hide_plots:
             plt.pause(0.2)
 
-    return
-
 
 def plot_rms(lc, model, meta, fitter):
     """Plot an Allan plot to look for red noise. (Figs 5301)
@@ -112,17 +106,13 @@ def plot_rms(lc, model, meta, fitter):
     Parameters
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The fitted composite model
-    meta : MetaClass
-        The metadata object
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     fitter : str
-        The name of the fitter (for plot filename)
-
-    Returns
-    -------
-    None
+        The name of the fitter (for plot filename).
 
     Notes
     -----
@@ -174,8 +164,6 @@ def plot_rms(lc, model, meta, fitter):
         if not meta.hide_plots:
             plt.pause(0.2)
 
-    return
-
 
 def plot_corner(samples, lc, meta, freenames, fitter):
     """Plot a corner plot. (Figs 5501)
@@ -183,19 +171,15 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     Parameters
     ----------
     samples : ndarray
-        The samples produced by the sampling algorithm
+        The samples produced by the sampling algorithm.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     freenames : iterable
-        The names of the fitted parameters
-    meta : MetaClass
-        The metadata object
+        The names of the fitted parameters.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     fitter : str
-        The name of the fitter (for plot filename)
-
-    Returns
-    -------
-    None
+        The name of the fitter (for plot filename).
 
     Notes
     -----
@@ -233,40 +217,34 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['xtick.labelsize'] = old_xtick_labelsize
     rcParams['ytick.labelsize'] = old_ytick_labelsize
 
-    return
-
 
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                nburn=0, nrows=3, ncols=4, nthin=1):
-    """Plot the evolution of the chain to look for temporal trends (Figs 5303)
+    """Plot the evolution of the chain to look for temporal trends. (Figs 5303)
 
     Parameters
     ----------
     samples : ndarray
-        The samples produced by the sampling algorithm
+        The samples produced by the sampling algorithm.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     freenames : iterable
-        The names of the fitted parameters
-    meta : MetaClass
-        The metadata object
-    fitter : str
-        The name of the fitter (for plot filename)
-    burnin : bool
-        Whether or not the samples include the burnin phase
-    nburn : int
-        The number of burn-in steps that are discarded later
-    nrows : int
-        The number of rows to make per figure
-    ncols : int
-        The number of columns to make per figure
-    nthin : int
+        The names of the fitted parameters.
+    fitter : str, optional
+        The name of the fitter (for plot filename). Defaults to 'emcee'.
+    burnin : bool, optional
+        Whether or not the samples include the burnin phase. Defaults to False.
+    nburn : int, optional
+        The number of burn-in steps that are discarded later. Defaults to 0.
+    nrows : int, optional
+        The number of rows to make per figure. Defaults to 3.
+    ncols : int, optional
+        The number of columns to make per figure. Defaults to 4.
+    nthin : int, optional
         If >1, the plot will use every nthin point to help speed up
-        computation and reduce clutter on the plot.
-
-    Returns
-    -------
-    None
+        computation and reduce clutter on the plot. Defaults to 1.
 
     Notes
     -----
@@ -332,8 +310,6 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
         if not meta.hide_plots:
             plt.pause(0.2)
 
-    return
-
 
 def plot_res_distr(lc, model, meta, fitter):
     """Plot the normalized distribution of residuals + a Gaussian. (Fig 5302)
@@ -341,17 +317,13 @@ def plot_res_distr(lc, model, meta, fitter):
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
-        The fitted composite model
-    meta: MetaClass
-        The metadata object
+        The fitted composite model.
+    meta: eureka.lib.readECF.MetaClass
+        The metadata object.
     fitter: str
-        The name of the fitter (for plot filename)
-
-    Returns
-    -------
-    None
+        The name of the fitter (for plot filename).
 
     Notes
     -----
@@ -397,7 +369,6 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
-    return
 
 
 def plot_GP_components(lc, model, meta, fitter, isTitle=True):
@@ -406,19 +377,15 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     Parameters
     ----------
     lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model: eureka.S5_lightcurve_fitting.models.CompositeModel
-        The fitted composite model
-    meta: MetaClass
-        The metadata object
+        The fitted composite model.
+    meta: eureka.lib.readECF.MetaClass
+        The metadata object.
     fitter: str
-        The name of the fitter (for plot filename)
-    isTitle : bool
+        The name of the fitter (for plot filename).
+    isTitle : bool, optional
         Should figure have a title. Defaults to True.
-
-    Returns
-    -------
-    None
 
     Notes
     -----

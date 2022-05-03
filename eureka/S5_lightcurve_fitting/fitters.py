@@ -27,13 +27,16 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     Parameters
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
-    meta : MetaClass
-        The metadata object
+        The composite model to fit.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
+    calling_function : str
+        The fitter that is being run (e.g. may be 'emcee' if running lsqfitter
+        to initialize emcee walkers). Defailts to 'lsq'.
     **kwargs : dict
         Arbitrary keyword arguments.
 
@@ -197,11 +200,11 @@ def demcfitter(lc, model, meta, log, **kwargs):
     Parameters
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
-    meta : MetaClass
-        The metadata object
+        The composite model to fit.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     **kwargs : dict
@@ -232,7 +235,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         The lightcurve data object
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The composite model to fit
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object
     log : logedit.Logedit
         The open log in which notes from this step can be added.
@@ -257,7 +260,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. Added statements to avoid some initial
         state issues.
-
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -455,7 +457,7 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The meta data object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
@@ -561,7 +563,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The meta data object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
@@ -719,11 +721,11 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     Parameters
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
-    meta : MetaClass
-        The metadata object
+        The composite model to fit.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     **kwargs : dict
@@ -910,11 +912,11 @@ def lmfitter(lc, model, meta, log, **kwargs):
     Parameters
     ----------
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
-    meta : MetaClass
-        The metadata object
+        The composite model to fit.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     **kwargs : dict
@@ -1146,12 +1148,12 @@ def load_old_fitparams(meta, log, channel, freenames):
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     channel : int
-        The current channel.
+        Unused. The current channel.
     freenames : list
         The names of the fitted parameters.
 
@@ -1192,12 +1194,12 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[],
 
     Parameters
     ----------
-    meta : MetaClass
-        The metadata object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
-        The lightcurve data object
+        The lightcurve data object.
     model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The composite model to fit
+        The composite model to fit.
     fitter : str
         The current fitter being used.
     fit_params : np.array

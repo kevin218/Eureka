@@ -7,7 +7,15 @@ from ...lib.readEPF import Parameters
 class ExpRampModel(Model):
     """Model for single or double exponential ramps"""
     def __init__(self, **kwargs):
-        """Initialize the exponential ramp model
+        """Initialize the exponential ramp model.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
         """
         # Inherit from Model class
         super().__init__(**kwargs)
@@ -35,16 +43,12 @@ class ExpRampModel(Model):
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list
-        of coefficients in increasing order, i.e. ['r0','r1','r2']
-
-        Parameters
-        ----------
-        None
+        of coefficients in increasing order, i.e. ['r0','r1','r2'].
 
         Returns
         -------
         np.ndarray
-            The sequence of coefficient values
+            The sequence of coefficient values.
         """
         # Parse 'r#' keyword arguments as coefficients
         self.coeffs = np.zeros((self.nchan, 6))
@@ -60,7 +64,18 @@ class ExpRampModel(Model):
                             int(remvisnum[0][1:])] = v[0]
 
     def eval(self, **kwargs):
-        """Evaluate the function with the given values"""
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')

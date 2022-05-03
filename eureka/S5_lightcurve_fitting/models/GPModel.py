@@ -18,7 +18,7 @@ class GPModel(Model):
     """Model for Gaussian Process (GP)"""
     def __init__(self, kernel_classes, kernel_inputs, lc, gp_code='george',
                  **kwargs):
-        """Initialize the GP model
+        """Initialize the GP model.
 
         Parameters
         ----------
@@ -31,6 +31,11 @@ class GPModel(Model):
         gp_code : str, optional
             Type GP package to use from ('george', 'celerite'),
             by default 'george'.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
         """
         # Inherit from Model class
         super().__init__(**kwargs)
@@ -65,15 +70,7 @@ class GPModel(Model):
 
     def _parse_coeffs(self):
         """Convert dict of coefficients into a list
-        of coefficients in increasing order
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
+        of coefficients in increasing order.
         """
         # Parse keyword arguments as coefficients
         self.coeffs = {}
@@ -122,13 +119,17 @@ class GPModel(Model):
         gp : celerite.GP, george.GP, or tinygp.GaussianProcess; optional
             The current GP object.
         **kwargs : dict
-            Unused.
+            Must pass in the time array here if not already set.
 
         Returns
         -------
         lcfinal : ndarray
             Predicted systematics model
         """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
         lcfinal = np.array([])
 
         for c in np.arange(self.nchan):
@@ -177,15 +178,12 @@ class GPModel(Model):
 
     def set_inputs(self, normalise=False):
         """Setting up kernel inputs as array and standardizing them
-        see e.g. Evans et al. 2017
+        see e.g. Evans et al. 2017.
 
         Parameters
         ----------
-        kernel input as strings e.g. 'time'
-
-        Returns
-        -------
-        kernel inputs as a np.array
+        normalise : bool, optional
+            Standardize kernels following Evans+2017. Defaults to False.
         """
         kernel_inputs = []
         for i in self.kernel_input_names:
@@ -197,22 +195,21 @@ class GPModel(Model):
         if normalise:
             norm_kernel_inputs = [(i-i.mean())/i.std() for i in kernel_inputs]
             self.kernel_input_arrays = np.array(norm_kernel_inputs)
-            return
         else:
             self.kernel_input_arrays = np.array(kernel_inputs)
-        return
 
-    def setup_GP(self, channel, **kwargs):
+    def setup_GP(self, channel):
         """Set up GP kernels and GP object.
 
         Parameters
         ----------
-        None
+        channel : int
+            The current channel number.
 
         Returns
         -------
-        GP object
-
+        celerite.GP, george.GP, or tinygp.GaussianProcess
+            The GP object to use for this fit.
         """
         if len(self.kernel_input_arrays) == 0:
             self.set_inputs()
@@ -312,13 +309,18 @@ class GPModel(Model):
 
     def loglikelihood(self, fit, unc_fit):
         """Compute log likelihood of GP
+
         Parameters
         ----------
-        None
+        fit : ndarray
+            The fitted model.
+        unc_fit : ndarray
+            The fitted uncertainty.
 
         Returns
         -------
-        log likelihood of the GP evaluated by george/tinygp/celerite
+        float
+            log likelihood of the GP evaluated by george/tinygp/celerite
         """
         # update uncertainty
         self.unc_fit = unc_fit
@@ -357,7 +359,27 @@ class GPModel(Model):
         return sum(logL)
 
     def get_kernel(self, kernel_name, i, channel=0):
-        """get individual kernels"""
+        """Get individual kernels.
+
+        Parameters
+        ----------
+        kernel_name : str
+            The name of the kernel to get.
+        i : int
+            The kernel number.
+        channel : int, optional
+            The channel number, by default 0.
+
+        Returns
+        -------
+        kernel
+            The requested george, celerite, or tinygp kernel.
+
+        Raises
+        ------
+        AssertionError
+            Celerite currently only supports a Matern32 kernel.
+        """
         # get metric for the individual kernel for the current channel
         metric = (1./np.exp(self.coeffs[kernel_name][channel]))**2
 
@@ -396,13 +418,3 @@ class GPModel(Model):
                                      'Matern32 kernel')
 
         return kernel
-
-    def update(self, newparams, names, **kwargs):
-        """Update parameter values"""
-        for ii, arg in enumerate(names):
-            if hasattr(self.parameters, arg):
-                val = getattr(self.parameters, arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
-        self._parse_coeffs()
-        return

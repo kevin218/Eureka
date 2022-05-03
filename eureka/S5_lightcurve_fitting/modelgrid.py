@@ -66,15 +66,21 @@ class ModelGrid(object):
         model_directory : str
             The path to the directory of FITS files of spectra,
             which may include a filename with a wildcard caharacter
-        bibcode : str, array-like (optional)
-            The bibcode or list of bibcodes for this data set
-        names : dict (optional)
+        bibcode : str, array-like, optional
+            The bibcode or list of bibcodes for this data set.
+            Defaults to '2013A & A...553A...6H'.
+        names : dict, optional
             A dictionary to rename the table columns. The Phoenix
-            model keywords are given as an example
-        resolution : int (optional)
+            model keywords are given as an example. Defaults to
+            {'Teff': 'PHXTEFF', 'logg': 'PHXLOGG', 'FeH': 'PHXM_H',
+             'mass': 'PHXMASS', 'Lbol': 'PHXLUM'}.
+        resolution : int, optional
             The desired wavelength resolution (lambda/d_lambda)
-            of the grid spectra
-        wave_units : astropy.units.quantity
+            of the grid spectra. Defaults to None.
+        wave_units : astropy.units.quantity, optional
+            The wavelength units. Defaults to astropy.units.um.
+        **kwargs : dict
+            Additional arguments to pass to self.customize().
         """
         # Make sure we can use glob if a directory
         # is given without a wildcard
@@ -216,12 +222,14 @@ class ModelGrid(object):
 
     def export(self, filepath, **kwargs):
         """Export the model with the given parameters to a FITS file
-        at the given filepath
+        at the given filepath.
 
         Parameters
         ----------
         filepath : str
-            The path to the target FITS file
+            The path to the target FITS file.
+        **kwargs : dict
+            Additional parameters to pass to self.get().
         """
         if not filepath.endswith('.fits'):
             raise IOError("Target file must have a .fits extension.")
@@ -264,17 +272,17 @@ class ModelGrid(object):
         FeH : float
             The logarithm of the ratio of the metallicity
             and solar metallicity (dex)
-        resolution : int (optional)
-            The desired wavelength resolution (lambda/d_lambda)
-        interp : bool
-            Interpolate the model if possible
+        resolution : int, optional
+            The desired wavelength resolution (lambda/d_lambda).
+            Defaults to None.
+        interp : bool, optional
+            Interpolate the model if possible. Defaults to True.
 
         Returns
         -------
         spec_dict : dict
             A dictionary of arrays of the wavelength, flux, and
             mu values and the effective radius for the given model
-
         """
         # See if the model with the desired parameters is witin the grid
         in_grid = all([(Teff >= min(self.Teff_vals)) &
@@ -371,9 +379,9 @@ class ModelGrid(object):
         FeH : float
             The logarithm of the ratio of the metallicity
             and solar metallicity (dex)
-        plot : bool
+        plot : bool, optional
             Plot the interpolated spectrum along
-            with the 8 neighboring grid spectra
+            with the 8 neighboring grid spectra. Defaults to False.
 
         Returns
         -------
@@ -528,19 +536,21 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        Teff_rng : array-like
+        Teff_rng : array-like, optional
             The lower and upper inclusive bounds for the effective
-            temperature (K)
-        logg_rng : array-like
+            temperature (K). Defaults to (2300, 8000).
+        logg_rng : array-like, optional
             The lower and upper inclusive bounds for the logarithm of the
-            surface gravity (dex)
-        FeH_rng : array-like
+            surface gravity (dex). Defaults to (0, 6).
+        FeH_rng : array-like, optional
             The lower and upper inclusive bounds for the logarithm of the
-            ratio of the metallicity and solar metallicity (dex)
-        wave_rng : array-like
-            The lower and upper inclusive bounds for the wavelength (microns)
-        n_bins : int
-            The number of bins for the wavelength axis
+            ratio of the metallicity and solar metallicity (dex). Defaults
+            to (-2, 1).
+        wave_rng : array-like, optional
+            The lower and upper inclusive bounds for the wavelength (microns).
+            Defaults to (0*q.um, 40*q.um).
+        n_bins : int, optional
+            The number of bins for the wavelength axis. Defaults to ''.
         """
         # Make a copy of the grid
         grid = self.data.copy()
@@ -630,8 +640,8 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        wave_units : str, astropy.units.core.PrefixUnit/CompositeUnit
-            The wavelength units
+        wave_units : str, astropy.units.core.PrefixUnit/CompositeUnit, optional
+            The wavelength units. Defaults to astropy.units.um.
         """
         # Set wavelength units
         old_unit = self.wave_units

@@ -25,13 +25,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     ecf_path : str, optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s4_meta : MetaClass, optional
+    s4_meta : eureka.lib.readECF.MetaClass, optional
         The metadata object from Eureka!'s S4 step (if running S4 and S5
         sequentially). Defaults to None.
 
     Returns
     -------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S5.
 
     Notes
@@ -207,6 +207,43 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
                 log, longparamlist, time_units, paramtitles, chanrng):
+    """Run a fit for one channel or perform a shared fit.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    time : ndarray
+        The time array.
+    flux : ndarray
+        The flux array.
+    chan : int
+        The current channel number.
+    flux_err : ndarray
+        The uncertainty on each data point.
+    eventlabel : str
+        The unique identifier for this analysis.
+    sharedp : bool
+        Whether or not this is a shared fit.
+    params : eureka.lib.readEPF.Parameters
+        The Parameters object containing the fitted parameters
+        and their priors.
+    log : logedit.Logedit
+        The current log in which to output messages from this current stage.
+    longparamlist : list
+        The long list of all parameters relevant to this fit.
+    time_units : str
+        The units of the time array.
+    paramtitles : list
+        The names of the fitted parameters.
+    chanrng : int
+        The number of fitted channels.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist,
                              unc=flux_err, time_units=time_units,
@@ -324,6 +361,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
 
 
 def make_longparamlist(meta, params, chanrng):
+    """Make a long list of all relevant parameters.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    params : eureka.lib.readEPF.Parameters
+        The Parameters object containing the fitted parameters
+        and their priors.
+    chanrng : int
+        The number of fitted channels.
+
+    Returns
+    -------
+    longparamlist : list
+        The long list of all parameters relevant to this fit.
+    paramtitles : list
+        The names of the fitted parameters.
+    """
     if meta.sharedp:
         nspecchan = chanrng
     else:
@@ -350,6 +406,18 @@ def make_longparamlist(meta, params, chanrng):
 
 
 def load_specific_s4_meta_info(meta):
+    """Load the specific S4 MetaClass object used to make this aperture pair.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+
+    Returns
+    -------
+    eureka.lib.readECF.MetaClass
+        The current metadata object with values from the old MetaClass.
+    """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S4 outputs for this aperture pair
     inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
