@@ -9,13 +9,17 @@ with open('requirements.txt') as f:
 
 extras_require = {
    'jwst': ["jwst==1.3.3", "stcal", "asdf>=2.7.1,<2.11.0"],
-   'hst': ["image_registration @ git+https://github.com/keflavich/image_registration.git"] # Need the GitHub version as 0.2.6 is required for python>=3.10, but 0.2.6 is not yet on PyPI
+   # Need the GitHub version as 0.2.6 is required for python>=3.10, but
+   # 0.2.6 is not yet on PyPI
+   'hst': ["image_registration @ git+https://github.com/keflavich/"
+           + "image_registration.git"]
 }
 
 FILES = []
 for root, _, files in os.walk("Eureka"):
-    FILES += [os.path.join(root.replace("Eureka/", ""), fname) \
-        for fname in files if not fname.endswith(".py") and not fname.endswith(".pyc")]
+    FILES += [os.path.join(root.replace("Eureka/", ""), fname)
+              for fname in files
+              if not fname.endswith(".py") and not fname.endswith(".pyc")]
 
 setup(name='Eureka',
       version='0.0.1',
@@ -30,7 +34,7 @@ setup(name='Eureka',
       long_description='',
       zip_safe=True,
       use_2to3=False,
-      ext_modules = cythonize(["eureka/S3_data_reduction/niriss_cython.pyx"]),
-      include_dirs = np.get_include(),
+      ext_modules=cythonize(["eureka/S3_data_reduction/niriss_cython.pyx"]),
+      include_dirs=np.get_include(),
       extras_require=extras_require
-)
+      )
