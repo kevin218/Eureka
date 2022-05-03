@@ -10,7 +10,31 @@ def plot_spectrum(meta, model_x=None, model_y=None,
                   y_scalar=1, ylabel=r'$R_{\rm p}/R_{\rm *}$',
                   xlabel=r'Wavelength ($\mu$m)',
                   scaleHeight=None, planet_R0=None):
+    r"""Plot the planetary transmission or emission spectrum.
 
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The meta data object.
+    model_x : ndarray, optional
+        The wavelength array for the model to plot, by default None
+    model_y : ndarray, optional
+        The transmission or emission spectrum from the model, by default None
+    y_scalar : int, optional
+        The multiplier for the y-axis (100=%, 1e6=ppm), by default 1
+    ylabel : str, optional
+        The y-axis label, by default r'{\rm p}/R_{\rm *}$'
+    xlabel : str, optional
+        The x-axis label, by default r'Wavelength ($\mu)'
+    scaleHeight : float, optional
+        The planetary atmospheric scale height, by default None
+    planet_R0 : float, optional
+        The reference radius for the scale height, by default None
+
+    Returns
+    -------
+    None
+    """
     if scaleHeight is not None:
         fig = plt.figure(6301, figsize=(8, 4))
     else:

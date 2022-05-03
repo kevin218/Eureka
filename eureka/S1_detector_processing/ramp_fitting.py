@@ -53,7 +53,7 @@ default='none') # max number of processes to create
 
         Parameters
         ----------
-        input:  str, tuple, `~astropy.io.fits.HDUList`, ndarray, dict, None
+        input : str, tuple, `~astropy.io.fits.HDUList`, ndarray, dict, None
 
             - None: Create a default data model with no shape.
 
@@ -72,9 +72,9 @@ default='none') # max number of processes to create
 
         Returns
         -------
-        out_model:  jwst.datamodels.ImageModel
+        out_model : jwst.datamodels.ImageModel
             The output ImageModel to be returned from the ramp fit step.
-        int_model:  jwst.datamodels.CubeModel
+        int_model : jwst.datamodels.CubeModel
             The output CubeModel to be returned from the ramp fit step.
 
         Notes
@@ -219,15 +219,14 @@ def fixed_power(snr, weighting_exponent):
 
     Parameters
     ----------
-    snr: float32, 1D array
+    snr : float32, 1D array
         Signal-to-noise for the ramp segments
-
-    weighting_exponent: int/float
+    weighting_exponent : int/float
         Exponent to use for all frames/pixels
 
     Returns
     -------
-    pow_wt.ravel(): float32, 1D array
+    pow_wt.ravel() : float32, 1D array
         weighting exponent
     """
     pow_wt = snr.copy()
@@ -245,15 +244,14 @@ def interpolate_power(snr):
 
     Parameters
     ----------
-    snr: float32, 1D array
+    snr : float32, 1D array
         signal-to-noise for the ramp segments
 
     Returns
     -------
-    pow_wt.ravel(): float32, 1D array
+    pow_wt.ravel() : float32, 1D array
         weighting exponent
     """
-
     pow_wt = snr.copy() * 0.0
     pow_wt[np.where(snr > 5)] = ((snr[snr > 5]-5)/(10-5))*0.6+0.4
     pow_wt[np.where(snr > 10)] = ((snr[snr > 10]-10)/(20-10))*2.0+1.0
@@ -277,18 +275,15 @@ def custom_power(snr, snr_bounds, exponents):
 
     Parameters
     ----------
-    snr: float32, 1D array
+    snr : float32, 1D array
         signal-to-noise for the ramp segments
-
-    snr_bounds: 1D array
+    snr_bounds : 1D array
         snr bound at which the exponent should change
-
-    exponents: 1D array
+    exponents : 1D array
         exponents corresponding to each SNR bound
-
     Returns
     -------
-    pow_wt.ravel(): float32, 1D array
+    pow_wt.ravel() : float32, 1D array
         weighting exponent
     """
     pow_wt = snr.copy() * 0.0
@@ -316,37 +311,32 @@ def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
 
     Parameters
     ----------
-    rn_sect: float, 2D array
+    rn_sect : float, 2D array
         read noise values for all pixels in data section
-
-    gain_sect: float, 2D array
+    gain_sect : float, 2D array
         gain values for all pixels in data section
-
-    data_masked: float, 2D array
+    data_masked : float, 2D array
         masked values for all pixels in data section
-
-    mask_2d: bool, 2D array
+    mask_2d : bool, 2D array
         delineates which channels to fit for each pixel
-
-    xvalues: int, 2D array
+    xvalues : int, 2D array
         indices of valid pixel values for all groups
-
-    good_pix: int, 1D array
+    good_pix : int, 1D array
         indices of pixels having valid data for all groups
 
     Returns
     -------
-    sumx: float
+    sumx : float
         sum of xvalues
-    sumxx: float
+    sumxx : float
         sum of squares of xvalues
-    sumxy: float
+    sumxy : float
         sum of product of xvalues and data
-    sumy: float
+    sumy : float
         sum of data
-    nreads_wtd: float, 1D array
+    nreads_wtd : float, 1D array
         sum of optimal weights
-    xvalues: int, 2D array
+    xvalues : int, 2D array
         rolled up indices of valid pixel values for all groups
     """
     c_mask_2d = mask_2d.copy()  # copy the mask to prevent propagation
@@ -476,28 +466,32 @@ def mean_ramp_fit_single(model, buffsize, save_opt, readnoise_2d, gain_2d,
 
     Parameters
     ----------
-    ramp_data: RampData
-        Input data necessary for computing ramp fitting.
-    int_times: None
-        Not used
-    buffsize: int
-        The working buffer size
-    save_opt: bool
-        Whether to return the optional output model
-    readnoise_2d: ndarray
-        The read noise of each pixel
-    gain_2d: ndarray
-        The gain of each pixel
-    weighting: str
-        'optimal' is the only valid value
+    model : data model
+        Input data model.
+    buffsize : int
+        Unused. The working buffer size.
+    save_opt : bool
+        Whether to return the optional output model.
+    readnoise_2d : ndarray
+        The read noise of each pixel.
+    gain_2d : ndarray
+        The gain of each pixel.
+    algorithm : type
+        Unused.
+    weighting : str
+        'optimal' is the only valid value.
+    max_cores : str
+        The number of CPU cores to used.
+    dqflags : dict
+        The data quality flags needed for ramp fitting.
 
     Returns
     -------
-    image_info: tuple
+    image_info : tuple
         The tuple of computed ramp fitting arrays.
-    integ_info: tuple
+    integ_info : tuple
         The tuple of computed integration fitting arrays.
-    opt_info: tuple
+    opt_info : tuple
         The tuple of computed optional results arrays for fitting.
     """
     ramp_data = ramp_fit.create_ramp_fit_class(model, dqflags)
@@ -543,23 +537,24 @@ def ramp_fit_mean(ramp_data, gain_2d, readnoise_2d, save_opt, weighting):
 
     Parameters
     ----------
-    ramp_data: RampData
+    ramp_data : RampData
         Input data necessary for computing ramp fitting.
-    gain_2d: ndarrays
+    gain_2d : ndarrays
         gain for all pixels
-    readnoise_2d: ndarrays
+    readnoise_2d : ndarrays
         readnoise for all pixels
-    save_opt: bool
+    save_opt : bool
        calculate optional fitting results
-    weighting: str
+    weighting : str
+        Unused.
 
     Returns
     -------
-    image_info: tuple
+    image_info : tuple
         The tuple of computed ramp fitting arrays.
-    integ_info: tuple
+    integ_info : tuple
         The tuple of computed integration fitting arrays.
-    opt_info: tuple
+    opt_info : tuple
         The tuple of computed optional results arrays for fitting.
     """
     # Get image data information
@@ -656,22 +651,22 @@ def get_reference_file_subarrays(model, readnoise_model, gain_model, nframes):
 
     Parameters
     ----------
-    model: data model
-        input data model, assumed to be of type RampModel
-    readnoise_model: instance of data Model
-        readnoise for all pixels
-    gain_model: instance of gain Model
-        gain for all pixels
-    nframes: int
-        number of frames averaged per group; from the NFRAMES keyword. Does
-        not contain the groupgap.
+    model : data model
+        Input data model, assumed to be of type RampModel
+    readnoise_model : instance of data Model
+        Readnoise for all pixels
+    gain_model : instance of gain Model
+        Gain for all pixels
+    nframes : int
+        Unused. Number of frames averaged per group; from the NFRAMES keyword.
+        Does not contain the groupgap.
 
     Returns
     -------
-    readnoise_2d: float, 2D array
-        readnoise subarray
-    gain_2d: float, 2D array
-        gain subarray
+    readnoise_2d : float, 2D array
+        Readnoise subarray
+    gain_2d : float, 2D array
+        Gain subarray
     """
     if reffile_utils.ref_matches_sci(model, gain_model):
         gain_2d = gain_model.data
@@ -693,14 +688,14 @@ def create_image_model(input_model, image_info):
 
     Parameters
     ----------
-    input_model: RampModel
+    input_model : RampModel
         Input RampModel for which the output ImageModel is created.
-    image_info: tuple
+    image_info : tuple
         The ramp fitting arrays needed for the ImageModel.
 
     Returns
     -------
-    out_model: jwst.datamodels.ImageModel
+    out_model : jwst.datamodels.ImageModel
         The output ImageModel to be returned from the ramp fit step.
     """
     data, dq, var_poisson, var_rnoise, err = image_info
@@ -726,14 +721,14 @@ def create_integration_model(input_model, integ_info):
 
     Parameters
     ----------
-    input_model: RampModel
+    input_model : RampModel
         Input RampModel for which the output CubeModel is created.
-    integ_info: tuple
+    integ_info : tuple
         The ramp fitting arrays needed for the CubeModel for each integration.
 
     Returns
     -------
-    int_model: CubeModel
+    int_model : CubeModel
         The output CubeModel to be returned from the ramp fit step.
     """
     data, dq, var_poisson, var_rnoise, int_times, err = integ_info

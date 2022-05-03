@@ -21,23 +21,23 @@ def BGsubtraction(data, meta, log, isplots):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in units
         of MJy/sr or DN/s.
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log:    logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
-    isplots:    int
+    isplots : int
         The amount of plots saved; set in ecf.
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         Data object containing background subtracted data.
 
     Notes
-    ------
+    -----
     History:
 
     - Dec 10, 2021 Taylor Bell
@@ -151,32 +151,31 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
 
     Parameters
     ----------
-    dataim: ndarray
-        The data array
-    meta:   MetaClass
+    dataim : ndarray
+        The data array.
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    mask:   ndarray
-        A mask array
-    x1:     ndarray
-    x2:     ndarray
-    deg:    int, optional
+    mask : ndarray
+        A mask array.
+    x1 : ndarray
+    x2 : ndarray
+    deg : int, optional
         Polynomial order for column-by-column background subtraction
         Default is 1.
-    threshold:  int, optional
+    threshold : int, optional
         Sigma threshold for outlier rejection during background subtraction.
         Defaullt is 5.
-    isrotate:   bool, optional
+    isrotate : bool, optional
         Default is False.
-    isplots:    int, optional
+    isplots : int, optional
         The amount of plots saved; set in ecf. Default is 0.
 
     Notes
-    ------
+    -----
     History:
 
     - May 2013
         Removed [::-1] for LDSS3
-
     - Feb 2014
         Modified x1 and x2 to allow for arrays
     '''
@@ -297,27 +296,27 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
 
     Parameters
     ----------
-    dataim: ndarray
-        The data array
-    meta:   MetaClass
+    dataim : ndarray
+        The data array.
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    mask:   ndarray
-        A mask array
-    bgmask: ndarray
+    mask : ndarray
+        A mask array.
+    bgmask : ndarray
         A background mask array.
-    deg:    int, optional
+    deg : int, optional
         Polynomial order for column-by-column background subtraction.
         Default is 1.
-    threshold:  int, optional
+    threshold : int, optional
         Sigma threshold for outlier rejection during background subtraction.
         Default is 5.
-    isrotate:   bool, optional
+    isrotate : bool, optional
         Default is False.
-    isplots:    int, optional
+    isplots : int, optional
         The amount of plots saved; set in ecf. Default is 0.
 
     Notes
-    ------
+    -----
     History:
 
     - September 2016 Kevin Stevenson

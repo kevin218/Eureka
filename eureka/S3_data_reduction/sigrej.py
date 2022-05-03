@@ -8,17 +8,17 @@ def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
 
     Parameters
     ----------
-    data:   ndarray
+    data : ndarray
         Array of points to apply sigma rejection to.
-    sigma:  ndarray (1D)
+    sigma : ndarray (1D)
         1D array of sigma values for each iteration of sigma rejection.
         Number of elements determines number of iterations.
-    mask: (optional) byte array
+    mask: byte array, optional
         Same shape as Data, where 1 indicates the corresponding element in
         Data is good and 0 indicates it is bad.  Only
         rejection of good-flagged data will be further
         considered.  This input mask is NOT modified in the caller.
-    estsig: ndarray
+    estsig: ndarray, optional
         [nsig] array of estimated standard deviations to
         use instead of calculated ones in each iteration.
         This is useful in the case of small datasets with
@@ -29,25 +29,25 @@ def sigrej(data, sigma, mask=None,     estsig=None,   ival=False, axis=0,
         all elements in a dataset with one bad element.
         Set any element of estsig to a negative value to
         use the calculated standard deviation for that iteration.
-    ival: ndarray (2D)
+    ival: ndarray (2D), optional
         (returned) 2D array giving the median and standard deviation (with
         respect to the median) at each iteration.
-    axis: int
+    axis: int, optional
         The axis along which to compute the mean/median.
-    fmean:  ndarray
+    fmean:  ndarray, optional
         (returned) the mean of the accepted data.
-    fstddev:  ndarray
+    fstddev:  ndarray, optional
         (returned) the standard deviation of the accepted data with respect
         to the mean.
-    fmedian:  ndarray
+    fmedian:  ndarray, optional
        (returned) the median of the accepted data.
-    fmedstddev: ndarray
+    fmedstddev: ndarray, optional
        (returned) the standard deviation of the accepted data with respect
        to the median.
 
     Returns
     -------
-    ret:  tuple
+    ret : tuple
         This function returns a mask of accepted values in the data.  The
         mask is a byte array of the same shape as Data.  In the mask, 1
         indicates good data, 0 indicates an outlier in the corresponding

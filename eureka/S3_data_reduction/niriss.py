@@ -410,7 +410,7 @@ def mask_method_two(data, meta, isplots=0, save=False):
     return meta
 
 
-def simplify_niriss_img(data, meta, isplots=False):
+def simplify_niriss_img(data, meta, isplots=0):
     """
     Creates an image to map out where the orders are in
     the NIRISS data.

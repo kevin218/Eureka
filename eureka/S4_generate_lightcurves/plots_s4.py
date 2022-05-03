@@ -10,9 +10,9 @@ def binned_lightcurve(meta, i):
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    i:  int
+    i : int
         The current bandpass number.
 
     Returns
@@ -50,7 +50,7 @@ def drift1d(meta):
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
@@ -75,12 +75,12 @@ def lc_driftcorr(meta, wave_1d, optspec):
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    wave_1d:
+    wave_1d : ndarray
         Wavelength array with trimmed edges depending on xwindow and ywindow
-        which have been set in the S3 ecf
-    optspec:
+        which have been set in the S3 ecf.
+    optspec : ndarray
         The optimally extracted spectrum.
 
     Returns
@@ -125,13 +125,13 @@ def cc_spec(meta, ref_spec, fit_spec, n):
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    ref_spec:   ndarray (1D)
+    ref_spec : ndarray (1D)
         The reference spectrum used for cross-correlation.
-    fit_spec:   ndarray (1D)
+    fit_spec : ndarray (1D)
         The extracted spectrum for the current integration.
-    n:  int
+    n : int
         The current integration number.
 
     Returns
@@ -159,11 +159,11 @@ def cc_vals(meta, vals, n):
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    vals:   ndarray (1D)
+    vals : ndarray (1D)
         The cross-correlation strength.
-    n:  int
+    n : int
         The current integration number.
 
     Returns

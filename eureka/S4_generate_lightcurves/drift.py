@@ -14,14 +14,14 @@ def highpassfilt(signal, highpassWidth):
 
     Parameters
     ----------
-    signal: ndarray (1D)
-        1D array of values
-    highpassWidth: int
+    signal : ndarray (1D)
+        1D array of values.
+    highpassWidth : int
         The width of the boxcar filter to use.
 
     Returns
     -------
-    smoothed_signal:    ndarray (1D)
+    smoothed_signal : ndarray (1D)
         An array containing the smoothed signal.
 
     Notes
@@ -46,16 +46,16 @@ def spec1D(spectra, meta, log):
 
     Parameters
     ----------
-    spectra:    ndarray
+    spectra : ndarray
         2D array of flux values (nint, nx).
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log:    logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
 
     Notes

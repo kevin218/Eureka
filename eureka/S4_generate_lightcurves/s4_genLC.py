@@ -45,13 +45,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     ecf_path : str, optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s3_meta : MetaClass
+    s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
 
     Notes
@@ -292,6 +292,18 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
 
 def load_specific_s3_meta_info(meta):
+    """Load the specific S3 MetaClass object used to make this aperture pair.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+
+    Returns
+    -------
+    eureka.lib.readECF.MetaClass
+        The current metadata object with values from the old MetaClass.
+    """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep

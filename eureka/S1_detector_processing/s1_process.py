@@ -15,7 +15,6 @@ from ..lib import readECF
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
-
     def __init__(self):
         return
 
@@ -37,8 +36,8 @@ def rampfitJWST(eventlabel, ecf_path=None):
 
     Returns
     -------
-    meta: MetaClass
-        The metadata object
+    meta: eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Notes
     -----
@@ -146,11 +145,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
 
         Parameters
         ----------
-        filename:   str
+        filename : str
             A string pointing to the uncal file to be operated on.
-        meta:   MetaClass
-            The metadata object
-        log:    logedit.Logedit
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
 
         Returns

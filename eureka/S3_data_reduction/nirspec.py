@@ -9,17 +9,17 @@ def read(filename, data, meta):
 
     Parameters
     ----------
-    filename:   str
-        Single filename to read
-    data:   DataClass
-        The data object in which the fits data will stored
-    meta:   MetaClass
-        The metadata object
+    filename : str
+        Single filename to read.
+    data : DataClass
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
-    data: DataClass
-        The updated data object with the fits data stored inside
+    data : DataClass
+        The updated data object with the fits data stored inside.
 
     Notes
     -----
@@ -74,14 +74,14 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data:   DataClass
-        The data object in which the fits data will stored
-    meta:   MetaClass
-        The metadata object
+    data : DataClass
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         The updated data object with outlier background pixels flagged.
     '''
     y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
@@ -103,9 +103,31 @@ def flag_bg(data, meta):
     return data
 
 
-def fit_bg(dataim, datamask, n, meta, isplots=False):
-    '''Fit for a non-uniform background.
+def fit_bg(dataim, datamask, n, meta, isplots=0):
+    """Fit for a non-uniform background.
 
-    Uses the code written for NIRCam.
-    '''
+    Uses the code written for NIRCam which works for NIRSpec.
+
+    Parameters
+    ----------
+    dataim : ndarray (2D)
+        The 2D image array.
+    datamask : ndarray (2D)
+        An array of which data should be masked.
+    n : int
+        The current integration.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    isplots : int, optional
+        The plotting verbosity, by default 0.
+
+    Returns
+    -------
+    bg : ndarray (2D)
+        The fitted background level.
+    mask : ndarray (2D)
+        The updated mask after background subtraction.
+    n : int
+        The current integration number.
+    """
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)

@@ -15,17 +15,17 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
         Background subtracted data.
     mask : ndarray
         Outlier mask.
-    deg : int
-        Polynomial degree.
-    threshold : float
+    deg : int, optional
+        Polynomial degree, defaults to 3.
+    threshold : float, optional
         Sigma threshold for outlier rejection while constructing
-        spatial profile.
-    isplots : int
-        The amount of plots saved; set in ecf.
+        spatial profile, defaults to 10.
+    isplots : int, optional
+        The plotting verbosity. Defaults to 0.
 
     Returns
     -------
-    profile:    ndarray
+    profile : ndarray
         Fitted profile in the same shape as the input data array.
     '''
     submask = np.copy(mask)
@@ -82,7 +82,7 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
 
 
 def profile_smooth(subdata, mask, threshold=10, window_len=21,
-                   windowtype='hanning', isplots=False):
+                   windowtype='hanning', isplots=0):
     '''Construct normalized spatial profile using a smoothing function.
 
     Parameters
@@ -91,16 +91,16 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
         Background subtracted data.
     mask : ndarray
         Outlier mask.
-    threshold : float
+    threshold : float, optional
         Sigma threshold for outlier rejection while constructing
         spatial profile.
-    window_len : int
+    window_len : int, optional
         The dimension of the smoothing window.
-    windowtype : {'flat', 'hanning', 'hamming', 'bartlett', 'blackman'}
+    windowtype : {'flat','hanning','hamming','bartlett','blackman'}, optional
         UNUSED. The type of window. A flat window will produce a moving
         average smoothing.
-    isplots : int
-        The amount of plots saved; set in ecf.
+    isplots : int, optional
+        The plotting verbosity. Defaults to 0.
 
     Returns
     -------
@@ -175,16 +175,16 @@ def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
     Parameters
     ----------
     data : ndarray
-        UNUSED. Image data.
+        Unused. Image data.
     mask : ndarray
-        UNUSED. Outlier mask.
+        Unused. Outlier mask.
     meddata : ndarray
         The median of all data frames.
-    threshold : float
-        UNUSED. Sigma threshold for outlier rejection while constructing
-        spatial profile.
-    isplots : int
-        UNUSED. The amount of plots saved; set in ecf.
+    threshold : float, optional
+        Unused. Sigma threshold for outlier rejection while constructing
+        spatial profile. Defaults to 10.
+    isplots : int, optional
+        Unused. The plotting verbosity. Defaults to 0.
 
     Returns
     -------
@@ -217,8 +217,8 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
         qWavelet to use
     numlvls : int
         Decomposition levels to consider (must be >= 0).
-    isplots : int
-        The amount of plots saved; set in ecf.
+    isplots : int, optional
+        The plotting verbosity. Defaults to 0.
 
     Returns
     -------
@@ -291,8 +291,8 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
         qWavelet to use
     numlvls : int
         Decomposition levels to consider (must be >= 0).
-    isplots : int
-        The amount of plots saved; set in ecf.
+    isplots : int, optional
+        The plotting verbosity. Defaults to 0.
 
     Returns
     -------
@@ -358,17 +358,18 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
 
     Parameters
     ----------
-    subdata:    ndarray
+    subdata : ndarray
         Background subtracted data.
-    mask:   ndarray
+    mask : ndarray
         Outlier mask.
-    threshold:  float
+    threshold : float, optional
         Sigma threshold for outlier rejection while constructing
-        spatial profile.
-    guess: list
+        spatial profile. Defaults to 10.
+    guess : list, optional
         UNUSED. The initial guess for the Gaussian parameters.
-    isplots:    int
-        The amount of plots saved; set in ecf.
+        Defaults to None.
+    isplots : int, optional
+        The plotting verbosity. Defaults to 0.
 
     Returns
     -------
@@ -466,33 +467,33 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         The gain factor.
     v0 : ndarray
         Variance array for data.
-    p5thresh : float
+    p5thresh : float, optional
         Sigma threshold for outlier rejection while constructing
-        spatial profile.
-    p7thresh : float
+        spatial profile. Defaults to 10.
+    p7thresh : float, optional
         Sigma threshold for outlier rejection during optimal
-        spectral extraction.
-    fittype : str
+        spectral extraction. Defaukts to 10.
+    fittype : str, optional
         One of {'smooth', 'meddata', 'wavelet2D', 'wavelet',
                 'gauss', 'poly'}. The type of profile fitting
-        you want to do.
-    window_len : int
-        The dimension of the smoothing window.
-    deg : int
-        Polynomial degree.
-    windowtype : str
+        you want to do. Defaults to 'smooth'.
+    window_len : int, optional
+        The dimension of the smoothing window. Defaults to 21.
+    deg : int, optional
+        Polynomial degree. Defaults to 3.
+    windowtype : str, optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
                         'bartlett', 'blackman'}.
         The type of window. A flat window will produce a moving
-        average smoothing.
-    n : int
-        Integration number.
-    m : int
-        File number.
-    isplots : int
-        The amount of plots saved; set in ecf.
-    meddata : ndarray
-        The median of all data frames.
+        average smoothing. Defaults to 'hanning'.
+    n : int, optional
+        Integration number. Defaults to 0.
+    m : int, optional
+        File number. Defaults to 0.
+    isplots : int, optional
+        The plotting verbosity. Defaults to 0.
+    meddata : ndarray, optional
+        The median of all data frames. Defaults to None.
 
     Returns
     -------

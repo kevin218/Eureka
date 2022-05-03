@@ -12,12 +12,13 @@ def source_pos(data, meta, m, header=False):
     ----------
     data : DataClass
         The data object.
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
         The file number.
-    header : bool
+    header : bool, optional
         If True, use the source position in the FITS header.
+        Defaults to False.
 
     Returns
     -------
@@ -46,12 +47,13 @@ def source_pos_max(data, meta, m, plot=True):
     ----------
     data : DataClass
         The data object.
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
         The file number.
-    plot : bool
-        If true, plot the source position determination.
+    plot : bool, optional
+        If True, plot the source position determination.
+        Defaults to True.
 
     Returns
     -------
@@ -90,7 +92,7 @@ def source_pos_FWM(data, meta, m):
     ----------
     data : DataClass
         The data object.
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
         The file number.
@@ -170,7 +172,7 @@ def source_pos_gauss(data, meta, m):
     ----------
     data : DataClass
         The data object.
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
         The file number.

@@ -10,7 +10,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     wave_1d : ndarray
         Wavelength array with trimmed edges depending on xwindow and ywindow
@@ -52,7 +52,7 @@ def image_and_background(data, meta, n, m):
     ----------
     data : DataClass
         The data object.
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     n : int
         The integration number.
@@ -102,7 +102,7 @@ def optimal_spectrum(data, meta, n, m):
     ----------
     data : DataClass
         The data object.
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     n : int
         The integration number.
@@ -144,7 +144,7 @@ def source_position(meta, x_dim, pos_max, m,
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     x_dim : int
         The number of pixels in the y-direction in the image.
@@ -152,17 +152,21 @@ def source_position(meta, x_dim, pos_max, m,
         The brightest row.
     m : int
         The file number.
-    y_pixels : 1darray
-        The indices of the y-pixels.
-    sum_row : 1darray
-        The sum over each row.
-    isgauss : bool
+    isgauss : bool, optional
         Used a guassian centring method.
-    popt : list
+    x : type, optional
+        Unused.
+    y : type, optional
+        Unused.
+    popt : list, optional
         The fitted Gaussian terms.
-    isFWM : bool
+    isFWM : bool, optional
         Used a flux-weighted mean centring method.
-    y_pos : float
+    y_pixels : 1darray, optional
+        The indices of the y-pixels.
+    sum_row : 1darray, optional
+        The sum over each row.
+    y_pos : float, optional
         The FWM central position of the star.
 
     Returns
@@ -207,7 +211,7 @@ def profile(meta, profile, submask, n, m):
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     profile : ndarray
         Fitted profile in the same shape as the data array.
@@ -252,7 +256,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     i : int
         The column number.

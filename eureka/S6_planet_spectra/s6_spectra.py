@@ -14,7 +14,6 @@ from ..lib import astropytable
 class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
-
     def __init__(self):
         return
 
@@ -30,13 +29,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     ecf_path : str, optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s5_meta : MetaClass, optional
+    s5_meta : eureka.lib.readECF.MetaClass, optional
         The metadata object from Eureka!'s S5 step (if running S5
         and S6 sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S6.
 
     Notes
@@ -328,6 +327,32 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
 
 
 def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
+    """Load in the S5 save file.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    fit_methods : list
+        The fitting methods used in S5.
+    y_param : str
+        The parameter to plot.
+    channel_key : str, optional
+        A string describing the current channel (e.g. ch0),
+        by default 'shared'.
+
+    Returns
+    -------
+    medians
+        The best-fit values from S5.
+    errs
+        The uncertainties from a sampling algorithm like dynesty or emcee.
+
+    Raises
+    ------
+    AssertionError
+        The y_param was not found in the list of fitted parameter names.
+    """
     for fitter in fit_methods:
         if fitter in ['dynesty', 'emcee']:
             fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
@@ -389,6 +414,18 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
 
 
 def load_specific_s5_meta_info(meta):
+    """Load in the MetaClass object from the particular aperture pair being used.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object with values from earlier stages.
+    """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S5 outputs for this aperture pair
     inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep

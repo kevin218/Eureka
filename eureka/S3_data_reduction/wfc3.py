@@ -11,7 +11,25 @@ from ..lib import suntimecorr, utc_tt
 
 
 def preparation_step(meta, log):
+    """Perform preperatory steps which require many frames.
+    
+    Separate imaging and spectroscopy, separate observations into different
+    scan directions, and calculate centroid for each frame.
 
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
     meta.gain = 1
 
     obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log = \
@@ -39,7 +57,22 @@ def preparation_step(meta, log):
 
 
 def conclusion_step(meta, log):
-    # Convert these lists to arrays
+    """Convert lists into arrays for saving
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
     meta.centroids = np.array(meta.centroids)
     meta.subflat = np.array(meta.subflat)
     meta.flatmask = np.array(meta.flatmask)
@@ -55,7 +88,43 @@ def conclusion_step(meta, log):
 
 
 def separate_direct(meta, log):
+    """_summary_
 
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    obstimes : ndarray
+        The times of each integration.
+    CRPIX1 : float
+        The CRPIX1 FITS header value.
+    CRPIX2 : float
+        The CRPIX2 FITS header value.
+    postarg1 : float
+        The POSTARG1 FITS header value.
+    postarg2 : float
+        The POSTARG2 FITS header value.
+    ny : int
+        The NAXIS2 FITS header value.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+
+    Raises
+    ------
+    AssertionError
+        All observations cannot be in imaging mode.
+    AssertionError
+        All observations cannot be spectroscopic.
+    AssertionError
+        Unknown OBSTYPE(s) encountered.
+    """
     # Figure out which files are IMAGING or SPECTROSCOPIC
     obstypes = []
     obstimes = []
@@ -139,7 +208,26 @@ def separate_direct(meta, log):
 
 
 def separate_scan_direction(obstimes, postarg2, meta, log):
+    """Separate alternating scan directions.
 
+    Parameters
+    ----------
+    obstimes : ndarray
+        The times for each integration.
+    postarg2 : float
+        The POSTARG2 FITS header value.
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
     if meta.num_data_files == 1:
         # There is only one image
         meta.scandir = np.zeros(meta.num_data_files, dtype=int)
@@ -178,17 +266,19 @@ def read(filename, data, meta):
 
     Parameters
     ----------
-    filename:   str
+    filename : str
         Single filename to read
-    data:   DataClass
+    data : DataClass
         The data object in which the fits data will stored
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object
 
     Returns
     -------
-    data: DataClass
+    data : DataClass
         The updated data object with the fits data stored inside
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object
 
     Notes
     -----
@@ -301,6 +391,22 @@ def read(filename, data, meta):
 
 
 def flatfield(data, meta):
+    '''Perform flatfielding.
+
+    Parameters
+    ----------
+    data : DataClass
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    data : DataClass
+        The updated data object with flatfielding applied.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
     # Make list of master flat field frames
 
     print('Loading flat frames...')
@@ -326,6 +432,22 @@ def flatfield(data, meta):
 
 
 def difference_frames(data, meta):
+    '''Compute differenced frames.
+
+    Parameters
+    ----------
+    data : DataClass
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    data : DataClass
+        The updated data object with differenced frames.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
     if meta.nreads > 1:
         # Subtract pairs of subframes
         diffdata = np.zeros((meta.nreads-1, meta.ny, meta.nx))
@@ -393,9 +515,9 @@ def flag_bg(data, meta):
     Parameters
     ----------
     data : DataClass
-        The data object in which the fits data will stored
-    meta : MetaData
-        The metadata object
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
@@ -405,11 +527,41 @@ def flag_bg(data, meta):
     return nircam.flag_bg(data, meta)
 
 
-def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
-    '''Fit for a non-uniform background.
+def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
+    """Fit for a non-uniform background.
 
     Uses the code written for NIRCam, but adds on some extra steps
-    '''
+
+    Parameters
+    ----------
+    dataim : ndarray (2D)
+        The 2D image array.
+    datamask : ndarray (2D)
+        An array of which data should be masked.
+    datav0 : ndarray (2D)
+        readNoise**2.
+    datavariance : ndarray (2D)
+        Initially an all zeros array.
+    n : int
+        The current integration.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    isplots : int, optional
+        The plotting verbosity, by default False.
+
+    Returns
+    -------
+    bg : ndarray (2D)
+        The fitted background level.
+    mask : ndarray (2D)
+        The updated mask after background subtraction.
+    datav0 : ndarray (2D)
+        readNoise**2+np.mean(bgerr**2)
+    datavariance : ndarray (2D)
+        abs(dataim) / meta.gain + datav0
+    n : int
+        The current integration number.
+    """
     bg, mask, n = nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
@@ -420,21 +572,28 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=False):
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
 
-    return (dataim, datamask, datav0, datavariance, n)
+    return bg, mask, datav0, datavariance, n
 
 
 def correct_drift2D(data, meta, m):
-    '''
+    """Correct for calculated 2D drift.
+
     Parameters
     ----------
-    data:   DataClass
-        The data object in which the fits data will stored
-    meta:   MetaClass
-        The metadata object
-    m:  int
-        The current file number
+    data : DataClass
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The current file number.
 
-    '''
+    Returns
+    -------
+    data : DataClass
+        The updated DataClass object.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
     def writeDrift2D(arg):
         drift2D, m, n = arg
         # Assign to array of spectra and uncertainties
@@ -467,7 +626,7 @@ def correct_drift2D(data, meta, m):
                                           meta.subdiffmask[p][0]),
                                          (data.subdata[n] *
                                           meta.subdiffmask[-1][n]),
-                                         m, n, meta.num_data_files))
+                                         m, n))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)

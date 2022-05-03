@@ -11,13 +11,13 @@ def rate2count(data):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         rate units (#/s).
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         count units (#).
 
@@ -49,15 +49,15 @@ def dn2electrons(data, meta):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of DN.
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of electrons.
 
@@ -105,15 +105,15 @@ def bright2dn(data, meta, mjy=False):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of MJy/sr.
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of DN.
 
@@ -179,15 +179,15 @@ def bright2flux(data, pixel_area):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of MJy/sr.
-    pixel_area:  ndarray
+    pixel_area : ndarray
             Pixel area (arcsec/pix)
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of Jy/pix.
 
@@ -233,20 +233,20 @@ def convert_to_e(data, meta, log):
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of MJy/sr or DN/s.
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log:    logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
 
     Returns
     -------
-    data:   DataClass
+    data : DataClass
         Data object containing data, uncertainty, and variance arrays in
         units of electrons.
-    meta:   MetaClass
+    meta : MetaClass
         The metadata object.
     """
     if data.shdr['BUNIT'] == 'ELECTRONS':
@@ -307,14 +307,14 @@ def retrieve_ancil(fitsname):
 
     Parameters
     ----------
-    fitsname:
+    fitsname : str
         The filename of the file currently being analyzed.
 
     Returns
     -------
-    phot_filename:  str
+    phot_filename : str
         The full path to the photom calibration file.
-    gain_filename:  str
+    gain_filename : str
         The full path to the gain calibration file.
 
     Notes

@@ -63,13 +63,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     ecf_path : str, optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s2_meta : MetaClass, optional
+    s2_meta : eureka.lib.readECF.MetaClass, optional
         The metadata object from Eureka!'s S2 step (if running S2 and S3
         sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
 
     Notes

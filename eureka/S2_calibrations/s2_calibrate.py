@@ -43,18 +43,18 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     Parameters
     ----------
     eventlabel : str
-        Unique label for this dataset
+        Unique label for this dataset.
     ecf_path : str, optional
         The absolute or relative path to where ecfs are stored. Defaults
         to None which resolves to './'.
-    s1_meta : MetaClass, optional
+    s1_meta : eureka.lib.readECF.MetaClass, optional
         The metadata object from Eureka!'s S1 step (if running S1 and S2
         sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
-        The metadata object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Notes
     -----
@@ -198,11 +198,11 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
 
         Parameters
         ----------
-        filename:   str
+        filename : str
             A string pointing to the rateint or rateints file to process.
-        meta:   MetaClass
-            The metadata object
-        log:    logedit.Logedit
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
 
         Returns
@@ -327,11 +327,11 @@ class EurekaImage2Pipeline(Image2Pipeline):
 
         Parameters
         ----------
-        filename:   str
+        filename : str
             A string pointing to the rateint or rateints file to process.
-        meta:   MetaClass
-            The metadata object
-        log:    logedit.Logedit
+        meta : MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
 
         Returns

@@ -39,7 +39,7 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
 
     Returns
     -------
-    center :
+    centers : list
         Centroids
 
     Notes
@@ -169,12 +169,16 @@ def calcTrace(x, centroid, grism):
 
     Returns
     -------
-    y : computed trace
+    y : ndarray
+        Computed trace.
 
-    History
-    -------
-    Initial version by LK
-    Modified by Kevin Stevenson     November 2012
+    Notes
+    -----
+    History:
+
+    - Initial version by LK
+    - November 2021, Kevin Stevenson
+        Modified
     '''
     yref, xref = centroid
 
@@ -227,12 +231,16 @@ def calibrateLambda(x, centroid, grism):
 
     Returns
     -------
-    y             : computed wavelength values
+    y : ndarray
+        Computed wavelength values
 
-    History
-    -------
-    Initial version by LK
-    Modified by Kevin Stevenson     November 2012
+    Notes
+    -----
+    History:
+
+    - Initial version by LK
+    - November 2021, Kevin Stevenson
+        Modified
     '''
     yref, xref = centroid
 
@@ -278,22 +286,32 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
 
     Parameters
     ----------
-    flatfile        : List of files containing flatfiles images
-    wave            : wavelengths
-    xwindow         : Array containing image limits in wavelength direction
-    ywindow         : Array containing image limits in spatial direction
-    n_spec            : Number of spectra
-    sigma             : Sigma rejection level
+    flatfile : list
+        List of files containing flatfiles images.
+    wave : ndarray
+        Wavelengths.
+    xwindow : list
+        Array containing image limits in wavelength direction.
+    ywindow : list
+        Array containing image limits in spatial direction.
+    n_spec : int
+        Number of spectra.
+    sigma : float
+        Sigma rejection level.
 
     Returns
     -------
-    flat_master     : Single master flatfield image
-    mask_master     : Single bad-pixel mask image
+    flat_master : list
+        Single master flatfield image.
+    mask_master : list
+        Single bad-pixel mask image.
 
-    History
-    -------
-    Written by Kevin Stevenson        November 2012
+    Notes
+    -----
+    History:
 
+    - November 2012, Kevin Stevenson
+        Initial version.
     '''
     # Read in flat frames
     hdulist = fits.open(flatfile)
@@ -416,21 +434,32 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
 
     Parameters
     ----------
-    flatfile        : List of files containing flatfiles images
-    xwindow         : Array containing image limits in wavelength direction
-    ywindow         : Array containing image limits in spatial direction
-    n_spec          : Number of spectra
-    sigma           : Sigma rejection level
+    flatfile : list
+        List of files containing flatfiles images
+    xwindow : ndarray
+        Array containing image limits in wavelength direction
+    ywindow : ndarray
+        Array containing image limits in spatial direction
+    n_spec : int
+        Number of spectra
+    sigma : float
+        Sigma rejection level
 
     Returns
     -------
-    flat_master     : Single master flatfield image
-    mask_master     : Single bad-pixel mask image
+    flat_master : list
+        Single master flatfield image
+    mask_master : list
+        Single bad-pixel mask image
 
-    History
-    -------
-    Written by Kevin Stevenson      November 2012
-    Removed wavelength dependence   February 2018
+    Notes
+    -----
+    History:
+
+    - November 2012, Kevin Stevenson
+        Initial version.
+    - February 2018, Kevin Stevenson
+        Removed wavelength dependence.
     '''
     # Read in flat frames
     hdulist = fits.open(flatfile)
@@ -504,6 +533,30 @@ def calc_slitshift2(spectrum, xrng, ywindow, xwindow, width=5, deg=1):
 
     Calcualte horizontal shift to correct tilt in data using spectrum.
 
+    Parameters
+    ----------
+    spectrum : ndarray
+        The 2D image.
+    xrng : type
+        Unused.
+    xwindow : ndarray
+        Array containing image limits in wavelength direction.
+    ywindow : ndarray
+        Array containing image limits in spatial direction.
+    width : int, optional
+        The initial guess for the Gaussian width, defaults to 5.
+    deg : int, optional
+        The degree of the np.polyfit, defaults to 1.
+
+    Returns
+    -------
+    shift_models : ndarray
+        The fitted polynomial model to the drift.
+    shift_values : ndarray
+        The fitted drifts.
+    yfit : range
+        The y values used when calculating drifts.
+
     Notes
     -----
     History:
@@ -550,21 +603,23 @@ def calc_slitshift(wavegrid, xrng, refwave=None, width=3, deg=2):
 
     Parameters
     ----------
-    wavegrid : _type_
+    wavegrid : ndarray
+        The 2D wavelength grid.
+    xrng : ndarray
         _description_
-    xrng : _type_
-        _description_
-    refwave : _type_, optional
-        _description_, by default None
+    refwave : ndarray, optional
+        The 1D wavelength grid, by default None.
     width : int, optional
-        _description_, by default 3
+        The initial guess for the Gaussian width, defaults to 3.
     deg : int, optional
-        _description_, by default 2
+        The degree of the np.polyfit, defaults to 2.
 
     Returns
     -------
-    _type_
-        _description_
+    shift_models : ndarray
+        The fitted polynomial model to the drift.
+    shift_values : ndarray
+        The fitted drifts.
 
     Notes
     -----
@@ -599,19 +654,21 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
 
     Parameters
     ----------
-    data : _type_
-        _description_
-    slitshift : _type_
-        _description_
-    mask : _type_, optional
-        _description_, by default None
+    data : ndarray
+        The 2D image.
+    slitshift : ndarray
+        The fitted drifts.
+    mask : ndarray, optional
+        Data that should be masked, by default None.
     isreverse : bool, optional
-        _description_, by default False
+        If true subtract slitshift, else addd slitshift. By default False.
 
     Returns
     -------
-    _type_
-        _description_
+    cordata : ndarray
+        The 2D image corrected for slit shifts.
+    cormask.astype(int) : ndarray, optional
+        The corrected mask, only returned if input mask is not None.
 
     Notes
     -----
@@ -644,26 +701,28 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         return cordata
 
 
-def calcDrift2D(im1, im2, m, n, n_files):
+def calcDrift2D(im1, im2, m, n):
     """Calulate drift2D
 
     Parameters
     ----------
-    im1 : _type_
-        _description_
-    im2 : _type_
-        _description_
-    m : _type_
-        _description_
-    n : _type_
-        _description_
-    n_files : _type_
-        _description_
+    im1 : ndarray
+        The reference image.
+    im2 : ndarray
+        The current image.
+    m : int
+        The current file number.
+    n : int
+        The current integration number.
 
     Returns
     -------
-    _type_
-        _description_
+    drift2D : list
+        The x and y offset of im2 with respect to im1.
+    m : int
+        The current file number.
+    n : int
+        The current integration number.
 
     Raises
     ------
@@ -678,7 +737,7 @@ def calcDrift2D(im1, im2, m, n, n_files):
                                   '`pip install .[hst]`')
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
-    return (drift2D, m, n)
+    return drift2D, m, n
 
 
 def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):
@@ -686,35 +745,38 @@ def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):
 
     Parameters
     ----------
-    shiftdata : _type_
+    shiftdata : ndarray
         _description_
-    shiftmask : _type_
+    shiftmask : ndarray
         _description_
-    m : _type_
+    m : int
         _description_
-    n : _type_
+    n : int
         _description_
-    i : _type_
+    i : int
         _description_
-    j : _type_
+    j : int
         _description_
-    k : _type_
+    k : int
         _description_
-    ktot : _type_
+    ktot : int
         _description_
-    ny : _type_
+    ny : int
         _description_
-    nx : _type_
+    nx : int
         _description_
-    sy : _type_
+    sy : int
         _description_
-    sx : _type_
+    sx : int
         _description_
 
     Returns
     -------
-    _type_
-        _description_
+    shift : float
+    m : int
+    n : int
+    i : int
+    j : int
     """
     try:
         sys.stdout.write('\r'+str(k+1)+'/'+str(ktot))
@@ -728,27 +790,26 @@ def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):
     # Calculate kernel
     gk = smoothing.gauss_kernel_mask2((ny, nx), (sy, sx), (m, i), shiftmask)
     shift = np.sum(gk * newim[m:m+2*ny+1, i:i+2*nx+1])
-    return (shift, m, n, i, j)
+    return shift, m, n, i, j
 
 
-def drift_fit2D(ev, data, validRange=9):
+def drift_fit2D(meta, data, validRange=9):
     '''Measures the spectrum drift over all frames and all non-destructive reads.
 
     Parameters
     ----------
-    ev            : Event object
-    data        : 4D data frames
-    preclip     : Ignore first preclip values of spectrum
-    postclip    : Ignore last postclip values of spectrum
-    width         : Half-width in pixels used when fitting Gaussian
-    deg         : Degree of polynomial fit
-    validRange    : Trim spectra by +/- pixels to compute valid region of
-        cross correlation
+    meta : eureka.lib.readECF.MetaClass
+        Event object.
+    data : ndarray
+        4D data frames.
+    validRange : int
+        Trim spectra by +/- pixels to compute valid region of
+        cross correlation.
 
     Returns
     -------
-    drift         : Array of measured drift values
-    model         : Array of model drift values
+    drift : ndarray
+        Array of measured drift values.
 
     History
     -------
@@ -757,17 +818,17 @@ def drift_fit2D(ev, data, validRange=9):
     '''
     # if postclip is not None:
     #    postclip = -postclip
-    if ev.n_reads > 2:
+    if meta.nreads > 2:
         istart = 1
     else:
         istart = 0
-    drift = np.zeros((ev.n_files, ev.n_reads-1))
+    drift = np.zeros((meta.num_data_files, meta.nreads-1))
     # model = np.zeros((ev.n_files, ev.n_reads-1))
     # goodmask = np.zeros((ev.n_files, ev.n_reads-1),dtype=int)
-    for n in range(istart, ev.n_reads-1):
+    for n in range(istart, meta.nreads-1):
         ref_data = np.copy(data[-1, n])
         ref_data[np.where(np.isnan(ref_data))] = 0
-        for m in range(ev.n_files):
+        for m in range(meta.num_data_files):
             # Trim data to achieve accurate cross correlation without
             # assumptions over interesting region
             # http://stackoverflow.com/questions/15989384/cross-correlation-of-non-periodic-function-with-numpy

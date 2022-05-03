@@ -9,16 +9,16 @@ def read(filename, data, meta):
     Parameters
     ----------
     filename : str
-        Single filename to read
+        Single filename to read.
     data : DataClass
-        The data object in which the fits data will stored
-    meta : MetaData
-        The metadata object
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
     data : DataClass
-        The updated data object with the fits data stored inside
+        The updated data object with the fits data stored inside.
 
     Notes
     -----
@@ -158,7 +158,7 @@ def wave_MIRI_hardcoded():
 
     Returns
     -------
-    lam_x_full: list
+    lam_x_full : list
         A list of the wavelengths
 
     Notes
@@ -317,9 +317,9 @@ def flag_bg(data, meta):
     Parameters
     ----------
     data : DataClass
-        The data object in which the fits data will stored
-    meta : MetaData
-        The metadata object
+        The data object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
@@ -329,10 +329,32 @@ def flag_bg(data, meta):
     return nircam.flag_bg(data, meta)
 
 
-def fit_bg(dataim, datamask, n, meta, isplots=False):
-    '''Fit for a non-uniform background.
+def fit_bg(dataim, datamask, n, meta, isplots=0):
+    """Fit for a non-uniform background.
 
     Uses the code written for NIRCam which works for MIRI as long
     as the MIRI data gets rotated.
-    '''
+
+    Parameters
+    ----------
+    dataim : ndarray (2D)
+        The 2D image array.
+    datamask : ndarray (2D)
+        An array of which data should be masked.
+    n : int
+        The current integration.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    isplots : int, optional
+        The plotting verbosity, by default 0.
+
+    Returns
+    -------
+    bg : ndarray (2D)
+        The fitted background level.
+    mask : ndarray (2D)
+        The updated mask after background subtraction.
+    n : int
+        The current integration number.
+    """
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
