@@ -30,7 +30,7 @@ def rampfitJWST(eventlabel, ecf_path=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    ecf_path : str, optional
+    ecf_path : str; optional
         The absolute or relative path to where ecfs are stored. Defaults to
         None which resolves to './'.
 

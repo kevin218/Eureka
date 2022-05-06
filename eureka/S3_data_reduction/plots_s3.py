@@ -152,21 +152,21 @@ def source_position(meta, x_dim, pos_max, m,
         The brightest row.
     m : int
         The file number.
-    isgauss : bool, optional
+    isgauss : bool; optional
         Used a guassian centring method.
-    x : type, optional
+    x : type; optional
         Unused.
-    y : type, optional
+    y : type; optional
         Unused.
-    popt : list, optional
+    popt : list; optional
         The fitted Gaussian terms.
-    isFWM : bool, optional
+    isFWM : bool; optional
         Used a flux-weighted mean centring method.
-    y_pixels : 1darray, optional
+    y_pixels : 1darray; optional
         The indices of the y-pixels.
-    sum_row : 1darray, optional
+    sum_row : 1darray; optional
         The sum over each row.
-    y_pos : float, optional
+    y_pos : float; optional
         The FWM central position of the star.
 
     Returns

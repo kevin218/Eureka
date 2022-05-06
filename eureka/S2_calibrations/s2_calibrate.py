@@ -44,10 +44,10 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     ----------
     eventlabel : str
         Unique label for this dataset.
-    ecf_path : str, optional
+    ecf_path : str; optional
         The absolute or relative path to where ecfs are stored. Defaults
         to None which resolves to './'.
-    s1_meta : eureka.lib.readECF.MetaClass, optional
+    s1_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S1 step (if running S1 and S2
         sequentially). Defaults to None.
 

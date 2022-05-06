@@ -66,18 +66,18 @@ class ModelGrid(object):
         model_directory : str
             The path to the directory of FITS files of spectra,
             which may include a filename with a wildcard caharacter
-        bibcode : str, array-like, optional
+        bibcode : str, array-like; optional
             The bibcode or list of bibcodes for this data set.
             Defaults to '2013A & A...553A...6H'.
-        names : dict, optional
+        names : dict; optional
             A dictionary to rename the table columns. The Phoenix
             model keywords are given as an example. Defaults to
             {'Teff': 'PHXTEFF', 'logg': 'PHXLOGG', 'FeH': 'PHXM_H',
              'mass': 'PHXMASS', 'Lbol': 'PHXLUM'}.
-        resolution : int, optional
+        resolution : int; optional
             The desired wavelength resolution (lambda/d_lambda)
             of the grid spectra. Defaults to None.
-        wave_units : astropy.units.quantity, optional
+        wave_units : astropy.units.quantity; optional
             The wavelength units. Defaults to astropy.units.um.
         **kwargs : dict
             Additional arguments to pass to self.customize().
@@ -272,10 +272,10 @@ class ModelGrid(object):
         FeH : float
             The logarithm of the ratio of the metallicity
             and solar metallicity (dex)
-        resolution : int, optional
+        resolution : int; optional
             The desired wavelength resolution (lambda/d_lambda).
             Defaults to None.
-        interp : bool, optional
+        interp : bool; optional
             Interpolate the model if possible. Defaults to True.
 
         Returns
@@ -379,7 +379,7 @@ class ModelGrid(object):
         FeH : float
             The logarithm of the ratio of the metallicity
             and solar metallicity (dex)
-        plot : bool, optional
+        plot : bool; optional
             Plot the interpolated spectrum along
             with the 8 neighboring grid spectra. Defaults to False.
 
@@ -447,7 +447,7 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        reset : bool, optional
+        reset : bool; optional
             Delete the old file and clear the flux attribute.
             Defaults to False.
         """
@@ -536,20 +536,20 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        Teff_rng : array-like, optional
+        Teff_rng : array-like; optional
             The lower and upper inclusive bounds for the effective
             temperature (K). Defaults to (2300, 8000).
-        logg_rng : array-like, optional
+        logg_rng : array-like; optional
             The lower and upper inclusive bounds for the logarithm of the
             surface gravity (dex). Defaults to (0, 6).
-        FeH_rng : array-like, optional
+        FeH_rng : array-like; optional
             The lower and upper inclusive bounds for the logarithm of the
             ratio of the metallicity and solar metallicity (dex). Defaults
             to (-2, 1).
-        wave_rng : array-like, optional
+        wave_rng : array-like; optional
             The lower and upper inclusive bounds for the wavelength (microns).
             Defaults to (0*q.um, 40*q.um).
-        n_bins : int, optional
+        n_bins : int; optional
             The number of bins for the wavelength axis. Defaults to ''.
         """
         # Make a copy of the grid
@@ -640,7 +640,7 @@ class ModelGrid(object):
 
         Parameters
         ----------
-        wave_units : str, astropy.units.core.PrefixUnit/CompositeUnit, optional
+        wave_units : str, astropy.units.core.PrefixUnit/CompositeUnit; optional
             The wavelength units. Defaults to astropy.units.um.
         """
         # Set wavelength units

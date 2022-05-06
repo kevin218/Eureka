@@ -1,20 +1,23 @@
 import numpy as np
 from . import sort_nicely as sn
-import os, time, glob
+import os
+import time
+import glob
 
 
 def readfiles(meta):
-    """Reads in the files saved in topdir + inputdir and saves them into a list
+    """Reads in the files saved in topdir + inputdir and saves them into a list.
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
     -------
-    meta:   MetaClass
-        The metadata object with added segment_list containing the sorted data fits files.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object with added segment_list containing the sorted
+        data fits files.
     """
     meta.segment_list = []
     for fname in os.listdir(meta.inputdir):
@@ -23,95 +26,114 @@ def readfiles(meta):
     meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
     return meta
 
+
 def trim(data, meta):
-    """Removes the edges of the data arrays
+    """Removes the edges of the data arrays.
 
     Parameters
     ----------
-    data:   DataClass
+    data : DataClass
         The data object.
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
     -------
-    data:   DataClass
-        The data object with added subdata arrays with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf.
-    meta:   MetaClass
+    data : DataClass
+        The data object with added subdata arrays with trimmed edges depending
+        on xwindow and ywindow which have been set in the S3 ecf.
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     """
-    data.subdata = data.data[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
-    data.suberr  = data.err[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
-    data.subdq   = data.dq[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
-    data.subwave = data.wave[meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
-    data.subv0   = data.v0[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]]
+    data.subdata = data.data[:, meta.ywindow[0]:meta.ywindow[1],
+                             meta.xwindow[0]:meta.xwindow[1]]
+    data.suberr = data.err[:, meta.ywindow[0]:meta.ywindow[1],
+                           meta.xwindow[0]:meta.xwindow[1]]
+    data.subdq = data.dq[:, meta.ywindow[0]:meta.ywindow[1],
+                         meta.xwindow[0]:meta.xwindow[1]]
+    data.subwave = data.wave[meta.ywindow[0]:meta.ywindow[1],
+                             meta.xwindow[0]:meta.xwindow[1]]
+    data.subv0 = data.v0[:, meta.ywindow[0]:meta.ywindow[1],
+                         meta.xwindow[0]:meta.xwindow[1]]
     meta.subny = meta.ywindow[1] - meta.ywindow[0]
     meta.subnx = meta.xwindow[1] - meta.xwindow[0]
     if hasattr(meta, 'diffmask'):
         # Need to crop diffmask and variance from WFC3 as well
-        meta.subdiffmask.append(meta.diffmask[-1][:,meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]])
-        data.subvariance = np.copy(data.variance[:, meta.ywindow[0]:meta.ywindow[1], meta.xwindow[0]:meta.xwindow[1]])
+        meta.subdiffmask.append(
+            meta.diffmask[-1][:, meta.ywindow[0]:meta.ywindow[1],
+                              meta.xwindow[0]:meta.xwindow[1]])
+        data.subvariance = \
+            np.copy(data.variance[:, meta.ywindow[0]:meta.ywindow[1],
+                                  meta.xwindow[0]:meta.xwindow[1]])
         delattr(data, 'variance')
 
     return data, meta
 
+
 def check_nans(data, mask, log, name=''):
-    """Checks where a data array has NaNs
+    """Checks where a data array has NaNs.
 
     Parameters
     ----------
-    data:   ndarray
-        a data array (e.g. data, err, dq, ...)
-    mask:   ndarray
-        input mask
-    log:    logedit.Logedit
+    data : ndarray
+        a data array (e.g. data, err, dq, ...).
+    mask : ndarray
+        Input mask.
+    log : logedit.Logedit
         The open log in which NaNs will be mentioned if existent.
-    name:   str, optional
-        The name of the data array passed in (e.g. SUBDATA, SUBERR, SUBV0)
+    name : str; optional
+        The name of the data array passed in (e.g. SUBDATA, SUBERR, SUBV0).
+        Defaults to ''.
 
     Returns
     -------
-    mask:   ndarray
-        output mask where 0 will be written where the input data array has NaNs
+    mask : ndarray
+        Output mask where 0 will be written where the input data array has NaNs
     """
     num_nans = np.sum(np.isnan(data))
     if num_nans > 0:
-        log.writelog(f"  WARNING: {name} has {num_nans} NaNs.  Your subregion may be off the edge of the detector subarray.\n"+
-                     "Masking NaN region and continuing, but you should really stop and reconsider your choices.")
+        log.writelog(f"  WARNING: {name} has {num_nans} NaNs. Your subregion "
+                     f"may be off the edge of the detector subarray.\n"
+                     "Masking NaN region and continuing, but you should really"
+                     " stop and reconsider your choices.")
         inan = np.where(np.isnan(data))
-        #subdata[inan]  = 0
-        mask[inan]  = 0
+        # subdata[inan]  = 0
+        mask[inan] = 0
     return mask
 
+
 def makedirectory(meta, stage, counter=None, **kwargs):
-    """Creates a directory for the current stage
+    """Creates a directory for the current stage.
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    stage:  str
-        'S#' string denoting stage number (i.e. 'S3', 'S4')
-    counter : int
+    stage : str
+        'S#' string denoting stage number (i.e. 'S3', 'S4').
+    counter : int; optional
         The run number if you want to force a particular run number.
         Defaults to None which automatically finds the run number.
-    **kwargs
+    **kwargs : dict
+        Additional key,value pairs to add to the folder name
+        (e.g. {'ap': 4, 'bg': 10}).
 
     Returns
     -------
-    run:    int
+    run : int
         The run number
     """
     if not hasattr(meta, 'datetime') or meta.datetime is None:
         meta.datetime = time.strftime('%Y-%m-%d')
     datetime = meta.datetime
 
-    # This code allows the input and output files to be stored outside of the Eureka! folder
+    # This code allows the input and output files to be stored outside
+    # of the Eureka! folder
     rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
     if rootdir[-1] != os.sep:
-      rootdir += os.sep
+        rootdir += os.sep
 
-    outputdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel + '_run'
+    outputdir = rootdir+stage+'_'+datetime+'_'+meta.eventlabel+'_run'
 
     if counter is None:
         counter = 1
@@ -128,7 +150,7 @@ def makedirectory(meta, stage, counter=None, **kwargs):
     # Remove trailing _ if present
     if outputdir[-1] == '_':
         outputdir = outputdir[:-1]
-    
+
     # Add trailing slash
     if outputdir[-1] != os.sep:
         outputdir += os.sep
@@ -137,33 +159,42 @@ def makedirectory(meta, stage, counter=None, **kwargs):
         try:
             os.makedirs(outputdir)
         except (PermissionError, OSError) as e:
-            # Raise a more helpful error message so that users know to update topdir in their ecf file
-            raise PermissionError(f'You do not have the permissions to make the folder {outputdir}\n'+
-                                  f'Your topdir is currently set to {meta.topdir}, but your user account is called {os.getenv("USER")}.\n'+
-                                  f'You likely need to update the topdir setting in your {stage} .ecf file.') from e
+            # Raise a more helpful error message so that users know to update
+            # topdir in their ecf file
+            message = (f'You do not have the permissions to make the folder '
+                       f'{outputdir}\nYour topdir is currently set to'
+                       f'{meta.topdir}, but your user account is called '
+                       f'{os.getenv("USER")}.\nYou likely need to update the '
+                       f'topdir setting in your {stage} .ecf file.')
+            raise PermissionError(message) from e
     if not os.path.exists(os.path.join(outputdir, "figs")):
         os.makedirs(os.path.join(outputdir, "figs"))
 
     return counter
 
+
 def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
-    """Finds the directory for the requested stage, run, and datetime (or old_datetime)
+    """Finds the directory for the requested stage, run, and datetime
+    (or old_datetime).
 
     Parameters
     ----------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    stage:  str
+    stage : str
         'S#' string denoting stage number (i.e. 'S3', 'S4')
-    run:    int
+    run : int
         run #, output from makedirectory function
-    old_datetime:   str
-        The date that a previous run was made (for looking up old data)
-    **kwargs
+    old_datetime : str; optional
+        The date that a previous run was made (for looking up old data).
+        Defaults to None in which case meta.datetime is used instead.
+    **kwargs : dict
+        Additional key,value pairs to add to the folder name
+        (e.g. {'ap': 4, 'bg': 10}).
 
     Returns
     -------
-    path:   str
+    path : str
         Directory path for given parameters
     """
     if old_datetime is not None:
@@ -173,12 +204,14 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
             meta.datetime = time.strftime('%Y-%m-%d')
         datetime = meta.datetime
 
-    # This code allows the input and output files to be stored outside of the Eureka! folder
+    # This code allows the input and output files to be stored outside
+    # of the Eureka! folder
     rootdir = os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))
     if rootdir[-1] != os.sep:
-      rootdir += os.sep
+        rootdir += os.sep
 
-    outputdir = rootdir + stage + '_' + datetime + '_' + meta.eventlabel +'_run' + str(run) + os.sep
+    outputdir = (rootdir+stage+'_'+datetime+'_'+meta.eventlabel+'_run' +
+                 str(run)+os.sep)
 
     for key, value in kwargs.items():
         outputdir += key+str(value)+'_'
@@ -186,24 +219,25 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     # Remove trailing _ if present
     if outputdir[-1] == '_':
         outputdir = outputdir[:-1]
-    
+
     # Add trailing slash
     if outputdir[-1] != os.sep:
         outputdir += os.sep
 
     return outputdir
 
+
 def find_fits(meta):
     '''Locates S1 or S2 output FITS files if unable to find an metadata file.
 
     Parameters
     ----------
-    meta:    MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The new meta object for the current stage processing.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The meta object with the updated inputdir pointing to the location of
         the input files to use.
 
@@ -215,27 +249,37 @@ def find_fits(meta):
         Initial version.
     '''
     fnames = glob.glob(meta.inputdir+'*'+meta.suffix + '.fits')
-    if len(fnames)==0:
-        # There were no rateints files in that folder, so let's see if there are in children folders
-        fnames = glob.glob(meta.inputdir+'**'+os.sep+'*'+meta.suffix + '.fits', recursive=True)
+    if len(fnames) == 0:
+        # There were no rateints files in that folder, so let's see if
+        # there are in children folders
+        fnames = glob.glob(meta.inputdir+'**'+os.sep+'*'+meta.suffix+'.fits',
+                           recursive=True)
         fnames = sn.sort_nicely(fnames)
 
-    if len(fnames)==0:
-        # If the code can't find any of the reqested files, raise an error and give a helpful message
-        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!\n'+
-                             f'You likely need to change the inputdir in {meta.filename} to point to the folder containing the "{meta.suffix}.fits" files.')
+    if len(fnames) == 0:
+        # If the code can't find any of the reqested files, raise an error
+        # and give a helpful message
+        message = (f'Unable to find any "{meta.suffix}.fits" files in the '
+                   f'inputdir: \n"{meta.inputdir}"!\nYou likely need to change'
+                   f' the inputdir in {meta.filename} to point to the folder '
+                   f'containing the "{meta.suffix}.fits" files.')
+        raise AssertionError(message)
 
-    folders = np.unique([os.sep.join(fname.split(os.sep)[:-1]) for fname in fnames])
-    if len(folders)>=1:
+    folders = np.unique([os.sep.join(fname.split(os.sep)[:-1])
+                         for fname in fnames])
+    if len(folders) >= 1:
         # get the file with the latest modified time
         folder = max(folders, key=os.path.getmtime)
 
-    if len(folders)>1:
+    if len(folders) > 1:
         # There may be multiple runs - use the most recent but warn the user
-        print(f'WARNING: There are multiple folders containing "{meta.suffix}.fits" files in your inputdir: \n"{meta.inputdir}"\n'
-             +f'Using the files in: \n{folder}\n'
-              +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
-              +'of the run you intended, please provide a more precise folder for the metadata file.')
+        print(f'WARNING: There are multiple folders containing '
+              f'"{meta.suffix}.fits" files in your inputdir:\n'
+              f'"{meta.inputdir}"\n'
+              f'Using the files in: \n{folder}\n'
+              f'and will consider aperture ranges listed there. If this '
+              f'metadata file is not a part\nof the run you intended, please '
+              f'provide a more precise folder for the metadata file.')
 
     meta.inputdir = folder
     meta.inputdir_raw = folder[len(meta.topdir):]
@@ -246,23 +290,30 @@ def find_fits(meta):
 
     return meta
 
+
 def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
-    """Computes variation on median absolute deviation (MAD) using ediff1d for 2D data.
+    """Computes variation on median absolute deviation (MAD) using ediff1d
+    for 2D data.
 
     Parameters
     ----------
-    meta:   MetaClass
-        The metadata object.
-    wave_1d:    ndarray
-        Wavelength array (nx) with trimmed edges depending on xwindow and ywindow which have been set in the S3 ecf
-    optspec:    ndarray
+    meta : eureka.lib.readECF.MetaClass
+        Unused. The metadata object.
+    wave_1d : ndarray
+        Wavelength array (nx) with trimmed edges depending on xwindow and
+        ywindow which have been set in the S3 ecf
+    optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
-    wave_min:   float
-        Minimum wavelength for binned lightcurves, as given in the S4 .ecf file
-    wave_max:   float
-        Maximum wavelength for binned lightcurves, as given in the S4 .ecf file
+    wave_min : float; optional
+        Minimum wavelength for binned lightcurves, as given in the S4 .ecf
+        file. Defaults to None which does not impose a lower limit.
+    wave_maxf : float; optional
+        Maximum wavelength for binned lightcurves, as given in the S4 .ecf
+        file. Defaults to None which does not impose an upper limit.
 
-    Returns:
+    Returns
+    -------
+    mad : float
         Single MAD value in ppm
     """
     optspec = np.ma.masked_invalid(optspec)
@@ -278,12 +329,14 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
     normspec = optspec / np.ma.mean(optspec, axis=0)
     ediff = np.ma.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = get_mad_1d(normspec[m],iwmin,iwmax)
+        ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
     mad = np.ma.mean(ediff)
     return mad
 
+
 def get_mad_1d(data, ind_min=0, ind_max=-1):
-    """Computes variation on median absolute deviation (MAD) using ediff1d for 1D data.
+    """Computes variation on median absolute deviation (MAD) using ediff1d
+    for 1D data.
 
     Parameters
     ----------
@@ -294,7 +347,9 @@ def get_mad_1d(data, ind_min=0, ind_max=-1):
     ind_max : int
         Maximum index to consider (excluding ind_max).
 
-    Returns:
+    Returns
+    -------
+    mad : float
         Single MAD value in ppm
     """
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))

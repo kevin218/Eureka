@@ -16,7 +16,7 @@ def source_pos(data, meta, m, header=False):
         The metadata object.
     m : int
         The file number.
-    header : bool, optional
+    header : bool; optional
         If True, use the source position in the FITS header.
         Defaults to False.
 
@@ -51,7 +51,7 @@ def source_pos_max(data, meta, m, plot=True):
         The metadata object.
     m : int
         The file number.
-    plot : bool, optional
+    plot : bool; optional
         If True, plot the source position determination.
         Defaults to True.
 

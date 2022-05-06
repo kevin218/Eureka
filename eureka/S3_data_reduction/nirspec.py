@@ -118,7 +118,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
         The current integration.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity, by default 0.
 
     Returns

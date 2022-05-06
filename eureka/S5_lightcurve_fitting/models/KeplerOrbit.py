@@ -29,9 +29,9 @@ class KeplerOrbit(object):
         line-of-sight).
     argp : float
         The argument of periastron (in degrees CCW from Omega).
-    obliq : float, optional
+    obliq : float; optional
         The obliquity (axial tilt) of body 2 (in degrees toward body 1).
-    argobliq : float, optional
+    argobliq : float; optional
         The reference orbital angle used for obliq (in degrees from
         inferior conjunction).
     t_peri : float
@@ -145,37 +145,37 @@ class KeplerOrbit(object):
 
         Parameters
         ----------
-        a : float, optional
+        a : float; optional
             The semi-major axis in m. Detaults to 1 au.
-        Porb : float, optional
+        Porb : float; optional
             The orbital period in days. Defaults to None which
             computes the period using the m1 and m2 masses.
-        inc : float, optional
+        inc : float; optional
             The orbial inclination (in degrees above face-on).
             Defaults to 90.
-        t0 : float, optional
+        t0 : float; optional
             The linear ephemeris in days. Defaults to 0.
-        e : float, optional
+        e : float; optional
             The orbital eccentricity. Defaults to 0.
-        Omega : float, optional
+        Omega : float; optional
             The longitude of ascending node (in degrees CCW from
             line-of-sight). Defaults to 270.
-        argp : float, optional
+        argp : float; optional
             The argument of periastron (in degrees CCW from Omega).
             Defaults to 90.
-        obliq : float, optional
+        obliq : float; optional
             The obliquity (axial tilt) of body 2 (in degrees toward body 1).
             Defaults to 0.
-        argobliq : float, optional
+        argobliq : float; optional
             The reference orbital angle used for obliq (in degrees from
             inferior conjunction). Defaults to 0.
-        Prot : float, optional.
+        Prot : float; optional.
             The rotational period of body 2. Defaults to None which
             sets Prot equal to Porb (and will be updated when Porb is
             updated).
-        m1 : float, optional
+        m1 : float; optional
             The mass of body 1 in kg. Defaults to Msun.
-        m2 : float, optional
+        m2 : float; optional
             The mass of body 2 in kg. Defaults to 0.
         """
         self.e = e
@@ -333,10 +333,10 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        useFSSI : bool, optional
+        useFSSI : bool; optional
             Whether or not to use FSSI to invert Kepler's equation.
             Defaults to None which uses FSSI if t.size > 8.
-        xtol : float, optional
+        xtol : float; optional
             tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
         Returns
@@ -376,7 +376,7 @@ class KeplerOrbit(object):
         ----------
         M : ndarray
             The mean anomaly in radians.
-        xtol : float, optional
+        xtol : float; optional
             tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
         Returns
@@ -401,7 +401,7 @@ class KeplerOrbit(object):
         ----------
         M : ndarray
             The mean anomaly in radians.
-        xtol : float, optional
+        xtol : float; optional
             tolarance on error in eccentric anomaly. Defaults to 1e-10.
 
         Returns
@@ -474,7 +474,7 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        xtol : float, optional
+        xtol : float; optional
             tolarance on error in eccentric anomaly (calculated along the way).
             Defaults to 1e-10.
         Returns
@@ -495,7 +495,7 @@ class KeplerOrbit(object):
         TA : ndarray
             The true anomaly in radians (if t and TA are given, only TA
             will be used).
-        xtol : float, optional
+        xtol : float; optional
             tolarance on error in eccentric anomaly (calculated along the way).
             Defaults to 1e-10.
 
@@ -518,7 +518,7 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        xtol : float, optional
+        xtol : float; optional
             tolarance on error in eccentric anomaly (calculated along the way).
             Defaults to 1e-10.
 
@@ -566,7 +566,7 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        TA : ndarray, optional
+        TA : ndarray; optional
             The true anomaly. Defaults to None which calculates the TA
             using self.true_anomaly(t).
 
@@ -589,7 +589,7 @@ class KeplerOrbit(object):
         ----------
         t : ndarray
             The time in days.
-        TA : ndarray, optional
+        TA : ndarray; optional
             The true anomaly. Defaults to None which calculates the TA
             using self.true_anomaly(t).
 

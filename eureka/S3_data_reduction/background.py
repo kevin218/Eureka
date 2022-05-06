@@ -159,15 +159,15 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
         A mask array.
     x1 : ndarray
     x2 : ndarray
-    deg : int, optional
+    deg : int; optional
         Polynomial order for column-by-column background subtraction
         Default is 1.
-    threshold : int, optional
+    threshold : int; optional
         Sigma threshold for outlier rejection during background subtraction.
         Defaullt is 5.
-    isrotate : bool, optional
+    isrotate : bool; optional
         Default is False.
-    isplots : int, optional
+    isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
 
     Notes
@@ -304,15 +304,15 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
         A mask array.
     bgmask : ndarray
         A background mask array.
-    deg : int, optional
+    deg : int; optional
         Polynomial order for column-by-column background subtraction.
         Default is 1.
-    threshold : int, optional
+    threshold : int; optional
         Sigma threshold for outlier rejection during background subtraction.
         Default is 5.
-    isrotate : bool, optional
+    isrotate : bool; optional
         Default is False.
-    isplots : int, optional
+    isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
 
     Notes
@@ -452,16 +452,16 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
        Single exposure frame.
     mask : np.ndarray
        Mask to remove the orders.
-    sigma : float, optional
+    sigma : float; optional
        Sigma to remove above. Default is 5.
-    bkg_estimator : str, optional
+    bkg_estimator : str; optional
        Which type of 2D background model to use.
        Default is `median`.
-    box : tuple, optional
+    box : tuple; optional
        Box size by which to smooth over. Default
        is (10,2) --> prioritizes smoothing by
        column.
-    filter_size : tuple, optional
+    filter_size : tuple; optional
        The window size of the 2D filter to apply to the
        low-resolution background map. Default is (1,1).
 
@@ -491,7 +491,7 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
 
     Parameters
     ----------
-    isplots : bool, optional
+    isplots : bool; optional
        Plots intermediate steps for the background fitting routine.
        Default is False.
 

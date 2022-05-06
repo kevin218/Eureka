@@ -15,10 +15,10 @@ class SinusoidPhaseCurveModel(Model):
 
         Parameters
         ----------
-        transit_model : eureka.S5_lightcurve_fitting.models.Model, optional
+        transit_model : eureka.S5_lightcurve_fitting.models.Model; optional
             The transit model to use for this phase curve model.
             Defaults to None.
-        eclipse_model : eureka.S5_lightcurve_fitting.models.Model, optional
+        eclipse_model : eureka.S5_lightcurve_fitting.models.Model; optional
             The eclipse model to use for this phase curve model.
             Defaults to None.
         **kwargs : dict

@@ -543,9 +543,9 @@ def calc_slitshift2(spectrum, xrng, ywindow, xwindow, width=5, deg=1):
         Array containing image limits in wavelength direction.
     ywindow : ndarray
         Array containing image limits in spatial direction.
-    width : int, optional
+    width : int; optional
         The initial guess for the Gaussian width, defaults to 5.
-    deg : int, optional
+    deg : int; optional
         The degree of the np.polyfit, defaults to 1.
 
     Returns
@@ -607,11 +607,11 @@ def calc_slitshift(wavegrid, xrng, refwave=None, width=3, deg=2):
         The 2D wavelength grid.
     xrng : ndarray
         _description_
-    refwave : ndarray, optional
+    refwave : ndarray; optional
         The 1D wavelength grid, by default None.
-    width : int, optional
+    width : int; optional
         The initial guess for the Gaussian width, defaults to 3.
-    deg : int, optional
+    deg : int; optional
         The degree of the np.polyfit, defaults to 2.
 
     Returns
@@ -658,16 +658,16 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         The 2D image.
     slitshift : ndarray
         The fitted drifts.
-    mask : ndarray, optional
+    mask : ndarray; optional
         Data that should be masked, by default None.
-    isreverse : bool, optional
+    isreverse : bool; optional
         If true subtract slitshift, else addd slitshift. By default False.
 
     Returns
     -------
     cordata : ndarray
         The 2D image corrected for slit shifts.
-    cormask.astype(int) : ndarray, optional
+    cormask.astype(int) : ndarray; optional
         The corrected mask, only returned if input mask is not None.
 
     Notes
@@ -811,10 +811,12 @@ def drift_fit2D(meta, data, validRange=9):
     drift : ndarray
         Array of measured drift values.
 
-    History
-    -------
-    Written by Kevin Stevenson        January 2017
+    Notes
+    -----
+    History:
 
+    - January 2017, Kevin Stevenson
+        Initial version
     '''
     # if postclip is not None:
     #    postclip = -postclip

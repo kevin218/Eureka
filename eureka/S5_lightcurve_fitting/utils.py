@@ -82,7 +82,7 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
 
     Parameters
     ----------
-    download_location : string, optional
+    download_location : string; optional
         The path to where the ExoCTK data package will be downloaded.
         The default setting is the user's $HOME directory.
     """
@@ -167,9 +167,9 @@ def color_gen(colormap='viridis', key=None, n=10):
     ----------
     colormap : str, sequence
         The name of the color map.
-    key : str, optional
+    key : str; optional
         The palette key. Defaults to None which uses the first palette key.
-    n : int, optional
+    n : int; optional
         If palette is callable, the argument to that function. Defaults to 10.
 
     Returns
@@ -278,9 +278,9 @@ def rebin_spec(spec, wavnew, oversamp=100, plot=False):
         The wavelength and flux to be binned.
     wavenew : array-like
         The new wavelength array.
-    oversamp : int, optional
+    oversamp : int; optional
         The oversampling factor. Defaults to 100.
-    plot : bool, optional
+    plot : bool; optional
         Unused. Defaults to False.
 
     Returns
@@ -325,7 +325,7 @@ def writeFITS(filename, extensions, headers=()):
     extensions : dict
         The extension name and associated data to include.
         in the file
-    headers : array-like, optional
+    headers : array-like; optional
         The (keyword, value, comment) groups for the PRIMARY
         header extension. Defaults to ().
     """
@@ -465,10 +465,10 @@ def find_closest(axes, points, n=1, values=False):
         The array(s) to search.
     points : array-like, float
         The point(s) to search for.
-    n : int, optional
+    n : int; optional
         The number of values to the left and right of the points.
         Defaults to 1.
-    values : bool, optional
+    values : bool; optional
         Defaults to False.
 
     Returns

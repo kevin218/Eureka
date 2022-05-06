@@ -22,7 +22,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         The metadata object.
     fitter : str
         The name of the fitter (for plot filename).
-    isTitle : bool, optional
+    isTitle : bool; optional
         Should figure have a title. Defaults to True.
 
     Notes
@@ -232,17 +232,17 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
         The metadata object.
     freenames : iterable
         The names of the fitted parameters.
-    fitter : str, optional
+    fitter : str; optional
         The name of the fitter (for plot filename). Defaults to 'emcee'.
-    burnin : bool, optional
+    burnin : bool; optional
         Whether or not the samples include the burnin phase. Defaults to False.
-    nburn : int, optional
+    nburn : int; optional
         The number of burn-in steps that are discarded later. Defaults to 0.
-    nrows : int, optional
+    nrows : int; optional
         The number of rows to make per figure. Defaults to 3.
-    ncols : int, optional
+    ncols : int; optional
         The number of columns to make per figure. Defaults to 4.
-    nthin : int, optional
+    nthin : int; optional
         If >1, the plot will use every nthin point to help speed up
         computation and reduce clutter on the plot. Defaults to 1.
 
@@ -384,7 +384,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         The metadata object.
     fitter: str
         The name of the fitter (for plot filename).
-    isTitle : bool, optional
+    isTitle : bool; optional
         Should figure have a title. Defaults to True.
 
     Notes

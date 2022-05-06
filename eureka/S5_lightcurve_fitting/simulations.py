@@ -21,19 +21,19 @@ def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None,
     ----------
     target : str
         The name of the target to simulate.
-    snr : float, optional
+    snr : float; optional
         The signal to noise to use. Defaults to 1000.
-    npts : int, optional
+    npts : int; optional
         The number of points in each lightcurve. Defaults to 1000.
-    nbins : int, optional
+    nbins : int; optional
         The number of lightcurves. Defaults to 10.
-    radius : array-like, float, optional
+    radius : array-like, float; optional
         The radius or radii value(s) to use. Defaults to None which
         will use the literature Rp/Rs value if found or 0.1 if not.
-    ldcs : sequence, optional
+    ldcs : sequence; optional
         The limb darkening profile name and coefficients.
         Defaults to ('quadratic', [0.1, 0.1]).
-    plot : bool, optional
+    plot : bool; optional
         If True, plot the figure. Defaults to False.
 
     Returns

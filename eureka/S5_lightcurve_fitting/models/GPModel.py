@@ -28,7 +28,7 @@ class GPModel(Model):
             The names of the GP kernel inputs.
         lc : eureka.S5_lightcurve_fitting.lightcurve
             The current lightcurve object.
-        gp_code : str, optional
+        gp_code : str; optional
             Type GP package to use from ('george', 'celerite'),
             by default 'george'.
         **kwargs : dict
@@ -182,7 +182,7 @@ class GPModel(Model):
 
         Parameters
         ----------
-        normalise : bool, optional
+        normalise : bool; optional
             Standardize kernels following Evans+2017. Defaults to False.
         """
         kernel_inputs = []
@@ -367,7 +367,7 @@ class GPModel(Model):
             The name of the kernel to get.
         i : int
             The kernel number.
-        channel : int, optional
+        channel : int; optional
             The channel number, by default 0.
 
         Returns

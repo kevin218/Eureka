@@ -29,12 +29,12 @@ def ld_profile(name='quadratic', latex=False):
 
     Parameters
     ----------
-    name : str, optional
+    name : str; optional
         The name of the limb darkening profile function to use,
         including 'uniform', 'linear', 'quadratic', 'kipping2013',
         'square-root', 'logarithmic', 'exponential', '3-parameter',
         and '4-parameter'. Detaults to 'quadratic'.
-    latex: bool, optional
+    latex: bool; optional
         Return the function as a LaTeX formatted string. Defaults to False.
 
     Returns
@@ -339,7 +339,7 @@ class LDC:
             The coefficients.
         errors : sequence
             The errors on each coeff.
-        n_samples : int, optional
+        n_samples : int; optional
             The number of samples. Defaults to 1000.
 
         Returns
@@ -381,16 +381,16 @@ class LDC:
             The name of the limb darkening profile function to use,
             including 'uniform', 'linear', 'quadratic', 'square-root',
             'logarithmic', 'exponential', and '4-parameter'.
-        mu_min : float, optional
+        mu_min : float; optional
             The minimum mu value to consider. Defaults to 0.05.
-        ld_min : float, optional
+        ld_min : float; optional
             The minimum limb darkening value to consider. Defaults to 0.01.
-        bandpass : svo_filters.svo.Filter(), optional
+        bandpass : svo_filters.svo.Filter(); optional
             The photometric filter through which the limb darkening
             is to be calculated. Defaults to None.
-        name : str, optional
+        name : str; optional
             A name for the calculation. Defaults to None.
-        color : str, optional
+        color : str; optional
             A color for the plotted result. Defaults to None.
         **kwargs : dict
             Unused.
@@ -532,14 +532,14 @@ class LDC:
 
         Parameters
         ----------
-        show : bool, optional
+        show : bool; optional
             Show the figure. Defaults to False.
         **kwargs : dict
             Unused.
 
         Returns
         -------
-        final : bokeh.models.widgets.Tabs, optional
+        final : bokeh.models.widgets.Tabs; optional
             The final tabbed figure. Only returned if show==False.
         """
         # Change names to reflect ld profile
@@ -581,9 +581,9 @@ class LDC:
 
         Parameters
         ----------
-        fig : matplotlib.pyplot.figure, bokeh.plotting.figure, optional
+        fig : matplotlib.pyplot.figure, bokeh.plotting.figure; optional
             An existing figure to plot on. Defaults to None.
-        show : bool, optional
+        show : bool; optional
             Show the figure. Defaults to False.
         **kwargs : dict
             Additional parameters to be passed into plotting
@@ -591,7 +591,7 @@ class LDC:
 
         Returns
         -------
-        fig : matplotlib.pyplot.figure, bokeh.plotting.figure, optional
+        fig : matplotlib.pyplot.figure, bokeh.plotting.figure; optional
             The resulting figure. Only returned if show==False.
         """
         # Separate plotting kwargs from parameter kwargs

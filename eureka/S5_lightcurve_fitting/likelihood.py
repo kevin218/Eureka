@@ -305,9 +305,9 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     ----------
     data : ndarray
         The residuals after fitting.
-    maxnbins : int, optional
+    maxnbins : int; optional
         The maximum number of bins. Use None to default to 10 points per bin.
-    binstep : int, optional
+    binstep : int; optional
         Bin step size. Defaults to 1.
     isrmserr : bool
         True if return rmserr, else False. Defaults to False.
@@ -320,7 +320,7 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         The standard error for each bin size.
     binsz : ndarray
         The different bin sizes.
-    rmserr : ndarray, optional
+    rmserr : ndarray; optional
         The uncertainty in the RMS. Only returned if isrmserr==True.
 
     Notes

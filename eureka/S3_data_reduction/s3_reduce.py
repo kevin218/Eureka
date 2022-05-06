@@ -60,10 +60,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    ecf_path : str, optional
+    ecf_path : str; optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s2_meta : eureka.lib.readECF.MetaClass, optional
+    s2_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S2 step (if running S2 and S3
         sequentially). Defaults to None.
 

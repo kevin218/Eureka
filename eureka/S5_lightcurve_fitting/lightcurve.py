@@ -35,14 +35,14 @@ class LightCurve(m.Model):
             The open log in which notes from this step can be added.
         unc : sequence
             The uncertainty on the flux.
-        parameters : str or object, optional
+        parameters : str or object; optional
             Unused. The orbital parameters of the star/planet system,
             may be a path to a JSON file or a parameter object.
-        time_units : str, optional
+        time_units : str; optional
             The time units.
-        name : str, optional
+        name : str; optional
             A name for the object.
-        share : bool, optional
+        share : bool; optional
             Whether the fit shares parameters between spectral channels.
 
         Returns
@@ -169,7 +169,7 @@ class LightCurve(m.Model):
         ----------
         meta : eureka.lib.readECF.MetaClass
             The metadata object.
-        fits : bool, optional
+        fits : bool; optional
             Plot the fit models. Defaults to True.
 
         Returns

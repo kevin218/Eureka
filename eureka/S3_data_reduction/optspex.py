@@ -15,12 +15,12 @@ def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
         Background subtracted data.
     mask : ndarray
         Outlier mask.
-    deg : int, optional
+    deg : int; optional
         Polynomial degree, defaults to 3.
-    threshold : float, optional
+    threshold : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile, defaults to 10.
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
     Returns
@@ -91,15 +91,15 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
         Background subtracted data.
     mask : ndarray
         Outlier mask.
-    threshold : float, optional
+    threshold : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile.
-    window_len : int, optional
+    window_len : int; optional
         The dimension of the smoothing window.
-    windowtype : {'flat','hanning','hamming','bartlett','blackman'}, optional
+    windowtype : {'flat','hanning','hamming','bartlett','blackman'}; optional
         UNUSED. The type of window. A flat window will produce a moving
         average smoothing.
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
     Returns
@@ -180,10 +180,10 @@ def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
         Unused. Outlier mask.
     meddata : ndarray
         The median of all data frames.
-    threshold : float, optional
+    threshold : float; optional
         Unused. Sigma threshold for outlier rejection while constructing
         spatial profile. Defaults to 10.
-    isplots : int, optional
+    isplots : int; optional
         Unused. The plotting verbosity. Defaults to 0.
 
     Returns
@@ -217,7 +217,7 @@ def profile_wavelet(subdata, mask, wavelet, numlvls, isplots=0):
         qWavelet to use
     numlvls : int
         Decomposition levels to consider (must be >= 0).
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
     Returns
@@ -291,7 +291,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
         qWavelet to use
     numlvls : int
         Decomposition levels to consider (must be >= 0).
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
     Returns
@@ -362,13 +362,13 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
         Background subtracted data.
     mask : ndarray
         Outlier mask.
-    threshold : float, optional
+    threshold : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile. Defaults to 10.
-    guess : list, optional
+    guess : list; optional
         UNUSED. The initial guess for the Gaussian parameters.
         Defaults to None.
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
     Returns
@@ -467,32 +467,32 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         The gain factor.
     v0 : ndarray
         Variance array for data.
-    p5thresh : float, optional
+    p5thresh : float; optional
         Sigma threshold for outlier rejection while constructing
         spatial profile. Defaults to 10.
-    p7thresh : float, optional
+    p7thresh : float; optional
         Sigma threshold for outlier rejection during optimal
         spectral extraction. Defaukts to 10.
-    fittype : str, optional
+    fittype : str; optional
         One of {'smooth', 'meddata', 'wavelet2D', 'wavelet',
                 'gauss', 'poly'}. The type of profile fitting
         you want to do. Defaults to 'smooth'.
-    window_len : int, optional
+    window_len : int; optional
         The dimension of the smoothing window. Defaults to 21.
-    deg : int, optional
+    deg : int; optional
         Polynomial degree. Defaults to 3.
-    windowtype : str, optional
+    windowtype : str; optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
                         'bartlett', 'blackman'}.
         The type of window. A flat window will produce a moving
         average smoothing. Defaults to 'hanning'.
-    n : int, optional
+    n : int; optional
         Integration number. Defaults to 0.
-    m : int, optional
+    m : int; optional
         File number. Defaults to 0.
-    isplots : int, optional
+    isplots : int; optional
         The plotting verbosity. Defaults to 0.
-    meddata : ndarray, optional
+    meddata : ndarray; optional
         The median of all data frames. Defaults to None.
 
     Returns

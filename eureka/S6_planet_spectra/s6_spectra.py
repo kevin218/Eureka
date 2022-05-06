@@ -26,10 +26,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    ecf_path : str, optional
+    ecf_path : str; optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s5_meta : eureka.lib.readECF.MetaClass, optional
+    s5_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S5 step (if running S5
         and S6 sequentially). Defaults to None.
 
@@ -337,7 +337,7 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
         The fitting methods used in S5.
     y_param : str
         The parameter to plot.
-    channel_key : str, optional
+    channel_key : str; optional
         A string describing the current channel (e.g. ch0),
         by default 'shared'.
 

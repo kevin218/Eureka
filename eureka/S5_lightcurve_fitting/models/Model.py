@@ -167,19 +167,19 @@ class Model:
         ----------
         time : array-like
             The time axis to use.
-        components : bool, optional
+        components : bool; optional
             Plot all model components.
-        ax : Matplotlib Axes, optional
+        ax : Matplotlib Axes; optional
             The figure axes to plot on.
-        draw : bool, optional
+        draw : bool; optional
             Whether or not to display the plot. Defaults to False.
-        color : str, optional
+        color : str; optional
             The color to use for the plot. Defaults to 'blue'.
-        zorder : numeric, optional
+        zorder : numeric; optional
             The zorder for the plot. Defaults to np.inf.
-        share : bool, optional
+        share : bool; optional
             Whether or not this model is a shared model. Defaults to False.
-        chan : int, optional
+        chan : int; optional
             The current channel number. Detaults to 0.
         **kwargs : dict
             Additional parameters to pass to plot and self.eval().
@@ -236,7 +236,7 @@ class Model:
         ----------
         time_array: sequence, astropy.units.quantity.Quantity
             The time array.
-        time_units: str, optional
+        time_units: str; optional
             The units of the input time_array, ['MJD','BJD','BJD_TDB','phase'].
             Defaults to 'BJD_TDB'.
         """
@@ -301,7 +301,7 @@ class CompositeModel(Model):
 
         Parameters
         ----------
-        incl_GP : bool, optional
+        incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
         **kwargs : dict
@@ -391,7 +391,7 @@ class CompositeModel(Model):
 
         Parameters
         ----------
-        interp : bool, optional
+        interp : bool; optional
             Whether to uniformly sample in time or just use
             the self.time time points. Defaults to False.
         **kwargs : dict

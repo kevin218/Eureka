@@ -1206,11 +1206,11 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[],
         The best-fit values from the current fit.
     freenames : list
         The list of fitted parameter names.
-    samples : ndarray, optional
+    samples : ndarray; optional
         The full chain from a sampling method, by default [].
-    upper_errs : ndarray, optional
+    upper_errs : ndarray; optional
         The one sigma upper limits from a sampling method, by default [].
-    lower_errs : ndarray, optional
+    lower_errs : ndarray; optional
         The one sigma lower limits from a sampling method, by default [].
     """
     ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))

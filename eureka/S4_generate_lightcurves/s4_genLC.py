@@ -42,7 +42,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    ecf_path : str, optional
+    ecf_path : str; optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
     s3_meta : eureka.lib.readECF.MetaClass

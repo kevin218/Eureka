@@ -104,9 +104,9 @@ def image_filtering(img, radius=1, gf=4):
     ----------
     img : np.ndarray
        2D image array. 
-    radius : np.float, optional
+    radius : np.float; optional
        Default is 1.
-    gf : np.float, optional
+    gf : np.float; optional
        The standard deviation by which to Gaussian
        smooth the image. Default is 4.
 
@@ -140,7 +140,7 @@ def f277_mask(data, isplots=0):
     Parameters
     ----------
     data : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
@@ -188,11 +188,11 @@ def mask_method_one(data, meta, isplots=0, save=True):
     ----------  
     data : object
     meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    save : bool, optional
+    save : bool; optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
 
@@ -296,11 +296,11 @@ def mask_method_two(data, meta, isplots=0, save=False):
     -----------
     data : object
     meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    save : bool, optional
+    save : bool; optional
        Has the option to save the initial guesses for the location
        of the NIRISS orders. This is set in the .ecf control files.
        Default is False.
@@ -419,7 +419,7 @@ def simplify_niriss_img(data, meta, isplots=0):
     ----------     
     data : object  
     meta : object 
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.  
 
@@ -504,17 +504,17 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     ----------
     data : object
     meta : object
-    n_iters : int, optional
+    n_iters : int; optional
        The number of iterations to go over and remove cosmic
        rays. Default is 3.
-    readnoise : float, optional
+    readnoise : float; optional
        An estimation of the readnoise of the detector.
        Default is 5.
-    sigclip : list, array, optional
+    sigclip : list, array; optional
        A list or array of len(n_iiters) corresponding to the
        sigma-level which should be clipped in the cosmic
        ray removal routine. Default is [4,2,3].
-    isplots : int, optional
+    isplots : int; optional
        The level of output plots to display. Default is 0 
        (no plots).
 
@@ -584,7 +584,7 @@ def fit_orders(data, meta, which_table=2):
     ----------
     data : object
     meta : object
-    which_table : int, optional
+    which_table : int; optional
        Sets with table of initial y-positions for the
        orders to use. Default is 2.
 
@@ -651,7 +651,7 @@ def fit_orders_fast(data, meta, which_table=2):
     ----------
     data : object
     meta : object
-    which_table : int, optional
+    which_table : int; optional
        Sets with table of initial y-positions for the
        orders to use. Default is 2.
 

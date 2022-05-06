@@ -22,10 +22,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    ecf_path : str, optional
+    ecf_path : str; optional
         The absolute or relative path to where ecfs are stored.
         Defaults to None which resolves to './'.
-    s4_meta : eureka.lib.readECF.MetaClass, optional
+    s4_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S4 step (if running S4 and S5
         sequentially). Defaults to None.
 
