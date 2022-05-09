@@ -212,7 +212,7 @@ def mask_method_edges(data, radius=1, gf=4,
 
 
 def mask_method_profile(data, degree=4, save=False,
-                        outdir=None, isplots=0):
+                        outdir=None, isplots=8):
     """
     A second method to extract the masks for the first and
     second orders in NIRISS data. This method uses the vertical
@@ -243,7 +243,6 @@ def mask_method_profile(data, degree=4, save=False,
         std    = np.nanstd(column) # used to find second peak
         return height - which_std*std
 
-
     def identify_peaks(column, height, distance):
         """ Identifies peaks in the spatial profile. """
         p,_ = find_peaks(column, height=height, distance=distance)
@@ -262,6 +261,13 @@ def mask_method_profile(data, degree=4, save=False,
         tempx = np.delete(x, outliers)
         tempy = np.delete(y, outliers)
         return tempx, tempy
+
+    def mask_profile(mu, x, y, alpha=3, gamma=13):
+        """ Masks profiles that have already been fitted. """
+        m1 = Moffat1D(x_0=mu, alpha=alpha, gamma=gamma)
+        rmv = np.where(m1(x) < 0.01)[0]          #  and points beyond the 1st orders
+        newx, newcol = x[rmv] + 0.0, y[rmv] + 0.0
+        return newx, newcol
 
     def diagnostic_plotting(x, y, model, model_final):
         """ Plots the data, the first fit, and the final best-fit. """
@@ -298,26 +304,46 @@ def mask_method_profile(data, degree=4, save=False,
     x1, y1 = find_fit_outliers(x, center_1, fit1(x)) # Finds bad points
     fit1_final = fit_function(x1, y1, deg=degree)
 
-    if isplots>=6:
-        diagnostic_plotting(x, center_1, fit1, fit1_final)
-
     tab['order_1'] = fit1_final(x) # Adds fit of 1st order to output table
 
-    if new_ccd_no_premask.shape[0]==256: # Checks to see if 2nd order available
-        center_2 = np.zeros(new_ccd_no_premask.data.shape[1])
+
+    if new_ccd_no_premask.shape[0]==256: # Checks to see if 2nd & 3rd orders available
+
+        # Some arrays we'll be populating later on
         colx = np.arange(0,new_ccd_no_premask.data.shape[0],1)
+        center_2 = np.zeros(new_ccd_no_premask.data.shape[1])
+        center_3 = np.zeros(new_ccd_no_premask.data.shape[1])
 
-        for i in range(500,2048): # Can't get a good guesstimate for 2nd order
-                                  #    past pixel ~500
+        # We almost certainly want to fit the 3rd order first,
+        #    since it's physically distinct
+
+        for i in range(new_ccd_no_premask.shape[1]):
             col = new_ccd_no_premask.data[:,i]
-            m1  = Moffat1D(x_0=tab['order_1'][i], alpha=3, gamma=13) # approx
-            rmv = np.where( (m1(colx)*np.nanmax(col) < 30) &    # removes points under model
-                            (colx>50))[0]                       #  and points beyond the 1st orders
-            newx, newcol = colx[rmv] + 0.0, col[rmv] + 0.0
-            height = define_peak_params(newcol, which_std=2)
-            p = identify_peaks(newcol, height=height, distance=10.0)
-            center_2[i] = np.nanmedian(newx[p])
+            newx, newcol = mask_profile(mu=tab['order_1'][i], x=colx, y=col)
 
+            if i <= 750: # Can't get a good guesstimate for 3rd order past pixel~750
+                height = define_peak_params(newcol, which_std=4)
+                p = identify_peaks(newcol, height=height, distance=10.0)
+                inds = np.where(newx[p]>120)[0] # want to make sure we get the 3rd order
+                center_3[i] = np.nanmedian(newx[p[inds]])
+
+                newx, newcol = mask_profile(mu=center_3[i], x=newx,
+                                            y=newcol) # masks 3rd order
+
+            if i >= 500: # Can't get a good guesstimate for 2nd order past pixel~500
+                height = define_peak_params(newcol, which_std=2)
+                p = identify_peaks(newcol, height=height, distance=10.0)
+                center_2[i] = np.nanmedian(newx[p])
+
+        # Fitting polynomial to 3rd order
+        q3 = ((center_3 > 0) & (np.isnan(center_3) == False))
+        fit3 = fit_function(x[q3], center_3[q3], deg=degree)
+        x3, y3 = find_fit_outliers(x[q3], center_3[q3], fit3(x[q3])) # Finds bad points
+        fit3_final = fit_function(x3, y3, deg=degree)
+        tab['order_3'] = fit3_final(x) # Adds fit of 3rd order to output table
+        tab['order_3'][1000:len(tab['order_3'])] = np.nan # Remove parts of the fit where no 3rd order
+
+        # Fitting polynomial to 2nd order
         rmv_nans = ((np.isnan(center_2)==False) &
                     (center_2 > 0) & (x < 1760)) # removes first 500 and last 268 points
         fit2 = fit_function(x[rmv_nans], center_2[rmv_nans], deg=degree)
@@ -325,16 +351,17 @@ def mask_method_profile(data, degree=4, save=False,
                                    center_2[rmv_nans], fit2(x[rmv_nans]),
                                    which_std=1)
         # Need some points from the first order to anchor second order
-        #x2 = np.append(x[:300], x2)
-        #y2 = np.append(tab['order_1'][:300], y2)
+        x2 = np.append(x[:100], x2)
+        y2 = np.append(tab['order_1'][:100]+15, y2)
 
         fit2_final = fit_function(x2, y2, deg=degree)
 
         if isplots>=6:
+            diagnostic_plotting(x, center_1, fit1, fit1_final)
             diagnostic_plotting(x, center_2, fit2, fit2_final)
+            diagnostic_plotting(x, center_3, fit3, fit3_final)
 
         tab['order_2'] = fit2_final(x) # Adds fit of 2nd order to output table
-
 
     if save:
         fn = 'niriss_order_fits_method2.csv'
