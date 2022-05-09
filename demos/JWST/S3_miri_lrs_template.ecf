@@ -35,6 +35,6 @@ verbose         True        # If True, more details will be printed about steps
 # Project directory
 topdir          /home/User/
 
-# Directories relative to project dir
+# Directories relative to topdir
 inputdir        /Data/JWST-Sim/MIRI/Stage2/   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       /Data/JWST-Sim/MIRI/Stage3/
