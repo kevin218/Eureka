@@ -25,7 +25,7 @@ skip_straylight         True    # Not run for MIRI LRS Slitless
 skip_fringe             True    # Not run for MIRI LRS Slitless
 skip_pathloss           True    # Not run for MIRI LRS Slitless
 skip_barshadow          True    # Not run for MIRI LRS Slitless
-skip_photom             True
+skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3.
 skip_resample           True    # Not run for MIRI LRS Slitless
 skip_cube_build         True    # Not run for MIRI LRS Slitless
 skip_extract_1d         False
