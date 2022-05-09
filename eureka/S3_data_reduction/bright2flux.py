@@ -119,27 +119,27 @@ def bright2dn(data, meta, mjy=False):
         Convert to using Xarray Dataset
     """
     # Load response function and wavelength
-    foo = fits.getdata(meta.photfile)
+    phot = fits.getdata(meta.photfile)
     if meta.inst == 'nircam':
-        ind = np.where((foo['filter'] == data.attrs['mhdr']['FILTER']) *
-            (foo['pupil'] == data.attrs['mhdr']['PUPIL']) *
-            (foo['order'] == 1))[0][0]
+        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+            (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
+            (phot['order'] == 1))[0][0]
     elif meta.inst == 'miri':
-        ind = np.where((foo['filter'] == data.attrs['mhdr']['FILTER']) *
-            (foo['subarray'] == data.attrs['mhdr']['SUBARRAY']))[0][0]
+        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+            (phot['subarray'] == data.attrs['mhdr']['SUBARRAY']))[0][0]
     elif meta.inst == 'nirspec':
-        ind = np.where((foo['filter'] == data.attrs['mhdr']['FILTER']) *
-            (foo['grating'] == data.attrs['mhdr']['GRATING']) *
-            (foo['slit'] == data.attrs['shdr']['SLTNAME']))[0][0]
+        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+            (phot['grating'] == data.attrs['mhdr']['GRATING']) *
+            (phot['slit'] == data.attrs['shdr']['SLTNAME']))[0][0]
     elif meta.inst == 'niriss':
-        ind = np.where((foo['filter'] == data.attrs['mhdr']['FILTER']) *
-            (foo['pupil'] == data.attrs['mhdr']['PUPIL']) *
-            (foo['order'] == 1))[0][0]
+        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+            (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
+            (phot['order'] == 1))[0][0]
     else:
         raise ValueError(f'The bright2dn function has not been edited to handle the instrument {meta.inst},and can currently only handle JWST niriss, nirspec, nircam, and miri observations.')
 
-    response_wave = foo['wavelength'][ind]
-    response_vals = foo['relresponse'][ind]
+    response_wave = phot['wavelength'][ind]
+    response_vals = phot['relresponse'][ind]
     igood = np.where(response_wave > 0)[0]
     response_wave = response_wave[igood]
     response_vals = response_vals[igood]

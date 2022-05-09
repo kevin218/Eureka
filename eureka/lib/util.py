@@ -46,9 +46,7 @@ def trim(data, meta):
     """
     subdata = data.isel(y=np.arange(meta.ywindow[0],meta.ywindow[1]),
                         x=np.arange(meta.xwindow[0],meta.xwindow[1]))
-    # Trim wavelength attribute
-    # data.attrs['wave_2d'] = data.attrs['wave_2d'][meta.ywindow[0]:meta.ywindow[1],
-    #                                             meta.xwindow[0]:meta.xwindow[1]]
+    
     meta.subny = meta.ywindow[1] - meta.ywindow[0]
     meta.subnx = meta.xwindow[1] - meta.xwindow[0]
     if hasattr(meta, 'diffmask'):

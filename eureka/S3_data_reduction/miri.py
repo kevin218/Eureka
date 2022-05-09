@@ -41,8 +41,6 @@ def read(filename, data, meta):
     - Apr 21, 2022 Kevin Stevenson
         Convert to using Xarray Dataset
     '''
-    assert isinstance(filename, str)
-
     hdulist = fits.open(filename)
 
     # Load main and science headers

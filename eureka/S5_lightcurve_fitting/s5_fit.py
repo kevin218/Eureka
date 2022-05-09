@@ -137,6 +137,7 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
+                    # FINDME: need to consider optmask
                     flux = np.ma.append(flux,lc.data.values[channel,:] / \
                                 np.mean(lc.data.values[channel,:]))
                     flux_err = np.ma.append(flux_err,lc.err.values[channel,:] / \

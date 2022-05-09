@@ -48,14 +48,6 @@ class MetaClass:
         return
 
 
-# class DataClass:
-#     '''A class to hold Eureka! image data.
-#     '''
-#
-#     def __init__(self):
-#         return
-
-
 def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 

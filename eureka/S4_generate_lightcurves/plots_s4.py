@@ -20,12 +20,12 @@ def binned_lightcurve(meta, lc, i):
     '''
     plt.figure(int('43{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 6))
     plt.clf()
-    plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
+    plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (lc.wave_low.values[i], lc.wave_hi.values[i]))
     ax = plt.subplot(111)
     time_modifier = np.floor(lc.time.values[0])
     # Normalized light curve
-    norm_lcdata = lc['data'][i] / lc['data'][i, -1]
-    norm_lcerr = lc['err'][i] / lc['data'][i, -1]
+    norm_lcdata = lc['data'][i] / np.nan.median(lc['data'][i], axis=0)
+    norm_lcerr = lc['err'][i] / np.nan.median(lc['data'][i], axis=0)
     plt.errorbar(lc.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
     plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')

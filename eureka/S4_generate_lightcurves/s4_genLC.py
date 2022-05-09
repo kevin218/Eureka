@@ -119,12 +119,6 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             #table = astropytable.readtable(meta.tab_filename)
             spec = xrio.readXR(meta.filename_S3_SpecData)
 
-            # Reverse the reshaping which has been done when saving the astropy table
-            # optspec = np.reshape(table['optspec'].data, (-1, meta.subnx))
-            # opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
-            # wave_1d = table['wave_1d'].data[0:meta.subnx]
-            # meta.time = table['time'].data[::meta.subnx]
-
             if meta.wave_min is None:
                 meta.wave_min = np.min(spec.wave_1d.values)
                 log.writelog(f'No value was provided for meta.wave_min, so defaulting to {meta.wave_min}.', mute=(not meta.verbose))
@@ -136,9 +130,6 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             elif meta.wave_max>np.max(spec.wave_1d.values):
                 log.writelog(f'WARNING: The selected meta.wave_max ({meta.wave_max}) is larger than the longest wavelength ({np.max(spec.wave_1d.values)})')
 
-            #Replace NaNs with zero
-            spec.optspec[np.where(np.isnan(spec.optspec))] = 0
-            spec.opterr[np.where(np.isnan(spec.opterr))] = 0
             meta.n_int, meta.subnx   = spec.optspec.shape
 
             # Determine wavelength bins
@@ -152,15 +143,26 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             meta.wave_low = np.array(meta.wave_low)
             meta.wave_hi = np.array(meta.wave_hi)
             meta.wave = (meta.wave_low + meta.wave_hi)/2
-            meta.wave_err = (meta.wave_hi - meta.wave_low)/2
+
+            # Define light curve DataArray
+            lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)), meta.wave, spec.time.values, spec.optspec.attrs['flux_units'], spec.wave_1d.attrs['wave_units'], spec.optspec.attrs['time_units'], name='data')
+            lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)), meta.wave, spec.time.values, spec.optspec.attrs['flux_units'], spec.wave_1d.attrs['wave_units'], spec.optspec.attrs['time_units'], name='err')
+            lc = xrio.makeDataset({'data':lcdata, 'err':lcerr})
+            lc['wave_low'] = (['wavelength'], meta.wave_low)
+            lc['wave_hi'] = (['wavelength'], meta.wave_hi)
+            lc['wave_err'] = (lc.wave_hi - lc.wave_low)/2
+            lc.wave_low.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
+            lc.wave_hi.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
+            lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
             if not hasattr(meta, 'boundary'):
                 meta.boundary = 'extend' # The default value before this was added as an option
 
+            # FINDME: The current implementation needs improvement,
+            # consider using optmask instead of masked arrays
             # Create masked array for steps below
             optspec_ma = np.ma.masked_array(spec.optspec, spec.optmask)
             # Create opterr array with same mask as optspec
-            # FINDME: This implementation is terrible, masked arrays aren't working here
             opterr_ma = np.ma.copy(optspec_ma)
             opterr_ma = spec.opterr
 
@@ -182,8 +184,8 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                 drift1d, driftmask = drift.spec1D(optspec_ma, meta, log)
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(drift1d, driftmask, Box1DKernel(meta.box_width))
-                spec['drift1d'] = (['time'], drift1d)
-                spec['driftmask'] = (['time'], driftmask)
+                lc['drift1d'] = (['time'], drift1d)
+                lc['driftmask'] = (['time'], driftmask)
                 # Correct for drift/jitter
                 for n in range(meta.n_int):
                     # Need to zero-out the weights of masked data
@@ -201,6 +203,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             # Need to look into these issues.
             optspec_ma = np.ma.masked_invalid(optspec_ma)
             opterr_ma = np.ma.masked_array(opterr_ma, optspec_ma.mask)
+            #spec['optspec_drift']
 
             # Compute MAD alue
             meta.mad_s4 = util.get_mad(meta, spec.wave_1d.values, optspec_ma, meta.wave_min, meta.wave_max)
@@ -210,21 +213,12 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                 plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
 
             log.writelog("Generating light curves")
-            lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)), meta.wave, spec.time.values, spec.optspec.attrs['flux_units'], spec.wave_1d.attrs['wave_units'], spec.optspec.attrs['time_units'], name='data')
-            lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)), meta.wave, spec.time.values, spec.optspec.attrs['flux_units'], spec.wave_1d.attrs['wave_units'], spec.optspec.attrs['time_units'], name='err')
-            lc = xrio.makeDataset({'data':lcdata, 'err':lcerr})
-            lc['wave_low'] = (['wavelength'], meta.wave_low)
-            lc['wave_hi'] = (['wavelength'], meta.wave_hi)
-            lc['wave_err'] = (['wavelength'], meta.wave_err)
-            lc.wave_low.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
-            lc.wave_hi.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
-            lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
             # Loop over spectroscopic channels
             for i in range(meta.nspecchan):
-                log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
+                log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (lc.wave_low.values[i], lc.wave_hi.values[i]))
                 # Compute valid indeces within wavelength range
-                index   = np.where((spec.wave_1d >= meta.wave_low[i])*(spec.wave_1d < meta.wave_hi[i]))[0]
+                index   = np.where((spec.wave_1d >= lc.wave_low.values[i])*(spec.wave_1d < lc.wave_hi.values[i]))[0]
                 # Compute mean flux for each spectroscopic channel
                 # Sumation leads to outliers when there are masked points
                 lc['data'][i]    = np.ma.mean(optspec_ma[:,index],axis=1)
@@ -254,10 +248,6 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
             # Save Dataset object containing binned light curves
             meta.filename_S4_LCData = meta.outputdir + 'S4_' + event_ap_bg + "_LCData.h5"
             success = xrio.writeXR(meta.filename_S4_LCData, lc, verbose=True)
-
-            # wavelengths = np.mean(np.append(meta.wave_low.reshape(1,-1), meta.wave_hi.reshape(1,-1), axis=0), axis=0)
-            # wave_errs = (meta.wave_hi-meta.wave_low)/2
-            # astropytable.savetable_S4(meta.tab_filename_s4, meta.time, wavelengths, wave_errs, meta.lcdata, meta.lcerr)
 
             # Save results
             me.saveevent(meta, meta.outputdir + 'S4_' + meta.eventlabel + "_Meta_Save", save=[])

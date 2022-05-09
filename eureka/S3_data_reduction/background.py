@@ -118,17 +118,6 @@ def BGsubtraction(data, meta, log, isplots):
     # Perform background subtraction
     data['flux'] -= data.bg
 
-    if hasattr(meta, 'save_bgsub') and meta.save_bgsub:
-        log.writelog('  Saving background subtracted FITS file', mute=(not meta.verbose))
-        new_filename = data.attrs['filename'].split(os.sep)[-1]
-        new_folder = os.path.join(meta.outputdir, 'bgsub_FITS')
-        if not os.path.isdir(new_folder):
-            os.mkdir(new_folder)
-        new_filename = os.path.join(new_folder, new_filename)
-        with fits.open(data.attrs['filename']) as file:
-            file["SCI"].data = data.flux
-            file.writeto(new_filename)
-
     return data
 
 # STEP 3: Fit sky background with out-of-spectra data
