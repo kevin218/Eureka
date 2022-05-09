@@ -540,3 +540,108 @@ Here's an example fit parameter file:
 
 .. include:: ../media/S5_fit_par_template.epf
    :literal:
+
+
+Stage 6
+-------
+
+.. include:: ../media/S6_template.ecf
+   :literal:
+
+allapers
+''''''''
+Boolean to determine whether Stage 6 is run on all the apertures considered in Stage 5. If
+False, will just use the most recent output in the input directory.
+
+y_unit
+''''''
+The unit to use when plotting and saving the output table. For transit observations
+(or to plot the transmission spectrum from a phase curve observation), values can be
+"Rp/Rs" or "(Rp/Rs)^2". For eclipse observations (or to plot the dayside emission
+spectrum from a phase curve observation), the value must be "Fp/Fs".
+
+y_scalar
+''''''''
+This parameter can be used to rescale the y-axis. If set to 100, the y-axis will be in units of
+percent. If set to 1e6, the y-axis will be in units of ppm. If set to any other value other than
+1, 100, 1e6, then the y-axis will simply be multiplied by that value and the scalar will be noted
+in the y-axis label.
+
+x_unit
+''''''
+The x-unit to use in the plot. This can be any unit included in astropy.units.spectral
+(e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
+
+star_Rad
+''''''''
+The stellar radius. Used to compute the scale height if y_unit is transmission type and
+isplots_S6>=3.
+
+planet_Teq
+''''''''''
+The planet's zero-albedo, complete redistribution equlibrium temperature in Kelvin. Used to
+compute the scale height if y_unit is transmission type and isplots_S6>=3.
+
+planet_Mass
+'''''''''''
+The planet's mass in units of Jupiter masses. Used to compute the scale height if y_unit
+is transmission type and isplots_S6>=3.
+
+planet_Rad
+''''''''''
+The planet's radius in units of Jupiter radii. Set to None to use the average fitted radius.
+Used to compute the scale height if y_unit is transmission type and isplots_S6>=3.
+
+planet_mu
+'''''''''
+The mean molecular mass of the atmosphere (in atomic mass units).
+Used to compute the scale height if y_unit is transmission type and isplots_S6>=3.
+
+planet_R0
+'''''''''
+The reference radius (in Jupiter radii) for the scale height measurement. Set to None to
+use the mean fitted radius. Used to compute the scale height if y_unit is transmission
+type and isplots_S6>=3.
+
+isplots_S6
+''''''''''
+Sets how many plots should be saved when running Stage 6. A full description of these
+outputs is available here: :ref:`Stage 6 Output <s6-out>`.
+
+hide_plots
+'''''''''''
+If True, plots will automatically be closed rather than popping up on the screen.
+
+topdir + inputdir
+''''''''''''''''''
+The path to the directory containing the Stage 4 JWST data.
+
+topdir + outputdir
+'''''''''''''''''''
+The path to the directory in which to output the Stage 5 JWST data and plots.
+
+topdir + model_spectrum
+'''''''''''''''''''''''
+The path to a model spectrum to plot underneath the observations to show how the fitted results
+compare to the input model for simulated observations or how the fitted results compare to a
+retrieved model for real observations. Set to None if no model should be plotted.
+The file should have column 1 as the wavelength and column 2 should contain the transmission
+or emission spectrum. Any headers must be preceded by a #.
+
+model_x_unit
+''''''''''''
+The x-unit of the model. This can be any unit included in astropy.units.spectral
+(e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
+
+model_y_unit
+''''''''''''
+The y-unit of the model. Options include "Rp/Rs", "(Rp/Rs)^2", and "Fp/Fs".
+
+model_y_scalar
+''''''''''''''
+Indicate whether model y-values have already been scaled (e.g. write 1e6 if
+model_spectrum is in ppm).
+
+model_delimiter
+'''''''''''''''
+Delimiter between columns. Typical options: None (for whitespace), ',' for comma.

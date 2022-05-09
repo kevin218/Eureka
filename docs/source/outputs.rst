@@ -146,3 +146,31 @@ In Stage 5:
       :alt: Stage 5 GP plot
 
       Stage 5 output: Lightcurve, GP model, and Residual Plot
+
+
+.. _s6-out:
+
+Stage 6 Outputs
+---------------
+
+In Stage 6:
+   - If ``isplots_S6`` = 1: ``Eureka!`` will plot the transmission or emission spectrum, depending
+     on the setting of ``y_unit``.
+
+   .. figure:: ../media/S6_out/fig6101_transmission.png
+      :alt: Stage 6 transmission spectrum.
+
+      Stage 6 output: Transmission Spectrum.
+
+   .. figure:: ../media/S6_out/fig6101_emission.png
+      :alt: Stage 6 emission spectrum.
+
+      Stage 6 output: Emission Spectrum.
+
+   - If ``isplots_S6`` = 3: ``Eureka!`` will make another transmission plot (if ``y_unit`` is
+     transmission type) with a second y-axis which is in units of atmospheric scale height.
+
+   .. figure:: ../media/S6_out/fig6301_transmission.png
+      :alt: Stage 6 transmission spectrum with a second y-axis in units of atmospheric scale height.
+
+      Stage 6 output: Transmission Spectrum with Double y-axis.
