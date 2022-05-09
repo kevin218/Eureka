@@ -3,7 +3,7 @@
 Eureka! Outputs
 ===============
 
-Stage 2 through Stage 5 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages. 
+Stage 2 through Stage 6 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages. 
 
 
 .. _s2-out:
@@ -115,6 +115,7 @@ In Stage 5:
       Stage 5 output: Fitted lightcurve
 
    - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
+
    .. figure:: ../media/S5_out/fig5201.png
       :alt: Stage 5 RMS deviation plot
 
@@ -146,3 +147,31 @@ In Stage 5:
       :alt: Stage 5 GP plot
 
       Stage 5 output: Lightcurve, GP model, and Residual Plot
+
+
+.. _s6-out:
+
+Stage 6 Outputs
+---------------
+
+In Stage 6:
+   - If ``isplots_S6`` = 1: ``Eureka!`` will plot the transmission or emission spectrum, depending
+     on the setting of ``y_unit``.
+
+   .. figure:: ../media/S6_out/fig6101_transmission.png
+      :alt: Stage 6 transmission spectrum.
+
+      Stage 6 output: Transmission Spectrum.
+
+   .. figure:: ../media/S6_out/fig6101_emission.png
+      :alt: Stage 6 emission spectrum.
+
+      Stage 6 output: Emission Spectrum.
+
+   - If ``isplots_S6`` = 3: ``Eureka!`` will make another transmission plot (if ``y_unit`` is
+     transmission type) with a second y-axis which is in units of atmospheric scale height.
+
+   .. figure:: ../media/S6_out/fig6301_transmission.png
+      :alt: Stage 6 transmission spectrum with a second y-axis in units of atmospheric scale height.
+
+      Stage 6 output: Transmission Spectrum with Double y-axis.

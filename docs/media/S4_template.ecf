@@ -1,10 +1,12 @@
 # Eureka! Control File for Stage 4: Generate Lightcurves 
 
+# Stage 4 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4
+
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan       20          # Number of spectroscopic channels
-wave_min        2.4         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
-wave_max        4.0         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
-allapers        True        # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
+nspecchan       2          # Number of spectroscopic channels
+wave_min        1.5         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
+wave_max        4.5         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
+allapers        False       # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Parameters for drift correction of 1D spectra
 correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
@@ -33,6 +35,6 @@ verbose         True    # If True, more details will be printed about steps
 # Project directory
 topdir          /home/User
 
-# Directories relative to project dir
-inputdir        /Data/JWST-Sim/NIRCam/Stage3    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
-outputdir       /Data/JWST-Sim/NIRCam/Stage4
+# Directories relative to topdir
+inputdir        /Data/JWST-Sim/NIRSpec/Stage3    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir       /Data/JWST-Sim/NIRSpec/Stage4
