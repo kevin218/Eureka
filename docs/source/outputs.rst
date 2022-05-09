@@ -3,7 +3,7 @@
 Eureka! Outputs
 ===============
 
-Stage 2 through Stage 5 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages. 
+Stage 2 through Stage 6 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages. 
 
 
 .. _s2-out:
@@ -115,6 +115,7 @@ In Stage 5:
       Stage 5 output: Fitted lightcurve
 
    - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
+
    .. figure:: ../media/S5_out/fig5201.png
       :alt: Stage 5 RMS deviation plot
 

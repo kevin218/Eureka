@@ -5,7 +5,7 @@ Eureka! Control File (.ecf)
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
 
-In the following, we look at the contents of the ecf for Stages 1, 2, 3, 4, and 5.
+In the following, we look at the contents of the ecf for Stages 1, 2, 3, 4, 5, and 6.
 
 
 Stage 1
