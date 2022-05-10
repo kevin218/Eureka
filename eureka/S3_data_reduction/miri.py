@@ -55,8 +55,8 @@ def read(filename, data, meta):
     # Otherwise use the wavelength array from the header
     if np.all(hdulist['WAVELENGTH', 1].data == 0):
         if meta.firstFile:
-            print('  WARNING: The wavelength for the simulated MIRI data are currently hardcoded '
-                  'because they are not in the .fits files themselves')
+            print('  WARNING: The wavelength for the simulated MIRI data are currently hardcoded\n'+
+                  '           because they are not in the .fits files themselves')
         data.wave = np.tile(wave_MIRI_hardcoded(),(data.data.shape[2],1))[:,::-1]
     else:
         data.wave = hdulist['WAVELENGTH', 1].data
@@ -66,17 +66,37 @@ def read(filename, data, meta):
     # Record integration mid-times in BJD_TDB
     if len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
-            print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded '
-                  'because they are not in the .fits files themselves')
+            print('  WARNING: The timestamps for the simulated MIRI data are currently hardcoded\n'+
+                  '           because they are not in the .fits files themselves')
 
         if 'WASP_80b' in data.filename and 'transit' in data.filename:
             # Time array for WASP-80b MIRISIM transit observations
             # Assuming transit near August 1, 2022
-            data.time = np.linspace(2459791.3696221784, 2459791.6100991997, 4507, endpoint=True)[data.intstart - 1:data.intend-1]
+            phase_i = 0.95434
+            phase_f = 1.032726
+            t0 = 2456487.425006
+            per = 3.06785234
+            time_i = phase_i*per+t0
+            while np.abs(time_i-2459792.54237)>per:
+                time_i += per
+            time_f = phase_f*per+t0
+            while time_f<time_i:
+                time_f += per
+            data.time = np.linspace(time_i, time_f, 4507, endpoint=True)[data.intstart - 1:data.intend-1]
         elif 'WASP_80b' in data.filename and 'eclipse' in data.filename:
             # Time array for WASP-80b MIRISIM eclipse observations
             # Assuming eclipse near August 1, 2022
-            data.time = np.linspace(2459789.8356924183, 2459790.0761694396, 4506, endpoint=True)[data.intstart - 1:data.intend-1]
+            phase_i = 0.45434
+            phase_f = 0.532725929856498
+            t0 = 2456487.425006
+            per = 3.06785234
+            time_i = phase_i*per+t0
+            while np.abs(time_i-2459792.54237)>per:
+                time_i += per
+            time_f = phase_f*per+t0
+            while time_f<time_i:
+                time_f += per
+            data.time = np.linspace(time_i, time_f, 4506, endpoint=True)[data.intstart - 1:data.intend-1]
         elif 'new_drift' in data.filename:
             # Time array for the newest MIRISIM observations
             data.time = np.linspace(0, 47.712*(1849)/3600/24, 1849, endpoint=True)[data.intstart - 1:data.intend-1]
@@ -91,7 +111,6 @@ def read(filename, data, meta):
             raise AssertionError('Eureka does not currently know how to generate the time array for these simulations.')
     else:
         data.time = int_times['int_mid_BJD_TDB']
-
     meta.time_units = 'BJD_TDB'
 
     # MIRI appears to be rotated by 90° compared to NIRCam, so rotating arrays to allow the re-use of NIRCam code

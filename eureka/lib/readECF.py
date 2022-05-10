@@ -23,13 +23,13 @@ class MetaClass:
     '''A class to hold Eureka! metadata.
     '''
 
-    def __init__(self, folder='./', file=None, **kwargs):
+    def __init__(self, folder=None, file=None, **kwargs):
         '''Initialize the MetaClass object.
 
         Parameters
         ----------
         folder: str, optional
-            The folder containing an ECF file to be read in. Defaults to './'.
+            The folder containing an ECF file to be read in. Defaults to None which resolves to './'.
         file:   str, optional
             The ECF filename to be read in. Defaults to None which results in an empty MetaClass object.
         **kwargs:   dict, optional
@@ -42,6 +42,9 @@ class MetaClass:
         - Mar 2022 Taylor J Bell
             Initial Version based on old readECF code.
         '''
+        if folder is None:
+            folder = '.'+os.sep
+        
         self.params = {}
         if file is not None and folder is not None:
             if os.path.exists(os.path.join(folder,file)):
@@ -162,6 +165,8 @@ class MetaClass:
         History:
         - Mar 2022 Taylor J Bell
             Initial Version based on old readECF code.
+        - April 25, 2022 Taylor J Bell
+            Joining topdir and inputdir/outputdir here.
         """
         self.filename = file
         self.folder = folder
@@ -194,14 +199,19 @@ class MetaClass:
         for param, value in self.params.items():
             setattr(self, param, value)
 
-        if self.inputdir[0]=='/':
-            self.inputdir = self.inputdir[1:]
-        if self.inputdir[-1]!='/':
-            self.inputdir += '/'
-        if self.outputdir[0]=='/':
-            self.outputdir = self.outputdir[1:]
-        if self.outputdir[-1]!='/':
-            self.outputdir += '/'
+        self.inputdir_raw = self.inputdir
+        self.outputdir_raw = self.outputdir
+
+        # Join inputdir_raw and outputdir_raw to topdir for convenience
+        # Use split to avoid issues from beginning
+        self.inputdir = os.path.join(self.topdir, *self.inputdir.split(os.sep))
+        self.outputdir = os.path.join(self.topdir, *self.outputdir.split(os.sep))
+
+        # Make sure there's a trailing slash at the end of the paths
+        if self.inputdir[-1] != os.sep:
+            self.inputdir += os.sep
+        if self.outputdir[-1] != os.sep:
+            self.outputdir += os.sep
 
         return
 
@@ -262,11 +272,7 @@ class MetaClass:
                 else:
                     line_segs = line.strip().split()
                     if line_segs[0]=='inputdir':
-                        if self.topdir in self.inputdir:
-                            inputdir_string = self.inputdir[len(self.topdir):]
-                        else:
-                            inputdir_string = self.inputdir
-                        new_file.write(line_segs[0]+'\t\t'+inputdir_string+'\t'+' '.join(line_segs[2:])+'\n')
+                        new_file.write(line_segs[0]+'\t\t'+self.inputdir_raw+'\t'+' '.join(line_segs[2:])+'\n')
                     else:
                         new_file.write(line)
         return
