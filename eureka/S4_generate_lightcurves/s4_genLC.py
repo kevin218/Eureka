@@ -192,11 +192,11 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                     weights = (~np.ma.getmaskarray(optspec_ma[n])).astype(int)
                     spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec_ma[n], k=3, s=0, w=weights)
                     spline2    = spi.UnivariateSpline(np.arange(meta.subnx), spec.opterr[n],  k=3, s=0, w=weights)
-                    optspec_ma[n] = spline(np.arange(meta.subnx)+spec.drift1d[n].values)
-                    opterr_ma[n]  = spline2(np.arange(meta.subnx)+spec.drift1d[n].values)
+                    optspec_ma[n] = spline(np.arange(meta.subnx)+lc.drift1d[n].values)
+                    opterr_ma[n]  = spline2(np.arange(meta.subnx)+lc.drift1d[n].values)
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
-                    plots_s4.drift1d(meta, spec)
+                    plots_s4.drift1d(meta, lc)
 
             # FINDME: optspec mask isn't getting updated when correcting for drift.
             # Also, entire integrations are getting flagged.

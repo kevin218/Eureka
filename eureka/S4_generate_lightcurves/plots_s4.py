@@ -24,8 +24,8 @@ def binned_lightcurve(meta, lc, i):
     ax = plt.subplot(111)
     time_modifier = np.floor(lc.time.values[0])
     # Normalized light curve
-    norm_lcdata = lc['data'][i] / np.nan.median(lc['data'][i], axis=0)
-    norm_lcerr = lc['err'][i] / np.nan.median(lc['data'][i], axis=0)
+    norm_lcdata = lc['data'][i] / np.nanmedian(lc['data'][i].values)
+    norm_lcerr = lc['err'][i] / np.nanmedian(lc['data'][i].values)
     plt.errorbar(lc.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
     plt.text(0.05, 0.1, "MAD = " + str(np.round(1e6 * np.ma.median(np.abs(np.ediff1d(norm_lcdata))))) + " ppm",
              transform=ax.transAxes, color='k')
@@ -38,15 +38,15 @@ def binned_lightcurve(meta, lc, i):
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def drift1d(meta, spec):
+def drift1d(meta, lc):
     '''Plot the 1D drift/jitter results. (Fig 4100)
 
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
-    spec:     Xarray Dataset
-        The spectra object containing drift arrays.
+    lc:     Xarray Dataset
+        The light curve object containing drift arrays.
 
     Returns
     -------
@@ -54,8 +54,8 @@ def drift1d(meta, spec):
     '''
     plt.figure(int('41{}'.format(str(0).zfill(int(np.floor(np.log10(meta.nspecchan))+1)))), figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(~spec.driftmask)], spec.drift1d[np.where(~spec.driftmask)], '.', label='Good Drift Points')
-    plt.plot(np.arange(meta.n_int)[np.where(spec.driftmask)], spec.drift1d[np.where(spec.driftmask)], '.', label='Interpolated Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)], lc.drift1d[np.where(~lc.driftmask)], '.', label='Good Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)], lc.drift1d[np.where(lc.driftmask)], '.', label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
