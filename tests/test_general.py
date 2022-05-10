@@ -7,10 +7,7 @@ sys.path.insert(0, '../')
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
 from eureka.lib.medstddev import medstddev
-
-class DataClass:
-    def __init__(self):
-        return
+import astraeus.xarrayIO as xrio
 
 def test_trim(capsys):
     # eureka.lib.util.trim test
@@ -22,16 +19,18 @@ def test_trim(capsys):
     trim_y1 = 14
 
     meta = MetaClass()
-    data = DataClass()
-    n = 7
+    nt = 7
     ny = 20
     nx = 100
     #Let's assume we have a dataset with 7 integrations and every spectrum has the dimensions of 100x20
-    data.data = np.ones((n, ny, nx))
-    data.err = np.ones((n, ny, nx))
-    data.dq = np.ones((n, ny, nx))
-    data.wave = np.ones((n, ny, nx))
-    data.v0 = np.ones((n, ny, nx))
+    flux = np.ones((nt, ny, nx))
+    time = np.arange(nt)
+    flux_units = 'electrons'
+    time_units = 'timeless'
+    data = xrio.makeDataset()
+    data['flux'] = xrio.makeFluxLikeDA(flux, time, flux_units, time_units, name='flux')
+    data['err']  = xrio.makeFluxLikeDA(flux, time, flux_units, time_units, name='err')
+    data['dq']   = xrio.makeFluxLikeDA(flux, time, flux_units, time_units, name='dq')
 
     meta.ywindow = [trim_y0,trim_y1]
     meta.xwindow = [trim_x0,trim_x1]
@@ -39,7 +38,7 @@ def test_trim(capsys):
     res_dat, res_md = util.trim(data, meta)
 
     #Let's check if the dimensions agree
-    assert res_dat.subdata.shape == (n, (trim_y1 - trim_y0), (trim_x1 - trim_x0))
+    assert res_dat.flux.shape == (nt, (trim_y1 - trim_y0), (trim_x1 - trim_x0))
 
 def test_medstddev(capsys):
     # eureka.lib.util.medstddev.medstddev test
