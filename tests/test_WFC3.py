@@ -4,7 +4,7 @@ import numpy as np
 import sys, os
 from importlib import reload
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '..'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
@@ -24,17 +24,17 @@ def test_WFC3(capsys):
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel='WFC3'
-    meta.topdir='../tests'
-    ecf_path='./WFC3_ecfs/'
+    meta.topdir=f'..{os.sep}tests'
+    ecf_path=f'.{os.sep}WFC3_ecfs{os.sep}'
 
     reload(s3)
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
 
     # run assertions for S3
-    meta.outputdir_raw='data/WFC3/Stage3/'
+    meta.outputdir_raw=f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'
     name = pathdirectory(meta, 'S3', 1, ap=8, bg=40)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
-    os.system("rm -r data/WFC3/Stage3")
+    os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")

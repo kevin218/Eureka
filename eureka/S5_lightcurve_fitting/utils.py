@@ -15,7 +15,6 @@ import urllib
 from astropy.io import fits
 import bokeh.palettes as bpal
 from scipy.interpolate import RegularGridInterpolator
-import matplotlib.pyplot as plt
 import numpy as np
 from svo_filters import svo
 

@@ -135,8 +135,7 @@ class Model:
 
         # Or a Parameters instance
         if (params is not None) and (type(params).__name__ != Parameters.__name__):
-            raise TypeError("'params' argument must be a JSON file, ascii\
-                             file, or parameters.Parameters instance.")
+            raise TypeError("'params' argument must be a JSON file, ascii file, or parameters.Parameters instance.")
 
         # Set the parameters attribute
         self._parameters = params

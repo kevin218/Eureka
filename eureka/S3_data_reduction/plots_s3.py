@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from .source_pos import gauss
 from ..lib.plots import figure_filetype
@@ -35,7 +36,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/fig3101-2D_LC'+figure_filetype, dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+'fig3101-2D_LC'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -81,7 +82,7 @@ def image_and_background(data, meta, n, m):
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.savefig(meta.outputdir + f'figs/fig3301_file{file_number}_int{int_number}_ImageAndBackground'+figure_filetype, dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig3301_file{file_number}_int{int_number}_ImageAndBackground'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -117,7 +118,7 @@ def optimal_spectrum(data, meta, n, m):
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.savefig(meta.outputdir + f'figs/fig3302_file{file_number}_int{int_number}_Spectrum'+figure_filetype, dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig3302_file{file_number}_int{int_number}_Spectrum'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -180,7 +181,7 @@ def source_position(meta, x_dim, pos_max, m,
     plt.legend()
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    plt.savefig(meta.outputdir + f'figs/fig3303_file{file_number}_source_pos'+figure_filetype, dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig3303_file{file_number}_source_pos'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -220,7 +221,7 @@ def profile(meta, profile, submask, n, m):
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.savefig(meta.outputdir + f'figs/fig3304_file{file_number}_int{int_number}_Profile'+figure_filetype, dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig3304_file{file_number}_int{int_number}_Profile'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -260,6 +261,6 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
-    plt.savefig(meta.outputdir + f"figs/fig3501_file{file_number}_int{int_number}_col{col_number}_subdata"+figure_filetype, dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig3501_file{file_number}_int{int_number}_col{col_number}_subdata'+figure_filetype, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)

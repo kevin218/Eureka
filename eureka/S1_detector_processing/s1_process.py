@@ -18,17 +18,17 @@ class MetaClass:
     def __init__(self):
         return
 
-def rampfitJWST(eventlabel, ecf_path='./'):
+def rampfitJWST(eventlabel, ecf_path=None):
     '''Process a Stage 0, *_uncal.fits file to Stage 1 *_rate.fits and *_rateints.fits files.
 
     Steps taken to perform this processing can follow the default JWST pipeline, or alternative methods.  
 
     Parameters
     ----------
-    eventlabel: str
+    eventlabel : str
         The unique identifier for these data.
-    ecf_path:   str
-        The absolute or relative path to where ecfs are stored
+    ecf_path : str, optional
+        The absolute or relative path to where ecfs are stored. Defaults to None which resolves to './'.
 
     Returns
     -------
@@ -61,12 +61,12 @@ def rampfitJWST(eventlabel, ecf_path='./'):
     # Create directories for Stage 1 processing outputs
     # This code allows the input and output files to be stored outside of the Eureka! folder
     outputdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
-    if outputdir[-1]!='/':
-        outputdir += '/'
+    if outputdir[-1] != os.sep:
+        outputdir += os.sep
     run = util.makedirectory(meta, 'S1')
     meta.workdir = util.pathdirectory(meta, 'S1', run)
     # Add a trailing slash so we don't need to add it everywhere below
-    meta.workdir += '/'
+    meta.workdir += os.sep
     # Make a separate folder for plot outputs
     if not os.path.exists(meta.workdir+'figs'):
         os.makedirs(meta.workdir+'figs')
@@ -95,7 +95,7 @@ def rampfitJWST(eventlabel, ecf_path='./'):
     for m in range(istart, meta.num_data_files):
         # Report progress
         filename = meta.segment_list[m]
-        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}: '+filename.split('/')[-1])
+        log.writelog(f'Starting file {m + 1} of {meta.num_data_files}: '+filename.split(os.sep)[-1])
 
         with fits.open(filename, mode='update') as hdulist:
             # jwst 1.3.3 breaks unless NDITHPTS/NRIMDTPT are integers rather than the strings that they are in the old simulated NIRCam data

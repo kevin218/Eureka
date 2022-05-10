@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from ..lib import util
 from ..lib.plots import figure_filetype
@@ -36,7 +37,7 @@ def binned_lightcurve(meta, lc, i):
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
-    plt.savefig(meta.outputdir + f'figs/Fig4102_ch{ch_number}_1D_LC'+figure_filetype, bbox_inches='tight', dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig4102_ch{ch_number}_1D_LC'+figure_filetype, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -62,7 +63,7 @@ def drift1d(meta, lc):
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig4103_Drift'+figure_filetype, bbox_inches='tight', dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig4103_Drift'+figure_filetype, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -103,7 +104,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    plt.savefig(meta.outputdir + 'figs/Fig4101_2D_LC'+figure_filetype, bbox_inches='tight', dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig4101_2D_LC'+figure_filetype, bbox_inches='tight', dpi=300)
     if meta.hide_plots:
         plt.close()
     else:
@@ -137,7 +138,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.legend(loc='best')
     plt.tight_layout()
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.savefig(meta.outputdir + f'figs/Fig4301_int{int_number}_CC_Spec'+figure_filetype, bbox_inches='tight', dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig4301_int{int_number}_CC_Spec'+figure_filetype, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -163,6 +164,6 @@ def cc_vals(meta, vals, n):
     plt.plot(np.arange(-meta.drift_range,meta.drift_range+1), vals, '.')
     plt.tight_layout()
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.savefig(meta.outputdir + f'figs/Fig4302_int{int_number}_CC_Vals'+figure_filetype, bbox_inches='tight', dpi=300)
+    plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig4302_int{int_number}_CC_Vals'+figure_filetype, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
