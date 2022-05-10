@@ -20,8 +20,8 @@ class MetaClass:
 
 
 def rampfitJWST(eventlabel, ecf_path=None):
-    '''Process a Stage 0, *_uncal.fits file to Stage 1 *_rate.fits and
-    *_rateints.fits files.
+    r'''Process a Stage 0, \*_uncal.fits file to Stage 1 \*_rate.fits and
+    \*_rateints.fits files.
 
     Steps taken to perform this processing can follow the default JWST
     pipeline, or alternative methods.
@@ -131,7 +131,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
     This wrapper class allows non-standard changes to Stage 1 for Eureka!.
 
     Notes
-    ------
+    -----
     History:
 
     - October 2021 Aarynn Carter /  Eva-Maria Ahrer
@@ -157,7 +157,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
         None
 
         Notes
-        ------
+        -----
         History:
 
         - October 2021 Aarynn Carter /  Eva-Maria Ahrer

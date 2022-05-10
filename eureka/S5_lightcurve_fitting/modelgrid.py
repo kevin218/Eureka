@@ -53,6 +53,7 @@ class ModelGrid(object):
     inv_file : str
         An inventory file to more quickly load the database
     """
+
     def __init__(self, model_directory, bibcode='2013A & A...553A...6H',
                  names={'Teff': 'PHXTEFF', 'logg': 'PHXLOGG',
                         'FeH': 'PHXM_H', 'mass': 'PHXMASS', 'Lbol': 'PHXLUM'},

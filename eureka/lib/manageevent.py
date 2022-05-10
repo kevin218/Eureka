@@ -30,8 +30,8 @@ from . import readECF
 #     Adds parameters given by add from filename to event.
 
 
-# Examples:
-# ---------
+# Examples
+# --------
 # >>> from manageevent import *
 # >>> # Save  hd209bs51_ini.dat and hd209bs51_ini.h5 files.
 
@@ -44,11 +44,14 @@ from . import readECF
 # >>> # Load uncd and bdmsk into event:
 # >>> updateevent(event, 'hd209bs51_ini', ['uncd', 'bdmskd'])
 
-# Revisions
-# ---------
-# 2010-07-10  patricio         pcubillos@fulbrightmail.org
+# Notes
+# -----
+# History:
+#
+# - 2010-07-10  patricio pcubillos@fulbrightmail.org
 #     joined loadevent and saveevent into this package. updateevent added.
-# 2010-11-12  patricio  reimplemented using exec()
+# - 2010-11-12  patricio
+#   reimplemented using exec()
 
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):
@@ -70,8 +73,8 @@ def saveevent(event, filename, save=[], delete=[], protocol=3):
     Notes
     -----
     The input filename should not have the .dat nor the .h5 extentions.
-    Side effect: This routine deletes all parameters except 'event'
-                 after saving it.
+    Side effect: This routine deletes all parameters except 'event' after
+    saving it.
 
     History:
 
@@ -221,7 +224,7 @@ def findevent(meta, stage, allowFail=False):
         Unable to find a metadata save file and allowFail was False.
 
     Notes
-    -------
+    -----
     History:
 
     - April 25, 2022 Taylor Bell
@@ -297,7 +300,7 @@ def mergeevents(new_meta, old_meta):
         metadata object.
 
     Notes
-    -------
+    -----
     History:
 
     - April 25, 2022 Taylor Bell

@@ -46,9 +46,9 @@ def ld_profile(name='quadratic', latex=False):
         A string representation of the corresponding function
         for the given profile. Returned if latex==True.
 
-    Reference
-    ---------
-        https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
+    References
+    ----------
+    https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
     """
     # Supported profiles a la BATMAN
     names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
@@ -275,8 +275,8 @@ def four_parameter(m, c1, c2, c3, c4):
 class LDC:
     """A class to hold all the LDCs you want to run.
 
-    Example
-    -------
+    Examples
+    --------
     from exoctk.limb_darkening import limb_darkening_fit as lf
     from exoctk import modelgrid
     from svo_filters import Filter

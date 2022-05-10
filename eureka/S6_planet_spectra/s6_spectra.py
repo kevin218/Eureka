@@ -39,7 +39,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
         The metadata object with attributes added by S6.
 
     Notes
-    -------
+    -----
     History:
 
     - Feb 14, 2022 Taylor Bell

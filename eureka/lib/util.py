@@ -242,7 +242,7 @@ def find_fits(meta):
         the input files to use.
 
     Notes
-    -------
+    -----
     History:
 
     - April 25, 2022 Taylor Bell

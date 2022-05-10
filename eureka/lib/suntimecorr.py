@@ -26,30 +26,30 @@ def getcoords(file):
         A four elements list containing the X, Y, Z, and time arrays of
         values from file.
 
-    Example
-    -------
-    start_data = '$$SOE'
-    end_data   = '$$EOE'
+    Examples
+    --------
+    >>> start_data = '$$SOE'
+    >>> end_data   = '$$EOE'
 
     # Read in whole table as an list of strings, one string per line
-    ctable = open('/home/esp01/ancil/horizons/all_spitzer.vec', 'r')
-    wholetable = ctable.readlines()
-    ctable.close()
+    >>> ctable = open('/home/esp01/ancil/horizons/all_spitzer.vec', 'r')
+    >>> wholetable = ctable.readlines()
+    >>> ctable.close()
 
     # Find start and end line
-    i = 0
-    while wholetable[i].find(end_data) == -1:
-        if wholetable[i].find(start_data) != -1:
-           start = i + 1
-        i += 1
+    >>> i = 0
+    >>> while wholetable[i].find(end_data) == -1:
+    >>>     if wholetable[i].find(start_data) != -1:
+    >>>        start = i + 1
+    >>>     i += 1
 
     # Chop table
-    data = wholetable[start:i-2]
+    >>> data = wholetable[start:i-2]
 
     # Find values:
-    x, y, z, t = getcoords(data)
+    >>> x, y, z, t = getcoords(data)
 
-    # print(x, y, z, t)
+    >>> print(x, y, z, t)
 
     Notes
     -----
@@ -106,8 +106,8 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
         would have reached the plane perpendicular to their travel and
         containing the reference position.
 
-    Example
-    -------
+    Examples
+    --------
     >>> # Spitzer is in nearly the Earth's orbital plane.  Light coming from
     >>> # the north ecliptic pole should hit the observatory and the sun at
     >>> # about the same time.
@@ -118,13 +118,13 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
     >>> dec = 66.5 * np.pi / 180 # "
     >>> obst = np.array([2453607.078])       # Julian date of 2005-08-24 14:00
     >>> print( sc.suntimecorr(ra, dec, obst,
-                              '/home/esp01/ancil/horizons/cs41_spitzer.vec') )
+    >>>                       '/home/esp01/ancil/horizons/cs41_spitzer.vec') )
     1.00810877 # about 1 sec, close to zero
 
     >>> # If the object has the RA and DEC of Spitzer, light time should be
     >>> # about 8 minutes to the sun.
     >>> obs  = np.array([111093592.8346969, -97287023.315796047,
-                         -42212080.826677799])
+    >>>                  -42212080.826677799])
     >>> # vector to the object
     >>> obst = np.array([2453602.5])
 
@@ -135,7 +135,8 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
     >>> print(raobs, decobs)
     -0.7192383661, -0.2784282118
     >>> print(sc.suntimecorr(raobs, decobs, obst,
-                             '/home/esp01/ancil/horizons/cs41_spitzer.vec')/60.0)
+    >>>                      '/home/esp01/ancil/horizons/cs41_spitzer.vec')
+    >>>       / 60.0)
     8.5228630 # good, about 8 minutes light time to travel 1 AU
 
     Notes
@@ -145,7 +146,7 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
     Reference epoch : J2000.0
     xy-plane : plane of the Earth's mean equator at the reference epoch
     x-axis : out along ascending node of instantaneous plane of the Earth's
-              orbit and the Earth's mean equator at the reference epoch
+    orbit and the Earth's mean equator at the reference epoch
     z-axis : along the Earth mean north pole at the reference epoch
 
     Ephemerides are often calculated for BJD, barycentric Julian date.
@@ -164,44 +165,6 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
     the adjustment from, e.g., geocentric (RA-DEC) coordinates to
     barycentric coordinates has a negligible effect on the trig
     functions used in the routine.
-
-    The horizons file in coordtable should be in the form of the
-    following example, with a subject line of JOB:
-
-    !$$SOF
-    !
-    ! Example e-mail command file. If mailed to "horizons@ssd.jpl.nasa.gov"
-    ! with subject "JOB", results will be mailed back.
-    !
-    ! This example demonstrates a subset of functions. See main doc for
-    ! full explanation. Send blank e-mail with subject "BATCH-LONG" to
-    ! horizons@ssd.jpl.nasa.gov for complete example.
-    !
-     EMAIL_ADDR = 'shl35@cornell.edu'     ! Send output to this address
-                                          !  (can be blank for auto-reply)
-     COMMAND = '-79'                      ! Target body, closest apparition
-
-     OBJ_DATA = 'YES'                     ! No summary of target body data
-     MAKE_EPHEM = 'YES'                   ! Make an ephemeris
-
-     START_TIME = '2005-Aug-24 06:00'     ! Start of table (UTC default)
-     STOP_TIME = '2005-Aug-25 02:00'      ! End of table
-     STEP_SIZE = '1 hour'                 ! Table step-size
-
-     TABLE_TYPE = 'VECTOR'                ! Specify VECTOR ephemeris table type
-     CENTER     = '@10'                   ! Set observer (coordinate center)
-     REF_PLANE  = 'FRAME'                 ! J2000 equatorial plane
-
-     VECT_TABLE = '3'                     ! Selects output type (3=all).
-
-     OUT_UNITS  = 'KM-S'                  ! Vector units# KM-S, AU-D, KM-D
-     CSV_FORMAT = 'NO'                    ! Comma-separated output (YES/NO)
-     VEC_LABELS = 'YES'                   ! Label vectors in output (YES/NO)
-     VECT_CORR  = 'NONE'                  ! Correct for light-time (LT),
-                                          ! or lt + stellar aberration (LT+S),
-                                          ! or (NONE) return geometric
-                                          ! vectors only.
-    !$$EOF
 
     History:
 

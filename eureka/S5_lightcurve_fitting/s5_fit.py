@@ -35,7 +35,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
         The metadata object with attributes added by S5.
 
     Notes
-    -------
+    -----
     History:
 
     - November 12-December 15, 2021 Megan Mansfield

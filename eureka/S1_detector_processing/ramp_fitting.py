@@ -45,8 +45,8 @@ default='none') # max number of processes to create
     reference_file_types = ['readnoise', 'gain']
 
     def process(self, input):
-        '''Process a Stage 0 *_uncal.fits file to Stage 1 *_rate.fits and
-        *_rateints.fits files.
+        r'''Process a Stage 0 \*_uncal.fits file to Stage 1 \*_rate.fits and
+        \*_rateints.fits files.
 
         Steps taken to perform this processing can follow the default JWST
         pipeline, or alternative methods.

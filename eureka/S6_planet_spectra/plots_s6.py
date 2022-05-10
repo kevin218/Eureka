@@ -23,7 +23,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     y_scalar : int; optional
         The multiplier for the y-axis (100=%, 1e6=ppm), by default 1
     ylabel : str; optional
-        The y-axis label, by default r'{\rm p}/R_{\rm *}$'
+        The y-axis label, by default r'{\rm p}/R_{\rm \*}$'
     xlabel : str; optional
         The x-axis label, by default r'Wavelength ($\mu)'
     scaleHeight : float; optional

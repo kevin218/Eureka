@@ -25,23 +25,24 @@ def smooth(x, window_len=10, window='hanning'):
     ndarray
         the smoothed signal
 
-    Example
-    -------
+    Examples
+    --------
     t=linspace(-2,2,0.1)
     x=sin(t)+randn(len(t))*0.1
     y=smooth(x)
 
     See Also
     --------
-
     numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman,
     numpy.convolve, scipy.signal.lfilter
 
-    TODO: the window parameter could be the window itself if an array instead
-    of a string
+    Notes
+    -----
+    To Do: The window parameter could be the window itself if an array instead
+    of a string.
 
-    Source
-    ------
+    References
+    ----------
     http://www.scipy.org/Cookbook/SignalSmooth 2009-03-13
     """
     if x.ndim != 1:

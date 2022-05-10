@@ -7,7 +7,6 @@
 # ! /usr/bin/env python
 
 
-
 # Name
 # ----
 # gaussian
@@ -37,12 +36,14 @@
 #     Crudely estimates the parameters of a Gaussian that fits the
 #     (y, x) data.
 
-# Examples:
-# ---------
+# Examples
+# --------
 # See fitgaussian() example.
 
-# Revisions
-# ---------
+# Notes
+# -----
+# History:
+#
 # 2007-09-17 0.1 jh@physics.ucf.edu Initial version 0.01, portions
 #                 adapted from http://www.scipy.org/Cookbook/FittingData.
 # 2007-10-02 0.2 jh@physics.ucf.edu Started making N-dimensional,
@@ -61,8 +62,7 @@ from . import disk as d
 
 
 def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
-    """
-    Evaluates the Gaussian and a background with given parameters at
+    """Evaluates the Gaussian and a background with given parameters at
     locations in x.
 
     Parameters
@@ -74,36 +74,32 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
         highest dimension must have length 5, and each of those must
         give the coordinate along the respective axis).  May also be
         1-dimensional.  Default: np.indices(y.shape).
-
-    width : array_like
+    width : array_like; optional
         The width of the Gaussian function, sometimes called sigma.
         If scalar, assumed constant for all dimensions.  If array,
         must be linear and the same length as the first dimension of
         x.  In this case, each element gives the width of the function
-        in the corresponding dimension.  Default: [1.].
-
-    center : array_like
+        in the corresponding dimension.  Defaults to 1.0.
+    center : array_like; optional
         The mean value of the Gaussian function, sometimes called x0.
-        Same scalar/array behavior as width.  Default: [0.].
-
-    height : scalar
+        Same scalar/array behavior as width.  Defaults to 0.0.
+    height : scalar; optional
         The height of the Gaussian at its center.  If not set,
         initialized to the value that makes the Gaussian integrate to
         1.  If you want it to integrate to another number, leave
         height alone and multiply the result by that other number
-        instead.  Must be scalar.  Default: [product(1./sqrt(2 * pi *
-        width**2))].
-
-    bgpars : ndarray or tuple, 3-element
+        instead.  Must be scalar.  Defaults to None which resolves to
+        [product(1./sqrt(2 * pi * width**2))].
+    bgpars : ndarray or tuple, 3-element; optional
         Background parameters, the elements determine a X- and Y-linearly
         dependant level, of the form:
         f = Y*bgparam[0] + X*bgparam[1] + bgparam[2]
-        (Not tested for 1D yet).
+        (Not tested for 1D yet). Defaults to [0.0, 0.0, 0.0].
 
     Returns
     -------
-    results : ndarray, same shape as x (or first element of x if
-        multidimensional)
+    results : ndarray
+        Same shape as x (or first element of x if multidimensional)
         This function returns the Gaussian function of the given
         width(s), center(s), and height applied to its input plus a
         linear background level.  The Gaussian function is: f(x) =
@@ -165,21 +161,23 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
     >>> plt.xlabel('Y')
     >>> plt.ylabel('Z')
 
-    Revisions
-    ---------
-    2007-09-17 0.1 jh@physics.ucf.edu
+    Notes
+    -----
+    History:
+
+    - 2007-09-17 0.1 jh@physics.ucf.edu
         Initial version.
-    2007-10-02 0.2 jh@physics.ucf.edu
+    - 2007-10-02 0.2 jh@physics.ucf.edu
         Started making N-dimensional, put width before center in args.
-    2007-11-13 0.3 jh@physics.ucf.edu
+    - 2007-11-13 0.3 jh@physics.ucf.edu
         Fixed docs, bugs, added param, made N-dimensional.
-    2009-10-01 0.4 jh@physics.ucf.edu
+    - 2009-10-01 0.4 jh@physics.ucf.edu
         Fixed docs.
-    2009-10-25 0.5 jh@physics.ucf.edu
+    - 2009-10-25 0.5 jh@physics.ucf.edu
         Added examples and plot labels.
-    2011-05-03 patricio
+    - 2011-05-03 patricio
         Params option no longer sopported, Added bgpars to add a background.
-    2017-XX-XX bbrooks@stsci.edu
+    - 2017-XX-XX bbrooks@stsci.edu
         Added Patricio centering method.
     """
     ndim = np.ndim(x) - 1
@@ -287,26 +285,16 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     Returns
     -------
     params : ndarray
-
         This array contains the best fitting values parameters: width,
         center, height, and if requested, bgpars. with:
-          width : The fitted Gaussian widths in each dimension.
-          center : The fitted Gaussian center coordinate in each dimension.
-          height : The fitted height.
-
+        width : The fitted Gaussian widths in each dimension.
+        center : The fitted Gaussian center coordinate in each dimension.
+        height : The fitted height.
     err : ndarray
         An array containing the concatenated uncertainties
         corresponding to the values of params.  For example, 2D input
         gives np.array([widthyerr, widthxerr, centeryerr, centerxerr,
         heighterr]).
-
-    Notes
-    -----
-    If the input does not look anything like a Gaussian, the result
-    might not even be the best fit to that.
-
-    Method: First guess the parameters (if no guess is provided), then
-    call a Levenberg-Marquardt optimizer to finish the job.
 
     Examples
     --------
@@ -410,14 +398,14 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     >>> np.array(fh) - np.array(ht)
     0.0030143371034774269
 
-    >>> Last Example:
+    >>> # Last Example:
     >>> x = np.indices((30,30))
     >>> g1 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75), height=1e4,
     >>>                 bgpars=[0.0, 0.0, 100.0])
     >>> error = np.sqrt(g1) * np.random.randn(30,30)
     >>> y = g1 + error
     >>> var = g1
-    >>>
+
     >>> plt.figure(1)
     >>> plt.clf()
     >>> plt.imshow(y, origin='lower_left', interpolation='nearest')
@@ -433,23 +421,32 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     >>> print(fit[0])
 
 
-    Revisions
-    ---------
-    2007-09-17  Joe      Initial version, portions adapted from
-                         http://www.scipy.org/Cookbook/FittingData.
-                         jh@physics.ucf.edu
-    2007-11-13  Joe      Made N-dimensional.
-    2008-12-02  Nate     Included error calculation, and return Fixed a bug
-                         in which if the initial guess was None, and incorrect
-                         shape array was generated. This caused gaussian guess
-                         to fail.
-                         nlust@physics.ucf.edu
-    2009-10-25           Converted to standard doc header, fixed examples to
-                         return 4 parameters.
-    2011-05-03  patricio Added mask, weights, and background-fitting options.
-                         pcubillos@fulbrightmail.org
-    """
+    Notes
+    -----
+    If the input does not look anything like a Gaussian, the result
+    might not even be the best fit to that.
 
+    Method: First guess the parameters (if no guess is provided), then
+    call a Levenberg-Marquardt optimizer to finish the job.
+
+    History:
+
+    - 2007-09-17 Joe jh@physics.ucf.edu
+        Initial version, portions adapted from
+        http://www.scipy.org/Cookbook/FittingData.
+    - 2007-11-13  Joe
+        Made N-dimensional.
+    - 2008-12-02  Nate nlust@physics.ucf.edu
+        Included error calculation, and return Fixed a bug
+        in which if the initial guess was None, and incorrect
+        shape array was generated. This caused gaussian guess
+        to fail.
+    - 2009-10-25
+        Converted to standard doc header, fixed examples to
+        return 4 parameters.
+    - 2011-05-03  patricio pcubillos@fulbrightmail.org
+        Added mask, weights, and background-fitting options.
+    """
     if x is None:
         x = np.indices(np.shape(y))
     else:
@@ -557,8 +554,10 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
         a gaussian model determined by params (and bgpars when
         necessary).
 
-    Revisions
-    ---------
+    Notes
+    -----
+    History:
+
     2011-05-03  patricio Initial version.
                          pcubillos@fulbrightmail.org
     """
@@ -647,9 +646,10 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
     x : array_like
         (optional) Array (any shape) giving the abcissas of y (if
         missing, uses np.indices(y).
-    guess : 2D-tuple, [[width1, center1, height1],
-                       [width2, center2, height2],
-                       ...                       ]
+    guess : 2D-tuple
+        [[width1, center1, height1],
+        [width2, center2, height2],
+        ...                       ]
         Tuple giving an initial guess of the Gaussian parameters for
         the optimizer.  If supplied, x and y can be any shape and need
         not be sorted.  See gaussian() for meaning and format of this

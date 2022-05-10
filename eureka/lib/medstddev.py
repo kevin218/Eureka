@@ -27,8 +27,8 @@ def medstddev(data, mask=None, medi=False, axis=0):
     float, optional
         The median; only returned if medi==True.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import medstdev as m
     >>> a  = np.array([1,3,4,5,6,7,7])
     >>> std, med = m.medstddev(a, medi=True)

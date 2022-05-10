@@ -73,7 +73,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         The metadata object with attributes added by S3.
 
     Notes
-    -------
+    -----
     History:
 
     - May 2021 Kevin Stevenson

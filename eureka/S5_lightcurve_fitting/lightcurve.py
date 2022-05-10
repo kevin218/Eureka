@@ -122,14 +122,10 @@ class LightCurve(m.Model):
         **kwargs : dict
             Arbitrary keyword arguments.
 
-        Returns
-        -------
-        None
-
         Notes
         -----
-
         History:
+
         - Dec 29, 2021 Taylor Bell
             Updated documentation and reduced repeated code
         """

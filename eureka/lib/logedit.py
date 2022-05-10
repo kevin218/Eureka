@@ -2,23 +2,8 @@ class Logedit:
     """This object handles writing text outputs into a log file and to
     the screen as well.
 
-    Class methods:
-    --------------
-    init(logname, read=None):
-        Creates a log instance into file logname.
-        If read specified copies it's content into log.
-
-    writelog(message):
-        Prints message to terminal and to the log file.
-
-    closelog:
-        Closes an existing log file.
-
-    writeclose(message):
-        Prints message to terminal and to log, then closes the log file.
-
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from logedit import Logedit
     >>> message1 = 'This message will be logged and displayed.'
     >>> message2 = 'This message too.'
@@ -59,11 +44,14 @@ class Logedit:
 
     >>> # See the output files: 'out.log' and 'out2.log' to see the results.
 
-    Revisions
-    ---------
-    2010-07-10  patricio   Writen by Patricio Cubillos.
-                           pcubillos@fulbrightmail.org
-    2010-11-24  patricio   logedit converted to a class.
+    Notes
+    -----
+    History:
+
+    - 2010-07-10 Patricio Cubillos
+        Initial version
+    - 2010-11-24 Patricio Cubillos
+        logedit converted to a class.
     """
 
     def __init__(self, logname, read=None):
@@ -105,7 +93,7 @@ class Logedit:
             The message to log.
         mute : bool; optional
             If True, only log and do not pring. Defaults to False.
-        end = str; optional
+        end : str; optional
             Can be set to '\r' to have the printed line overwritten which
             is useful for progress bars. Defaults to '\n'.
         """
@@ -128,7 +116,7 @@ class Logedit:
             The message to log.
         mute : bool; optional
             If True, only log and do not pring. Defaults to False.
-        end = str; optional
+        end : str; optional
             Can be set to '\r' to have the printed line overwritten which
             is useful for progress bars. Defaults to '\n'.
         """

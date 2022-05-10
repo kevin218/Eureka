@@ -290,10 +290,9 @@ def mask_method_two(data, meta, isplots=0, save=False):
     second orders in NIRISS data. This method uses the vertical
     profile of a summed image to identify the borders of each
     order.
-    
-    ""
+
     Parameters
-    -----------
+    ----------
     data : object
     meta : object
     isplots : int; optional

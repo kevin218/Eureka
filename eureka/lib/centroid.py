@@ -61,9 +61,9 @@ def ctrguess(data, mask=None, guess=None):
     -----
     Logic adapted from `gaussian.py`
 
-    Revisions
-    ---------
-    2009-10-27, Christopher Campo
+    History:
+
+    - 2009-10-27, Christopher Campo
         Initial Version
     '''
     if mask is None:
@@ -121,11 +121,13 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
         The updated frame parameters array.  Contains the centers
         of each star in each image and their average width.
 
-    Revisions
-    ---------
-    2010-06-23  Patricio E. Cubillos
+    Notes
+    -----
+    History:
+
+    - 2010-06-23, Patricio E. Cubillos
         Adapted to POET from Chris' routines.
-    2009-10-30  Christopher J. Campo
+    - 2009-10-30, Christopher J. Campo
         Initial version.
     '''
     if guess is None:

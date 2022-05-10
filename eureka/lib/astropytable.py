@@ -4,23 +4,6 @@ import numpy as np
 
 
 def savetable_S3(filename, time, wave_1d, stdspec, stdvar, optspec, opterr):
-    """Saves data in an event as .txt using astropy
-
-    Parameters
-    ----------
-    event    : An Event instance.
-
-    Description
-    -----------
-    Saves data stored in an event object as an table
-
-    Returns
-    -------
-    .txt file
-
-    Revisions
-    ---------
-    """
     dims = stdspec.shape  # tuple (integration, wavelength position)
 
     orig_shapes = [str(time.shape), str(wave_1d.shape), str(stdspec.shape),
@@ -48,23 +31,6 @@ def savetable_S3(filename, time, wave_1d, stdspec, stdvar, optspec, opterr):
 
 
 def savetable_S4(filename, time, wavelength, bin_width, lcdata, lcerr):
-    """Saves data in an event as .txt using astropy
-
-    Parameters
-    ----------
-    event    : An Event instance.
-
-    Description
-    -----------
-    Saves data stored in an event object as an table
-
-    Returns
-    -------
-    .txt file
-
-    Revisions
-    ---------
-    """
     dims = lcdata.T.shape  # tuple (wavelength position, integration)
 
     orig_shapes = [str(time.shape), str(wavelength.shape),
@@ -92,23 +58,6 @@ def savetable_S4(filename, time, wavelength, bin_width, lcdata, lcerr):
 
 def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model,
                  residuals):
-    """Saves data in an event as .txt using astropy
-
-    Parameters
-    ----------
-    event    : An Event instance.
-
-    Description
-    -----------
-    Saves data stored in an event object as an table
-
-    Returns
-    -------
-    .txt file
-
-    Revisions
-    ---------
-    """
     dims = [len(time), len(wavelength)]
 
     orig_shapes = [str(time.shape), str(wavelength.shape),
@@ -140,23 +89,6 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model,
 
 def savetable_S6(filename, wavelength, bin_width, tr_depth, tr_depth_err,
                  ecl_depth, ecl_depth_err):
-    """Saves data in an event as .txt using astropy
-
-    Parameters
-    ----------
-    event    : An Event instance.
-
-    Description
-    -----------
-    Saves data stored in an event object as an table
-
-    Returns
-    -------
-    .txt file
-
-    Revisions
-    ---------
-    """
     orig_shapes = [str(wavelength.shape), str(bin_width.shape),
                    str(tr_depth.shape), str(tr_depth_err[0].shape),
                    str(tr_depth_err[1].shape), str(ecl_depth.shape),
