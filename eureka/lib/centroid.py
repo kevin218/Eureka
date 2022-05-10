@@ -8,18 +8,17 @@
 import numpy as np
 from . import gaussian as g
 
-'''
-Stellar Centroiding Routines
-----------------------------
-This package contains a collection of routines related
-to the finding of the centroid of a stellar image.
 
-Contents:
-  ctrguess:  Guesses the initial parameters of the
-             stellar centroid in a given image.
-  ctrgauss:  Performs centroiding by fitting a 2D Gaussian
-             function to a given image.
-'''
+# Stellar Centroiding Routines
+# ----------------------------
+# This package contains a collection of routines related
+# to the finding of the centroid of a stellar image.
+
+# Contents:
+#   ctrguess:  Guesses the initial parameters of the
+#              stellar centroid in a given image.
+#   ctrgauss:  Performs centroiding by fitting a 2D Gaussian
+#              function to a given image.
 
 
 def ctrguess(data, mask=None, guess=None):

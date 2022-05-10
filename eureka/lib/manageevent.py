@@ -6,51 +6,49 @@ import glob
 from . import readECF
 
 
-"""
-Name
-----
-Manage Event
+# Name
+# ----
+# Manage Event
 
-File
-----
-manageevnet.py
+# File
+# ----
+# manageevnet.py
 
-Description
------------
-Routines for handling events.
+# Description
+# -----------
+# Routines for handling events.
 
-Package Contents
-----------------
-saveevent(event, filename, save=['event'], delete=[])
-    Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
+# Package Contents
+# ----------------
+# saveevent(event, filename, save=['event'], delete=[])
+#     Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
 
-loadevent(filename, load):
-    Loads an event stored in .dat and .h5 files.
+# loadevent(filename, load):
+#     Loads an event stored in .dat and .h5 files.
 
-updateevent(event, filename, add):
-    Adds parameters given by add from filename to event.
+# updateevent(event, filename, add):
+#     Adds parameters given by add from filename to event.
 
 
-Examples:
----------
->>> from manageevent import *
->>> # Save  hd209bs51_ini.dat and hd209bs51_ini.h5 files.
+# Examples:
+# ---------
+# >>> from manageevent import *
+# >>> # Save  hd209bs51_ini.dat and hd209bs51_ini.h5 files.
 
->>> saveevent(event, 'd209bs51_ini', save=['data', 'head','uncd',
-                                        'bdmskd'])
+# >>> saveevent(event, 'd209bs51_ini', save=['data', 'head','uncd',
+#                                         'bdmskd'])
 
->>> # Load the event and its data frames
->>> event = loadevent('hd209bs51_ini', ['data'])
+# >>> # Load the event and its data frames
+# >>> event = loadevent('hd209bs51_ini', ['data'])
 
->>> # Load uncd and bdmsk into event:
->>> updateevent(event, 'hd209bs51_ini', ['uncd', 'bdmskd'])
+# >>> # Load uncd and bdmsk into event:
+# >>> updateevent(event, 'hd209bs51_ini', ['uncd', 'bdmskd'])
 
-Revisions
----------
-2010-07-10  patricio         pcubillos@fulbrightmail.org
-    joined loadevent and saveevent into this package. updateevent added.
-2010-11-12  patricio  reimplemented using exec()
-"""
+# Revisions
+# ---------
+# 2010-07-10  patricio         pcubillos@fulbrightmail.org
+#     joined loadevent and saveevent into this package. updateevent added.
+# 2010-11-12  patricio  reimplemented using exec()
 
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):

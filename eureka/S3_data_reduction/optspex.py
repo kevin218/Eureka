@@ -475,7 +475,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         spectral extraction. Defaukts to 10.
     fittype : str; optional
         One of {'smooth', 'meddata', 'wavelet2D', 'wavelet',
-                'gauss', 'poly'}. The type of profile fitting
+        'gauss', 'poly'}. The type of profile fitting
         you want to do. Defaults to 'smooth'.
     window_len : int; optional
         The dimension of the smoothing window. Defaults to 21.
@@ -483,7 +483,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         Polynomial degree. Defaults to 3.
     windowtype : str; optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
-                        'bartlett', 'blackman'}.
+        'bartlett', 'blackman'}.
         The type of window. A flat window will produce a moving
         average smoothing. Defaults to 'hanning'.
     n : int; optional

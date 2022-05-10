@@ -7,53 +7,53 @@
 # ! /usr/bin/env python
 
 
-'''
-Name
-----
-gaussian
 
-File
-----
-gaussian.py
+# Name
+# ----
+# gaussian
 
-Description
------------
-Routines for evaluating, estimating parameters of, and fitting Gaussians.
+# File
+# ----
+# gaussian.py
 
-Package Contents
-----------------
-N-dimensional functions:
+# Description
+# -----------
+# Routines for evaluating, estimating parameters of, and fitting Gaussians.
 
-gaussian(x, width=1., center=0., height=None, params=None)
-    Evaluate the Gaussian function with given parameters at x
-    (n-dimensional).
-fitgaussian(y, x)
-    Calculates a Gaussian fit to (y, x) data, returns (width,
-    center, height).
+# Package Contents
+# ----------------
+# N-dimensional functions:
 
-1-dimensional functions:
+# gaussian(x, width=1., center=0., height=None, params=None)
+#     Evaluate the Gaussian function with given parameters at x
+#     (n-dimensional).
+# fitgaussian(y, x)
+#     Calculates a Gaussian fit to (y, x) data, returns (width,
+#     center, height).
 
-gaussianguess(y, x=None)
-    Crudely estimates the parameters of a Gaussian that fits the
-    (y, x) data.
+# 1-dimensional functions:
 
-Examples:
----------
-See fitgaussian() example.
+# gaussianguess(y, x=None)
+#     Crudely estimates the parameters of a Gaussian that fits the
+#     (y, x) data.
 
-Revisions
----------
-2007-09-17 0.1 jh@physics.ucf.edu Initial version 0.01, portions
-                adapted from http://www.scipy.org/Cookbook/FittingData.
-2007-10-02 0.2 jh@physics.ucf.edu Started making N-dimensional,
-                put width before center in args.
-2007-11-13 0.3 jh@physics.ucf.edu Made N-dimensional.
-2008-12-02 0.4 nlust@physics.ucf.edu Made fit gaussian return errors, and
-                fixed a bug generating initial guesses
-2009-10-25 0.5 jh@physics.ucf.edu Standardized all headers, fixed
-                an error in a fitgaussian example, added example
-                ">>>"s and plot labels.
-'''
+# Examples:
+# ---------
+# See fitgaussian() example.
+
+# Revisions
+# ---------
+# 2007-09-17 0.1 jh@physics.ucf.edu Initial version 0.01, portions
+#                 adapted from http://www.scipy.org/Cookbook/FittingData.
+# 2007-10-02 0.2 jh@physics.ucf.edu Started making N-dimensional,
+#                 put width before center in args.
+# 2007-11-13 0.3 jh@physics.ucf.edu Made N-dimensional.
+# 2008-12-02 0.4 nlust@physics.ucf.edu Made fit gaussian return errors, and
+#                 fixed a bug generating initial guesses
+# 2009-10-25 0.5 jh@physics.ucf.edu Standardized all headers, fixed
+#                 an error in a fitgaussian example, added example
+#                 ">>>"s and plot labels.
+
 
 import numpy as np
 import scipy.optimize as so
