@@ -44,39 +44,36 @@ def box_extract(data, var, boxmask):
     spec2 : np.ndarray
        Extracted spectra for the second order.
     """
+    def mask_individual_orders(total, order=1):
+        masked = np.zeros(total.shape)
+        if order==1:
+            masked[(total==1) | (total==3)] = 1
+        elif order==2:
+            masked[(total==2) | (total==3)] = 1
+        elif order==3:
+            masked[(total==4)] = 1
+        return masked
 
-    spec1 = np.zeros((data.shape[0],
-                      data.shape[2]))
-    spec2 = np.zeros((data.shape[0],
-                      data.shape[2]))
-    var1 = np.zeros(spec1.shape)
-    var2 = np.zeros(spec2.shape)
+    all_spec = np.zeros((3, data.shape[0], data.shape[2]))
+    all_var  = np.zeros((3, data.shape[0], data.shape[2]))
 
-    m1, m2 = boxmask
+    m1, m2, m3 = boxmask
 
-    summed = (m1+0)+(m2*2)
-    masked_second = summed+0.0
-    masked_second[summed==2] = 0
-    masked_second[masked_second>0] = 1
+    summed = (m1+0)+(m2*2)+(m3*4)
+    first  = mask_individual_orders(summed, order=1)
+    second = mask_individual_orders(summed, order=2)
+    third  = mask_individual_orders(summed, order=3)
+    masks  = [first, second, third]
 
-    masked_first = summed+0.0
-    masked_first[summed==1] = 0
-    masked_first[masked_first>0] = 1
+    for i in range(len(masks)):
+        all_spec[i] = np.nansum(data[i]*np.full(data.shape, masks[i]), axis=1)
+        all_var[i]  = np.nansum(var[i]*np.full(data.shape, masks[i]),  axis=1)
 
-    for i in range(len(data)):
-        spec1[i] = np.nansum(data[i]*masked_second,
-                             axis=0)
-        spec2[i] = np.nansum(data[i]*masked_first,
-                             axis=0)
-
-        var1[i] = np.nansum(var[i] * m1, axis=0)
-        var2[i] = np.nansum(var[i] * m2, axis=0)
-
-    return spec1, spec2, var1, var2
+    return all_spec, all_var
 
 
-def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
-               return_together=True, pos1=None, pos2=None):
+def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
+               booltype=True, return_together=True, pos1=None, pos2=None):
     """
     Really dirty box mask for background purposes.
 
@@ -104,19 +101,23 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
     """
     order1 = np.zeros((boxsize1, len(img[0])))
     order2 = np.zeros((boxsize2, len(img[0])))
+    order3 = np.zeros((boxsize3, len(img[0])))
     mask = np.zeros(img.shape)
 
     if tab is not None:
         pos1 = tab['order_1'] + 0.0
         pos2 = tab['order_2'] + 0.0
+        pos3 = tab['order_3'] + 0.0
 
-    m1, m2 = 1, 2
+    m1, m2, m3 = 2, 4, 16
 
     for i in range(img.shape[1]):
+        # First order box mask
         s,e = int(pos1[i]-boxsize1/2), int(pos1[i]+boxsize1/2)
         order1[:,i] = img[s:e,i]
         mask[s:e,i] += m1
 
+        # Second order box mask
         s,e = int(pos2[i]-boxsize2/2), int(pos2[i]+boxsize2/2)
         try:
             order2[:,i] = img[s:e,i]
@@ -124,19 +125,26 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, booltype=True,
         except:
             pass
 
+        # Third order boxmask
+        if np.isnan(pos3[i])==False:
+            s, e = int(pos3[i]-boxsize3/2), int(pos3[i]+boxsize3/2)
+            order3[:,i] = img[s:e, i]
+            mask[s:e,i] += m3
+
     if return_together:
         if booltype==True:
             mask = ~np.array(mask,dtype=bool)
         return mask
     else:
-        m1, m2 = np.zeros(mask.shape), np.zeros(mask.shape)
-        m1[(mask==1) | (mask==3)] = 1
-        m2[mask>=2] = 1
+        m1, m2, m3 = np.zeros(mask.shape), np.zeros(mask.shape), np.zeros(mask.shape)
+        m1[(mask==2) | (mask==6)] = 1
+        m2[(mask==4) | (mask==6)] = 1
+        m3[mask==16] = 1
 
         if booltype==True:
-            return np.array(m1,dtype=bool), np.array(m2,dtype=bool)
+            return np.array(m1,dtype=bool), np.array(m2,dtype=bool), np.array(m3,dtype=bool)
         else:
-            return m1, m2
+            return m1, m2, m3
 
 
 def profile_niriss_median(medprof, sigma=50):
@@ -515,8 +523,10 @@ def extraction_routine(data, var,
             P = np.abs(P)
 
             # 6. Revise variance estimates
-            V = spectrum_var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
-            #V = var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
+            try:
+                V = spectrum_var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
+            except:
+                V = var[i] + np.abs(sky_bkg[i]+(P*reference))/Q
 
             # 7. Mask *more* cosmic ray hits
             stdevs = (np.abs(data[i] - sky_bkg[i] - reference)*P)/np.sqrt(V)
