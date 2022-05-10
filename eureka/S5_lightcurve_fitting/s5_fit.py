@@ -16,7 +16,7 @@ class MetaClass:
     def __init__(self):
         return
 
-def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
+def fitlc(eventlabel, ecf_path='./', s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -125,7 +125,10 @@ def fitJWST(eventlabel, ecf_path='./', s4_meta=None):
             # Subtract off the user provided time value to avoid floating point precision problems when fitting for values like t0
             offset = params.time_offset.value
             time = lc.time.values - offset
-            time_units = lc.data.attrs['time_units']+f' - {offset}'
+            if offset != 0:
+                time_units = lc.data.attrs['time_units']+f' - {offset}'
+            else:
+                time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
 
             if sharedp:
@@ -226,7 +229,7 @@ def fit_channel(meta,time,flux,chan,flux_err,eventlabel,sharedp,params,log,longp
                                 longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_ramp)
     if 'GP' in meta.run_myfuncs:
-        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--', log=log)
+        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model, parameters=params, name='GP', fmt='r--', log=log, gp_code=meta.GP_package, longparamlist=lc_model.longparamlist, nchan=lc_model.nchannel_fitted, paramtitles=paramtitles)
         modellist.append(t_GP)
     model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
 
@@ -343,7 +346,7 @@ def load_general_s4_meta_info(meta, ecf_path, s4_meta):
 
     # Overwrite the inputdir with the exact output directory from S4
     meta.inputdir = s4_outputdir
-    meta.old_datetime = s4_meta.datetime # Capture the date that the
+    meta.old_datetime = s4_meta.datetime # Capture the date that the S4 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir

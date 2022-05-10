@@ -16,10 +16,6 @@ def readfiles(meta):
     meta:   MetaClass
         The metadata object with added segment_list containing the sorted data fits files.
     """
-    meta.inputdir = os.path.join(meta.topdir, *meta.inputdir_raw.split(os.sep))
-    if meta.inputdir[-1]!='/':
-      meta.inputdir += '/'
-
     meta.segment_list = []
     for fname in os.listdir(meta.inputdir):
         if fname.endswith(meta.suffix + '.fits'):
@@ -182,7 +178,7 @@ def pathdirectory(meta, stage, run, old_datetime=None, **kwargs):
     return path
 
 def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
-    """Computes variation on median absolute deviation (MAD) using ediff1d.
+    """Computes variation on median absolute deviation (MAD) using ediff1d for 2D data.
 
     Parameters
     ----------
@@ -213,6 +209,23 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
     normspec = optspec / np.ma.mean(optspec, axis=0)
     ediff = np.ma.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(normspec[m,iwmin:iwmax])))
+        ediff[m] = get_mad_1d(normspec[m],iwmin,iwmax)
     mad = np.ma.mean(ediff)
     return mad
+
+def get_mad_1d(data, ind_min=0, ind_max=-1):
+    """Computes variation on median absolute deviation (MAD) using ediff1d for 1D data.
+
+    Parameters
+    ----------
+    data : ndarray
+        The array from which to calculate MAD.
+    int_min : int
+        Minimum index to consider.
+    ind_max : int
+        Maximum index to consider (excluding ind_max).
+
+    Returns:
+        Single MAD value in ppm
+    """
+    return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))

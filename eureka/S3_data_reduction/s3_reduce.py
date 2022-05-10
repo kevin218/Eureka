@@ -48,7 +48,7 @@ class MetaClass:
         return
 
 
-def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
+def reduce(eventlabel, ecf_path='./', s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters
@@ -258,7 +258,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
                         # make image+background plots
-                        plots_s3.image_and_background(data, meta, n)
+                        plots_s3.image_and_background(data, meta, n, m)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
@@ -300,13 +300,12 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
-                    data['optspec'][n], data['opterr'][n], mask = optspex.optimize(apdata[n], apmask[n], apbg[n],
+                    data['optspec'][n], data['opterr'][n], mask = optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
                                                                              data.stdspec[n].values, gain, apv0[n],
                                                                              p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
                                                                              fittype=meta.fittype, window_len=meta.window_len,
                                                                              deg=meta.prof_deg, n=intstart + n,
-                                                                             isplots=meta.isplots_S3, eventdir=meta.outputdir,
-                                                                             meddata=medapdata, hide_plots=meta.hide_plots)
+                                                                             isplots=meta.isplots_S3, meddata=medapdata)
 
                 #Mask out NaNs and Infs
                 optspec_ma = np.ma.masked_invalid(data.optspec.values)
@@ -324,7 +323,7 @@ def reduceJWST(eventlabel, ecf_path='./', s2_meta=None):
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
                         # make optimal spectrum plot
-                        plots_s3.optimal_spectrum(data, meta, n)
+                        plots_s3.optimal_spectrum(data, meta, n, m)
 
                 if meta.save_output == True:
                     # Save flux data from current segment
@@ -470,7 +469,7 @@ def load_general_s2_meta_info(meta, ecf_path, s2_meta):
 
     # Overwrite the inputdir with the exact output directory from S2
     meta.inputdir = os.path.join(s2_topdir, s2_outputdir)
-    meta.old_datetime = meta.datetime # Capture the date that the
+    meta.old_datetime = meta.datetime # Capture the date that the S2 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = s2_outputdir
     meta.outputdir_raw = meta.outputdir

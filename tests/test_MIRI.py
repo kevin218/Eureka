@@ -7,6 +7,7 @@ from importlib import reload
 sys.path.insert(0, '../')
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
+import eureka.lib.plots
 try:
     from eureka.S1_detector_processing import s1_process as s1
     from eureka.S2_calibrations import s2_calibrate as s2
@@ -18,13 +19,15 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 from eureka.S6_planet_spectra import s6_spectra as s6
 
 def test_MIRI(capsys):
-
+    # Set up some parameters to make plots look nicer. You can set usetex=True if you have LaTeX installed
+    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
+    
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:
         with capsys.disabled():
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print('\nSkipping MIRI Stage 1-2 tests as could not import them.')
+            print('\nSkipping MIRI Stage 2 test as could not import eureka.S2_calibrations.s2_calibrate.')
             print("\nMIRI S3-6 test: ", end='', flush=True)
     else:
         with capsys.disabled():
@@ -32,7 +35,7 @@ def test_MIRI(capsys):
             # useful to leave messages for future users who run the tests
             print("\n\nIMPORTANT: Make sure that any changes to the ecf files are "+
                 "included in demo ecf files and documentation (docs/source/ecf.rst)")
-            print("\nMIRI S1-6 test: ", end='', flush=True)
+            print("\nMIRI S2-6 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
@@ -42,7 +45,7 @@ def test_MIRI(capsys):
 
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        reload(s1)
+        # reload(s1)
         reload(s2)
     reload(s3)
     reload(s4)
@@ -50,21 +53,21 @@ def test_MIRI(capsys):
     reload(s6)
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
+        # s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
     else:
         s2_meta = None
-    s3_spec, s3_meta = s3.reduceJWST(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
-    s4_spec, s4_lc, s4_meta = s4.lcJWST(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
-    s5_meta = s5.fitJWST(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
+    s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+    s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
     s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)
 
     # run assertions for S2
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage1/'
-        name = pathdirectory(meta, 'S1', 1)
-        assert os.path.exists(name)
+        # meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage1/'
+        # name = pathdirectory(meta, 'S1', 1)
+        # assert os.path.exists(name)
 
         meta.outputdir_raw='/data/JWST-Sim/MIRI/Stage2/'
         name = pathdirectory(meta, 'S2', 1)
@@ -96,7 +99,7 @@ def test_MIRI(capsys):
     assert os.path.exists(name+'/figs')
 
     # remove temporary files
-    os.system("rm -r data/JWST-Sim/MIRI/Stage1/S1_*")
+    # os.system("rm -r data/JWST-Sim/MIRI/Stage1/S1_*")
     os.system("rm -r data/JWST-Sim/MIRI/Stage2/S2_*")
     os.system("rm -r data/JWST-Sim/MIRI/Stage3")
     os.system("rm -r data/JWST-Sim/MIRI/Stage4")

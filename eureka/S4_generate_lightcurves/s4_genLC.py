@@ -40,7 +40,7 @@ class MetaClass:
         return
 
 
-def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
+def genlc(eventlabel, ecf_path='./', s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
@@ -194,6 +194,9 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
                     spline2    = spi.UnivariateSpline(np.arange(meta.subnx), spec.opterr[n],  k=3, s=0, w=weights)
                     optspec_ma[n] = spline(np.arange(meta.subnx)+lc.drift1d[n].values)
                     opterr_ma[n]  = spline2(np.arange(meta.subnx)+lc.drift1d[n].values)
+                    # Merge conflict: Need to test code below before implementing
+                    # optspec_ma[n] = np.ma.masked_invalid(spline(np.arange(meta.subnx)+lc.drift1d[n].values))
+                    # opterr_ma[n]  = np.ma.masked_invalid(spline2(np.arange(meta.subnx)+lc.drift1d[n].values))
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta, lc)
@@ -207,7 +210,7 @@ def lcJWST(eventlabel, ecf_path='./', s3_meta=None):
 
             # Compute MAD alue
             meta.mad_s4 = util.get_mad(meta, spec.wave_1d.values, optspec_ma, meta.wave_min, meta.wave_max)
-            log.writelog("Stage 4 MAD = " + str(np.round(meta.mad_s4, 2).astype(int)) + " ppm")
+            log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
             if meta.isplots_S4 >= 1:
                 plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
@@ -309,7 +312,7 @@ def load_general_s3_meta_info(meta, ecf_path, s3_meta):
 
     # Overwrite the inputdir with the exact output directory from S3
     meta.inputdir = s3_outputdir
-    meta.old_datetime = meta.datetime # Capture the date that the
+    meta.old_datetime = meta.datetime  # Capture the date that the S3 data was made (to figure out it's foldername)
     meta.datetime = None # Reset the datetime in case we're running this on a different day
     meta.inputdir_raw = meta.inputdir
     meta.outputdir_raw = meta.outputdir

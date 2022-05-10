@@ -86,10 +86,10 @@ def spec1D(spectra, meta, log):
     if meta.sub_mean:
         # Zero-mean for cross correlation
         # correlate.py sometimes performs better when the mean is subtracted
-        ref_spec-= np.mean(ref_spec[meta.drift_range:-meta.drift_range][np.where(np.isnan(ref_spec[meta.drift_range:-meta.drift_range]) == False)])
+        ref_spec-= np.ma.mean(ref_spec[meta.drift_range:-meta.drift_range])
     ref_spec[np.where(np.isnan(ref_spec) == True)] = 0
     for n in tqdm(range(meta.n_int)):
-        fit_spec    = np.copy(spectra[n,meta.drift_preclip:meta.drift_postclip])
+        fit_spec    = np.ma.copy(spectra[n,meta.drift_preclip:meta.drift_postclip])
         #Trim data to achieve accurate cross correlation without assumptions over interesting region
         #http://stackoverflow.com/questions/15989384/cross-correlation-of-non-periodic-function-with-numpy
         fit_spec    = fit_spec[meta.drift_range:-meta.drift_range]
@@ -99,14 +99,14 @@ def spec1D(spectra, meta, log):
             fit_spec -= highpassfilt(fit_spec, meta.highpassWidth)
             fit_spec = fit_spec[int(np.ceil(meta.highpassWidth/2)):]
         if meta.sub_mean:
-            fit_spec     -= np.mean(fit_spec[np.where(np.isnan(fit_spec) == False)])
+            fit_spec     -= np.ma.mean(fit_spec)
         fit_spec[np.where(np.isnan(fit_spec) == True)] = 0
         try:
             vals = sps.correlate(ref_spec, fit_spec, mode='valid', method='fft')
             if meta.isplots_S4 >= 5:
                 plots_s4.cc_spec(meta, ref_spec, fit_spec, n)
                 plots_s4.cc_vals(meta, vals, n)
-            argmax      = np.argmax(vals)
+            argmax      = np.ma.argmax(vals)
             subvals     = vals[argmax-meta.drift_hw:argmax+meta.drift_hw+1]
             params, err = g.fitgaussian(subvals/subvals.max(), guess=[meta.drift_hw/5., meta.drift_hw*1., 1])
             drift1d[n]= len(vals)//2 - params[1] - argmax + meta.drift_hw
