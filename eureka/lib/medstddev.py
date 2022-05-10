@@ -105,7 +105,8 @@ def medstddev(data, mask=None, medi=False, axis=0):
     # residuals is data - median, masked values don't count:
     residuals = data - median
     # calculate standar deviation:
-    std = np.ma.sqrt(np.ma.sum(residuals**2.0) / (ngood - 1.0))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        std = np.ma.sqrt(np.ma.sum(residuals**2.0) / (ngood - 1.0))
 
     # Convert masked arrays to just arrays
     std = np.array(std)
