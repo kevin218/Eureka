@@ -150,6 +150,7 @@ def genlc(eventlabel, ecf_path='./', s3_meta=None):
             lc = xrio.makeDataset({'data':lcdata, 'err':lcerr})
             lc['wave_low'] = (['wavelength'], meta.wave_low)
             lc['wave_hi'] = (['wavelength'], meta.wave_hi)
+            lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
             lc['wave_err'] = (lc.wave_hi - lc.wave_low)/2
             lc.wave_low.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_hi.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
@@ -232,7 +233,7 @@ def genlc(eventlabel, ecf_path='./', s3_meta=None):
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    lc['data'][i], outliers = clipping.clip_outliers(lc['data'][i].values, log, spec.wave_1d[i], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
+                    lc['data'][i], outliers = clipping.clip_outliers(lc['data'][i].values, log, lc.wave_mid[i], meta.sigma, meta.box_width, meta.maxiters, meta.boundary, meta.fill_value, verbose=False)
                     log.writelog('  Sigma clipped {} outliers in time series'.format(outliers), mute=(not meta.verbose))
 
                 # Plot each spectroscopic light curve
