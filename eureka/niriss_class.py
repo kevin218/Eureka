@@ -265,7 +265,8 @@ class NIRISS_S3(object):
             return('Trace method not implemented. Options are `edges` and `centers`.')
 
 
-    def create_box_mask(self, boxsize1=60, boxsize2=50, booltype=True,
+    def create_box_mask(self, boxsize1=60, boxsize2=50, boxsize3=40,
+                        booltype=True,
                         return_together=True):
         """
         Creates a box mask to extract the first and second NIRISS orders.
@@ -310,6 +311,7 @@ class NIRISS_S3(object):
         out = dirty_mask(self.median, t,
                          boxsize1=boxsize1,
                          boxsize2=boxsize2,
+                         boxsize3=boxsize3,
                          booltype=booltype,
                          return_together=return_together)
         if return_together == True:
@@ -319,6 +321,7 @@ class NIRISS_S3(object):
 
         self.boxsize1 = boxsize1
         self.boxsize2 = boxsize2
+        self.boxsize3 = boxsize3
 
         return
 
@@ -347,14 +350,15 @@ class NIRISS_S3(object):
         else:
             d = self.data + 0.0
 
-        s1, s2, v1, v2 = box_extract(d,
-                                     self.var,
-                                     self.box_mask_separate)
+        s, v = box_extract(d, self.var, self.box_mask_separate)
 
-        self.box_var1     = v1 + 0.0
-        self.box_var2     = v2 + 0.0
-        self.box_spectra1 = s1 + 0.0
-        self.box_spectra2 = s2 + 0.0
+        self.box_var1     = v[0] + 0.0
+        self.box_var2     = v[1] + 0.0
+        self.box_var3     = v[2] + 0.0
+
+        self.box_spectra1 = s[0] + 0.0
+        self.box_spectra2 = s[1] + 0.0
+        self.box_spectra3 = s[2] + 0.0
 
         return
 
