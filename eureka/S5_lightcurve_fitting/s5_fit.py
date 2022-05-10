@@ -142,9 +142,9 @@ def fitlc(eventlabel, ecf_path='./', s4_meta=None):
                 for channel in range(chanrng):
                     # FINDME: need to consider optmask
                     flux = np.ma.append(flux,lc.data.values[channel,:] / \
-                                np.mean(lc.data.values[channel,:]))
+                                np.nanmean(lc.data.values[channel,:]))
                     flux_err = np.ma.append(flux_err,lc.err.values[channel,:] / \
-                                np.mean(lc.data.values[channel,:]))
+                                np.nanmean(lc.data.values[channel,:]))
 
                 meta = fit_channel(meta,time,flux,0,flux_err,eventlabel,sharedp,params,log,longparamlist,time_units,paramtitles,chanrng)
 

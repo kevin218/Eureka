@@ -37,3 +37,4 @@ dependencies:
         - stcal
         - stdatamodels
         - svo_filters
+        - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus

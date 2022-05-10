@@ -1,3 +1,4 @@
+astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
 astropy
 batman-package
 bokeh
