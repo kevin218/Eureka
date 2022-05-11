@@ -1,6 +1,7 @@
 # NIRCam specific rountines go here
 import numpy as np
 from astropy.io import fits
+import astraeus.xarrayIO as xrio
 from . import sigrej, background
 
 # Read FITS file from JWST's NIRCam instrument
@@ -11,15 +12,17 @@ def read(filename, data, meta):
     ----------
     filename:   str
         Single filename to read
-    data:   DataClass
-        The data object in which the fits data will stored
+    data:   Xarray Dataset
+        The Dataset object in which the fits data will be stored
     meta:   MetaClass
         The metadata object
 
     Returns
     -------
-    data: DataClass
-        The updated data object with the fits data stored inside
+    data: Xarray Dataset
+        The updated Dataset object with the fits data stored inside
+    meta:   MetaClass
+        The metadata object
 
     Notes
     -----
@@ -30,30 +33,40 @@ def read(filename, data, meta):
     - May 2021 KBS
         Updated for NIRCam
     - July 2021
-        Moved bjdtdb into here              
+        Moved bjdtdb into here
+    - Apr 20, 2022 Kevin Stevenson
+        Convert to using Xarray Dataset
     '''
-    assert isinstance(filename, str)
-
     hdulist = fits.open(filename)
 
     # Load master and science headers
-    data.filename = filename
-    data.mhdr    = hdulist[0].header
-    data.shdr    = hdulist['SCI',1].header
+    data.attrs['filename'] = filename
+    data.attrs['mhdr']     = hdulist[0].header
+    data.attrs['shdr']     = hdulist['SCI',1].header
+    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+    data.attrs['intend']   = data.attrs['mhdr']['INTEND']
 
-    data.intstart    = data.mhdr['INTSTART']
-    data.intend      = data.mhdr['INTEND']
-
-    data.data    = hdulist['SCI',1].data
-    data.err     = hdulist['ERR',1].data
-    data.dq      = hdulist['DQ',1].data
-    data.wave    = hdulist['WAVELENGTH',1].data
-    data.v0      = hdulist['VAR_RNOISE',1].data
-    int_times = hdulist['INT_TIMES',1].data[data.intstart-1:data.intend]
+    sci     = hdulist['SCI',1].data
+    err     = hdulist['ERR',1].data
+    dq      = hdulist['DQ',1].data
+    v0      = hdulist['VAR_RNOISE',1].data
+    wave_2d = hdulist['WAVELENGTH',1].data
+    int_times = hdulist['INT_TIMES',1].data[data.attrs['intstart']-1:data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
-    data.time = int_times['int_mid_BJD_TDB']
-    meta.time_units = 'BJD_TDB'
+    time = int_times['int_mid_BJD_TDB']
+
+    # Record units
+    flux_units  = data.attrs['shdr']['BUNIT']
+    time_units = 'BJD_TDB'
+    wave_units = 'microns'
+
+    data['flux'] = xrio.makeFluxLikeDA( sci, time, flux_units, time_units, name='flux')
+    data['err']  = xrio.makeFluxLikeDA( err, time, flux_units, time_units, name='err')
+    data['dq']   = xrio.makeFluxLikeDA(  dq, time,     "None", time_units, name='dq')
+    data['v0']   = xrio.makeFluxLikeDA(  v0, time, flux_units, time_units, name='v0')
+    data['wave_2d'] = (['y','x'], wave_2d)
+    data['wave_2d'].attrs['wave_units'] = wave_units
 
     return data, meta
 
@@ -62,29 +75,30 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data:   DataClass
-        The data object in which the fits data will stored
+    data:   Xarray Dataset
+        The Dataset object containing the fits data
     meta:   MetaClass
         The metadata object
 
     Returns
     -------
-    data:   DataClass
+    data:   Xarray Dataset
         The updated data object with outlier background pixels flagged.
     '''
     y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
-    
-    bgdata1 = data.subdata[:,  :y1]
-    bgmask1 = data.submask[:,  :y1]
-    bgdata2 = data.subdata[:,y2:  ]
-    bgmask2 = data.submask[:,y2:  ]
-    bgerr1  = np.median(data.suberr[:,  :y1])
-    bgerr2  = np.median(data.suberr[:,y2:  ])
+
+    bgdata1 = data.flux[:,  :y1]
+    bgmask1 = data.mask[:,  :y1]
+    bgdata2 = data.flux[:,y2:  ]
+    bgmask2 = data.mask[:,y2:  ]
+    bgerr1  = np.median(data.err[:,  :y1])
+    bgerr2  = np.median(data.err[:,y2:  ])
     estsig1 = [bgerr1 for j in range(len(bg_thresh))]
     estsig2 = [bgerr2 for j in range(len(bg_thresh))]
-
-    data.submask[:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1, estsig1)
-    data.submask[:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2, estsig2)
+    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
+    # Need to test performance with and without estsig on real data.
+    data['mask'][:,  :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1)#, estsig1)
+    data['mask'][:,y2:  ] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2)#, estsig2)
 
     return data
 

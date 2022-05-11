@@ -4,13 +4,15 @@ import matplotlib.pyplot as plt
 from ..lib import util
 from ..lib.plots import figure_filetype
 
-def binned_lightcurve(meta, i):
+def binned_lightcurve(meta, lc, i):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
+    lc:     Xarray Dataset
+        The Dataset object containing light curve and time data.
     i:  int
         The current bandpass number.
 
@@ -20,17 +22,18 @@ def binned_lightcurve(meta, i):
     '''
     plt.figure(4102, figsize=(8, 6))
     plt.clf()
-    plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
+    plt.suptitle(f"Bandpass {i}: %.3f - %.3f" % (lc.wave_low.values[i], lc.wave_hi.values[i]))
     ax = plt.subplot(111)
-    time_modifier = np.ma.floor(meta.time[0])
+    time_modifier = np.floor(lc.time.values[0])
     # Normalized light curve
-    norm_lcdata = meta.lcdata[i] / np.ma.mean(meta.lcdata[i,:])
-    norm_lcerr = meta.lcerr[i] / np.ma.mean(meta.lcdata[i,:])
-    plt.errorbar(meta.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
+    norm_lcdata = lc['data'][i] / np.nanmedian(lc['data'][i].values)
+    norm_lcerr = lc['err'][i] / np.nanmedian(lc['data'][i].values)
+    plt.errorbar(lc.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o', color=f'C{i}', mec=f'C{i}', alpha = 0.2)
     mad = util.get_mad_1d(norm_lcdata)
     plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm", transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
-    plt.xlabel(f'Time [{meta.time_units} - {time_modifier}]')
+    time_units = lc.data.attrs['time_units']
+    plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
     plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90, hspace=0.20, wspace=0.3)
     ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
@@ -38,13 +41,15 @@ def binned_lightcurve(meta, i):
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def drift1d(meta):
+def drift1d(meta, lc):
     '''Plot the 1D drift/jitter results. (Fig 4103)
 
     Parameters
     ----------
     meta:   MetaClass
         The metadata object.
+    lc:     Xarray Dataset
+        The light curve object containing drift arrays.
 
     Returns
     -------
@@ -52,9 +57,11 @@ def drift1d(meta):
     '''
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(meta.driftmask)], meta.drift1d[np.where(meta.driftmask)], '.')
+    plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)], lc.drift1d[np.where(~lc.driftmask)], '.', label='Good Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)], lc.drift1d[np.where(lc.driftmask)], '.', label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
+    plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig(meta.outputdir + 'figs'+os.sep+f'fig4103_Drift'+figure_filetype, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
