@@ -97,7 +97,7 @@ def read(filename, data, meta):
             time_f = phase_f*per+t0
             while time_f<time_i:
                 time_f += per
-            data.time = np.linspace(time_i, time_f, 4506, endpoint=True)[data.attrs['intstart'] - 1:data.attrs['intend']-1]
+            time = np.linspace(time_i, time_f, 4506, endpoint=True)[data.attrs['intstart'] - 1:data.attrs['intend']-1]
         elif 'new_drift' in data.attrs['filename']:
             # Time array for the newest MIRISIM observations
             time = np.linspace(0, 47.712*(1849)/3600/24, 1849, endpoint=True)[data.attrs['intstart']-1:data.attrs['intend']]
