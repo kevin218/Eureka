@@ -9,31 +9,41 @@ def smooth(x, window_len=10, window='hanning'):
     (with the window size) in both ends so that transient parts are minimized
     in the begining and end part of the output signal.
 
-    input:
-        x: the input signal
-        window_len: the dimension of the smoothing window
-        window: str
-            The type of window from 'flat', 'hanning', 'hamming','bartlett',
-            or 'blackman'. flat window will produce a moving average smoothing.
+    Parameters
+    ----------
+    x : ndarray
+        The input signal.
+    window_len : int; optional
+        The dimension of the smoothing window. Defaults to 10.
+    window : str; optional
+        The type of window from 'flat', 'hanning', 'hamming','bartlett',
+        or 'blackman'. flat window will produce a moving average smoothing.
+        Defaults to 'hanning'.
 
-    output:
+    Returns
+    -------
+    ndarray
         the smoothed signal
 
-    example:
-
+    Examples
+    --------
     t=linspace(-2,2,0.1)
     x=sin(t)+randn(len(t))*0.1
     y=smooth(x)
 
-    see also:
-
+    See Also
+    --------
     numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman,
     numpy.convolve, scipy.signal.lfilter
 
-    TODO: the window parameter could be the window itself if an array instead
-    of a string
+    Notes
+    -----
+    To Do: The window parameter could be the window itself if an array instead
+    of a string.
 
-    Source: http://www.scipy.org/Cookbook/SignalSmooth		2009-03-13
+    References
+    ----------
+    http://www.scipy.org/Cookbook/SignalSmooth 2009-03-13
     """
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
@@ -65,6 +75,18 @@ def smooth(x, window_len=10, window='hanning'):
 def medfilt(x, window_len):
     """Apply a length-k median filter to a 1D array x.
     Boundaries are extended by repeating endpoints.
+
+    Parameters
+    ----------
+    x : ndarray (1D)
+        The data to be smoothed.
+    window_len : int
+        The smoothing window length.
+
+    Returns
+    -------
+    ndarray
+        A smoothed copy of x.
     """
     assert(x.ndim == 1), "Input must be one-dimensional."
     if window_len % 2 == 0:

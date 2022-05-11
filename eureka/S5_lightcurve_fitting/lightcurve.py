@@ -4,45 +4,47 @@ Author: Joe Filippazzo
 Email: jfilippazzo@stsci.edu
 """
 import numpy as np
-import pandas as pd
+import os
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 from . import models as m
 from . import fitters as f
 from .utils import COLORS, color_gen
 from ..lib.plots import figure_filetype
 
-from copy import deepcopy
 
 class LightCurve(m.Model):
-    def __init__(self, time, flux, channel, nchannel, log, longparamlist, unc=None, parameters=None, time_units='BJD', name='My Light Curve', share=False, white=False):
+    def __init__(self, time, flux, channel, nchannel, log, longparamlist,
+                 unc=None, parameters=None, time_units='BJD',
+                 name='My Light Curve', share=False, white=False):
         """
         A class to store the actual light curve
 
         Parameters
         ----------
-        time: sequence
-            The time axis in days, [MJD or BJD]
-        flux: sequence
-            The flux in electrons (not ADU)
-        channel: int
+        time : sequence
+            The time axis in days.
+        flux : sequence
+            The flux in electrons (not ADU).
+        channel : int
             The channel number.
-        nChannel: int
+        nChannel : int
             The total number of channels.
-        log: logedit.Logedit
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
-        unc: sequence
+        unc : sequence
             The uncertainty on the flux
-        parameters: str, object (optional)
-            The orbital parameters of the star/planet system,
-            may be a path to a JSON file or a parameter object
-        time_units: str
-            The time units
-        name: str
-            A name for the object
-        share: bool
-            Whether the fit shares parameters between spectral channels
-        white: bool
+        parameters : str or object; optional
+            Unused. The orbital parameters of the star/planet system,
+            may be a path to a JSON file or a parameter object.
+        time_units : str; optional
+            The time units.
+        name : str; optional
+            A name for the object.
+        share : bool; optional
+            Whether the fit shares parameters between spectral channels.
+        white : bool; optional
             Whether the current fit is for a white-light light curve
 
         Returns
@@ -87,7 +89,8 @@ class LightCurve(m.Model):
         # Set the data arrays
         if unc is not None:
             if type(unc) == float or type(unc) == np.float64:
-                log.writelog('Warning: Only one uncertainty input, assuming constant uncertainty.')
+                log.writelog('Warning: Only one uncertainty input, assuming '
+                             'constant uncertainty.')
             elif len(time)*self.nchannel_fitted != len(unc):
                 raise ValueError('Time and unc axes must be the same length.')
 
@@ -101,7 +104,8 @@ class LightCurve(m.Model):
 
         self.longparamlist = longparamlist
 
-        self.colors = np.array([next(COLORS) for i in range(self.nchannel_fitted)])
+        self.colors = np.array([next(COLORS)
+                                for i in range(self.nchannel_fitted)])
 
         return
 
@@ -110,25 +114,21 @@ class LightCurve(m.Model):
 
         Parameters
         ----------
-        model: eureka.S5_lightcurve_fitting.models.CompositeModel
-            The model to fit to the data
-        meta: MetaClass
-            The metadata object
-        log: logedit.Logedit
+        model : eureka.S5_lightcurve_fitting.models.CompositeModel
+            The model to fit to the data.
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
-        fitter: str
-            The name of the fitter to use
-        **kwargs:
+        fitter : str
+            The name of the fitter to use.
+        **kwargs : dict
             Arbitrary keyword arguments.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
-
         History:
+
         - Dec 29, 2021 Taylor Bell
             Updated documentation and reduced repeated code
         """
@@ -161,17 +161,15 @@ class LightCurve(m.Model):
         if fit_model is not None:
             self.results.append(fit_model)
 
-        return
-
     def plot(self, meta, fits=True):
         """Plot the light curve with all available fits. (Figs 5103)
 
         Parameters
         ----------
-        fits: bool
-            Plot the fit models
-        draw: bool
-            Show the figure, else return it
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        fits : bool; optional
+            Plot the fit models. Defaults to True.
 
         Returns
         -------
@@ -188,11 +186,12 @@ class LightCurve(m.Model):
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
-            fig = plt.figure(5103, figsize=(8,6))
+            fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i], zorder=0)
+            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i],
+                        zorder=0)
 
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
@@ -200,7 +199,8 @@ class LightCurve(m.Model):
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(plot_COLORS), zorder=np.inf, share=self.share, chan=channel)
+                    model.plot(self.time, ax=ax, color=next(plot_COLORS),
+                               zorder=np.inf, share=self.share, chan=channel)
 
             # Format axes
             ax.set_title(f'{meta.eventlabel} - Channel {channel}')
@@ -214,15 +214,11 @@ class LightCurve(m.Model):
             else:
                 ch_number = str(channel).zfill(len(str(self.nchannel)))
                 fname_tag = f'ch{ch_number}'
-            fname = f'figs/fig5103_{fname_tag}_all_fits'+figure_filetype
+            fname = f'figs{os.sep}fig5103_{fname_tag}_all_fits'+figure_filetype
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
 
-        return
-
     def reset(self):
         """Reset the results"""
         self.results = []
-
-        return
