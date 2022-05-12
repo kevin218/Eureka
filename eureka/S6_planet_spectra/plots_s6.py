@@ -1,5 +1,6 @@
 from copy import deepcopy
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 
 from ..lib.plots import figure_filetype
@@ -59,9 +60,9 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         ax2 = ax.secondary_yaxis('right', functions=(H, r))
         ax2.set_ylabel('Scale Height')
 
-        fname = 'figs/fig6301'
+        fname = 'figs'+os.sep+'fig6301'
     else:
-        fname = 'figs/fig6101'
+        fname = 'figs'+os.sep+'fig6101'
 
     if 'R_' in ylabel:
         fname += '_transmission'

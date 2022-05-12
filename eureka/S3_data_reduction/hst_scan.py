@@ -253,26 +253,21 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx, sigm
         # Read and assemble flat field
         # Select windowed region containing the data
         x         = (wave[i] - wmin)/(wmax - wmin)
-        #print("Extracting flat field region:")
-        #print(ywindow[i][0]+flatoffset[i][0],ywindow[i][1]+flatoffset[i][0],xwindow[i][0]+flatoffset[i][1],xwindow[i][1]+flatoffset[i][1])
 
         ylower = int(ywindow[i][0]+flatoffset[i][0])
         yupper = int(ywindow[i][1]+flatoffset[i][0])
         xlower = int(xwindow[i][0]+flatoffset[i][1])
         xupper = int(xwindow[i][1]+flatoffset[i][1])
-        #flat_window += hdulist[j].data[ylower:yupper,xlower:xupper]*x**j
 
         if flatfile[-19:] == 'sedFFcube-both.fits':
             #sedFFcube-both
-
             flat_window = hdulist[1].data[ylower:yupper,xlower:xupper]
             for j in range(2,len(hdulist)):
                 flat_window += hdulist[j].data[ylower:yupper,xlower:xupper]*x**(j-1)
         else:
-            #WFC3.IR.G141.flat.2
+            #WFC3.IR.G141.flat.2 OR WFC3.IR.G102.flat.2
             flat_window = hdulist[0].data[ylower:yupper,xlower:xupper]
             for j in range(1,len(hdulist)):
-                #print(j)
                 flat_window += hdulist[j].data[ylower:yupper,xlower:xupper]*x**j
 
         # Initialize bad-pixel mask
@@ -589,7 +584,7 @@ def drift_fit2D(ev, data, validRange=9):
     Written by Kevin Stevenson        January 2017
 
     '''
-    
+
 
     #if postclip != None:
     #    postclip = -postclip

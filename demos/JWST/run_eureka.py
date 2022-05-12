@@ -1,5 +1,5 @@
-import sys
-sys.path.insert(0, '../../')
+import sys, os
+sys.path.append(f'..{os.sep}..{os.sep}')
 import eureka.lib.plots
 import eureka.S1_detector_processing.s1_process as s1
 import eureka.S2_calibrations.s2_calibrate as s2
@@ -15,16 +15,16 @@ eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
 # eventlabel = 'miri_lrs_template'
 # eventlabel = 'nirspec_fs_template'
 eventlabel = 'nircam_wfss_template'
-ecf_path = './'
+ecf_path = '.'+os.sep
 
 if __name__ == '__main__':
 	#s1_meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
-	
-	s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)#, s1_meta=s1_meta)
 
-	s3_meta = s3.reduce(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+	s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
 
-	s4_meta = s4.genlc(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+	s3_spec, s3_meta = s3.reduce(eventlabel, ecf_path=ecf_path, s2_meta=s2_meta)
+
+	s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
 
 	s5_meta = s5.fitlc(eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
 

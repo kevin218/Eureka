@@ -4,7 +4,7 @@ import numpy as np
 import sys, os
 from importlib import reload
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '..'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
@@ -38,8 +38,8 @@ def test_NIRSpec(capsys):
     # explicitly define meta variables to be able to run pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel='NIRSpec'
-    meta.topdir='../tests'
-    ecf_path='./NIRSpec_ecfs/'
+    meta.topdir=f'..{os.sep}tests'
+    ecf_path=f'.{os.sep}NIRSpec_ecfs{os.sep}'
 
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
@@ -50,41 +50,38 @@ def test_NIRSpec(capsys):
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
-    s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
-    s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
+    s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
-    
     # run assertions for S2
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
-        meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage2/'
+        meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2{os.sep}'
         name = pathdirectory(meta, 'S2', 1)
         assert os.path.exists(name)
-        assert os.path.exists(name+'/figs')
-    
+        assert os.path.exists(name+os.sep+'figs')
     # run assertions for S3
-    meta.outputdir_raw='/data/JWST-Sim/NIRSpec/Stage3/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3{os.sep}'
     name = pathdirectory(meta, 'S3', 1, ap=8, bg=10)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S4
-    meta.outputdir_raw='data/JWST-Sim/NIRSpec/Stage4/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4{os.sep}'
     name = pathdirectory(meta, 'S4', 1, ap=8, bg=10)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S5
-    meta.outputdir_raw='data/JWST-Sim/NIRSpec/Stage5/'
+    meta.outputdir_raw=f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage5{os.sep}'
     name = pathdirectory(meta, 'S5', 1, ap=8, bg=10)
     assert os.path.exists(name)
-    assert os.path.exists(name+'/figs')
+    assert os.path.exists(name+os.sep+'figs')
     
-    # remove temp files
+    # remove temporary files
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
-        os.system("rm -r data/JWST-Sim/NIRSpec/Stage2/S2_*")
-        pass
-    os.system("rm -r data/JWST-Sim/NIRSpec/Stage3")
-    os.system("rm -r data/JWST-Sim/NIRSpec/Stage4")
-    os.system("rm -r data/JWST-Sim/NIRSpec/Stage5")
+        os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage2{os.sep}S2_*")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage3")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage4")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}Stage5")

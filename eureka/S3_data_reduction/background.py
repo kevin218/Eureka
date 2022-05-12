@@ -24,8 +24,8 @@ def BGsubtraction(data, meta, log, isplots):
 
     Parameters
     ----------
-    data:   DataClass
-        Data object containing data, uncertainty, and variance arrays in units of MJy/sr or DN/s.
+    data:   Xarray Dataset
+        Dataset object containing data, uncertainty, and variance arrays in units of MJy/sr or electrons.
     meta:   MetaClass
         The metadata object.
     log:    logedit.Logedit
@@ -35,8 +35,8 @@ def BGsubtraction(data, meta, log, isplots):
 
     Returns
     -------
-    data:   DataClass
-        Data object containing background subtracted data.
+    data:   Xarray Dataset
+        Dataset object containing background subtracted data.
 
     Notes
     ------
@@ -44,8 +44,10 @@ def BGsubtraction(data, meta, log, isplots):
 
     - Dec 10, 2021 Taylor Bell
         Edited to pass the full DataClass object into inst.fit_bg
+    - Apr 20, 2022 Kevin Stevenson
+        Convert to using Xarray Dataset
     """
-    
+
     # Load instrument module
     if meta.inst == 'miri':
         from . import miri as inst
@@ -63,20 +65,21 @@ def BGsubtraction(data, meta, log, isplots):
     # Write background
     def writeBG(arg):
         bg_data, bg_mask, n = arg
-        data.subbg[n] = bg_data
-        data.submask[n] = bg_mask
+        data['bg'][n] = bg_data
+        data['mask'][n] = bg_mask
         return
     def writeBG_WFC3(arg):
         bg_data, bg_mask, datav0, datavariance, n = arg
-        data.subbg[n] = bg_data
-        data.submask[n] = bg_mask
-        data.subv0[n] = datav0
-        data.subvariance[n] = datavariance
+        data['bg'][n] = bg_data
+        data['mask'][n] = bg_mask
+        data['v0'][n] = datav0
+        data['variance'][n] = datavariance
         return
 
     # Compute background for each integration
     log.writelog('  Performing background subtraction', mute=(not meta.verbose))
-    data.subbg = np.zeros((data.subdata.shape))
+    data['bg'] = (['time','y','x'], np.zeros(data.flux.shape))
+    data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
     if meta.ncpu == 1:
         # Only 1 CPU
         iterfn = range(meta.int_start,meta.n_int)
@@ -87,9 +90,9 @@ def BGsubtraction(data, meta, log, isplots):
             if meta.inst == 'niriss':
                 writeBG(inst.fit_bg(data, meta, n, isplots))
             elif meta.inst == 'wfc3':
-                writeBG_WFC3(inst.fit_bg(data.subdata[n], data.submask[n], data.subv0[n], data.subvariance[n], n, meta, isplots))
+                writeBG_WFC3(inst.fit_bg(data.flux[n].values, data.mask[n].values, data.v0[n].values, data.variance[n].values, n, meta, isplots))
             else:
-                writeBG(inst.fit_bg(data.subdata[n], data.submask[n], n, meta, isplots))
+                writeBG(inst.fit_bg(data.flux[n].values, data.mask[n].values, n, meta, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
@@ -102,9 +105,9 @@ def BGsubtraction(data, meta, log, isplots):
             jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,), callback=writeBG) for args in args_list]
         elif meta.inst =='wfc3':
             # The WFC3 background subtraction needs a few more inputs and outputs
-            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.subdata[n], data.submask[n], data.subv0[n], data.subvariance[n], n, meta, isplots,), callback=writeBG_WFC3) for n in range(meta.int_start,meta.n_int)]
-        else: 
-            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.subdata[n], data.submask[n], n, meta, isplots,), callback=writeBG) for n in range(meta.int_start,meta.n_int)]
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.flux[n].values, data.mask[n].values, data.v0[n].values, data.variance[n].values, n, meta, isplots,), callback=writeBG_WFC3) for n in range(meta.int_start,meta.n_int)]
+        else:
+            jobs = [pool.apply_async(func=inst.fit_bg, args=(data.flux[n].values, data.mask[n].values, n, meta, isplots,), callback=writeBG) for n in range(meta.int_start,meta.n_int)]
         pool.close()
         iterfn = jobs
         if meta.verbose:
@@ -114,18 +117,7 @@ def BGsubtraction(data, meta, log, isplots):
 
     # 9.  Background subtraction
     # Perform background subtraction
-    data.subdata -= data.subbg
-    
-    if hasattr(meta, 'save_bgsub') and meta.save_bgsub:
-        log.writelog('  Saving background subtracted FITS file', mute=(not meta.verbose))
-        new_filename = data.filename.split(os.sep)[-1]
-        new_folder = os.path.join(meta.outputdir, 'bgsub_FITS')
-        if not os.path.isdir(new_folder):
-            os.mkdir(new_folder)
-        new_filename = os.path.join(new_folder, new_filename)
-        with fits.open(data.filename) as file:
-            file["SCI"].data = data.subdata
-            file.writeto(new_filename)
+    data['flux'] -= data.bg
 
     return data
 
@@ -248,7 +240,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False, isplot
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+figure_filetype, dpi=300)
+                    plt.savefig(meta.outputdir + 'figs'+os.sep+'Fig6_BG_'+str(j)+figure_filetype, dpi=300)
                     plt.pause(0.01)
 
     if isrotate == 1:
@@ -356,7 +348,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                         plt.title(str(j))
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
-                        plt.savefig(meta.outputdir + 'figs/Fig6_BG_'+str(j)+figure_filetype, dpi=300)
+                        plt.savefig(meta.outputdir + 'figs'+os.sep+'Fig6_BG_'+str(j)+figure_filetype, dpi=300)
                         plt.pause(0.01)
 
                     # Calculate residuals
@@ -368,7 +360,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False, isplo
                     ind = np.arange(0,len(residuals),1)
                     ind = np.delete(ind, loc)
                     stdres = np.std(residuals[ind])
-                    
+
                     if stdres == 0:
                         stdres = np.inf
                     # Calculate number of sigma from the model
@@ -413,7 +405,7 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     """
     Completes a step for fitting a 2D background
     model.
-    
+
     Parameters
     ----------
     img : np.ndarray
@@ -439,12 +431,12 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
        The modeled background image.
     """
     sigma_clip = SigmaClip(sigma=sigma)
-    
+
     if bkg_estimator.lower()=='mmmbackground':
         bkg = MMMBackground()
     elif bkg_estimator.lower()=='median':
         bkg = MedianBackground()
-        
+
     b = Background2D(img, box,
                      filter_size=filter_size,
                      bkg_estimator=bkg,
@@ -460,9 +452,9 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
 
     Parameters
     ----------
-    isplots : bool, optional                                      
+    isplots : bool, optional
        Plots intermediate steps for the background fitting routine.
-       Default is False.                                          
+       Default is False.
 
     Returns
     -------
@@ -493,19 +485,19 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4,2,3], isplots=0):
                                            linspace=[-200,200]) # removal from background
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
                                            linspace=[-10,10], where='order') # removal from order
-        
 
-        b1 = bkg_sub(rm_crs[i], 
+
+        b1 = bkg_sub(rm_crs[i],
                      order_mask,
                      bkg_estimator='median', sigma=4, box=(10,5), filter_size=(2,2))
-        b2 = bkg_sub(rm_crs[i]-b1, 
+        b2 = bkg_sub(rm_crs[i]-b1,
                      order_mask,
                      sigma=3,
                      bkg_estimator='median')
-        
+
         bkg_subbed[i] = (rm_crs[i]-b1)-b2
 
-        
+
     data.bkg_removed = bkg_subbed
 
     return data
