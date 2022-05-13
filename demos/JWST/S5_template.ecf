@@ -53,6 +53,6 @@ hide_plots      False   # If True, plots will automatically be closed rather tha
 # Project directory
 topdir          /home/User
 
-# Directories relative to project dir
-inputdir        /Data/JWST-Sim/NIRCam/Stage4/   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-outputdir       /Data/JWST-Sim/NIRCam/Stage5/
+# Directories relative to topdir
+inputdir        /Data/JWST-Sim/NIRSpec/Stage4/   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
+outputdir       /Data/JWST-Sim/NIRSpec/Stage5/
