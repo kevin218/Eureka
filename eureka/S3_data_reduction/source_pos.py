@@ -10,8 +10,8 @@ def source_pos(data, meta, m, header=False):
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -26,27 +26,27 @@ def source_pos(data, meta, m, header=False):
         The central position of the star.
     '''
     if header:
-        src_ypos = data.shdr['SRCYPOS'] - meta.ywindow[0]
+        src_ypos = data.attrs['shdr']['SRCYPOS'] - meta.ywindow[0]
     elif meta.src_pos_type == 'weighted':
         # find the source location using a flux-weighted mean approach
-        src_ypos = source_pos_FWM(data.subdata, meta, m)
+        src_ypos = source_pos_FWM(data.flux.values, meta, m)
     elif meta.src_pos_type == 'gaussian':
         # find the source location using a gaussian fit
-        src_ypos = source_pos_gauss(data.subdata, meta, m)
+        src_ypos = source_pos_gauss(data.flux.values, meta, m)
     else:
         # brightest row for source location
-        src_ypos = source_pos_max(data.subdata, meta, m)
+        src_ypos = source_pos_max(data.flux.values, meta, m)
 
     return round(src_ypos)
 
 
-def source_pos_max(data, meta, m, plot=True):
+def source_pos_max(flux, meta, m, plot=True):
     '''A simple function to find the brightest row for source location
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    flux : ndarray
+        The 3D array of flux values.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -69,9 +69,10 @@ def source_pos_max(data, meta, m, plot=True):
     - 2021-07-14 Sebastian Zieba
         Modified
     '''
-    x_dim = data.shape[1]
 
-    sum_row = np.sum(data[0], axis=1)
+    x_dim = flux.shape[1]
+
+    sum_row = np.sum(flux[0], axis=1)
     pos_max = np.argmax(sum_row)
 
     y_pixels = np.arange(0, x_dim)
@@ -84,14 +85,14 @@ def source_pos_max(data, meta, m, plot=True):
     return pos_max
 
 
-def source_pos_FWM(data, meta, m):
+def source_pos_FWM(flux, meta, m):
     '''An alternative function to find the source location using a
-    flux-weighted mean approach
+    flux-weighted mean approach.
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    flux : ndarray
+        The 3D array of flux values.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -111,13 +112,14 @@ def source_pos_FWM(data, meta, m):
     - 2021-07-14 Sebastian Zieba
         Modified
     '''
-    x_dim = data.shape[1]
 
-    pos_max = source_pos_max(data, meta, m, plot=False)
+    x_dim = flux.shape[1]
+
+    pos_max = source_pos_max(flux, meta, m, plot=False)
 
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
-    sum_row = np.sum(data[0],
+    sum_row = np.sum(flux[0],
                      axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
     sum_row -= (sum_row[0]+sum_row[-1])/2
 
@@ -162,16 +164,16 @@ def gauss(x, a, x0, sigma, off):
     - 2021-10-15 Taylor Bell
         Separated this into its own function to allow it to be used elsewhere.
     '''
-    return a * np.exp(-(x-x0)**2/(2*sigma**2))+off
+    return a*np.exp(-(x-x0)**2/(2*sigma**2))+off
 
 
-def source_pos_gauss(data, meta, m):
+def source_pos_gauss(flux, meta, m):
     '''A function to find the source location using a gaussian fit.
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    flux : ndarray
+        The 3D array of flux values.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -191,12 +193,12 @@ def source_pos_gauss(data, meta, m):
     - 2021-10-15 Taylor Bell
         Tweaked to allow for cleaner plots_s3.py
     '''
-    x_dim = data.shape[1]
+    x_dim = flux.shape[1]
 
     # Data cutout around the maximum row
-    pos_max = source_pos_max(data, meta, m, plot=False)
+    pos_max = source_pos_max(flux, meta, m, plot=False)
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    sum_row = np.sum(data[0],
+    sum_row = np.sum(flux[0],
                      axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
     # Initial Guesses

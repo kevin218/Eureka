@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import time as time_pkg
+import astraeus.xarrayIO as xrio
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -48,6 +49,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
         Adding ability to do a single shared fit across all channels
     - January - February, 2022 Eva-Maria Ahrer
         Adding GP functionality
+    - April 2022 Kevin Stevenson
+        Enabled Astraeus
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
@@ -102,6 +105,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
 
+            lc = xrio.readXR(meta.filename_S4_LCData)
+
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
                                                 ap=spec_hw_val, bg=bg_hw_val)
@@ -136,11 +141,12 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
             offset = params.time_offset.value
-            time = meta.time - offset
+            time = lc.time.values - offset
             if offset != 0:
-                time_units = meta.time_units+f' - {offset}'
+                time_units = lc.data.attrs['time_units']+f' - {offset}'
             else:
-                time_units = meta.time_units
+                time_units = lc.data.attrs['time_units']
+            meta.time = lc.time.values
 
             # If any of the parameters' ptypes are set to 'white', enforce a
             # Gaussian prior based on a white-light light curve fit
@@ -181,13 +187,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
+                    # FINDME: need to consider optmask
                     flux = np.ma.append(flux,
-                                        (meta.lcdata[channel, :] /
-                                         np.ma.mean(meta.lcdata[channel, :])))
-                    flux_err = \
-                        np.ma.append(flux_err,
-                                     (meta.lcerr[channel, :] /
-                                      np.ma.mean(meta.lcdata[channel, :])))
+                                        (lc.data.values[channel, :] /
+                                         np.nanmean(
+                                             lc.data.values[channel, :])))
+                    flux_err = np.ma.append(flux_err,
+                                            (lc.err.values[channel, :] /
+                                             np.nanmean(
+                                                 lc.data.values[channel, :])))
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -205,8 +213,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Get the flux and error measurements for
                     # the current channel
-                    flux = meta.lcdata[channel, :]
-                    flux_err = meta.lcerr[channel, :]
+                    flux = lc.data.values[channel, :]
+                    flux_err = lc.err.values[channel, :]
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values

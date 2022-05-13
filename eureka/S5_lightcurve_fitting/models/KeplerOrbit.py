@@ -1,8 +1,3 @@
-# Code taken from
-# https://github.com/taylorbell57/Bell_EBM/blob/master/Bell_EBM/KeplerOrbit.py
-# Author: Taylor Bell
-# Last Update: 2019-07-03
-
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy.constants as const
@@ -11,6 +6,11 @@ import scipy.optimize
 
 class KeplerOrbit(object):
     """A Keplerian orbit.
+
+    Code taken from:
+    https://github.com/taylorbell57/Bell_EBM/blob/master/Bell_EBM/KeplerOrbit.py
+    Author: Taylor James Bell
+    Last Update: 2021-05-12
 
     Attributes
     ----------

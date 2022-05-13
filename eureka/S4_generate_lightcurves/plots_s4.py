@@ -5,50 +5,50 @@ from ..lib import util
 from ..lib.plots import figure_filetype
 
 
-def binned_lightcurve(meta, i, white=False):
+def binned_lightcurve(meta, lc, i, white=False):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    lc : Xarray Dataset
+        The Dataset object containing light curve and time data.
     i : int
         The current bandpass number.
     white : bool, optional
         Is this figure for the additional white-light light curve
-
-    Returns
-    -------
-    None
     '''
     fig = plt.figure(4102, figsize=(8, 6))
     fig.clf()
     ax = fig.gca()
     if white:
-        fig.suptitle(f'White-light Bandpass {i}: {meta.wave_min:.3f} - '
-                     f'{meta.wave_max:.3f}')
+        fig.suptitle(f'White-light Bandpass {i}: {lc.wave_min:.3f} - '
+                     f'{lc.wave_max:.3f}')
         # Normalized light curve
+        # FINDME: Merge conflict - need to edit this with the Astraeus code
         norm_lcdata = meta.lcdata_white[0]/np.ma.mean(meta.lcdata_white[i, :])
         norm_lcerr = meta.lcerr_white[0]/np.ma.mean(meta.lcdata_white[i, :])
         i = 0
         fname_tag = 'white'
     else:
-        fig.suptitle(f'Bandpass {i}: {meta.wave_low[i]:.3f} - '
-                     f'{meta.wave_hi[i]:.3f}')
+        fig.suptitle(f'Bandpass {i}: {lc.wave_low[i]:.3f} - '
+                     f'{lc.wave_hi[i]:.3f}')
         # Normalized light curve
-        norm_lcdata = meta.lcdata[i]/np.ma.mean(meta.lcdata[i, :])
-        norm_lcerr = meta.lcerr[i]/np.ma.mean(meta.lcdata[i, :])
+        norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i].values)
+        norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
         ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
         fname_tag = f'ch{ch_number}'
 
-    time_modifier = np.ma.floor(meta.time[0])
-    ax.errorbar(meta.time - time_modifier, norm_lcdata, norm_lcerr, fmt='o',
+    time_modifier = np.floor(lc.time.values[0])
+    ax.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
                 color=f'C{i}', mec=f'C{i}', alpha=0.2)
     mad = util.get_mad_1d(norm_lcdata)
     ax.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
             transform=ax.transAxes, color='k')
     ax.set_ylabel('Normalized Flux')
-    ax.set_xlabel(f'Time [{meta.time_units} - {time_modifier}]')
+    time_units = lc.data.attrs['time_units']
+    plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
     fig.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
@@ -58,24 +58,27 @@ def binned_lightcurve(meta, i, white=False):
         plt.pause(0.2)
 
 
-def drift1d(meta):
+def drift1d(meta, lc):
     '''Plot the 1D drift/jitter results. (Fig 4103)
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Returns
-    -------
-    None
+    lc : Xarray Dataset
+        The light curve object containing drift arrays.
     '''
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int)[np.where(meta.driftmask)],
-             meta.drift1d[np.where(meta.driftmask)], '.')
+    plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
+             lc.drift1d[np.where(~lc.driftmask)], '.',
+             label='Good Drift Points')
+    plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
+             lc.drift1d[np.where(lc.driftmask)], '.',
+             label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
+    plt.legend(loc='best')
     plt.tight_layout()
     fname = 'figs'+os.sep+'fig4103_Drift'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
@@ -95,10 +98,6 @@ def lc_driftcorr(meta, wave_1d, optspec):
         which have been set in the S3 ecf.
     optspec : ndarray
         The optimally extracted spectrum.
-
-    Returns
-    -------
-    None
     '''
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
@@ -145,10 +144,6 @@ def cc_spec(meta, ref_spec, fit_spec, n):
         The extracted spectrum for the current integration.
     n : int
         The current integration number.
-
-    Returns
-    -------
-    None
     '''
     plt.figure(4301, figsize=(8, 8))
     plt.clf()
@@ -177,10 +172,6 @@ def cc_vals(meta, vals, n):
         The cross-correlation strength.
     n : int
         The current integration number.
-
-    Returns
-    -------
-    None
     '''
     plt.figure(4302, figsize=(8, 8))
     plt.clf()

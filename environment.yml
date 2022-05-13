@@ -15,7 +15,7 @@ dependencies:
     - emcee[version='>3.0.0']
     - george
     - gwcs
-    - h5py
+    - h5py[version='<3.2']
     - ipython
     - lmfit
     - matplotlib
@@ -38,3 +38,4 @@ dependencies:
         - stcal
         - stdatamodels
         - svo_filters
+        - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus

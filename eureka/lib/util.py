@@ -32,29 +32,21 @@ def trim(data, meta):
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
     -------
-    data : DataClass
-        The data object with added subdata arrays with trimmed edges depending
-        on xwindow and ywindow which have been set in the S3 ecf.
+    subdata : Xarray Dataset
+        A new Dataset object with arrays that have been trimmed, depending on
+        xwindow and ywindow as set in the S3 ecf.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     """
-    data.subdata = data.data[:, meta.ywindow[0]:meta.ywindow[1],
-                             meta.xwindow[0]:meta.xwindow[1]]
-    data.suberr = data.err[:, meta.ywindow[0]:meta.ywindow[1],
-                           meta.xwindow[0]:meta.xwindow[1]]
-    data.subdq = data.dq[:, meta.ywindow[0]:meta.ywindow[1],
-                         meta.xwindow[0]:meta.xwindow[1]]
-    data.subwave = data.wave[meta.ywindow[0]:meta.ywindow[1],
-                             meta.xwindow[0]:meta.xwindow[1]]
-    data.subv0 = data.v0[:, meta.ywindow[0]:meta.ywindow[1],
-                         meta.xwindow[0]:meta.xwindow[1]]
+    subdata = data.isel(y=np.arange(meta.ywindow[0], meta.ywindow[1]),
+                        x=np.arange(meta.xwindow[0], meta.xwindow[1]))
     meta.subny = meta.ywindow[1] - meta.ywindow[0]
     meta.subnx = meta.xwindow[1] - meta.xwindow[0]
     if hasattr(meta, 'diffmask'):
@@ -62,12 +54,12 @@ def trim(data, meta):
         meta.subdiffmask.append(
             meta.diffmask[-1][:, meta.ywindow[0]:meta.ywindow[1],
                               meta.xwindow[0]:meta.xwindow[1]])
-        data.subvariance = \
-            np.copy(data.variance[:, meta.ywindow[0]:meta.ywindow[1],
-                                  meta.xwindow[0]:meta.xwindow[1]])
-        delattr(data, 'variance')
+        # data.subvariance = np.copy(
+        #     data.variance[:, meta.ywindow[0]:meta.ywindow[1],
+        #     meta.xwindow[0]:meta.xwindow[1]])
+        # delattr(data, 'variance')
 
-    return data, meta
+    return subdata, meta
 
 
 def check_nans(data, mask, log, name=''):

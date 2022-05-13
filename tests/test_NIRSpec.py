@@ -54,11 +54,14 @@ def test_NIRSpec(capsys):
     reload(s5)
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
-        _ = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
-    s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
-    s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path, s3_meta=s3_meta)
-    _ = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
-
+        s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+    else:
+        s2_meta = None
+    s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
+                                 s2_meta=s2_meta)
+    s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
+                                       s3_meta=s3_meta)
+    s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
     # run assertions for S2
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed

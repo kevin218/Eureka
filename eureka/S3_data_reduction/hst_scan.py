@@ -328,9 +328,6 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
         # Read and assemble flat field
         # Select windowed region containing the data
         x = (wave[i] - wmin)/(wmax - wmin)
-        # print("Extracting flat field region:")
-        # print(ywindow[i][0]+flatoffset[i][0],ywindow[i][1]+flatoffset[i][0],
-        #       xwindow[i][0]+flatoffset[i][1],xwindow[i][1]+flatoffset[i][1])
 
         ylower = int(ywindow[i][0]+flatoffset[i][0])
         yupper = int(ywindow[i][1]+flatoffset[i][0])
@@ -345,7 +342,7 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
                 flat_window += hdulist[j].data[ylower:yupper,
                                                xlower:xupper]*x**(j-1)
         else:
-            # WFC3.IR.G141.flat.2
+            # WFC3.IR.G141.flat.2 OR WFC3.IR.G102.flat.2
             flat_window = hdulist[0].data[ylower:yupper, xlower:xupper]
             for j in range(1, len(hdulist)):
                 # print(j)

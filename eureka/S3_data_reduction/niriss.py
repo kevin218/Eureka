@@ -54,7 +54,6 @@ def read(filename, f277_filename, data, meta):
     meta : astropy.table.Table
        Metadata stored in the FITS file.
     """
-
     meta.filename = filename
 
     hdu = fits.open(filename)
