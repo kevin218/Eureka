@@ -123,7 +123,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog(f"Loading S3 save file:\n{meta.tab_filename}",
+            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
                          mute=(not meta.verbose))
             spec = xrio.readXR(meta.filename_S3_SpecData)
 
@@ -351,9 +351,7 @@ def load_specific_s3_meta_info(meta):
     meta.inputdir = inputdir
     s3_meta, meta.inputdir, meta.inputdir_raw = \
         me.findevent(meta, 'S3', allowFail=False)
-    tab_filename = s3_meta.tab_filename
     # Merge S4 meta into old S3 meta
     meta = me.mergeevents(meta, s3_meta)
-    meta.tab_filename = tab_filename
 
     return meta
