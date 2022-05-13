@@ -447,7 +447,7 @@ def flatfield(data, meta):
     print(meta.flatfile)
     tempflat, tempmask = hst.makeflats(meta.flatfile,
                                        [np.mean(data.wave_2d.values,
-                                                axis=0), ]
+                                                axis=0), ],
                                        [[0, meta.nx], ], [[0, meta.ny], ],
                                        meta.flatoffset, 1, meta.ny, meta.nx,
                                        sigma=meta.flatsigma,

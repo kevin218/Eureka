@@ -278,7 +278,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Loop over spectroscopic channels
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
-                             f"{lc.wave_hi.values[i]:%.3f}")
+                             f"{lc.wave_hi.values[i]:.3f}")
                 # Compute valid indeces within wavelength range
                 index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
                                  (spec.wave_1d < lc.wave_hi.values[i]))[0]
@@ -311,7 +311,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
             log.writelog('Saving results')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
-                           + str(bg_hw_val))()
+                           + str(bg_hw_val))
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S4_SpecData = (meta.outputdir + 'S4_' + event_ap_bg
                                          + "_SpecData.h5")
