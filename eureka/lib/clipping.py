@@ -65,7 +65,8 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5,
 
     if np.any(outliers):
         log.writelog(f'Identified {np.sum(outliers)} outliers for wavelength '
-                     f'{wavelength}', mute=(not verbose))
+                     f'{wavelength.values:.4f} '
+                     f'{wavelength.attrs["wave_units"]}', mute=(not verbose))
 
     # Replace clipped data
     if fill_value == 'mask':

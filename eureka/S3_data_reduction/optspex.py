@@ -448,12 +448,12 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
 
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
-             windowtype='hanning', n=0, m=0, isplots=0, meddata=None):
+             windowtype='hanning', n=0, m=0, meddata=None):
     '''Extract optimal spectrum with uncertainties.
 
     Parameters
     ----------
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     subdata : ndarray
         Background subtracted data.
@@ -490,8 +490,6 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         Integration number. Defaults to 0.
     m : int; optional
         File number. Defaults to 0.
-    isplots : int; optional
-        The plotting verbosity. Defaults to 0.
     meddata : ndarray; optional
         The median of all data frames. Defaults to None.
 
@@ -513,19 +511,21 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         if fittype == 'smooth':
             profile = profile_smooth(subdata, submask, threshold=p5thresh,
                                      window_len=window_len,
-                                     windowtype=windowtype, isplots=isplots)
+                                     windowtype=windowtype,
+                                     isplots=meta.isplots_S3)
         elif fittype == 'meddata':
             profile = profile_meddata(subdata, submask, meddata,
-                                      threshold=p5thresh, isplots=isplots)
+                                      threshold=p5thresh,
+                                      isplots=meta.isplots_S3)
         elif fittype == 'wavelet2D':
             profile = profile_wavelet2D(subdata, submask, wavelet='bior5.5',
-                                        numlvls=3, isplots=isplots)
+                                        numlvls=3, isplots=meta.isplots_S3)
         elif fittype == 'wavelet':
             profile = profile_wavelet(subdata, submask, wavelet='bior5.5',
-                                      numlvls=3, isplots=isplots)
+                                      numlvls=3, isplots=meta.isplots_S3)
         elif fittype == 'gauss':
             profile = profile_gauss(subdata, submask, threshold=p5thresh,
-                                    guess=None, isplots=isplots)
+                                    guess=None, isplots=meta.isplots_S3)
         elif fittype == 'poly':
             profile = profile_poly(subdata, submask, deg=deg,
                                    threshold=p5thresh)
@@ -533,7 +533,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             print("Unknown normalized spatial profile method.")
             return
 
-        if isplots >= 3:
+        if meta.isplots_S3 >= 3:
             plots_s3.profile(meta, profile, submask, n, m)
 
         isnewprofile = False
@@ -545,7 +545,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             variance = np.abs(expected + bg) / Q + v0
             # STEP 7: Mask cosmic ray hits
             stdevs = np.abs(subdata - expected)*submask / np.sqrt(variance)
-            if isplots == 8:
+            if meta.isplots_S3 == 8:
                 try:
                     plt.figure(3801)
                     plt.clf()
@@ -563,7 +563,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                 loc = np.argmax(stdevs, axis=0)
                 # Mask data point if std is > p7thresh
                 for i in range(nx):
-                    if isplots == 8:
+                    if meta.isplots_S3 == 8:
                         try:
                             plt.figure(3803)
                             plt.clf()
@@ -579,7 +579,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                         isoutliers = True
                         submask[loc[i], i] = 0
                         # Generate plot
-                        if isplots >= 5:
+                        if meta.isplots_S3 >= 5:
                             plots_s3.subdata(meta, i, n, m, subdata, submask,
                                              expected, loc)
                         # Check for insufficient number of good points

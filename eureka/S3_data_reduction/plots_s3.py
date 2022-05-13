@@ -50,8 +50,8 @@ def image_and_background(data, meta, n, m):
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     n : int
@@ -63,8 +63,11 @@ def image_and_background(data, meta, n, m):
     -------
     None
     '''
-    intstart, subdata, submask, subbg = (data.intstart, data.subdata,
-                                         data.submask, data.subbg)
+    intstart, subdata, submask, subbg = (data.attrs['intstart'],
+                                         data.flux.values, data.mask.values,
+                                         data.bg.values)
+    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     plt.figure(3301, figsize=(8, 8))
     plt.clf()
@@ -72,19 +75,19 @@ def image_and_background(data, meta, n, m):
     plt.subplot(211)
     plt.title('Background-Subtracted Flux')
     max = np.max(subdata[n] * submask[n])
-    plt.imshow(subdata[n] * submask[n], origin='lower', aspect='auto',
-               vmin=0, vmax=max / 10)
+    plt.imshow(subdata[n]*submask[n], origin='lower', aspect='auto',
+               vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
     plt.colorbar()
-    plt.ylabel('Pixel Position')
+    plt.ylabel('Detector Pixel Position')
     plt.subplot(212)
     plt.title('Subtracted Background')
     median = np.median(subbg[n])
     std = np.std(subbg[n])
-    plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median - 3 * std,
-               vmax=median+3*std)
+    plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
+               vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
     plt.colorbar()
-    plt.ylabel('Pixel Position')
-    plt.xlabel('Pixel Position')
+    plt.ylabel('Detector Pixel Position')
+    plt.xlabel('Detector Pixel Position')
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
@@ -100,8 +103,8 @@ def optimal_spectrum(data, meta, n, m):
 
     Parameters
     ----------
-    data : DataClass
-        The data object.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     n : int
@@ -113,19 +116,20 @@ def optimal_spectrum(data, meta, n, m):
     -------
     None
     '''
-    intstart, subnx, stdspec, optspec, opterr = (data.intstart, meta.subnx,
-                                                 data.stdspec, data.optspec,
-                                                 data.opterr)
+    intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
+                                          data.stdspec.values,
+                                          data.optspec.values,
+                                          data.opterr.values)
 
     plt.figure(3302)
     plt.clf()
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
-    plt.semilogy(np.arange(subnx), stdspec[n], '-', color='C1',
+    plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
                  label='Standard Spec')
-    plt.errorbar(np.arange(subnx), optspec[n], yerr=opterr[n], fmt='-',
+    plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
                  color='C2', ecolor='C2', label='Optimal Spec')
     plt.ylabel('Flux')
-    plt.xlabel('Pixel Position')
+    plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
@@ -180,7 +184,7 @@ def source_position(meta, x_dim, pos_max, m,
     - 2021-07-14: Sebastian Zieba
         Initial version.
     - Oct 15, 2021: Taylor Bell
-        Tided up the code a bit to reduce repeated code.
+        Tidied up the code a bit to reduce repeated code.
     '''
     plt.figure(3303)
     plt.clf()
@@ -239,8 +243,8 @@ def profile(meta, profile, submask, n, m):
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin)
-    plt.ylabel('Pixel Postion')
-    plt.xlabel('Pixel Position')
+    plt.ylabel('Relative Pixel Postion')
+    plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from astropy.nddata import CCDData
 from astropy.stats import SigmaClip
 from photutils import MMMBackground, MedianBackground, Background2D
-from astropy.io import fits
 import os
 
 from ..lib import clipping
@@ -21,9 +20,9 @@ def BGsubtraction(data, meta, log, isplots):
 
     Parameters
     ----------
-    data : DataClass
-        Data object containing data, uncertainty, and variance arrays in units
-        of MJy/sr or DN/s.
+    data : Xarray Dataset
+        Dataset object containing data, uncertainty, and variance arrays in
+        units of MJy/sr or electrons.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -33,8 +32,8 @@ def BGsubtraction(data, meta, log, isplots):
 
     Returns
     -------
-    data : DataClass
-        Data object containing background subtracted data.
+    data : Xarray Dataset
+        Dataset object containing background subtracted data.
 
     Notes
     -----
@@ -42,6 +41,8 @@ def BGsubtraction(data, meta, log, isplots):
 
     - Dec 10, 2021 Taylor Bell
         Edited to pass the full DataClass object into inst.fit_bg
+    - Apr 20, 2022 Kevin Stevenson
+        Convert to using Xarray Dataset
     """
     # Load instrument module
     if meta.inst == 'miri':
@@ -60,22 +61,23 @@ def BGsubtraction(data, meta, log, isplots):
     # Write background
     def writeBG(arg):
         bg_data, bg_mask, n = arg
-        data.subbg[n] = bg_data
-        data.submask[n] = bg_mask
+        data['bg'][n] = bg_data
+        data['mask'][n] = bg_mask
         return
 
     def writeBG_WFC3(arg):
         bg_data, bg_mask, datav0, datavariance, n = arg
-        data.subbg[n] = bg_data
-        data.submask[n] = bg_mask
-        data.subv0[n] = datav0
-        data.subvariance[n] = datavariance
+        data['bg'][n] = bg_data
+        data['mask'][n] = bg_mask
+        data['v0'][n] = datav0
+        data['variance'][n] = datavariance
         return
 
     # Compute background for each integration
     log.writelog('  Performing background subtraction',
                  mute=(not meta.verbose))
-    data.subbg = np.zeros((data.subdata.shape))
+    data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+    data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
     if meta.ncpu == 1:
         # Only 1 CPU
         iterfn = range(meta.int_start, meta.n_int)
@@ -86,12 +88,14 @@ def BGsubtraction(data, meta, log, isplots):
             if meta.inst == 'niriss':
                 writeBG(inst.fit_bg(data, meta, n, isplots))
             elif meta.inst == 'wfc3':
-                writeBG_WFC3(inst.fit_bg(data.subdata[n], data.submask[n],
-                                         data.subv0[n], data.subvariance[n],
+                writeBG_WFC3(inst.fit_bg(data.flux[n].values,
+                                         data.mask[n].values,
+                                         data.v0[n].values,
+                                         data.variance[n].values,
                                          n, meta, isplots))
             else:
-                writeBG(inst.fit_bg(data.subdata[n], data.submask[n], n, meta,
-                                    isplots))
+                writeBG(inst.fit_bg(data.flux[n].values, data.mask[n].values,
+                                    n, meta, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
@@ -105,17 +109,20 @@ def BGsubtraction(data, meta, log, isplots):
             jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,),
                                      callback=writeBG) for args in args_list]
         elif meta.inst == 'wfc3':
-            # The WFC3 background subtraction needs a few more
-            # inputs and outputs
+            # The WFC3 background subtraction needs a few more inputs
+            # and outputs
             jobs = [pool.apply_async(func=inst.fit_bg,
-                                     args=(data.subdata[n], data.submask[n],
-                                           data.subv0[n], data.subvariance[n],
-                                           n, meta, isplots,),
+                                     args=(data.flux[n].values,
+                                           data.mask[n].values,
+                                           data.v0[n].values,
+                                           data.variance[n].values, n, meta,
+                                           isplots,),
                                      callback=writeBG_WFC3)
                     for n in range(meta.int_start, meta.n_int)]
         else:
             jobs = [pool.apply_async(func=inst.fit_bg,
-                                     args=(data.subdata[n], data.submask[n],
+                                     args=(data.flux[n].values,
+                                           data.mask[n].values,
                                            n, meta, isplots,),
                                      callback=writeBG)
                     for n in range(meta.int_start, meta.n_int)]
@@ -128,19 +135,7 @@ def BGsubtraction(data, meta, log, isplots):
 
     # 9.  Background subtraction
     # Perform background subtraction
-    data.subdata -= data.subbg
-
-    if hasattr(meta, 'save_bgsub') and meta.save_bgsub:
-        log.writelog('  Saving background subtracted FITS file',
-                     mute=(not meta.verbose))
-        new_filename = data.filename.split(os.sep)[-1]
-        new_folder = os.path.join(meta.outputdir, 'bgsub_FITS')
-        if not os.path.isdir(new_folder):
-            os.mkdir(new_folder)
-        new_filename = os.path.join(new_folder, new_filename)
-        with fits.open(data.filename) as file:
-            file["SCI"].data = data.subdata
-            file.writeto(new_filename)
+    data['flux'] -= data.bg
 
     return data
 

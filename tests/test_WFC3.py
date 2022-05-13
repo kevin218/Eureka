@@ -32,7 +32,7 @@ def test_WFC3(capsys):
     ecf_path = f'.{os.sep}WFC3_ecfs{os.sep}'
 
     reload(s3)
-    _ = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    s3.reduce(meta.eventlabel, ecf_path=ecf_path)
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'

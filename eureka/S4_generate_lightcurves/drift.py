@@ -55,8 +55,10 @@ def spec1D(spectra, meta, log):
 
     Returns
     -------
-    meta : eureka.lib.readECF.MetaClass
-        The updated metadata object.
+    drift1d : ndarray
+        1D array of spectrum drift values.
+    driftmask : ndarray
+        1D masked array, where True is masked.
 
     Notes
     -----
@@ -71,13 +73,16 @@ def spec1D(spectra, meta, log):
     - Nov 02, 2021 Taylor Bell
         Added option for subtraction of continuum using a highpass
         filter before cross-correlation.
+    - Apr 23, 2022 Kevin Stevenson
+        Switched defition of mask to coincide with np.ma definition
+        Removed drift1d and driftmask from meta
     '''
     if meta.drift_postclip is not None:
         meta.drift_postclip = -meta.drift_postclip
-    meta.drift1d = np.ma.zeros(meta.n_int)
-    meta.driftmask = np.ma.zeros(meta.n_int, dtype=int)
-    ref_spec = np.ma.copy(spectra[meta.drift_iref,
-                                  meta.drift_preclip:meta.drift_postclip])
+    drift1d = np.zeros(meta.n_int)
+    driftmask = np.zeros(meta.n_int, dtype=bool)
+    ref_spec = np.copy(spectra[meta.drift_iref,
+                               meta.drift_preclip:meta.drift_postclip])
     if meta.sub_continuum:
         # Subtract off the continuum as computed using a highpass filter
         ref_spec -= highpassfilt(ref_spec, meta.highpassWidth)
@@ -113,13 +118,13 @@ def spec1D(spectra, meta, log):
             params, err = g.fitgaussian(subvals/subvals.max(),
                                         guess=[meta.drift_hw/5.,
                                                meta.drift_hw*1., 1])
-            meta.drift1d[n] = len(vals)//2 - params[1] - argmax + meta.drift_hw
-            # meta.drift1d[n]= len(vals)/2 - params[1] - argmax + meta.drift_hw
-            meta.driftmask[n] = 1
+            drift1d[n] = len(vals)//2-params[1]-argmax+meta.drift_hw
+            # meta.drift1d[n] = len(vals)/2-params[1]-argmax+meta.drift_hw
         except:
             # FINDME: Need change this bare except to only
             # catch the specific exception
             log.writelog(f'  Cross correlation failed. Integration {n} marked '
-                         'as bad.')
+                         f'as bad.')
+            driftmask[n] = True
 
-    return meta
+    return drift1d, driftmask
