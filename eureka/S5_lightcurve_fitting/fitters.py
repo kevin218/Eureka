@@ -649,10 +649,10 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
                     for i in range(nwalkers)])
 
     # Make sure the walker positions obey the priors
-    in_range = np.array([((prior1[u] <= ii) and (ii <= prior2[u])).all()
+    in_range = np.array([((prior1[u] <= ii).all() and (ii <= prior2[u]).all())
                          for ii in pos[:, u]])
-    in_range2 = np.array([((prior1[lu] <= np.log(ii)) and
-                           (np.log(ii) <= prior2[lu])).all()
+    in_range2 = np.array([((prior1[lu] <= np.log(ii)).all() and
+                           (np.log(ii) <= prior2[lu]).all())
                           for ii in pos[:, lu]])
     if not np.all(in_range) or not np.all(in_range2):
         log.writelog('Not all walkers were initialized within the priors, '
