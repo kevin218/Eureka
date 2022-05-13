@@ -308,33 +308,50 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # If requested, also generate white-light light curve
             if hasattr(meta, 'compute_white') and meta.compute_white:
                 log.writelog("Generating white-light light curve")
-                meta.lcdata_white = np.ma.zeros((1, meta.n_int))
-                meta.lcerr_white = np.ma.zeros((1, meta.n_int))
+
+                lcdata_white = xrio.makeLCDA(np.ma.zeros((1, meta.n_int)),
+                                             [np.mean(meta.wave), ],
+                                             spec.time.values,
+                                             spec.optspec.attrs['flux_units'],
+                                             spec.wave_1d.attrs['wave_units'],
+                                             spec.optspec.attrs['time_units'],
+                                             name='flux_white')
+                lcerr_white = xrio.makeLCDA(np.ma.zeros((1, meta.n_int)),
+                                            [np.mean(meta.wave), ],
+                                            spec.time.values,
+                                            spec.optspec.attrs['flux_units'],
+                                            spec.wave_1d.attrs['wave_units'],
+                                            spec.optspec.attrs['time_units'],
+                                            name='err_white')
+                lc['flux_white'] = lcdata_white
+                lc['err_white'] = lcerr_white
 
                 log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
                              f"{meta.wave_max:.3f}")
                 # Compute valid indeces within wavelength range
-                index = np.where((wave_1d >= meta.wave_min) *
-                                 (wave_1d < meta.wave_max))[0]
+                index = np.where((spec.wave_1d >= meta.wave_min) *
+                                 (spec.wave_1d < meta.wave_max))[0]
                 # Sum flux for each spectroscopic channel
-                meta.lcdata_white[0] = np.sum(optspec[:, index], axis=1)
+                lc['flux_white'][0] = \
+                    np.nansum(spec.optspec[:, index], axis=1)
                 # Add uncertainties in quadrature
-                meta.lcerr_white[0] = np.sqrt(np.sum(opterr[:, index]**2,
-                                                     axis=1))
+                lc['err_white'][0] = \
+                    np.sqrt(np.nansum(spec.opterr[:, index]**2, axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    meta.lcdata_white[0], outliers = clipping.clip_outliers(
-                        meta.lcdata_white[0], log,
-                        np.mean([meta.wave_min, meta.wave_max]), meta.sigma,
-                        meta.box_width, meta.maxiters, meta.boundary,
-                        meta.fill_value, verbose=False)
+                    lc['flux_white'][0], outliers = \
+                        clipping.clip_outliers(
+                            lc['flux_white'][0], log,
+                            np.mean([meta.wave_min, meta.wave_max]),
+                            meta.sigma, meta.box_width, meta.maxiters,
+                            meta.boundary, meta.fill_value, verbose=False)
                     log.writelog(f'  Sigma clipped {outliers} outliers in '
                                  f'time series')
 
                 # Plot the white-light light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, 0, white=True)
+                    plots_s4.binned_lightcurve(meta, lc, 0, white=True)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
@@ -351,19 +368,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
                                        + "_LCData.h5")
             xrio.writeXR(meta.filename_S4_LCData, lc, verbose=True)
-
-            # If requested, also save white-light light curve
-            if hasattr(meta, 'compute_white') and meta.compute_white:
-                event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg' +
-                               str(bg_hw_val))
-                meta.tab_filename_s4_white = (meta.outputdir+'S4_'+event_ap_bg
-                                              + "_white_Table_Save.txt")
-                wavelengths = np.array([np.mean([meta.wave_min,
-                                                 meta.wave_max])])
-                wave_errs = np.array([(meta.wave_max-meta.wave_min)/2])
-                astropytable.savetable_S4(meta.tab_filename_s4_white,
-                                          meta.time, wavelengths, wave_errs,
-                                          meta.lcdata_white, meta.lcerr_white)
 
             # Save results
             fname = meta.outputdir+'S4_'+meta.eventlabel+"_Meta_Save"

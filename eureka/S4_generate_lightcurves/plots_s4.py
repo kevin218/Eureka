@@ -23,17 +23,18 @@ def binned_lightcurve(meta, lc, i, white=False):
     fig.clf()
     ax = fig.gca()
     if white:
-        fig.suptitle(f'White-light Bandpass {i}: {lc.wave_min:.3f} - '
-                     f'{lc.wave_max:.3f}')
+        fig.suptitle(f'White-light Bandpass {i}: {meta.wave_min:.3f} - '
+                     f'{meta.wave_max:.3f}')
         # Normalized light curve
-        # FINDME: Merge conflict - need to edit this with the Astraeus code
-        norm_lcdata = meta.lcdata_white[0]/np.ma.mean(meta.lcdata_white[i, :])
-        norm_lcerr = meta.lcerr_white[0]/np.ma.mean(meta.lcdata_white[i, :])
+        norm_lcdata = (lc['flux_white'][0] /
+                       np.nanmedian(lc['flux_white']))
+        norm_lcerr = (lc['err_white'][0] /
+                      np.nanmedian(lc['err_white']))
         i = 0
         fname_tag = 'white'
     else:
-        fig.suptitle(f'Bandpass {i}: {lc.wave_low[i]:.3f} - '
-                     f'{lc.wave_hi[i]:.3f}')
+        fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
+                     f'{lc.wave_hi.values[i]:.3f}')
         # Normalized light curve
         norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i].values)
         norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)

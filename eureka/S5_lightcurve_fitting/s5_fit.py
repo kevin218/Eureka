@@ -158,13 +158,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 log.writelog("\nStarting Fit of White-light Light Curve\n")
 
                 # Get the flux and error measurements for the current channel
-                flux = meta.lcdata_white[0, :]
-                flux_err = meta.lcerr_white[0, :]
+                flux = lc.flux_white.values[0, :]
+                flux_err = lc.err_white.values[0, :]
 
                 # Normalize flux and uncertainties to avoid large flux values
                 # FINDME: replace when constant offset is implemented
-                flux_err = flux_err/flux.mean()
-                flux = flux/flux.mean()
+                flux_err = flux_err/np.nanmedian(flux)
+                flux = flux/np.nanmedian(flux)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
