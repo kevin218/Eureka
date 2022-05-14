@@ -80,7 +80,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         # Running these stages sequentially, so can safely assume the path hasn't changed
         meta.inputdir = s3_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
-    
+
     meta = me.mergeevents(meta, s3_meta)
 
     if not meta.allapers:
