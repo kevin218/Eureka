@@ -80,7 +80,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         # Running these stages sequentially, so can safely assume the path hasn't changed
         meta.inputdir = s3_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
-    
+
     meta = me.mergeevents(meta, s3_meta)
 
     if not meta.allapers:
@@ -119,7 +119,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog(f"Loading S3 save file:\n{meta.tab_filename}", mute=(not meta.verbose))
+            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}", mute=(not meta.verbose))
             spec = xrio.readXR(meta.filename_S3_SpecData)
 
             if meta.wave_min is None:
@@ -270,9 +270,9 @@ def load_specific_s3_meta_info(meta):
     # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
     meta.inputdir = inputdir
     s3_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S3', allowFail=False)
-    tab_filename = s3_meta.tab_filename
+    filename_S3_SpecData = s3_meta.filename_S3_SpecData
     # Merge S4 meta into old S3 meta
     meta = me.mergeevents(meta, s3_meta)
-    meta.tab_filename = tab_filename
+    meta.filename_S3_SpecData = filename_S3_SpecData
 
     return meta
