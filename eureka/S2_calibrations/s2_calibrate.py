@@ -2,7 +2,6 @@
 
 # Eureka! Stage 2 calibration pipeline
 
-
 # Proposed Steps
 # --------------
 # 1.  Read in Stage 1 data products
@@ -11,8 +10,9 @@
 # 4.  Save Stage 2 data products
 # 5.  Produce plots
 
-
-import os, shutil, time, glob
+import os
+import shutil
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -20,46 +20,41 @@ from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
-from ..lib import sort_nicely as sn
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib.plots import figure_filetype
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-
-    def __init__(self):
-        return
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
-    '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST pipeline into calints and x1dints.
+    '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
+    pipeline into calints and x1dints.
 
-    This function does the preparation for running the STScI's JWST pipeline and decides whether to run the
-    Spec2Pipeline or Image2Pipeline.
+    This function does the preparation for running the STScI's JWST pipeline
+    and decides whether to run the Spec2Pipeline or Image2Pipeline.
 
     Parameters
     ----------
     eventlabel : str
-        Unique label for this dataset
-    ecf_path : str, optional
-        The absolute or relative path to where ecfs are stored. Defaults to None which resolves to './'.
-    s1_meta : MetaClass, optional
-        The metadata object from Eureka!'s S1 step (if running S1 and S2 sequentially). Defaults to None.
+        Unique label for this dataset.
+    ecf_path : str; optional
+        The absolute or relative path to where ecfs are stored. Defaults
+        to None which resolves to './'.
+    s1_meta : eureka.lib.readECF.MetaClass; optional
+        The metadata object from Eureka!'s S1 step (if running S1 and S2
+        sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
-        The metadata object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Notes
-    ------
+    -----
     History:
 
     - 03 Nov 2021 Taylor Bell
         Initial version
     '''
-
     t0 = time.time()
 
     # Load Eureka! control file and store values in Event object
@@ -68,19 +63,22 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     meta.eventlabel = eventlabel
 
     if s1_meta is None:
-        # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
-        s1_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S2', allowFail=True)
+        # Locate the old MetaClass savefile, and load new ECF into
+        # that old MetaClass
+        s1_meta, meta.inputdir, meta.inputdir_raw = \
+            me.findevent(meta, 'S2', allowFail=True)
     else:
-        # Running these stages sequentially, so can safely assume the path hasn't changed
+        # Running these stages sequentially, so can safely assume
+        # that the path hasn't changed
         meta.inputdir = s1_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
-    
+
     if s1_meta is None:
         # Attempt to find subdirectory containing S1 FITS files
-        meta = util.find_fits(meta)    
+        meta = util.find_fits(meta)
     else:
         meta = me.mergeevents(meta, s1_meta)
-    
+
     run = util.makedirectory(meta, 'S2')
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
 
@@ -101,11 +99,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     # Create list of file segments
     meta = util.readfiles(meta)
     meta.num_data_files = len(meta.segment_list)
-    if meta.num_data_files==0:
-        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!\n'+
-                             f'You likely need to change the inputdir in {meta.filename} to point to the folder containing the "{meta.suffix}.fits" files.')
+    if meta.num_data_files == 0:
+        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
+                             f'in the inputdir: \n"{meta.inputdir}"!\n'
+                             f'You likely need to change the inputdir in '
+                             f'{meta.filename} to point to the folder '
+                             f'containing the "{meta.suffix}.fits" files.')
     else:
-        log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits')
+        log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in '
+                     f'{meta.suffix}.fits')
 
     # If testing, only run the last file
     if meta.testing_S2:
@@ -117,21 +119,26 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     with fits.open(meta.segment_list[0]) as hdulist:
         # Figure out which observatory and observation mode we are using
         telescope = hdulist[0].header['TELESCOP']
-    if telescope=='JWST':
+    if telescope == 'JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
         if 'image' in exp_type.lower():
-            # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+            # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
+            # NIS_IMAGE, or NRS_IMAGING
             pipeline = EurekaImage2Pipeline()
         else:
-            # EXP_TYPE doesn't say image, so it should be a spectrum (or someone is putting weird files into Eureka!)
+            # EXP_TYPE doesn't say image, so it should be a spectrum
+            # (or someone is putting weird files into Eureka!)
             pipeline = EurekaSpec2Pipeline()
-    elif telescope=='HST':
+    elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
-        shutil.rmtree(os.path.join(meta.topdir, *meta.outputdir_raw.split(os.sep))) # Clean up temporary folder
+        # Clean up temporary folder
+        shutil.rmtree(os.path.join(meta.topdir,
+                      *meta.outputdir_raw.split(os.sep)))
         meta.outputdir = meta.inputdir
         return meta
     else:
-        raise AssertionError(f'Telescope "{telescope}" detected in FITS header is not JWST or HST and is unsupported!')
+        raise AssertionError(f'Telescope "{telescope}" detected in FITS '
+                             'header is not JWST or HST and is unsupported!')
 
     # Run the pipeline on each file sequentially
     for m in range(istart, meta.num_data_files):
@@ -140,8 +147,10 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
         filename = meta.segment_list[m]
 
         with fits.open(filename, mode='update') as hdulist:
-            if hdulist[0].header['INSTRUME']=='NIRCam':
-                # jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers rather than the strings that they are in the old simulated NIRCam data
+            if hdulist[0].header['INSTRUME'] == 'NIRCam':
+                # jwst 1.3.3 breaks unless NDITHPTS and NRIMDTPT are integers
+                # rather than the strings that they are in the old simulated
+                # NIRCam data
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
 
@@ -154,19 +163,21 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     # Save results
     if not meta.testing_S2:
         log.writelog('Saving Metadata')
-        me.saveevent(meta, meta.outputdir + 'S2_' + meta.eventlabel + "_Meta_Save", save=[])
+        me.saveevent(meta, meta.outputdir+'S2_'+meta.eventlabel+"_Meta_Save",
+                     save=[])
 
     log.closelog()
-    
+
     return meta
+
 
 class EurekaSpec2Pipeline(Spec2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_spec2.Spec2Pipeline.
 
-    This wrapper class can allow non-standard changes to Stage 2 steps for Eureka!.
+    This wrapper class allows non-standard changes to Stage 2 for Eureka!.
 
     Notes
-    ------
+    -----
     History:
 
     - October 2021 Taylor Bell
@@ -174,23 +185,20 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
     '''
 
     def run_eurekaS2(self, filename, meta, log):
-        '''Reduces rateints spectrum files ouput from Stage 1 of the JWST pipeline into calints and x1dints.
+        '''Reduces rateints spectrum files ouput from Stage 1 of the JWST
+        pipeline into calints and x1dints.
 
         Parameters
         ----------
-        filename:   str
-            A string pointing to the rateint or rateints file to be operated on.
-        meta:   MetaClass
-            The metadata object
-        log:    logedit.Logedit
+        filename : str
+            A string pointing to the rateint or rateints file to process.
+        meta : eureka.lib.readECF.MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
 
-        Returns
-        -------
-        None
-
         Notes
-        ------
+        -----
         History:
 
         - June 2021 Eva-Maria Ahrer and Aarynn Carter
@@ -198,32 +206,36 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         - October 2021 Taylor Bell
             Significantly overhauled code formatting
         - 03 Nov 2021 Taylor Bell
-            Fragmented code to allow reuse of code between spectral and image analysis.
+            Fragmented code to allow reuse of code between spectral and image
+            analysis.
         '''
-        if meta.slit_y_low != None:
-            #Controls the cross-dispersion extraction
+        if meta.slit_y_low is not None:
+            # Controls the cross-dispersion extraction
             self.assign_wcs.slit_y_low = meta.slit_y_low
 
-        if meta.slit_y_high != None:
-            #Controls the cross-dispersion extraction
+        if meta.slit_y_high is not None:
+            # Controls the cross-dispersion extraction
             self.assign_wcs.slit_y_high = meta.slit_y_high
 
-        if meta.waverange_start != None:
-            #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
+        if meta.waverange_start is not None:
+            # Control the dispersion extraction
+            # FIX: Does not actually change dispersion direction extraction
             log.writelog('Editing (in place) the waverange in the input file')
             with datamodels.open(filename) as m:
                 m.meta.wcsinfo.waverange_start = meta.waverange_start
                 m.save(filename)
 
-        if meta.waverange_end != None:
-            #Control the dispersion extraction - FIX: Does not actually change dispersion direction extraction
-            if meta.waverange_start == None:
+        if meta.waverange_end is not None:
+            # Control the dispersion extraction
+            # FIX: Does not actually change dispersion direction extraction
+            if meta.waverange_start is None:
                 # Only log this once
-                log.writelog('Editing (in place) the waverange in the input file')
+                log.writelog('Editing (in place) the waverange in the input '
+                             'file')
             with datamodels.open(filename) as m:
                 m.meta.wcsinfo.waverange_end = meta.waverange_end
                 m.save(filename)
-        
+
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.imprint_subtract.skip = meta.skip_imprint_subtract
@@ -244,33 +256,38 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         # Save outputs if requested to the folder specified in the ecf
         self.save_results = (not meta.testing_S2)
         self.output_dir = meta.outputdir
-        # This needs to be reset to None to permit the pipeline to be run on multiple files
+        # This needs to be reset to None to permit the pipeline to be run on
+        # multiple files
         self.suffix = None
 
         # Call the main Spec2Pipeline function (defined in the parent class)
         log.writelog('Running the Spec2Pipeline\n')
-        # Must call the pipeline in this way to ensure the skip booleans are respected
+        # Must call the pipeline in this way to ensure the skip booleans are
+        # respected
         self(filename)
 
         # Produce some summary plots if requested
         if not meta.testing_S2 and not self.extract_1d.skip:
             log.writelog('\nGenerating x1dints figure')
-            m = np.where(meta.segment_list==filename)[0][0]+1
+            m = np.where(meta.segment_list == filename)[0][0]+1
             max_m = meta.num_data_files
             fig_number = str(m).zfill(int(np.floor(np.log10(max_m))+1))
             fname = f'fig2101_file{fig_number}_x1dints'
-            x1d_fname = '_'.join(filename.split(os.sep)[-1].split('_')[:-1])+'_x1dints'
+            x1d_fname = ('_'.join(filename.split(os.sep)[-1].split('_')[:-1]) +
+                         '_x1dints')
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
-                plt.figure(2101, figsize=[15,5])
+                plt.figure(2101, figsize=[15, 5])
                 plt.clf()
-                
+
                 for i in range(len(sp1d.spec)):
-                    plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'], sp1d.spec[i].spec_table['FLUX'])
+                    plt.plot(sp1d.spec[i].spec_table['WAVELENGTH'],
+                             sp1d.spec[i].spec_table['FLUX'])
 
                 plt.title('Time Series Observation: Extracted spectra')
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs'+os.sep+fname+figure_filetype, bbox_inches='tight', dpi=300)
+                plt.savefig(meta.outputdir+'figs'+os.sep+fname+figure_filetype,
+                            bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()
                 else:
@@ -278,13 +295,14 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
 
         return
 
+
 class EurekaImage2Pipeline(Image2Pipeline):
     '''A wrapper class for the jwst.pipeline.calwebb_image2.Image2Pipeline.
 
-    This wrapper class can allow non-standard changes to Stage 2 steps for Eureka!.
+    This wrapper class allows non-standard changes to Stage 2 for Eureka!.
 
     Notes
-    ------
+    -----
     History:
 
     - October 2021 Taylor Bell
@@ -292,23 +310,20 @@ class EurekaImage2Pipeline(Image2Pipeline):
     '''
 
     def run_eurekaS2(self, filename, meta, log):
-        '''Reduces rateints image files ouput from Stage 1 of the JWST pipeline into calints.
+        '''Reduces rateints image files ouput from Stage 1 of the JWST
+        pipeline into calints.
 
         Parameters
         ----------
-        filename:   str
-            A string pointing to the rateint or rateints file to be operated on.
-        meta:   MetaClass
-            The metadata object
-        log:    logedit.Logedit
+        filename : str
+            A string pointing to the rateint or rateints file to process.
+        meta : MetaClass
+            The metadata object.
+        log : logedit.Logedit
             The open log in which notes from this step can be added.
 
-        Returns
-        -------
-        None
-
         Notes
-        ------
+        -----
         History:
 
         - 03 Nov 2021 Taylor Bell
@@ -322,12 +337,14 @@ class EurekaImage2Pipeline(Image2Pipeline):
         # Save outputs if requested to the folder specified in the ecf
         self.save_results = (not meta.testing_S2)
         self.output_dir = meta.outputdir
-        # This needs to be reset to None to permit the pipeline to be run on multiple files
+        # This needs to be reset to None to permit the pipeline to be run on
+        # multiple files
         self.suffix = None
 
         # Call the main Image2Pipeline function (defined in the parent class)
         log.writelog('Running the Image2Pipeline\n')
-        # Must call the pipeline in this way to ensure the skip booleans are respected
+        # Must call the pipeline in this way to ensure the skip booleans are
+        # respected
         self(filename)
 
         return

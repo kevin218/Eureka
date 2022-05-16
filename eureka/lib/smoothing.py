@@ -2,7 +2,7 @@ import numpy as np
 
 
 def gauss_kernel_mask2(ny_nx, sy_sx, j_i, mask):
-    """_summary_
+    """Create a 2D Gaussian kernel mask.
 
     Parameters
     ----------
@@ -11,9 +11,9 @@ def gauss_kernel_mask2(ny_nx, sy_sx, j_i, mask):
     sy_sx : list/ndarray
         The sy and sx values.
     j_i : list/ndarray
-        The j and i values
+        The j and i values.
     mask : ndarray
-        The current mask
+        The current mask.
 
     Returns
     -------

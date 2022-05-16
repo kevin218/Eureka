@@ -1,20 +1,21 @@
 import numpy as np
 import scipy.signal as sps
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from ..lib import gaussian as g
 from . import plots_s4
 from astropy.convolution import convolve, Box1DKernel
 
+
 def highpassfilt(signal, highpassWidth):
     '''Run a signal through a highpass filter to remove high frequency signals.
 
-    This function can be used to compute the continuum of a signal to be subtracted.
+    This function can be used to compute the continuum of a signal to be
+    subtracted.
 
     Parameters
     ----------
     signal : ndarray (1D)
-        1D array of values
+        1D array of values.
     highpassWidth : int
         The width of the boxcar filter to use.
 
@@ -37,24 +38,26 @@ def highpassfilt(signal, highpassWidth):
     g = Box1DKernel(highpassWidth)
     return convolve(signal, g, boundary='extend')
 
-# Measure spectrum drift over all frames and all non-destructive reads.
+
 def spec1D(spectra, meta, log):
     '''Measures the 1D spectrum drift over all integrations.
+
+    Measure spectrum drift over all frames and all non-destructive reads.
 
     Parameters
     ----------
     spectra : ndarray
         2D array of flux values (nint, nx).
-    meta : MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
 
     Returns
     -------
-    drift1d:   ndarray
+    drift1d : ndarray
         1D array of spectrum drift values.
-    driftmask: ndarray
+    driftmask : ndarray
         1D masked array, where True is masked.
 
     Notes
@@ -74,11 +77,12 @@ def spec1D(spectra, meta, log):
         Switched defition of mask to coincide with np.ma definition
         Removed drift1d and driftmask from meta
     '''
-    if meta.drift_postclip != None:
+    if meta.drift_postclip is not None:
         meta.drift_postclip = -meta.drift_postclip
-    drift1d    = np.zeros(meta.n_int)
-    driftmask   = np.zeros(meta.n_int,dtype=bool)
-    ref_spec        = np.copy(spectra[meta.drift_iref,meta.drift_preclip:meta.drift_postclip])
+    drift1d = np.zeros(meta.n_int)
+    driftmask = np.zeros(meta.n_int, dtype=bool)
+    ref_spec = np.copy(spectra[meta.drift_iref,
+                               meta.drift_preclip:meta.drift_postclip])
     if meta.sub_continuum:
         # Subtract off the continuum as computed using a highpass filter
         ref_spec -= highpassfilt(ref_spec, meta.highpassWidth)
@@ -86,34 +90,41 @@ def spec1D(spectra, meta, log):
     if meta.sub_mean:
         # Zero-mean for cross correlation
         # correlate.py sometimes performs better when the mean is subtracted
-        ref_spec-= np.ma.mean(ref_spec[meta.drift_range:-meta.drift_range])
-    ref_spec[np.where(np.isnan(ref_spec) == True)] = 0
+        ref_spec -= np.ma.mean(ref_spec[meta.drift_range:-meta.drift_range])
+    ref_spec[np.where(np.isnan(ref_spec))] = 0
     for n in tqdm(range(meta.n_int)):
-        fit_spec    = np.ma.copy(spectra[n,meta.drift_preclip:meta.drift_postclip])
-        #Trim data to achieve accurate cross correlation without assumptions over interesting region
-        #http://stackoverflow.com/questions/15989384/cross-correlation-of-non-periodic-function-with-numpy
-        fit_spec    = fit_spec[meta.drift_range:-meta.drift_range]
+        fit_spec = np.ma.copy(spectra[n,
+                                      meta.drift_preclip:meta.drift_postclip])
+        # Trim data to achieve accurate cross correlation without assumptions
+        # over interesting region
+        # http://stackoverflow.com/questions/15989384/cross-correlation-of-non-periodic-function-with-numpy
+        fit_spec = fit_spec[meta.drift_range:-meta.drift_range]
         # correlate.py sometimes performs better when the mean is subtracted
         if meta.sub_continuum:
             # Subtract off the continuum as computed using a highpass filter
             fit_spec -= highpassfilt(fit_spec, meta.highpassWidth)
             fit_spec = fit_spec[int(np.ceil(meta.highpassWidth/2)):]
         if meta.sub_mean:
-            fit_spec     -= np.ma.mean(fit_spec)
-        fit_spec[np.where(np.isnan(fit_spec) == True)] = 0
+            fit_spec -= np.ma.mean(fit_spec)
+        fit_spec[np.where(np.isnan(fit_spec))] = 0
         try:
-            vals = sps.correlate(ref_spec, fit_spec, mode='valid', method='fft')
+            vals = sps.correlate(ref_spec, fit_spec, mode='valid',
+                                 method='fft')
             if meta.isplots_S4 >= 5:
                 plots_s4.cc_spec(meta, ref_spec, fit_spec, n)
                 plots_s4.cc_vals(meta, vals, n)
-            argmax      = np.ma.argmax(vals)
-            subvals     = vals[argmax-meta.drift_hw:argmax+meta.drift_hw+1]
-            params, err = g.fitgaussian(subvals/subvals.max(), guess=[meta.drift_hw/5., meta.drift_hw*1., 1])
-            drift1d[n]= len(vals)//2 - params[1] - argmax + meta.drift_hw
-            #meta.drift1d[n]= len(vals)/2 - params[1] - argmax + meta.drift_hw
+            argmax = np.ma.argmax(vals)
+            subvals = vals[argmax-meta.drift_hw:argmax+meta.drift_hw+1]
+            params, err = g.fitgaussian(subvals/subvals.max(),
+                                        guess=[meta.drift_hw/5.,
+                                               meta.drift_hw*1., 1])
+            drift1d[n] = len(vals)//2-params[1]-argmax+meta.drift_hw
+            # meta.drift1d[n] = len(vals)/2-params[1]-argmax+meta.drift_hw
         except:
-            log.writelog(f'  Cross correlation failed. Integration {n} marked as bad.')
+            # FINDME: Need change this bare except to only
+            # catch the specific exception
+            log.writelog(f'  Cross correlation failed. Integration {n} marked '
+                         f'as bad.')
             driftmask[n] = True
-
 
     return drift1d, driftmask

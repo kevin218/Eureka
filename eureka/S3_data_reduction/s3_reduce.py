@@ -22,8 +22,6 @@
 # 16. Save Stage 3 data products
 # 17. Produce plots DONE
 
-
-import os, glob
 import time as time_pkg
 import numpy as np
 import astraeus.xarrayIO as xrio
@@ -33,19 +31,11 @@ from . import optspex
 from . import plots_s3, source_pos
 from . import background as bg
 from . import bright2flux as b2f
-from ..lib import sort_nicely as sn
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
-from ..lib import astropytable
 from ..lib import util
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-
-    def __init__(self):
-        return
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
@@ -54,18 +44,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    ecf_path : str, optional
-        The absolute or relative path to where ecfs are stored. Defaults to None which resolves to './'.
-    s2_meta : MetaClass, optional
-        The metadata object from Eureka!'s S2 step (if running S2 and S3 sequentially). Defaults to None.
+    ecf_path : str; optional
+        The absolute or relative path to where ecfs are stored.
+        Defaults to None which resolves to './'.
+    s2_meta : eureka.lib.readECF.MetaClass; optional
+        The metadata object from Eureka!'s S2 step (if running S2 and S3
+        sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S3.
 
     Notes
-    -------
+    -----
     History:
 
     - May 2021 Kevin Stevenson
@@ -80,44 +72,53 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     meta.eventlabel = eventlabel
 
     if s2_meta is None:
-        # Locate the old MetaClass savefile, and load new ECF into that old MetaClass
-        s2_meta, meta.inputdir, meta.inputdir_raw = me.findevent(meta, 'S2', allowFail=True)
+        # Locate the old MetaClass savefile, and load new ECF into
+        # that old MetaClass
+        s2_meta, meta.inputdir, meta.inputdir_raw = \
+            me.findevent(meta, 'S2', allowFail=True)
     else:
-        # Running these stages sequentially, so can safely assume the path hasn't changed
+        # Running these stages sequentially, so can safely assume
+        # the path hasn't changed
         meta.inputdir = s2_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
-    
+
     if s2_meta is None:
         # Attempt to find subdirectory containing S2 FITS files
-        meta = util.find_fits(meta)    
+        meta = util.find_fits(meta)
     else:
         meta = me.mergeevents(meta, s2_meta)
 
     # check for range of spectral apertures
     if isinstance(meta.spec_hw, list):
-        meta.spec_hw_range = range(meta.spec_hw[0], meta.spec_hw[1]+meta.spec_hw[2], meta.spec_hw[2])
+        meta.spec_hw_range = range(meta.spec_hw[0],
+                                   meta.spec_hw[1]+meta.spec_hw[2],
+                                   meta.spec_hw[2])
     else:
         meta.spec_hw_range = [meta.spec_hw]
 
-    #check for range of background apertures
+    # check for range of background apertures
     if isinstance(meta.bg_hw, list):
-        meta.bg_hw_range = range(meta.bg_hw[0], meta.bg_hw[1]+meta.bg_hw[2], meta.bg_hw[2])
+        meta.bg_hw_range = range(meta.bg_hw[0],
+                                 meta.bg_hw[1]+meta.bg_hw[2],
+                                 meta.bg_hw[2])
     else:
         meta.bg_hw_range = [meta.bg_hw]
 
     # create directories to store data
-    meta.run_s3 = None # Used to make sure we're always looking at the right run for each aperture/annulus pair
+    # run_s3 used to make sure we're always looking at the right run for
+    # each aperture/annulus pair
+    meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
 
         for bg_hw_val in meta.bg_hw_range:
 
             meta.eventlabel = eventlabel
 
-            meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3, ap=spec_hw_val, bg=bg_hw_val)
+            meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
+                                             ap=spec_hw_val, bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
-
         for bg_hw_val in meta.bg_hw_range:
 
             t0 = time_pkg.time()
@@ -125,9 +126,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             meta.spec_hw = spec_hw_val
             meta.bg_hw = bg_hw_val
 
-            meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3, ap=spec_hw_val, bg=bg_hw_val)
+            meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
+                                                ap=spec_hw_val, bg=bg_hw_val)
 
-            event_ap_bg = meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg' + str(bg_hw_val)
+            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg' +
+                           str(bg_hw_val))
 
             # Open new log file
             meta.s3_logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
@@ -138,7 +141,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
-            log.writelog("Using ap=" + str(spec_hw_val) + ", bg=" + str(bg_hw_val))
+            log.writelog(f"Using ap={spec_hw_val}, bg={bg_hw_val}")
 
             # Copy ecf
             log.writelog('Copying S3 control file', mute=(not meta.verbose))
@@ -147,11 +150,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Create list of file segments
             meta = util.readfiles(meta)
             meta.num_data_files = len(meta.segment_list)
-            if meta.num_data_files==0:
-                log.writelog(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!', mute=True)
-                raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files in the inputdir: \n"{meta.inputdir}"!')
+            if meta.num_data_files == 0:
+                log.writelog(f'Unable to find any "{meta.suffix}.fits" files '
+                             f'in the inputdir: \n"{meta.inputdir}"!',
+                             mute=True)
+                raise AssertionError(f'Unable to find any "{meta.suffix}.fits"'
+                                     f' files in the inputdir: \n'
+                                     f'"{meta.inputdir}"!')
             else:
-                log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in {meta.suffix}.fits', mute=(not meta.verbose))
+                log.writelog(f'\nFound {meta.num_data_files} data file(s) '
+                             f'ending in {meta.suffix}.fits',
+                             mute=(not meta.verbose))
 
             with fits.open(meta.segment_list[-1]) as hdulist:
                 # Figure out which instrument we are using
@@ -163,9 +172,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 from . import nircam as inst
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
-                log.writelog('WARNING: Are you using real JWST data? If so, you should edit the flag_bg() function in nirspec.py and look at Issue #193 on Github!')
+                log.writelog('WARNING: Are you using real JWST data? If so, '
+                             'you should edit the flag_bg() function in '
+                             'nirspec.py and look at Issue #193 on Github!')
             elif meta.inst == 'niriss':
-                raise ValueError('NIRISS observations are currently unsupported!')
+                raise ValueError('NIRISS observations are currently '
+                                 'unsupported!')
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta, log = inst.preparation_step(meta, log)
@@ -174,7 +186,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             datasets = []
             # Loop over each segment
-            # Only reduce the last segment/file if testing_S3 is set to True in ecf
+            # Only reduce the last segment/file if testing_S3 is set to
+            # True in ecf
             if meta.testing_S3:
                 istart = meta.num_data_files - 1
             else:
@@ -183,16 +196,18 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Initialize data object
                 data = xrio.makeDataset()
 
-                # Keep track if this is the first file - otherwise MIRI will keep swapping x and y windows
-                if m==istart and meta.spec_hw==meta.spec_hw_range[0] and meta.bg_hw==meta.bg_hw_range[0]:
-                    meta.firstFile = True
-                else:
-                    meta.firstFile = False
+                # Keep track if this is the first file - otherwise MIRI will
+                # keep swapping x and y windows
+                meta.firstFile = (m == istart and
+                                  meta.spec_hw == meta.spec_hw_range[0] and
+                                  meta.bg_hw == meta.bg_hw_range[0])
                 # Report progress
                 if meta.verbose:
-                    log.writelog(f'Reading file {m + 1} of {meta.num_data_files}')
+                    log.writelog(f'Reading file {m + 1} of '
+                                 f'{meta.num_data_files}')
                 else:
-                    log.writelog(f'Reading file {m + 1} of {meta.num_data_files}', end='\r')
+                    log.writelog(f'Reading file {m + 1} of '
+                                 f'{meta.num_data_files}', end='\r')
 
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
@@ -201,7 +216,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
                 if meta.testing_S3:
                     # Only process the last 5 integrations when testing
-                    meta.int_start = np.max((0,meta.n_int-5))
+                    meta.int_start = np.max((0, meta.n_int-5))
                 else:
                     meta.int_start = 0
 
@@ -210,40 +225,53 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
-                meta.src_ypos = source_pos.source_pos(data, meta, m,
-                                    header=('SRCYPOS' in data.attrs['shdr']))
-                log.writelog(f'  Source position on detector is row {meta.src_ypos}.', mute=(not meta.verbose))
+                meta.src_ypos = source_pos.source_pos(
+                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                log.writelog(f'  Source position on detector is row '
+                             f'{meta.src_ypos}.', mute=(not meta.verbose))
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
-                    data['wave_1d'] = (['x'], data.wave_2d[meta.src_ypos].values)
-                    data['wave_1d'].attrs['wave_units'] = data.wave_2d.attrs['wave_units']
+                    data['wave_1d'] = (['x'],
+                                       data.wave_2d[meta.src_ypos].values)
+                    data['wave_1d'].attrs['wave_units'] = \
+                        data.wave_2d.attrs['wave_units']
 
-                # Convert flux units to electrons (eg. MJy/sr -> DN -> Electrons)
+                # Convert flux units to electrons
+                # (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
 
                 # Compute median frame
-                data['medflux'] = (['y','x'], np.median(data.flux.values, axis=0))
-                data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
+                data['medflux'] = (['y', 'x'], np.median(data.flux.values,
+                                                         axis=0))
+                data['medflux'].attrs['flux_units'] = \
+                    data.flux.attrs['flux_units']
 
                 # Create bad pixel mask (1 = good, 0 = bad)
-                # FINDME: Will want to use DQ array in the future to flag certain pixels
-                data['mask'] = (['time','y','x'], np.ones(data.flux.shape, dtype=bool))
+                # FINDME: Will want to use DQ array in the future
+                # to flag certain pixels
+                data['mask'] = (['time', 'y', 'x'], np.ones(data.flux.shape,
+                                                            dtype=bool))
 
                 # Check if arrays have NaNs
-                data['mask'] = util.check_nans(data['flux'], data['mask'], log, name='FLUX')
-                data['mask'] = util.check_nans(data['err'], data['mask'], log, name='ERR')
-                data['mask'] = util.check_nans(data['v0'], data['mask'], log, name='V0')
+                data['mask'] = util.check_nans(data['flux'], data['mask'],
+                                               log, name='FLUX')
+                data['mask'] = util.check_nans(data['err'], data['mask'],
+                                               log, name='ERR')
+                data['mask'] = util.check_nans(data['v0'], data['mask'],
+                                               log, name='V0')
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    log.writelog("  Masking manually identified bad pixels", mute=(not meta.verbose))
+                    log.writelog("  Masking manually identified bad pixels",
+                                 mute=(not meta.verbose))
                     for i in range(len(meta.manmask)):
                         colstart, colend, rowstart, rowend = meta.manmask[i]
                         data['mask'][rowstart:rowend, colstart:colend] = 0
 
                 # Perform outlier rejection of sky background along time axis
-                log.writelog('  Performing background outlier rejection', mute=(not meta.verbose))
+                log.writelog('  Performing background outlier rejection',
+                             mute=(not meta.verbose))
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
                 data = inst.flag_bg(data, meta)
@@ -251,8 +279,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
                 if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for background subtraction', mute=(not meta.verbose))
-                    iterfn = range(meta.int_start,meta.n_int)
+                    log.writelog('  Creating figures for background '
+                                 'subtraction', mute=(not meta.verbose))
+                    iterfn = range(meta.int_start, meta.n_int)
                     if meta.verbose:
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
@@ -261,88 +290,110 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
-                    log.writelog('  Correcting for 2D drift', mute=(not meta.verbose))
+                    log.writelog('  Correcting for 2D drift',
+                                 mute=(not meta.verbose))
                     inst.correct_drift2D(data, meta, m)
 
                 # Select only aperture region
-                ap_y1 = int(meta.src_ypos - spec_hw_val)
-                ap_y2 = int(meta.src_ypos + spec_hw_val)
-                apdata  = data.flux[:, ap_y1:ap_y2].values
-                aperr   = data.err[:, ap_y1:ap_y2].values
-                apmask  = data.mask[:, ap_y1:ap_y2].values
-                apbg    = data.bg[:, ap_y1:ap_y2].values
-                apv0    = data.v0[:, ap_y1:ap_y2].values
+                ap_y1 = int(meta.src_ypos-spec_hw_val)
+                ap_y2 = int(meta.src_ypos+spec_hw_val)
+                apdata = data.flux[:, ap_y1:ap_y2].values
+                aperr = data.err[:, ap_y1:ap_y2].values
+                apmask = data.mask[:, ap_y1:ap_y2].values
+                apbg = data.bg[:, ap_y1:ap_y2].values
+                apv0 = data.v0[:, ap_y1:ap_y2].values
                 # Compute median frame
-                medapdata  = np.median(apdata, axis=0)
+                medapdata = np.median(apdata, axis=0)
 
                 # Extract standard spectrum and its variance
-                data['stdspec'] = (['time','x'], np.sum(apdata, axis=1))
-                data['stdvar'] = (['time','x'], np.sum(aperr ** 2, axis=1))
-                data['stdspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                data['stdspec'].attrs['time_units'] = data.flux.attrs['time_units']
-                data['stdvar'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                data['stdvar'].attrs['time_units'] = data.flux.attrs['time_units']
+                data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
+                data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
+                data['stdspec'].attrs['flux_units'] = \
+                    data.flux.attrs['flux_units']
+                data['stdspec'].attrs['time_units'] = \
+                    data.flux.attrs['time_units']
+                data['stdvar'].attrs['flux_units'] = \
+                    data.flux.attrs['flux_units']
+                data['stdvar'].attrs['time_units'] = \
+                    data.flux.attrs['time_units']
                 # FINDME: stdvar >> stdspec, which is a problem
 
                 # Extract optimal spectrum with uncertainties
-                log.writelog("  Performing optimal spectral extraction", mute=(not meta.verbose))
-                data['optspec'] = (['time','x'], np.zeros(data.stdspec.shape))
-                data['opterr']  = (['time','x'], np.zeros(data.stdspec.shape))
-                data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
-                data['opterr'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                data['opterr'].attrs['time_units'] = data.flux.attrs['time_units']
+                log.writelog("  Performing optimal spectral extraction",
+                             mute=(not meta.verbose))
+                data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
+                data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
+                data['optspec'].attrs['flux_units'] = \
+                    data.flux.attrs['flux_units']
+                data['optspec'].attrs['time_units'] = \
+                    data.flux.attrs['time_units']
+                data['opterr'].attrs['flux_units'] = \
+                    data.flux.attrs['flux_units']
+                data['opterr'].attrs['time_units'] = \
+                    data.flux.attrs['time_units']
 
-                gain = 1  # Already converted DN to electrons, so gain = 1 for optspex
+                # Already converted DN to electrons, so gain = 1 for optspex
+                gain = 1
                 intstart = data.attrs['intstart']
-                iterfn = range(meta.int_start,meta.n_int)
+                iterfn = range(meta.int_start, meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
-                    data['optspec'][n], data['opterr'][n], mask = optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
-                                                                             data.stdspec[n].values, gain, apv0[n],
-                                                                             p5thresh=meta.p5thresh, p7thresh=meta.p7thresh,
-                                                                             fittype=meta.fittype, window_len=meta.window_len,
-                                                                             deg=meta.prof_deg, n=intstart + n,
-                                                                             isplots=meta.isplots_S3, meddata=medapdata)
+                    data['optspec'][n], data['opterr'][n], mask = \
+                        optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
+                                         data.stdspec[n].values, gain, apv0[n],
+                                         p5thresh=meta.p5thresh,
+                                         p7thresh=meta.p7thresh,
+                                         fittype=meta.fittype,
+                                         window_len=meta.window_len,
+                                         deg=meta.prof_deg, n=intstart+n,
+                                         meddata=medapdata)
 
-                #Mask out NaNs and Infs
+                # Mask out NaNs and Infs
                 optspec_ma = np.ma.masked_invalid(data.optspec.values)
                 opterr_ma = np.ma.masked_invalid(data.opterr.values)
-                optmask = np.logical_or(np.ma.getmaskarray(optspec_ma), np.ma.getmaskarray(opterr_ma))
-                data['optmask'] = (['time','x'], optmask)
+                optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
+                                        np.ma.getmaskarray(opterr_ma))
+                data['optmask'] = (['time', 'x'], optmask)
                 # data['optspec'] = np.ma.masked_where(mask, data.optspec)
                 # data['opterr'] = np.ma.masked_where(mask, data.opterr)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for optimal spectral extraction', mute=(not meta.verbose))
-                    iterfn = range(meta.int_start,meta.n_int)
+                    log.writelog('  Creating figures for optimal spectral '
+                                 'extraction', mute=(not meta.verbose))
+                    iterfn = range(meta.int_start, meta.n_int)
                     if meta.verbose:
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
 
-                if meta.save_output == True:
+                if meta.save_output:
                     # Save flux data from current segment
-                    filename_xr = meta.outputdir + 'S3_' + event_ap_bg + "_FluxData_seg" + str(m+1).zfill(4) + ".h5"
-                    success = xrio.writeXR(filename_xr, data, verbose=False, append=False)
+                    filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
+                                   "_FluxData_seg"+str(m+1).zfill(4)+".h5")
+                    success = xrio.writeXR(filename_xr, data, verbose=False,
+                                           append=False)
                     if success == 0:
                         del(data.attrs['filename'])
                         del(data.attrs['mhdr'])
                         del(data.attrs['shdr'])
-                        success = xrio.writeXR(filename_xr, data, verbose=meta.verbose, append=False)
+                        success = xrio.writeXR(filename_xr, data,
+                                               verbose=meta.verbose,
+                                               append=False)
 
                 # Remove large 3D arrays from Dataset
-                del(data['flux'], data['err'], data['dq'], data['v0'], data['bg'],
-                    data['mask'], data.attrs['intstart'], data.attrs['intend'])
+                del(data['flux'], data['err'], data['dq'], data['v0'],
+                    data['bg'], data['mask'], data.attrs['intstart'],
+                    data.attrs['intend'])
 
                 # Append results for future concatenation
                 datasets.append(data)
 
             if meta.inst == 'wfc3':
-                # WFC3 needs a conclusion step to convert lists into arrays before saving
+                # WFC3 needs a conclusion step to convert lists into
+                # arrays before saving
                 meta, log = inst.conclusion_step(meta, log)
 
             # Concatenate results along time axis (default)
@@ -353,12 +404,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             # Save Dataset object containing time-series of 1D spectra
-            meta.filename_S3_SpecData = meta.outputdir + 'S3_' + event_ap_bg + "_SpecData.h5"
-            success = xrio.writeXR(meta.filename_S3_SpecData, spec, verbose=True)
+            meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                         "_SpecData.h5")
+            success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                   verbose=True)
 
             # Compute MAD value
             meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
-            log.writelog("Stage 3 MAD = " + str(np.round(meta.mad_s3, 2).astype(int)) + " ppm")
+            log.writelog(f"Stage 3 MAD = "
+                         f"{np.round(meta.mad_s3, 2).astype(int)} ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
@@ -366,9 +420,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
 
             # Save results
-            if meta.save_output == True:
+            if meta.save_output:
                 log.writelog('Saving Metadata')
-                me.saveevent(meta, meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save", save=[])
+                fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
+                me.saveevent(meta, fname, save=[])
 
             log.closelog()
 

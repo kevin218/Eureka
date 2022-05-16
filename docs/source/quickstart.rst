@@ -1,6 +1,6 @@
 
 ⚡️ Eureka! Quickstart ⚡️
-================
+==========================
 
 Want to get up and running with ``Eureka!``, but not really sure where to begin? Keep reading! 
 
@@ -11,7 +11,7 @@ The first thing you need to do is install the package, so if you haven't already
 
 
 2. Download the data 💾
------------------------------------
+-----------------------
 
 With the installation complete, you'll need some data to run ``Eureka!`` on. For now let's use some simulated data that was produced for the `Transiting Exoplanet Community ERS <https://ers-transit.github.io/>`_ Data Challenge. Datasets for all four instruments are available on the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_, however, for the rest of this quickstart guide the `NIRSpec Tiny dataset <https://stsci.box.com/s/mgicm6yc5c7khljako7yswh619dn5e7a>`_ will be used. 
 
@@ -30,7 +30,7 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 -------------------------------
 
 3.1 Gather the demo files
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We're almost there, but before you can get things running you need to set up a directory for ``Eureka!`` to store both input and output files. 
 
@@ -170,7 +170,7 @@ The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcur
 .. image:: ../media/stage6_quickstart.png
 
 5. Where to go next 👩‍💻
-----------------------
+-------------------------
 
 You made it! Congratulations, it's time to reward yourself with a break 😊
 

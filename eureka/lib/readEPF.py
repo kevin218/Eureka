@@ -1,42 +1,30 @@
-
 import numpy as np
 import os
 import inspect
 
-"""
-    This class loads a Eureka! Parameter File (epf) and lets you
-    query the parameters and values.
-
-    Modification History:
-    --------------------
-    2022-03-24 taylor     Made based on readECF with significant edits for Eureka
-                          by Taylor J Bell          bell@baeri.org
-
-"""
 
 class Parameter:
     """A generic parameter class"""
-    def __init__(self, name, value, ptype, priorpar1=None, priorpar2=None, prior=None):
-        """Instantiate a Parameter with a name and value at least
+    def __init__(self, name, value, ptype, priorpar1=None, priorpar2=None,
+                 prior=None):
+        """Instantiate a Parameter with a name and value at least.
 
         Parameters
         ----------
-        name: str
-            The name of the parameter
-        value: float, int, str, list, tuple
-            The value of the parameter
-        ptype: str
-            The parameter type from ['free','fixed','independent','shared']
-        priorpar1: float, int, str, list, tuple (optioal)
-            The first prior input value: lower-bound for uniform/log uniform priors, or mean for normal priors.
-        priorpar2: float, int, str, list, tuple (optioal)
-            The second prior input value: upper-bound for uniform/log uniform priors, or std. dev. for normal priors.
-        prior: str
-            Type of prior, ['U','LU','N']
-
-        Returns
-        -------
-        None
+        name : str
+            The name of the parameter.
+        value : float, int, str, list, tuple
+            The value of the parameter.
+        ptype : str
+            The parameter type from ['free','fixed','independent','shared'].
+        priorpar1 : float, int, str, list, tuple; optional
+            The first prior input value: lower-bound for uniform/log uniform
+            priors, or mean for normal priors. Defaults to None.
+        priorpar2 : float, int, str, list, tuple; optional
+            The second prior input value: upper-bound for uniform/log uniform
+            priors, or std. dev. for normal priors. Defaults to None.
+        prior : str; optional
+            Type of prior, ['U','LU','N']. Defaults to None.
         """
         # If value is a list, distribute the elements
         if isinstance(value, list):
@@ -55,18 +43,16 @@ class Parameter:
         self.prior = prior
 
     def __str__(self):
-        '''A function to nicely format some outputs when a Parameter object is converted to a string.
+        '''A function to nicely format some outputs when a Parameter object is
+        converted to a string.
 
         This function gets used if one does str(param) or print(param).
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
-        output: str
-            A string representation of what is contained in the Parameter object.
+        str
+            A string representation of what is contained in
+            the Parameter object.
 
         Notes
         -----
@@ -79,18 +65,17 @@ class Parameter:
         return str(self.values)
 
     def __repr__(self):
-        '''A function to nicely format some outputs when asked for a printable representation of the Parameter object.
+        '''A function to nicely format some outputs when asked for a printable
+        representation of the Parameter object.
 
-        This function gets used if one does repr(param) or does just param in an interactive shell.
-
-        Parameters
-        ----------
-        None
+        This function gets used if one does repr(param) or does just param
+        in an interactive shell.
 
         Returns
         -------
-        output: str
-            A string representation of what is contained in the Parameter object in a manner that could reproduce a similar Parameter object.
+        str
+            A string representation of what is contained in the Parameter
+            object in a manner that could reproduce a similar Parameter object.
 
         Notes
         -----
@@ -103,7 +88,8 @@ class Parameter:
         output = type(self).__module__+'.'+type(self).__qualname__+'('
         # Get the list of Parameter.__init__ arguments (excluding self)
         keys = inspect.getfullargspec(Parameter.__init__).args[1:]
-        # Show how the Parameter could be initialized (e.g. name='rp', val=0.01, ptype='free')
+        # Show how the Parameter could be initialized
+        # (e.g. name='rp', val=0.01, ptype='free')
         for name in keys:
             val = getattr(self, name)
             if isinstance(val, str):
@@ -126,40 +112,61 @@ class Parameter:
 
         Parameters
         ----------
-        param_type: str
+        param_type : str
             Parameter type, ['free','fixed','independent','shared']
         """
         if param_type in [True, False]:
-            raise ValueError("Boolean ptype values are deprecated. ptype must now be 'free', 'fixed', 'independent', or 'shared'")
+            raise ValueError("Boolean ptype values are deprecated. ptype must "
+                             "now be 'free', 'fixed', 'independent', or "
+                             "'shared'")
         elif param_type not in ['free', 'fixed', 'independent', 'shared']:
-            raise ValueError("ptype must be 'free', 'fixed', 'independent', or 'shared'")
+            raise ValueError("ptype must be 'free', 'fixed', 'independent', "
+                             "or 'shared'")
 
         self._ptype = param_type
 
     @property
     def values(self):
-        """Return all values for this parameter"""
-        vals = self.name, self.value, self.ptype, self.priorpar1, self.priorpar2, self.prior
+        """Return all values for this parameter
+
+        Returns
+        -------
+        list
+            [self.name, self.value, self.ptype, self.priorpar1,
+             self.priorpar2, self.prior] excluding any values which
+             are None.
+        """
+        vals = (self.name, self.value, self.ptype, self.priorpar1,
+                self.priorpar2, self.prior)
 
         return list(filter(lambda x: x is not None, vals))
 
 
 class Parameters:
     """A class to hold the Parameter instances
+
+    This class loads a Eureka! Parameter File (epf) and lets you
+    query the parameters and values.
+
+    Notes
+    -----
+    History:
+
+    - 2022-03-24 Taylor J Bell
+        Based on readECF with significant edits for Eureka
     """
     def __init__(self, param_path=None, param_file=None, **kwargs):
         """Initialize the parameter object
 
         Parameters
         ----------
-        param_path : str
-            The path to the parameters.
-        param_file : str
-            A text file of the parameters to parse.
+        param_path : str; optional
+            The path to the parameters. Defaults to None.
+        param_file : str; optional
+            A text file of the parameters to parse. Defaults to None.
         **kwargs : dict
             Any additional settings to set in the Parameters object.
         """
-
         if param_path is None:
             param_path = '.'+os.sep
 
@@ -168,38 +175,45 @@ class Parameters:
         self.dict = {}
 
         # If a param_file is given, make sure it exists
-        if param_file is not None and param_path is not None and os.path.exists(os.path.join(param_path,param_file)):
+        param_file_okay = (param_file is not None and
+                           param_path is not None and
+                           os.path.exists(os.path.join(param_path,
+                                                       param_file)))
+        if param_file_okay:
 
             # Parse the file
             if param_file.endswith('.txt') or param_file.endswith('.json'):
-                raise AssertionError('ERROR: S5 parameter files in txt or json file formats have been deprecated.\n'+
-                                     'Please change to using EPF (Eureka! Parameter File) file formats.')
+                raise AssertionError(
+                    'ERROR: S5 parameter files in txt or json file formats '
+                    'have been deprecated.\n'
+                    'Please change to using EPF (Eureka! Parameter File) '
+                    'file formats.')
             elif param_file.endswith('.ecf'):
-                print('WARNING, using ECF file formats for S5 parameter files has been deprecated.')
-                print('Please update the file format to an EPF (Eureka! Parameter File; .epf).')
+                print('WARNING, using ECF file formats for S5 parameter files '
+                      'has been deprecated.')
+                print('Please update the file format to an EPF (Eureka! '
+                      'Parameter File; .epf).')
 
             self.read(param_path, param_file)
 
         # Add any kwargs to the parameter dict
         self.params.update(kwargs)
-        
+
         # Try to store each as an attribute
         for param, value in self.params.items():
             setattr(self, param, value)
 
     def __str__(self):
-        '''A function to nicely format some outputs when a Parameters object is converted to a string.
+        '''A function to nicely format some outputs when a Parameters object
+        is converted to a string.
 
         This function gets used if one does str(params) or print(params).
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
-        output: str
-            A string representation of what is contained in the Parameters object.
+        str
+            A string representation of what is contained in
+            the Parameters object.
 
         Notes
         -----
@@ -215,18 +229,18 @@ class Parameters:
         return output[:-1]
 
     def __repr__(self):
-        '''A function to nicely format some outputs when asked for a printable representation of the Parameters object.
+        '''A function to nicely format some outputs when asked for a printable
+        representation of the Parameters object.
 
-        This function gets used if one does repr(params) or does just params in an interactive shell.
-
-        Parameters
-        ----------
-        None
+        This function gets used if one does repr(params) or does just params
+        in an interactive shell.
 
         Returns
         -------
-        output: str
-            A string representation of what is contained in the Parameters object in a manner that could reproduce a similar Parameters object.
+        str
+            A string representation of what is contained in the Parameters
+            object in a manner that could reproduce a similar Parameters
+            object.
 
         Notes
         -----
@@ -249,22 +263,19 @@ class Parameters:
 
         Parameters
         ----------
-        item: str
+        item : str
             The name for the attribute
-        value: any
+        value : any
             The attribute value
-
-        Returns
-        -------
-        None
         """
-        if item=='epf' or item=='params' or item=='dict' or item=='filename' or item=='folder' or item=='lines' or item=='cleanlines':
+        if item in ['epf', 'params', 'dict', 'filename', 'folder',
+                    'lines', 'cleanlines']:
             self.__dict__[item] = value
             return
 
         if isinstance(value, (str, float, int, bool)):
             # Convert single items to list
-            value = [value,]
+            value = [value, ]
         elif isinstance(value, tuple):
             # Convert tuple to list
             value = list(value)
@@ -277,19 +288,17 @@ class Parameters:
         # Add it to the list of parameters
         self.__dict__['dict'][item] = self.__dict__[item].values[1:]
 
-        return
-
     def __add__(self, other):
         """Add parameters to make a combined model
 
         Parameters
         ----------
-        other: Parameters
+        other : Parameters
             The parameters object to combine
 
         Returns
         -------
-        newParams:  Parameters
+        newParams : Parameters
             The combined model
         """
         # Make sure it is the right type
@@ -308,19 +317,15 @@ class Parameters:
 
         Parameters
         ----------
-        folder: str
+        folder : str
             The folder containing an EPF file to be read in.
-        file:   str
+        file : str
             The EPF filename to be read in.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
-
         History:
+
         - Mar 2022 Taylor J Bell
             Initial Version based on old readECF code.
         """
@@ -353,33 +358,29 @@ class Parameters:
                 try:
                     vals.append(eval(par[i+1]))
                 except:
+                    # FINDME: Need to catch only the expected exception
                     vals.append(par[i+1])
             self.params[name] = vals
 
-        return
-
     def write(self, folder):
-        """A function to write an EPF file based on the current Parameters settings.
+        """A function to write an EPF file based on the current Parameters
+        settings.
 
-        NOTE: For now this only rewrites the input EPF file to a new EPF file in the requested folder.
-        In the future this function should make a full EPF file based on any adjusted parameters.
+        NOTE: For now this only rewrites the input EPF file to a new EPF file
+        in the requested folder. In the future this function should make a
+        full EPF file based on any adjusted parameters.
 
         Parameters
         ----------
-        folder: str
+        folder : str
             The folder where the EPF file should be written.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
-
         History:
+
         - Mar 2022 Taylor J Bell
             Initial Version.
         """
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
-        return

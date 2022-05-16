@@ -1,7 +1,7 @@
 .. _faq:
 
 Eureka! FAQ
-============================
+===========
 
 In this section you will find frequently asked questions about Eureka! as well as fixes for common problems
 
@@ -19,7 +19,7 @@ and checks for implicit dependencies. If you still encounter issues, you should 
 new conda environment as other packages you've previously installed could have conflicting requirements with Eureka!.
 
 If you are following the installation instructions and still encounter an error, please open a new Issue on
-`GitHub <https://github.com/kevin218/Eureka/issues>`_ and paste the full error message you are getting along
+`GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ and paste the full error message you are getting along
 with details about which python version and operating system you are using.
 
 Issues installing or importing batman
@@ -47,9 +47,9 @@ command line developer tools must be installed first. Alternatively, you can ins
 
 If you were doing that and you are still receiving error messages, it is possible that something about your
 installation environment does not play well with jwst. You should open or comment on an already open issue on the Eureka!
-`GitHub <https://github.com/kevin218/Eureka/issues>`_ page and tell us as many details as you can about every step you
+`GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ page and tell us as many details as you can about every step you
 took to finally get to your error message as well as details about your operating system, python version, and conda version.
-You should also consider opening an issue on the jwst `GitHub <https://github.com/spacetelescope/jwst/issues>`_ page as
+You should also consider opening an issue on the `jwst GitHub <https://github.com/spacetelescope/jwst/issues>`__ page as
 there may not be much we can do to help troubleshoot a package we have no control over.
 
 Finally, if you simply cannot get jwst to install and still want to use later stages of the Eureka! pipeline, then you can
@@ -98,7 +98,7 @@ My question isn't listed here!
 ''''''''''''''''''''''''''''''
 
 First check to see if your question/concern is already addressed in an open or closed issue on the Eureka! 
-`GitHub <https://github.com/kevin218/Eureka/issues>`_ page. If not, please open a new issue and paste the
+`GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ page. If not, please open a new issue and paste the
 full error message you are getting along with details about which python version and operating system you
 are using, and ideally the ecf you used to get your error (ideally copy-paste it into the issue in a
 quote block).
