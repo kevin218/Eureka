@@ -1,10 +1,3 @@
-# $Author: patricio $
-# $Revision: 285 $
-# $Date: 2010-06-18 17:59:25 -0400 (Fri, 18 Jun 2010) $
-# $HeadURL:
-# file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/centroid.py
-# $Id: centroid.py 285 2010-06-18 21:59:25Z patricio $
-
 import numpy as np
 from . import gaussian as g
 
@@ -15,9 +8,9 @@ from . import gaussian as g
 # to the finding of the centroid of a stellar image.
 
 # Contents:
-#   ctrguess:  Guesses the initial parameters of the
+#   ctrguess : Guesses the initial parameters of the
 #              stellar centroid in a given image.
-#   ctrgauss:  Performs centroiding by fitting a 2D Gaussian
+#   ctrgauss : Performs centroiding by fitting a 2D Gaussian
 #              function to a given image.
 
 
@@ -100,18 +93,18 @@ def ctrgauss(data, guess=None, mask=None, indarr=None, trim=None):
 
     Parameters
     ----------
-    data   : ndarray (2D)
+    data : ndarray (2D)
         The stellar image.
-    guess  : array_like
+    guess : array_like
         The initial guess of the position of the star.  Has the form
         (y, x) of the guess center.
-    mask   : ndarray (2D)
+    mask : ndarray (2D)
         The stellar image.
     indarr : array_like
         The indices of the x and y center columns of the frame
         parameters and the width index.  Defaults to 4, 5, and 6
         respectively.
-    trim   : Scalar (positive)
+    trim : Scalar (positive)
         If trim!=0, trims the image in a box of 2*trim pixels around
         the guess center. Must be !=0 for 'col' method.
 

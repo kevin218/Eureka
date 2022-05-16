@@ -36,7 +36,7 @@ def rampfitJWST(eventlabel, ecf_path=None):
 
     Returns
     -------
-    meta: eureka.lib.readECF.MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Notes

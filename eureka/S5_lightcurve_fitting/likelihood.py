@@ -80,7 +80,7 @@ def lnprior(theta, prior1, prior2, priortype):
 
     Returns
     -------
-    lnprior_prob: ndarray
+    lnprior_prob : ndarray
         The log-prior probability value at the position theta.
 
     Notes

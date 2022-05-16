@@ -1,8 +1,3 @@
-"""Functions to simulate lightcurve data from ExoMAST parameters
-
-Author: Joe Filippazzo
-Email: jfilippazzo@stsci.edu
-"""
 import numpy as np
 from bokeh.plotting import figure, show
 try:

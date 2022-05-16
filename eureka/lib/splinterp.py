@@ -1,10 +1,3 @@
-# $Author: carthik $
-# $Revision: 267 $
-# $Date: 2010-06-08 22:33:22 -0400 (Tue, 08 Jun 2010) $
-# $HeadURL:
-# file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/splinterp.py
-# $Id: splinterp.py 267 2010-06-09 02:33:22Z carthik $
-
 import scipy.interpolate as si
 
 
@@ -14,12 +7,12 @@ def splinterp(x2, x, y):
 
     Parameters
     ----------
-    x2: 1D array_like
+    x2 : 1D array_like
         array of points at which to return the value of the
         smoothed spline or its derivatives
-    x: array_like
+    x : array_like
         The x data points defining a curve y = f(x).
-    y: array_like
+    y : array_like
         The y data points defining a curve y = f(x).
 
     Returns

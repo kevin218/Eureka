@@ -316,13 +316,13 @@ def plot_res_distr(lc, model, meta, fitter):
 
     Parameters
     ----------
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object.
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The fitted composite model.
-    meta: eureka.lib.readECF.MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    fitter: str
+    fitter : str
         The name of the fitter (for plot filename).
 
     Notes
@@ -376,13 +376,13 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
     Parameters
     ----------
-    lc: eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object.
-    model: eureka.S5_lightcurve_fitting.models.CompositeModel
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
         The fitted composite model.
-    meta: eureka.lib.readECF.MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    fitter: str
+    fitter : str
         The name of the fitter (for plot filename).
     isTitle : bool; optional
         Should figure have a title. Defaults to True.

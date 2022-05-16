@@ -1,8 +1,3 @@
-#! /usr/bin env python
-# Converts UTC Julian dates to Terrestrial Time and Barycentric
-# Dynamical Time Julian dates
-# Author: Ryan A. Hardy, hardy.r@gmail.com
-# Last update: 2011-03-17
 import numpy as np
 import urllib
 import os

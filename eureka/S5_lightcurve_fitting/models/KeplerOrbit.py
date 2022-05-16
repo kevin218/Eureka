@@ -9,8 +9,6 @@ class KeplerOrbit(object):
 
     Code taken from:
     https://github.com/taylorbell57/Bell_EBM/blob/master/Bell_EBM/KeplerOrbit.py
-    Author: Taylor James Bell
-    Last Update: 2021-05-12
 
     Attributes
     ----------
@@ -119,7 +117,7 @@ class KeplerOrbit(object):
         Returns
         -------
         float
-            float: Body 2's orbital period in days.
+            Body 2's orbital period in days.
         """
         return self._Porb
 

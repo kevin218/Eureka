@@ -1,9 +1,3 @@
-"""Base and child classes to handle models
-used to fit light curves
-
-Author: Joe Filippazzo
-Email: jfilippazzo@stsci.edu
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
@@ -52,7 +46,7 @@ class Model:
 
         Parameters
         ----------
-        other: eureka.S5_lightcurve_fitting.models.Model
+        other : eureka.S5_lightcurve_fitting.models.Model
             The model to multiply.
 
         Returns
@@ -234,9 +228,9 @@ class Model:
 
         Parameters
         ----------
-        time_array: sequence, astropy.units.quantity.Quantity
+        time_array : sequence, astropy.units.quantity.Quantity
             The time array.
-        time_units: str; optional
+        time_units : str; optional
             The units of the input time_array, ['MJD','BJD','BJD_TDB','phase'].
             Defaults to 'BJD_TDB'.
         """
@@ -261,7 +255,7 @@ class Model:
 
         Parameters
         ----------
-        units: str
+        units : str
             The time units ['BJD', 'BJD_TDB', 'MJD', 'phase'].
         """
         # Check the type
@@ -279,7 +273,7 @@ class CompositeModel(Model):
 
         Parameters
         ----------
-        models: sequence
+        models : sequence
             The list of models.
         **kwargs : dict
             Additional parameters to pass to

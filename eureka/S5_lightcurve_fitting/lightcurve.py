@@ -1,8 +1,3 @@
-"""Base and child classes to handle light curve fitting
-
-Author: Joe Filippazzo
-Email: jfilippazzo@stsci.edu
-"""
 import numpy as np
 import os
 import matplotlib.pyplot as plt

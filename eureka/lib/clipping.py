@@ -19,30 +19,39 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5,
 
     Parameters
     ----------
-    data: ndarray (1D, float)
+    data : ndarray (1D, float)
         The input array in which to identify outliers
-    log: logedit.Logedit
+    log : logedit.Logedit
         The open log in which notes from this step can be added.
-    wavelength: float
+    wavelength : float
         The wavelength currently under consideration.
-    sigma: float
+    sigma : float; optional
         The number of sigmas a point must be from the rolling mean to be
-        considered an outlier
-    box_width: int
+        considered an outlier. Defaults to 10.
+    box_width : int; optional
         The width of the box-car filter (used to calculated the rolling
-        median) in units of number of data points
-    maxiters: int
+        median) in units of number of data points. Defaults to 5.
+    maxiters : int; optional
         The number of iterations of sigma clipping that should be performed.
-    fill_value: string or float
+        Defaults to 5.
+    boundary : str; optional
+        The boundary argument to pass to astropy.convolution.convolve. Defaults
+        to 'extend'.
+    fill_value : str or float; optional
         Either the string 'mask' to mask the outlier values, 'boxcar' to
         replace data with the mean from the box-car filter, or a constant
-        float-type fill value.
+        float-type fill value. Defaults to 'mask'.
+    verbose : bool; optional
+        If True, log details about the outliers found at this wavelength.
+        Defaults to False.
 
     Returns
     -------
-    data:   ndarray (1D, boolean)
+    data : ndarray (1D, boolean)
         An array with the same dimensions as the input array with outliers
         replaced with fill_value.
+    noutliers : int
+        The number of outliers identified.
 
     Notes
     -----
@@ -84,16 +93,16 @@ def replace_moving_mean(data, outliers, kernel):
 
     Parameters
     ----------
-    data: ndarray (1D, float)
+    data : ndarray (1D, float)
         The input array in which to replace outliers
-    outliers: ndarray (1D, bool)
+    outliers : ndarray (1D, bool)
         The input array in which to replace outliers
-    kernel: astropy.convolution.Kernel1D
+    kernel : astropy.convolution.Kernel1D
         The kernel used to compute the moving mean.
 
     Returns
     -------
-    data:   ndarray (boolean)
+    data : ndarray (boolean)
         An array with the same dimensions as the input array with outliers
         replaced with fill_value.
 
@@ -114,7 +123,25 @@ def replace_moving_mean(data, outliers, kernel):
 
 
 def skewed_gaussian(x, eta=0, omega=1, alpha=0, scale=1):
-    """A skewed gaussian model.
+    """A skewed Gaussian model.
+
+    Parameters
+    ----------
+    x : ndarray
+        The values at which to evaluate the skewed Gaussian.
+    eta : float; optional
+        The Gaussian mean. Defaults to 0.
+    omega : float, optional
+        The skewed normal scale. Defaults to 1.
+    alpha : float, optional
+        The skewed normal shape. Defaults to 0.
+    scale : float, optional
+        A multiplier for the skewed normal. Defaults to 1.
+
+    Returns
+    -------
+    ndarray
+        The skewed Gaussian model evaluated at positions x.
     """
     t = alpha*(x-eta)/omega
     Psi = 0.5*(1+erf(t/np.sqrt(2)))

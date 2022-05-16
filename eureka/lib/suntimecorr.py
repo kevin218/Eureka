@@ -1,10 +1,3 @@
-# $Author: carthik $
-# $Revision: 267 $
-# $Date: 2010-06-08 22:33:22 -0400 (Tue, 08 Jun 2010) $
-# $HeadURL:
-# file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/suntimecorr.py
-# $Id: suntimecorr.py 267 2010-06-09 02:33:22Z carthik $
-
 import numpy as np
 import re
 from scipy.constants import c

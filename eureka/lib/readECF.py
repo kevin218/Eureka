@@ -123,9 +123,9 @@ class MetaClass:
 
         Parameters
         ----------
-        item: str
+        item : str
             The name for the attribute
-        value: any
+        value : any
             The attribute value
         """
         if item in ['lines', 'params', 'filename', 'folder']:

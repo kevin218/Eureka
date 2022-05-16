@@ -373,7 +373,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
 
     Returns
     -------
-    profile:    ndarray
+    profile : ndarray
         Fitted profile in the same shape as the input data array.
     '''
     submask = np.copy(mask)

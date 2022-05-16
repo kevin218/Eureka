@@ -34,7 +34,7 @@ def ld_profile(name='quadratic', latex=False):
         including 'uniform', 'linear', 'quadratic', 'kipping2013',
         'square-root', 'logarithmic', 'exponential', '3-parameter',
         and '4-parameter'. Detaults to 'quadratic'.
-    latex: bool; optional
+    latex : bool; optional
         Return the function as a LaTeX formatted string. Defaults to False.
 
     Returns

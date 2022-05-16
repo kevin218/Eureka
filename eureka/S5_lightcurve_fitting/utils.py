@@ -612,7 +612,7 @@ def get_target_data(target_name):
 
     Returns
     -------
-    target_data: json
+    target_data : json
         json object with target data.
     """
     canonical_name = get_canonical_name(target_name)
