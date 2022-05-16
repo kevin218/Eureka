@@ -505,16 +505,10 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
         raise AssertionError(message)
 
     fname = f'S5_emcee_samples_{channel_key}'
-    if os.path.isfile(os.path.join(foldername, fname)+'.h5'):
-        # New code to load HDF5 files
-        full_fname = os.path.join(foldername, fname)+'.h5'
-        with h5py.File(full_fname, 'r') as hf:
-            samples = hf['samples'][:]
-    else:
-        # Keep this old code for the time being to
-        # allow backwards compatibility
-        full_fname = os.path.join(foldername, fname)+'.csv'
-        samples = np.loadtxt(full_fname, delimiter=',')
+    # Load HDF5 files
+    full_fname = os.path.join(foldername, fname)+'.h5'
+    with h5py.File(full_fname, 'r') as hf:
+        samples = hf['samples'][:]
     log.writelog(f'Old chain path: {full_fname}')
 
     # Initialize the walkers using samples from the old chain

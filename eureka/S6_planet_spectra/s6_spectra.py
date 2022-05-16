@@ -354,15 +354,9 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
             full_keys = fitted_values.keys()
 
             fname = f'S5_{fitter}_samples_{channel_key}'
-            if os.path.isfile(meta.inputdir+fname+'.h5'):
-                # New code to load HDF5 files
-                with h5py.File(meta.inputdir+fname+'.h5', 'r') as hf:
-                    samples = hf['samples'][:]
-            else:
-                # Keep this old code for the time being to allow backwards
-                # compatibility
-                samples = pd.read_csv(meta.inputdir+fname+'.csv',
-                                      escapechar='#', skipinitialspace=True)
+            # Load HDF5 file
+            with h5py.File(meta.inputdir+fname+'.h5', 'r') as hf:
+                samples = hf['samples'][:]
 
             if y_param == 'fp':
                 keys = [key for key in full_keys if 'fp' in key]
@@ -374,15 +368,10 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
                                      ' of fitted parameters which includes: '
                                      ', '.join(full_keys))
 
-            if os.path.isfile(meta.inputdir+fname+'.h5'):
-                # New code to load HDF5 files
-                spectra_samples = np.array([samples[:, full_keys == key]
-                                            for key in keys])
-                spectra_samples = spectra_samples.reshape((len(keys), -1))
-            else:
-                # Keep this old code for the time being to allow backwards
-                # compatibility
-                spectra_samples = np.array([samples[key] for key in keys])
+            # Load HDF5 files
+            spectra_samples = np.array([samples[:, full_keys == key]
+                                        for key in keys])
+            spectra_samples = spectra_samples.reshape((len(keys), -1))
             lowers, medians, uppers = np.percentile(spectra_samples,
                                                     [16, 50, 84], axis=1)
             lowers = np.abs(medians-lowers)
