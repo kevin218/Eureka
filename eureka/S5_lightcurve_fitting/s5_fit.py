@@ -10,12 +10,6 @@ from . import lightcurve as lc
 from . import models as m
 
 
-class MetaClass:
-    """A class to hold Eureka! metadata."""
-    def __init__(self):
-        return
-
-
 def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 

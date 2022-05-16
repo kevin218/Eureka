@@ -40,10 +40,6 @@ class LightCurve(m.Model):
         share : bool; optional
             Whether the fit shares parameters between spectral channels.
 
-        Returns
-        -------
-        None
-
         Notes
         -----
 
@@ -162,10 +158,6 @@ class LightCurve(m.Model):
             The metadata object.
         fits : bool; optional
             Plot the fit models. Defaults to True.
-
-        Returns
-        -------
-        None
         """
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):

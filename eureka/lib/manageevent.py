@@ -272,9 +272,6 @@ def findevent(meta, stage, allowFail=False):
 
     # Load old savefile
     old_meta = loadevent(fname)
-    # Code to not break backwards compatibility with old MetaClass save files
-    # but also use the new MetaClass going forwards
-    old_meta = readECF.MetaClass(**old_meta.__dict__)
 
     old_meta.folder = os.sep.join(fname.split(os.sep)[:-1])+os.sep
     old_meta.filename = fname.split(os.sep)[-1]

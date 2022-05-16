@@ -28,14 +28,6 @@ from ..lib import util
 from ..lib import clipping
 
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-
-    def __init__(self):
-        return
-
-
 def genlc(eventlabel, ecf_path=None, s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 

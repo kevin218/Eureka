@@ -25,14 +25,6 @@ from ..lib import readECF
 from ..lib.plots import figure_filetype
 
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-
-    def __init__(self):
-        return
-
-
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
     pipeline into calints and x1dints.
@@ -205,10 +197,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         log : logedit.Logedit
             The open log in which notes from this step can be added.
 
-        Returns
-        -------
-        None
-
         Notes
         -----
         History:
@@ -333,10 +321,6 @@ class EurekaImage2Pipeline(Image2Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Returns
-        -------
-        None
 
         Notes
         -----

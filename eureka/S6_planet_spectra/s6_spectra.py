@@ -11,13 +11,6 @@ from . import plots_s6 as plots
 from ..lib import astropytable
 
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-    def __init__(self):
-        return
-
-
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''Gathers together different wavelength fits and makes
     transmission/emission spectra.

@@ -12,16 +12,9 @@ from ..lib import manageevent as me
 from ..lib import readECF
 
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-    def __init__(self):
-        return
-
-
 def rampfitJWST(eventlabel, ecf_path=None):
-    r'''Process a Stage 0, \*_uncal.fits file to Stage 1 \*_rate.fits and
-    \*_rateints.fits files.
+    """Process a Stage 0, _uncal.fits file to Stage 1 _rate.fits and
+    _rateints.fits files.
 
     Steps taken to perform this processing can follow the default JWST
     pipeline, or alternative methods.
@@ -49,7 +42,7 @@ def rampfitJWST(eventlabel, ecf_path=None):
         Initial version
     - February 2022 Aarynn Carter and Eva-Maria Ahrer
         Updated for JWST version 1.3.3, code restructure
-    '''
+    """
     t0 = time.time()
 
     # Load Eureka! control file and store values in Event object
@@ -151,10 +144,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
             The metadata object.
         log : logedit.Logedit
             The open log in which notes from this step can be added.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
