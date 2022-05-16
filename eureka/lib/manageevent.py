@@ -3,8 +3,6 @@ import pickle
 import os
 import glob
 
-from . import readECF
-
 
 # Name
 # ----
