@@ -176,13 +176,16 @@ class Parameters:
 
         # If a param_file is given, make sure it exists
         param_file_okay = (param_file is not None and
-                           param_path is not None and
-                           os.path.exists(os.path.join(param_path,
-                                                       param_file)))
+                           param_path is not None)
         if param_file_okay:
-
-            # Parse the file
-            if param_file.endswith('.txt') or param_file.endswith('.json'):
+            if not os.path.exists(os.path.join(param_path, param_file)):
+                raise FileNotFoundError(
+                    f"The Eureka! Parameter File:\n"
+                    f"{os.path.join(param_path,param_file)}\n"
+                    f"does not exist. Make sure to update the fit_par setting"
+                    f" in your Stage 5 ECF to point to the EPF file you've "
+                    f"made.")
+            elif param_file.endswith('.txt') or param_file.endswith('.json'):
                 raise AssertionError(
                     'ERROR: S5 parameter files in txt or json file formats '
                     'have been deprecated.\n'
