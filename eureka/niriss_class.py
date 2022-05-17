@@ -223,7 +223,7 @@ class NIRISS_S3(object):
         self.wavelength_map = wmap + 0.0
 
 
-    def map_trace(self, method='centers', ref_filename=None):
+    def map_trace(self, method='centers', ref_filename=None, isplots=0):
         """
         Calculates the trace of the first and second NIRISS
         orders.
@@ -250,11 +250,11 @@ class NIRISS_S3(object):
            `tab2` is initialized when using the method `centers`.
         """
         if method.lower() == 'edges':
-            self.tab1 = mask_method_edges(self)
+            self.tab1 = mask_method_edges(self, isplots=isplots)
 
         elif method.lower() == 'centers':
             if self.f277 is not None:
-                self.tab2 = mask_method_profile(self)
+                self.tab2 = mask_method_profile(self, isplots=isplots)
             else:
                 return('Need F277W filter to run this trace finding method.')
 
