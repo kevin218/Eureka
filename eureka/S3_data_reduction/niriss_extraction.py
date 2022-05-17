@@ -73,7 +73,8 @@ def box_extract(data, var, boxmask):
 
 
 def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
-               booltype=True, return_together=True, pos1=None, pos2=None):
+               booltype=True, return_together=True, pos1=None,
+               pos2=None, pos3=None):
     """
     Really dirty box mask for background purposes.
 
@@ -308,7 +309,8 @@ def profile_niriss_moffat(data, pos1, pos2):
 
 
 def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medframe=None,
-                               pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
+                               pos1=None, pos2=None, pos3=None,
+                               sigma=20, cr_mask=None, Q=18,
                                proftype='gaussian', isplots=0, per_quad=False, test=False):
     """
     Optimal extraction routine for NIRISS. This is different from the
@@ -358,7 +360,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
     block_extra = np.ones(data[0].shape)
 
     # Create a box mask to set pixels far from the order to 0
-    boxmask = dirty_mask(medframe, pos1=pos1, pos2=pos2)
+    boxmask = dirty_mask(medframe, pos1=pos1, pos2=pos2, pos3=pos3)
     boxmask = np.array(~boxmask, dtype=int)
 
     # Loops over each quadrant
@@ -414,6 +416,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
                                            medframe=medframe[y1:y2, x1:x2],
                                            pos1=pos1[x1:x2],
                                            pos2=pos2[x1:x2],
+                                           pos3=pos3[x1:x2],
                                            sigma=sigma,
                                            cr_mask=new_cr_mask,
                                            Q=Q,
@@ -434,6 +437,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
                                        medframe=medframe,
                                        pos1=pos1,
                                        pos2=pos2,
+                                       pos3=pos3,
                                        sigma=sigma,
                                        cr_mask=cr_mask,
                                        Q=Q,
@@ -446,7 +450,8 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
 
 def extraction_routine(data, var,
                        spectrum, spectrum_var, sky_bkg, medframe=None,
-                       pos1=None, pos2=None, sigma=20, cr_mask=None, Q=18,
+                       pos1=None, pos2=None, pos3=None, sigma=20,
+                       cr_mask=None, Q=18,
                        proftype='gaussian', isplots=0, test=False):
     """
     The actual extraction routine. `optimal extraction` is a wrapper

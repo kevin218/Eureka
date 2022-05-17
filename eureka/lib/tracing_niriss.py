@@ -250,7 +250,8 @@ def mask_method_profile(data, degree=4, save=False,
 
     def fit_function(x, y, deg=4):
         """ Fits a n-degree polynomial to x and y data. """
-        poly = np.polyfit(x, y, deg=deg)
+        q = (np.isnan(x)==False) & (np.isnan(y)==False)
+        poly = np.polyfit(x[q], y[q], deg=deg)
         fit = np.poly1d(poly)
         return fit
 
@@ -277,7 +278,7 @@ def mask_method_profile(data, degree=4, save=False,
         plt.legend(ncol=3)
         plt.show()
 
-    summed = np.nansum(data.data, axis=0)
+    summed = data.median+0.0#np.nansum(data.median, axis=0)
     ccd = CCDData(summed*units.electron)
 
     new_ccd_no_premask = ccdp.cosmicray_lacosmic(ccd, readnoise=150,
@@ -306,7 +307,6 @@ def mask_method_profile(data, degree=4, save=False,
 
     tab['order_1'] = fit1_final(x) # Adds fit of 1st order to output table
 
-
     if new_ccd_no_premask.shape[0]==256: # Checks to see if 2nd & 3rd orders available
 
         # Some arrays we'll be populating later on
@@ -317,11 +317,12 @@ def mask_method_profile(data, degree=4, save=False,
         # We almost certainly want to fit the 3rd order first,
         #    since it's physically distinct
 
-        for i in range(new_ccd_no_premask.shape[1]):
+        for i in range(5, new_ccd_no_premask.shape[1]):
             col = new_ccd_no_premask.data[:,i]
             newx, newcol = mask_profile(mu=tab['order_1'][i], x=colx, y=col)
 
             if i <= 750: # Can't get a good guesstimate for 3rd order past pixel~750
+                #plt.plot(colx, col)
                 height = define_peak_params(newcol, which_std=4)
                 p = identify_peaks(newcol, height=height, distance=10.0)
                 inds = np.where(newx[p]>120)[0] # want to make sure we get the 3rd order
