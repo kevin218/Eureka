@@ -322,7 +322,6 @@ def mask_method_profile(data, degree=4, save=False,
             newx, newcol = mask_profile(mu=tab['order_1'][i], x=colx, y=col)
 
             if i <= 750: # Can't get a good guesstimate for 3rd order past pixel~750
-                #plt.plot(colx, col)
                 height = define_peak_params(newcol, which_std=4)
                 p = identify_peaks(newcol, height=height, distance=10.0)
                 inds = np.where(newx[p]>120)[0] # want to make sure we get the 3rd order
