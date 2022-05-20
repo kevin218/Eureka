@@ -976,16 +976,6 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
         fname = f'S5_{fitter}_fitparams_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
     results_table.write(meta.outputdir+fname+'.csv', format='csv', overwrite=False)
 
-    # Save transmission spectrum
-    # indices of fitted rps for all channels
-    # if spec_table is not None:
-    #     if lc.share:
-    #         spec_fname = f'S5_{fitter}_trspec_shared'
-    #     else:
-    #         spec_fname = f'S5_{fitter}_trspec_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
-
-    #     spec_table.write(meta.outputdir+spec_fname+'.csv', format='csv', overwrite=False)
-
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples)!=0:
