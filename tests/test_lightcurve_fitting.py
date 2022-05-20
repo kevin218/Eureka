@@ -247,6 +247,9 @@ class TestParameters(unittest.TestCase):
                          ['param1', 123.456, 'free'])
         self.assertEqual(self.params.param2.values,
                          ['param2', 234.567, 'free', 200, 300])
+        # Test FileNotFoundError
+        self.assertRaises(FileNotFoundError, Parameters, None,
+                          'non-existent.epf')
 
 
 class TestSimulations(unittest.TestCase):
