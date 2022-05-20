@@ -1,8 +1,3 @@
-"""Functions to simulate lightcurve data from ExoMAST parameters
-
-Author: Joe Filippazzo
-Email: jfilippazzo@stsci.edu
-"""
 import numpy as np
 from bokeh.plotting import figure, show
 try:
@@ -13,25 +8,28 @@ except ImportError:
 from . import utils
 
 
-def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None, ldcs=('quadratic', [0.1, 0.1]), plot=False):
+def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None,
+                        ldcs=('quadratic', [0.1, 0.1]), plot=False):
     """Simulate lightcurve data for the given target exoplanet
 
     Parameters
     ----------
-    target: str
-        The name of the target to simulate
-    snr: float
-        The signal to noise to use
-    npts: int
-        The number of points in each lightcurve
-    nbins: int
-        The number of lightcurves
-    radius: array-like, float (optional)
-        The radius or radii value(s) to use
-    ldcs: sequence
-        The limb darkening profile name and coefficients
-    plot: bool
-        Plot the figure
+    target : str
+        The name of the target to simulate.
+    snr : float; optional
+        The signal to noise to use. Defaults to 1000.
+    npts : int; optional
+        The number of points in each lightcurve. Defaults to 1000.
+    nbins : int; optional
+        The number of lightcurves. Defaults to 10.
+    radius : array-like, float; optional
+        The radius or radii value(s) to use. Defaults to None which
+        will use the literature Rp/Rs value if found or 0.1 if not.
+    ldcs : sequence; optional
+        The limb darkening profile name and coefficients.
+        Defaults to ('quadratic', [0.1, 0.1]).
+    plot : bool; optional
+        If True, plot the figure. Defaults to False.
 
     Returns
     -------
@@ -90,4 +88,5 @@ def simulate_lightcurve(target, snr=1000., npts=1000, nbins=10, radius=None, ldc
         return time, flux, unc, targ
 
     except IOError:
-        raise ValueError('{}: Could not simulate light curve for this target'.format(target))
+        raise ValueError(f'{target}: Could not simulate light curve for this '
+                         f'target')

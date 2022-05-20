@@ -1,6 +1,6 @@
 
 ⚡️ Eureka! Quickstart ⚡️
-================
+==========================
 
 Want to get up and running with ``Eureka!``, but not really sure where to begin? Keep reading! 
 
@@ -11,7 +11,7 @@ The first thing you need to do is install the package, so if you haven't already
 
 
 2. Download the data 💾
------------------------------------
+-----------------------
 
 With the installation complete, you'll need some data to run ``Eureka!`` on. For now let's use some simulated data that was produced for the `Transiting Exoplanet Community ERS <https://ers-transit.github.io/>`_ Data Challenge. Datasets for all four instruments are available on the `STScI Box site <https://stsci.app.box.com/s/tj1jnivn9ekiyhecl5up7mkg8xrd1htl/folder/154382715453>`_, however, for the rest of this quickstart guide the `NIRSpec Tiny dataset <https://stsci.box.com/s/mgicm6yc5c7khljako7yswh619dn5e7a>`_ will be used. 
 
@@ -30,7 +30,7 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 -------------------------------
 
 3.1 Gather the demo files
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We're almost there, but before you can get things running you need to set up a directory for ``Eureka!`` to store both input and output files. 
 
@@ -99,7 +99,20 @@ The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wa
 	ncpu		4
 	fit_par		S5_fit_par_wasp39b.epf
 
-While editing those files you may have noticed that there are a whole range of other inputs that can be tweaked and adjusted at each different stage. For now you can ignore these, as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
+To speed up the Stage 5 dynesty fit, you can also reduce the number of live points (``run_nlive``) at the cost of a more coarse corner plot in the end. The bare minimum recommended value is
+
+.. code-block:: bash
+	
+	ndim * (ndim + 1) / 2
+
+and our fit presently has ndim=10 free values in the EPF, so that means a bare minimum of 55 live points. As a compromise, let's use 256 live points instead to
+get a fairly nice corner plot but also speed up the fit, so set the following in ``S5_fit_par_wasp39b.epf``:
+
+.. code-block:: bash
+	
+	run_nlive    256
+
+While editing all those files, you may have noticed that there is a whole range of other inputs that can be tweaked and adjusted at each different stage. For now you can ignore these as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
 
 
 4. Run Eureka! 💡
@@ -170,7 +183,7 @@ The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcur
 .. image:: ../media/stage6_quickstart.png
 
 5. Where to go next 👩‍💻
-----------------------
+-------------------------
 
 You made it! Congratulations, it's time to reward yourself with a break 😊
 

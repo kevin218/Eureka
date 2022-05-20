@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def gelmanrubin(chain, nchains):
     """Perform convergence test of Gelman & Rubin (1992) on a MCMC chain.
 
@@ -9,13 +10,14 @@ def gelmanrubin(chain, nchains):
         A vector of parameter samples from a MCMC routine.
     nchains : scalar
         The number of chains to split the original chain into. The
-        length of `chain` WILL BE MODIFIED if NOT evenly divisible by `nchains`.
+        length of `chain` WILL BE MODIFIED if NOT evenly divisible by
+        `nchains`.
 
     Returns
     -------
     psrf : scalar
-        The potential scale reduction factor of the chain.  If the
-        chain has converged, this should be close to unity.  If it is
+        The potential scale reduction factor of the chain. If the
+        chain has converged, this should be close to unity. If it is
         much greater than 1, the chain has not converged and requires
         more samples.
 
@@ -26,17 +28,18 @@ def gelmanrubin(chain, nchains):
     2010-08-20  ccampo
         Initial version.
     2011-07-07  kevin
-        Removed chain length constraint
+        Removed chain length constraint.
     """
-    # Shorten chain by 'remainder' so that chain length is evenly divisible by nchains
+    # Shorten chain by 'remainder' so that chain length is evenly divisible
+    # by nchains
     remainder = int(chain.size % nchains)
     if remainder != 0:
         chain = chain[:-remainder]
-    
+
     # get length of each chain and reshape
-    nchains  = int(nchains)
+    nchains = int(nchains)
     chainlen = int(chain.size/nchains)
-    chains   = chain.reshape(nchains, chainlen)
+    chains = chain.reshape(nchains, chainlen)
 
     # calculate W (within-chain variance)
     W = np.mean(chains.var(axis=1))
@@ -44,7 +47,7 @@ def gelmanrubin(chain, nchains):
     # calculate B (between-chain variance)
     means = chains.mean(axis=1)
     mmean = means.mean()
-    B     = (chainlen/(nchains - 1.))*np.sum((means - mmean)**2)
+    B = (chainlen/(nchains - 1.))*np.sum((means - mmean)**2)
 
     # calculate V (posterior marginal variance)
     V = W*((chainlen - 1.)/chainlen) + B*((nchains + 1.)/(chainlen*nchains))
@@ -54,9 +57,10 @@ def gelmanrubin(chain, nchains):
 
     return psrf
 
+
 def convergetest(pars, nchains):
     """Driver routine for gelmanrubin.
-    
+
     Perform convergence test of Gelman & Rubin (1992) on a MCMC chain.
 
     Parameters
@@ -93,7 +97,7 @@ def convergetest(pars, nchains):
     >>> # channels 2/4 free parameters
     >>> ch24pars = np.concatenate((fit[1].allparams[fit[1].freepars],
     >>>                            fit[3].allparams[fit[3].freepars]))
-    
+
     >>> # number of chains to split into
     >>> nchains = 4
 
@@ -114,17 +118,17 @@ def convergetest(pars, nchains):
     Notes
     -----
     History:
-    
+
     2010-08-20  ccampo
         Initial version.
-    """   
+    """
     # allocate placeholder for results
     nfpar = pars.shape[0]
-    psrf  = np.zeros(nfpar)
+    psrf = np.zeros(nfpar)
     # calculate psrf for each parameter
     for i in range(nfpar):
-        chain   = pars[i].flatten()
-        #chain   = pars[i]
+        chain = pars[i].flatten()
+        # chain = pars[i]
         psrf[i] = gelmanrubin(chain, nchains)
-    
+
     return psrf, psrf.mean()
