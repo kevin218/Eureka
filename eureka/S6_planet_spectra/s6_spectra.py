@@ -390,7 +390,7 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
                                      ' of fitted parameters which includes: '
                                      ', '.join(samples.keys()))
             medians = np.array([fitted_values[key] for key in keys])
-            errs = np.ones_like(medians)*np.nan
+            errs = np.ones((2, len(medians)))*np.nan
 
     return medians, errs
 

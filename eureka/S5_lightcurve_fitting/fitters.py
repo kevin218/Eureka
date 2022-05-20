@@ -132,6 +132,43 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                         freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
+
+    print('\nLSQ RESULTS:')
+    for i in range(len(freenames)):
+        if 'scatter_mult' in freenames[i]:
+            chan = freenames[i].split('_')[-1]
+            if chan.isnumeric():
+                chan = int(chan)
+            else:
+                chan = 0
+            scatter_ppm = (fit_params[i] *
+                           np.ma.median(lc.unc[chan*lc.time.size:
+                                               (chan+1)*lc.time.size]) * 1e6)
+            log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
+        else:
+            log.writelog(f'{freenames[i]}: {fit_params[i]}')
+    log.writelog('')
+
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter=calling_function)
+
+    # Plot GP fit + components
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter=calling_function)
+
+    # Plot Allan plot
+    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+        # This plot is only really useful if you're actually using the
+        # lsq fitter, otherwise don't make it
+        plots.plot_rms(lc, model, meta, fitter=calling_function)
+
+    # Plot residuals distribution
+    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+        plots.plot_res_distr(lc, model, meta, fitter=calling_function)
+
     # Make a new model instance
     best_model = copy.copy(model)
     best_model.components[0].update(fit_params, freenames)
@@ -152,39 +189,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat', cov_mat)
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter=calling_function)
-
-    # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
-
-    print('\nLSQ RESULTS:')
-    for i in range(len(freenames)):
-        if 'scatter_mult' in freenames[i]:
-            chan = freenames[i].split('_')[-1]
-            if chan.isnumeric():
-                chan = int(chan)
-            else:
-                chan = 0
-            scatter_ppm = (fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]) * 1e6)
-            log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
-        else:
-            log.writelog(f'{freenames[i]}: {fit_params[i]}')
-    log.writelog('')
-
-    # Plot Allan plot
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
-        # This plot is only really useful if you're actually using the
-        # lsq fitter, otherwise don't make it
-        plots.plot_rms(lc, model, meta, fitter=calling_function)
-
-    # Plot residuals distribution
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
-        plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
@@ -389,24 +393,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
         log.writelog("WARNING: Unable to estimate the autocorrelation time!",
                      mute=(not meta.verbose))
 
-    if meta.isplots_S5 >= 3:
-        plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
-                         fitter='emcee', burnin=True, nburn=meta.run_nburn)
-        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
-                         freenames, fitter='emcee', burnin=False)
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='emcee')
-
-    # Plot GP fit + components
-    if model.GP and meta.isplots_S5 >= 1:
-        plots.plot_GP_components(lc, model, meta, fitter='emcee')
-
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
@@ -435,6 +421,21 @@ def emceefitter(lc, model, meta, log, **kwargs):
                          f' -{lower_errs[i]})')
     log.writelog('')
 
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter='emcee')
+
+    # Plot GP fit + components
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='emcee')
+
+    # Plot chain evolution
+    if meta.isplots_S5 >= 3:
+        plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
+                         fitter='emcee', burnin=True, nburn=meta.run_nburn)
+        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
+                         freenames, fitter='emcee', burnin=False)
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='emcee')
@@ -446,6 +447,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 
@@ -842,22 +846,6 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                         freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
 
-    # plot using corner.py
-    if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
-
-    # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
-
-    # Plot GP fit + components
-    if model.GP and meta.isplots_S5 >= 1:
-        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
-
-    # Plot fit
-    if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
-
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
@@ -886,6 +874,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                          f' -{lower_errs[i]})')
     log.writelog('')
 
+    # Plot fit
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta, fitter='dynesty')
+
+    # Plot GP fit + components
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='dynesty')
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='dynesty')
@@ -894,6 +890,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='dynesty')
 
+    # plot using corner.py
+    if meta.isplots_S5 >= 5:
+        plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
+
+    # Make a new model instance
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 
@@ -953,8 +956,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
     result = lcmodel.fit(lc.flux, weights=1/lc.unc, params=initialParams,
                          **indep_vars, **kwargs)
 
-    log.writelog(result.fit_report(), mute=(not meta.verbose))
-
     # Get the best fit params
     fit_params = result.__dict__['params']
     # new_params = [(fit_params.get(i).name, fit_params.get(i).value,
@@ -981,21 +982,31 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', fit_params, freenames)
 
-    # Create new model with best fit parameters
-    best_model = copy.copy(model)
-    best_model.components[0].update(fit_params, freenames)
+    # Compute reduced chi-squared
+    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
+
+    # Log results
+    log.writelog(result.fit_report(), mute=(not meta.verbose))
 
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
-    # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
+    # Plot GP fit + components
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='lmfitter')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
+    # Plot residuals distribution
+    if meta.isplots_S5 >= 3:
+        plots.plot_res_distr(lc, model, meta, fitter='lmfitter')
+
+    # Create new model with best fit parameters
+    best_model = copy.copy(model)
+    best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 

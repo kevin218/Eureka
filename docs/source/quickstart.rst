@@ -99,7 +99,20 @@ The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wa
 	ncpu		4
 	fit_par		S5_fit_par_wasp39b.epf
 
-While editing those files you may have noticed that there are a whole range of other inputs that can be tweaked and adjusted at each different stage. For now you can ignore these, as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
+To speed up the Stage 5 dynesty fit, you can also reduce the number of live points (``run_nlive``) at the cost of a more coarse corner plot in the end. The bare minimum recommended value is
+
+.. code-block:: bash
+	
+	ndim * (ndim + 1) / 2
+
+and our fit presently has ndim=10 free values in the EPF, so that means a bare minimum of 55 live points. As a compromise, let's use 256 live points instead to
+get a fairly nice corner plot but also speed up the fit, so set the following in ``S5_fit_par_wasp39b.epf``:
+
+.. code-block:: bash
+	
+	run_nlive    256
+
+While editing all those files, you may have noticed that there is a whole range of other inputs that can be tweaked and adjusted at each different stage. For now you can ignore these as the demo files have been specifically tailored to this simulated dataset of WASP-39b.
 
 
 4. Run Eureka! 💡
