@@ -9,7 +9,7 @@ tags:
   - spectroscopy
   - photometry
 authors:
-  - name: Taylor James Bell
+  - name: Taylor J. Bell
     orcid: 0000-0003-4177-2149
     affiliation: 1
   - name: Eva-Maria Ahrer
