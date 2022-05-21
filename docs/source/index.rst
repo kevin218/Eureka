@@ -11,12 +11,12 @@ The code is not officially associated with JWST or the ERS team.
 
 The code is separated into six parts or "Stages":
 
-- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 1 outputs.
-- Stage 2: An optional step that calibrates Stage 1 data (performs flatfielding, unit conversion, etc.). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 2 outputs.
-- Stage 3: Starts with Stage 2 data and further calibrates (performs background subtraction, etc.) and reduces the data in order to convert 2D spectra into a time-series of 1D spectra.
-- Stage 4: Bins the 1D Spectra and generates light curves. Also removes spectral drift and jitter and sigma clips outliers.
-- Stage 5: Fits the light curves with noise and astrophysical models.
-- Stage 6: Creates a table and a figure summarizing the transmission and/or emission spectra from your many fits.
+- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes for JWST observations). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 1 outputs.
+- Stage 2: An optional step that calibrates Stage 1 data (performs flatfielding, unit conversion, etc. for JWST observations). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 2 outputs, although it is recommended that you skip the photom step in that pipeline.
+- Stage 3: Starts with the "_calints.fits" files produced by Stage 2 data and performs background subtraction and some final calibration. This stage also reduces the data in order to convert 2D spectra into a time series of 1D spectra or 2D photometric images into a 1D time series.
+- Stage 4: Bins the 1D Spectra and generates light curves. Also removes 1D spectral drift/jitter and sigma clips outliers.
+- Stage 5: Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
+- Stage 6: Creates a table and a figure summarizing the transmission and/or emission spectra from your Stage 5 fit(s).
 
 The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin218/Eureka>`_
 

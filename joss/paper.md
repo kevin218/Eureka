@@ -78,29 +78,34 @@ bibliography: paper.bib
 
 # Summary
 
-Eureka! is a data reduction and analysis pipeline for exoplanet time series observations, with a particular focus on James Webb Space Telescope observations. The pipeline is end-to-end, and includes calibration, spectral extraction, light curve fitting, high level outputs, ... 
+`Eureka!` is a data reduction and analysis pipeline for exoplanet time series observations, with a particular focus on James Webb Space Telescope (JWST) observations. The goal of `Eureka!` is to provide an end-to-end pipline which starts with raw, uncalibrated FITS files and ultimately results in high quality exoplanet transmission and/or emission spectra. The pipeline has a modular structure with six stages, and each stage uses a "Eureka! Control File" (ECFs use the .ecf file extension) to allow for easy control of the pipeline's behaviour. We have provided template ECFs for the MIRI, NIRCam, NIRISS, and NIRSpec instruments on JWST and the WFC3 instrument on the Hubble Space Telescope (HST); these templates give users a good starting point for their analyses, but `Eureka!` is not intended to be used as a black-box tool, and users should expect to fine-tune some settings for each observation in order to achieve optimal results. Throughout the pipeline, many intermediate figures and outputs are created to allow users to compare `Eureka!`'s performance using different parameter settings or to compare `Eureka!` with an independent pipeline. The ECF used to run each stage is also copied into the output folder from each stage to increase reproducibility.
 
 
-# Statement of need
-Transit spectrsocopy is really hard!
+# Outline of `Eureka!`'s Stages
 
+The six stages of `Eureka!` are as follows:
 
-# Outline of the stages
-The Eureka! pipeline is broken into 6 different stages that allow users to go from raw, uncalibrated FITS files to transmission and/or emission spectra. The stages are as follows:
-
-- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes). This step can be skipped if you’d rather use STScI’s JWST pipeline’s Stage 1 outputs.
-- Stage 2: An optional step that calibrates Stage 1 data (performs flatfielding, unit conversion, etc.). This step can be skipped if you’d rather use STScI’s JWST pipeline’s Stage 2 outputs.
-- Stage 3: Starts with Stage 2 data and further calibrates (performs background subtraction, etc.) and reduces the data in order to convert 2D spectra into a time-series of 1D spectra.
+- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes for JWST observations). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 1 outputs.
+- Stage 2: An optional step that calibrates Stage 1 data (performs flatfielding, unit conversion, etc. for JWST observations). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 2 outputs, although it is recommended that you skip the photom step in that pipeline.
+- Stage 3: Starts with the "_calints.fits" files produced by Stage 2 data and performs background subtraction and some final calibration. This stage also reduces the data in order to convert 2D spectra into a time series of 1D spectra or 2D photometric images into a 1D time series.
 - Stage 4: Bins the 1D Spectra and generates light curves. Also removes 1D spectral drift/jitter and sigma clips outliers.
-- Stage 5: Fits the light curves with noise and astrophysical models.
-- Stage 6: Creates a table and a figure summarizing the transmission and/or emission spectra from your many fits.
+- Stage 5: Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
+- Stage 6: Creates a table and a figure summarizing the transmission and/or emission spectra from your Stage 5 fit(s).
+
+(INSERT OVERVIEW FLOWCHART OF EUREKA AND FLOWCHARTS OF EACH STAGE)
+
+
+# Statement of Need
+
+Transit spectrsocopy is really hard! (MORE TO COME)
 
 
 # Documentation
 
 Documentation for `Eureka!` is available at [https://eurekadocs.readthedocs.io/en/latest/](https://eurekadocs.readthedocs.io/en/latest/). 
 
-# Similar tools
+
+# Similar Tools
 
 jwst pipeline, exoplanet, juliet, POET, SPCA
 
@@ -109,6 +114,7 @@ jwst pipeline, exoplanet, juliet, POET, SPCA
 
 ERS collaboration
 
+`Eureka!` allows for some variations upon the STScI's `jwst` pipeline for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing this code to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by or were initially written for the kevin218/WFC3 pipeline (hosted at https://github.com/kevin218/WFC3). Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by or were initially written for the kevin218/POET pipeline (hosted at https://github.com/kevin218/POET; `@Stevenson:2012; @Cubillos:2013`).
+
+
 # References
-
-
