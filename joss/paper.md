@@ -85,8 +85,8 @@ bibliography: paper.bib
 
 The six stages of `Eureka!` are as follows:
 
-- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes for JWST observations). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 1 outputs.
-- Stage 2: An optional step that calibrates Stage 1 data (performs flatfielding, unit conversion, etc. for JWST observations). This step can be skipped if you'd rather use STScI's JWST pipeline's Stage 2 outputs, although it is recommended that you skip the photom step in that pipeline.
+- Stage 1: An optional step that calibrates Raw data (converts ramps to slopes for JWST observations). This step can be skipped if you'd rather use STScI's `jwst` pipeline's Stage 1 outputs.
+- Stage 2: An optional step that calibrates Stage 1 data (performs flatfielding, unit conversion, etc. for JWST observations). This step can be skipped if you'd rather use STScI's `jwst` pipeline's Stage 2 outputs, although it is recommended that you skip the photom step in that pipeline.
 - Stage 3: Starts with the "_calints.fits" files produced by Stage 2 data and performs background subtraction and some final calibration. This stage also reduces the data in order to convert 2D spectra into a time series of 1D spectra or 2D photometric images into a 1D time series.
 - Stage 4: Bins the 1D Spectra and generates light curves. Also removes 1D spectral drift/jitter and sigma clips outliers.
 - Stage 5: Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
@@ -114,7 +114,7 @@ jwst pipeline, exoplanet, juliet, POET, SPCA
 
 ERS collaboration
 
-`Eureka!` allows for some variations upon the STScI's `jwst` pipeline for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing this code to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by or were initially written for the kevin218/WFC3 pipeline (hosted at https://github.com/kevin218/WFC3). Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by or were initially written for the kevin218/POET pipeline (hosted at https://github.com/kevin218/POET; `@Stevenson:2012; @Cubillos:2013`).
+`Eureka!` allows for some variations upon the STScI's `jwst` pipeline for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing this code to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by or were initially written for the kevin218/WFC3 pipeline (hosted at [https://github.com/kevin218/WFC3]). Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by or were initially written for the kevin218/POET pipeline (hosted at [https://github.com/kevin218/POET]; `@Stevenson:2012; @Cubillos:2013`).
 
 
 # References
