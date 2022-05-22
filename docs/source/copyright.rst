@@ -16,4 +16,5 @@ The current main developers of Eureka! are (ordered alphabetically by first name
 - Megan Mansfield
 - Sebastian Zieba
 - Taylor Bell
+- Yoni Brande
 
