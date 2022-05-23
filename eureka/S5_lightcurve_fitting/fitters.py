@@ -112,10 +112,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Get the best fit params
     fit_params = results.x
-    
+
     # Create table of results
-    t_results = table.Table([freenames, fit_params], 
-                            names=("Parameter", "Mean")  ) 
+    t_results = table.Table([freenames, fit_params],
+                            names=("Parameter", "Mean"))
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -135,7 +135,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                  lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
 
     # Save the fit ASAP
-    # save_fit(meta, lc, model, calling_function, t_results, freenames, spec_table=t_spec)
     save_fit(meta, lc, model, calling_function, t_results, freenames)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
@@ -275,7 +274,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         Adding scatter_ppm parameter. Added statements to avoid some initial
         state issues.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for mean, median, percentiles, +/- 1 sigma, all params
+         Record an astropy table for mean, median, percentiles,
+             +/- 1 sigma, all params
          Save transmission spectrum (commented out)
     """
     # Group the different variable types
@@ -359,16 +359,18 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
-    fit_params = q[1] # median
+    fit_params = q[1]  # median
     mean_params = np.mean(samples, axis=0)
 
     # Create table of results
-    t_results = table.Table([freenames, mean_params, q[0]-q[1],q[2]-q[1],q[0],fit_params, q[2]], 
-                            names=("Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th", "84th"))
+    t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
+                             q[0], fit_params, q[2]],
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma",
+                                   "16th", "50th", "84th"))
 
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
-        
+
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -387,10 +389,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    # save_fit(meta, lc, model, 'emcee', t_results, freenames, samples, spec_table=t_spec)
     save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
-
-
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
@@ -760,9 +759,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter. 
+        Adding scatter_ppm parameter.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for mean, median, percentiles, +/- 1 sigma, all params
+         Record an astropy table for mean, median, percentiles,
+         +/- 1 sigma, all params
          Save transmission spectrum (commented out)
     """
     # Group the different variable types
@@ -826,16 +826,17 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     log.writelog('Number of posterior samples is {}'.format(len(samples)),
                  mute=(not meta.verbose))
 
-
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
-    fit_params = q[1] # median
+    fit_params = q[1]  # median
     mean_params = np.mean(samples, axis=0)
-    
+
     # Create table of results
-    t_results = table.Table([freenames, mean_params, q[0]-q[1],q[2]-q[1],q[0], fit_params, q[2]], 
-                            names=("Parameter", "Mean", "-1sigma", "+1sigma", "16th", "50th", "84th"))
-    
+    t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
+                             q[0], fit_params, q[2]],
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma",
+                                   "16th", "50th", "84th"))
+
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
 
@@ -855,16 +856,13 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                  lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
     else:
         lc.unc_fit = lc.unc
-    
-    # Save the fit ASAP so plotting errors don't make you lose everything
-    # save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples, spec_table = t_spec)
-    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
 
+    # Save the fit ASAP so plotting errors don't make you lose everything
+    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
     log.writelog(f'Ending lnprob: {end_lnprob}', mute=(not meta.verbose))
-
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
@@ -1008,9 +1006,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP
-    # save_fit(meta, lc, model, 'lmfitter', t_results, freenames, spec_table=t_spec)
     save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
-
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
@@ -1223,7 +1219,8 @@ def load_old_fitparams(meta, log, channel, freenames):
     return np.array(fitted_values)[0]
 
 
-def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec_table=None):
+def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[],
+             spec_table=None):
     """Save a fit as a txt file as well as the entire chain if provided.
 
     Parameters
@@ -1244,20 +1241,23 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[], spec
         The full chain from a sampling method, by default [].
     spec_table: astropy table; optional
         Transmission spectrum (now only produced in S6)
-    
     Notes
     -----
     History:
+
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for mean, median, percentiles, +/- 1 sigma, all params
+         Record an astropy table for mean, median, percentiles,
+             +/- 1 sigma, all params
          Save transmission spectrum (commented out)
     """
+    ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
-        fname = f'S5_{fitter}_fitparams_ch{str(lc.channel).zfill(len(str(lc.nchannel)))}'
-    results_table.write(meta.outputdir+fname+'.csv', format='csv', overwrite=False)
-
+        fname = f'S5_{fitter}_fitparams_ch{ch_number}'
+    results_table.write(meta.outputdir+fname+'.csv', format='csv',
+                        overwrite=False)
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples) != 0:

@@ -349,9 +349,9 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
     for fitter in fit_methods:
         if fitter in ['dynesty', 'emcee']:
             fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
+            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                        skipinitialspace=True)
             full_keys = list(fitted_values["Parameter"])
-
 
             fname = f'S5_{fitter}_samples_{channel_key}'
             # Load HDF5 file
@@ -378,25 +378,27 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
             uppers = np.abs(uppers-medians)
             errs = np.array([lowers, uppers])
         else:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv' 
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#', skipinitialspace=True)
+            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                        skipinitialspace=True)
             full_keys = list(fitted_values["Parameter"])
-            if y_param=='fp':
+            if y_param == 'fp':
                 keys = [key for key in full_keys if 'fp' in key]
             else:
                 keys = [key for key in full_keys if 'rp' in key]
-            if len(keys)==0:
-                raise AssertionError(f'Parameter {y_param} was not in the list of fitted parameters which includes:'
-                                    +', '.join(samples.keys()))
+            if len(keys) == 0:
+                raise AssertionError(f'Parameter {y_param} was not in the list'
+                                     ' of fitted parameters which includes: '
+                                     ', '.join(full_keys))
             medians = np.array(fitted_values["50th"])
             errs = np.ones((2, len(medians)))*np.nan
-
 
     return medians, errs
 
 
 def load_specific_s5_meta_info(meta):
-    """Load in the MetaClass object from the particular aperture pair being used.
+    """Load in the MetaClass object from the particular aperture pair being
+    used.
 
     Parameters
     ----------
