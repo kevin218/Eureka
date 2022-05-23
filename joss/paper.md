@@ -18,7 +18,7 @@ authors:
   - name: Jonathan Brande
     orcid: 0000-0002-2072-6541
     affiliation: 3
-  - name: Aarynn Carter
+  - name: Aarynn L. Carter
     orcid: 0000-0001-5365-4815
     affiliation: 4
   - name: Adina D. Feinstein
