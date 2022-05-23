@@ -53,7 +53,7 @@ affiliations:
     index: 1
   - name: Centre for Exoplanets and Habitability, University of Warwick, Gibbet Hill Road, CV4 7AL Coventry, UK
     index: 2
-  - name: Department of Physics, Astronomy, University of Kansas, 1082 Malott, 1251 Wescoe Hall Dr., Lawrence, KS 66045, USA
+  - name: Department of Physics and Astronomy, University of Kansas, 1082 Malott, 1251 Wescoe Hall Dr., Lawrence, KS 66045, USA
     index: 3
   - name: Department of Astronomy and Astrophysics, University of California, Santa Cruz, Santa Cruz, CA 95064, USA
     index: 4
