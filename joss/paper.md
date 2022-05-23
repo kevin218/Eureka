@@ -21,7 +21,7 @@ authors:
   - name: Aarynn Carter
     orcid: 0000-0001-5365-4815
     affiliation: 4
-  - name: Adina Feinstein
+  - name: Adina D. Feinstein
     orcid: 0000-0002-9464-8101
     affiliation: 5
   - name: Giannina Guzman
