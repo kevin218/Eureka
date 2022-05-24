@@ -62,9 +62,6 @@ def read(filename, data, meta, f277_filename=None):
     meta : astropy.table.Table
        Metadata stored in the FITS file.
     """
-
-    assert(filename, str)
-
     meta.filename = filename
 
     hdu = fits.open(filename)
@@ -119,11 +116,11 @@ def mask_method_edges(data, meta=None, radius=1, gf=4,
     ----------
     data : object
     meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    save : bool, optional
+    save : bool; optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
 
@@ -150,16 +147,15 @@ def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
     profile of a summed image to identify the borders of each
     order.
 
-    ""
     Parameters
-    -----------
+    ----------
     data : object
     meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    save : bool, optional
+    save : bool; optional
        Has the option to save the initial guesses for the location
        of the NIRISS orders. This is set in the .ecf control files.
        Default is False.
@@ -249,7 +245,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
     readnoise : float, optional
        An estimation of the readnoise of the detector.
        Default is 5.
-    sigclip : list, array, optional
+    sigclip : list, array; optional
        A list or array of len(n_iiters) corresponding to the
        sigma-level which should be clipped in the cosmic
        ray removal routine. Default is [4,2,3].

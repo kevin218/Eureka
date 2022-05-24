@@ -6,29 +6,28 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
     This is rather than the standard method of using the mean.
 
-    Parameters:
-    -----------
-    data:   ndarray
+    Parameters
+    ----------
+    data : ndarray
         An array from which to caculate the median standard deviation.
-    mask:   1D ndarray
+    mask : 1D ndarray
         Mask indicating the good values (ones) and bad values (zeros).
-        Same shape as data.
-    medi:   boolean, optional
-        If True return a tuple with (stddev, median) of data.
-    axis:   int
+        Same shape as data. Defaults to None.
+    medi : boolean; optional
+        If True return a tuple with (stddev, median) of data. Defaults
+        to False.
+    axis : int; optional
         The axis along wich the median std deviation is calculated.
+        Defaults to 0.
 
-    Notes:
-    ------
-    MEANSTDDEV calculates the median, subtracts it from each value of
-    X, then uses this residual to calculate the standard deviation.
+    Returns
+    -------
+    float
+        The stadard deviation.
+    float, optional
+        The median; only returned if medi==True.
 
-    The numerically-stable method for calculating the variance from
-    moment.pro doesn't work for the median standard deviation.  It
-    only works for the mean, because by definition the residuals from
-    the mean add to zero.
-
-    Example:
+    Examples
     --------
     >>> import medstdev as m
     >>> a  = np.array([1,3,4,5,6,7,7])
@@ -69,19 +68,29 @@ def medstddev(data, mask=None, medi=False, axis=0):
     >>> print(std, med)
     (nan, nan)
 
-    Modification history:
-    ---------------------
-    2005-01-18  statia
+    Notes
+    -----
+    MEANSTDDEV calculates the median, subtracts it from each value of
+    X, then uses this residual to calculate the standard deviation.
+
+    The numerically-stable method for calculating the variance from
+    moment.pro doesn't work for the median standard deviation.  It
+    only works for the mean, because by definition the residuals from
+    the mean add to zero.
+
+    History:
+
+    - 2005-01-18  statia
         Written by Statia Luszcz.
-    2005-01-19  statia
+    - 2005-01-19  statia
         Updated variance calculation according to algorithm in moment.pro,
         added medi keyword.
-    2005-01-20  Joe Harrington, Cornell, jh@oobleck.astro.cornell.edu
+    - 2005-01-20  Joe Harrington, Cornell, jh@oobleck.astro.cornell.edu
         Header update.  Removed algorithm from moment.pro because it
         doesn't work for the median.  Added /double.
-    2010-11-05  patricio  pcubillos@fulbrightmail.org
+    - 2010-11-05  patricio  pcubillos@fulbrightmail.org
         Converted to python, documented.
-    2022-04-11  Taylor James Bell
+    - 2022-04-11  Taylor James Bell
         Efficiently using numpy axes
     """
     # mask invalid values:
@@ -96,7 +105,8 @@ def medstddev(data, mask=None, medi=False, axis=0):
     # residuals is data - median, masked values don't count:
     residuals = data - median
     # calculate standar deviation:
-    std = np.array(np.ma.sqrt(np.ma.sum(residuals**2.0) / (ngood - 1.0)))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        std = np.ma.sqrt(np.ma.sum(residuals**2.0) / (ngood - 1.0))
 
     # Convert masked arrays to just arrays
     std = np.array(std)

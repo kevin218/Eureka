@@ -1,28 +1,25 @@
+astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
 astropy
 batman-package
 bokeh
 ccdproc
+celerite # Needed for GP
 corner
 crds
 cython
 dynesty>1.0
 emcee>3.0.0
-george
+george # Needed for GP
 gwcs
-h5py
+h5py<3.2
 ipython
 lmfit
 matplotlib
-myst_parser # Needed for documentation
-nbsphinx # Needed for documentation
 numpy>=1.20.0
 pandas
 photutils
-pytest
-recommonmark # Needed for documentation
 requests
 scipy>=1.4.0 # Needed for scipy.fft
-sphinx-rtd-theme # Needed for documentation
 stdatamodels
 svo_filters
 tqdm

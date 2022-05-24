@@ -1,11 +1,13 @@
 # Eureka! Control File for Stage 2: Data Reduction
 
+# Stage 2 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-2
+
 suffix              rateints     # Data file suffix
 
 # Note: different instruments and modes will use different steps by default
 skip_bkg_subtract   True    # Not run for TSO observations
 skip_flat_field     False
-skip_photom         True
+skip_photom         True	# Recommended to skip to get better uncertainties out of Stage 3.
 skip_resample       True    # Not run for TSO observations
 
 # Diagnostics
@@ -15,6 +17,6 @@ hide_plots          False   # If True, plots will automatically be closed rather
 # Project directory
 topdir              /home/User/
 
-# Directories relative to project dir
-inputdir            /Data/JWST-Sim/NIRCam/Stage1
-outputdir           /Data/JWST-Sim/NIRCam/Stage2
+# Directories relative to topdir
+inputdir            /Data/JWST-Sim/MIRI/Stage1
+outputdir           /Data/JWST-Sim/MIRI/Stage2

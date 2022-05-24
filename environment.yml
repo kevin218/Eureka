@@ -15,8 +15,7 @@ dependencies:
     - emcee[version='>3.0.0']
     - george
     - gwcs
-    - h5py
-    - image_registration
+    - h5py[version='<3.2']
     - ipython
     - lmfit
     - matplotlib
@@ -32,9 +31,11 @@ dependencies:
     - tqdm
     - pip:
         - crds
+        - image_registration @ git+https://github.com/keflavich/image_registration.git@main#egg=image_registration
         - jwst==1.3.3
         - myst-parser # Needed for documentation
         - sphinx-rtd-theme # Needed for documentation
         - stcal
         - stdatamodels
         - svo_filters
+        - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
