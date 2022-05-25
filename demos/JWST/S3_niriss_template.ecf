@@ -4,7 +4,7 @@ ncpu	  	 1	       # Number of CPUs
 suffix	  	 calints       # Data file suffix
 
 # Order location estimation
-method		 2		    # Which method to identify orders by (see docs)
+method		 centers  # Which method to identify orders by (see docs)
 save	   	 False		# Saves a table of central value for each order
 
 # Background parameters
