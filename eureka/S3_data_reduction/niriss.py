@@ -10,10 +10,9 @@ from tqdm import tqdm
 import itertools
 import numpy as np
 import ccdproc as ccdp
+import astraeus.xarrayIO as xrio
 from astropy import units
 from astropy.io import fits
-import scipy.optimize as so
-import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy.nddata import CCDData
 from scipy.signal import find_peaks
@@ -62,41 +61,71 @@ def read(filename, data, meta, f277_filename=None):
     meta : astropy.table.Table
        Metadata stored in the FITS file.
     """
-    meta.filename = filename
+    hdulist = fits.open(filename)
 
-    hdu = fits.open(filename)
+    # Load master and science headers
+    data.attrs['filename'] = filename
+    data.attrs['mhdr'] = hdulist[0].header
+    data.attrs['shdr'] = hdulist['SCI', 1].header
+    # data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+    # data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    data.attrs['NINTS'] = data.attrs['mhdr']['NINTS']
+
     if f277_filename is not None:
         f277= fits.open(f277_filename)
-        data.f277 = f277[1].data + 0.0
+        data.attrs['f277'] = f277[1].data + 0.0
         f277.close()
 
-    # loads in all the header data
-    data.filename = filename
-    data.mhdr = hdu[0].header
-    data.shdr = hdu['SCI',1].header
+    # Load data
+    sci = hdulist['SCI', 1].data
+    err = hdulist['ERR', 1].data
+    dq = hdulist['DQ', 1].data
+    v0 = hdulist['VAR_RNOISE', 1].data
+    # var  = hdulist['VAR_POISSON',1].data
+    # wave_2d = hdulist['WAVELENGTH', 1].data
+    # int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
+    #                                          data.attrs['intend']]
 
-    data.intend = hdu[0].header['NINTS'] + 0.0
-    data.time = np.linspace(data.mhdr['EXPSTART'],
-                              data.mhdr['EXPEND'],
-                              int(data.intend))
-    meta.time_units = 'BJD_TDB'
+    # Record integration mid-times in BJD_TDB
+    try:
+        int_time = hdulist['INT_TIMES', 1].data
+        time = int_times['int_mid_BJD_TDB']
+        time_units = 'BJD_TDB'
+    except:
+        # This exception is (hopefully) only for simulated data
+        print("WARNING: INT_TIMES not found. Using EXPSTART and EXPEND in UTC.")
+        time = np.linspace(data.attrs['mhdr']['EXPSTART'],
+                                  data.attrs['mhdr']['EXPEND'],
+                                  int(data.attrs['NINTS']))
+        time_units = 'UTC'
+        # Check that number of SCI integrations matches NINTS from header
+        if data.attrs['NINTS'] != sci.shape[0]:
+            print("WARNING: Number of SCI integrations doesn't match NINTS from header. Updating NINTS.")
+            data.attrs['NINTS'] = sci.shape[0]
+            time = time[:data.attrs['NINTS']]
 
-    # loads all the data into the data object
-    data.data = hdu['SCI',1].data + 0.0
-    data.err  = hdu['ERR',1].data + 0.0
-    data.dq   = hdu['DQ' ,1].data + 0.0
+    # Record units
+    flux_units = data.attrs['shdr']['BUNIT']
+    # wave_units = 'microns'
 
-    data.var  = hdu['VAR_POISSON',1].data
-    data.v0   = hdu['VAR_RNOISE' ,1].data
-
-    meta.meta = hdu[-1].data
-
+    # meta.meta = hdulist[-1].data
     # removes NaNs from the data & error arrays
-    data.data[np.isnan(data.data)==True] = 0
-    data.err[ np.isnan(data.err) ==True] = 0
+    sci[np.isnan(sci) == True] = 0
+    err[np.isnan(sci) == True] = 0
+    # median = np.nanmedian(sci, axis=0)
 
-    data.median = np.nanmedian(data.data, axis=0)
-    hdu.close()
+    data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
+                                       name='flux')
+    data['err'] = xrio.makeFluxLikeDA(err, time, flux_units, time_units,
+                                      name='err')
+    data['dq'] = xrio.makeFluxLikeDA(dq, time, "None", time_units,
+                                     name='dq')
+    data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
+                                     name='v0')
+    # data['wave_2d'] = (['y', 'x'], wave_2d)
+    # data['wave_2d'].attrs['wave_units'] = wave_units
+
+    hdulist.close()
 
     return data, meta
 
@@ -258,7 +287,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
     data : object
     bkg : np.ndarray
     """
-    box_mask = dirty_mask(data.median, meta, booltype=True,
+    box_mask = dirty_mask(data.medflux.values, meta.tab1, booltype=True,
                           return_together=True)
     bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,

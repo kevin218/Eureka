@@ -176,8 +176,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                              'you should edit the flag_bg() function in '
                              'nirspec.py and look at Issue #193 on Github!')
             elif meta.inst == 'niriss':
-                raise ValueError('NIRISS observations are currently '
-                                 'unsupported!')
+                from . import niriss as inst
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta, log = inst.preparation_step(meta, log)

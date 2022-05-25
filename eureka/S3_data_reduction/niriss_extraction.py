@@ -72,7 +72,7 @@ def box_extract(data, var, boxmask):
     return all_spec, all_var
 
 
-def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
+def dirty_mask(img, tab, boxsize1=70, boxsize2=60, boxsize3=60,
                booltype=True, return_together=True, pos1=None,
                pos2=None, pos3=None):
     """
@@ -105,10 +105,9 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
     order3 = np.zeros((boxsize3, len(img[0])))
     mask = np.zeros(img.shape)
 
-    if tab is not None:
-        pos1 = tab['order_1'] + 0.0
-        pos2 = tab['order_2'] + 0.0
-        pos3 = tab['order_3'] + 0.0
+    pos1 = tab['order_1'] + 0.0
+    pos2 = tab['order_2'] + 0.0
+    pos3 = tab['order_3'] + 0.0
 
     m1, m2, m3 = 2, 4, 16
 
