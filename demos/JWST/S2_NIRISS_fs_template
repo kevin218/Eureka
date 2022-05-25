@@ -5,30 +5,30 @@
 suffix                  rateints    # Data file suffix
 
 # Controls the cross-dispersion extraction
-slit_y_low              -1      # Use None to rely on the default parameters
-slit_y_high             50      # Use None to rely on the default parameters
+slit_y_low              None      # Use None to rely on the default parameters
+slit_y_high             None     # Use None to rely on the default parameters
 
 # Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
 wave_orders         [1,2,3]     # Which orders to get wavelengths for
 waverange_start     None        # Which wavelength to start extraction
-waverange_end       None        # Which wavelength to end extraction 
+waverange_end       None        # Which wavelength to end extraction
 
 # Note: different instruments and modes will use different steps by default
 skip_bkg_subtract       False   # Not run for TSO observations
-skip_imprint_subtract   True    # Not run for NIRSpec Fixed Slit
-skip_msa_flagging       True    # Not run for NIRSpec Fixed Slit
-skip_extract_2d         False
-skip_srctype            False
-skip_master_background  True    # Not run for NIRSpec Fixed Slit
-skip_wavecorr           False
-skip_flat_field         False
-skip_straylight         True    # Not run for NIRSpec Fixed Slit
-skip_fringe             True    # Not run for NIRSpec Fixed Slit
-skip_pathloss           True    # Not run for TSO observations
-skip_barshadow          True    # Not run for NIRSpec Fixed Slit
+skip_imprint_subtract   True
+skip_msa_flagging       True
+skip_extract_2d         True
+skip_srctype            True
+skip_master_background  True
+skip_wavecorr           True
+skip_flat_field         instruments
+skip_straylight         True
+skip_fringe             True
+skip_pathloss           True
+skip_barshadow          True
 skip_photom             True	  # Recommended to skip to get better uncertainties out of Stage 3.
 skip_resample           True    # Not run for TSO observations
-skip_cube_build         True    # Not run for NIRSpec Fixed Slit
+skip_cube_build         True
 skip_extract_1d         False
 
 # Diagnostics
