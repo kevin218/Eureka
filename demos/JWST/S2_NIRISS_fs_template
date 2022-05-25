@@ -10,6 +10,8 @@ slit_y_high             50      # Use None to rely on the default parameters
 
 # Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
 wave_orders         [1,2,3]     # Which orders to get wavelengths for
+waverange_start     None        # Which wavelength to start extraction
+waverange_end       None        # Which wavelength to end extraction 
 
 # Note: different instruments and modes will use different steps by default
 skip_bkg_subtract       False   # Not run for TSO observations
