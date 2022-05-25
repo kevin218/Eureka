@@ -2,7 +2,7 @@
 
 # Stage 2 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-2
 
-suffix                  rateints    # Data file suffix
+suffix                  rampfitstep    # Data file suffix
 
 # Controls the cross-dispersion extraction
 slit_y_low              None      # Use None to rely on the default parameters
