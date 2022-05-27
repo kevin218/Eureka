@@ -1,17 +1,21 @@
 # Eureka! Control File for Stage 3: Data Reduction of NIRISS
 
-ncpu	  	 1	       # Number of CPUs
+ncpu	  	   1	       # Number of CPUs
 suffix	  	 calints       # Data file suffix
 
 # Order location estimation
-method		 centers  # Which method to identify orders by (see docs)
-save	   	 False		# Saves a table of central value for each order
+trace_method		ears     # Which method to identify orders by (see docs)
+poly_order      4        # Degree polynomial to fit to trace ear extraction method
+save_table 	    False		 # Saves a table of central value for each order
+extract_order3  False    # Sets whether to extract the 3rd order or mask it
+radius          1        # Sets the radius for edge extraction method
+filter          4        # Sets the filter size for edge extraction method
 
 # Background parameters
 readnoise	    18		                   # Estimation of the readnoise
 sigclip	     	[4,4,4]	          	     # Iterations and sigma to find & remove outliers
 box	        	((10,2), (5,2))		       # Box size to average background values over
-bkg_estimator	['median', 'medain']     # How to calculate and estimate the background over the box size
+bkg_estimator	['median', 'median']     # How to calculate and estimate the background over the box size
 filter_size	  ((2,1), (1,1))		       # Window size to apply the 2D low-resolution background map
 
 # Spectral extraction parameters
@@ -28,8 +32,8 @@ hide_plots      False       # If True, plots will automatically be closed rather
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir		/home/User
+topdir		/Users/belugawhale/Documents/niriss_sim/tiny
 
 # Directories relative to project dir
-inputdir      	/Data/JWST-Sim/NIRISS/Stage2
-outputdir	      /Data/JWST-Sim/NIRISS/Stage3
+inputdir      	/Stage2/
+outputdir	      /Stage3/
