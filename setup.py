@@ -8,11 +8,14 @@ with open('requirements.txt') as f:
     REQUIRES = f.read().splitlines()
 
 extras_require = {
-   'jwst': ["jwst==1.3.3", "stcal", "asdf>=2.7.1,<2.11.0"],
-   # Need the GitHub version as 0.2.6 is required for python>=3.10, but
-   # 0.2.6 is not yet on PyPI
-   'hst': ["image_registration @ git+https://github.com/keflavich/"
-           + "image_registration.git"]
+    'jwst': ["jwst==1.3.3", "stcal", "asdf>=2.7.1,<2.11.0"],
+    # Need the GitHub version as 0.2.6 is required for python>=3.10, but
+    # 0.2.6 is not yet on PyPI
+    'hst': ["image_registration @ git+https://github.com/keflavich/"
+            + "image_registration.git"],
+    'docs': ['myst_parser', 'nbsphinx', 'recommonmark', 'sphinx-rtd-theme',
+             'sphinx', 'sphinx-automodapi', 'numpydoc'],
+    'test': ['pytest', 'pytest-doctestplus', 'flake8', 'codecov', 'pytest-cov']
 }
 
 FILES = []
