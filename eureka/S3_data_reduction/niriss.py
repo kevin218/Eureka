@@ -20,10 +20,6 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
-from jwst import datamodels
-from jwst.pipeline import calwebb_spec2
-from jwst.pipeline import calwebb_detector1
-
 from .background import fitbg3
 from .niriss_extraction import *
 
@@ -82,7 +78,7 @@ def read(filename, data, meta, f277_filename=None):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     # var  = hdulist['VAR_POISSON',1].data
-    # wave_2d = hdulist['WAVELENGTH', 1].data
+    wave_2d = hdulist['WAVELENGTH', 1].data
     # int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
     #                                          data.attrs['intend']]
 
@@ -108,7 +104,6 @@ def read(filename, data, meta, f277_filename=None):
     flux_units = data.attrs['shdr']['BUNIT']
     # wave_units = 'microns'
 
-    # meta.meta = hdulist[-1].data
     # removes NaNs from the data & error arrays
     sci[np.isnan(sci) == True] = 0
     err[np.isnan(sci) == True] = 0
@@ -122,8 +117,6 @@ def read(filename, data, meta, f277_filename=None):
                                      name='dq')
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0')
-    # data['wave_2d'] = (['y', 'x'], wave_2d)
-    # data['wave_2d'].attrs['wave_units'] = wave_units
 
     hdulist.close()
 
@@ -200,53 +193,6 @@ def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
         return meta
     else:
         return tab
-
-
-def wave_NIRISS(filename, orders=None, meta=None, inclass=False):
-    """
-    Adds the 2D wavelength solutions to the meta object.
-
-    Parameters
-    ----------
-    wavefile : str
-       The name of the .FITS file with the wavelength
-       solution.
-    meta : object
-    filename : str, optional
-       The flux filename. Default is None. Needs a filename if
-       the `meta` class is not provided.
-
-    Returns
-    -------
-    meta : object
-    """
-    if meta is not None:
-        rampfitting_results = datamodels.open(meta.filename)
-    else:
-        rampfitting_results = datamodels.open(filename)
-
-    # Run assignwcs step on Stage 1 outputs:
-    assign_wcs_results = calwebb_spec2.assign_wcs_step.AssignWcsStep.call(rampfitting_results)
-
-    # Extract 2D wavelenght map for order 1:
-    rows, columns = assign_wcs_results.data[0,:,:].shape
-    wavelength_map = np.zeros([3, rows, columns])
-
-    # Loops through the three orders to retrieve the wavelength maps
-    if orders is None:
-        orders = [1,2,3]
-
-    for order in orders:
-        for row in tqdm(range(rows)):
-            for column in range(columns):
-                wavelength_map[order-1, row, column] = assign_wcs_results.meta.wcs(column,
-                                                                                   row,
-                                                                                   order)[-1]
-    if inclass == False:
-        meta.wavelength_order = wavelength_map
-        return meta
-    else:
-        return wavelength_map
 
 
 def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4],
