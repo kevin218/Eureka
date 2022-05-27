@@ -22,7 +22,7 @@ def readfiles(meta):
     meta.segment_list = []
     for fname in os.listdir(meta.inputdir):
         if fname.endswith(meta.suffix + '.fits'):
-            meta.segment_list.append(meta.inputdir + fname)
+            meta.segment_list.append(os.path.join(meta.inputdir, fname))
     meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
     return meta
 
