@@ -10,7 +10,7 @@ from scipy.ndimage import gaussian_filter
 from astropy.modeling.models import Moffat1D
 
 __all__ = ['image_filtering', 'simplify_niriss_img',
-           'mask_method_edges', 'mask_method_profile', 'f277_mask',
+           'mask_method_edges', 'mask_method_ears', 'f277_mask',
            'ref_file']
 
 
@@ -200,7 +200,7 @@ def mask_method_edges(data, radius=1, gf=4,
     tab['order_1'] = fit1(x)
     tab['order_2'] = fit2(x)
 
-    fn = 'niriss_order_fits_method1.csv'
+    fn = 'niriss_order_fits_edges.csv'
     if save:
         if outdir is not None:
             path = os.path.join(outdir, fn)
@@ -211,7 +211,7 @@ def mask_method_edges(data, radius=1, gf=4,
     return tab
 
 
-def mask_method_profile(data, degree=4, save=False,
+def mask_method_ears(data, degree=4, save=False,
                         outdir=None, isplots=8):
     """
     A second method to extract the masks for the first and
@@ -364,8 +364,7 @@ def mask_method_profile(data, degree=4, save=False,
         tab['order_2'] = fit2_final(x) # Adds fit of 2nd order to output table
 
     if save:
-        fn = 'niriss_order_fits_method2.csv'
-        print(outdir)
+        fn = 'niriss_order_fits_ears.csv'
         if outdir is not None:
             path = os.path.join(outdir, fn)
         else:
