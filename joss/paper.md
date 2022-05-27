@@ -51,7 +51,7 @@ authors:
 affiliations:
   - name: BAER Institute, NASA Ames Research Center, Moffet Field, CA 94035, USA
     index: 1
-  - name: Centre for Exoplanets and Habitability, University of Warwick, Gibbet Hill Road, CV4 7AL Coventry, UK
+  - name: Department of Physics, University of Warwick, Gibbet Hill Road, CV4 7AL Coventry, UK
     index: 2
   - name: Department of Physics and Astronomy, University of Kansas, 1082 Malott, 1251 Wescoe Hall Dr., Lawrence, KS 66045, USA
     index: 3
