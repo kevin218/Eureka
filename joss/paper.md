@@ -107,14 +107,14 @@ Documentation for `Eureka!` is available at [https://eurekadocs.readthedocs.io/e
 
 # Similar Tools
 
-[`jwst`](https://github.com/spacetelescope/jwst), [`exoplanet`](https://github.com/exoplanet-dev/exoplanet) [@exoplanet:2021], [`juliet`](https://github.com/nespinoza/juliet) [@juliet:2018], [`POET`](https://github.com/kevin218/POET) [@Stevenson:2012; @Cubillos:2013], [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a], [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021]
+[`jwst`](https://github.com/spacetelescope/jwst) [@jwst:2022], [`exoplanet`](https://github.com/exoplanet-dev/exoplanet) [@exoplanet:2021], [`juliet`](https://github.com/nespinoza/juliet) [@juliet:2018], [`POET`](https://github.com/kevin218/POET) [@Stevenson:2012; @Cubillos:2013], [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a], [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021]
 
 
 # Acknowledgements
 
 ERS collaboration
 
-`Eureka!` allows for some variations upon the STScI's [`jwst`](https://github.com/spacetelescope/jwst) pipeline for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing that pipeline to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by, or were initially written for, the [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a] pipeline. Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by, or were initially written for, the [`POET`](https://github.com/kevin218/POET) pipeline [@Stevenson:2012; @Cubillos:2013]. Small pieces of the [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021] and [`Bell_EBM`](https://github.com/taylorbell57/Bell_EBM) [@Bell:2018] repositories have also been reused. ALC is supported by a grant from STScI (_JWST_-ERS-01386) under NASA contract NAS5-03127.
+`Eureka!` allows for some variations upon the STScI's [`jwst`](https://github.com/spacetelescope/jwst) pipeline [@jwst:2022] for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing that pipeline to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by, or were initially written for, the [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a] pipeline. Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by, or were initially written for, the [`POET`](https://github.com/kevin218/POET) pipeline [@Stevenson:2012; @Cubillos:2013]. Small pieces of the [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021] and [`Bell_EBM`](https://github.com/taylorbell57/Bell_EBM) [@Bell:2018] repositories have also been reused. ALC is supported by a grant from STScI (_JWST_-ERS-01386) under NASA contract NAS5-03127.
 
 
 # References
