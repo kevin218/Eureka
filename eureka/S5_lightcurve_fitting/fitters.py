@@ -949,7 +949,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
     - December 29, 2021 Taylor Bell
         Updated documentation. Reduced repeated code.
     - February 28-March 1, 2022 Caroline Piaulet
-        Adding scatter_ppm parameter. 
+        Adding scatter_ppm parameter.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for parameter values
          Save transmission spectrum (commented out)
@@ -984,9 +984,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
     #                fit_params.get(i).max) for i in fit_params]
 
     # Create table of results
-    t_results = table.Table([freenames, fit_params], 
-                            names=("Parameter", "Mean")  )  
-    
+    t_results = table.Table([freenames, fit_params],
+                            names=("Parameter", "Mean"))
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
