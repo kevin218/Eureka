@@ -92,13 +92,19 @@ def dn2electrons(data, meta):
         gain = np.swapaxes(gain, 0, 1)
 
     # Gain subarray
-    subgain = gain[meta.ywindow[0]:meta.ywindow[1],
-                   meta.xwindow[0]:meta.xwindow[1]]
-
-    # Convert to electrons
-    data['flux'] *= subgain
-    data['err'] *= subgain
-    data['v0'] *= (subgain)**2  # FINDME: should this really be squared
+    if meta.inst.lower() != 'niriss':
+        subgain = gain[meta.ywindow[0]:meta.ywindow[1],
+                       meta.xwindow[0]:meta.xwindow[1]]
+        # Convert to electrons
+        data['flux'] *= subgain
+        data['err']  *= subgain
+        data['v0']   *= (subgain)**2  # FINDME: should this really be squared
+    else:
+        subgain = gain + 0.0
+        # Convert to electrons
+        data['flux'][:,1:,1:] *= subgain
+        data['err'][:,1:,1:]  *= subgain
+        data['v0'][:,1:,1:]   *= (subgain)**2  # FINDME: should this really be squared
 
     return data
 
