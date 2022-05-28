@@ -563,4 +563,4 @@ def fitbg3(data, order_mask, readnoise=11,
 
         bkg_var[i] = np.nansum(v, axis=0)
 
-    return bkg, bkg_var, rm_crs
+    return np.abs(bkg), bkg_var, rm_crs
