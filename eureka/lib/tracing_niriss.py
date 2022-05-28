@@ -331,8 +331,11 @@ def mask_method_ears(data, degree=4, save=False,
                     center_3[i] = np.nanmedian(newx[p[inds]])
                     newx, newcol = mask_profile(mu=center_3[i], x=newx,
                                                 y=newcol) # masks 3rd order
+            else:
+                newx, newcol = mask_profile(mu=center_1[i], x=newx,
+                                            y=newcol) # masks 1st order
 
-            if i >= 500: # Can't get a good guesstimate for 2nd order past pixel~500
+            if (i >= 500) and (i <= 1850): # Can't get a good guesstimate for 2nd order past pixel~500
                 height = define_peak_params(newcol, which_std=2)
                 p = identify_peaks(newcol, height=height, distance=10.0)
                 center_2[i] = np.nanmedian(newx[p])
