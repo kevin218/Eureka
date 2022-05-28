@@ -109,11 +109,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     # each aperture/annulus pair
     meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
-
         for bg_hw_val in meta.bg_hw_range:
 
             meta.eventlabel = eventlabel
-
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val, bg=bg_hw_val)
 
@@ -138,6 +136,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 log = logedit.Logedit(meta.s3_logname, read=s2_meta.s2_logname)
             else:
                 log = logedit.Logedit(meta.s3_logname)
+
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
@@ -149,6 +148,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Create list of file segments
             meta = util.readfiles(meta)
+            print(dir(meta))
             meta.num_data_files = len(meta.segment_list)
             if meta.num_data_files == 0:
                 log.writelog(f'Unable to find any "{meta.suffix}.fits" files '
@@ -223,9 +223,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
-                # Locate source postion
+                # Locate source postion on the detector
                 meta.src_ypos = source_pos.source_pos(
-                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))  # THIS SHOULD BE THE TABLE WITH ORDER Y POSITIONS
                 log.writelog(f'  Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
