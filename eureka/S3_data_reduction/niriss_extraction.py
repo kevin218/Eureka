@@ -2,7 +2,6 @@
 A library of custom weighted profiles
 to fit to the NIRISS orders to complete
 the optimal extraction of the data.
-
 Written by: Adina Feinstein
 Last updated: March 23, 2022
 """
@@ -27,7 +26,6 @@ __all__ = ['box_extract', 'dirty_mask',
 def box_extract(data, var, boxmask):
     """
     Quick & dirty box extraction to use in the optimal extraction routine.
-
     Parameters
     ----------
     data : np.ndarray
@@ -36,7 +34,6 @@ def box_extract(data, var, boxmask):
        Array of variance frames.
     boxmask : np.ndarray
        Array of masks for each individual order.
-
     Returns
     -------
     spec1 : np.ndarray
@@ -66,18 +63,17 @@ def box_extract(data, var, boxmask):
     masks  = [first, second, third]
 
     for i in range(len(masks)):
-        all_spec[i] = np.nansum(data[i]* np.full(data.shape, masks[i]), axis=1)
-        all_var[i]  = np.nansum(var[i] * np.full(data.shape, masks[i]),  axis=1)
+        all_spec[i] = np.nansum(data[i]*np.full(data.shape, masks[i]), axis=1)
+        all_var[i]  = np.nansum(var[i]*np.full(data.shape, masks[i]),  axis=1)
 
     return all_spec, all_var
 
 
-def dirty_mask(img, tab, boxsize1=70, boxsize2=60, boxsize3=60,
+def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
                booltype=True, return_together=True, pos1=None,
                pos2=None, pos3=None, isplots=0):
     """
     Really dirty box mask for background purposes.
-
     Parameters
     ----------
     img : np.ndarray
@@ -95,19 +91,18 @@ def dirty_mask(img, tab, boxsize1=70, boxsize2=60, boxsize3=60,
        Determines whether or not to return one combined
        profile mask or masks for both orders separately.
        Default is True.
-
     Return
     ------
-
     """
     order1 = np.zeros((boxsize1, len(img[0])))
     order2 = np.zeros((boxsize2, len(img[0])))
     order3 = np.zeros((boxsize3, len(img[0])))
     mask = np.zeros(img.shape)
 
-    pos1 = tab['order_1'] + 0.0
-    pos2 = tab['order_2'] + 0.0
-    pos3 = tab['order_3'] + 0.0
+    if tab is not None:
+        pos1 = tab['order_1'] + 0.0
+        pos2 = tab['order_2'] + 0.0
+        pos3 = tab['order_3'] + 0.0
 
     m1, m2, m3 = 2, 4, 16
 
@@ -154,7 +149,6 @@ def dirty_mask(img, tab, boxsize1=70, boxsize2=60, boxsize3=60,
 def profile_niriss_median(medprof, sigma=50):
     """
     Builds a median profile for the NIRISS images.
-
     Parameters
     ----------
     data : object
@@ -165,7 +159,6 @@ def profile_niriss_median(medprof, sigma=50):
     sigma : float, optional
        Sigma for which to remove outliers above.
        Default is 50.
-
     Returns
     -------
     medprof : np.ndarray
@@ -219,7 +212,6 @@ def profile_niriss_gaussian(data, pos1, pos2):
     """
     Creates a Gaussian spatial profile for NIRISS to complete
     the optimal extraction.
-
     Parameters
     ----------
     data : np.ndarray
@@ -228,7 +220,6 @@ def profile_niriss_gaussian(data, pos1, pos2):
        x-values for the center of the first order.
     pos2 : np.array
        x-values for the center of the second order.
-
     Returns
     -------
     out_img1 : np.ndarray
@@ -267,7 +258,6 @@ def profile_niriss_moffat(data, pos1, pos2):
     """
     Creates a Moffat spatial profile for NIRISS to complete
     the optimal extraction.
-
     Parameters
     ----------
     data : np.ndarray
@@ -276,7 +266,6 @@ def profile_niriss_moffat(data, pos1, pos2):
       x-values for the center of the first order.
     pos2 : np.array
        x-values for the center of the second order.
-
     Returns
     -------
     out_img1 : np.ndarray
@@ -320,7 +309,6 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
     general `optspex.optimize` since there are two ways to extract the
     NIRISS data. The first is breaking up the image into quadrants. The
     second is extracting the spectra all together.
-
     Parameters
     ----------
     data : np.ndarray
@@ -460,7 +448,6 @@ def extraction_routine(data, var,
     The actual extraction routine. `optimal extraction` is a wrapper
     for this function, since it needs to loop through *if* you want
     to extract the data via quadrants.
-
     Parameters
     ----------
     data : np.array
