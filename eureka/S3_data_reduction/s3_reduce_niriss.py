@@ -28,7 +28,7 @@ import astraeus.xarrayIO as xrio
 from astropy.io import fits
 from tqdm import tqdm
 
-from . import niriss_extraction
+from .niriss_extraction import optimal_extraction_routine
 from . import plots_s3, source_pos
 from . import background as bg
 from . import bright2flux as b2f
@@ -283,16 +283,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                          mute=(not meta.verbose))
             inst.correct_drift2D(data, meta, m)
 
-        # Select only aperture region
-        ap_y1 = int(meta.src_ypos-spec_hw_val)
-        ap_y2 = int(meta.src_ypos+spec_hw_val)
-        apdata = data.flux[:, ap_y1:ap_y2].values
-        aperr = data.err[:, ap_y1:ap_y2].values
-        apmask = data.mask[:, ap_y1:ap_y2].values
-        apbg = data.bg[:, ap_y1:ap_y2].values
-        apv0 = data.v0[:, ap_y1:ap_y2].values
         # Compute median frame
-        medapdata = np.median(apdata, axis=0)
+        medapdata = np.median(data.flux, axis=0)
+
+### STOPPING HERE FOR THE NIGHT ##
 
         # Extract standard spectrum and its variance
         data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
@@ -329,14 +323,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             iterfn = tqdm(iterfn)
         for n in iterfn:
             data['optspec'][n], data['opterr'][n], mask = \
-                optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
-                                 data.stdspec[n].values, gain, apv0[n],
-                                 p5thresh=meta.p5thresh,
-                                 p7thresh=meta.p7thresh,
-                                 fittype=meta.fittype,
-                                 window_len=meta.window_len,
-                                 deg=meta.prof_deg, n=intstart+n,
-                                 meddata=medapdata)
+                optimal_extraction_routine(meta, apdata[n], apmask[n], apbg[n],
+                                           data.stdspec[n].values, gain, apv0[n],
+                                           p5thresh=meta.p5thresh,
+                                           p7thresh=meta.p7thresh,
+                                           fittype=meta.fittype,
+                                           window_len=meta.window_len,
+                                           deg=meta.prof_deg, n=intstart+n,
+                                           meddata=medapdata)
 
         # Mask out NaNs and Infs
         optspec_ma = np.ma.masked_invalid(data.optspec.values)
