@@ -284,8 +284,6 @@ def mask_method_ears(data, degree=4, save=False,
     new_ccd_no_premask = ccdp.cosmicray_lacosmic(ccd, readnoise=150,
                                                  sigclip=4, verbose=False)
 
-    summed_f277 = np.nansum(data.f277, axis=(0,1))
-
     x = np.arange(0, new_ccd_no_premask.data.shape[1], 1)
 
     # Initializes astropy.table.Table to save traces to
