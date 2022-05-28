@@ -244,7 +244,7 @@ def fit_bg(data, meta, log,
                                           meta.time, meta.flux_units,
                                           meta.time_units,
                                           name='bg_var')
-    data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bkg,
+    data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bg,
                                               meta.time,
                                               meta.flux_units, meta.time_units,
                                               name='bg_removed')
