@@ -148,7 +148,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Create list of file segments
             meta = util.readfiles(meta)
-            print(dir(meta))
             meta.num_data_files = len(meta.segment_list)
             if meta.num_data_files == 0:
                 log.writelog(f'Unable to find any "{meta.suffix}.fits" files '
