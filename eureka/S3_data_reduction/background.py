@@ -518,7 +518,7 @@ def fitbg3(data, order_mask, readnoise=11,
        Errors on the fitted backgrouns.
     """
     if inclass is False:
-        data = data.data + 0.0
+        data = data.flux + 0.0
 
     # Removes cosmic rays
     # Loops through niters cycles to make sure all pesky
