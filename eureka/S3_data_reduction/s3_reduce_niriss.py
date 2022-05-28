@@ -264,6 +264,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                            box=meta.box,
                            filter_size=meta.filter_size,
                            bkg_estimator=meta.bkg_estimator,
+                           testing=meta.testing_S3,
                            isplots=meta.isplots_S3)
 
         if meta.isplots_S3 >= 3:
