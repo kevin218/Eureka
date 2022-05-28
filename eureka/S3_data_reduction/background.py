@@ -535,31 +535,32 @@ def fitbg3(data, order_mask, readnoise=11,
     for i in tqdm(range(len(data))):
 
         mask = np.array(first_pass[i], dtype=bool)
-        ccd = CCDData((data[i]*~mask)*units.electron)
+        ccd = CCDData((data[i]*~mask), unit=units.electron)
 
         # Second pass at removing cosmic rays, with ccdproc
         for n in range(len(sigclip)):
             m1 = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise,
                                          sigclip=sigclip[n])
             ccd = CCDData(m1.data*units.electron)
-            mask[m1.mask] += 1
+            mask[m1.mask] += True
 
         rm_crs[i] = m1.data
-        rm_crs[i][mask >= 1] = np.nan
+        rm_crs[i][mask>=1] = np.nan
 
-        # removal from background
-        rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
-                                           linspace=[-200, 200])
-        # removal from order
-        rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
-                                           linspace=[-10, 10], where='order')
+        v = np.zeros((len(bkg_estimator), rm_crs[i].shape[0], rm_crs[i].shape[1]))
+        # Fits a 2D background (with the orders masked)
+        for j in range(len(bkg_estimator)):
+            b1,b1_err = bkg_sub(rm_crs[i],
+                                order_mask,
+                                bkg_estimator=bkg_estimator[j],
+                                sigma=sigma, box=box[j],
+                                filter_size=filter_size[j])
+            bkg[i] += b1
+            v[j] = b1_err
 
-        b1 = bkg_sub(rm_crs[i],  order_mask, bkg_estimator='median', sigma=4,
-                     box=(10, 5), filter_size=(2, 2))
-        b2 = bkg_sub(rm_crs[i]-b1, order_mask, sigma=3, bkg_estimator='median')
+            if box[j][0]<5 or box[j][1]<5:
+                b1 *= order_mask
 
-        bkg_subbed[i] = (rm_crs[i]-b1)-b2
+        bkg_var[i] = np.nansum(v, axis=0)
 
-    data.bkg_removed = bkg_subbed
-
-    return data
+    return bkg, bkg_var, rm_crs
