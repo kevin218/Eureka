@@ -496,7 +496,7 @@ def fitbg3(data, order_mask, readnoise=11,
            sigclip=[4,4,4], box=(10,2),
            filter_size=(1,1), sigma=5,
            bkg_estimator=['median'],
-           isplots=0,
+           isplots=0, testing=False,
            inclass=False):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
@@ -528,13 +528,14 @@ def fitbg3(data, order_mask, readnoise=11,
     bkg_var = np.zeros(data.shape)
 
     # Does a first pass at CR removal in the time-direction
-    first_pass = clipping.time_removal(data, sigma=sigclip[0])
+    first_pass = clipping.time_removal(data, sigma=sigclip[0],
+                                       testing=testing)
 
     # Loops through and removes more cosimc rays
     for i in tqdm(range(len(data))):
 
         mask = np.array(first_pass[i], dtype=bool)
-        ccd = CCDData(data[i]*~mask*units.electron)
+        ccd = CCDData((data[i]*~mask)*units.electron)
 
         # Second pass at removing cosmic rays, with ccdproc
         for n in range(len(sigclip)):

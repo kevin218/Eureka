@@ -198,7 +198,8 @@ def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
 def fit_bg(data, meta, log,
            readnoise=11, sigclip=[4,4,4],
            box=(5,2), filter_size=(2,2),
-           bkg_estimator=['median'], isplots=0):
+           bkg_estimator=['median'],
+           testing=False, isplots=0):
     """
     Subtracts background from non-spectral regions.
 
@@ -226,7 +227,8 @@ def fit_bg(data, meta, log,
                           return_together=True)
     bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,
-                                   box=box, filter_size=filter_size, isplots=isplots)
+                                   box=box, filter_size=filter_size,
+                                   testing=testing, isplots=isplots)
     data.bkg = bkg
     data.bkg_var = bkg_var
     data.bkg_removed = data.flux - data.bkg

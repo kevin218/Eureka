@@ -205,7 +205,7 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     return img
 
 
-def time_removal(img, sigma=5):
+def time_removal(img, sigma=5, testing=False):
     """
     Removing cosmic rays in the time direction. This is meant as a
     first pass, not a final routine for cosmic ray removal.
@@ -221,7 +221,12 @@ def time_removal(img, sigma=5):
 
     cr_mask = np.zeros(img.shape)
 
-    for x in tqdm(range(img.shape[1])):
+    if testing==False:
+        y=img.shape[1]
+    else:
+        y=10
+
+    for x in tqdm(range(y)):
         for y in range(img.shape[2]):
             dat = img[:,x,y] + 0.0
             ind = np.where((dat>=np.nanmedian(dat)+sigma*np.nanstd(dat)) |
