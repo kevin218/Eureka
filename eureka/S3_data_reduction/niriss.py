@@ -63,9 +63,11 @@ def read(filename, data, meta, f277_filename=None):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    # data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
-    # data.attrs['intend'] = data.attrs['mhdr']['INTEND']
     data.attrs['NINTS'] = data.attrs['mhdr']['NINTS']
+
+    # need some placeholder right now for testing
+    data.attrs['intstart'] = 0 #data.attrs['mhdr']['INTSTART']
+    data.attrs['intend'] = 3 #data.attrs['mhdr']['INTEND']
 
     if f277_filename is not None:
         f277= fits.open(f277_filename)
@@ -235,17 +237,17 @@ def fit_bg(data, meta, log,
                                    box=box, filter_size=filter_size,
                                    testing=testing, isplots=isplots)
 
-    data['bkg'] = xrio.makeFluxLikeDA(bkg, meta.time,
-                                      meta.flux_units, meta.time_units,
-                                      name='bkg')
-    data['bkg_var'] = xrio.makeFluxLikeDA(bkg_var,
+    data['bg'] = xrio.makeFluxLikeDA(bkg, meta.time,
+                                     meta.flux_units, meta.time_units,
+                                     name='bg')
+    data['bg_var'] = xrio.makeFluxLikeDA(bkg_var,
                                           meta.time, meta.flux_units,
                                           meta.time_units,
-                                          name='bkg')
-    data['bkg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bkg,
+                                          name='bg_var')
+    data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bkg,
                                               meta.time,
                                               meta.flux_units, meta.time_units,
-                                              name='bkg_removed')
+                                              name='bg_removed')
 
     return data
 
