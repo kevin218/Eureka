@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import ccdproc as ccdp
 from astropy import units
@@ -272,6 +273,8 @@ def mask_method_ears(data, degree=4, save=False,
 
     def diagnostic_plotting(x, y, model, model_final):
         """ Plots the data, the first fit, and the final best-fit. """
+        nonlocal summed
+        plt.imshow(summed, vmin=0, vmax=np.nanpercentile(summed, 75))
         plt.plot(x, y, 'k.', label='Data')
         plt.plot(x, model(x), 'darkorange', label='First Fit Attempt')
         plt.plot(x, model_final(x), 'deepskyblue', lw=2, label='Final Fit')
@@ -323,10 +326,11 @@ def mask_method_ears(data, degree=4, save=False,
                 height = define_peak_params(newcol, which_std=4)
                 p = identify_peaks(newcol, height=height, distance=10.0)
                 inds = np.where(newx[p]>120)[0] # want to make sure we get the 3rd order
-                center_3[i] = np.nanmedian(newx[p[inds]])
 
-                newx, newcol = mask_profile(mu=center_3[i], x=newx,
-                                            y=newcol) # masks 3rd order
+                if np.isnan(np.nanmedian(newx[p[inds]]))==False:
+                    center_3[i] = np.nanmedian(newx[p[inds]])
+                    newx, newcol = mask_profile(mu=center_3[i], x=newx,
+                                                y=newcol) # masks 3rd order
 
             if i >= 500: # Can't get a good guesstimate for 2nd order past pixel~500
                 height = define_peak_params(newcol, which_std=2)
