@@ -274,9 +274,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
         Adding scatter_ppm parameter. Added statements to avoid some initial
         state issues.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for mean, median, percentiles,
-             +/- 1 sigma, all params
-         Save transmission spectrum (commented out)
+        Record an astropy table for mean, median, percentiles,
+        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -1238,16 +1237,14 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[],
         The list of fitted parameter names.
     samples : ndarray; optional
         The full chain from a sampling method, by default [].
-    spec_table: astropy table; optional
-        Transmission spectrum (now only produced in S6)
+
     Notes
     -----
     History:
 
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for mean, median, percentiles,
-             +/- 1 sigma, all params
-         Save transmission spectrum (commented out)
+        Record an astropy table for mean, median, percentiles,
+        +/- 1 sigma, all params
     """
     ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
 
