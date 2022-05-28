@@ -60,8 +60,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for param values
-         Save transmission spectrum (commented out)
+        Record an astropy table for param values
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -760,9 +759,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
-         Record an astropy table for mean, median, percentiles,
-         +/- 1 sigma, all params
-         Save transmission spectrum (commented out)
+        Record an astropy table for mean, median, percentiles,
+        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -951,7 +949,6 @@ def lmfitter(lc, model, meta, log, **kwargs):
         Adding scatter_ppm parameter.
     - Mar 13-Apr 18, 2022 Caroline Piaulet
          Record an astropy table for parameter values
-         Save transmission spectrum (commented out)
     """
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
@@ -1217,8 +1214,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     return np.array(fitted_values)[0]
 
 
-def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[],
-             spec_table=None):
+def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
     """Save a fit as a txt file as well as the entire chain if provided.
 
     Parameters
