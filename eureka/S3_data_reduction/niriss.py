@@ -104,6 +104,11 @@ def read(filename, data, meta, f277_filename=None):
     flux_units = data.attrs['shdr']['BUNIT']
     # wave_units = 'microns'
 
+    # Not sure if these are saved somewhere already?
+    meta.time = time
+    meta.flux_units = flux_units
+    meta.time_units = time_units
+
     # removes NaNs from the data & error arrays
     sci[np.isnan(sci) == True] = 0
     err[np.isnan(sci) == True] = 0
@@ -229,9 +234,19 @@ def fit_bg(data, meta, log,
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,
                                    box=box, filter_size=filter_size,
                                    testing=testing, isplots=isplots)
-    data.bkg = bkg
-    data.bkg_var = bkg_var
-    data.bkg_removed = data.flux - data.bkg
+
+    data['bkg'] = xrio.makeFluxLikeDA(bkg, meta.time,
+                                      meta.flux_units, meta.time_units,
+                                      name='bkg')
+    data['bkg_var'] = xrio.makeFluxLikeDA(bkg_var,
+                                          meta.time, meta.flux_units,
+                                          meta.time_units,
+                                          name='bkg')
+    data['bkg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bkg,
+                                              meta.time,
+                                              meta.flux_units, meta.time_units,
+                                              name='bkg_removed')
+
     return data
 
 
