@@ -66,15 +66,15 @@ def box_extract(data, var, boxmask):
     masks  = [first, second, third]
 
     for i in range(len(masks)):
-        all_spec[i] = np.nansum(data[i]*np.full(data.shape, masks[i]), axis=1)
-        all_var[i]  = np.nansum(var[i]*np.full(data.shape, masks[i]),  axis=1)
+        all_spec[i] = np.nansum(data[i]* np.full(data.shape, masks[i]), axis=1)
+        all_var[i]  = np.nansum(var[i] * np.full(data.shape, masks[i]),  axis=1)
 
     return all_spec, all_var
 
 
 def dirty_mask(img, tab, boxsize1=70, boxsize2=60, boxsize3=60,
                booltype=True, return_together=True, pos1=None,
-               pos2=None, pos3=None):
+               pos2=None, pos3=None, isplots=0):
     """
     Really dirty box mask for background purposes.
 
@@ -130,6 +130,10 @@ def dirty_mask(img, tab, boxsize1=70, boxsize2=60, boxsize3=60,
             s, e = int(pos3[i]-boxsize3/2), int(pos3[i]+boxsize3/2)
             order3[:,i] = img[s:e, i]
             mask[s:e,i] += m3
+
+    if isplots>=6:
+        plt.imshow(mask)
+        plt.show()
 
     if return_together:
         if booltype==True:

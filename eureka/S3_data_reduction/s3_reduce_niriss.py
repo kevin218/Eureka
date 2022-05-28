@@ -28,6 +28,7 @@ import astraeus.xarrayIO as xrio
 from astropy.io import fits
 from tqdm import tqdm
 
+from . import niriss_extraction
 from .niriss_extraction import optimal_extraction_routine
 from . import plots_s3, source_pos
 from . import background as bg
@@ -134,12 +135,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                      'and "edges".\n')
         raise AssertionError('Method for identifying NIRISS trace'
                              'not implemented.')
-
-
-    # creates mask for the traces
-
-    # creates mask for the background pixels
-
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -287,18 +282,37 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         medapdata = np.median(data.flux, axis=0)
 
 ### STOPPING HERE FOR THE NIGHT ##
+        # creates mask for the traces
+        box_masks = niriss_extraction.dirty_mask(medapdata,
+                                                 traces,
+                                                 boxsize1=meta.boxsize1,
+                                                 boxsize2=meta.boxsize2,
+                                                 boxsize3=meta.boxsize3,
+                                                 booltype=False,
+                                                 return_together=False,
+                                                 isplots=meta.isplots_S3)
+
+        stdflux, stdvar = niriss_extraction.box_extract(data.flux.data,
+                                                        data.err.data,
+                                                        box_masks)
 
         # Extract standard spectrum and its variance
-        data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
-        data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
-        data['stdspec'].attrs['flux_units'] = \
-            data.flux.attrs['flux_units']
-        data['stdspec'].attrs['time_units'] = \
-            data.flux.attrs['time_units']
-        data['stdvar'].attrs['flux_units'] = \
-            data.flux.attrs['flux_units']
-        data['stdvar'].attrs['time_units'] = \
-            data.flux.attrs['time_units']
+        print(stdflux.shape, stdflux[0].shape)
+        for o in range(3):
+            stdspec_key = 'stdspec_order{0:02d}'.format(o+1)
+            stdvar_key  = 'stdvar_order{0:02d}'.format(o+1)
+
+            data[stdspec_key] = (['time', 'x'], stdflux[o])
+            data[stdspec_key].attrs['flux_units'] = \
+                            data.flux.attrs['flux_units']
+            data[stdspec_key].attrs['time_units'] = \
+                            data.flux.attrs['time_units']
+
+            data[stdvar_key] = (['time', 'x'], stdvar[o] ** 2)
+            data[stdvar_key].attrs['flux_units'] = \
+                            data.flux.attrs['flux_units']
+            data[stdvar_key].attrs['time_units'] = \
+                            data.flux.attrs['time_units']
         # FINDME: stdvar >> stdspec, which is a problem
 
         # Extract optimal spectrum with uncertainties
