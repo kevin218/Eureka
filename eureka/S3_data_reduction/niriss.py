@@ -195,20 +195,9 @@ def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
         return tab
 
 
-def flag_bg(data, meta, readnoise=11, sigclip=[4,4,4],
-            box=(5,2), filter_size=(2,2), bkg_estimator=['median'], isplots=0):
-    """
-    I think this is just a wrapper for fit_bg, because I perform outlier
-    flagging at the same time as the background fitting.
-    """
-    data = fit_bg(data, meta, readnoise, sigclip,
-                  bkg_estimator=bkg_estimator, box=box,
-                  filter_size=filter_size, isplots=isplots)
-    return data
-
-
-
-def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,2),
+def fit_bg(data, meta, log,
+           readnoise=11, sigclip=[4,4,4],
+           box=(5,2), filter_size=(2,2),
            bkg_estimator=['median'], isplots=0):
     """
     Subtracts background from non-spectral regions.
@@ -240,7 +229,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4,4,4], box=(5,2), filter_size=(2,
                                    box=box, filter_size=filter_size, isplots=isplots)
     data.bkg = bkg
     data.bkg_var = bkg_var
-    data.bkg_removed = data.data - data.bkg
+    data.bkg_removed = data.flux - data.bkg
     return data
 
 
