@@ -96,7 +96,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     else:
         meta = me.mergeevents(meta, s2_meta)
 
-
     # Open new log file
     meta.s3_logname = meta.outputdir + 'S3_{0}'.format(eventlabel) + ".log"
     if s2_meta is not None:
@@ -105,12 +104,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         log = logedit.Logedit(meta.s3_logname)
 
     # Create list of file segments
+    x1d_files = util.readfiles(meta, suffix='x1dints')
     meta = util.readfiles(meta)
+    meta.x1d_segment_list = x1d_files
 
     # Get summed frame for tracing
     with fits.open(meta.segment_list[-1]) as hdulist:
         # Figure out which instrument we are using
         meta.median = np.nansum(hdulist[1].data, axis=0)
+
 
     # identifies the trace for all orders
     if meta.trace_method == 'ears':
@@ -209,13 +211,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         else:
             meta.int_start = 0
 
+        # Extract 1D wavelength solution from x1d file
+        exts = np.linspace(1, meta.n_int*3-2, 3, dtype=int)+m
+        wave_soln = np.full((meta.n_int, meta.nx), np.nan)
 
-        # Compute 1D wavelength solution
-        if 'wave_2d' in data:
-            data['wave_1d'] = (['x'],
-                               data.wave_2d[meta.src_ypos].values)
-            data['wave_1d'].attrs['wave_units'] = \
-                data.wave_2d.attrs['wave_units']
+        with fits.open(meta.x1d_segment_list[-1]) as hdulist:
+            # Get solns from appropriate extention
+            for e, ext in enumerate(exts):
+                soln = hdulist[ext].data['WAVELENGTH'] + 0.0
+                wave_soln[e, :len(soln)] = soln
+
+        data['wave_1d'] = (['order', 'x'],
+                            wave_soln)
+        data['wave_1d'].attrs['wave_units'] = 'micron'
 
         # Convert flux units to electrons
         # (eg. MJy/sr -> DN -> Electrons)
@@ -376,7 +384,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
         if meta.save_output:
             # Save flux data from current segment
-            filename_xr = (meta.outputdir+'S3_'+ event +
+            filename_xr = (meta.outputdir+'S3_'+ meta.eventlabel +
                            "_FluxData_seg"+str(m+1).zfill(4)+".h5")
             success = xrio.writeXR(filename_xr, data, verbose=False,
                                    append=False)
@@ -405,13 +413,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     # Save Dataset object containing time-series of 1D spectra
-    meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+    meta.filename_S3_SpecData = (meta.outputdir+'S3_'+ meta.eventlabel +
                                  "_SpecData.h5")
     success = xrio.writeXR(meta.filename_S3_SpecData, spec,
                            verbose=True)
 
     # Compute MAD value
-    meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
+    meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec) # I will
     log.writelog(f"Stage 3 MAD = "
                  f"{np.round(meta.mad_s3, 2).astype(int)} ppm")
 
@@ -423,7 +431,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     # Save results
     if meta.save_output:
         log.writelog('Saving Metadata')
-        fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
+        fname = meta.outputdir + 'S3_' + meta.eventlabel + "_Meta_Save"
         me.saveevent(meta, fname, save=[])
 
     log.closelog()
