@@ -98,7 +98,7 @@ def image_and_background(data, meta, n, m):
         plt.pause(0.2)
 
 
-def optimal_spectrum(data, meta, n, m):
+def optimal_spectrum(data, meta, n, m, niriss=False):
     '''Make optimal spectrum plot. (Figs 3302)
 
     Parameters
@@ -111,23 +111,38 @@ def optimal_spectrum(data, meta, n, m):
         The integration number.
     m : int
         The file number.
+    niriss : bool, optional
+        If True, plots the first and second
+        orders for NIRISS.
 
     Returns
     -------
     None
     '''
+
+    def plot_data(x, y, yerr):
+        plt.semilogy(x, y, '-', color='C1',
+                     label='Standard Spec')
+        plt.errorbar(x, y, yerr=yerr, fmt='-',
+                     color='C2', ecolor='C2', label='Optimal Spec')
+        return
+
     intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
                                           data.stdspec.values,
                                           data.optspec.values,
                                           data.opterr.values)
-
     plt.figure(3302)
     plt.clf()
+
+    if niriss==False:
+        plot_data(data.stdspec.x.values, stdspec[n], opterr[n])
+
+    else:
+        for i in range(2):
+            plot_data(data.stdspec[i].x.values, stdspec[i][n],
+                      opterr[i][n])
+
     plt.suptitle(f'1D Spectrum - Integration {intstart + n}')
-    plt.semilogy(data.stdspec.x.values, stdspec[n], '-', color='C1',
-                 label='Standard Spec')
-    plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
-                 color='C2', ecolor='C2', label='Optimal Spec')
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
