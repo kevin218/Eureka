@@ -277,6 +277,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             fname = f'fig2101_file{fig_number}_x1dints'
             x1d_fname = ('_'.join(filename.split(os.sep)[-1].split('_')[:-1]) +
                          '_x1dints')
+
             with datamodels.open(meta.outputdir+x1d_fname+'.fits') as sp1d:
                 plt.figure(2101, figsize=[15, 5])
                 plt.clf()
