@@ -318,12 +318,14 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
     mad : float
         Single MAD value in ppm
     """
+
     optspec = np.ma.masked_invalid(optspec)
 
     if len(optspec.shape)==2:
         n_int, nx = optspec.shape
+        ny = None
     else:
-        n_int, nx = optspec.shape[:2]
+        n_int, ny, nx = optspec.shape
 
     if wave_min is not None:
         iwmin = np.argmin(np.abs(wave_1d-wave_min))
@@ -333,12 +335,27 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
         iwmax = np.argmin(np.abs(wave_1d-wave_max))
     else:
         iwmax = None
+
     normspec = optspec / np.ma.mean(optspec, axis=0)
+
+    mad = np.ma.zeros(n_int)
     ediff = np.ma.zeros(n_int)
+
     for m in range(n_int):
-        ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
-    mad = np.ma.mean(ediff)
-    return mad
+
+        if len(normspec[m].shape) > 1:
+            temp = np.ma.zeros(normspec[m].shape[0])
+            for n in range(normspec[m].shape[0]):
+                temp[n] = get_mad_1d(normspec[m], iwmin, iwmax)
+            mad[m] = np.ma.mean(temp)
+
+        else:
+            ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
+
+    if ny is None:
+        return np.ma.mean(ediff)
+    else:
+        return mad
 
 
 def get_mad_1d(data, ind_min=0, ind_max=-1):
