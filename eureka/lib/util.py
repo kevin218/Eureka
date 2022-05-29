@@ -5,7 +5,7 @@ import time
 import glob
 
 
-def readfiles(meta):
+def readfiles(meta, suffix=None):
     """Reads in the files saved in topdir + inputdir and saves them into a list.
 
     Parameters
@@ -19,12 +19,22 @@ def readfiles(meta):
         The metadata object with added segment_list containing the sorted
         data fits files.
     """
-    meta.segment_list = []
+    if suffix is None:
+        suffix = meta.suffix
+        return_meta=True
+    else:
+        return_meta=False
+
+    segment_list = []
     for fname in os.listdir(meta.inputdir):
-        if fname.endswith(meta.suffix + '.fits'):
-            meta.segment_list.append(os.path.join(meta.inputdir, fname))
-    meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
-    return meta
+        if fname.endswith(suffix + '.fits'):
+            segment_list.append(os.path.join(meta.inputdir, fname))
+
+    if return_meta:
+        meta.segment_list = np.array(sn.sort_nicely(segment_list))
+        return meta
+    else:
+        return np.array(sn.sort_nicely(segment_list))
 
 
 def trim(data, meta):
