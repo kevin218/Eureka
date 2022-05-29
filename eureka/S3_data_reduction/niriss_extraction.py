@@ -381,7 +381,6 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medfr
             elif quad == 3: # Overlap region (left-hand side)
                 x1,x2 = 0, 1000
                 y1,y2 = 0, data.shape[1]
-                print(x1,x2, y1,y2)
                 newdata = np.copy(data)[:,y1:y2, x1:x2] # Takes the proper data slice
 
                 index = 0 # Index for the box extracted spectra
@@ -467,13 +466,12 @@ def extraction_routine(data, var,
     best_fit_prof     = np.zeros(data.shape)
 
     if test:
-        frames = 5
+        frames = 3
     else:
         frames = len(data)
 
     # Loop through each frame
-    for i in tqdm(range(frames)):
-
+    for i in range(frames):
         ny, nx = data[i].shape
         x = np.arange(0,ny,1)
 
