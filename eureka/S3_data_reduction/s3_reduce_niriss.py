@@ -281,7 +281,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         # Compute median frame
         medapdata = np.median(data.flux, axis=0)
 
-### STOPPING HERE FOR THE NIGHT ##
         # creates mask for the traces
         box_masks = niriss_extraction.dirty_mask(medapdata,
                                                  traces,
@@ -292,43 +291,48 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                  return_together=False,
                                                  isplots=meta.isplots_S3)
 
-        stdflux, stdvar = niriss_extraction.box_extract(data.flux.data,
-                                                        data.err.data,
+        # Extract standard spectrum and its variance
+        stdflux, stdvar = niriss_extraction.box_extract(data.flux.values,
+                                                        data.err.values,
                                                         box_masks)
 
-        # Extract standard spectrum and its variance
-        print(stdflux.shape, stdflux[0].shape)
-        for o in range(3):
-            stdspec_key = 'stdspec_order{0:02d}'.format(o+1)
-            stdvar_key  = 'stdvar_order{0:02d}'.format(o+1)
+        # Adding box extracted spectra to data object
+        stdspec_key = 'stdspec'
+        stdvar_key  = 'stdvar'
 
-            data[stdspec_key] = (['time', 'x'], stdflux[o])
-            data[stdspec_key].attrs['flux_units'] = \
-                            data.flux.attrs['flux_units']
-            data[stdspec_key].attrs['time_units'] = \
-                            data.flux.attrs['time_units']
+        # Includes additional 'order' axis
+        data[stdspec_key] = (['order', 'time', 'x'], stdflux)
+        data[stdspec_key].attrs['flux_units'] = \
+                        data.flux.attrs['flux_units']
+        data[stdspec_key].attrs['time_units'] = \
+                        data.flux.attrs['time_units']
 
-            data[stdvar_key] = (['time', 'x'], stdvar[o] ** 2)
-            data[stdvar_key].attrs['flux_units'] = \
-                            data.flux.attrs['flux_units']
-            data[stdvar_key].attrs['time_units'] = \
-                            data.flux.attrs['time_units']
-        # FINDME: stdvar >> stdspec, which is a problem
+        data[stdvar_key] = (['order', 'time', 'x'], stdvar ** 2)
+        data[stdvar_key].attrs['flux_units'] = \
+                        data.flux.attrs['flux_units']
+        data[stdvar_key].attrs['time_units'] = \
+                        data.flux.attrs['time_units']
 
-        # Extract optimal spectrum with uncertainties
+        optspec_key = 'optspec'
+        opterr_key  = 'opterr'
+
+        # Adding optimal extracted arrays to data object
+        data[optspec_key] = (['order', 'time', 'x'],
+                             np.zeros(data.stdspec.shape))
+        data[optspec_key].attrs['flux_units'] = \
+            data.flux.attrs['flux_units']
+        data[optspec_key].attrs['time_units'] = \
+            data.flux.attrs['time_units']
+
+        data[opterr_key] = (['order', 'time', 'x'],
+                             np.zeros(data.stdspec.shape))
+        data[opterr_key].attrs['flux_units'] = \
+            data.flux.attrs['flux_units']
+        data[opterr_key].attrs['time_units'] = \
+            data.flux.attrs['time_units']
+
         log.writelog("  Performing optimal spectral extraction",
                      mute=(not meta.verbose))
-        data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-        data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-        data['optspec'].attrs['flux_units'] = \
-            data.flux.attrs['flux_units']
-        data['optspec'].attrs['time_units'] = \
-            data.flux.attrs['time_units']
-        data['opterr'].attrs['flux_units'] = \
-            data.flux.attrs['flux_units']
-        data['opterr'].attrs['time_units'] = \
-            data.flux.attrs['time_units']
-
         # Already converted DN to electrons, so gain = 1 for optspex
         gain = 1
         intstart = data.attrs['intstart']
@@ -336,24 +340,28 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         if meta.verbose:
             iterfn = tqdm(iterfn)
         for n in iterfn:
-            data['optspec'][n], data['opterr'][n], mask = \
-                optimal_extraction_routine(meta, apdata[n], apmask[n], apbg[n],
-                                           data.stdspec[n].values, gain, apv0[n],
-                                           p5thresh=meta.p5thresh,
-                                           p7thresh=meta.p7thresh,
-                                           fittype=meta.fittype,
-                                           window_len=meta.window_len,
-                                           deg=meta.prof_deg, n=intstart+n,
-                                           meddata=medapdata)
+            optspec, opterr, profile = \
+                optimal_extraction_routine(data.flux.values,
+                                           data.err.values,
+                                           stdflux,
+                                           stdvar,
+                                           pos1=traces['order_1'],
+                                           pos2=traces['order_2'],
+                                           pos3=traces['order_3'],
+                                           sky_bkg=data.bg.values,
+                                           medframe=medapdata,
+                                           sigma=meta.opt_sigma,
+                                           per_quad=meta.per_quad,
+                                           proftype=meta.proftype,
+                                           test=meta.testing_S3,
+                                           isplots=meta.isplots_S3)
 
         # Mask out NaNs and Infs
         optspec_ma = np.ma.masked_invalid(data.optspec.values)
         opterr_ma = np.ma.masked_invalid(data.opterr.values)
         optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
                                 np.ma.getmaskarray(opterr_ma))
-        data['optmask'] = (['time', 'x'], optmask)
-        # data['optspec'] = np.ma.masked_where(mask, data.optspec)
-        # data['opterr'] = np.ma.masked_where(mask, data.opterr)
+        data['optmask'] = (['order', 'time', 'x'], optmask)
 
         # Plot results
         if meta.isplots_S3 >= 3:
@@ -364,11 +372,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 iterfn = tqdm(iterfn)
             for n in iterfn:
                 # make optimal spectrum plot
-                plots_s3.optimal_spectrum(data, meta, n, m)
+                plots_s3.optimal_spectrum(data, meta, n, m, niriss=True)
 
         if meta.save_output:
             # Save flux data from current segment
-            filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
+            filename_xr = (meta.outputdir+'S3_'+ event +
                            "_FluxData_seg"+str(m+1).zfill(4)+".h5")
             success = xrio.writeXR(filename_xr, data, verbose=False,
                                    append=False)
