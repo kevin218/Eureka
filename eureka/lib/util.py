@@ -319,7 +319,12 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
         Single MAD value in ppm
     """
     optspec = np.ma.masked_invalid(optspec)
-    n_int, nx = optspec.shape
+
+    if len(optspec.shape)==2:
+        n_int, nx = optspec.shape
+    else:
+        n_int, nx = optspec.shape[:2]
+
     if wave_min is not None:
         iwmin = np.argmin(np.abs(wave_1d-wave_min))
     else:
