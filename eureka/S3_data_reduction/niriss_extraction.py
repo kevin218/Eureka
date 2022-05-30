@@ -202,10 +202,6 @@ def profile_niriss_median(medprof, sigma=50):
             if len(outliers)>0:
                 medprof[:,i][outliers] = interp(x[outliers])
 
-        #if i > 300 and i < 350:
-        #    plt.plot(x, medprof[:,i], 'r')
-        #    plt.show()
-
     return medprof
 
 def profile_niriss_gaussian(data, pos1, pos2):

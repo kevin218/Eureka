@@ -274,6 +274,8 @@ def mask_method_ears(data, degree=4, save=False,
     def diagnostic_plotting(x, y, model, model_final):
         """ Plots the data, the first fit, and the final best-fit. """
         nonlocal summed
+        plt.figure(3330)
+        plt.clf()
         plt.imshow(summed, vmin=0, vmax=np.nanpercentile(summed, 75))
         plt.plot(x, y, 'k.', label='Data')
         plt.plot(x, model(x), 'darkorange', label='First Fit Attempt')
