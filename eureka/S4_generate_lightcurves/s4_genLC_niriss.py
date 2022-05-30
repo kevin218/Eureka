@@ -78,15 +78,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
-    meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4)
+    meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
+                                     order=meta.order)
 
     # Get directory for Stage 4 processing outputs
-    meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4)
-
     t0 = time_pkg.time()
 
     # Load in the S3 metadata used for this particular aperture pair
     meta = load_specific_s3_meta_info(meta)
+    meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
+                                        order=meta.order)
 
     # Copy existing S3 log file and resume log
     meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
@@ -103,6 +104,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                  mute=(not meta.verbose))
     spec = xrio.readXR(meta.filename_S3_SpecData)
 
+    # Sets minimum wavelength to evaluate over
     if meta.wave_min is None:
         meta.wave_min = np.min(spec.wave_1d.values)
         log.writelog(f'No value was provided for meta.wave_min, so '
@@ -112,6 +114,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         log.writelog(f'WARNING: The selected meta.wave_min '
                      f'({meta.wave_min}) is smaller than the shortest '
                      f'wavelength ({np.min(spec.wave_1d.values)})')
+
+    # Sets maximum wavelength to evaluate over
     if meta.wave_max is None:
         meta.wave_max = np.max(spec.wave_1d.values)
         log.writelog(f'No value was provided for meta.wave_max, so '
@@ -122,7 +126,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                      f'({meta.wave_max}) is larger than the longest '
                      f'wavelength ({np.max(spec.wave_1d.values)})')
 
-    meta.n_int, meta.subnx = spec.optspec.shape
+
+    ### Gets only the data for the input order ###
+    index = meta.order - 1
+    nonans = np.where(np.isnan(spec.wave_1d[index])==False)[0]
+
+    meta.n_int, meta.subnx = spec.optspec[index][:,nonans].shape
 
     # Determine wavelength bins
     if not hasattr(meta, 'wave_hi'):
@@ -173,10 +182,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     # FINDME: The current implementation needs improvement,
     # consider using optmask instead of masked arrays
     # Create masked array for steps below
-    optspec_ma = np.ma.masked_array(spec.optspec, spec.optmask)
+    optspec_ma = np.ma.masked_array(spec.optspec[index][:,nonans],
+                                    spec.optmask[index][:,nonans])
     # Create opterr array with same mask as optspec
     opterr_ma = np.ma.copy(optspec_ma)
-    opterr_ma = spec.opterr
+    opterr_ma = spec.opterr[index][:,nonans]
 
     # Do 1D sigma clipping (along time axis) on unbinned spectra
     if meta.sigma_clip:
@@ -224,12 +234,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                    lc.drift1d[n].values)
             opterr_ma[n] = spline2(np.arange(meta.subnx) +
                                    lc.drift1d[n].values)
-            # # Merge conflict: Need to test code below
-            # # before implementing
-            # optspec_ma[n] = np.ma.masked_invalid(spline(
-            #     np.arange(meta.subnx)+lc.drift1d[n].values))
-            # opterr_ma[n] = np.ma.masked_invalid(spline2(
-            #     np.arange(meta.subnx)+lc.drift1d[n].values))
+
         # Plot Drift
         if meta.isplots_S4 >= 1:
             plots_s4.drift1d(meta, lc)
@@ -246,8 +251,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                meta.wave_min, meta.wave_max)
     log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
+    print(meta.outputdir)
+
     if meta.isplots_S4 >= 1:
-        plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
+        plots_s4.lc_driftcorr(meta, spec.wave_1d[index][nonans], optspec_ma)
 
     log.writelog("Generating light curves")
 
