@@ -5,7 +5,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.table import Table
 
-from .lib.tracing_niriss import mask_method_edges, mask_method_profile, ref_file
+from .lib.tracing_niriss import mask_method_edges, mask_method_ears, ref_file
 from .lib.masking        import (interpolating_row, data_quality_mask,
                               interpolating_image)
 from .lib.clipping       import time_removal
@@ -256,7 +256,7 @@ class NIRISS_S3(object):
                 return('Need F277W filter to run this trace finding method.')
 
         elif method.lower() == 'profile':
-            self.tab2 = mask_method_profile(self, isplots=isplots)
+            self.tab2 = mask_method_ears(self, isplots=isplots)
 
         elif method.lower() == 'ref':
             self.tab3 = ref_file(ref_filename)
