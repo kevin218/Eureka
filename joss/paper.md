@@ -55,7 +55,7 @@ affiliations:
     index: 2
   - name: Department of Physics and Astronomy, University of Kansas, 1082 Malott, 1251 Wescoe Hall Dr., Lawrence, KS 66045, USA
     index: 3
-  - name: Department of Astronomy and Astrophysics, University of California, Santa Cruz, Santa Cruz, CA 95064, USA
+  - name: Department of Astronomy and Astrophysics, University of California, Santa Cruz, 1156 High Street, Santa Cruz, CA 95064, USA
     index: 4
   - name: Department of Astronomy & Astrophysics, University of Chicago, 5640 S. Ellis Avenue, Chicago, IL 60637, USA
     index: 5
