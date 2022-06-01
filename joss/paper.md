@@ -29,7 +29,7 @@ authors:
     affiliation: 6
   - name: Megan Mansfield
     orcid: 0000-0003-4241-7413
-    affiliation: 7,8
+    affiliation: "7, 8"
   - name: Sebastian Zieba
     orcid: 0000-0003-0562-6750
     affiliation: 9
