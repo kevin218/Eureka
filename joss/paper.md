@@ -29,25 +29,25 @@ authors:
     affiliation: 6
   - name: Megan Mansfield
     orcid: 0000-0003-4241-7413
-    affiliation: 7
+    affiliation: 7,8
   - name: Sebastian Zieba
     orcid: 0000-0003-0562-6750
-    affiliation: 8
+    affiliation: 9
   - name: Caroline Piaulet
     orcid: 0000-0002-2875-917X
-    affiliation: 9
+    affiliation: 10
   - name: Joseph Filippazzo
     orcid: 0000-0002-0201-8306
-    affiliation: 10
+    affiliation: 11
   - name: Erin M. May
     orcid: 0000-0002-2739-1465
-    affiliation: 11
+    affiliation: 12
   - name: Kevin B. Stevenson
     orcid: 0000-0002-7352-7941
-    affiliation: 11
+    affiliation: 12
   - name: Laura Kreidberg
     orcid: 0000-0003-0514-1147
-    affiliation: 8
+    affiliation: 9
 affiliations:
   - name: BAER Institute, NASA Ames Research Center, Moffet Field, CA 94035, USA
     index: 1
@@ -63,14 +63,16 @@ affiliations:
     index: 6
   - name: Steward Observatory, University of Arizona, Tucson, AZ 85719, USA
     index: 7
-  - name: Max-Planck-Institut für Astronomie, Königstuhl 17, D-69117 Heidelberg, Germany
+  - name: NHFP Sagan Fellow
     index: 8
-  - name: Department of Physics and Institute for Research on Exoplanets, Université de Montréal, Montreal, QC, Canada
+  - name: Max-Planck-Institut für Astronomie, Königstuhl 17, D-69117 Heidelberg, Germany
     index: 9
-  - name: Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA
+  - name: Department of Physics and Institute for Research on Exoplanets, Université de Montréal, Montreal, QC, Canada
     index: 10
-  - name: Johns Hopkins APL, 11100 Johns Hopkins Road, Laurel, MD 20723, USA
+  - name: Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA
     index: 11
+  - name: Johns Hopkins APL, 11100 Johns Hopkins Road, Laurel, MD 20723, USA
+    index: 12
 date: 30 May 2022
 bibliography: paper.bib
 
@@ -111,7 +113,7 @@ Documentation for `Eureka!` is available at [https://eurekadocs.readthedocs.io/e
 
 # Acknowledgements
 
-`Eureka!` allows for some variations upon the STScI's [`jwst`](https://github.com/spacetelescope/jwst) pipeline [@jwst:2022] for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing that pipeline to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by, or were initially written for, the [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a] pipeline. Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by, or were initially written for, the [`POET`](https://github.com/kevin218/POET) pipeline [@Stevenson:2012; @Cubillos:2013]. Some of the Stage 5 code comes from @Kreidberg:2014 and [`PACMAN`](https://github.com/sebastian-zieba/PACMAN) [@pacman:2022]. Small pieces of the [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021] and [`Bell_EBM`](https://github.com/taylorbell57/Bell_EBM) [@Bell:2018] repositories have also been reused. ALC is supported by a grant from STScI (_JWST_-ERS-01386) under NASA contract NAS5-03127. ADF acknowledges support by the National Science Foundation Graduate Research Fellowship Program under Grant No. (DGE-1746045). We also thank Ivelina Momcheva for useful discussions. Support for this work was provided in part by NASA through a grant from the Space Telescope Science Institute, which is operated by the Association of Universities for Research in Astronomy, Inc., under NASA contract NAS 5-03127. In addition, we would like to thank the Transiting Exoplanet Community Early Release Science program for organizing meetings that contributed to the writing of `Eureka!`.
+`Eureka!` allows for some variations upon the STScI's [`jwst`](https://github.com/spacetelescope/jwst) pipeline [@jwst:2022] for Stages 1 and 2, but presently these stages mostly act as wrappers around the `jwst` pipeline allowing that pipeline to be run in the same way as the later stages of the `Eureka!` pipeline. `Eureka!` then uses its own custom code for additional calibration steps, spectral or photometric extraction, and light curve fitting. Several parts of the spectroscopy-focused code in Stages 3 and 4 of `Eureka!` were inspired by, or were initially written for, the [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a] pipeline. Other parts of the spectroscopy code and several parts of the photometry focused code in Stage 3 were inspired by, or were initially written for, the [`POET`](https://github.com/kevin218/POET) pipeline [@Stevenson:2012; @Cubillos:2013]. Some of the Stage 5 code comes from @Kreidberg:2014 and [`PACMAN`](https://github.com/sebastian-zieba/PACMAN) [@pacman:2022]. Small pieces of the [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021] and [`Bell_EBM`](https://github.com/taylorbell57/Bell_EBM) [@Bell:2018] repositories have also been reused. ALC is supported by a grant from STScI (_JWST_-ERS-01386) under NASA contract NAS5-03127. ADF acknowledges support by the National Science Foundation Graduate Research Fellowship Program under Grant No. (DGE-1746045). MM acknowledges support through the NASA Hubble Fellowship grant HST-HF2-51485.001-A awarded by STScI, which is operated by the Association of Universities for Research in Astronomy, Inc., for NASA, under contract NAS5-26555. We also thank Ivelina Momcheva for useful discussions. Support for this work was provided in part by NASA through a grant from the Space Telescope Science Institute, which is operated by the Association of Universities for Research in Astronomy, Inc., under NASA contract NAS 5-03127. In addition, we would like to thank the Transiting Exoplanet Community Early Release Science program for organizing meetings that contributed to the writing of `Eureka!`.
 
 
 # References
