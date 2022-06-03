@@ -24,7 +24,7 @@ authors:
   - name: Adina D. Feinstein
     orcid: 0000-0002-9464-8101
     affiliation: 5
-  - name: Giannina Guzman
+  - name: Giannina {Guzman Caloca}
     orcid: 0000-0001-6340-8220
     affiliation: 6
   - name: Megan Mansfield
