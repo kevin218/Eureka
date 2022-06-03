@@ -643,6 +643,10 @@ model_y_scalar
 Indicate whether model y-values have already been scaled (e.g. write 1e6 if
 model_spectrum is in ppm).
 
+model_zorder
+''''''''''''
+The zorder of the model on the plot (0 for beneath the data, np.inf for above the data).
+
 model_delimiter
 '''''''''''''''
 Delimiter between columns. Typical options: None (for whitespace), ',' for comma.
