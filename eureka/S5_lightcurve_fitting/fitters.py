@@ -396,7 +396,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     log.writelog(f"Mean acceptance fraction: {acceptance_fraction:.3f}",
                  mute=(not meta.verbose))
     try:
-        autocorr = sampler.get_autocorr_time()
+        autocorr = np.mean(sampler.get_autocorr_time())
         log.writelog(f"Mean autocorrelation time: {autocorr:.3f} steps",
                      mute=(not meta.verbose))
     except:
