@@ -292,8 +292,9 @@ topdir + outputdir
 ''''''''''''''''''
 The path to the directory in which to output the Stage 3 JWST data and plots.
 
-
-
+topdir + time_file
+''''''''''''''''''
+The path to a file which contains the time array you want to use instead of the one contained in the FITS file.
 
 
 
