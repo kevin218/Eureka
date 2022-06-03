@@ -148,3 +148,4 @@ niriss_cython.c
 Dockerfile
 docker-compose.yml
 docker-setup.sh
+eureka_analysis/JWST/run_eureka_demo.py
