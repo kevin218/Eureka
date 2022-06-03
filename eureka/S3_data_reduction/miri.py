@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import nircam
@@ -68,7 +69,14 @@ def read(filename, data, meta):
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
-    if len(int_times['int_mid_BJD_TDB']) == 0:
+    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+        fname = os.path.join(meta.topdir,
+                             os.sep.join(meta.time_file.split(os.sep)))
+        if meta.firstFile:
+            print('  Note: Using the time stamps from:\n'+fname)
+        time = np.loadtxt(fname).flatten()[data.attrs['intstart']-1:
+                                           data.attrs['intend']-1]
+    elif len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
             print('  WARNING: The timestamps for the simulated MIRI data are '
                   'currently hardcoded\n'
