@@ -23,6 +23,6 @@ jobs:
         with:
           python-version: 3.9
       - name: Setup Environment
-        run: pip install .[jwst,hst,test]
+        run: pip install .[jwst,hst,test];export CRDS_PATH=$HOME/crds_cache;export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
       - name: Run tests
         run: pytest tests
