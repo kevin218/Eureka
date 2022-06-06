@@ -296,10 +296,11 @@ def profile_niriss_moffat(data, pos1, pos2):
     return out_img1[0], out_img2[0]
 
 
-def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg, medframe=None,
+def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
+                               medframe=None,
                                pos1=None, pos2=None, pos3=None,
                                sigma=20, cr_mask=None, Q=18,
-                               proftype='gaussian', isplots=0, per_quad=False, test=False):
+                               proftype='median', isplots=0, per_quad=False, test=False):
     """
     Optimal extraction routine for NIRISS. This is different from the
     general `optspex.optimize` since there are two ways to extract the
@@ -438,7 +439,7 @@ def extraction_routine(data, var,
                        spectrum, spectrum_var, sky_bkg, medframe=None,
                        pos1=None, pos2=None, pos3=None, sigma=20,
                        cr_mask=None, Q=18,
-                       proftype='gaussian', isplots=0, test=False):
+                       proftype='median', isplots=0, test=False):
     """
     The actual extraction routine. `optimal extraction` is a wrapper
     for this function, since it needs to loop through *if* you want
@@ -525,11 +526,12 @@ def extraction_routine(data, var,
 
             if isplots>=9:
                 plt.title('check')
-                plt.imshow(stdevs*M, vmin=sigma-2, vmax=sigma)
+                plt.imshow(stdevs*M, vmin=sigma-2, vmax=sigma,
+                           aspect='auto')
                 plt.show()
 
                 plt.title('profile')
-                plt.imshow(P)
+                plt.imshow(P, aspect='auto')
                 plt.show()
 
             # If cosmic rays found, continue looping through untl
@@ -572,10 +574,6 @@ def extraction_routine(data, var,
                     f = np.nansum(M*P*( (data[i]+fill_vals) - sky_bkg[i])/V, axis=0) / denom
                     var_f = np.nansum(M*P,axis=0) / denom # This may need a sqrt ?
 
-                if isplots>=8:
-                    plt.imshow(P)
-                    plt.colorbar()
-                    plt.show()
 
         extracted_spectra[i] = f + 0.0
         extracted_error[i] = var_f + 0.0
