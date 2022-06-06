@@ -12,7 +12,7 @@ from .lib.clipping       import time_removal
 from .S3_data_reduction.background     import bkg_sub, fitbg3
 from .S3_data_reduction.niriss_extraction   import (dirty_mask, box_extract,
                                               optimal_extraction_routine)
-from .S3_data_reduction.niriss  import wave_NIRISS as wavelength
+#from .S3_data_reduction.niriss  import wave_NIRISS as wavelength
 from .lib.simultaneous_order_fitting import fit_orders, fit_orders_fast
 
 
@@ -424,7 +424,7 @@ class NIRISS_S3(object):
 
 
     def optimal_extraction(self, proftype='median', sigma=20, Q=1.8,
-                           per_quad=True, test=False):
+                           per_quad=True, test=False, isplots=3):
         """
         Runs the optimal extraction routine for the NIRISS orders.
         There is a lot of flexibility in this routine, so please read
@@ -476,34 +476,41 @@ class NIRISS_S3(object):
         if self.tab2 is not None:
             pos1 = self.tab2['order_1']
             pos2 = self.tab2['order_2']
+            pos3 = self.tab2['order_3']
         elif self.tab1 is not None:
             pos1 = self.tab1['order_1']
             pos2 = self.tab1['order_2']
+            pos3 = self.tab1['order_3']
         else:
             self.map_trace()
             pos1 = self.tab2['order_1']
             pos2 = self.tab2['order_2']
+            pos3 = self.tab2['order_3']
 
         if test == True:
             start, end = 0,5#int(len(self.data)/2-2), int(len(self.data)/2+2)
         else:
             start, end = 0, len(self.data)
 
-        cr_mask = ~np.array(self.cr_mask, dtype=bool)
+        #cr_mask = ~np.array(self.cr_mask, dtype=bool)
 
         all_fluxes, all_errs, all_profs = optimal_extraction_routine(self.data[start:end],
                                                                      self.var[start:end],
                                                                      spectrum=np.array([self.box_spectra1[start:end],
-                                                                                        self.box_spectra2[start:end]]),
+                                                                                        self.box_spectra2[start:end],
+                                                                                        self.box_spectra3[start:end]]),
                                                                      spectrum_var=np.array([self.box_var1[start:end],
-                                                                                            self.box_var2[start:end]]),
-                                                                     sky_bkg=self.bkg[start:end],
+                                                                                            self.box_var2[start:end],
+                                                                                            self.box_var3[start:end]]),
+                                                                     sky_bkg=np.zeros(self.data.shape),#self.bkg[start:end],
                                                                      medframe=self.median,
-                                                                     cr_mask=self.bkg_removed,
+                                                                     #cr_mask=self.bkg_removed,
                                                                      pos1=pos1,
                                                                      pos2=pos2,
+                                                                     pos3=pos3,
                                                                      sigma=sigma,
                                                                      Q=Q,
                                                                      proftype=proftype,
-                                                                     per_quad=per_quad)
+                                                                     per_quad=per_quad,
+                                                                     isplots=isplots)
         return all_fluxes, all_errs, all_profs
