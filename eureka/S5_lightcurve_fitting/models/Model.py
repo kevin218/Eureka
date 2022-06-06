@@ -352,7 +352,7 @@ class CompositeModel(Model):
 
         return flux
 
-    def GPeval(self,  fit, **kwargs):
+    def GPeval(self, fit, **kwargs):
         """Evaluate the GP model components only.
 
         Parameters

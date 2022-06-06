@@ -522,7 +522,7 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
                                            linspace=[-10, 10], where='order')
 
-        b1 = bkg_sub(rm_crs[i],  order_mask, bkg_estimator='median', sigma=4,
+        b1 = bkg_sub(rm_crs[i], order_mask, bkg_estimator='median', sigma=4,
                      box=(10, 5), filter_size=(2, 2))
         b2 = bkg_sub(rm_crs[i]-b1, order_mask, sigma=3, bkg_estimator='median')
 
