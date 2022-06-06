@@ -108,7 +108,7 @@ Documentation for `Eureka!` is available at [https://eurekadocs.readthedocs.io/e
 
 # Similar Tools
 
-[`jwst`](https://github.com/spacetelescope/jwst) [@jwst:2022], [`exoplanet`](https://github.com/exoplanet-dev/exoplanet) [@exoplanet:2021], [`juliet`](https://github.com/nespinoza/juliet) [@juliet:2018], [`POET`](https://github.com/kevin218/POET) [@Stevenson:2012; @Cubillos:2013], [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a], [`PACMAN`](https://github.com/sebastian-zieba/PACMAN) [@Kreidberg:2014; @pacman:2022], [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021]
+[`jwst`](https://github.com/spacetelescope/jwst) [@jwst:2022], [`exoplanet`](https://github.com/exoplanet-dev/exoplanet) [@exoplanet:2021], [`juliet`](https://github.com/nespinoza/juliet) [@juliet:2019], [`POET`](https://github.com/kevin218/POET) [@Stevenson:2012; @Cubillos:2013], [`WFC3`](https://github.com/kevin218/WFC3) [@Stevenson:2014a], [`PACMAN`](https://github.com/sebastian-zieba/PACMAN) [@Kreidberg:2014; @pacman:2022], [`SPCA`](https://github.com/lisadang27/SPCA) [@Dang:2018; @Bell:2021]
 
 
 # Acknowledgements
