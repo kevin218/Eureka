@@ -1,4 +1,6 @@
-# Eureka!
+<img src="docs/media/Eureka_logo.png" width="128px"/>
+<br/>
+<br/>
 
 [![Documentation Status](https://readthedocs.org/projects/eurekadocs/badge/?version=latest)](https://eurekadocs.readthedocs.io/en/latest/?badge=latest)
 [![pytest](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml)
