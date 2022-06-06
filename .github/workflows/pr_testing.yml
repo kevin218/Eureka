@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened,reopened,synchronize]
 
+env:
+  CRDS_PATH: $HOME/crds_cache
+  CRDS_SERVER_URL: https://jwst-crds.stsci.edu
+
 jobs:
   lint:
     name: Flake8 Linting
@@ -12,6 +16,8 @@ jobs:
     - uses: actions/checkout@v2
     - uses: tonybajan/flake8-check-action@v1.2.0
       with:
+        select: E1,E2,E3,E4,E5,E7,W6,F
+        ignore: W504,W503,E704,E226,E722
         maxlinelength: 100
         repotoken: ${{ secrets.GITHUB_TOKEN }}
   test:
@@ -26,8 +32,6 @@ jobs:
         run: |
           pip install .[jwst,hst,test]
           mkdir $HOME/crds_cache
-          setenv CRDS_PATH=$HOME/crds_cache
-          setenv CRDS_SERVER_URL=https://jwst-crds.stsci.edu
       - name: Check Environment
         run: |
           echo "CRDS_PATH=$CRDS_PATH; CRDS_SERVER_URL=$CRDS_SERVER_URL"
