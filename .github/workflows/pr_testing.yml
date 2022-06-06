@@ -24,7 +24,6 @@ jobs:
           python-version: 3.9
       - name: Setup Environment
         run: |
-          apt install gcc
           pip install .[jwst,hst,test]
           mkdir $HOME/crds_cache
           export CRDS_PATH=$HOME/crds_cache
