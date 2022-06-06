@@ -29,6 +29,7 @@ from astropy.io import fits
 from tqdm import tqdm
 from . import optspex
 from . import plots_s3, source_pos
+from . import s3_reduce_niriss
 from . import background as bg
 from . import bright2flux as b2f
 from ..lib import logedit
@@ -70,6 +71,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     ecffile = 'S3_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+
+    if meta.trace_method: # This pushes S3 to s3_reduce_niriss if
+                          # accidentally called
+        s3_reduce_niriss.reduce(eventlabel,
+                                ecf_path=ecf_path,
+                                s2_meta=s2_meta)
 
     if s2_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -175,7 +182,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                              'you should edit the flag_bg() function in '
                              'nirspec.py and look at Issue #193 on Github!')
             elif meta.inst == 'niriss':
-                from . import niriss as inst
+                s3_reduce_niriss.reduce(eventlabel,
+                                        ecf_path=ecf_path,
+                                        s2_meta=s2_meta)
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta, log = inst.preparation_step(meta, log)
