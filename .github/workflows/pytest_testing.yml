@@ -1,23 +1,16 @@
-name: PR Testing
+name: Pytest Testing
 
 on:
   pull_request:
     types: [opened,reopened,synchronize]
+  push:
+    branches:    
+      - 'main'
+      - 'releases/**'
 
 jobs:
-  lint:
-    name: Flake8 Linting
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: tonybajan/flake8-check-action@v1.2.0
-      with:
-        select: E1,E2,E3,E4,E5,E7,W6,F
-        ignore: W504,W503,E704,E226,E722
-        maxlinelength: 100
-        repotoken: ${{ secrets.GITHUB_TOKEN }}
   test:
-    name: pytest Testing
+    name: Pytest Testing
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -30,10 +23,5 @@ jobs:
           mkdir $HOME/crds_cache
           echo "CRDS_PATH=$HOME/crds_cache" >> $GITHUB_ENV
           echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> $GITHUB_ENV
-      - name: Check Environment
-        run: |
-          echo "CRDS_PATH=$CRDS_PATH; CRDS_SERVER_URL=$CRDS_SERVER_URL"
-          which pytest
-          pip show jwst
       - name: Run tests
         run: pytest tests
