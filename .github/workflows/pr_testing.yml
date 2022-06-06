@@ -8,6 +8,6 @@ jobs:
     - uses: actions/checkout@v2
     - uses: tonybajan/flake8-check-action@v1.2.0
       with:
-        select: E1,E2,E3,E4,E5,E7,W6,F
+        select: E1,E3,E4,E5,E7,W6,F
         maxlinelength: 100
         repotoken: ${{ secrets.GITHUB_TOKEN }}
