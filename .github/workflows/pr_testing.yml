@@ -4,10 +4,6 @@ on:
   pull_request:
     types: [opened,reopened,synchronize]
 
-env:
-  CRDS_PATH: $HOME/crds_cache
-  CRDS_SERVER_URL: https://jwst-crds.stsci.edu
-
 jobs:
   lint:
     name: Flake8 Linting
@@ -32,6 +28,8 @@ jobs:
         run: |
           pip install .[jwst,hst,test]
           mkdir $HOME/crds_cache
+          echo "CRDS_PATH=$HOME/crds_cache" >> $GITHUB_ENV
+          echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> $GITHUB_ENV
       - name: Check Environment
         run: |
           echo "CRDS_PATH=$CRDS_PATH; CRDS_SERVER_URL=$CRDS_SERVER_URL"
