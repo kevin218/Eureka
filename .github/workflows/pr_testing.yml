@@ -26,8 +26,8 @@ jobs:
         run: |
           pip install .[jwst,hst,test]
           mkdir $HOME/crds_cache
-          export CRDS_PATH=$HOME/crds_cache
-          export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
+          setenv CRDS_PATH=$HOME/crds_cache
+          setenv CRDS_SERVER_URL=https://jwst-crds.stsci.edu
       - name: Check Environment
         run: |
           echo "CRDS_PATH=$CRDS_PATH; CRDS_SERVER_URL=$CRDS_SERVER_URL"
