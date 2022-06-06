@@ -23,6 +23,16 @@ jobs:
         with:
           python-version: 3.9
       - name: Setup Environment
-        run: pip install .[jwst,hst,test];export CRDS_PATH=$HOME/crds_cache;export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
+        run: |
+          apt install gcc
+          pip install .[jwst,hst,test]
+          mkdir $HOME/crds_cache
+          export CRDS_PATH=$HOME/crds_cache
+          export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
+      - name: Check Environment
+        run: |
+          echo "CRDS_PATH=$CRDS_PATH; CRDS_SERVER_URL=$CRDS_SERVER_URL"
+          which pytest
+          pip show jwst
       - name: Run tests
         run: pytest tests
