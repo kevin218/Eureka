@@ -1,0 +1,13 @@
+on: push
+name: PR Testing
+jobs:
+  lint:
+    name: Flake8 Linting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: tonybajan/flake8-check-action@v1.2.0
+      with:
+        select: E3,E4,E5,E7,W6,F,B,G0
+        maxlinelength: 100
+        repotoken: ${{ secrets.GITHUB_TOKEN }}
