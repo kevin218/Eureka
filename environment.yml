@@ -9,6 +9,7 @@ dependencies:
     - batman-package
     - bokeh
     - ccdproc
+    - celerite
     - corner
     - cython
     - dynesty[version='>1.0']
