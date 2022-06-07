@@ -152,7 +152,7 @@ def fit_bg(data, meta, log,
     data : object
     bkg : np.ndarray
     """
-    box_mask = dirty_mask(data.medflux.values, meta.tab1, booltype=True,
+    box_mask = dirty_mask(data.medflux.values, meta.trace1, booltype=True,
                           return_together=True)
     bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,
