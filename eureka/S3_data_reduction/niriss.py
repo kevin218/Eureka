@@ -194,19 +194,19 @@ def define_traces(meta):
 
     # identifies the trace for all orders
     if meta.trace_method == 'ears':
-        traces = tracing_niriss.mask_method_ears(meta,
-                                                 degree=meta.poly_order,
-                                                 save=meta.save_table,
-                                                 outdir=meta.outputdir,
-                                                 isplots=meta.isplots_S3)
+        traces = tn.mask_method_ears(meta,
+                                     degree=meta.poly_order,
+                                     save=meta.save_table,
+                                     outdir=meta.outputdir,
+                                     isplots=meta.isplots_S3)
         meta.trace1 = traces
     elif meta.trace_method == 'edges':
-        traces = tracing_niriss.mask_method_edges(meta,
-                                                  radius=meta.radius,
-                                                  gf=meta.filter,
-                                                  save=meta.save_table,
-                                                  outdir=meta.outputdir,
-                                                  isplots=meta.isplots_S3)
+        traces = tn.mask_method_edges(meta,
+                                      radius=meta.radius,
+                                      gf=meta.filter,
+                                      save=meta.save_table,
+                                      outdir=meta.outputdir,
+                                      isplots=meta.isplots_S3)
         meta.trace2 = traces
     else:
         # This will break if traces cannot be extracted
