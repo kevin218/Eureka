@@ -71,8 +71,8 @@ class NIRISS_S3(object):
             self.f277 = None
             print('Without F277W filter image, some functions may not be available.')
 
-        self.tab1     = None
-        self.tab2     = None
+        self.trace_ear     = None
+        self.trace_edge     = None
         self.bkg      = None
         self.box_mask = None
         self.box_var1 = None
@@ -242,21 +242,21 @@ class NIRISS_S3(object):
 
         Attributes
         ----------
-        tab1 : astropy.table.Table
+        trace_ear : astropy.table.Table
            Astropy table with x,y coordinates for each order.
-           `tab1` is initialized when using the method `edges`.
-        tab2 : astropy.table.Table
+           `trace_ear` is initialized when using the method `edges`.
+        trace_edge : astropy.table.Table
            Astropy table with x,y coordinates for each order.
-           `tab2` is initialized when using the method `centers`.
+           `trace_edge` is initialized when using the method `centers`.
         """
         if method.lower() == 'edges':
             if self.f277 is not None:
-                self.tab1 = mask_method_edges(self, isplots=isplots)
+                self.trace_ear = mask_method_edges(self, isplots=isplots)
             else:
                 return('Need F277W filter to run this trace finding method.')
 
         elif method.lower() == 'profile':
-            self.tab2 = mask_method_ears(self, isplots=isplots)
+            self.trace_edge = mask_method_ears(self, isplots=isplots)
 
         elif method.lower() == 'ref':
             self.tab3 = ref_file(ref_filename)
@@ -301,10 +301,10 @@ class NIRISS_S3(object):
            Attribute for separate box masks per each order. Created
            when `return_together == False`.
         """
-        if self.tab2 is not None:
-            t = self.tab2
-        elif self.tab1 is not None:
-            t = self.tab1
+        if self.trace_edge is not None:
+            t = self.trace_edge
+        elif self.trace_ear is not None:
+            t = self.trace_ear
         else:
             return('Need to run the trace identifier to create the box mask.')
 
@@ -473,19 +473,19 @@ class NIRISS_S3(object):
         if self.box_spectra1 is None:
             self.extract_box_spectrum()
 
-        if self.tab2 is not None:
-            pos1 = self.tab2['order_1']
-            pos2 = self.tab2['order_2']
-            pos3 = self.tab2['order_3']
-        elif self.tab1 is not None:
-            pos1 = self.tab1['order_1']
-            pos2 = self.tab1['order_2']
-            pos3 = self.tab1['order_3']
+        if self.trace_edge is not None:
+            pos1 = self.trace_edge['order_1']
+            pos2 = self.trace_edge['order_2']
+            pos3 = self.trace_edge['order_3']
+        elif self.trace_ear is not None:
+            pos1 = self.trace_ear['order_1']
+            pos2 = self.trace_ear['order_2']
+            pos3 = self.trace_ear['order_3']
         else:
             self.map_trace()
-            pos1 = self.tab2['order_1']
-            pos2 = self.tab2['order_2']
-            pos3 = self.tab2['order_3']
+            pos1 = self.trace_edge['order_1']
+            pos2 = self.trace_edge['order_2']
+            pos3 = self.trace_edge['order_3']
 
         if test == True:
             start, end = 0,5#int(len(self.data)/2-2), int(len(self.data)/2+2)

@@ -152,7 +152,7 @@ def fit_bg(data, meta, log,
     data : object
     bkg : np.ndarray
     """
-    box_mask = dirty_mask(data.medflux.values, meta.trace1, booltype=True,
+    box_mask = dirty_mask(data.medflux.values, meta.trace_ear, booltype=True,
                           return_together=True)
     bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,
@@ -199,7 +199,7 @@ def define_traces(meta):
                                      save=meta.save_table,
                                      outdir=meta.outputdir,
                                      isplots=meta.isplots_S3)
-        meta.trace1 = traces
+        meta.trace_ear = traces
     elif meta.trace_method == 'edges':
         traces = tn.mask_method_edges(meta,
                                       radius=meta.radius,
@@ -207,7 +207,7 @@ def define_traces(meta):
                                       save=meta.save_table,
                                       outdir=meta.outputdir,
                                       isplots=meta.isplots_S3)
-        meta.trace2 = traces
+        meta.trace_edge = traces
     else:
         # This will break if traces cannot be extracted
         log.writelog('Method for identifying NIRISS trace'

@@ -319,12 +319,12 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
        Images of the estimated sky background.
     pos1 : np.ndarray, optional
        Initial guesses for the center of the first order. These
-       can be taken from `trace1` or `trace2`.
+       can be taken from `trace_ear` or `trace_edge`.
        Default is None. This is not optional if you are using
        the `gaussian` or `moffat` profile types.
     pos2 : np.ndarray
        Initial guesses for the center of the second order. These
-       can be taken from `trace1` or `trace2`.
+       can be taken from `trace_ear` or `trace_edge`.
        Default is None. This is not optional if you are using
        the `gaussian` or `moffat` profile types.
     sigma : float, optional
