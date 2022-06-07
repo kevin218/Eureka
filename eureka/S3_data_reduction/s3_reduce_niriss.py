@@ -108,40 +108,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     meta = util.readfiles(meta)
     meta.x1d_segment_list = x1d_files
 
-    # Get summed frame for tracing
-    with fits.open(meta.segment_list[-1]) as hdulist:
-        # Figure out which instrument we are using
-        meta.median = np.nansum(hdulist[1].data, axis=0)
+    # Get the NIRISS traces
+    meta = inst.define_traces(meta)
 
+    ## TO DO : RECORD THE TRACES IN THE DATA OBJECT
+    # want to record the trace in the data object via Astreaus
+    # make flux like data command
 
-    # identifies the trace for all orders
-    if meta.trace_method == 'ears':
-        traces = tracing_niriss.mask_method_ears(meta,
-                                                 degree=meta.poly_order,
-                                                 save=meta.save_table,
-                                                 outdir=meta.outputdir,
-                                                 isplots=meta.isplots_S3)
-        meta.tab1 = traces
-    elif meta.trace_method == 'edges':
-        traces = tracing_niriss.mask_method_edges(meta,
-                                                  radius=meta.radius,
-                                                  gf=meta.filter,
-                                                  save=meta.save_table,
-                                                  outdir=meta.outputdir,
-                                                  isplots=meta.isplots_S3)
-        meta.tab2 = traces
-    else:
-        # This will break if traces cannot be extracted
-        log.writelog('Method for identifying NIRISS trace'
-                     'not implemented. Please select between "ears"'
-                     'and "edges".\n')
-        raise AssertionError('Method for identifying NIRISS trace'
-                             'not implemented.')
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
     # each order
-
     meta.eventlabel = eventlabel
 
     meta.run_s3 = None
