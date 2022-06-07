@@ -32,9 +32,8 @@ pyximport.install()
 from . import niriss_cython
 
 
-__all__ = ['read',
-           'flag_bg', 'fit_bg', 'wave_NIRISS',
-           'mask_method_edges', 'mask_method_profile']
+__all__ = ['read', 'define_traces',
+           'fit_bg']
 
 
 def read(filename, data, meta, f277_filename=None):
@@ -106,11 +105,6 @@ def read(filename, data, meta, f277_filename=None):
     flux_units = data.attrs['shdr']['BUNIT']
     # wave_units = 'microns'
 
-    # Not sure if these are saved somewhere already?
-    meta.time = time
-    meta.flux_units = flux_units
-    meta.time_units = time_units
-
     # removes NaNs from the data & error arrays
     sci[np.isnan(sci) == True] = 0
     err[np.isnan(sci) == True] = 0
@@ -128,78 +122,6 @@ def read(filename, data, meta, f277_filename=None):
     hdulist.close()
 
     return data, meta
-
-
-def mask_method_edges(data, meta=None, radius=1, gf=4,
-                    isplots=0, save=False, inclass=False,
-                    outdir=None):
-    """
-    There are some hard-coded numbers in here right now. The idea
-    is that once we know what the real data looks like, nobody will
-    have to actually call this function and we'll provide a CSV
-    of a good initial guess for each order. This method uses some fun
-    image processing to identify the boundaries of the orders and fits
-    the edges of the first and second orders with a 4th degree polynomial.
-
-    Parameters
-    ----------
-    data : object
-    meta : object
-    isplots : int; optional
-       Level of plots that should be created in the S3 stage.
-       This is set in the .ecf control files. Default is 0.
-       This stage will plot if isplots >= 5.
-    save : bool; optional
-       An option to save the polynomial fits to a CSV. Default
-       is True. Output table is saved under `niriss_order_guesses.csv`.
-
-    Returns
-    -------
-    meta : object
-    """
-
-    tab = tn.mask_method_one(data, radius=radius, gf=gf,
-                             save=save, outdir=outdir)
-
-    if inclass==False:
-        meta.tab1 = tab
-        return meta
-    else:
-        return tab
-
-
-def mask_method_profile(data, meta=None, isplots=0, save=False, inclass=False,
-                    outdir=None):
-    """
-    A second method to extract the masks for the first and
-    second orders in NIRISS data. This method uses the vertical
-    profile of a summed image to identify the borders of each
-    order.
-
-    Parameters
-    ----------
-    data : object
-    meta : object
-    isplots : int; optional
-       Level of plots that should be created in the S3 stage.
-       This is set in the .ecf control files. Default is 0.
-       This stage will plot if isplots >= 5.
-    save : bool; optional
-       Has the option to save the initial guesses for the location
-       of the NIRISS orders. This is set in the .ecf control files.
-       Default is False.
-
-    Returns
-    -------
-    meta : object
-    """
-    tab = tn.mask_method_two(data, save=save, outdir=outdir)
-
-    if inclass == False:
-        meta.tab2 = tab
-        return meta
-    else:
-        return tab
 
 
 def fit_bg(data, meta, log,
@@ -238,39 +160,59 @@ def fit_bg(data, meta, log,
                                    testing=testing, isplots=isplots)
 
     data['bg'] = xrio.makeFluxLikeDA(bkg, meta.time,
-                                     meta.flux_units, meta.time_units,
+                                     data['flux'].attrs['flux_units'], data['flux'].attrs['time_units'],
                                      name='bg')
     data['bg_var'] = xrio.makeFluxLikeDA(bkg_var,
-                                          meta.time, meta.flux_units,
-                                          meta.time_units,
+                                          meta.time, data['flux'].attrs['flux_units'],
+                                          data['flux'].attrs['time_units'],
                                           name='bg_var')
     data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bg,
                                               meta.time,
-                                              meta.flux_units, meta.time_units,
+                                              data['flux'].attrs['flux_units'], data['flux'].attrs['time_units'],
                                               name='bg_removed')
 
     return data
 
 
-def set_which_table(i, meta):
+def define_traces(meta):
     """
-    A little routine to return which table to
-    use for the positions of the orders.
+    A cute little routine that defines the NIRISS traces.
 
     Parameters
     ----------
-    i : int
     meta : object
 
     Returns
     -------
-    pos1 : np.array
-       Array of locations for first order.
-    pos2 : np.array
-       Array of locations for second order.
+    meta : object
     """
-    if i == 2:
-        pos1, pos2 = meta.tab2['order_1'], meta.tab2['order_2']
-    elif i == 1:
-        pos1, pos2 = meta.tab1['order_1'], meta.tab1['order_2']
-    return pos1, pos2
+    # Get summed frame for tracing
+    with fits.open(meta.segment_list[-1]) as hdulist:
+        # Figure out which instrument we are using
+        meta.median = np.nansum(hdulist[1].data, axis=0)
+
+
+    # identifies the trace for all orders
+    if meta.trace_method == 'ears':
+        traces = tracing_niriss.mask_method_ears(meta,
+                                                 degree=meta.poly_order,
+                                                 save=meta.save_table,
+                                                 outdir=meta.outputdir,
+                                                 isplots=meta.isplots_S3)
+        meta.trace1 = traces
+    elif meta.trace_method == 'edges':
+        traces = tracing_niriss.mask_method_edges(meta,
+                                                  radius=meta.radius,
+                                                  gf=meta.filter,
+                                                  save=meta.save_table,
+                                                  outdir=meta.outputdir,
+                                                  isplots=meta.isplots_S3)
+        meta.trace2 = traces
+    else:
+        # This will break if traces cannot be extracted
+        log.writelog('Method for identifying NIRISS trace'
+                     'not implemented. Please select between "ears"'
+                     'and "edges".\n')
+        raise AssertionError('Method for identifying NIRISS trace'
+                             'not implemented.')
+    return meta
