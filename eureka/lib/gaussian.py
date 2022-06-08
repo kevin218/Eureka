@@ -428,7 +428,7 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
 
     # "ravel" the guess
     gparams = np.append(guess[0], guess[1])
-    gparams = np.append(gparams,  guess[2])
+    gparams = np.append(gparams, guess[2])
 
     # Background params to fit:
     if fitbg == 0:

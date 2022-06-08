@@ -351,7 +351,7 @@ def retrieve_ancil(fitsname):
             "meta.observation.date": file[0].header["DATE-OBS"],
             "meta.observation.time": file[0].header["TIME-OBS"],
             "meta.exposure.type": file[0].header["EXP_TYPE"],
-            }
+        }
         observatory = file[0].header['TELESCOP'].lower()
         refiles = crds.getreferences(parameters, ["gain", "photom"],
                                      observatory=observatory)

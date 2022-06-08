@@ -296,10 +296,10 @@ class ModelGrid(object):
         if in_grid:
 
             # See if the model with the desired parameters is a true grid point
-            on_grid = self.data[[(self.data['Teff'] == Teff) &
-                                 (self.data['logg'] == logg) &
-                                 (self.data['FeH'] == FeH)]]\
-                                 in self.data
+            on_grid = (self.data[[(self.data['Teff'] == Teff) &
+                                  (self.data['logg'] == logg) &
+                                  (self.data['FeH'] == FeH)]]
+                       in self.data)
 
             # Grab the data if the point is on the grid
             if on_grid:
@@ -432,7 +432,7 @@ class ModelGrid(object):
 
             # Make a dictionary to return
             grid_point = {'Teff': Teff, 'logg': logg, 'FeH': FeH,
-                          'mu': mu,  'flux': new_flux, 'wave': self.wavelength,
+                          'mu': mu, 'flux': new_flux, 'wave': self.wavelength,
                           'generators': generators}
 
             return grid_point

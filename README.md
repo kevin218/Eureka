@@ -1,4 +1,8 @@
-# Eureka!
+<img src="docs/media/Eureka_logo.png" width="128px"/>
+
+[![Documentation Status](https://readthedocs.org/projects/eurekadocs/badge/?version=latest)](https://eurekadocs.readthedocs.io/en/latest/?badge=latest)
+[![pytest](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml)
+[![flake8](https://github.com/kevin218/Eureka/actions/workflows/flake8_linting.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/flake8_linting.yml)
 
 **Welcome to Eureka!**
 
