@@ -53,8 +53,10 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     if err is not None:
         err *= y_scalar
 
+    # Set zorder to 0.5 so model can easily be placed above or below
     ax.errorbar(wavelength, spectrum, fmt='o', capsize=3, ms=3,
-                xerr=wavelength_error, yerr=err, color='k')
+                xerr=wavelength_error, yerr=err, color='k',
+                zorder=0.5)
     if (model_x is not None) and (model_y is not None):
         in_range = np.logical_and(model_x >= wavelength[0]-wavelength_error[0],
                                   model_x <= (wavelength[-1] +

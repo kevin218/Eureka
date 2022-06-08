@@ -294,7 +294,7 @@ The path to the directory in which to output the Stage 3 JWST data and plots.
 
 topdir + time_file
 ''''''''''''''''''
-The path to a file which contains the time array you want to use instead of the one contained in the FITS file.
+The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
 
 
 
@@ -645,7 +645,7 @@ model_spectrum is in ppm).
 
 model_zorder
 ''''''''''''
-The zorder of the model on the plot (0 for beneath the data, np.inf for above the data).
+The zorder of the model on the plot (0 for beneath the data, 1 for above the data).
 
 model_delimiter
 '''''''''''''''
