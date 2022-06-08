@@ -3,7 +3,7 @@
 [![Documentation Status](https://readthedocs.org/projects/eurekadocs/badge/?version=latest)](https://eurekadocs.readthedocs.io/en/latest/?badge=latest)
 [![pytest](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/pytest_testing.yml)
 [![flake8](https://github.com/kevin218/Eureka/actions/workflows/flake8_linting.yml/badge.svg)](https://github.com/kevin218/Eureka/actions/workflows/flake8_linting.yml)
-[![codecov](https://codecov.io/gh/kevin218/Eureka/branch/pr_testing/graph/badge.svg?token=2Y2KK7DZWL)](https://codecov.io/gh/kevin218/Eureka)
+[![codecov](https://codecov.io/gh/kevin218/Eureka/branch/main/graph/badge.svg?token=2Y2KK7DZWL)](https://codecov.io/gh/kevin218/Eureka)
 
 **Welcome to Eureka!**
 
