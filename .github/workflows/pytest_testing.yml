@@ -30,9 +30,10 @@ jobs:
           echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> $GITHUB_ENV
       - name: Run tests, generate coverage report
         run: pytest tests --cov=./ --cov-report=xml
-    #  - name: Upload coverage reports to Codecov with GitHub Action
-    #    uses: codecov/codecov-action@v2
-    #    with:
-    #     env_vars: OS,PYTHON
-    #     files: ./coverage.xml
-    #     fail_ci_if_error: true
+     - name: Upload coverage reports to Codecov with GitHub Action
+       uses: codecov/codecov-action@v2
+       with:
+         env_vars: OS,PYTHON
+         files: ./coverage.xml
+         fail_ci_if_error: true
+         verbose: true
