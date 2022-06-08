@@ -7,7 +7,7 @@ on:
       - 'main'
       - 'releases/**'
 jobs:
-  test:
+  run:
     name: pytest
     runs-on: ${{ matrix.os }}
     strategy:
