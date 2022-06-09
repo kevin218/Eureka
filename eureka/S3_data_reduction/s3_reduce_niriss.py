@@ -72,7 +72,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     - May 2022 Adina Feinstein
         Modified and updated to work for NIRISS
     '''
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S3_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
@@ -97,7 +96,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         meta = me.mergeevents(meta, s2_meta)
 
     # Open new log file
-    meta.s3_logname = meta.outputdir + 'S3_{0}'.format(eventlabel) + ".log"
+    meta.s3_logname = meta.outputdir + 'S3_' + eventlabel + ".log"
     if s2_meta is not None:
         log = logedit.Logedit(meta.s3_logname, read=s2_meta.s2_logname)
     else:
@@ -119,9 +118,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
     # each order
-    meta.eventlabel = eventlabel
-
-    meta.run_s3 = None
     meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3)
 
     # begin process
@@ -272,8 +268,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                  boxsize1=meta.boxsize1,
                                                  boxsize2=meta.boxsize2,
                                                  boxsize3=meta.boxsize3,
-                                                 booltype=False,
-                                                 return_together=False,
                                                  isplots=meta.isplots_S3)
 
         # Extract standard spectrum and its variance
