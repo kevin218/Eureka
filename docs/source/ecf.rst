@@ -14,13 +14,13 @@ Stage 1
 .. include:: ../media/S1_template.ecf
    :literal:
 
-suffix 
+suffix
 ''''''
 Data file suffix (e.g. uncal).
 
 ramp_fit_algorithm
 ''''''''''''''''''
-Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently. 
+Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
 ramp_fit_max_cores
@@ -30,7 +30,7 @@ Fraction of processor cores to use to compute the ramp fits, options are ``none`
 
 skip_*
 ''''''
-If True, skip the named step. 
+If True, skip the named step.
 
 .. note::
    Note that some instruments and observing modes might skip a step either way! See `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
@@ -54,16 +54,16 @@ Define the method by which individual frame pixels will be weighted during the d
 
 ``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
 
-In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above). 
+In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above).
 
 
 ``fixed``: As with default, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
 
 
-``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation. 
+``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation.
 
 
-``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally. 
+``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally.
 
 
 ``custom``: As with default, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
@@ -236,7 +236,6 @@ Possible values:
 5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
-
 p3thresh
 ''''''''
 Only important if ``bg_deg => 0`` (see above). # sigma threshold for outlier rejection during background subtraction which corresponds to step 3 of optimal spectral extraction, as defined by Horne (1986).
@@ -294,10 +293,56 @@ The path to the directory in which to output the Stage 3 JWST data and plots.
 
 
 
+Stage 3 - NIRISS
+----------------
 
+trace_method
+''''''''''''
+Sets the method to use for identifying the order traces for all three NIRISS orders. There are two methods currently implemented in `Eureka!`: "ears" and "edges". "ears" uses the spatial profile to identify the edges of the three traces and assumes the center of the trace is the average of the edges. "edges" uses a canny edge detector method to independently identify the edges of the traces. "edges" requires the F277W filter image. It uses the F277W filter image to find the center of the overlap region between the first and second orders.
 
+poly_order
+''''''''''
+The degree polynomial to fit to the "ear" trace extraction method. Recommended is 4.
 
+save_table
+''''''''''
+Allows the user to save the center x, y positions for each of the three NIRISS orders as a 'CSV'.
 
+extract_order3
+''''''''''''''
+Sets whether to extract the spatially removed third order or mask it throughout the analysis.
+
+radius
+''''''
+Sets the radius of the disk used to filter over the image. This is used in the "edges" trace extraction method.
+
+filter
+''''''
+Sets the Gaussian filter size to blur out the orders in order to find the edges. This is used in the "edges" trace extraction method.
+
+sigclip
+'''''''
+Iterations and sigma outlier threshold to find and remove bad pixels or cosmic ray events. `sigclip` can be a list of any length. The default is `sigclip = [4,4,4]`.
+
+box
+'''
+The box size of pixels in (ny,nx) to calculate the background over. Should be of length `sigclip`.
+
+bkg_estimator
+'''''''''''''
+How to calculate and estimate the background over a given box size. Options include 'median', 'mean', and 'MMMBackground' (3*mean + 2*median). Should be of length `sigclip`.
+
+filter_size
+'''''''''''
+The filter size of pixels in (ny,nx) to filter over. A filter size of 1 or (1, 1) means no filtering. Should be of length `sigclip`.
+
+proftype
+''''''''
+What profile model to use for the optimal extraction. Options are 'median', 'gaussian', and 'moffat'. Recommended is 'median'.
+
+per_quad
+''''''''
+Sets the option to extract the NIRISS orders per quadrant (`True`) or an entire order at one time (`False`). If `per_quad = True` the optimal extraction routine will extract (1) the spatially resolved end of the first order (2) the spatially resolved end of the second order and (3) the overlap between the first and second orders as a single region. The final result will stitch together the quadrants to result in complete entire first order and second order spectra.
 
 
 Stage 4
@@ -427,7 +472,7 @@ Float to determine the tolerance of the scipy.optimize.minimize method.
 
 Emcee Fitting Parameters
 ''''''''''''''''''''''''
-The following set the parameters for running emcee. 
+The following set the parameters for running emcee.
 
 old_chain
 '''''''''
@@ -517,7 +562,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
    - Phase Curve Parameters - the phase curve model allows for the addition of up to four sinusoids into a single phase curve
-      - ``AmpCos1`` - Amplitude of the first cosine 
+      - ``AmpCos1`` - Amplitude of the first cosine
       - ``AmpSin1`` - Amplitude of the first sine
       - ``AmpCos2`` - Amplitude of the second cosine
       - ``AmpSin2`` - Amplitude of the second sine
