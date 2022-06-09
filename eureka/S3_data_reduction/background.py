@@ -477,7 +477,6 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     elif bkg_estimator.lower()=='mean':        # mean background
         bkg = MeanBackground()
 
-
     b = Background2D(img, box,
                      filter_size=filter_size, # window size of the
                                               # background filter to
@@ -496,17 +495,40 @@ def fitbg3(data, order_mask, readnoise=11,
            sigclip=[4,4,4], box=(10,2),
            filter_size=(1,1), sigma=5,
            bkg_estimator=['median'],
-           isplots=0, testing=False,
-           inclass=False):
+           isplots=0, testing=False, inclass=False):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
 
     Parameters
     ----------
-    isplots : bool; optional
-       Plots intermediate steps for the background fitting routine.
-       Default is False.
+    data : object
+    order_mask : np.ndarray
+       Array masking where the three NIRISS orders are located.
+    readnoise : float, optional
+       An estimation of the readnoise of the detector.
+       Default is 5.
+    sigclip : list, array; optional
+       A list or array of len(n_iiters) corresponding to the
+       sigma-level which should be clipped in the cosmic
+       ray removal routine. Default is [4,4,4].
+    box : list, array; optional
+       The box size along each axis. Box has two elements: (ny, nx). For best
+       results, the box shape should be chosen such that the data are covered
+       by an integer number of boxes in both dimensions. Default is (5,2).
+    filter_size : list, array; optional
+       The window size of the 2D median filter to apply to the low-resolution
+       background map. Filter_size has two elements: (ny, nx). A filter size of
+       1 (or (1,1)) means no filtering. Default is (2, 2).
+    bkg_estimator : list, array; optional
+       The value which to approximate the background values as. Options are
+       "mean", "median", or "MMMBackground". Default is "median".
+    testing : bool, optional
+       Evaluates the background across fewer integrations to test and
+       save computational time. Default is False.
+    isplots : int, optional
+       The level of output plots to display. Default is 0
+       (no plots).
 
     Returns
     -------
@@ -518,7 +540,7 @@ def fitbg3(data, order_mask, readnoise=11,
        Errors on the fitted backgrouns.
     """
     if inclass is False:
-        data = data.flux + 0.0
+        data = np.copy(data.flux)
 
     # Removes cosmic rays
     # Loops through niters cycles to make sure all pesky
@@ -535,7 +557,7 @@ def fitbg3(data, order_mask, readnoise=11,
     for i in tqdm(range(len(data))):
 
         mask = np.array(first_pass[i], dtype=bool)
-        ccd = CCDData((data[i]*~mask), unit=units.electron)
+        ccd = CCDData((data[i]), unit=units.electron)
 
         # Second pass at removing cosmic rays, with ccdproc
         for n in range(len(sigclip)):
