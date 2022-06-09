@@ -127,7 +127,7 @@ class NIRISS_S3(object):
         self.mhdr = hdu[0].header        # Sets in the meta data header
         self.shdr = hdu['SCI',1].header  # Sets the science data header
 
-        self.intend = hdu[0].header['NINTS'] + 0.0
+        self.intend = np.copy(hdu[0].header['NINTS'])
         self.time   = np.linspace(self.mhdr['EXPSTART'],
                                   self.mhdr['EXPEND'],
                                   int(self.intend) )
@@ -136,10 +136,10 @@ class NIRISS_S3(object):
         self.inttime  = hdu[0].header['EFFINTTM']
 
         # Loads all the data in
-        self.data = hdu['SCI',1].data + 0.0
-        self.raw_data = hdu['SCI',1].data + 0.0
-        self.err  = hdu['ERR',1].data + 0.0
-        self.dq   = hdu['DQ', 1].data + 0.0
+        self.data = np.copy(hdu['SCI',1].data)
+        self.raw_data = np.copy(hdu['SCI',1].data)
+        self.err  = np.copy(hdu['ERR',1].data)
+        self.dq   = np.copy(hdu['DQ', 1].data)
 
         self.var  = hdu['VAR_POISSON',1].data * self.inttime**2.0
         self.v0   = hdu['VAR_RNOISE', 1].data * self.inttime**2.0
@@ -218,9 +218,8 @@ class NIRISS_S3(object):
         ----------
         wavelength_map : np.ndarray
         """
-        wmap = wavelength(os.path.join(self.data_dir, self.filename),
-                          orders, inclass=True)
-        self.wavelength_map = wmap + 0.0
+        self.wavelength_map  = wavelength(os.path.join(self.data_dir, self.filename),
+                                          orders, inclass=True)
 
 
     def map_trace(self, method='profile', ref_filename=None, isplots=0):
@@ -346,19 +345,19 @@ class NIRISS_S3(object):
                                  booltype=False)
 
         if self.bkg_removed is not None:
-            d = self.bkg_removed + 0.0
+            d = np.copy(self.bkg_removed)
         else:
-            d = self.data + 0.0
+            d = np.copy(self.data)
 
         s, v = box_extract(d, self.var, self.box_mask_separate)
 
-        self.box_var1     = v[0] + 0.0
-        self.box_var2     = v[1] + 0.0
-        self.box_var3     = v[2] + 0.0
+        self.box_var1     = np.copy(v[0])
+        self.box_var2     = np.copy(v[1])
+        self.box_var3     = np.copy(v[2])
 
-        self.box_spectra1 = s[0] + 0.0
-        self.box_spectra2 = s[1] + 0.0
-        self.box_spectra3 = s[2] + 0.0
+        self.box_spectra1 = np.copy(s[0])
+        self.box_spectra2 = np.copy(s[1])
+        self.box_spectra3 = np.copy(s[2])
 
         return
 
@@ -406,9 +405,9 @@ class NIRISS_S3(object):
                                        filter_size=filter_size,
                                        inclass=True)
 
-        self.bkg = bkg + 0.0
-        self.bkg_var = bkg_var + 0.0
-        self.bkg_removed = cr_mask - bkg + 0.0
+        self.bkg = np.copy(bkg)
+        self.bkg_var = np.copy(bkg_var)
+        self.bkg_removed = cr_mask - bkg
 
         m = np.zeros(cr_mask.shape)
         x,y,z = np.where(np.isnan(cr_mask)==True)
