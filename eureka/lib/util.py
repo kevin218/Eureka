@@ -21,9 +21,9 @@ def readfiles(meta, suffix=None):
     """
     if suffix is None:
         suffix = meta.suffix
-        return_meta=True
+        return_meta = True
     else:
-        return_meta=False
+        return_meta = False
 
     segment_list = []
     for fname in os.listdir(meta.inputdir):
