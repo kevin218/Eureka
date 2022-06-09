@@ -70,7 +70,7 @@ def box_extract(data, var, boxmask):
 
 
 def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
-               booltype=True, return_together=True, pos1=None,
+               booltype=False, return_together=False, pos1=None,
                pos2=None, pos3=None, isplots=0):
     """
     Really dirty box mask for background purposes.
