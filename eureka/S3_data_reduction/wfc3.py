@@ -313,21 +313,14 @@ def read(filename, data, meta):
         else:
             meta.nreads = data.attrs['shdr']['SAMPNUM']
 
-        if flux_units == 'ELECTRONS/S':
-            # Science data and uncertainties were previously in units
-            # of e-/sec, therefore multiply by sample time to get electrons.
-            samptime = data.attrs['shdr']['SAMPTIME']
-        else:
-            samptime = 1
-
         sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
         err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
         dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
         jd = []
         j = 0
         for rd in range(meta.nreads, 0, -1):
-            sci[j] = hdulist['SCI', rd].data*samptime
-            err[j] = hdulist['ERR', rd].data*samptime
+            sci[j] = hdulist['SCI', rd].data
+            err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
             jd.append(2400000.5+hdulist['SCI', rd].header['ROUTTIME']
                       - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
