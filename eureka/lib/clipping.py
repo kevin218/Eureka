@@ -196,9 +196,9 @@ def gauss_removal(img, mask, linspace, where='bkg'):
     gfit = fitter(g, bincenters, n)
 
     if where == 'bkg':
-        xcr, ycr = np.where(np.abs(img*mask) >= gfit.mean+2*gfit.stddev)
+        xcr, ycr = np.where(np.abs(img * mask) >= gfit.mean + 2 * gfit.stddev)
     elif where == 'order':
-        xcr, ycr = np.where(img*mask <= gfit.eta-1*gfit.omega)
+        xcr, ycr = np.where(img * mask <= gfit.eta-1*gfit.omega)
 
     # returns an image that is nan-masked
     img[xcr, ycr] = np.nan
@@ -217,27 +217,26 @@ def time_removal(img, sigma=5, testing=False):
     sigma : float, optional
        The sigma outlier by which to mask pixels. Default=5.
     """
-    import matplotlib.pyplot as plt
-
     cr_mask = np.zeros(img.shape)
 
-    if testing==False:
-        y=img.shape[1]
+    if testing is False:
+        y = img.shape[1]
     else:
-        y=10
+        y = 10
 
     for x in tqdm(range(y)):
         for y in range(img.shape[2]):
-            dat = img[:,x,y] + 0.0
-            ind = np.where((dat>=np.nanmedian(dat)+sigma*np.nanstd(dat)) |
-                           (dat<=np.nanmedian(dat)-sigma*np.nanstd(dat)) )[0]
-            if len(ind)>0:
-                cr_mask[ind,x,y] = 1.0
+            dat = img[:, x, y] + 0.0
+            ind = np.where((dat >= np.nanmedian(dat) + sigma * np.nanstd(dat)) |
+                          (dat <= np.nanmedian(dat) - sigma * np.nanstd(dat)))
+            ind = ind[0]
+            if len(ind) > 0:
+                cr_mask[ind, x, y] = 1.0
 
             # Checks for extreme differences in values
             diff = np.abs(np.diff(dat))
-            ind = np.where(diff>5)[0]
-            if len(ind)>0:
-                cr_mask[ind,x,y] = 1.0
+            ind = np.where(diff > 5)[0]
+            if len(ind) > 0:
+                cr_mask[ind, x, y] = 1.0
 
     return cr_mask
