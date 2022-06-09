@@ -1,10 +1,3 @@
-# NIRISS specific rountines go here
-#
-# Written by: Adina Feinstein
-# Last updated by: Adina Feinstein
-# Last updated date: April 16, 2022
-#
-####################################
 import os
 from tqdm import tqdm
 import itertools
@@ -47,6 +40,9 @@ def read(filename, data, meta, f277_filename=None):
        Single filename to read. Should be a `.fits` file.
     data : object
        Data object in which the fits data will be stored.
+    meta : object
+    f277_filename : str, optional
+       Single filename for the F277W filtered images.
 
     Returns
     -------
@@ -65,13 +61,12 @@ def read(filename, data, meta, f277_filename=None):
     data.attrs['NINTS'] = data.attrs['mhdr']['NINTS']
 
     # need some placeholder right now for testing
-    data.attrs['intstart'] = 0 #data.attrs['mhdr']['INTSTART']
-    data.attrs['intend'] = 3 #data.attrs['mhdr']['INTEND']
+    data.attrs['intstart'] = 0
+    data.attrs['intend'] = 3
 
     if f277_filename is not None:
-        f277= fits.open(f277_filename)
-        data.attrs['f277'] = f277[1].data + 0.0
-        f277.close()
+        with fits.open(f277_filename) as f277:
+            data.attrs['f277'] = f277[1].data
 
     # Load data
     sci = hdulist['SCI', 1].data
@@ -92,8 +87,9 @@ def read(filename, data, meta, f277_filename=None):
         # This exception is (hopefully) only for simulated data
         print("WARNING: INT_TIMES not found. Using EXPSTART and EXPEND in UTC.")
         time = np.linspace(data.attrs['mhdr']['EXPSTART'],
-                                  data.attrs['mhdr']['EXPEND'],
-                                  int(data.attrs['NINTS']))
+                           data.attrs['mhdr']['EXPEND'],
+                           int(data.attrs['NINTS']))
+
         time_units = 'UTC'
         # Check that number of SCI integrations matches NINTS from header
         if data.attrs['NINTS'] != sci.shape[0]:
@@ -106,8 +102,8 @@ def read(filename, data, meta, f277_filename=None):
     # wave_units = 'microns'
 
     # removes NaNs from the data & error arrays
-    sci[np.isnan(sci) == True] = 0
-    err[np.isnan(sci) == True] = 0
+    sci[np.isnan(sci)] = 0
+    err[np.isnan(sci)] = 0
     # median = np.nanmedian(sci, axis=0)
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
@@ -130,7 +126,10 @@ def fit_bg(data, meta, log,
            bkg_estimator=['median'],
            testing=False, isplots=0):
     """
-    Subtracts background from non-spectral regions.
+    Subtracts background from non-spectral regions. Uses
+    photutils.background.Background2D to estimate background noise.
+    More documentation can be found at:
+    https://photutils.readthedocs.io/en/stable/api/photutils.background.Background2D.html
 
     Parameters
     ----------
@@ -142,7 +141,21 @@ def fit_bg(data, meta, log,
     sigclip : list, array; optional
        A list or array of len(n_iiters) corresponding to the
        sigma-level which should be clipped in the cosmic
-       ray removal routine. Default is [4,2,3].
+       ray removal routine. Default is [4,4,4].
+    box : list, array; optional
+       The box size along each axis. Box has two elements: (ny, nx). For best
+       results, the box shape should be chosen such that the data are covered
+       by an integer number of boxes in both dimensions. Default is (5,2).
+    filter_size : list, array; optional
+       The window size of the 2D median filter to apply to the low-resolution
+       background map. Filter_size has two elements: (ny, nx). A filter size of
+       1 (or (1,1)) means no filtering. Default is (2, 2).
+    bkg_estimator : list, array; optional
+       The value which to approximate the background values as. Options are
+       "mean", "median", or "MMMBackground". Default is "median".
+    testing : bool, optional
+       Evaluates the background across fewer integrations to test and
+       save computational time. Default is False.
     isplots : int, optional
        The level of output plots to display. Default is 0
        (no plots).
@@ -152,8 +165,17 @@ def fit_bg(data, meta, log,
     data : object
     bkg : np.ndarray
     """
-    box_mask = dirty_mask(data.medflux.values, meta.trace_ear, booltype=True,
-                          return_together=True)
+    if meta.trace_method=='ears':
+        box_mask = dirty_mask(data.medflux.values,
+                              meta.trace_ear, booltype=True,
+                              return_together=True)
+    elif meta.trace_method=='edges':
+        box_mask = dirty_mask(data.medflux.values,
+                              meta.trace_edge, booltype=True,
+                              return_together=True)
+    import matplotlib.pyplot as plt
+    plt.imshow(box_mask)
+    plt.show()
     bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
                                    readnoise, sigclip, bkg_estimator=bkg_estimator,
                                    box=box, filter_size=filter_size,
