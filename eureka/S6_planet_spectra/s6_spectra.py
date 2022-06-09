@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from astropy import units, constants
 import os
-import h5py
 import time as time_pkg
 from ..lib import manageevent as me
 from ..lib import readECF
@@ -351,12 +350,9 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
             fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
             fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                         skipinitialspace=True)
-            full_keys = fitted_values.keys()
+            full_keys = list(fitted_values["Parameter"])
 
             fname = f'S5_{fitter}_samples_{channel_key}'
-            # Load HDF5 file
-            with h5py.File(meta.inputdir+fname+'.h5', 'r') as hf:
-                samples = hf['samples'][:]
 
             if y_param == 'fp':
                 keys = [key for key in full_keys if 'fp' in key]
@@ -368,35 +364,44 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
                                      ' of fitted parameters which includes: '
                                      ', '.join(full_keys))
 
-            # Load HDF5 files
-            spectra_samples = np.array([samples[:, full_keys == key]
-                                        for key in keys])
-            spectra_samples = spectra_samples.reshape((len(keys), -1))
-            lowers, medians, uppers = np.percentile(spectra_samples,
-                                                    [16, 50, 84], axis=1)
-            lowers = np.abs(medians-lowers)
-            uppers = np.abs(uppers-medians)
+            lowers = []
+            uppers = []
+            medians = []
+
+            for i, key in enumerate(keys):
+                ind = np.where(fitted_values["Parameter"] == key)[0][0]
+                lowers.append(np.abs(fitted_values["-1sigma"][ind]))
+                uppers.append(np.abs(fitted_values["+1sigma"][ind]))
+                medians.append(np.abs(fitted_values["50th"][ind]))
+
             errs = np.array([lowers, uppers])
+            medians = np.array(medians)
+
         else:
             fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
             fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                         skipinitialspace=True)
+            full_keys = list(fitted_values["Parameter"])
             if y_param == 'fp':
-                keys = [key for key in fitted_values.keys() if 'fp' in key]
+                keys = [key for key in full_keys if 'fp' in key]
             else:
-                keys = [key for key in fitted_values.keys() if 'rp' in key]
+                keys = [key for key in full_keys if 'rp' in key]
             if len(keys) == 0:
                 raise AssertionError(f'Parameter {y_param} was not in the list'
                                      ' of fitted parameters which includes: '
-                                     ', '.join(samples.keys()))
-            medians = np.array([fitted_values[key] for key in keys])
+                                     ', '.join(full_keys))
+            if "50th" in fitted_values.keys():
+                medians = np.array(fitted_values["50th"])
+            else:  # if lsq (no uncertainties)
+                medians = np.array(fitted_values["Mean"])
             errs = np.ones((2, len(medians)))*np.nan
 
     return medians, errs
 
 
 def load_specific_s5_meta_info(meta):
-    """Load in the MetaClass object from the particular aperture pair being used.
+    """Load in the MetaClass object from the particular aperture pair being
+    used.
 
     Parameters
     ----------

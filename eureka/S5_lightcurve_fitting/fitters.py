@@ -20,6 +20,8 @@ from ..lib import astropytable
 
 from multiprocessing import Pool
 
+from astropy import table
+
 
 def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     """Perform least-squares fit.
@@ -57,6 +59,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Adding ability to do a single shared fit across all channels
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
+    - Mar 13-Apr 18, 2022 Caroline Piaulet
+        Record an astropy table for param values
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -108,6 +112,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Get the best fit params
     fit_params = results.x
 
+    # Create table of results
+    t_results = table.Table([freenames, fit_params],
+                            names=("Parameter", "Mean"))
+
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -126,7 +134,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                  lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, calling_function, fit_params, freenames)
+    save_fit(meta, lc, model, calling_function, t_results, freenames)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
@@ -264,6 +272,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter. Added statements to avoid some initial
         state issues.
+    - Mar 13-Apr 18, 2022 Caroline Piaulet
+        Record an astropy table for mean, median, percentiles,
+        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -344,18 +355,19 @@ def emceefitter(lc, model, meta, log, **kwargs):
         pool.close()
         pool.join()
 
-    # Compute the medians and uncertainties
-    fit_params = []
-    upper_errs = []
-    lower_errs = []
-    for i in range(ndim):
-        q = np.percentile(samples[:, i], [16, 50, 84])
-        lower_errs.append(q[0])
-        fit_params.append(q[1])
-        upper_errs.append(q[2])
-    fit_params = np.array(fit_params)
-    upper_errs = np.array(upper_errs)-fit_params
-    lower_errs = fit_params-np.array(lower_errs)
+    # Record median + percentiles
+    q = np.percentile(samples, [16, 50, 84], axis=0)
+    fit_params = q[1]  # median
+    mean_params = np.mean(samples, axis=0)
+
+    # Create table of results
+    t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
+                             q[0], fit_params, q[2]],
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma",
+                                   "16th", "50th", "84th"))
+
+    upper_errs = q[2]-q[1]
+    lower_errs = q[1]-q[0]
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -375,8 +387,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'emcee', fit_params, freenames, samples,
-             upper_errs=upper_errs, lower_errs=lower_errs)
+    save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
@@ -385,7 +396,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     log.writelog(f"Mean acceptance fraction: {acceptance_fraction:.3f}",
                  mute=(not meta.verbose))
     try:
-        autocorr = sampler.get_autocorr_time()
+        autocorr = np.mean(sampler.get_autocorr_time())
         log.writelog(f"Mean autocorrelation time: {autocorr:.3f} steps",
                      mute=(not meta.verbose))
     except:
@@ -628,6 +639,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     ind_max_LU = np.where(np.log(freepars[lu]) - prior2[lu] == 0.)[0]
     ind_min_LU = np.where(np.log(freepars[lu]) - prior1[lu] == 0.)[0]
     pmid = (prior2+prior1)/2.
+
     if len(ind_max) > 0 or len(ind_max_LU) > 0:
         log.writelog('Warning: >=1 params hit the upper bound in the lsq fit. '
                      'Setting to the middle of the interval.')
@@ -746,6 +758,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         Added log-uniform and Gaussian priors.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter.
+    - Mar 13-Apr 18, 2022 Caroline Piaulet
+        Record an astropy table for mean, median, percentiles,
+        +/- 1 sigma, all params
     """
     # Group the different variable types
     freenames, freepars, prior1, prior2, priortype, indep_vars = \
@@ -808,18 +823,19 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     log.writelog('Number of posterior samples is {}'.format(len(samples)),
                  mute=(not meta.verbose))
 
-    # Compute the medians and uncertainties
-    fit_params = []
-    upper_errs = []
-    lower_errs = []
-    for i in range(ndims):
-        q = np.percentile(samples[:, i], [16, 50, 84])
-        lower_errs.append(q[0])
-        fit_params.append(q[1])
-        upper_errs.append(q[2])
-    fit_params = np.array(fit_params)
-    upper_errs = np.array(upper_errs)-fit_params
-    lower_errs = fit_params-np.array(lower_errs)
+    # Record median + percentiles
+    q = np.percentile(samples, [16, 50, 84], axis=0)
+    fit_params = q[1]  # median
+    mean_params = np.mean(samples, axis=0)
+
+    # Create table of results
+    t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
+                             q[0], fit_params, q[2]],
+                            names=("Parameter", "Mean", "-1sigma", "+1sigma",
+                                   "16th", "50th", "84th"))
+
+    upper_errs = q[2]-q[1]
+    lower_errs = q[1]-q[0]
 
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
@@ -839,8 +855,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'dynesty', fit_params, freenames, samples,
-             upper_errs=upper_errs, lower_errs=lower_errs)
+    save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
 
     end_lnprob = lnprob(fit_params, lc, model, prior1, prior2, priortype,
                         freenames)
@@ -932,6 +947,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
         Updated documentation. Reduced repeated code.
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter.
+    - Mar 13-Apr 18, 2022 Caroline Piaulet
+         Record an astropy table for parameter values
     """
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
@@ -962,6 +979,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     #                fit_params.get(i).vary, fit_params.get(i).min,
     #                fit_params.get(i).max) for i in fit_params]
 
+    # Create table of results
+    t_results = table.Table([freenames, fit_params],
+                            names=("Parameter", "Mean"))
+
     model.update(fit_params, freenames)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -980,7 +1001,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         lc.unc_fit = lc.unc
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, 'lmfitter', fit_params, freenames)
+    save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
@@ -1193,8 +1214,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     return np.array(fitted_values)[0]
 
 
-def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[],
-             upper_errs=[], lower_errs=[]):
+def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
     """Save a fit as a txt file as well as the entire chain if provided.
 
     Parameters
@@ -1213,23 +1233,23 @@ def save_fit(meta, lc, model, fitter, fit_params, freenames, samples=[],
         The list of fitted parameter names.
     samples : ndarray; optional
         The full chain from a sampling method, by default [].
-    upper_errs : ndarray; optional
-        The one sigma upper limits from a sampling method, by default [].
-    lower_errs : ndarray; optional
-        The one sigma lower limits from a sampling method, by default [].
+
+    Notes
+    -----
+    History:
+
+    - Mar 13-Apr 18, 2022 Caroline Piaulet
+        Record an astropy table for mean, median, percentiles,
+        +/- 1 sigma, all params
     """
     ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-    # Save the fitted parameters and their uncertainties (if possible)
+
     if lc.share:
         fname = f'S5_{fitter}_fitparams_shared'
     else:
         fname = f'S5_{fitter}_fitparams_ch{ch_number}'
-    data = fit_params.reshape(1, -1)
-    if len(upper_errs) != 0 and len(lower_errs) != 0:
-        data = np.append(data, -lower_errs.reshape(1, -1), axis=0)
-        data = np.append(data, upper_errs.reshape(1, -1), axis=0)
-    np.savetxt(meta.outputdir+fname+'.csv', data, header=','.join(freenames),
-               delimiter=',')
+    results_table.write(meta.outputdir+fname+'.csv', format='csv',
+                        overwrite=False)
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples) != 0:

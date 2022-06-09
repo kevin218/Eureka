@@ -30,6 +30,7 @@ model_spectrum  None # Path to the model spectrum relative to topdir. Set to Non
 model_x_unit    um # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
 model_y_unit    Rp/Rs # Options include Rp/Rs, (Rp/Rs)^2, Fp/Fs
 model_y_scalar  1 # Indicate whether model y-values have already been scaled (e.g. write 1e6 if model_spectrum is in ppm)
+model_zorder    0 # The zorder of the model on the plot (0 for beneath the data, 1 for above the data)
 model_delimiter None # Delimiter between columns. Typical options: None (for space), ',' for comma
 
 # Directories relative to topdir

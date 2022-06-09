@@ -53,13 +53,18 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     if err is not None:
         err *= y_scalar
 
+    # Set zorder to 0.5 so model can easily be placed above or below
     ax.errorbar(wavelength, spectrum, fmt='o', capsize=3, ms=3,
-                xerr=wavelength_error, yerr=err, color='k')
+                xerr=wavelength_error, yerr=err, color='k',
+                zorder=0.5)
     if (model_x is not None) and (model_y is not None):
         in_range = np.logical_and(model_x >= wavelength[0]-wavelength_error[0],
                                   model_x <= (wavelength[-1] +
                                               wavelength_error[-1]))
-        ax.plot(model_x[in_range], model_y[in_range], color='r', zorder=0)
+        if not hasattr(meta, 'model_zorder'):
+            meta.model_zorder = 0
+        ax.plot(model_x[in_range], model_y[in_range], color='r',
+                zorder=meta.model_zorder)
         if wavelength_error is not None:
             # Compute the binned model for easlier comparisons
             binned_model = []
@@ -70,7 +75,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
                 binned_model.append(model_val)
             # Plot the binned model as well
             ax.plot(wavelength, binned_model, 'o', ms=3, color='r', mec='k',
-                    mew=0.5, zorder=0)
+                    mew=0.5, zorder=meta.model_zorder)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
 
