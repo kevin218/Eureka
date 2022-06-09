@@ -97,14 +97,16 @@ def dn2electrons(data, meta):
                        meta.xwindow[0]:meta.xwindow[1]]
         # Convert to electrons
         data['flux'] *= subgain
-        data['err']  *= subgain
-        data['v0']   *= (subgain)**2  # FINDME: should this really be squared
+        data['err'] *= subgain
+        # FINDME: should this really be squared
+        data['v0'] *= (subgain)**2
     else:
         subgain = np.copy(gain)
         # Convert to electrons
-        data['flux'][:,1:,1:] *= subgain
-        data['err'][:,1:,1:]  *= subgain
-        data['v0'][:,1:,1:]   *= (subgain)**2  # FINDME: should this really be squared
+        data['flux'][:, 1:, 1:] *= subgain
+        data['err'][:, 1:, 1:] *= subgain
+        # FINDME: should this really be squared
+        data['v0'][:, 1:, 1:] *= (subgain)**2
 
     return data
 
