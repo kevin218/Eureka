@@ -100,7 +100,7 @@ def dn2electrons(data, meta):
         data['err']  *= subgain
         data['v0']   *= (subgain)**2  # FINDME: should this really be squared
     else:
-        subgain = gain + 0.0
+        subgain = np.copy(gain)
         # Convert to electrons
         data['flux'][:,1:,1:] *= subgain
         data['err'][:,1:,1:]  *= subgain
