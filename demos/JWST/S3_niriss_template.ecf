@@ -1,7 +1,7 @@
 # Eureka! Control File for Stage 3: Data Reduction of NIRISS
 
-ncpu         1             # Number of CPUs
-suffix	  	 calints       # Data file suffix
+ncpu       1             # Number of CPUs
+suffix       calints       # Data file suffix
 
 # Order location estimation
 trace_method		ears     # Which method to identify orders by (see docs)
