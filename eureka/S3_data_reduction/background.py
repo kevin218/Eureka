@@ -6,7 +6,8 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 from astropy.nddata import CCDData
 from astropy.stats import SigmaClip
-from photutils import MMMBackground, MedianBackground, Background2D
+from photutils import (MMMBackground, MedianBackground,
+                       Background2D, MeanBackground)
 import os
 
 from ..lib import clipping
@@ -470,30 +471,26 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     sigma_clip = SigmaClip(sigma=sigma)        # Sigma clipping mask
 
     # These are different ways to calculate the background noise
-    if bkg_estimator.lower()=='mmmbackground': # 3*mean + 2*median
+    if bkg_estimator.lower() == 'mmmbackground':  # 3*mean + 2*median
         bkg = MMMBackground()
-    elif bkg_estimator.lower()=='median':      # median background
+    elif bkg_estimator.lower() == 'median':      # median background
         bkg = MedianBackground()
-    elif bkg_estimator.lower()=='mean':        # mean background
+    elif bkg_estimator.lower() == 'mean':        # mean background
         bkg = MeanBackground()
 
     b = Background2D(img, box,
-                     filter_size=filter_size, # window size of the
-                                              # background filter to
-                                              # apply low-res bkg map
-
+                     filter_size=filter_size,  # window size of the filter
                      bkg_estimator=bkg,       # how to calculate the bkg
                      sigma_clip=sigma_clip,   # performs sigma clipping
                      fill_value=0.0,          # used to fill masked pixels
                      mask=mask)               # masks the orders
 
-
     return b.background, np.sqrt(b.background_rms)
 
 
 def fitbg3(data, order_mask, readnoise=11,
-           sigclip=[4,4,4], box=(10,2),
-           filter_size=(1,1), sigma=5,
+           sigclip=[4, 4, 4], box=(10, 2),
+           filter_size=(1, 1), sigma=5,
            bkg_estimator=['median'],
            isplots=0, testing=False, inclass=False):
     """
@@ -563,24 +560,26 @@ def fitbg3(data, order_mask, readnoise=11,
         for n in range(len(sigclip)):
             m1 = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise,
                                          sigclip=sigclip[n])
-            ccd = CCDData(m1.data*units.electron)
+            ccd = CCDData(m1.data * units.electron)
             mask[m1.mask] += True
 
         rm_crs[i] = m1.data
-        rm_crs[i][mask>=1] = np.nan
+        rm_crs[i][mask >= 1] = np.nan
 
-        v = np.zeros((len(bkg_estimator), rm_crs[i].shape[0], rm_crs[i].shape[1]))
+        v = np.zeros((len(bkg_estimator),
+                      rm_crs[i].shape[0],
+                      rm_crs[i].shape[1]))
         # Fits a 2D background (with the orders masked)
         for j in range(len(bkg_estimator)):
-            b1,b1_err = bkg_sub(rm_crs[i],
-                                order_mask,
-                                bkg_estimator=bkg_estimator[j],
-                                sigma=sigma, box=box[j],
-                                filter_size=filter_size[j])
+            b1, b1_err = bkg_sub(rm_crs[i],
+                                 order_mask,
+                                 bkg_estimator=bkg_estimator[j],
+                                 sigma=sigma, box=box[j],
+                                 filter_size=filter_size[j])
             bkg[i] += b1
             v[j] = b1_err
 
-            if box[j][0]<5 or box[j][1]<5:
+            if box[j][0] < 5 or box[j][1] < 5:
                 b1 *= order_mask
 
         bkg_var[i] = np.nansum(v, axis=0)
