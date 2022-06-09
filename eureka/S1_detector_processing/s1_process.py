@@ -49,29 +49,20 @@ def rampfitJWST(eventlabel, ecf_path=None):
     ecffile = 'S1_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
-    # This will break for any instruments/observations that do not make uncal
-    meta.suffix = 'uncal'
-
-    meta.inputdir_raw = meta.inputdir
-    meta.outputdir_raw = meta.outputdir
 
     # Create directories for Stage 1 processing outputs
-    # Allows the input and output files to be stored anywhere
-    outputdir = os.path.join(meta.topdir, *meta.outputdir.split(os.sep))
-    if outputdir[-1] != os.sep:
-        outputdir += os.sep
     run = util.makedirectory(meta, 'S1')
-    meta.workdir = util.pathdirectory(meta, 'S1', run)
-    # Add a trailing slash so we don't need to add it everywhere below
-    meta.workdir += os.sep
+    meta.outputdir = util.pathdirectory(meta, 'S1', run)
     # Make a separate folder for plot outputs
-    if not os.path.exists(meta.workdir+'figs'):
-        os.makedirs(meta.workdir+'figs')
+    if not os.path.exists(meta.outputdir+'figs'):
+        os.makedirs(meta.outputdir+'figs')
 
     # Output S2 log file
-    meta.s1_logname = meta.workdir + 'S1_' + meta.eventlabel + ".log"
+    meta.s1_logname = meta.outputdir + 'S1_' + meta.eventlabel + ".log"
     log = logedit.Logedit(meta.s1_logname)
     log.writelog("\nStarting Stage 1 Processing")
+    log.writelog(f"Input directory: {meta.inputdir}")
+    log.writelog(f"Output directory: {meta.outputdir}")
 
     # Copy ecf
     log.writelog('Copying S1 control file')
@@ -112,7 +103,7 @@ def rampfitJWST(eventlabel, ecf_path=None):
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')
-        me.saveevent(meta, meta.workdir+'S1_'+meta.eventlabel+"_Meta_Save",
+        me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
 
     return meta

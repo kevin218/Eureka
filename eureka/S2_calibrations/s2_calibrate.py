@@ -242,7 +242,8 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         self.msa_flagging.skip = meta.skip_msa_flagging
         self.extract_2d.skip = meta.skip_extract_2d
         self.srctype.skip = meta.skip_srctype
-        self.master_background.skip = meta.skip_master_background
+        if hasattr(self, 'master_background'):
+            self.master_background.skip = meta.skip_master_background
         self.wavecorr.skip = meta.skip_wavecorr
         self.flat_field.skip = meta.skip_flat_field
         self.straylight.skip = meta.skip_straylight
