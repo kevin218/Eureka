@@ -1,8 +1,8 @@
 # NIRCam specific rountines go here
-# import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import sigrej, background
+from ..lib.util import read_time
 
 
 def read(filename, data, meta):
@@ -55,7 +55,10 @@ def read(filename, data, meta):
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
-    time = int_times['int_mid_BJD_TDB']
+    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+        time = read_time(meta, data)
+    else:
+        time = int_times['int_mid_BJD_TDB']
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
