@@ -128,7 +128,6 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
         else:
             # EXP_TYPE doesn't say image, so it should be a spectrum
             # (or someone is putting weird files into Eureka!)
-            meta.instrument = hdulist[0].header['INSTRUME']
             pipeline = EurekaSpec2Pipeline()
     elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
@@ -243,10 +242,8 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         self.msa_flagging.skip = meta.skip_msa_flagging
         self.extract_2d.skip = meta.skip_extract_2d
         self.srctype.skip = meta.skip_srctype
-
         if hasattr(self, 'master_background'):
             self.master_background.skip = meta.skip_master_background
-            
         self.wavecorr.skip = meta.skip_wavecorr
         self.flat_field.skip = meta.skip_flat_field
         self.straylight.skip = meta.skip_straylight
