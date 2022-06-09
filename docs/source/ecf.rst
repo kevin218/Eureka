@@ -291,6 +291,9 @@ topdir + outputdir
 ''''''''''''''''''
 The path to the directory in which to output the Stage 3 JWST data and plots.
 
+topdir + time_file
+''''''''''''''''''
+The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
 
 
 Stage 3 - NIRISS
@@ -319,6 +322,7 @@ Sets the radius of the disk used to filter over the image. This is used in the "
 filter
 ''''''
 Sets the Gaussian filter size to blur out the orders in order to find the edges. This is used in the "edges" trace extraction method.
+
 
 sigclip
 '''''''
@@ -686,6 +690,10 @@ model_y_scalar
 ''''''''''''''
 Indicate whether model y-values have already been scaled (e.g. write 1e6 if
 model_spectrum is in ppm).
+
+model_zorder
+''''''''''''
+The zorder of the model on the plot (0 for beneath the data, 1 for above the data).
 
 model_delimiter
 '''''''''''''''

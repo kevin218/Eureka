@@ -1,5 +1,8 @@
 import os
 
+# Required in case user passes in a numpy object (e.g. np.inf)
+import numpy as np
+
 
 class MetaClass:
     '''A class to hold Eureka! metadata.

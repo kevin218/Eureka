@@ -185,8 +185,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/flux.mean()
-                    flux = flux/flux.mean()
+                    flux_err = flux_err/np.nanmean(flux)
+                    flux = flux/np.nanmean(flux)
 
                     meta = fit_channel(meta, time, flux, channel, flux_err,
                                        eventlabel, sharedp, params, log,

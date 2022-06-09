@@ -377,3 +377,28 @@ def get_mad_1d(data, ind_min=0, ind_max=-1):
         Single MAD value in ppm
     """
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))
+
+
+def read_time(meta, data):
+    """Read in a time CSV file instead of using the FITS time array.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    data : Xarray Dataset
+        The Dataset object with the fits data stored inside.
+
+    Returns
+    -------
+    time : ndarray
+        The time array stored in the meta.time_file CSV file.
+    """
+    fname = os.path.join(meta.topdir,
+                         os.sep.join(meta.time_file.split(os.sep)))
+    if meta.firstFile:
+        print('  Note: Using the time stamps from:\n'+fname)
+    time = np.loadtxt(fname).flatten()[data.attrs['intstart']-1:
+                                       data.attrs['intend']-1]
+
+    return time
