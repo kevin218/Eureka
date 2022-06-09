@@ -7,7 +7,7 @@ __all__ = ['interpolating_row', 'data_quality_mask',
 
 def interpolating_image(data, mask):
     """
-    Uses `scipy.interpolate.NearestNDInterpolator` to 
+    Uses `scipy.interpolate.NearestNDInterpolator` to
     fill in bad pixels/cosmic rays/whichever mask you
     decide to pass in.
 
@@ -27,16 +27,15 @@ def interpolating_image(data, mask):
     """
     def interpolate(d, m):
         try:
-            m = m == False
+            m = m is False
         except:
             m = m > 0
 
         x, y = np.meshgrid(np.arange(d.shape[1]),
                            np.arange(d.shape[0]))
-        xym  = np.vstack( (np.ravel(x[m]),
-                           np.ravel(y[m]) )).T
+        xym = np.vstack((np.ravel(x[m]), np.ravel(y[m]))).T
         data = np.ravel(d[m])
-        interp = NearestNDInterpolator(xym, data)        
+        interp = NearestNDInterpolator(xym, data)
         return interp(np.ravel(x), np.ravel(y)).reshape(d.shape)
 
     cleaned = np.zeros(data.shape)
@@ -47,7 +46,6 @@ def interpolating_image(data, mask):
     else:
         cleaned = interpolate(data, mask)
     return cleaned
-    
 
 
 def interpolating_row(data, mask, reg=2, arrtype='data'):
@@ -68,31 +66,31 @@ def interpolating_row(data, mask, reg=2, arrtype='data'):
        Default is 2.
     arrtype : str, optional
        Array type. Options are `data` and `var`, where `data`
-       results in a median interpolated value to fill in and 
+       results in a median interpolated value to fill in and
        `var` sets the bad pixels equal to 0. Default is `data`.
 
     Returns
     -------
     interp : np.ndarray
-       Image where the bad pixels are filled in with the 
+       Image where the bad pixels are filled in with the
        appropriate values. Should return the same shape
        as `data`.
     """
-    nanx, nany = np.where(mask>0)
+    nanx, nany = np.where(mask > 0)
     interp = np.zeros(data.shape)
 
-    for loc in np.array([nanx,nany]).T:
+    for loc in np.array([nanx, nany]).T:
         if loc[0] < reg:
-            y = np.arange(0,reg*2, 1, dtype=int)
+            y = np.arange(0, reg*2, 1, dtype=int)
         elif loc[0] > data.shape[0]-reg:
-            y = np.arange(loc[0]-reg, data.shape[0], 1, dtype=int)
+            y = np.arange(loc[0] - reg, data.shape[0], 1, dtype=int)
         else:
-            y = np.arange(loc[0]-reg, loc[0]+reg,1,dtype=int)
+            y = np.arange(loc[0] - reg, loc[0] + reg, 1, dtype=int)
 
-        ind = np.where(y==loc[0])[0]
+        ind = np.where(y == loc[0])[0]
         y = np.delete(y, ind)
-        if arrtype=='data':
-            newval = np.nanmedian(data[y,loc[1]])
+        if arrtype == 'data':
+            newval = np.nanmedian(data[y, loc[1]])
         else:
             newval = 0.0
         interp[loc[0], loc[1]] = newval + 0.0
@@ -118,14 +116,12 @@ def data_quality_mask(dq):
 
     if len(dq.shape) == 3:
         for i in range(len(dq)):
-            x,y = np.where( (dq[i] == 0) |
-                            (dq[i] == 2147483648))
-            dq_mask[i,x,y] = False
+            x, y = np.where((dq[i] == 0) | (dq[i] == 2147483648))
+            dq_mask[i, x, y] = False
 
     elif len(dq.shape) == 2:
-        x, y = np.where( (dq[i] == 0) |
-                         (dq[i] == 2147483648))
-        dq_mask[x,y] = False
+        x, y = np.where((dq[i] == 0) | (dq[i] == 2147483648))
+        dq_mask[x, y] = False
     else:
         return('Data quality array should be 2D.')
 
