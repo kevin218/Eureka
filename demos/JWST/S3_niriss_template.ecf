@@ -1,7 +1,7 @@
 # Eureka! Control File for Stage 3: Data Reduction of NIRISS
 
-ncpu	  	   1	       # Number of CPUs
-suffix	  	 calints       # Data file suffix
+ncpu       1             # Number of CPUs
+suffix       calints       # Data file suffix
 
 # Order location estimation
 trace_method		ears     # Which method to identify orders by (see docs)
@@ -32,8 +32,8 @@ hide_plots      False       # If True, plots will automatically be closed rather
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir		/Users/belugawhale/Documents/niriss_sim/tiny
+topdir		/home/Users/
 
 # Directories relative to project dir
-inputdir      	/Stage2/
-outputdir	      /Stage3/
+inputdir        /Data/JWST-Sim/NIRISS/Stage2
+outputdir	      /Data/JWST-Sim/NIRISS/Stage3
