@@ -109,13 +109,14 @@ def lc_driftcorr(meta, wave_1d, optspec):
                extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(meta.mad_s4).astype(int)) + " ppm")
-    if meta.nspecchan > 1:
-        # Insert vertical dashed lines at spectroscopic channel edges
-        secax = plt.gca().secondary_xaxis('top')
-        xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
-        secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
-                         fontsize='xx-small')
-        plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+
+    # Insert vertical dashed lines at spectroscopic channel edges
+    secax = plt.gca().secondary_xaxis('top')
+    xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
+    secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
+                     fontsize='xx-small')
+    plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
