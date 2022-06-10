@@ -325,6 +325,8 @@ def read(filename, data, meta):
             meta.nreads = 2
         else:
             meta.nreads = data.attrs['shdr']['SAMPNUM']
+        
+        data.attrs['nreads'] = meta.nreads
 
         sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
         err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
@@ -426,6 +428,7 @@ def read(filename, data, meta):
     diffdata.attrs['shdr'] = data.attrs['shdr']
     diffdata.attrs['mhdr'] = data.attrs['mhdr']
     diffdata.attrs['filename'] = data.attrs['filename']
+    diffdata.attrs['nreads'] = data.attrs['nreads']
 
     return diffdata, meta
 

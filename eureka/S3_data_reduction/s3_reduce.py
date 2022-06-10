@@ -233,7 +233,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
                 if meta.inst == 'wfc3':
-                    meta.nreads = data.attrs['intend']-data.attrs['intstart']
+                    meta.nreads = np.sum([data_temp.attrs['nreads']
+                                          for data_temp in batch])
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
