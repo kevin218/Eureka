@@ -499,7 +499,9 @@ def fitbg3(data, order_mask, readnoise=11,
 
     Parameters
     ----------
-    data : object
+    ata : Xarray Dataset, np.ndarray
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
     order_mask : np.ndarray
        Array masking where the three NIRISS orders are located.
     readnoise : float, optional
@@ -529,12 +531,12 @@ def fitbg3(data, order_mask, readnoise=11,
 
     Returns
     -------
-    data : object
-       data object now contains new attribute `bkg_removed`.
     bkg : np.ndarray
        The fitted background array.
     bkg_var : np.ndarray
        Errors on the fitted backgrouns.
+    rm_crs : np.ndarray
+       Array of masked bad pixels.
     """
     if inclass is False:
         data = np.copy(data.flux)
