@@ -332,7 +332,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
     # Initiate background image with zeros
     ny, nx = np.shape(dataim)
     bg = np.zeros((ny, nx))
-
+    mask2 = mask*bgmask
     if deg < 0:
         # Calculate median background of entire frame
         bg += np.median(dataim[np.where(mask2)])
@@ -522,7 +522,7 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], order_mask,
                                            linspace=[-10, 10], where='order')
 
-        b1 = bkg_sub(rm_crs[i],  order_mask, bkg_estimator='median', sigma=4,
+        b1 = bkg_sub(rm_crs[i], order_mask, bkg_estimator='median', sigma=4,
                      box=(10, 5), filter_size=(2, 2))
         b2 = bkg_sub(rm_crs[i]-b1, order_mask, sigma=3, bkg_estimator='median')
 

@@ -153,7 +153,7 @@ class BatmanEclipseModel(Model):
         log = kwargs.get('log')
 
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['a', 'per',  'inc', 't0', 'ecc', 'w'])
+        ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
         # Check if able to do ltt correction
         self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
                             and 'Rs' in self.parameters.dict.keys())
