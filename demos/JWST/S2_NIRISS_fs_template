@@ -17,19 +17,20 @@ waverange_end       None        # Which wavelength to end extraction
 skip_bkg_subtract       False   # Not run for TSO observations
 skip_imprint_subtract   True
 skip_msa_flagging       True
-skip_extract_2d         True
-skip_srctype            False
+skip_extract_2d         True    # Not recommended for NIRISS SOSS; recommended for WFSS
+skip_srctype            False   # Recommended for NIRISS SOSS; not recommended for WFSS
 skip_master_background  True
 skip_wavecorr           True
-skip_flat_field         instruments
+skip_flat_field         instruments # Relevant for NIRISS SOSS and WFSS
 skip_straylight         True
 skip_fringe             True
-skip_pathloss           False
+skip_pathloss           False   # Recommended for NIRISS SOSS; not recommended for WFSS
 skip_barshadow          True
 skip_photom             False	  # Recommended to skip to get better uncertainties out of Stage 3.
+skip_wfss_contam        True    # Not recommended for NIRISS SOSS; recommended for WFSS
 skip_resample           True    # Not run for TSO observations
 skip_cube_build         True
-skip_extract_1d         False
+skip_extract_1d         False   # Recommended for NIRISS SOSS and WFSS
 
 # Diagnostics
 testing_S2              False
