@@ -72,8 +72,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
 
-    if meta.trace_method: # This pushes S3 to s3_reduce_niriss if
-                          # accidentally called
+    if hasattr(meta, 'trace_method') and meta.trace_method is not None:
+        # This pushes S3 to s3_reduce_niriss if accidentally called
         s3_reduce_niriss.reduce(eventlabel,
                                 ecf_path=ecf_path,
                                 s2_meta=s2_meta)
