@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 3: Data Reduction of NIRISS
 
+# Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
+
 ncpu       1             # Number of CPUs
 suffix       calints       # Data file suffix
 
