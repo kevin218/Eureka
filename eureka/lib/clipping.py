@@ -219,7 +219,7 @@ def time_removal(img, sigma=5, testing=False):
     """
     cr_mask = np.zeros(img.shape)
 
-    if testing is False:
+    if not testing:
         y = img.shape[1]
     else:
         y = 10
