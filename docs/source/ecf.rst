@@ -330,15 +330,15 @@ Iterations and sigma outlier threshold to find and remove bad pixels or cosmic r
 
 box
 '''
-The box size of pixels in (ny,nx) to calculate the background over. Should be of length `sigclip`.
+The box size of pixels in (ny,nx) to calculate the background over. Should be the same length as `sigclip`.
 
 bkg_estimator
 '''''''''''''
-How to calculate and estimate the background over a given box size. Options include 'median', 'mean', and 'MMMBackground' (3 * median - 2 * mean). More information on `MMMBackground` routine can be found in the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.MMMBackground.html?highlight=mmmbackground#photutils.background.MMMBackground>`__. Should be of length `sigclip`.
+How to calculate and estimate the background over a given box size. Options include 'median', 'mean', and 'MMMBackground' (3 * median - 2 * mean). More information on `MMMBackground` routine can be found in the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.MMMBackground.html?highlight=mmmbackground#photutils.background.MMMBackground>`__. Should be the same length as `sigclip`.
 
 filter_size
 '''''''''''
-The filter size of pixels in (ny,nx) to filter over. A filter size of 1 or (1, 1) means no filtering. For more information see the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.Background2D.html>`__. Should be of length `sigclip`.
+The filter size of pixels in (ny,nx) to filter over. A filter size of 1 or (1, 1) means no filtering. For more information see the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.Background2D.html>`__. Should be the same length as `sigclip`.
 
 proftype
 ''''''''
