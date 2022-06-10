@@ -73,8 +73,7 @@ def fit_orders(data, tab):
                                                    [final_guess[0]],
                                                    [final_guess[1]],
                                                    [final_guess[2]],
-                                                   pos1, pos2,
-                                                   return_together=False)
+                                                   pos1, pos2)
     return ord1[0], ord2[0]
 
 
