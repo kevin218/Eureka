@@ -216,7 +216,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Read in data frame and header
                 batch = []
                 for i in range(m*meta.files_per_batch,
-                               min([meta.num_data_files-1,
+                               min([meta.num_data_files,
                                     (m+1)*meta.files_per_batch])):
                     # Keep track if this is the first file - otherwise
                     # MIRI will keep swapping x and y windows
