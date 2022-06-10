@@ -1,5 +1,4 @@
 name: Pytest Testing
-
 on:
   pull_request:
     types: [opened,reopened,synchronize]
@@ -7,11 +6,13 @@ on:
     branches:    
       - 'main'
       - 'releases/**'
-
 jobs:
   test:
     name: pytest
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-latest'
+    env:
+      OS: 'ubuntu-latest'
+      PYTHON: '3.9'
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
@@ -24,7 +25,12 @@ jobs:
           mkdir $HOME/crds_cache
           echo "CRDS_PATH=$HOME/crds_cache" >> $GITHUB_ENV
           echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> $GITHUB_ENV
-      - name: Run tests
-        run: pytest tests --cov=. --cov-report xml
-#      - name: Upload coverage reports to Codecov with GitHub Action
-#        uses: codecov/codecov-action@v2
+      - name: Run tests, generate coverage report
+        run: pytest tests --cov=./ --cov-report=xml
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v2
+        with:
+          env_vars: OS,PYTHON
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
