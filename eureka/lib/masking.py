@@ -27,7 +27,7 @@ def interpolating_image(data, mask):
     """
     def interpolate(d, m):
         try:
-            m = m is False
+            m = ~m
         except:
             m = m > 0
 
