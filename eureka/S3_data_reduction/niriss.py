@@ -38,18 +38,18 @@ def read(filename, data, meta, f277_filename=None):
     ----------
     filename : str
        Single filename to read. Should be a `.fits` file.
-    data : object
-       Data object in which the fits data will be stored.
-    meta : object
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     f277_filename : str, optional
        Single filename for the F277W filtered images.
 
     Returns
     -------
-    data : object
-       Data object now populated with all of the FITS file
-       information.
-    meta : astropy.table.Table
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
        Metadata stored in the FITS file.
     """
     hdulist = fits.open(filename)
@@ -133,8 +133,10 @@ def fit_bg(data, meta, log,
 
     Parameters
     ----------
-    data : object
-    meta : object
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     readnoise : float, optional
        An estimation of the readnoise of the detector.
        Default is 5.
@@ -162,7 +164,8 @@ def fit_bg(data, meta, log,
 
     Returns
     -------
-    data : object
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
     bkg : np.ndarray
     """
     if meta.trace_method=='ears':
@@ -202,11 +205,13 @@ def define_traces(meta):
 
     Parameters
     ----------
-    meta : object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
-    meta : object
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     """
     # Get summed frame for tracing
     with fits.open(meta.segment_list[-1]) as hdulist:
