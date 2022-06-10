@@ -13,7 +13,7 @@ filter          4        # Sets the filter size for edge extraction method
 
 # Background parameters
 readnoise	    18		                   # Estimation of the readnoise
-sigclip	     	[4,4,4]	          	     # Iterations and sigma to find & remove outliers
+sigclip	     	[4,4]	          	       # Iterations and sigma to find & remove outliers
 box	        	((10,2), (5,2))		       # Box size to average background values over
 bkg_estimator	['median', 'median']     # How to calculate and estimate the background over the box size
 filter_size	  ((2,1), (1,1))		       # Window size to apply the 2D low-resolution background map
