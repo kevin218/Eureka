@@ -22,11 +22,14 @@
 # 16. Save Stage 3 data products
 # 17. Produce plots DONE
 
+import os
 import time as time_pkg
 import numpy as np
 import astraeus.xarrayIO as xrio
+import xarray
 from astropy.io import fits
 from tqdm import tqdm
+import psutil
 from . import optspex
 from . import plots_s3, source_pos
 from . import background as bg
@@ -184,7 +187,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
 
-            datasets = []
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to
             # True in ecf
@@ -192,25 +194,46 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 istart = meta.num_data_files - 1
             else:
                 istart = 0
-            for m in range(istart, meta.num_data_files):
-                # Initialize data object
-                data = xrio.makeDataset()
 
-                # Keep track if this is the first file - otherwise MIRI will
-                # keep swapping x and y windows
-                meta.firstFile = (m == istart and
-                                  meta.spec_hw == meta.spec_hw_range[0] and
-                                  meta.bg_hw == meta.bg_hw_range[0])
+            # Group files into batches
+            system_RAM = psutil.virtual_memory().total
+            filesize = os.path.getsize(meta.segment_list[istart])
+            maxfiles = int(system_RAM*meta.max_memory/filesize)
+            meta.files_per_batch = min([maxfiles, meta.nfiles])
+            meta.nbatch = int(np.ceil((meta.num_data_files-istart) /
+                                      meta.files_per_batch))
+
+            datasets = []
+            for m in range(meta.nbatch):
                 # Report progress
                 if meta.verbose:
-                    log.writelog(f'Reading file {m + 1} of '
-                                 f'{meta.num_data_files}')
+                    log.writelog(f'Starting batch {m + 1} of '
+                                 f'{meta.nbatch}')
                 else:
-                    log.writelog(f'Reading file {m + 1} of '
-                                 f'{meta.num_data_files}', end='\r')
+                    log.writelog(f'Starting batch {m + 1} of '
+                                 f'{meta.nbatch}', end='\r')
 
                 # Read in data frame and header
-                data, meta = inst.read(meta.segment_list[m], data, meta)
+                batch = []
+                for i in range(m*meta.files_per_batch,
+                               min([meta.num_data_files-1,
+                                    (m+1)*meta.files_per_batch])):
+                    # Keep track if this is the first file - otherwise
+                    # MIRI will keep swapping x and y windows
+                    meta.firstFile = (m == 0 and i == 0 and
+                                      meta.spec_hw == meta.spec_hw_range[0] and
+                                      meta.bg_hw == meta.bg_hw_range[0])
+                    # Initialize a new data object
+                    data = xrio.makeDataset()
+                    data, meta = inst.read(meta.segment_list[i], data, meta)
+                    batch.append(data)
+
+                # Combine individual datasets
+                data = xarray.concat(batch, 'time')  # , data_vars='minimal')
+                data.attrs['intstart'] = batch[0].attrs['intstart']
+                data.attrs['intend'] = batch[-1].attrs['intend']
+                if meta.inst == 'wfc3':
+                    meta.nreads = data.attrs['intend']-data.attrs['intstart']
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -232,8 +255,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
-                    data['wave_1d'] = (['x'],
-                                       data.wave_2d[meta.src_ypos].values)
+                    data['wave_1d'] = (['x'], np.median(
+                        data.wave_2d[:, meta.src_ypos].values, axis=0))
                     data['wave_1d'].attrs['wave_units'] = \
                         data.wave_2d.attrs['wave_units']
 

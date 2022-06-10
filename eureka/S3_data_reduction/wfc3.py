@@ -33,22 +33,20 @@ def preparation_step(meta, log):
     """
     meta.gain = 1
 
-    obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log = \
-        separate_direct(meta, log)
-    meta, log = separate_scan_direction(obstimes, postarg2, meta, log)
+    meta, log = separate_direct(meta, log)
+    meta, log = separate_scan_direction(meta, log)
 
     # Calculate centroid of direct image(s)
     meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
-                                      meta.centroidtrim, ny, CRPIX1, CRPIX2,
-                                      postarg1, postarg2)
+                                      meta.centroidtrim, meta.ny, meta.CRPIX1,
+                                      meta.CRPIX2, meta.postarg1,
+                                      meta.postarg2)
 
     # Initialize listto hold centroid positions from later steps in this stage
     meta.centroids = []
     meta.subflat = []
     meta.flatmask = []
     meta.scanHeight = []
-    meta.diffmask = []
-    meta.subdiffmask = []
     meta.drift2D = []
     meta.drift2D_int = []
     meta.subdata_ref = []
@@ -78,8 +76,6 @@ def conclusion_step(meta, log):
     meta.subflat = np.array(meta.subflat)
     meta.flatmask = np.array(meta.flatmask)
     meta.scanHeight = np.array(meta.scanHeight)
-    meta.diffmask = np.array(meta.diffmask)
-    meta.subdiffmask = np.array(meta.subdiffmask)
     meta.drift2D = np.array(meta.drift2D)
     meta.drift2D_int = np.array(meta.drift2D_int)
     meta.subdata_ref = np.array(meta.subdata_ref)
@@ -205,10 +201,17 @@ def separate_direct(meta, log):
             meta.direct_index[i] = \
                 np.where(science_times[i] > direct_times)[0][-1]
 
-    return obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log
+    meta.obstimes = obstimes
+    meta.CRPIX1 = CRPIX1
+    meta.CRPIX2 = CRPIX2
+    meta.postarg1 = postarg1
+    meta.postarg2 = postarg2
+    meta.ny = ny
+
+    return meta, log
 
 
-def separate_scan_direction(obstimes, postarg2, meta, log):
+def separate_scan_direction(meta, log):
     """Separate alternating scan directions.
 
     Parameters
@@ -239,12 +242,12 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
         meta.scandir = np.zeros(meta.num_data_files, dtype=int)
         meta.n_scan0 = 0
         meta.n_scan1 = 0
-        scan0 = postarg2[0]
-        scan1 = postarg2[1]
+        scan0 = meta.postarg2[0]
+        scan1 = meta.postarg2[1]
         for m in range(meta.num_data_files):
-            if postarg2[m] == scan0:
+            if meta.postarg2[m] == scan0:
                 meta.n_scan0 += 1
-            elif postarg2[m] == scan1:
+            elif meta.postarg2[m] == scan1:
                 meta.scandir[m] = 1
                 meta.n_scan1 += 1
             else:
@@ -256,7 +259,18 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
                  mute=(not meta.verbose))
 
     # Group frames into frame, batch, and orbit number
-    meta.framenum, meta.batchnum, meta.orbitnum = hst.groupFrames(obstimes)
+    meta.framenum, meta.batchnum, meta.orbitnum = \
+        hst.groupFrames(meta.obstimes)
+
+    # Order frames by scan direction (for batch processing)
+    # order = np.append(np.where(meta.scandir == 0)[0],
+    #                   np.where(meta.scandir == 1)[0])
+    # meta.segment_list = meta.segment_list[order]
+    # meta.scandir = meta.scandir[order]
+    # meta.obstimes = meta.obstimes[order]
+    # meta.postarg1 = meta.postarg1[order]
+    # meta.postarg2 = meta.postarg2[order]
+    # meta.direct_index = meta.direct_index[order]
 
     return meta, log
 
@@ -291,7 +305,6 @@ def read(filename, data, meta):
     - May 9, 2022 Kevin Stevenson
         Convert to using Xarray Dataset
     '''
-
     # Determine image size and filter/grism
     with fits.open(filename) as hdulist:
         data.attrs['filename'] = filename
@@ -368,7 +381,7 @@ def read(filename, data, meta):
     meta.centroids.append(centroids)
 
     # Calculate trace
-    print("Calculating wavelength assuming " + meta.grism + " filter/grism...")
+    print(f"Calculating wavelength assuming {meta.grism} filter/grism...")
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
     wave = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4
@@ -538,16 +551,6 @@ def difference_frames(data, meta):
                                                time_units, name='variance')
     diffdata['guess'] = (['time'], guess)
 
-    meta.diffmask.append(diffmask)
-    # # Save the non-differenced frame data in case it is useful
-    # data.raw_data = np.copy(data.data)
-    # data.raw_err = np.copy(data.err)
-    # # Overwrite the data array with the differenced data since that's
-    # # what we'll use for the other steps
-    # data.data = diffdata
-    # data.err = differr
-    # data.time = data.time[1:]
-
     return diffdata, meta
 
 
@@ -610,9 +613,8 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
-    bgerr = np.std(bg[n], axis=0)/np.sqrt(np.sum(meta.subdiffmask[-1][n],
-                                                 axis=0))
-    bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
+    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(datamask, axis=0))
+    bgerr[np.logical_not(np.isfinite(bgerr))] = 0.
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
 
@@ -652,7 +654,7 @@ def correct_drift2D(data, meta, m):
         # for observations with only one scan direction, since the second ref
         # file will never be used.
         meta.subdata_ref.append(data.flux)
-        meta.diffmask_ref.append(meta.diffmask[-1])
+        meta.diffmask_ref.append(data.mask)
 
     print("Calculating 2D drift...")
     # FINDME: instead of calculating scanHeight, consider fitting
@@ -666,9 +668,9 @@ def correct_drift2D(data, meta, m):
         p = meta.scandir[m]
         for n in range(meta.nreads-1):
             writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][0] *
-                                          meta.subdiffmask[p][0]),
+                                          meta.diffmask_ref[p][0]),
                                          (data.flux[n] *
-                                          meta.subdiffmask[-1][n]),
+                                          data.mask[n]),
                                          m, n))
     else:
         # Multiple CPUs
@@ -679,9 +681,9 @@ def correct_drift2D(data, meta, m):
         for n in range(meta.nreads-1):
             res = pool.apply_async(hst.calcDrift2D,
                                    args=((meta.subdata_ref[p][0] *
-                                          meta.subdiffmask[p][0]),
+                                          meta.diffmask_ref[p][0]),
                                          (data.flux[n] *
-                                          meta.subdiffmask[-1][n]),
+                                          data.mask[n]),
                                          m, n),
                                    callback=writeDrift2D)
         pool.close()
