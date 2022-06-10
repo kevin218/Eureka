@@ -346,7 +346,7 @@ What profile model to use for the optimal extraction. Options are 'median', 'gau
 
 per_quad
 ''''''''
-Sets the option to extract the NIRISS orders per quadrant (`True`) or an entire order at one time (`False`). If `per_quad = True` the optimal extraction routine will extract (1) the spatially resolved end of the first order (2) the spatially resolved end of the second order and (3) the overlap between the first and second orders as a single region. The final result will stitch together the quadrants to result in complete entire first order and second order spectra.
+Sets the option to extract the NIRISS orders per quadrant (`True`) or an entire order at one time (`False`). If `per_quad = True` the optimal extraction routine will extract (1) the spatially separated end of the first order (2) the spatially separated end of the second order and (3) the overlap between the first and second orders as a single region. The final result will stitch together the quadrants to result in complete entire first order and second order spectra.
 
 
 Stage 4
