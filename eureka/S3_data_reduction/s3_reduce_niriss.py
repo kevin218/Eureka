@@ -208,6 +208,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         data['medflux'].attrs['flux_units'] = \
             data.flux.attrs['flux_units']
 
+        # Interpolating over bad pixels from the data quality map
+        data['data'] = interpolating_image(data['data'], mask=data['DQ'])
+        data['err']  = interpolating_image(data['err'],  mask=data['DQ'])
+        data['v0']  = interpolating_image(data['v0'],  mask=data['DQ'])
+        data['medflux'] = interpolating_image(np.nanmedian(data['data'], axis=0),
+                                              mask=np.nanmedian(mask=data['DQ'],
+                                                                axis=0))
+
         # Create bad pixel mask (1 = good, 0 = bad)
         # FINDME: Will want to use DQ array in the future
         # to flag certain pixels
