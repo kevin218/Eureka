@@ -547,8 +547,11 @@ def difference_frames(data, meta):
                                            time_units, name='flux')
     diffdata['err'] = xrio.makeFluxLikeDA(differr, difftime, flux_units,
                                           time_units, name='err')
-    diffdata['mask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
-                                           time_units, name='mask')
+    diffdata['mask'] = xrio.makeFluxLikeDA(np.repeat(diffmask[-1:],
+                                                     diffmask.shape[0],
+                                                     axis=0),
+                                           difftime, "None", time_units,
+                                           name='mask')
     variance = np.zeros_like(diffdata.flux.values)
     diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
                                                time_units, name='variance')
