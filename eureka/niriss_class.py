@@ -46,6 +46,27 @@ class NIRISS_S3(object):
            The path to where the science file is stored.
         output_dir : str
            The path to where output files will be stored.
+        bkg : np.ndarray
+           Array of background values.
+        bkg_var : np.ndarray
+           Array of variance estimations on the background.
+        cr_mask : np.ndarray
+           Array of masks for bad pixels.
+        bkg_removed : np.ndarray
+           Data - background array.
+        trace_ear : astropy.table.Table
+           Astropy table with x,y coordinates for each order.
+           `trace_ear` is initialized when using the method `edges`.
+        trace_edge : astropy.table.Table
+           Astropy table with x,y coordinates for each order.
+           `trace_edge` is initialized when using the method `centers`.
+        box_spectra1 : np.ndarray
+           Box extracted spectra for the first order.
+        box_spectra2 : np.ndarray
+           Box extracted spectra for the second order.
+        box_mask_separate : np.ndarray
+           Attribute for separate box masks per each order. Created
+           when `dirty_mask(return_together == False)`.
         """
         self.filename = filename
 
