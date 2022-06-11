@@ -40,17 +40,19 @@ def preparation_step(meta, log):
     meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
                                       meta.centroidtrim, meta.ny, meta.CRPIX1,
                                       meta.CRPIX2, meta.postarg1,
-                                      meta.postarg2)
+                                      meta.postarg2, meta, log)
 
     # Initialize listto hold centroid positions from later steps in this stage
     meta.centroids = []
     meta.subflat = []
     meta.flatmask = []
     meta.scanHeight = []
+    meta.diffmask = []
+    meta.subdiffmask = []
     meta.drift2D = []
     meta.drift2D_int = []
     meta.subdata_ref = []
-    meta.diffmask_ref = []
+    meta.subdiffmask_ref = []
 
     return meta, log
 
@@ -76,10 +78,12 @@ def conclusion_step(meta, log):
     meta.subflat = np.array(meta.subflat)
     meta.flatmask = np.array(meta.flatmask)
     meta.scanHeight = np.array(meta.scanHeight)
+    meta.diffmask = np.array(meta.diffmask)
+    meta.subdiffmask = np.array(meta.subdiffmask)
     meta.drift2D = np.array(meta.drift2D)
     meta.drift2D_int = np.array(meta.drift2D_int)
     meta.subdata_ref = np.array(meta.subdata_ref)
-    meta.diffmask_ref = np.array(meta.diffmask_ref)
+    meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
 
     return meta, log
 
@@ -275,7 +279,7 @@ def separate_scan_direction(meta, log):
     return meta, log
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from HST's WFC3 instrument.
 
     Parameters
@@ -286,6 +290,8 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored
     meta : eureka.lib.readECF.MetaClass
         The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -293,6 +299,8 @@ def read(filename, data, meta):
         The updated data object with the fits data stored inside
     meta : eureka.lib.readECF.MetaClass
         The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -353,8 +361,9 @@ def read(filename, data, meta):
         bjdutc = jd + bjd_corr/86400.
         # FINDME: this was utc_tt, but I believe it should have
         # been utc_tdb instead
-        time = utc_tt.utc_tdb(bjdutc, meta.leapdir)
-        frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., meta.leapdir)
+        time = utc_tt.utc_tdb(bjdutc, meta.leapdir, log)
+        frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., meta.leapdir,
+                                   log)
         time_units = 'BJD_TDB'
     else:
         if meta.firstFile:
@@ -373,7 +382,7 @@ def read(filename, data, meta):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.zeros((meta.nreads-1, 2))
+    centroids = np.zeros((meta.nreads, 2))
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
@@ -383,7 +392,9 @@ def read(filename, data, meta):
     meta.centroids.append(centroids)
 
     # Calculate trace
-    print(f"Calculating wavelength assuming {meta.grism} filter/grism...")
+    if meta.firstInBatch:
+        log.writelog(f"  Calculating wavelength assuming {meta.grism} "
+                     f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
     wave = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4
@@ -394,13 +405,13 @@ def read(filename, data, meta):
     data['wave_2d'].attrs['wave_units'] = wave_units
 
     # Divide data by flat field
-    if meta.flatfile is None:
-        print('No flat frames found.')
+    if meta.flatfile is None and meta.firstFile:
+        log.writelog('No flat frames found.')
     else:
-        data, meta = flatfield(data, meta)
+        data, meta, log = flatfield(data, meta, log)
 
     # Compute differences between non-destructive reads
-    diffdata, meta = difference_frames(data, meta)
+    diffdata, meta, log = difference_frames(data, meta, log)
 
     # Determine read noise and gain
     readNoise = np.mean((data.attrs['mhdr']['READNSEA'],
@@ -430,10 +441,10 @@ def read(filename, data, meta):
     diffdata.attrs['filename'] = data.attrs['filename']
     diffdata.attrs['nreads'] = data.attrs['nreads']
 
-    return diffdata, meta
+    return diffdata, meta, log
 
 
-def flatfield(data, meta):
+def flatfield(data, meta, log):
     '''Perform flatfielding.
 
     Parameters
@@ -442,6 +453,8 @@ def flatfield(data, meta):
         The data object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -449,11 +462,15 @@ def flatfield(data, meta):
         The updated data object with flatfielding applied.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     '''
+    if meta.firstInBatch:
+        log.writelog('  Performing flat fielding.', mute=(not meta.verbose))
     # Make list of master flat field frames
-
-    print('Loading flat frames...')
-    print(meta.flatfile)
+    if meta.firstFile:
+        log.writelog(f'  Loading flat frame:\n  {meta.flatfile}',
+                     mute=(not meta.verbose))
     tempflat, tempmask = hst.makeflats(meta.flatfile,
                                        [np.mean(data.wave_2d.values,
                                                 axis=0), ],
@@ -472,10 +489,10 @@ def flatfield(data, meta):
     subflat[np.where(subflat == 0)] = 1
     data['flux'] /= subflat
 
-    return data, meta
+    return data, meta, log
 
 
-def difference_frames(data, meta):
+def difference_frames(data, meta, log):
     '''Compute differenced frames.
 
     Parameters
@@ -484,6 +501,8 @@ def difference_frames(data, meta):
         The data object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -491,12 +510,16 @@ def difference_frames(data, meta):
         The updated data object with differenced frames.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     '''
     if meta.nreads > 1:
         # Subtract pairs of subframes
-        diffflux = np.zeros((meta.nreads-1, meta.ny, meta.nx))
-        differr = np.zeros((meta.nreads-1, meta.ny, meta.nx))
-        for n in range(meta.nreads-1):
+        meta.nreads -= 1
+        data.attrs['nreads'] -= 1
+        diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
+        differr = np.zeros((meta.nreads, meta.ny, meta.nx))
+        for n in range(meta.nreads):
             diffflux[n] = data.flux[n+1]-data.flux[n]
             differr[n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
     else:
@@ -504,9 +527,9 @@ def difference_frames(data, meta):
         diffflux = data.flux
         differr = data.err
 
-    diffmask = np.zeros((meta.nreads-1, meta.ny, meta.nx))
-    guess = np.zeros((meta.nreads-1), dtype=int)
-    for n in range(meta.nreads-1):
+    diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
+    guess = np.zeros((meta.nreads), dtype=int)
+    for n in range(meta.nreads):
         diffmask[n] = np.copy(meta.flatmask[-1][0])
         try:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
@@ -514,7 +537,7 @@ def difference_frames(data, meta):
         except:
             # FINDME: Need to only catch the expected exception
             # May fail for FLT files
-            print("Diffthresh failed - this may happen for FLT files.")
+            log.writelog("Diffthresh failed - this may happen for FLT files.")
 
         masked_data = diffflux[n]*diffmask[n]
         guess[n] = np.median(np.where(masked_data > np.mean(masked_data)
@@ -547,17 +570,16 @@ def difference_frames(data, meta):
                                            time_units, name='flux')
     diffdata['err'] = xrio.makeFluxLikeDA(differr, difftime, flux_units,
                                           time_units, name='err')
-    diffdata['mask'] = xrio.makeFluxLikeDA(np.repeat(diffmask[-1:],
-                                                     diffmask.shape[0],
-                                                     axis=0),
-                                           difftime, "None", time_units,
-                                           name='mask')
+    diffdata['mask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
+                                           time_units, name='mask')
     variance = np.zeros_like(diffdata.flux.values)
     diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
                                                time_units, name='variance')
     diffdata['guess'] = (['time'], guess)
 
-    return diffdata, meta
+    meta.diffmask.append(diffmask)
+
+    return diffdata, meta, log
 
 
 def flag_bg(data, meta):
@@ -627,7 +649,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
     return bg, mask, datav0, datavariance, n
 
 
-def correct_drift2D(data, meta, m):
+def correct_drift2D(data, meta, log, m):
     """Correct for calculated 2D drift.
 
     Parameters
@@ -636,6 +658,8 @@ def correct_drift2D(data, meta, m):
         The data object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     m : int
         The current file number.
 
@@ -645,6 +669,8 @@ def correct_drift2D(data, meta, m):
         The updated DataClass object.
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
+    log : logedit.Logedit
+        The current log.
     """
     def writeDrift2D(arg):
         drift2D, m, n = arg
@@ -653,28 +679,28 @@ def correct_drift2D(data, meta, m):
         return
 
     # Save the reference frame for each scan direction if not yet done
-    if m < 2:
+    if len(meta.subdata_ref) < 2:
         # FINDME: This requires that the reference files be the first
         # two files. Using other files as the reference files will
         # require loading in all of the frames at once. This will still work
         # for observations with only one scan direction, since the second ref
         # file will never be used.
         meta.subdata_ref.append(data.flux)
-        meta.diffmask_ref.append(data.mask)
+        meta.subdiffmask_ref.append(meta.subdiffmask[-1])
 
-    print("Calculating 2D drift...")
+    log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
     # FINDME: instead of calculating scanHeight, consider fitting
     # stretch factor
-    drift2D = np.zeros((meta.nreads-1, 2))
+    drift2D = np.zeros((meta.nreads, 2))
     meta.drift2D.append(drift2D)
     if meta.ncpu == 1:
         # Only 1 CPU
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
-        for n in range(meta.nreads-1):
+        for n in range(meta.nreads):
             writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][0] *
-                                          meta.diffmask_ref[p][0]),
+                                          meta.subdiffmask_ref[p][0]),
                                          (data.flux[n] *
                                           data.mask[n]),
                                          m, n))
@@ -684,10 +710,10 @@ def correct_drift2D(data, meta, m):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
-        for n in range(meta.nreads-1):
+        for n in range(meta.nreads):
             res = pool.apply_async(hst.calcDrift2D,
                                    args=((meta.subdata_ref[p][0] *
-                                          meta.diffmask_ref[p][0]),
+                                          meta.subdiffmask_ref[p][0]),
                                          (data.flux[n] *
                                           data.mask[n]),
                                          m, n),
@@ -696,10 +722,11 @@ def correct_drift2D(data, meta, m):
         pool.join()
         res.wait()
 
-    print("Performing rough, pixel-scale drift correction...")
+    log.writelog("  Performing rough, pixel-scale drift correction...",
+                 mute=(not meta.verbose))
     meta.drift2D_int.append(np.round(meta.drift2D[-1], 0))
     # Correct for drift by integer pixel numbers, no interpolation
-    for n in range(meta.nreads-1):
+    for n in range(meta.nreads):
         data.flux[n] = spni.shift(data.flux[n],
                                   -1*meta.drift2D_int[-1][n, ::-1], order=0,
                                   mode='constant', cval=0)
@@ -720,7 +747,7 @@ def correct_drift2D(data, meta, m):
     # for p in range(2):
     #     iscan   = np.where(ev.scandir == p)[0]
     #     if len(iscan) > 0:
-    #         for n in range(meta.nreads-1):
+    #         for n in range(meta.nreads):
     #             #y1  = data.guess[ev.iref,n] - meta.spec_hw
     #             #y2  = data.guess[ev.iref,n] + meta.spec_hw
     #             #estsig      = [differr[ev.iref,n,y1:y2]
@@ -730,14 +757,15 @@ def correct_drift2D(data, meta, m):
     #                                                shiftmask[iscan,n])  # ,
     #                                                # estsig)
 
-    print("Performing sub-pixel drift correction...")
+    log.writelog("  Performing sub-pixel drift correction...",
+                 mute=(not meta.verbose))
     # Get indices for each pixel
     ix = range(meta.subnx)
     iy = range(meta.subny)
     # Define the degrees of the bivariate spline
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
-    for n in range(meta.nreads-1):
+    for n in range(meta.nreads):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
@@ -771,4 +799,4 @@ def correct_drift2D(data, meta, m):
                             (ix-meta.drift2D[-1][n, 0] +
                              meta.drift2D_int[-1][n, 0]).flatten())
 
-    return data, meta
+    return data, meta, log

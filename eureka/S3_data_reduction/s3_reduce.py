@@ -223,9 +223,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     meta.firstFile = (m == 0 and i == 0 and
                                       meta.spec_hw == meta.spec_hw_range[0] and
                                       meta.bg_hw == meta.bg_hw_range[0])
+                    meta.firstInBatch = i == 0
                     # Initialize a new data object
                     data = xrio.makeDataset()
-                    data, meta = inst.read(meta.segment_list[i], data, meta)
+                    data, meta, log = inst.read(meta.segment_list[i], data, 
+                                                meta, log)
                     batch.append(data)
 
                 # Combine individual datasets
@@ -274,8 +276,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Create bad pixel mask (1 = good, 0 = bad)
                 # FINDME: Will want to use DQ array in the future
                 # to flag certain pixels
-                data['mask'] = (['time', 'y', 'x'], np.ones(data.flux.shape,
-                                                            dtype=bool))
+                if not hasattr(data, 'mask'):
+                    data['mask'] = (['time', 'y', 'x'],
+                                    np.ones(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs
                 data['mask'] = util.check_nans(data['flux'], data['mask'],
@@ -316,7 +319,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if hasattr(inst, 'correct_drift2D'):
                     log.writelog('  Correcting for 2D drift',
                                  mute=(not meta.verbose))
-                    inst.correct_drift2D(data, meta, m)
+                    data, meta, log = inst.correct_drift2D(data, meta, log, m)
 
                 # Select only aperture region
                 ap_y1 = int(meta.src_ypos-spec_hw_val)

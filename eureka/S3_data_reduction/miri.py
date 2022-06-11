@@ -5,7 +5,7 @@ from . import nircam
 from ..lib.util import read_time
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from JWST's MIRI instrument.
 
     Parameters
@@ -16,6 +16,8 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -23,6 +25,8 @@ def read(filename, data, meta):
         The updated Dataset object with the fits data stored inside.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -169,7 +173,7 @@ def read(filename, data, meta):
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
 
-    return data, meta
+    return data, meta, log
 
 
 def wave_MIRI_hardcoded():

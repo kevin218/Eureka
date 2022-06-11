@@ -13,7 +13,7 @@ from ..lib import centroid, smoothing
 
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
-                  POSTARG2):
+                  POSTARG2, meta, log):
     '''Calculate centroid for a list of direct images.
 
     Parameters
@@ -36,6 +36,10 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         The value of POSTARG1 in the science FITS header
     POSTARG2 : float
         The value of POSTARG2 in the science FITS header
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -74,7 +78,8 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                    (POSTARG2[i] - calhdr0['POSTARG2'])/0.121)
         centers[i][0] += yoffset
         centers[i][1] += xoffset
-        print(f"Adding {xoffset},{yoffset} pixels to x,y centroid position.")
+        log.writelog(f"Adding {xoffset},{yoffset} pixels to x,y centroid position.",
+                     mute=(not meta.verbose))
         """
         if calhdr0['APERTURE'] == 'IRSUB256':
             # centers[i][1] -= 111

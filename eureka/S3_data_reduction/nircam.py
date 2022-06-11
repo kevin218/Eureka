@@ -1,11 +1,12 @@
 # NIRCam specific rountines go here
+import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import sigrej, background
 from ..lib.util import read_time
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
@@ -16,6 +17,8 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -23,6 +26,8 @@ def read(filename, data, meta):
         The updated Dataset object with the fits data stored inside.
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -76,7 +81,7 @@ def read(filename, data, meta):
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
 
-    return data, meta
+    return data, meta, log
 
 
 def flag_bg(data, meta):
@@ -100,16 +105,20 @@ def flag_bg(data, meta):
     bgmask1 = data.mask[:, :y1]
     bgdata2 = data.flux[:, y2:]
     bgmask2 = data.mask[:, y2:]
-    # bgerr1 = np.median(data.err[:, :y1])
-    # bgerr2 = np.median(data.err[:, y2:])
-    # estsig1 = [bgerr1 for j in range(len(bg_thresh))]
-    # estsig2 = [bgerr2 for j in range(len(bg_thresh))]
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
     # Need to test performance with and without estsig on real data.
-    data['mask'][:, :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1)  # ,
-    #                                      estsig1)
-    data['mask'][:, y2:] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2)  # ,
-    #                                     estsig2)
+    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+        bgerr1 = np.median(data.err[:, :y1])
+        bgerr2 = np.median(data.err[:, y2:])
+        estsig1 = [bgerr1 for j in range(len(bg_thresh))]
+        estsig2 = [bgerr2 for j in range(len(bg_thresh))]
+    else:
+        estsig1 = None
+        estsig2 = None
+    data['mask'][:, :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1,
+                                         estsig1)
+    data['mask'][:, y2:] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2,
+                                         estsig2)
 
     return data
 
