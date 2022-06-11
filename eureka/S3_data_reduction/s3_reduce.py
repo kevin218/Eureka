@@ -426,10 +426,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
 
-            # Calculate total time
-            total = (time_pkg.time() - t0) / 60.
-            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                          "_SpecData.h5")
@@ -451,6 +447,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 log.writelog('Saving Metadata')
                 fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
                 me.saveevent(meta, fname, save=[])
+
+            # Calculate total time
+            total = (time_pkg.time() - t0) / 60.
+            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             log.closelog()
 

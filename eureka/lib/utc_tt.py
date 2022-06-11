@@ -39,7 +39,7 @@ def leapdates(rundir, log):
     else:
         expiration = -np.inf
     if time.time() + ntpepoch > expiration:
-        log.writelog("Leap-second file expired.	Retrieving new file.",
+        log.writelog("  Leap-second file expired. Retrieving new file.",
                      mute=True)
         try:
             with urllib.request.urlopen('ftp://ftp.boulder.nist.gov/'
@@ -59,12 +59,12 @@ def leapdates(rundir, log):
             with open(rundir+"leap-seconds."+newexp, 'w') as newfile:
                 newfile.write(doc)
             table = doc.split('#@')[1].split('\n#\r\n')[1].split('\n')
-            log.writelog("Leap second file updated.", mute=True)
+            log.writelog("  Leap second file updated.", mute=True)
     else:
         use_fallback = False
-        log.writelog("Local leap second file retrieved.", mute=True)
+        log.writelog("  Local leap second file retrieved.", mute=True)
         t_next = time.asctime(time.localtime(expiration-ntpepoch))
-        log.writelog(f"Next update: {t_next}", mute=True)
+        log.writelog(f"  Next update: {t_next}", mute=True)
 
     if not use_fallback:
         ls = np.zeros(len(table))
@@ -73,7 +73,8 @@ def leapdates(rundir, log):
         jd = ls/86400+2415020.5
         return jd
     else:
-        print('NIST leap-second file not available.	Using stored table.')
+        log.writelog('  NIST leap-second file not available. '
+                     'Using stored table.')
 
         return np.array([2441316.5, 2441682.5, 2442047.5, 2442412.5,
                          2442777.5, 2443143.5, 2443508.5, 2443873.5,
