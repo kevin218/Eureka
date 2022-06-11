@@ -439,7 +439,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Compute MAD value
             meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
             log.writelog(f"Stage 3 MAD = "
-                         f"{np.round(meta.mad_s3, 2).astype(int)} ppm")
+                         f"{np.round(meta.mad_s3).astype(int)} ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')

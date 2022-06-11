@@ -78,7 +78,9 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                    (POSTARG2[i] - calhdr0['POSTARG2'])/0.121)
         centers[i][0] += yoffset
         centers[i][1] += xoffset
-        log.writelog(f"Adding {xoffset},{yoffset} pixels to x,y centroid position.",
+        log.writelog(f"Adding {np.round(xoffset, 3)}, {np.round(yoffset, 3)}"
+                     f" pixels to x, y centroid position for integrations "
+                     f"related to staring-mode image #{i}.",
                      mute=(not meta.verbose))
         """
         if calhdr0['APERTURE'] == 'IRSUB256':
