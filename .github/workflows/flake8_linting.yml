@@ -20,3 +20,4 @@ jobs:
         ignore: W504,W503,E704,E226,E722
         maxlinelength: 100
         repotoken: ${{ secrets.GITHUB_TOKEN }}
+        
