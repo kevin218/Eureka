@@ -780,12 +780,16 @@ def correct_drift2D(data, meta, log, m):
                                meta.drift2D_int[-1][n, 1]).flatten(),
                               (ix-meta.drift2D[-1][n, 0] +
                                meta.drift2D_int[-1][n, 0]).flatten())
+        # Need to be careful with shifting the mask. Do the shifting, and
+        # mask whichever pixel was closest to the one that had been masked
         spline = spi.RectBivariateSpline(iy, ix, data.mask[n], kx=kx,
                                          ky=ky, s=0)
         data.mask[n] = spline((iy-meta.drift2D[-1][n, 1] +
                                meta.drift2D_int[-1][n, 1]).flatten(),
                               (ix-meta.drift2D[-1][n, 0] +
                                meta.drift2D_int[-1][n, 0]).flatten())
+        # Fractional masking won't work - make sure it is all integer
+        data.mask[n] = np.round(data.mask[n])
         spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx,
                                          ky=ky, s=0)
         data.variance[n] = spline((iy-meta.drift2D[-1][n, 1] +
