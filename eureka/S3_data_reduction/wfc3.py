@@ -42,7 +42,7 @@ def preparation_step(meta, log):
                                       meta.CRPIX2, meta.postarg1,
                                       meta.postarg2, meta, log)
 
-    # Initialize listto hold centroid positions from later steps in this stage
+    # Initialize list to hold centroid positions from later steps in this stage
     meta.centroids = []
     meta.subflat = []
     meta.flatmask = []
