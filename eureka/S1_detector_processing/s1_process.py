@@ -163,6 +163,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.linearity.skip = meta.skip_linearity
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
+        self.jump.rejection_threshold = meta.jump_rejection_threshold
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
