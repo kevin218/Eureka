@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: tonybajan/flake8-check-action@v1.2.0
+    - uses: tonybajan/flake8-check-action@v1.4.0
       with:
         select: E1,E2,E3,E4,E5,E7,W6,F
         ignore: W504,W503,E704,E226,E722
