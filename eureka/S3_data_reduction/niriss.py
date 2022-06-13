@@ -2,14 +2,15 @@
 #
 # Written by: Adina Feinstein
 # Last updated by: Adina Feinstein
-# Last updated date: January 13, 2022
+# Last updated date: February 7, 2022
 #
 ####################################
-
+import itertools
 import numpy as np
 import ccdproc as ccdp
 from astropy import units
 from astropy.io import fits
+import scipy.optimize as so
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy.nddata import CCDData
@@ -18,14 +19,19 @@ from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 
-#from jwst.datamodels import WaveMapModel, WaveMapSingleModel
-
 from .background import fitbg3
+from .niriss_profiles import *
+
+# some cute cython code
+import pyximport
+pyximport.install()
+from . import niriss_cython
 
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
            'f277_mask', 'fit_bg', 'wave_NIRISS',
-           'mask_method_one', 'mask_method_two']
+           'mask_method_one', 'mask_method_two', 'fit_orders',
+           'fit_orders_fast']
 
 
 def read(filename, f277_filename, data, meta):
@@ -48,22 +54,21 @@ def read(filename, f277_filename, data, meta):
     meta : astropy.table.Table
        Metadata stored in the FITS file.
     """
-
-    assert(filename, str)
-
     meta.filename = filename
 
     hdu = fits.open(filename)
     f277= fits.open(f277_filename)
 
     # loads in all the header data
+    data.filename = filename
     data.mhdr = hdu[0].header
     data.shdr = hdu['SCI',1].header
 
     data.intend = hdu[0].header['NINTS'] + 0.0
-    data.bjdtbd = np.linspace(data.mhdr['EXPSTART'], 
+    data.time = np.linspace(data.mhdr['EXPSTART'], 
                               data.mhdr['EXPEND'], 
                               int(data.intend))
+    meta.time_units = 'BJD_TDB'
 
     # loads all the data into the data object
     data.data = hdu['SCI',1].data + 0.0
@@ -81,7 +86,10 @@ def read(filename, f277_filename, data, meta):
     data.data[np.isnan(data.data)==True] = 0
     data.err[ np.isnan(data.err) ==True] = 0
 
+    data.median = np.nanmedian(data.data, axis=0)
+
     return data, meta
+
 
 def image_filtering(img, radius=1, gf=4):
     """
@@ -93,9 +101,9 @@ def image_filtering(img, radius=1, gf=4):
     ----------
     img : np.ndarray
        2D image array. 
-    radius : np.float, optional
+    radius : np.float; optional
        Default is 1.
-    gf : np.float, optional
+    gf : np.float; optional
        The standard deviation by which to Gaussian
        smooth the image. Default is 4.
 
@@ -122,15 +130,14 @@ def image_filtering(img, radius=1, gf=4):
 
     return z, g
 
-def f277_mask(data, meta, isplots=0):
+def f277_mask(data, isplots=0):
     """        
     Marks the overlap region in the f277w filter image.
     
     Parameters
     ----------
     data : object
-    meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
@@ -178,22 +185,17 @@ def mask_method_one(data, meta, isplots=0, save=True):
     ----------  
     data : object
     meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    save : bool, optional
+    save : bool; optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
 
     Returns
     -------
-    x : np.array
-       x-array for the polynomial fits to each order.
-    y1 : np.array
-       Polynomial fit to the first order.
-    y2 : np.array
-       Polynomial fit to the second order.
+    meta : object
     """
     def rm_outliers(arr):
         # removes instantaneous outliers
@@ -227,15 +229,9 @@ def mask_method_one(data, meta, isplots=0, save=True):
         fit = np.poly1d(poly)
         return fit
 
-#    try:
-#        g = data.simple_img
-#    except:
     g = simplify_niriss_img(data, meta, isplots)
 
-#    try:
-#        f = data.f277_img
-#    except:
-    f,_ = f277_mask(data, meta)
+    f,_ = f277_mask(data)
 
     g_centers = find_centers(g,cutends=None)
     f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
@@ -280,7 +276,9 @@ def mask_method_one(data, meta, isplots=0, save=True):
     if save:
         tab.write('niriss_order_fits_method1.csv',format='csv')
 
-    return tab
+    meta.tab1 = tab
+
+    return meta
 
 
 def mask_method_two(data, meta, isplots=0, save=False):
@@ -289,20 +287,23 @@ def mask_method_two(data, meta, isplots=0, save=False):
     second orders in NIRISS data. This method uses the vertical
     profile of a summed image to identify the borders of each
     order.
-    
-    ""
+
     Parameters
-    -----------
+    ----------
     data : object
     meta : object
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    save : bool, optional
+    save : bool; optional
        Has the option to save the initial guesses for the location
        of the NIRISS orders. This is set in the .ecf control files.
        Default is False.
+
+    Returns
+    -------
+    meta : object
     """
     def identify_peaks(column, height, distance):
         p,_ = find_peaks(column, height=height, distance=distance)
@@ -400,10 +401,12 @@ def mask_method_two(data, meta, isplots=0, save=False):
     if save:
         tab.write('niriss_order_fits_method2.csv',format='csv')
 
-    return tab
+    meta.tab2 = tab
+
+    return meta
 
 
-def simplify_niriss_img(data, meta, isplots=False):
+def simplify_niriss_img(data, meta, isplots=0):
     """
     Creates an image to map out where the orders are in
     the NIRISS data.
@@ -412,9 +415,15 @@ def simplify_niriss_img(data, meta, isplots=False):
     ----------     
     data : object  
     meta : object 
-    isplots : int, optional
+    isplots : int; optional
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.  
+
+    Returns
+    -------
+    g : np.ndarray
+       A 2D array that marks where the NIRISS first
+       and second orders are.
     """
     perc  = np.nanmax(data.data, axis=0)
 
@@ -447,6 +456,10 @@ def wave_NIRISS(wavefile, meta):
        The name of the .FITS file with the wavelength
        solution.
     meta : object
+
+    Returns
+    -------
+    meta : object
     """
     hdu = fits.open(wavefile)
 
@@ -458,13 +471,217 @@ def wave_NIRISS(wavefile, meta):
 
     return meta
 
+def flag_bg(data, meta):
+    '''Outlier rejection of sky background along time axis.
 
-def fit_bg(data, meta):
+    Parameters
+    ----------
+    data:   DataClass
+        The data object in which the fits data will stored
+    meta:   MetaClass
+        The metadata object
+
+    Returns
+    -------
+    data:   DataClass
+        The updated data object with outlier background pixels flagged.
+    '''
+
+    print('WARNING, niriss.flag_bg is not yet implemented!')
+
+    return
+
+
+def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
     """
     Subtracts background from non-spectral regions.
 
-    # want to create some background mask to pass in to 
-      background.fitbg2
-    """
+    Parameters
+    ----------
+    data : object
+    meta : object
+    n_iters : int; optional
+       The number of iterations to go over and remove cosmic
+       rays. Default is 3.
+    readnoise : float; optional
+       An estimation of the readnoise of the detector.
+       Default is 5.
+    sigclip : list, array; optional
+       A list or array of len(n_iiters) corresponding to the
+       sigma-level which should be clipped in the cosmic
+       ray removal routine. Default is [4,2,3].
+    isplots : int; optional
+       The level of output plots to display. Default is 0 
+       (no plots).
 
-    return 
+    Returns
+    -------
+    data : object
+    """
+    def dirty_mask(img, boxsize1=70, boxsize2=60):
+        """Really dirty box mask for background purposes."""
+        order1 = np.zeros((boxsize1, len(img[0])))
+        order2 = np.zeros((boxsize2, len(img[0])))
+        mask = np.ones(img.shape)
+        
+        for i in range(img.shape[1]):
+            s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
+            order1[:,i] = img[s:e,i]
+            mask[s:e,i] = 0
+
+            s,e = int(meta.tab2['order_2'][i]-boxsize2/2), int(meta.tab2['order_2'][i]+boxsize2/2)
+            try:
+                order2[:,i] = img[s:e,i]
+                mask[s:e,i] = 0
+            except:
+                pass
+
+        return mask
+
+    box_mask = dirty_mask(data.median)
+    data = fitbg3(data, np.array(box_mask-1, dtype=bool), 
+                  readnoise, sigclip, isplots)
+    return data
+
+
+def set_which_table(i, meta):
+    """ 
+    A little routine to return which table to
+    use for the positions of the orders.
+
+    Parameters
+    ----------
+    i : int
+    meta : object
+
+    Returns
+    -------
+    pos1 : np.array
+       Array of locations for first order.
+    pos2 : np.array
+       Array of locations for second order.
+    """
+    if i == 2:
+        pos1, pos2 = meta.tab2['order_1'], meta.tab2['order_2']
+    elif i == 1:
+        pos1, pos2 = meta.tab1['order_1'], meta.tab1['order_2']
+    return pos1, pos2
+
+
+def fit_orders(data, meta, which_table=2):
+    """
+    Creates a 2D image optimized to fit the data. Currently
+    runs with a Gaussian profile, but will look into other
+    more realistic profiles at some point. This routine
+    is a bit slow, but fortunately, you only need to run it
+    once per observations.
+
+    Parameters
+    ----------
+    data : object
+    meta : object
+    which_table : int; optional
+       Sets with table of initial y-positions for the
+       orders to use. Default is 2.
+
+    Returns
+    -------
+    meta : object
+       Adds two new attributes: `order1_mask` and `order2_mask`.
+    """
+    print("Go grab some food. This routing could take up to 30 minutes.")
+
+    def construct_guesses(A, B, sig, length=10):
+        As   = np.linspace(A[0],   A[1],   length)  # amplitude of gaussian for first order
+        Bs   = np.linspace(B[0],   B[1],   length)  # amplitude of gaussian for second order
+        sigs = np.linspace(sig[0], sig[1], length)  # std of gaussian profile
+        combos = np.array(list(itertools.product(*[As,Bs,sigs]))) # generates all possible combos
+        return combos
+
+    pos1, pos2 = set_which_table(which_table, meta)
+    
+    # Good initial guesses
+    combos = construct_guesses([0.1,30], [0.1,30], [1,40])
+    
+    # generates length x length x length number of images and fits to the data
+    img1, sigout1 = niriss_cython.build_image_models(data.median,
+                                                     combos[:,0], combos[:,1], 
+                                                     combos[:,2], 
+                                                     pos1, pos2)
+
+    # Iterates on a smaller region around the best guess
+    best_guess = combos[np.argmin(sigout1)]
+    combos = construct_guesses( [best_guess[0]-0.5, best_guess[0]+0.5],
+                                [best_guess[1]-0.5, best_guess[1]+0.5],
+                                [best_guess[2]-0.5, best_guess[2]+0.5] )
+
+    # generates length x length x length number of images centered around the previous
+    #   guess to optimize the image fit
+    img2, sigout2 = niriss_cython.build_image_models(data.median, 
+                                                     combos[:,0], combos[:,1],
+                                                     combos[:,2],
+                                                     pos1, pos2)
+
+    # creates a 2D image for the first and second orders with the best-fit gaussian
+    #    profiles
+    final_guess = combos[np.argmin(sigout2)]
+    ord1, ord2, _ = niriss_cython.build_image_models(data.median,
+                                                     [final_guess[0]],
+                                                     [final_guess[1]],
+                                                     [final_guess[2]],
+                                                     pos1, pos2,
+                                                     return_together=False)
+    meta.order1_mask = ord1[0]
+    meta.order2_mask = ord2[0]
+
+    return meta
+    
+
+def fit_orders_fast(data, meta, which_table=2):
+    """
+    A faster method to fit a 2D mask to the NIRISS data.
+    Very similar to `fit_orders`, but works with 
+    `scipy.optimize.leastsq`.
+
+    Parameters
+    ----------
+    data : object
+    meta : object
+    which_table : int; optional
+       Sets with table of initial y-positions for the
+       orders to use. Default is 2.
+
+    Returns
+    -------
+    meta : object
+    """
+    def residuals(params, data, y1_pos, y2_pos):
+        """ Calcualtes residuals for best-fit profile. """
+        A, B, sig1 = params
+        # Produce the model:   
+        model,_ = niriss_cython.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
+        # Calculate residuals:     
+        res = (model[0] - data)
+        return res.flatten()
+
+    pos1, pos2 = set_which_table(which_table, meta)
+
+    # fits the mask
+    results = so.least_squares( residuals, 
+                                x0=np.array([2,3,30]), 
+                                args=(data.median, pos1, pos2),
+                                xtol=1e-11, ftol=1e-11, max_nfev=1e3
+                               )
+
+    # creates the final mask
+    out_img1,out_img2,_= niriss_cython.build_image_models(data.median, 
+                                                          results.x[0:1], 
+                                                          results.x[1:2], 
+                                                          results.x[2:3], 
+                                                          pos1, 
+                                                          pos2,
+                                                          return_together=False)
+    meta.order1_mask_fast = out_img1[0]
+    meta.order2_mask_fast = out_img2[0]
+
+    return meta

@@ -1,7 +1,0 @@
-site_name: Eureka
-site_url: https://eureka.com/
-theme:
-  name: material
-  palette:
-    scheme: default
-    primary: light blue

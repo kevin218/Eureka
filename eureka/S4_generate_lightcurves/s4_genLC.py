@@ -2,7 +2,6 @@
 
 # Generic Stage 4 light curve generation pipeline
 
-
 # Proposed Steps
 # -------- -----
 # 1.  Read in Stage 3 data products
@@ -15,42 +14,37 @@
 # 8.  Save Stage 4 data products
 # 9.  Produce plots
 
-
-import sys, os, time, shutil, glob
+import os
+import time as time_pkg
 import numpy as np
 import scipy.interpolate as spi
-import matplotlib.pyplot as plt
-from . import plots_s4
-from . import drift
-from ..lib import sort_nicely as sn
+import astraeus.xarrayIO as xrio
+from astropy.convolution import Box1DKernel
+from . import plots_s4, drift
 from ..lib import logedit
-from ..lib import readECF as rd
+from ..lib import readECF
 from ..lib import manageevent as me
-from ..lib import astropytable
 from ..lib import util
+from ..lib import clipping
 
 
-class MetaClass:
-    '''A class to hold Eureka! metadata.
-    '''
-
-    def __init__(self):
-        return
-
-
-def lcJWST(eventlabel, s3_meta=None):
+def genlc(eventlabel, ecf_path=None, s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
     ----------
-    eventlabel: str
+    eventlabel : str
         The unique identifier for these data.
-    s3_meta:    MetaClass
-        The metadata object from Eureka!'s S3 step (if running S3 and S4 sequentially).
+    ecf_path : str; optional
+        The absolute or relative path to where ecfs are stored.
+        Defaults to None which resolves to './'.
+    s3_meta : eureka.lib.readECF.MetaClass
+        The metadata object from Eureka!'s S3 step (if running S3 and S4
+        sequentially). Defaults to None.
 
     Returns
     -------
-    meta:   MetaClass
+    meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
 
     Notes
@@ -61,179 +55,296 @@ def lcJWST(eventlabel, s3_meta=None):
         Initial version
     - October 2021 Taylor Bell
         Updated to allow for inputs from new S3
+    - April 2022 Kevin Stevenson
+        Enabled Astraeus
     '''
-    # Initialize a new metadata object
-    meta = MetaClass()
-    meta.eventlabel = eventlabel
-
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'
-    ecf = rd.read_ecf(ecffile)
-    rd.store_ecf(meta, ecf)
+    meta = readECF.MetaClass(ecf_path, ecffile)
+    meta.eventlabel = eventlabel
 
-    #load savefile
-    if s3_meta == None:
-        # Search for the S2 output metadata in the inputdir provided in
-        # First just check the specific inputdir folder
-        rootdir = os.path.join(meta.topdir, *meta.inputdir.split(os.sep))
-        if rootdir[-1]!='/':
-            rootdir += '/'
-        fnames = glob.glob(rootdir+'S3_'+meta.eventlabel+'*_Meta_Save.dat')
-        if len(fnames)==0:
-            # There were no metadata files in that folder, so let's see if there are in children folders
-            fnames = glob.glob(rootdir+'**/S3_'+meta.eventlabel+'*_Meta_Save.dat', recursive=True)
-            fnames = sn.sort_nicely(fnames)
+    if s3_meta is None:
+        # Locate the old MetaClass savefile, and load new ECF into
+        # that old MetaClass
+        s3_meta, meta.inputdir, meta.inputdir_raw = \
+            me.findevent(meta, 'S3', allowFail=False)
+    else:
+        # Running these stages sequentially, so can safely assume
+        # the path hasn't changed
+        meta.inputdir = s3_meta.outputdir
+        meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-        if len(fnames)==0:
-            # There may be no metafiles in the inputdir - raise an error and give a helpful message
-            raise AssertionError('Unable to find an output metadata file from Eureka!\'s S3 step '
-                                +'in the inputdir: \n"{}"!'.format(rootdir))
-        elif len(fnames)>1:
-            # There may be multiple runs - use the most recent but warn the user
-            print('WARNING: There are multiple metadata save files in your inputdir: \n"{}"\n'.format(rootdir)
-                 +'Using the metadata file: \n{}\n'.format(fnames[-1])
-                 +'and will consider aperture ranges listed there. If this metadata file is not a part\n'
-                 +'of the run you intended, please provide a more precise folder for the metadata file.')
-
-        fname = fnames[-1] # Pick the last file name (should be the most recent or only file)
-        fname = fname[:-4] # Strip off the .dat ending
-
-        s3_meta = me.loadevent(fname)
-
-    # Need to remove the topdir from the outputdir
-    s3_outputdir = s3_meta.outputdir[len(s3_meta.topdir):]
-    if s3_outputdir[0]=='/':
-        s3_outputdir = s3_outputdir[1:]
-
-    meta = s3_meta
-
-    # Load Eureka! control file and store values in the S3 metadata object
-    ecffile = 'S4_' + eventlabel + '.ecf'
-    ecf     = rd.read_ecf(ecffile)
-    rd.store_ecf(meta, ecf)
-
-    # Overwrite the inputdir with the exact output directory from S3
-    meta.inputdir = s3_outputdir
-    meta.old_datetime = meta.datetime # Capture the date that the
-    meta.datetime = None # Reset the datetime in case we're running this on a different day
-    meta.inputdir_raw = meta.inputdir
-    meta.outputdir_raw = meta.outputdir
+    meta = me.mergeevents(meta, s3_meta)
 
     if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider one aperture
-        meta.spec_hw_range = [meta.spec_hw,]
-        meta.bg_hw_range = [meta.bg_hw,]
+        # The user indicated in the ecf that they only want to consider
+        # one aperture
+        meta.spec_hw_range = [meta.spec_hw, ]
+        meta.bg_hw_range = [meta.bg_hw, ]
 
-    run_i = 0
+    # Create directories for Stage 5 outputs
+    meta.run_s4 = None
     for spec_hw_val in meta.spec_hw_range:
+        for bg_hw_val in meta.bg_hw_range:
+            meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
+                                             ap=spec_hw_val, bg=bg_hw_val)
 
+    for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
 
-            t0 = time.time()
+            t0 = time_pkg.time()
 
             meta.spec_hw = spec_hw_val
-
             meta.bg_hw = bg_hw_val
 
-            # Do some folder swapping to be able to reuse this function to find S3 outputs
-            tempfolder = meta.outputdir_raw
-            meta.outputdir_raw = meta.inputdir_raw
-            meta.inputdir = util.pathdirectory(meta, 'S3', meta.runs[run_i], old_datetime=meta.old_datetime, ap=spec_hw_val, bg=bg_hw_val)
-            meta.outputdir_raw = tempfolder
-            run_i += 1
+            # Load in the S3 metadata used for this particular aperture pair
+            meta = load_specific_s3_meta_info(meta)
 
-            # Create directories for Stage 4 processing outputs
-            run = util.makedirectory(meta, 'S4', ap=spec_hw_val, bg=bg_hw_val)
-            meta.outputdir = util.pathdirectory(meta, 'S4', run, ap=spec_hw_val, bg=bg_hw_val)
+            # Get directory for Stage 4 processing outputs
+            meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
+                                                ap=meta.spec_hw, bg=meta.bg_hw)
 
             # Copy existing S3 log file and resume log
-            meta.s4_logname  = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
-            log         = logedit.Logedit(meta.s4_logname, read=meta.s3_logname)
+            meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
+            log = logedit.Logedit(meta.s4_logname, read=meta.s3_logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
-            log.writelog(f"Input directory: {s3_outputdir}")
+            log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
-            # Copy ecf (and update outputdir in case S4 is being called sequentially with S3)
-            log.writelog('Copying S4 control file')
-            # shutil.copy(ecffile, meta.outputdir)
-            new_ecfname = meta.outputdir + ecffile.split('/')[-1]
-            with open(new_ecfname, 'w') as new_file:
-                with open(ecffile, 'r') as file:
-                    for line in file.readlines():
-                        if len(line.strip())==0 or line.strip()[0]=='#':
-                            new_file.write(line)
-                        else:
-                            line_segs = line.strip().split()
-                            if line_segs[0]=='inputdir':
-                                new_file.write(line_segs[0]+'\t\t/'+meta.inputdir+'\t'+' '.join(line_segs[2:])+'\n')
-                            else:
-                                new_file.write(line)
+            # Copy ecf
+            log.writelog('Copying S4 control file', mute=(not meta.verbose))
+            meta.copy_ecf()
 
-            log.writelog("Loading S3 save file")
-            table = astropytable.readtable(meta.tab_filename)
+            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
+                         mute=(not meta.verbose))
+            spec = xrio.readXR(meta.filename_S3_SpecData)
 
-            # Reverse the reshaping which has been done when saving the astropy table
-            optspec = np.reshape(table['optspec'].data, (-1, meta.subnx))
-            opterr = np.reshape(table['opterr'].data, (-1, meta.subnx))
-            wave_1d = table['wave_1d'].data[0:meta.subnx]
-            meta.bjdtdb = table['bjdtdb'].data[::meta.subnx]
+            if meta.wave_min is None:
+                meta.wave_min = np.min(spec.wave_1d.values)
+                log.writelog(f'No value was provided for meta.wave_min, so '
+                             f'defaulting to {meta.wave_min}.',
+                             mute=(not meta.verbose))
+            elif meta.wave_min < np.min(spec.wave_1d.values):
+                log.writelog(f'WARNING: The selected meta.wave_min '
+                             f'({meta.wave_min}) is smaller than the shortest '
+                             f'wavelength ({np.min(spec.wave_1d.values)})')
+            if meta.wave_max is None:
+                meta.wave_max = np.max(spec.wave_1d.values)
+                log.writelog(f'No value was provided for meta.wave_max, so '
+                             f'defaulting to {meta.wave_max}.',
+                             mute=(not meta.verbose))
+            elif meta.wave_max > np.max(spec.wave_1d.values):
+                log.writelog(f'WARNING: The selected meta.wave_max '
+                             f'({meta.wave_max}) is larger than the longest '
+                             f'wavelength ({np.max(spec.wave_1d.values)})')
 
-            #Replace NaNs with zero
-            optspec[np.where(np.isnan(optspec))] = 0
-            opterr[np.where(np.isnan(opterr))] = 0
-            meta.n_int, meta.subnx   = optspec.shape
+            meta.n_int, meta.subnx = spec.optspec.shape
 
             # Determine wavelength bins
-            binsize     = (meta.wave_max - meta.wave_min)/meta.nspecchan
-            meta.wave_low = np.round([i for i in np.linspace(meta.wave_min, meta.wave_max-binsize, meta.nspecchan)],3)
-            meta.wave_hi  = np.round([i for i in np.linspace(meta.wave_min+binsize, meta.wave_max, meta.nspecchan)],3)
+            if not hasattr(meta, 'wave_hi'):
+                binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
+                meta.wave_low = np.round(np.linspace(meta.wave_min,
+                                                     meta.wave_max-binsize,
+                                                     meta.nspecchan), 3)
+                meta.wave_hi = np.round(np.linspace(meta.wave_min+binsize,
+                                                    meta.wave_max,
+                                                    meta.nspecchan), 3)
+            elif (meta.nspecchan is not None
+                  and meta.nspecchan != len(meta.wave_hi)):
+                log.writelog(f'WARNING: Your nspecchan value of '
+                             f'{meta.nspecchan} differs from the size of '
+                             f'wave_hi ({len(meta.wave_hi)}). Using the '
+                             f'latter instead.')
+                meta.nspecchan = len(meta.wave_hi)
+            meta.wave_low = np.array(meta.wave_low)
+            meta.wave_hi = np.array(meta.wave_hi)
+            meta.wave = (meta.wave_low + meta.wave_hi)/2
+
+            # Define light curve DataArray
+            lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                   meta.wave, spec.time.values,
+                                   spec.optspec.attrs['flux_units'],
+                                   spec.wave_1d.attrs['wave_units'],
+                                   spec.optspec.attrs['time_units'],
+                                   name='data')
+            lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                  meta.wave, spec.time.values,
+                                  spec.optspec.attrs['flux_units'],
+                                  spec.wave_1d.attrs['wave_units'],
+                                  spec.optspec.attrs['time_units'],
+                                  name='err')
+            lc = xrio.makeDataset({'data': lcdata, 'err': lcerr})
+            lc['wave_low'] = (['wavelength'], meta.wave_low)
+            lc['wave_hi'] = (['wavelength'], meta.wave_hi)
+            lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
+            lc['wave_err'] = (lc.wave_hi - lc.wave_low)/2
+            lc.wave_low.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
+            lc.wave_hi.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
+            lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
+            lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
+
+            if not hasattr(meta, 'boundary'):
+                # The default value before this was added as an option
+                meta.boundary = 'extend'
+
+            # FINDME: The current implementation needs improvement,
+            # consider using optmask instead of masked arrays
+            # Create masked array for steps below
+            optspec_ma = np.ma.masked_array(spec.optspec, spec.optmask)
+            # Create opterr array with same mask as optspec
+            opterr_ma = np.ma.copy(optspec_ma)
+            opterr_ma = spec.opterr
+
+            # Do 1D sigma clipping (along time axis) on unbinned spectra
+            if meta.sigma_clip:
+                log.writelog('Sigma clipping unbinned optimal spectra along '
+                             'time axis')
+                outliers = 0
+                for w in range(meta.subnx):
+                    optspec_ma[:, w], nout = \
+                        clipping.clip_outliers(optspec_ma[:, w], log,
+                                               spec.wave_1d[w], meta.sigma,
+                                               meta.box_width, meta.maxiters,
+                                               meta.boundary, meta.fill_value,
+                                               verbose=meta.verbose)
+                    outliers += nout
+                # Print summary if not verbose
+                log.writelog(f'Identified a total of {outliers} outliers in '
+                             f'time series, or an average of '
+                             f'{outliers/meta.subnx:.3f} outliers per '
+                             f'wavelength',
+                             mute=meta.verbose)
 
             # Apply 1D drift/jitter correction
-            if meta.correctDrift == True:
-                #Calculate drift over all frames and non-destructive reads
+            if meta.correctDrift:
+                # Calculate drift over all frames and non-destructive reads
+                # This can take a long time, so always print this message
                 log.writelog('Applying drift/jitter correction')
                 # Compute drift/jitter
-                meta = drift.spec1D(optspec, meta, log)
+                drift1d, driftmask = drift.spec1D(optspec_ma, meta, log)
+                # Replace masked points with moving mean
+                drift1d = clipping.replace_moving_mean(
+                    drift1d, driftmask, Box1DKernel(meta.box_width))
+                lc['drift1d'] = (['time'], drift1d)
+                lc['driftmask'] = (['time'], driftmask)
                 # Correct for drift/jitter
                 for n in range(meta.n_int):
-                    spline     = spi.UnivariateSpline(np.arange(meta.subnx), optspec[n], k=3, s=0)
-                    spline2    = spi.UnivariateSpline(np.arange(meta.subnx), opterr[n],  k=3, s=0)
-                    optspec[n] = spline(np.arange(meta.subnx)+meta.drift1d[n])
-                    opterr[n]  = spline2(np.arange(meta.subnx)+meta.drift1d[n])
+                    # Need to zero-out the weights of masked data
+                    weights = (~np.ma.getmaskarray(optspec_ma[n])).astype(int)
+                    spline = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                  optspec_ma[n], k=3, s=0,
+                                                  w=weights)
+                    spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                   spec.opterr[n], k=3, s=0,
+                                                   w=weights)
+                    optspec_ma[n] = spline(np.arange(meta.subnx) +
+                                           lc.drift1d[n].values)
+                    opterr_ma[n] = spline2(np.arange(meta.subnx) +
+                                           lc.drift1d[n].values)
+                    # # Merge conflict: Need to test code below
+                    # # before implementing
+                    # optspec_ma[n] = np.ma.masked_invalid(spline(
+                    #     np.arange(meta.subnx)+lc.drift1d[n].values))
+                    # opterr_ma[n] = np.ma.masked_invalid(spline2(
+                    #     np.arange(meta.subnx)+lc.drift1d[n].values))
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
-                    plots_s4.drift1d(meta)
+                    plots_s4.drift1d(meta, lc)
 
+            # FINDME: optspec mask isn't getting updated when correcting
+            # for drift. Also, entire integrations are getting flagged.
+            # Need to look into these issues.
+            optspec_ma = np.ma.masked_invalid(optspec_ma)
+            opterr_ma = np.ma.masked_array(opterr_ma, optspec_ma.mask)
+            # spec['optspec_drift']
+
+            # Compute MAD alue
+            meta.mad_s4 = util.get_mad(meta, spec.wave_1d.values, optspec_ma,
+                                       meta.wave_min, meta.wave_max)
+            log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
+
+            if meta.isplots_S4 >= 1:
+                plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
 
             log.writelog("Generating light curves")
-            meta.lcdata   = np.zeros((meta.nspecchan, meta.n_int))
-            meta.lcerr    = np.zeros((meta.nspecchan, meta.n_int))
-            # ev.eventname2 = ev.eventname
+
+            # Loop over spectroscopic channels
             for i in range(meta.nspecchan):
-                log.writelog(f"  Bandpass {i} = %.3f - %.3f" % (meta.wave_low[i], meta.wave_hi[i]))
+                log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
+                             f"{lc.wave_hi.values[i]:.3f}")
                 # Compute valid indeces within wavelength range
-                index   = np.where((wave_1d >= meta.wave_low[i])*(wave_1d < meta.wave_hi[i]))[0]
-                # Sum flux for each spectroscopic channel
-                meta.lcdata[i]    = np.sum(optspec[:,index],axis=1)
+                index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
+                                 (spec.wave_1d < lc.wave_hi.values[i]))[0]
+                # Compute mean flux for each spectroscopic channel
+                # Sumation leads to outliers when there are masked points
+                lc['data'][i] = np.ma.mean(optspec_ma[:, index], axis=1)
                 # Add uncertainties in quadrature
-                meta.lcerr[i]     = np.sqrt(np.sum(opterr[:,index]**2,axis=1))
+                # then divide by number of good points to get
+                # proper uncertainties
+                lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma[:, index]**2,
+                                                  axis=1)) /
+                                np.ma.MaskedArray.count(opterr_ma))
+
+                # Do 1D sigma clipping (along time axis) on binned spectra
+                if meta.sigma_clip:
+                    lc['data'][i], outliers = clipping.clip_outliers(
+                        lc['data'][i].values, log, lc.wave_mid[i], meta.sigma,
+                        meta.box_width, meta.maxiters, meta.boundary,
+                        meta.fill_value, verbose=False)
+                    log.writelog(f'  Sigma clipped {outliers} outliers in time'
+                                 f' series', mute=(not meta.verbose))
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, meta.bjdtdb, i)
+                    plots_s4.binned_lightcurve(meta, lc, i)
 
             # Calculate total time
-            total = (time.time() - t0) / 60.
+            total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-            # Save results
             log.writelog('Saving results')
-            me.saveevent(meta, meta.outputdir + 'S4_' + meta.eventlabel + "_Meta_Save", save=[])
+            event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
+                           + str(bg_hw_val))
+            # Save Dataset object containing time-series of 1D spectra
+            meta.filename_S4_SpecData = (meta.outputdir + 'S4_' + event_ap_bg
+                                         + "_SpecData.h5")
+            xrio.writeXR(meta.filename_S4_SpecData, spec, verbose=True)
+            # Save Dataset object containing binned light curves
+            meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
+                                       + "_LCData.h5")
+            xrio.writeXR(meta.filename_S4_LCData, lc, verbose=True)
 
-            # if (isplots >= 1) and (correctDrift == True):
-            #     # Plot Drift
-            #     # Plots corrected 2D light curves
+            # Save results
+            fname = meta.outputdir+'S4_'+meta.eventlabel+"_Meta_Save"
+            me.saveevent(meta, fname, save=[])
 
             log.closelog()
+
+    return spec, lc, meta
+
+
+def load_specific_s3_meta_info(meta):
+    """Load the specific S3 MetaClass object used to make this aperture pair.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+
+    Returns
+    -------
+    eureka.lib.readECF.MetaClass
+        The current metadata object with values from the old MetaClass.
+    """
+    # Get directory containing S3 outputs for this aperture pair
+    inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
+    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    # Locate the old MetaClass savefile, and load new ECF into
+    # that old MetaClass
+    meta.inputdir = inputdir
+    s3_meta, meta.inputdir, meta.inputdir_raw = \
+        me.findevent(meta, 'S3', allowFail=False)
+    # Merge S4 meta into old S3 meta
+    meta = me.mergeevents(meta, s3_meta)
 
     return meta

@@ -49,6 +49,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+tests/data
 
 # Translations
 *.mo
@@ -69,6 +70,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/build/
 
 # PyBuilder
 target/
@@ -129,12 +131,27 @@ dmypy.json
 
 *.DS_Store
 
-# ecf file 
+# ecf files
 *.ecf
+
+# epf files
+*.epf
 
 # VS Code workspaces
 *.code-workspace
-.vscode/settings.json
+.vscode
 
-# Ignore installed packages for wfc3 branch
-image_registration/
+# Compiled niriss_cython file
+niriss_cython.c
+
+# Dockerfiles
+Dockerfile
+docker-compose.yml
+docker-setup.sh
+
+# Compiled JOSS paper files
+paper.pdf
+paper.jats
+
+# Ignores for Caroline
+eureka_analysis/JWST/run_eureka_demo.py

@@ -1,224 +1,260 @@
+import os
 
+# Required in case user passes in a numpy object (e.g. np.inf)
 import numpy as np
 
-"""
+
+class MetaClass:
+    '''A class to hold Eureka! metadata.
+
     This class loads a Eureka! Control File (ecf) and lets you
-    querry the parameters and values.
+    query the parameters and values.
 
-    Constructor Parameters:
-    -----------------------
-    file : A control file containing the parameters and values.
+    Notes
+    -----
+    History:
 
-    Notes:
-    ------
-    A parameter can have one or more values, differet parameters can
-    have different number of values.
-
-    The function Param.get(index) automatically interprets the type of the
-    values. If they can be cast into a numeric value retuns a numeric
-    value, otherwise returns a string.
-
-    Examples:
-    --------
-    >>> # Load a ecf file:
-    >>> import reader3 as rd
-    >>> reload(rd)
-    >>> ecf = rd.ecffile('/home/patricio/ast/esp01/anal/wa011bs11/run/wa011bs11.ecf')
-
-    >>> Each parameter has the attribute value, wich is a ndarray:
-    >>> ecf.planet.value
-    array(['wa011b'],
-          dtype='|S6')
-
-    >>> # To get the n-th value of a parameter use ecffile.param.get(n):
-    >>> # if it can't be converted to a number/bool/etc, it returns a string.
-    >>> ecf.planet.get(0)
-    'wa011b'
-    >>> ecf.photchan.get(0)
-    1
-    >>> ecf.fluxunits.get(0)
-    True
-
-    >>> # Use ecffile.param.value[n] to get the n-th value as string:
-    >>> ecf.aorname.get(0)
-    38807808
-    >>> ecf.aorname.value[0]
-    '38807808'
-
-    >>> # The function ecffile.param.getarr() returns the numeric/bool/etc
-    >>> # values of a parameter as a nparray:
-    >>> ecf.sigma.value
-    array(['4.0', '4.0'],
-          dtype='|S5')
-    >>> ecf.sigma.getarr()
-    array([4.0, 4.0], dtype=object)
-
-
-    Modification History:
-    --------------------
-    2009-01-02 chris      Initial Version.
-                          by Christopher Campo      ccampo@gmail.com
-    2010-03-08 patricio   Modified from ccampo version.
-                          by Patricio Cubillos      pcubillos@fulbrightmail.org
-    2010-10-27 patricio   Docstring updated
-    2011-02-12 patricio   Merged with ccampo's tepclass.py
-
-"""
-
-
-# each parameter is an instance of this class
-class Param:
-  # constructor
-  def __init__(self, vals):
-    self.value = vals
-
-  def get(self, index=0):
-    """
-    Return a numeric/boolean/None/etc. value if possible, else return a string.
-    """
-    try:
-      return eval(self.value[index])
-    except:
-      return self.value[index]
-
-  def getarr(self):
-    length = np.size(self.value)
-    ret = np.zeros(length, dtype='object')
-    for i in np.arange(length):
-      ret[i] = self.get(i)
-    return ret
-
-
-class Ecf:
-
-  def __init__(self, params):
-
-  # :::: And now, Chris' code ::::
-  # load all parameters
-    for i, parname in enumerate(params):
-      exec("self.{pname} = Param(parname[1:])".format(pname  = parname[0]))
-
-  def make_file(self, name):
-
-    file = open(name, 'w')
-
-    attrib = vars(self)
-    keys = attrib.keys()
-
-    file.write("@ " + self.ecfname.get() + "\n")
-    for key in keys:
-      if key != "ecfname":
-        file.write(key + " " + attrib.get(key).value[0] + "\n")
-    file.close()
-
-def read_ecf(file):
-    """
-    Function to read the file:
-    """
-
-    # List containing the set of parameters:
-    ecfsets = []
-
-    # Read the file
-    file = open(file, 'r')
-    lines = file.readlines()
-    file.close()
-
-    cleanlines = []   # list with only the important lines
-    block      = []   # Blocks separator
-    # Clean the lines:
-    for i in np.arange(len(lines)):
-      line = lines[i]
-      # Strip off comments:
-      try:
-        line = line[0:line.index('#')].strip()
-      except:
-        line = line.strip()
-
-      # Keep only useful lines:
-      if len(line) > 0:
-        cleanlines.append(line)
-        # identify the separators:
-        if line[0] == "@":
-          block.append([len(cleanlines)-1, line[1:].strip()])
-
-    # Append a line to mark the end of the block:
-    block.append([len(cleanlines), "end"])
-
-
-    if (len(block)-1) == 0:
-      # do normal readecfs
-      params = []
-      for line in cleanlines:
-        params.append( np.array(line.split()) )
-      return Ecf(params)
-    else:
-      # Loop over each block:
-      for i in np.arange(len(block)-1):
-        params    = []  # List for the parameters and values of the block
-        multiples = []  # line position of multiple valued parameter
-        nval      = []  # number of values
-
-        for j in np.arange(block[i][0]+1, block[i+1][0]):
-          params.append( np.array(cleanlines[j].split()) )
-          # if the parameter has more than 1 value:
-          if len(params[-1]) > 2:
-            multiples.append(len(params)-1)
-            nval.append(len(params[-1])-1)
-
-
-        # number of parameters with multiple values:
-        nmul = len(multiples)
-
-        if nmul == 0:
-          ecfsets.append(params)
-          ecfsets[-1].append(["ecfname", str(block[i][1])])
-        else:
-          # calculate total number of sets
-          nt = 1
-          for j in np.arange(nmul):
-            nt *= nval[j]
-          ncurrent = nt
-
-          # holder of the sets of params:
-          parset = []
-          # make nt copies of the original set:
-          for j in np.arange(nt):
-            parset.append(params[:])
-            # and add the ecfname:
-            parset[j].append(["ecfname", str(block[i][1])])
-
-          # Loop over each multiple valued parameter:
-          for j in np.arange(nmul):
-            ncurrent /= nval[j]
-            mpar = np.copy(params[multiples[j]][1:])
-            # Edit the value in each set:
-            for k in np.arange(nt):
-              index = int((k/ncurrent) % nval[j])
-
-              parset[k][multiples[j]] = np.array([params[multiples[j]][0],
-                                                  mpar[index]])
-          for ps in parset:
-            ecfsets.append(ps)
-
-      # return a List of ecf objects (one for each set):
-      ecf = []
-      i = 0
-      for ecfset in ecfsets:
-        ecf.append(Ecf(ecfset))
-        i += 1
-      return ecf
-
-def store_ecf(meta, ecf):
+    - 2009-01-02 Christopher Campo
+        Initial Version.
+    - 2010-03-08 Patricio Cubillos
+        Modified from ccampo version.
+    - 2010-10-27 Patricio Cubillos
+        Docstring updated
+    - 2011-02-12 Patricio Cubillos
+        Merged with ccampo's tepclass.py
+    - 2022-03-24 Taylor J Bell
+        Significantly modified for Eureka
     '''
-    Store values from Eureka control file as parameters in Meta object.
-    '''
-    for key in ecf.__dict__.keys():
-        try:
-            exec('meta.' + key + ' = ecf.'+key+'.get(0)', locals())
-        except:
+
+    def __init__(self, folder=None, file=None, **kwargs):
+        '''Initialize the MetaClass object.
+
+        Parameters
+        ----------
+        folder : str; optional
+            The folder containing an ECF file to be read in. Defaults to None
+            which resolves to './'.
+        file : str; optional
+            The ECF filename to be read in. Defaults to None which results
+            in an empty MetaClass object.
+        **kwargs : dict
+            Any additional parameters to be loaded into the MetaClass after
+            the ECF has been read in
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial Version based on old readECF code.
+        '''
+        if folder is None:
+            folder = '.'+os.sep
+
+        self.params = {}
+        if file is not None and folder is not None:
+            if os.path.exists(os.path.join(folder, file)):
+                self.read(folder, file)
+            else:
+                raise ValueError(f"The file {os.path.join(folder,file)} "
+                                 f"does not exist.")
+
+        if kwargs is not None:
+            # Add any kwargs to the parameter dict
+            self.params.update(kwargs)
+
+            # Store each as an attribute
+            for param, value in kwargs.items():
+                setattr(self, param, value)
+
+    def __str__(self):
+        '''A function to nicely format some outputs when a MetaClass object is
+        converted to a string.
+
+        This function gets used if one does str(meta) or print(meta).
+
+        Returns
+        -------
+        str
+            A string representation of what is contained in the
+            MetaClass object.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial version.
+        '''
+        output = ''
+        for par in self.params:
+            # For each parameter, format a line as "Name: Value"
+            output += par+': '+str(getattr(self, par))+'\n'
+        return output
+
+    def __repr__(self):
+        '''A function to nicely format some outputs when asked for a printable
+        representation of the MetaClass object.
+
+        This function gets used if one does repr(meta) or does just meta in an
+        interactive shell.
+
+        Returns
+        -------
+        str
+            A string representation of what is contained in the MetaClass
+            object in a manner that could reproduce a similar MetaClass object.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial version.
+        '''
+        # Get the fully qualified name of the class
+        output = type(self).__module__+'.'+type(self).__qualname__+'('
+        # Show what folder and file were used to read in an ECF
+        output += f"folder='{self.folder}', file='{self.filename}', "
+        # Show what values have been loaded into the params dictionary
+        output += "**"+str(self.params)
+        output = output+')'
+        return output
+
+    def __setattr__(self, item, value):
+        """Maps attributes to values
+
+        Parameters
+        ----------
+        item : str
+            The name for the attribute
+        value : any
+            The attribute value
+        """
+        if item in ['lines', 'params', 'filename', 'folder']:
+            self.__dict__[item] = value
+            return
+
+        # Set the attribute
+        self.__dict__[item] = value
+
+        # Add it to the list of parameters
+        self.__dict__['params'][item] = value
+
+    def read(self, folder, file):
+        """A function to read ECF files
+
+        Parameters
+        ----------
+        folder : str
+            The folder containing an ECF file to be read in.
+        file : str
+            The ECF filename to be read in.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial Version based on old readECF code.
+        - April 25, 2022 Taylor J Bell
+            Joining topdir and inputdir/outputdir here.
+        """
+        self.filename = file
+        self.folder = folder
+        # Read the file
+        with open(os.path.join(folder, file), 'r') as file:
+            self.lines = file.readlines()
+
+        cleanlines = []   # list with only the important lines
+        # Clean the lines:
+        for line in self.lines:
+            # Strip off comments:
+            if "#" in line:
+                line = line[0:line.index('#')]
+            line = line.strip()
+
+            # Keep only useful lines:
+            if len(line) > 0:
+                cleanlines.append(line)
+
+        for line in cleanlines:
+            name = line.split()[0]
+            val = ''.join(line.split()[1:])
             try:
-                exec('meta.' + key + ' = ecf.'+key+'.getarr(0)', locals())
+                val = eval(val)
             except:
-                print("Unable to store parameter: " + key)
-    return
+                # FINDME: Need to catch only the expected exception
+                pass
+            self.params[name] = val
+
+        # Store each as an attribute
+        for param, value in self.params.items():
+            setattr(self, param, value)
+
+        self.inputdir_raw = self.inputdir
+        self.outputdir_raw = self.outputdir
+
+        # Join inputdir_raw and outputdir_raw to topdir for convenience
+        # Use split to avoid issues from beginning
+        self.inputdir = os.path.join(self.topdir,
+                                     *self.inputdir.split(os.sep))
+        self.outputdir = os.path.join(self.topdir,
+                                      *self.outputdir.split(os.sep))
+
+        # Make sure there's a trailing slash at the end of the paths
+        if self.inputdir[-1] != os.sep:
+            self.inputdir += os.sep
+        if self.outputdir[-1] != os.sep:
+            self.outputdir += os.sep
+
+    def write(self, folder):
+        """A function to write an ECF file based on the current MetaClass settings.
+
+        NOTE: For now this only rewrites the input ECF file to a new ECF file
+        in the requested folder. In the future this function should make a full
+        ECF file based on any adjusted parameters.
+
+        Parameters
+        ----------
+        folder : str
+            The folder where the ECF file should be written.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial Version.
+        """
+        with open(os.path.join(folder, self.filename), 'w') as file:
+            file.writelines(self.lines)
+
+    def copy_ecf(self):
+        """Copy an ECF file to the output directory to ensure reproducibility.
+
+        NOTE: This will update the inputdir of the ECF file to point to the
+        exact inputdir used to avoid ambiguity later and ensure that the ECF
+        could be used to make the same outputs.
+
+        Notes
+        -----
+        History:
+
+        - Mar 2022 Taylor J Bell
+            Initial Version based on old readECF code.
+        """
+        # Copy ecf (and update inputdir to be precise which exact inputs
+        # were used)
+        new_ecfname = os.path.join(self.outputdir, self.filename)
+        with open(new_ecfname, 'w') as new_file:
+            for line in self.lines:
+                if len(line.strip()) == 0 or line.strip()[0] == '#':
+                    new_file.write(line)
+                else:
+                    line_segs = line.strip().split()
+                    if line_segs[0] == 'inputdir':
+                        new_file.write(line_segs[0]+'\t\t'+self.inputdir_raw +
+                                       '\t'+' '.join(line_segs[2:])+'\n')
+                    else:
+                        new_file.write(line)

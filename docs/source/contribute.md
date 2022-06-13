@@ -2,29 +2,29 @@
 
 ## Page information
 
-Here you will find information on how to contribute to Eureka! Which includes the importance of
-[testing](#Testing-Eureka!) as well as some [GitHub basics](#GitHub-Basics)
+Here you will find information on how to contribute to Eureka! which includes the importance of
+testing as well as some GitHub basics.
 
 ## Testing Eureka!
 
-As of now, tests for Stage 3, Stage 4, as well as light curve fitting functionality for NIRCam have been written for
-Eureka!. **It is required for all contributors of Eureka! to run these tests locally before opening a pull request
-with their new code**. By running the tests locally, the contributor will be able to see whether the functionality of
-the main code is still intact. This requirement is common in software development teams and is meant to encourage smooth
-collaboration by helping track small bugs or changes that affect the basic functionality of the code so that colleagues won't have to.
+As of 5/10/2022, Eureka has working end-to-end tests for NIRCam (S3-S6), NIRSpec (S2-S5), MIRI (S2-S6), and HST/WFC3 (S3). Test data NIRISS has not yet been created, so this instrument will not have unit tests until further in the future. Future testing will test the functionality of different fitting methods and different systematics models. **It is required for all contributors of Eureka! to run these tests locally before opening a pull request with their new code**. By running the tests locally, the contributor will be able to see whether the functionality of the main code is still intact. This requirement is common in software development teams and is meant to encourage smooth collaboration by helping track small bugs or changes that affect the basic functionality of the code so that colleagues won't have to.
 
-For these tests, the `pytest` package (<a href="https://docs.pytest.org/en/6.2.x/getting-started.html" target="_blank"> link </a>) will be used. Once installed, the user submitting a pull request may navigate to the tests folder in Eureka! (`eureka/tests`) and run
+For these tests, the `pytest` package (<a href="https://docs.pytest.org/en/6.2.x/getting-started.html" target="_blank"> link </a>) will be used. Once installed, the user submitting a pull request may navigate to the tests folder in Eureka! (`tests`) and run
 the following command:
 ```bash
 pytest
 ```
 
-Which will run the suite of tests found within the folder. To run a specific test, let's use NIRCam tests as an example, then the following command can be used:
+Which will run the entire suite of tests found within the folder. To run a specific instrument test, the following command can be used:
 ```bash
 pytest -k test_NIRCam
 ```
+or
+```bash
+pytest -k test_NIRSpec
+```
 
-Everything should pass and a result similar to the following picture should be seen.
+All the tests should pass and a result similar to the following picture should be seen.
 
 ![testing](../media/testing.png)
 

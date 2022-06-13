@@ -7,11 +7,9 @@ import inspect
 import warnings
 
 import astropy.table as at
-import astropy.units as q
 from astropy.utils.exceptions import AstropyWarning
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import rc
 import numpy as np
 from scipy.optimize import curve_fit
 from svo_filters import svo
@@ -20,82 +18,63 @@ from bokeh.models import Range1d
 from bokeh.models.widgets import Panel, Tabs
 
 from . import utils
-from . import modelgrid
+# from . import modelgrid
 
 warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', category=FutureWarning)
 
 
 def ld_profile(name='quadratic', latex=False):
-    """
-    Define the function to fit the limb darkening profile
-
-    Reference:
-        https://www.cfa.harvard.edu/~lkreidberg/batman/
-        tutorial.html#limb-darkening-options
+    """Define the function to fit the limb darkening profile.
 
     Parameters
     ----------
-    name: str
+    name : str; optional
         The name of the limb darkening profile function to use,
-        including 'uniform', 'linear', 'quadratic', 'square-root',
-        'logarithmic', 'exponential', '3-parameter', and '4-parameter'
-    latex: bool
-        Return the function as a LaTeX formatted string
+        including 'uniform', 'linear', 'quadratic', 'kipping2013',
+        'square-root', 'logarithmic', 'exponential', '3-parameter',
+        and '4-parameter'. Detaults to 'quadratic'.
+    latex : bool; optional
+        Return the function as a LaTeX formatted string. Defaults to False.
 
     Returns
     -------
-    function, str
-        The corresponding function for the given profile
+    function
+        The corresponding function for the given profile.
+        Returned if latex==False.
+    OR str
+        A string representation of the corresponding function
+        for the given profile. Returned if latex==True.
 
+    References
+    ----------
+    https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
     """
     # Supported profiles a la BATMAN
-    names = ['uniform', 'linear', 'quadratic', 'square-root',
+    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
 
     # Check that the profile is supported
     if name in names:
 
-        # Uniform
         if name == 'uniform':
-            def profile(m, c1):
-                return c1
-
-        # Linear
-        if name == 'linear':
-            def profile(m, c1):
-                return 1. - c1*(1.-m)
-
-        # Quadratic
-        if name == 'quadratic':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2*(1.-m)**2
-
-        # Square-root
-        if name == 'square-root':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2*(1.-np.sqrt(m))
-
-        # Logarithmic
-        if name == 'logarithmic':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2*m*np.log(m)
-
-        # Exponential
-        if name == 'exponential':
-            def profile(m, c1, c2):
-                return 1. - c1*(1.-m) - c2/(1.-np.e**m)
-
-        # 3-parameter
-        if name == '3-parameter':
-            def profile(m, c1, c2, c3):
-                return 1. - c1*(1.-m) - c2*(1.-m**1.5) - c3*(1.-m**2)
-
-        # 4-parameter
-        if name == '4-parameter':
-            def profile(m, c1, c2, c3, c4):
-                return 1. - c1*(1.-m**0.5) - c2*(1.-m) \
-                          - c3*(1.-m**1.5) - c4*(1.-m**2)
+            profile = uniform
+        elif name == 'linear':
+            profile = linear
+        elif name == 'quadratic':
+            profile = quadratic
+        elif name == 'kipping2013':
+            profile = kipping2013
+        elif name == 'square-root':
+            profile = square_root
+        elif name == 'logarithmic':
+            profile = logarithmic
+        elif name == 'exponential':
+            profile = exponential
+        elif name == '3-parameter':
+            profile = three_parameter
+        elif name == '4-parameter':
+            profile = four_parameter
 
         if latex:
             profile = inspect.getsource(profile).replace('\n', '')
@@ -106,17 +85,198 @@ def ld_profile(name='quadratic', latex=False):
                 profile = profile.replace(i, j)
 
         return profile
-
     else:
-        print("'{}' is not a supported profile. Try".format(name), names)
-        return
+        raise Exception(f"'{name}' is not a supported profile. Try {names}")
+
+
+def uniform(m):
+    """Uniform limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1.
+
+
+def linear(m, c1):
+    """Linear limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1. - c1*(1.-m)
+
+
+def quadratic(m, c1, c2):
+    """Quadratic limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1. - c1*(1.-m) - c2*(1.-m)**2
+
+
+def kipping2013(m, c1, c2):
+    """Reparameterized Quadratic (Kipping 2013) limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    u1 = 2*np.sqrt(c1)*c2
+    u2 = np.sqrt(c1)*(1-2*c2)
+    return 1. - u1*(1.-m) - u2*(1.-m)**2
+
+
+def square_root(m, c1, c2):
+    """Square-root limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1. - c1*(1.-m) - c2*(1.-np.sqrt(m))
+
+
+def logarithmic(m, c1, c2):
+    """Logarithmic limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1. - c1*(1.-m) - c2*m*np.log(m)
+
+
+def exponential(m, c1, c2):
+    """Exponential limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1. - c1*(1.-m) - c2/(1.-np.e**m)
+
+
+def three_parameter(m, c1, c2, c3):
+    """3-parameter limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+    c3 : float
+        The third limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return 1. - c1*(1.-m) - c2*(1.-m**1.5) - c3*(1.-m**2)
+
+
+def four_parameter(m, c1, c2, c3, c4):
+    """4-parameter limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+    c3 : float
+        The third limb darkening coefficient.
+    c4 : float
+        The fourth limb darkening coefficient.
+
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    return (1. - c1*(1.-m**0.5) - c2*(1.-m)
+            - c3*(1.-m**1.5) - c4*(1.-m**2))
 
 
 class LDC:
-    """A class to hold all the LDCs you want to run
+    """A class to hold all the LDCs you want to run.
 
-    Example
-    -------
+    Examples
+    --------
     from exoctk.limb_darkening import limb_darkening_fit as lf
     from exoctk import modelgrid
     from svo_filters import Filter
@@ -129,28 +289,30 @@ class LDC:
     ld.calculate(4000, 4.5, 0.0, '4-parameter', bandpass=bp)
     ld.plot(show=True)
     """
+
     def __init__(self, model_grid):
-        """Initialize an LDC object
+        """Initialize an LDC object.
 
         Parameters
         ----------
-        model_grid: exoctk.modelgrid.ModelGrid
+        model_grid : exoctk.modelgrid.ModelGrid
             The grid of synthetic spectra from which the coefficients will
-            be calculated
+            be calculated.
         """
         # Set the model grid
         # if not isinstance(model_grid, modelgrid.ModelGrid):
-        #     raise TypeError("'model_grid' must be a exoctk.modelgrid.ModelGrid object.")
+        #     raise TypeError("'model_grid' must be a "
+        #                     "exoctk.modelgrid.ModelGrid object.")
 
         self.model_grid = model_grid
 
         # Table for results
-        columns = ['name', 'Teff', 'logg', 'FeH', 'profile', 'filter', 'coeffs',
-                   'errors', 'wave', 'wave_min', 'wave_eff', 'wave_max',
-                   'scaled_mu', 'raw_mu', 'mu_min', 'scaled_ld', 'raw_ld',
-                   'ld_min', 'ldfunc', 'flux', 'bandpass', 'color']
-        dtypes = ['|S20', float, float, float, '|S20', '|S20', object, object, object,
-                  np.float16, np.float16, np.float16, object, object,
+        columns = ['name', 'Teff', 'logg', 'FeH', 'profile', 'filter',
+                   'coeffs', 'errors', 'wave', 'wave_min', 'wave_eff',
+                   'wave_max', 'scaled_mu', 'raw_mu', 'mu_min', 'scaled_ld',
+                   'raw_ld', 'ld_min', 'ldfunc', 'flux', 'bandpass', 'color']
+        dtypes = ['|S20', float, float, float, '|S20', '|S20', object, object,
+                  object, np.float16, np.float16, np.float16, object, object,
                   np.float16, object, object, np.float16, object, object,
                   object, '|S20']
         self.results = at.Table(names=columns, dtype=dtypes)
@@ -158,32 +320,32 @@ class LDC:
         self.ld_color = {'quadratic': 'blue', '4-parameter': 'red',
                          'exponential': 'green', 'linear': 'orange',
                          'square-root': 'cyan', '3-parameter': 'magenta',
-                         'logarithmic': 'pink', 'uniform': 'purple'}
+                         'logarithmic': 'pink', 'uniform': 'purple',
+                         'kipping2013': 'brown'}
 
         self.count = 1
 
     @staticmethod
     def bootstrap_errors(mu_vals, func, coeffs, errors, n_samples=1000):
-        """
-        Bootstrapping LDC errors
+        """Bootstrapping LDC errors.
 
         Parameters
         ----------
-        mu_vals: sequence
-            The mu values
-        func: callable
-            The LD profile function
-        coeffs: sequence
-            The coefficients
-        errors: sequence
-            The errors on each coeff
-        n_samples: int
-            The number of samples
+        mu_vals : sequence
+            The mu values.
+        func : callable
+            The LD profile function.
+        coeffs : sequence
+            The coefficients.
+        errors : sequence
+            The errors on each coeff.
+        n_samples : int; optional
+            The number of samples. Defaults to 1000.
 
         Returns
         -------
         tuple
-            The lower and upper errors
+            The lower and upper errors.
         """
         # Generate n_samples
         vals = []
@@ -209,27 +371,29 @@ class LDC:
 
         Parameters
         ----------
-        Teff: int
-            The effective temperature of the model
-        logg: float
-            The logarithm of the surface gravity
-        FeH: float
-            The logarithm of the metallicity
-        profile: str
+        Teff : int
+            The effective temperature of the model.
+        logg : float
+            The logarithm of the surface gravity.
+        FeH : float
+            The logarithm of the metallicity.
+        profile : str
             The name of the limb darkening profile function to use,
             including 'uniform', 'linear', 'quadratic', 'square-root',
-            'logarithmic', 'exponential', and '4-parameter'
-        mu_min: float
-            The minimum mu value to consider
-        ld_min: float
-            The minimum limb darkening value to consider
-        bandpass: svo_filters.svo.Filter() (optional)
+            'logarithmic', 'exponential', and '4-parameter'.
+        mu_min : float; optional
+            The minimum mu value to consider. Defaults to 0.05.
+        ld_min : float; optional
+            The minimum limb darkening value to consider. Defaults to 0.01.
+        bandpass : svo_filters.svo.Filter(); optional
             The photometric filter through which the limb darkening
-            is to be calculated
-        name: str (optional)
-            A name for the calculation
-        color: str (optional)
-            A color for the plotted result
+            is to be calculated. Defaults to None.
+        name : str; optional
+            A name for the calculation. Defaults to None.
+        color : str; optional
+            A color for the plotted result. Defaults to None.
+        **kwargs : dict
+            Unused.
         """
         # Define the limb darkening profile function
         ldfunc = ld_profile(profile)
@@ -268,9 +432,11 @@ class LDC:
 
         # Apply the filter
         try:
-            flux, _ = bandpass.apply([wave, flux])  # Sometimes this returns a tuple
+            # Sometimes this returns a tuple
+            flux, _ = bandpass.apply([wave, flux])
         except ValueError:
-            flux = bandpass.apply([wave, flux])  # Sometimes it returns one value
+            # Sometimes it returns one value
+            flux = bandpass.apply([wave, flux])
 
         # Make rsr curve 3 dimensions if there is only one
         # wavelength bin, then get wavelength only
@@ -315,7 +481,8 @@ class LDC:
             result['name'] = name or 'Calculation {}'.format(self.count)
             self.count += 1
             if len(bandpass.centers[0]) == len(scaled_ld) and name is None:
-                result['name'] = '{} {}'.format(str(round(bandpass.centers[0][n], 2)), self.model_grid.wave_units)
+                result['name'] = (f'{round(bandpass.centers[0][n], 2)} '
+                                  f'{self.model_grid.wave_units}')
 
             # Set a color if possible
             result['color'] = color or self.ld_color[profile]
@@ -365,10 +532,15 @@ class LDC:
 
         Parameters
         ----------
-        fig: matplotlib.pyplot.figure, bokeh.plotting.figure (optional)
-            An existing figure to plot on
-        show: bool
-            Show the figure
+        show : bool; optional
+            Show the figure. Defaults to False.
+        **kwargs : dict
+            Unused.
+
+        Returns
+        -------
+        final : bokeh.models.widgets.Tabs; optional
+            The final tabbed figure. Only returned if show==False.
         """
         # Change names to reflect ld profile
         old_names = self.results['name']
@@ -381,8 +553,9 @@ class LDC:
 
             # Plot it
             TOOLS = 'box_zoom, box_select, crosshair, reset, hover'
-            fig = bkp.figure(tools=TOOLS, x_range=Range1d(0, 1), y_range=Range1d(0, 1),
-                        plot_width=800, plot_height=400)
+            fig = bkp.figure(tools=TOOLS, x_range=Range1d(0, 1),
+                             y_range=Range1d(0, 1),
+                             plot_width=800, plot_height=400)
             self.plot(wave_eff=wav, fig=fig)
 
             # Plot formatting
@@ -408,10 +581,18 @@ class LDC:
 
         Parameters
         ----------
-        fig: matplotlib.pyplot.figure, bokeh.plotting.figure (optional)
-            An existing figure to plot on
-        show: bool
-            Show the figure
+        fig : matplotlib.pyplot.figure, bokeh.plotting.figure; optional
+            An existing figure to plot on. Defaults to None.
+        show : bool; optional
+            Show the figure. Defaults to False.
+        **kwargs : dict
+            Additional parameters to be passed into plotting
+            and utils.filter_table().
+
+        Returns
+        -------
+        fig : matplotlib.pyplot.figure, bokeh.plotting.figure; optional
+            The resulting figure. Only returned if show==False.
         """
         # Separate plotting kwargs from parameter kwargs
         pwargs = {i: j for i, j in kwargs.items() if i in self.results.columns}
