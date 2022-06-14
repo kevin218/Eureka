@@ -6,6 +6,7 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
+import xarray as xr
 from . import nircam, sigrej
 from . import hst_scan as hst
 from ..lib import suntimecorr, utc_tt
@@ -728,7 +729,7 @@ def correct_drift2D(data, meta, log, m):
 
     # Outlier rejection of full frame along time axis
     if meta.files_per_batch > 1:
-        log.writelog("Performing full-frame outlier rejection...",
+        log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
             iscan = np.where(meta.scandir == p)[0]*data.attrs['nreads']
@@ -790,11 +791,12 @@ def correct_drift2D(data, meta, log, m):
                             (ix-drift2D[n, 0] +
                              drift2D_int[n, 0]).flatten())
 
-    data['drift2D'] = xrio.makeFluxLikeDA(drift2D, data.time, 'pixels',
-                                          data.time.attrs["units"],
-                                          name='drift2D')
-    data['drift2D_int'] = xrio.makeFluxLikeDA(drift2D_int, data.time, 'pixels',
-                                              data.time.attrs["units"],
-                                              name='drift2D_int')
+    data['drift2D'] = xr.DataArray(drift2D, name='drift2D',
+                                   coords={"time": data.time,
+                                           "axis": ["x", "y"]},
+                                   dims=["time", "axis"],
+                                   attrs={"time_units": data.time.time_units,
+                                          "drift_units": 'pixels'})
+    data.drift2D["time"].attrs["time_units"] = data.time.time_units
 
     return data, meta, log
