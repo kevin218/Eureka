@@ -196,9 +196,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 istart = 0
 
             # Group files into batches
+            if not hasattr(meta, 'max_memory'):
+                meta.max_memory = 0.5
+            if not hasattr(meta, 'nfiles'):
+                meta.nfiles = 1
             system_RAM = psutil.virtual_memory().total
             filesize = os.path.getsize(meta.segment_list[istart])
-            maxfiles = int(system_RAM*meta.max_memory/filesize)
+            maxfiles = max([1, int(system_RAM*meta.max_memory/filesize)])
             meta.files_per_batch = min([maxfiles, meta.nfiles])
             meta.nbatch = int(np.ceil((meta.num_data_files-istart) /
                                       meta.files_per_batch))
@@ -395,7 +399,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if meta.save_output:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
-                                   "_FluxData_seg"+str(m+1).zfill(4)+".h5")
+                                   "_FluxData_seg"+str(m).zfill(4)+".h5")
                     success = xrio.writeXR(filename_xr, data, verbose=False,
                                            append=False)
                     if success == 0:

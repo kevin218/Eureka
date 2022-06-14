@@ -356,7 +356,7 @@ def read_time(meta, data):
     fname = os.path.join(meta.topdir,
                          os.sep.join(meta.time_file.split(os.sep)))
     if meta.firstFile:
-        print('  Note: Using the time stamps from:\n'+fname)
+        print('  Note: Using the time stamps from:\n  '+fname)
     time = np.loadtxt(fname).flatten()[data.attrs['intstart']-1:
                                        data.attrs['intend']-1]
 

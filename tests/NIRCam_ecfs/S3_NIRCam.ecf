@@ -1,8 +1,9 @@
 # Eureka! Control File for Stage 3: Data Reduction
 
 ncpu        1           # Number of CPUs
+nfiles      1           # The number of data files to analyze simultaneously
+max_memory  0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix      calints     # Data file suffix
-inst        nircam
 
 # Subarray region of interest
 ywindow     [5,64]      # Vertical axis as seen in DS9
