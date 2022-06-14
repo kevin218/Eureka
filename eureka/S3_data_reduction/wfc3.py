@@ -6,7 +6,7 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-from . import nircam
+from . import nircam, sigrej
 from . import hst_scan as hst
 from ..lib import suntimecorr, utc_tt
 
@@ -47,10 +47,6 @@ def preparation_step(meta, log):
     meta.subflat = []
     meta.flatmask = []
     meta.scanHeight = []
-    meta.diffmask = []
-    meta.subdiffmask = []
-    meta.drift2D = []
-    meta.drift2D_int = []
     meta.subdata_ref = []
     meta.subdiffmask_ref = []
 
@@ -78,10 +74,6 @@ def conclusion_step(meta, log):
     meta.subflat = np.array(meta.subflat)
     meta.flatmask = np.array(meta.flatmask)
     meta.scanHeight = np.array(meta.scanHeight)
-    meta.diffmask = np.array(meta.diffmask)
-    meta.subdiffmask = np.array(meta.subdiffmask)
-    meta.drift2D = np.array(meta.drift2D)
-    meta.drift2D_int = np.array(meta.drift2D_int)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
 
@@ -330,18 +322,16 @@ def read(filename, data, meta, log):
         # Determine if we are using IMA or FLT files
         if filename.endswith('flt.fits'):
             # FLT files subtract first from last, 2 reads
-            meta.nreads = 2
+            data.attrs['nreads'] = 2
         else:
-            meta.nreads = data.attrs['shdr']['SAMPNUM']
-        
-        data.attrs['nreads'] = meta.nreads
+            data.attrs['nreads'] = data.attrs['shdr']['SAMPNUM']
 
-        sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
-        err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
-        dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
+        sci = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))  # Flux
+        err = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))  # Error
+        dq = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))  # Flags
         jd = []
         j = 0
-        for rd in range(meta.nreads, 0, -1):
+        for rd in range(data.attrs['nreads'], 0, -1):
             sci[j] = hdulist['SCI', rd].data
             err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
@@ -382,7 +372,7 @@ def read(filename, data, meta, log):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.zeros((meta.nreads, 2))
+    centroids = np.zeros((data.attrs['nreads'], 2))
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
@@ -432,8 +422,8 @@ def read(filename, data, meta, log):
     diffdata['wave_2d'].attrs['wave_units'] = wave_units
 
     # Figure out which read this file starts and ends with
-    diffdata.attrs['intstart'] = image_number*(meta.nreads-1)
-    diffdata.attrs['intend'] = (image_number+1)*(meta.nreads-1)
+    diffdata.attrs['intstart'] = image_number*(data.attrs['nreads']-1)
+    diffdata.attrs['intend'] = (image_number+1)*(data.attrs['nreads']-1)
 
     # Copy science and master headers
     diffdata.attrs['shdr'] = data.attrs['shdr']
@@ -513,13 +503,12 @@ def difference_frames(data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
-    if meta.nreads > 1:
+    if data.attrs['nreads'] > 1:
         # Subtract pairs of subframes
-        meta.nreads -= 1
         data.attrs['nreads'] -= 1
-        diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
-        differr = np.zeros((meta.nreads, meta.ny, meta.nx))
-        for n in range(meta.nreads):
+        diffflux = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))
+        differr = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))
+        for n in range(data.attrs['nreads']):
             diffflux[n] = data.flux[n+1]-data.flux[n]
             differr[n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
     else:
@@ -527,9 +516,9 @@ def difference_frames(data, meta, log):
         diffflux = data.flux
         differr = data.err
 
-    diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
-    guess = np.zeros((meta.nreads), dtype=int)
-    for n in range(meta.nreads):
+    diffmask = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))
+    guess = np.zeros((data.attrs['nreads']), dtype=int)
+    for n in range(data.attrs['nreads']):
         diffmask[n] = np.copy(meta.flatmask[-1][0])
         try:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
@@ -570,14 +559,12 @@ def difference_frames(data, meta, log):
                                            time_units, name='flux')
     diffdata['err'] = xrio.makeFluxLikeDA(differr, difftime, flux_units,
                                           time_units, name='err')
-    diffdata['mask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
-                                           time_units, name='mask')
+    diffdata['flatmask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
+                                               time_units, name='mask')
     variance = np.zeros_like(diffdata.flux.values)
     diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
                                                time_units, name='variance')
     diffdata['guess'] = (['time'], guess)
-
-    meta.diffmask.append(diffmask)
 
     return diffdata, meta, log
 
@@ -673,9 +660,9 @@ def correct_drift2D(data, meta, log, m):
         The current log.
     """
     def writeDrift2D(arg):
-        drift2D, m, n = arg
+        value, m, n = arg
         # Assign to array of spectra and uncertainties
-        meta.drift2D[-1][n] = drift2D
+        drift2D[n] = value
         return
 
     # Save the reference frame for each scan direction if not yet done
@@ -686,23 +673,22 @@ def correct_drift2D(data, meta, log, m):
         # for observations with only one scan direction, since the second ref
         # file will never be used.
         meta.subdata_ref.append(data.flux)
-        meta.subdiffmask_ref.append(meta.subdiffmask[-1])
+        meta.subdiffmask_ref.append(data.flatmask)
 
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
     # FINDME: instead of calculating scanHeight, consider fitting
     # stretch factor
-    drift2D = np.zeros((meta.nreads, 2))
-    meta.drift2D.append(drift2D)
+    drift2D = np.zeros((data.flux.shape[0], 2))
     if meta.ncpu == 1:
         # Only 1 CPU
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
-        for n in range(meta.nreads):
+        for n in range(data.flux.shape[0]):
             writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][0] *
                                           meta.subdiffmask_ref[p][0]),
                                          (data.flux[n] *
-                                          data.mask[n]),
+                                          data.flatmask[n]),
                                          m, n))
     else:
         # Multiple CPUs
@@ -710,12 +696,12 @@ def correct_drift2D(data, meta, log, m):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
-        for n in range(meta.nreads):
+        for n in range(data.flux.shape[0]):
             res = pool.apply_async(hst.calcDrift2D,
                                    args=((meta.subdata_ref[p][0] *
                                           meta.subdiffmask_ref[p][0]),
                                          (data.flux[n] *
-                                          data.mask[n]),
+                                          data.flatmask[n]),
                                          m, n),
                                    callback=writeDrift2D)
         pool.close()
@@ -724,38 +710,39 @@ def correct_drift2D(data, meta, log, m):
 
     log.writelog("  Performing rough, pixel-scale drift correction...",
                  mute=(not meta.verbose))
-    meta.drift2D_int.append(np.round(meta.drift2D[-1], 0))
+    drift2D_int = np.round(drift2D, 0)
     # Correct for drift by integer pixel numbers, no interpolation
-    for n in range(meta.nreads):
+    for n in range(data.flux.shape[0]):
         data.flux[n] = spni.shift(data.flux[n],
-                                  -1*meta.drift2D_int[-1][n, ::-1], order=0,
+                                  -1*drift2D_int[n, ::-1], order=0,
                                   mode='constant', cval=0)
         data.mask[n] = spni.shift(data.mask[n],
-                                  -1*meta.drift2D_int[-1][n, ::-1], order=0,
+                                  -1*drift2D_int[n, ::-1], order=0,
                                   mode='constant', cval=0)
         data.variance[n] = spni.shift(data.variance[n],
-                                      -1*meta.drift2D_int[-1][n, ::-1],
+                                      -1*drift2D_int[n, ::-1],
                                       order=0, mode='constant', cval=0)
         data.bg[n] = spni.shift(data.bg[n],
-                                -1*meta.drift2D_int[-1][n, ::-1], order=0,
+                                -1*drift2D_int[n, ::-1], order=0,
                                 mode='constant', cval=0)
 
-    # FINDME: The following cannot be run since we don't have the
-    # full time axis.
     # Outlier rejection of full frame along time axis
-    # print("Performing full-frame outlier rejection...")
-    # for p in range(2):
-    #     iscan   = np.where(ev.scandir == p)[0]
-    #     if len(iscan) > 0:
-    #         for n in range(meta.nreads):
-    #             #y1  = data.guess[ev.iref,n] - meta.spec_hw
-    #             #y2  = data.guess[ev.iref,n] + meta.spec_hw
-    #             #estsig      = [differr[ev.iref,n,y1:y2]
-    #                             for j in range(len(ev.sigthresh))]
-    #             shiftmask[iscan,n] = sigrej.sigrej(shiftdata[iscan,n],
-    #                                                ev.sigthresh,
-    #                                                shiftmask[iscan,n])  # ,
-    #                                                # estsig)
+    if meta.files_per_batch > 1:
+        log.writelog("Performing full-frame outlier rejection...",
+                     mute=(not meta.verbose))
+        for p in range(2):
+            iscan = np.where(meta.scandir == p)[0]*data.attrs['nreads']
+            if len(iscan) > 0:
+                for n in range(data.attrs['nreads']):
+                    # FINDME: The following is outdated, and it's not clear how
+                    # it relates to the current variables
+                    # y1 = data.guess[meta.iref+n] - meta.spec_hw
+                    # y2 = data.guess[meta.iref+n] + meta.spec_hw
+                    # estsig = [data.err[meta.iref+n, y1:y2]
+                    #           for j in range(len(meta.bg_thresh))]
+                    data.mask[iscan+n] = sigrej.sigrej(data.flux[iscan+n],
+                                                       meta.bg_thresh,
+                                                       data.mask[iscan+n])
 
     log.writelog("  Performing sub-pixel drift correction...",
                  mute=(not meta.verbose))
@@ -765,7 +752,7 @@ def correct_drift2D(data, meta, log, m):
     # Define the degrees of the bivariate spline
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
-    for n in range(meta.nreads):
+    for n in range(data.flux.shape[0]):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
@@ -776,31 +763,38 @@ def correct_drift2D(data, meta, log, m):
         # the reference image)
         # "Measures the amount im2 is offset from im1 (i.e., shift im2 by
         # -1 * these #'s to match im1)"
-        data.flux[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                               meta.drift2D_int[-1][n, 1]).flatten(),
-                              (ix-meta.drift2D[-1][n, 0] +
-                               meta.drift2D_int[-1][n, 0]).flatten())
+        data.flux[n] = spline((iy-drift2D[n, 1] +
+                               drift2D_int[n, 1]).flatten(),
+                              (ix-drift2D[n, 0] +
+                               drift2D_int[n, 0]).flatten())
         # Need to be careful with shifting the mask. Do the shifting, and
         # mask whichever pixel was closest to the one that had been masked
         spline = spi.RectBivariateSpline(iy, ix, data.mask[n], kx=kx,
                                          ky=ky, s=0)
-        data.mask[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                               meta.drift2D_int[-1][n, 1]).flatten(),
-                              (ix-meta.drift2D[-1][n, 0] +
-                               meta.drift2D_int[-1][n, 0]).flatten())
+        data.mask[n] = spline((iy-drift2D[n, 1] +
+                               drift2D_int[n, 1]).flatten(),
+                              (ix-drift2D[n, 0] +
+                               drift2D_int[n, 0]).flatten())
         # Fractional masking won't work - make sure it is all integer
         data.mask[n] = np.round(data.mask[n]).astype(int)
         spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx,
                                          ky=ky, s=0)
-        data.variance[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                                   meta.drift2D_int[-1][n, 1]).flatten(),
-                                  (ix-meta.drift2D[-1][n, 0] +
-                                   meta.drift2D_int[-1][n, 0]).flatten())
+        data.variance[n] = spline((iy-drift2D[n, 1] +
+                                   drift2D_int[n, 1]).flatten(),
+                                  (ix-drift2D[n, 0] +
+                                   drift2D_int[n, 0]).flatten())
         spline = spi.RectBivariateSpline(iy, ix, data.bg[n], kx=kx,
                                          ky=ky, s=0)
-        data.bg[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                             meta.drift2D_int[-1][n, 1]).flatten(),
-                            (ix-meta.drift2D[-1][n, 0] +
-                             meta.drift2D_int[-1][n, 0]).flatten())
+        data.bg[n] = spline((iy-drift2D[n, 1] +
+                             drift2D_int[n, 1]).flatten(),
+                            (ix-drift2D[n, 0] +
+                             drift2D_int[n, 0]).flatten())
+
+    data['drift2D'] = xrio.makeFluxLikeDA(drift2D, data.time, 'pixels',
+                                          data.time.attrs["units"],
+                                          name='drift2D')
+    data['drift2D_int'] = xrio.makeFluxLikeDA(drift2D_int, data.time, 'pixels',
+                                              data.time.attrs["units"],
+                                              name='drift2D_int')
 
     return data, meta, log

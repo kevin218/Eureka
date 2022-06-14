@@ -234,9 +234,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = xarray.concat(batch, 'time')  # , data_vars='minimal')
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
-                if meta.inst == 'wfc3':
-                    meta.nreads = np.sum([data_temp.attrs['nreads']
-                                          for data_temp in batch])
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -276,9 +273,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Create bad pixel mask (1 = good, 0 = bad)
                 # FINDME: Will want to use DQ array in the future
                 # to flag certain pixels
-                if not hasattr(data, 'mask'):
-                    data['mask'] = (['time', 'y', 'x'],
-                                    np.ones(data.flux.shape, dtype=bool))
+                data['mask'] = (['time', 'y', 'x'],
+                                np.ones(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs
                 data['mask'] = util.check_nans(data['flux'], data['mask'],
