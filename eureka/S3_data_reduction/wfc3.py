@@ -789,7 +789,7 @@ def correct_drift2D(data, meta, log, m):
                               (ix-meta.drift2D[-1][n, 0] +
                                meta.drift2D_int[-1][n, 0]).flatten())
         # Fractional masking won't work - make sure it is all integer
-        data.mask[n] = np.round(data.mask[n])
+        data.mask[n] = np.round(data.mask[n]).astype(int)
         spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx,
                                          ky=ky, s=0)
         data.variance[n] = spline((iy-meta.drift2D[-1][n, 1] +
