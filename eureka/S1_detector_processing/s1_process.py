@@ -167,8 +167,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
             isinstance(meta.jump_rejection_threshold, float):
             self.jump.rejection_threshold = meta.jump_rejection_threshold
         else:
-            log.writelog("\n Jump rejection threshold is not\
-                defined or not a float, default is used (4.0)")
+            log.writelog("\n Jump rejection threshold is not" +
+                "defined or not a float, default is used (4.0)")
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
