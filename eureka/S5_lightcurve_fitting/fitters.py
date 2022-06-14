@@ -1258,7 +1258,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         else:
             fname = f'S5_{fitter}_samples_ch{ch_number}'
         with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
-            hf.create_dataset("samples",  data=samples)
+            hf.create_dataset("samples", data=samples)
 
     # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)

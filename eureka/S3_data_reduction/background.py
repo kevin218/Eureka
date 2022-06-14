@@ -333,7 +333,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
     # Initiate background image with zeros
     ny, nx = np.shape(dataim)
     bg = np.zeros((ny, nx))
-
+    mask2 = mask*bgmask
     if deg < 0:
         # Calculate median background of entire frame
         bg += np.median(dataim[np.where(mask2)])

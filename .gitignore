@@ -152,3 +152,6 @@ docker-setup.sh
 # Compiled JOSS paper files
 paper.pdf
 paper.jats
+
+# Ignores for Caroline
+eureka_analysis/JWST/run_eureka_demo.py
