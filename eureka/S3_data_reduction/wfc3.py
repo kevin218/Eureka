@@ -502,7 +502,7 @@ def flatfield(data, meta, log):
     '''
     if meta.firstInBatch:
         log.writelog(f'  Performing flat fielding using:\n'
-                     f'    {meta.flatfile}.',
+                     f'    {meta.flatfile}',
                      mute=(not meta.verbose))
     # Make list of master flat field frames
     tempflat, tempmask = hst.makeflats(meta.flatfile,
