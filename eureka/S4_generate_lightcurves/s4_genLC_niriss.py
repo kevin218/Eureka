@@ -126,12 +126,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                      f'({meta.wave_max}) is larger than the longest '
                      f'wavelength ({np.max(spec.wave_1d.values)})')
 
-
-    ### Gets only the data for the input order ###
+    # Gets only the data for the input order ###
     index = meta.order - 1
-    nonans = np.where(np.isnan(spec.wave_1d[index])==False)[0]
+    nonans = np.where(~np.isnan(spec.wave_1d[index]))[0]
 
-    meta.n_int, meta.subnx = spec.optspec[index][:,nonans].shape
+    meta.n_int, meta.subnx = spec.optspec[index][:, nonans].shape
 
     # Determine wavelength bins
     if not hasattr(meta, 'wave_hi'):
@@ -182,11 +181,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     # FINDME: The current implementation needs improvement,
     # consider using optmask instead of masked arrays
     # Create masked array for steps below
-    optspec_ma = np.ma.masked_array(spec.optspec[index][:,nonans],
-                                    spec.optmask[index][:,nonans])
+    optspec_ma = np.ma.masked_array(spec.optspec[index][:, nonans],
+                                    spec.optmask[index][:, nonans])
     # Create opterr array with same mask as optspec
     opterr_ma = np.ma.copy(optspec_ma)
-    opterr_ma = spec.opterr[index][:,nonans]
+    opterr_ma = spec.opterr[index][:, nonans]
 
     # Do 1D sigma clipping (along time axis) on unbinned spectra
     if meta.sigma_clip:

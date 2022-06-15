@@ -1,19 +1,13 @@
 import os
 import numpy as np
-from astropy import units
 from astropy.io import fits
-import matplotlib.pyplot as plt
-from astropy.table import Table
 
 from .lib.tracing_niriss import mask_method_edges, mask_method_ears, ref_file
-from .lib.masking        import (interpolating_row, data_quality_mask,
-                              interpolating_image)
-from .lib.clipping       import time_removal
-from .S3_data_reduction.background     import bkg_sub, fitbg3
-from .S3_data_reduction.niriss_extraction   import (dirty_mask, box_extract,
-                                              optimal_extraction_routine)
-#from .S3_data_reduction.niriss  import wave_NIRISS as wavelength
-from .lib.simultaneous_order_fitting import fit_orders, fit_orders_fast
+from .lib.masking import data_quality_mask, interpolating_image
+from .S3_data_reduction.background import fitbg3
+from .S3_data_reduction.niriss_extraction import (dirty_mask, box_extract,
+                                                  optimal_extraction_routine)
+# from .S3_data_reduction.niriss import wave_NIRISS as wavelength
 
 
 __all__ = ['NIRISS_S3']
@@ -23,8 +17,7 @@ class NIRISS_S3(object):
 
     def __init__(self, filename, f277_filename=None,
                  data_dir=None, output_dir=None):
-        """
-        Initializes the NIRISS S3 data reduction class.
+        """Initializes the NIRISS S3 data reduction class.
 
         Parameters
         ----------
@@ -90,25 +83,24 @@ class NIRISS_S3(object):
             self.setup_f277(f277_filename)
         else:
             self.f277 = None
-            print('Without F277W filter image, some functions may not be available.')
+            print('Without F277W filter image, some functions may not be '
+                  'available.')
 
-        self.trace_ear     = None
-        self.trace_edge     = None
-        self.bkg      = None
+        self.trace_ear = None
+        self.trace_edge = None
+        self.bkg = None
         self.box_mask = None
         self.box_var1 = None
         self.box_var2 = None
-        self.bkg_removed  = None
+        self.bkg_removed = None
         self.box_spectra1 = None
         self.box_spectra2 = None
         self.box_mask_separate = None
 
         return
 
-
     def setup(self):
-        """
-        Sets up all proper attributes from the FITS file.
+        """Sets up all proper attributes from the FITS file.
 
         Attributes
         ----------
@@ -143,47 +135,42 @@ class NIRISS_S3(object):
         median : np.ndarray
            Median frame of all science images.
         """
-        hdu = fits.open(os.path.join(self.data_dir, self.filename))
+        with fits.open(os.path.join(self.data_dir, self.filename)) as hdu:
+            self.mhdr = hdu[0].header        # Sets in the meta data header
+            self.shdr = hdu['SCI', 1].header  # Sets the science data header
 
-        self.mhdr = hdu[0].header        # Sets in the meta data header
-        self.shdr = hdu['SCI',1].header  # Sets the science data header
+            self.intend = np.copy(hdu[0].header['NINTS'])
+            self.time = np.linspace(self.mhdr['EXPSTART'],
+                                    self.mhdr['EXPEND'],
+                                    int(self.intend))
 
-        self.intend = np.copy(hdu[0].header['NINTS'])
-        self.time   = np.linspace(self.mhdr['EXPSTART'],
-                                  self.mhdr['EXPEND'],
-                                  int(self.intend) )
+            self.time_units = 'BJD_TDB'
+            self.inttime = hdu[0].header['EFFINTTM']
 
-        self.time_units = 'BJD_TDB'
-        self.inttime  = hdu[0].header['EFFINTTM']
+            # Loads all the data in
+            self.data = np.copy(hdu['SCI', 1].data)
+            self.raw_data = np.copy(hdu['SCI', 1].data)
+            self.err = np.copy(hdu['ERR', 1].data)
+            self.dq = np.copy(hdu['DQ', 1].data)
 
-        # Loads all the data in
-        self.data = np.copy(hdu['SCI',1].data)
-        self.raw_data = np.copy(hdu['SCI',1].data)
-        self.err  = np.copy(hdu['ERR',1].data)
-        self.dq   = np.copy(hdu['DQ', 1].data)
+            self.var = hdu['VAR_POISSON', 1].data*self.inttime**2.0
+            self.v0 = hdu['VAR_RNOISE', 1].data*self.inttime**2.0
 
-        self.var  = hdu['VAR_POISSON',1].data * self.inttime**2.0
-        self.v0   = hdu['VAR_RNOISE', 1].data * self.inttime**2.0
+            self.meta = hdu[-1].data
 
-        self.meta = hdu[-1].data
+            # Removes NaNs from the data & error/variance arrays
+            self.data[np.isnan(self.data)] = 0.0
+            self.err[np.isnan(self.err)] = 0.0
+            self.var[np.isnan(self.var)] = 0.0
+            self.v0[np.isnan(self.v0)] = 0.0
 
-        # Removes NaNs from the data & error/variance arrays
-        self.data[np.isnan(self.data)==True] = 0.0
-        self.err[ np.isnan(self.err )==True] = 0.0
-        self.var[ np.isnan(self.var )==True] = 0.0
-        self.v0[  np.isnan(self.v0  )==True] = 0.0
+            print(hdu['DQ', 1].data.shape)
 
-        print(hdu['DQ', 1].data.shape)
-
-        self.median = np.nanmedian(self.data, axis=0)
-        hdu.close()
-
-        return
+            self.median = np.nanmedian(self.data, axis=0)
 
     def setup_f277(self, filename):
-        """
-        Opens and assigns proper attributes for the F277W
-        filter observations.
+        """Opens and assigns proper attributes for the F277W filter
+        observations.
 
         Parameters
         ----------
@@ -195,13 +182,8 @@ class NIRISS_S3(object):
         f277 : np.ndarray
            Science images from this filter.
         """
-        hdu = fits.open(os.path.join(self.data_dir,
-                                     filename) )
-        self.f277 = hdu[1].data + 0.0
-
-        hdu.close()
-        return
-
+        with fits.open(os.path.join(self.data_dir, filename)) as hdu:
+            self.f277 = hdu[1].data
 
     def clean_up(self):
         """
@@ -217,16 +199,14 @@ class NIRISS_S3(object):
         self.data = interpolating_image(self.data, mask=self.dq)
         self.median = np.nanmedian(self.data, axis=0)
         print('Cleaning error . . .')
-        self.err  = interpolating_image(self.err,  mask=self.dq)
+        self.err = interpolating_image(self.err, mask=self.dq)
         print('Cleaning variance . . .')
-        self.var  = interpolating_image(self.var,  mask=self.dq)
-        self.median = interpolating_image(self.median, mask=np.nanmedian(self.dq,axis=0))
+        self.var = interpolating_image(self.var, mask=self.dq)
+        self.median = interpolating_image(self.median,
+                                          mask=np.nanmedian(self.dq, axis=0))
 
-
-    def map_wavelength(self, orders=[1,2,3]):
-        """
-        Retrieves the 2D wavelength maps for the first and
-        second orders.
+    def map_wavelength(self, orders=[1, 2, 3]):
+        """Retrieves the 2D wavelength maps for the first and second orders.
 
         Parameters
         ----------
@@ -239,14 +219,12 @@ class NIRISS_S3(object):
         ----------
         wavelength_map : np.ndarray
         """
-        self.wavelength_map  = wavelength(os.path.join(self.data_dir, self.filename),
-                                          orders, inclass=True)
-
+        self.wavelength_map = wavelength(os.path.join(self.data_dir,
+                                                      self.filename),
+                                         orders, inclass=True)
 
     def map_trace(self, method='profile', ref_filename=None, isplots=0):
-        """
-        Calculates the trace of the first and second NIRISS
-        orders.
+        """Calculates the trace of the first and second NIRISS orders.
 
         Parameters
         ----------
@@ -282,17 +260,16 @@ class NIRISS_S3(object):
             self.tab3 = ref_file(ref_filename)
 
         else:
-            return('Trace method not implemented. Options are `edges` and `centers`.')
-
+            return('Trace method not implemented. Options are `edges` and '
+                   '`centers`.')
 
     def create_box_mask(self, boxsize1=60, boxsize2=50, boxsize3=40,
-                        booltype=True,
-                        return_together=True):
-        """
-        Creates a box mask to extract the first and second NIRISS orders.
+                        booltype=True, return_together=True):
+        """Creates a box mask to extract the first and second NIRISS orders.
+        
         Can set different box sizes for each order and also return a single
-        mask with both orders (`return_together==True`) or return masks for each
-        order (`return_together==False`).
+        mask with both orders (`return_together==True`) or return masks for
+        each order (`return_together==False`).
 
         Parameters
         ----------
@@ -334,7 +311,7 @@ class NIRISS_S3(object):
                          boxsize3=boxsize3,
                          booltype=booltype,
                          return_together=return_together)
-        if return_together == True:
+        if return_together:
             self.box_mask = out
         else:
             self.box_mask_separate = np.array(out)
@@ -342,9 +319,6 @@ class NIRISS_S3(object):
         self.boxsize1 = boxsize1
         self.boxsize2 = boxsize2
         self.boxsize3 = boxsize3
-
-        return
-
 
     def extract_box_spectrum(self):
         """
@@ -372,9 +346,9 @@ class NIRISS_S3(object):
 
         s, v = box_extract(d, self.var, self.box_mask_separate)
 
-        self.box_var1     = np.copy(v[0])
-        self.box_var2     = np.copy(v[1])
-        self.box_var3     = np.copy(v[2])
+        self.box_var1 = np.copy(v[0])
+        self.box_var2 = np.copy(v[1])
+        self.box_var3 = np.copy(v[2])
 
         self.box_spectra1 = np.copy(s[0])
         self.box_spectra2 = np.copy(s[1])
@@ -382,31 +356,48 @@ class NIRISS_S3(object):
 
         return
 
-
-    def fit_background(self, readnoise=11, sigclip=[4,4,4],
-                       box=(5,2), filter_size=(2,2),
-                       bkg_estimator=['median'], test=True):
-        """
-        Subtracts background from non-spectral regions.
+    def fit_background(self, readnoise=11, sigclip=[4, 4, 4],
+                       box=(5, 2), filter_size=(2, 2),
+                       bkg_estimator=['median', ], test=True):
+        """Subtracts background from non-spectral regions.
 
         Parameters
         ----------
-        data : object
-        meta : object
         readnoise : float, optional
-           An estimation of the readnoise of the detector.
-           Default is 5.
-        sigclip : list, array, optional
-           A list or array of len(n_iiters) corresponding to the
-           sigma-level which should be clipped in the cosmic
-           ray removal routine. Default is [4,2,3].
+            An estimation of the readnoise of the detector.
+            Default is 11.
+        sigclip : list, array; optional
+            A list or array of len(n_iiters) corresponding to the
+            sigma-level which should be clipped in the cosmic
+            ray removal routine. Default is [4, 4, 4].
+        box : list, array; optional
+            The box size along each axis. Box has two elements: (ny, nx). For
+            best results, the box shape should be chosen such that the data
+            are covered by an integer number of boxes in both dimensions.
+            Default is (5, 2).
+        filter_size : list, array; optional
+            The window size of the 2D median filter to apply to the
+            low-resolution background map. Filter_size has two elements:
+            (ny, nx). A filter size of 1 (or (1,1)) means no filtering.
+            Default is (2, 2).
+        bkg_estimator : list, array; optional
+            The value which to approximate the background values as. Options
+            are "mean", "median", or "MMMBackground". Default is ['median', ].
+        test : bool, optional
+            Evaluates the background across fewer integrations to test and
+            save computational time. Default is False.
 
         Returns
         -------
-        bkg : np.ndarray
-        bkg_var : np.ndarray
-        cr_mask : np.ndarray
-        bkg_removed : np.ndarray
+        self.bkg : np.ndarray
+            The fitted background array.
+        self.bkg_var : np.ndarray
+            Errors on the fitted backgrouns.
+        self.cr_mask : np.ndarray
+            Array of masked bad pixels.
+        self.bkg_removed : np.ndarray
+            self.cr_mask - self.bkg after running through
+            lib.masking.interpolating_image.
         """
         if self.box_mask is None:
             self.create_box_mask(return_together=True, booltype=True)
@@ -416,37 +407,30 @@ class NIRISS_S3(object):
         else:
             ind = len(self.data)
 
-
-        bkg, bkg_var, cr_mask = fitbg3(self.data[:ind],
-                                       ~self.box_mask,
-                                       readnoise=readnoise,
-                                       sigclip=sigclip,
-                                       bkg_estimator=bkg_estimator,
-                                       box=box,
-                                       filter_size=filter_size,
-                                       inclass=True)
+        bkg, bkg_var, cr_mask = fitbg3(self.data[:ind], ~self.box_mask,
+                                       readnoise=readnoise, sigclip=sigclip,
+                                       bkg_estimator=bkg_estimator, box=box,
+                                       filter_size=filter_size, inclass=True)
 
         self.bkg = np.copy(bkg)
         self.bkg_var = np.copy(bkg_var)
         self.bkg_removed = cr_mask - bkg
 
         m = np.zeros(cr_mask.shape)
-        x,y,z = np.where(np.isnan(cr_mask)==True)
-        m[x,y,z] = 1
-        self.cr_mask = m + 0
+        x, y, z = np.where(np.isnan(cr_mask))
+        m[x, y, z] = 1
+        self.cr_mask = np.copy(m)
 
         m = np.zeros(self.bkg_removed.shape)
-        x,y,z = np.where(np.isnan(self.bkg_removed)==True)
-        m[x,y,z] = 1
+        x, y, z = np.where(np.isnan(self.bkg_removed))
+        m[x, y, z] = 1
         self.bkg_removed = interpolating_image(self.bkg_removed,
                                                mask=m)
 
-
-
     def optimal_extraction(self, proftype='median', sigma=20, Q=1.8,
                            per_quad=True, test=False, isplots=3):
-        """
-        Runs the optimal extraction routine for the NIRISS orders.
+        """Runs the optimal extraction routine for the NIRISS orders.
+        
         There is a lot of flexibility in this routine, so please read
         the options carefully. There are 2 options for extracting the
         spectra:
@@ -507,30 +491,24 @@ class NIRISS_S3(object):
             pos2 = self.trace_edge['order_2']
             pos3 = self.trace_edge['order_3']
 
-        if test == True:
-            start, end = 0,5#int(len(self.data)/2-2), int(len(self.data)/2+2)
+        if test:
+            start, end = 0, 5
+            # start, end = int(len(self.data)/2-2), int(len(self.data)/2+2)
         else:
             start, end = 0, len(self.data)
 
-        #cr_mask = ~np.array(self.cr_mask, dtype=bool)
+        # cr_mask = ~np.array(self.cr_mask, dtype=bool)
 
-        all_fluxes, all_errs, all_profs = optimal_extraction_routine(self.data[start:end],
-                                                                     self.var[start:end],
-                                                                     spectrum=np.array([self.box_spectra1[start:end],
-                                                                                        self.box_spectra2[start:end],
-                                                                                        self.box_spectra3[start:end]]),
-                                                                     spectrum_var=np.array([self.box_var1[start:end],
-                                                                                            self.box_var2[start:end],
-                                                                                            self.box_var3[start:end]]),
-                                                                     sky_bkg=np.zeros(self.data.shape),#self.bkg[start:end],
-                                                                     medframe=self.median,
-                                                                     #cr_mask=self.bkg_removed,
-                                                                     pos1=pos1,
-                                                                     pos2=pos2,
-                                                                     pos3=pos3,
-                                                                     sigma=sigma,
-                                                                     Q=Q,
-                                                                     proftype=proftype,
-                                                                     per_quad=per_quad,
-                                                                     isplots=isplots)
+        all_fluxes, all_errs, all_profs = optimal_extraction_routine(
+            self.data[start:end], self.var[start:end],
+            spectrum=np.array([self.box_spectra1[start:end],
+                               self.box_spectra2[start:end],
+                               self.box_spectra3[start:end]]),
+            spectrum_var=np.array([self.box_var1[start:end],
+                                   self.box_var2[start:end],
+                                   self.box_var3[start:end]]),
+            sky_bkg=np.zeros(self.data.shape),  # self.bkg[start:end],
+            medframe=self.median,  # cr_mask=self.bkg_removed,
+            pos1=pos1, pos2=pos2, pos3=pos3, sigma=sigma, Q=Q,
+            proftype=proftype, per_quad=per_quad, isplots=isplots)
         return all_fluxes, all_errs, all_profs

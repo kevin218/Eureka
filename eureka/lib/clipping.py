@@ -227,8 +227,8 @@ def time_removal(img, sigma=5, testing=False):
     for x in tqdm(range(y)):
         for y in range(img.shape[2]):
             dat = img[:, x, y] + 0.0
-            ind = np.where((dat >= np.nanmedian(dat) + sigma * np.nanstd(dat)) |
-                          (dat <= np.nanmedian(dat) - sigma * np.nanstd(dat)))
+            ind = np.where((dat >= np.nanmedian(dat)+sigma*np.nanstd(dat)) |
+                           (dat <= np.nanmedian(dat)-sigma*np.nanstd(dat)))
             ind = ind[0]
             if len(ind) > 0:
                 cr_mask[ind, x, y] = 1.0

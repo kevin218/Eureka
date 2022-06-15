@@ -4,11 +4,13 @@ import ccdproc as ccdp
 from astropy import units
 from astropy.table import Table
 from astropy.nddata import CCDData
+from astropy.io import fits
 from scipy.signal import find_peaks
 from skimage.morphology import disk
 from skimage import filters, feature
 from scipy.ndimage import gaussian_filter
 from astropy.modeling.models import Moffat1D
+import matplotlib.pyplot as plt
 
 __all__ = ['image_filtering', 'simplify_niriss_img',
            'mask_method_edges', 'mask_method_ears', 'f277_mask',
@@ -16,10 +18,11 @@ __all__ = ['image_filtering', 'simplify_niriss_img',
 
 
 def image_filtering(img, radius=1, gf=4):
-    """
-    Does some simple image processing to isolate where the
-    spectra are located on the detector. This routine is
-    optimized for NIRISS S2 processed data and the F277W filter.
+    """Does some simple image processing to isolate where the
+    spectra are located on the detector.
+    
+    This routine is optimized for NIRISS S2 processed data and
+    the F277W filter.
 
     Parameters
     ----------
@@ -44,9 +47,9 @@ def image_filtering(img, radius=1, gf=4):
     # applies the mask to the main frame
     data = img*mask
     g = gaussian_filter(data, gf)
-    g[g>4] = 10000
+    g[g > 4] = 10000
     edges = filters.sobel(g)
-    edges[edges>0] = 10
+    edges[edges > 0] = 10
 
     # turns edge array into a boolean array
     edges = (edges-np.nanmax(edges)) * -1
@@ -56,8 +59,7 @@ def image_filtering(img, radius=1, gf=4):
 
 
 def simplify_niriss_img(data):
-    """
-    Creates an image to map out where the orders are in
+    """Creates an image to map out where the orders are in
     the NIRISS data.
 
     Parameters
@@ -72,20 +74,18 @@ def simplify_niriss_img(data):
        A 2D array that marks where the NIRISS first
        and second orders are.
     """
-    perc  = np.nanmax(data, axis=0)
+    perc = np.nanmax(data, axis=0)
     # creates data img mask
-    z,g = image_filtering(perc)
+    z, g = image_filtering(perc)
     return g
 
 
 def f277_mask(f277, radius=1, gf=4):
-    """
-    Marks the overlap region in the f277w filter image.
+    """Marks the overlap region in the f277w filter image.
 
     Parameters
     ----------
-    data : object
-
+    
     Returns
     -------
     mask : np.ndarray
@@ -93,20 +93,18 @@ def f277_mask(f277, radius=1, gf=4):
     mid : np.ndarray
        (x,y) anchors for where the overlap region is located.
     """
-    img = np.nanmax(f277, axis=(0,1))
-    mask, _ = image_filtering(img[:150,:500], radius, gf)
-    mid = np.zeros((mask.shape[1], 2),dtype=int)
+    img = np.nanmax(f277, axis=(0, 1))
+    mask, _ = image_filtering(img[:150, :500], radius, gf)
+    mid = np.zeros((mask.shape[1], 2), dtype=int)
     new_mask = np.zeros(img.shape)
 
     for i in range(mask.shape[1]):
-        inds = np.where(mask[:,i]==True)[0]
+        inds = np.where(mask[:, i])[0]
         if len(inds) > 1:
             new_mask[inds[1]:inds[-2], i] = True
             mid[i] = np.array([i, (inds[1]+inds[-2])/2])
 
-    q = ((mid[:,0]<420) & (mid[:,1]>0) & (mid[:,0] > 0))
-
-    f277_img = new_mask
+    q = ((mid[:, 0] < 420) & (mid[:, 1] > 0) & (mid[:, 0] > 0))
 
     return new_mask, mid[q]
 
@@ -139,7 +137,7 @@ def mask_method_edges(data, radius=1, gf=4,
     def rm_outliers(arr):
         # removes instantaneous outliers
         diff = np.diff(arr)
-        outliers = np.where(np.abs(diff)>=np.nanmean(diff)+3*np.nanstd(diff))
+        outliers = np.where(np.abs(diff) >= np.nanmean(diff)+3*np.nanstd(diff))
         arr[outliers] = 0
         return arr
 
@@ -147,8 +145,8 @@ def mask_method_edges(data, radius=1, gf=4,
         """ Finds a running center """
         centers = np.zeros(len(img[0]), dtype=int)
         for i in range(len(img[0])):
-            inds = np.where(img[:,i]>0)[0]
-            if len(inds)>0:
+            inds = np.where(img[:, i] > 0)[0]
+            if len(inds) > 0:
                 centers[i] = np.nanmean(inds)
 
         centers = rm_outliers(centers)
@@ -157,44 +155,43 @@ def mask_method_edges(data, radius=1, gf=4,
 
         return centers
 
-    def clean_and_fit(x1,x2,y1,y2):
-        x1,y1 = x1[y1>0], y1[y1>0]
-        x2,y2 = x2[y2>0], y2[y2>0]
+    def clean_and_fit(x1, x2, y1, y2):
+        x1, y1 = x1[y1 > 0], y1[y1 > 0]
+        x2, y2 = x2[y2 > 0], y2[y2 > 0]
 
-        poly = np.polyfit(np.append(x1,x2),
-                          np.append(y1,y2),
-                          deg=4) # hard coded deg of polynomial fit
+        poly = np.polyfit(np.append(x1, x2),
+                          np.append(y1, y2),
+                          deg=4)  # hard coded deg of polynomial fit
         fit = np.poly1d(poly)
         return fit
 
     g = simplify_niriss_img(data.data)
-    f,_ = f277_mask(data.f277, radius, gf)
+    f, _ = f277_mask(data.f277, radius, gf)
 
-    g_centers = find_centers(g,cutends=None)
-    f_centers = find_centers(f,cutends=430) # hard coded end of the F277 img
+    # g_centers = find_centers(g, cutends=None)
+    f_centers = find_centers(f, cutends=430)  # hard coded end of the F277 img
 
-    gcenters_1 = np.zeros(len(g[0]),dtype=int)
-    gcenters_2 = np.zeros(len(g[0]),dtype=int)
+    gcenters_1 = np.zeros(len(g[0]), dtype=int)
+    gcenters_2 = np.zeros(len(g[0]), dtype=int)
 
     for i in range(len(g[0])):
-        inds = np.where(g[:,i]>100)[0]
-        inds_1 = inds[inds <= 78] # hard coded y-boundary for the first order
-        inds_2 = inds[inds>=80]   # hard coded y-boundary for the second order
+        inds = np.where(g[:, i] > 100)[0]
+        inds_1 = inds[inds <= 78]  # hard coded y-boundary for the first order
+        inds_2 = inds[inds >= 80]  # hard coded y-boundary for the second order
 
-        if len(inds_1)>=1:
+        if len(inds_1) >= 1:
             gcenters_1[i] = np.nanmean(inds_1)
-        if len(inds_2)>=1:
+        if len(inds_2) >= 1:
             gcenters_2[i] = np.nanmean(inds_2)
-
 
     gcenters_1 = rm_outliers(gcenters_1)
     gcenters_2 = rm_outliers(gcenters_2)
-    x = np.arange(0,len(gcenters_1),1)
+    x = np.arange(0, len(gcenters_1), 1)
 
-    fit1 = clean_and_fit(x, x[x>800],
-                         f_centers, gcenters_1[x>800])
-    fit2 = clean_and_fit(x, x[(x>800) & (x<1800)],
-                         f_centers, gcenters_2[(x>800) & (x<1800)])
+    fit1 = clean_and_fit(x, x[x > 800],
+                         f_centers, gcenters_1[x > 800])
+    fit2 = clean_and_fit(x, x[(x > 800) & (x < 1800)],
+                         f_centers, gcenters_2[(x > 800) & (x < 1800)])
 
     tab = Table()
     tab['x'] = x
@@ -212,13 +209,12 @@ def mask_method_edges(data, radius=1, gf=4,
     return tab
 
 
-def mask_method_ears(data, degree=4, save=False,
-                        outdir=None, isplots=8):
-    """
-    A second method to extract the masks for the first and
-    second orders in NIRISS data. This method uses the vertical
-    profile of a summed image to identify the borders of each
-    order.
+def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
+    """A second method to extract the masks for the first and
+    second orders in NIRISS data.
+    
+    This method uses the vertical profile of a summed image to identify the
+    borders of each order.
 
     Parameters
     ----------
@@ -237,21 +233,19 @@ def mask_method_ears(data, degree=4, save=False,
        Table with x,y positions for the first and second NIRISS
        orders.
     """
-    import matplotlib.pyplot as plt
-
     def define_peak_params(column, which_std=1):
-        height = np.nanmax(column) # used to find peak in profile
-        std    = np.nanstd(column) # used to find second peak
+        height = np.nanmax(column)  # used to find peak in profile
+        std = np.nanstd(column)  # used to find second peak
         return height - which_std*std
 
     def identify_peaks(column, height, distance):
         """ Identifies peaks in the spatial profile. """
-        p,_ = find_peaks(column, height=height, distance=distance)
+        p, _ = find_peaks(column, height=height, distance=distance)
         return p
 
     def fit_function(x, y, deg=4):
         """ Fits a n-degree polynomial to x and y data. """
-        q = (np.isnan(x)==False) & (np.isnan(y)==False)
+        q = (not np.isnan(x)) & (not np.isnan(y))
         poly = np.polyfit(x[q], y[q], deg=deg)
         fit = np.poly1d(poly)
         return fit
@@ -259,7 +253,8 @@ def mask_method_ears(data, degree=4, save=False,
     def find_fit_outliers(x, y, m, deg=4, which_std=2):
         """ Uses difference between data and model to remove outliers. """
         diff = np.abs(y - m)
-        outliers = np.where(diff>=np.nanmedian(diff)+which_std*np.nanstd(diff))
+        outliers = np.where(diff >= (np.nanmedian(diff) +
+                                     which_std*np.nanstd(diff)))
         tempx = np.delete(x, outliers)
         tempy = np.delete(y, outliers)
         return tempx, tempy
@@ -267,7 +262,7 @@ def mask_method_ears(data, degree=4, save=False,
     def mask_profile(mu, x, y, alpha=3, gamma=13):
         """ Masks profiles that have already been fitted. """
         m1 = Moffat1D(x_0=mu, alpha=alpha, gamma=gamma)
-        rmv = np.where(m1(x) < 0.01)[0]          #  and points beyond the 1st orders
+        rmv = np.where(m1(x) < 0.01)[0]  # and points beyond the 1st orders
         newx, newcol = x[rmv] + 0.0, y[rmv] + 0.0
         return newx, newcol
 
@@ -283,7 +278,7 @@ def mask_method_ears(data, degree=4, save=False,
         plt.legend(ncol=3)
         plt.show()
 
-    summed = data.median+0.0#np.nansum(data.median, axis=0)
+    summed = np.copy(data.median)  # np.nansum(data.median, axis=0)
     ccd = CCDData(summed*units.electron)
 
     new_ccd_no_premask = ccdp.cosmicray_lacosmic(ccd, readnoise=150,
@@ -298,22 +293,23 @@ def mask_method_ears(data, degree=4, save=False,
     # Extraction for the first order
     center_1 = np.zeros(new_ccd_no_premask.data.shape[1])
     for i in range(len(center_1)):
-        height = define_peak_params(new_ccd_no_premask.data[:,i])
-        p = identify_peaks(new_ccd_no_premask.data[:,i],
+        height = define_peak_params(new_ccd_no_premask.data[:, i])
+        p = identify_peaks(new_ccd_no_premask.data[:, i],
                            height=height,
                            distance=10.0)
-        center_1[i] = np.nanmedian(x[p]) # Takes the median between peaks
+        center_1[i] = np.nanmedian(x[p])  # Takes the median between peaks
     # Iterate on fitting a profile to remove outliers from the first go
     fit1 = fit_function(x, center_1, deg=degree)
-    x1, y1 = find_fit_outliers(x, center_1, fit1(x)) # Finds bad points
+    x1, y1 = find_fit_outliers(x, center_1, fit1(x))  # Finds bad points
     fit1_final = fit_function(x1, y1, deg=degree)
 
-    tab['order_1'] = fit1_final(x) # Adds fit of 1st order to output table
+    tab['order_1'] = fit1_final(x)  # Adds fit of 1st order to output table
 
-    if new_ccd_no_premask.shape[0]==256: # Checks to see if 2nd & 3rd orders available
+    if new_ccd_no_premask.shape[0] == 256:
+        # Checks to see if 2nd & 3rd orders available
 
         # Some arrays we'll be populating later on
-        colx = np.arange(0,new_ccd_no_premask.data.shape[0],1)
+        colx = np.arange(0, new_ccd_no_premask.data.shape[0], 1)
         center_2 = np.zeros(new_ccd_no_premask.data.shape[1])
         center_3 = np.zeros(new_ccd_no_premask.data.shape[1])
 
@@ -321,38 +317,44 @@ def mask_method_ears(data, degree=4, save=False,
         #    since it's physically distinct
 
         for i in range(5, new_ccd_no_premask.shape[1]):
-            col = new_ccd_no_premask.data[:,i]
+            col = new_ccd_no_premask.data[:, i]
             newx, newcol = mask_profile(mu=tab['order_1'][i], x=colx, y=col)
 
-            if i <= 750: # Can't get a good guesstimate for 3rd order past pixel~750
+            if i <= 750:
+                # Can't get a good guesstimate for 3rd order past pixel~750
                 height = define_peak_params(newcol, which_std=4)
                 p = identify_peaks(newcol, height=height, distance=10.0)
-                inds = np.where(newx[p]>120)[0] # want to make sure we get the 3rd order
+                # want to make sure we get the 3rd order
+                inds = np.where(newx[p] > 120)[0]
 
-                if np.isnan(np.nanmedian(newx[p[inds]]))==False:
+                if not np.isnan(np.nanmedian(newx[p[inds]])):
                     center_3[i] = np.nanmedian(newx[p[inds]])
                     newx, newcol = mask_profile(mu=center_3[i], x=newx,
-                                                y=newcol) # masks 3rd order
+                                                y=newcol)  # masks 3rd order
             else:
                 newx, newcol = mask_profile(mu=center_1[i], x=newx,
-                                            y=newcol) # masks 1st order
+                                            y=newcol)  # masks 1st order
 
-            if (i >= 500) and (i <= 1850): # Can't get a good guesstimate for 2nd order past pixel~500
+            if (i >= 500) and (i <= 1850):
+                # Can't get a good guesstimate for 2nd order past pixel~500
                 height = define_peak_params(newcol, which_std=2)
                 p = identify_peaks(newcol, height=height, distance=10.0)
                 center_2[i] = np.nanmedian(newx[p])
 
         # Fitting polynomial to 3rd order
-        q3 = ((center_3 > 0) & (np.isnan(center_3) == False))
+        q3 = ((center_3 > 0) & (not np.isnan(center_3)))
         fit3 = fit_function(x[q3], center_3[q3], deg=degree)
-        x3, y3 = find_fit_outliers(x[q3], center_3[q3], fit3(x[q3])) # Finds bad points
+        # Finds bad points
+        x3, y3 = find_fit_outliers(x[q3], center_3[q3], fit3(x[q3]))
         fit3_final = fit_function(x3, y3, deg=degree)
-        tab['order_3'] = fit3_final(x) # Adds fit of 3rd order to output table
-        tab['order_3'][1000:len(tab['order_3'])] = np.nan # Remove parts of the fit where no 3rd order
+        tab['order_3'] = fit3_final(x)  # Adds fit of 3rd order to output table
+        # Remove parts of the fit where no 3rd order
+        tab['order_3'][1000:len(tab['order_3'])] = np.nan
 
         # Fitting polynomial to 2nd order
-        rmv_nans = ((np.isnan(center_2)==False) &
-                    (center_2 > 0) & (x < 1760)) # removes first 500 and last 268 points
+        # removes first 500 and last 268 points
+        rmv_nans = ((not np.isnan(center_2)) &
+                    (center_2 > 0) & (x < 1760))
         fit2 = fit_function(x[rmv_nans], center_2[rmv_nans], deg=degree)
         x2, y2 = find_fit_outliers(x[rmv_nans],
                                    center_2[rmv_nans], fit2(x[rmv_nans]),
@@ -363,12 +365,13 @@ def mask_method_ears(data, degree=4, save=False,
 
         fit2_final = fit_function(x2, y2, deg=degree)
 
-        if isplots>=6:
+        if isplots >= 6:
             diagnostic_plotting(x, center_1, fit1, fit1_final)
             diagnostic_plotting(x, center_2, fit2, fit2_final)
             diagnostic_plotting(x, center_3, fit3, fit3_final)
 
-        tab['order_2'] = fit2_final(x) # Adds fit of 2nd order to output table
+        # Add fit of 2nd order to output table
+        tab['order_2'] = fit2_final(x)
 
     if save:
         fn = 'niriss_order_fits_ears.csv'
@@ -382,9 +385,7 @@ def mask_method_ears(data, degree=4, save=False,
 
 
 def ref_file(filename):
-    """
-    Reads in the order traces from the STScI JWST reference
-    file.
+    """Reads in the order traces from the STScI JWST reference file.
 
     Parameters
     ----------
@@ -397,14 +398,11 @@ def ref_file(filename):
        Table with x,y positions for the first and second NIRISS
        orders.
     """
-    hdu = fits.open(filename)
-
-    tab = Table()
-    tab['x'] = hdu[0].data['X']
-    tab['order_1'] = hdu[0].data['Y']
-    tab['order_2'] = hdu[1].data['Y']
-    tab['order_3'] = hdu[2].data['Y']
-
-    hdu.close()
+    with fits.open(filename) as hdu:
+        tab = Table()
+        tab['x'] = hdu[0].data['X']
+        tab['order_1'] = hdu[0].data['Y']
+        tab['order_2'] = hdu[1].data['Y']
+        tab['order_3'] = hdu[2].data['Y']
 
     return tab

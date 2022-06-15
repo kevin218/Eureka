@@ -321,7 +321,7 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
 
     optspec = np.ma.masked_invalid(optspec)
 
-    if len(optspec.shape)==2:
+    if len(optspec.shape) == 2:
         n_int, nx = optspec.shape
         ny = None
     else:

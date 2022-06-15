@@ -491,7 +491,7 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
 def fitbg3(data, order_mask, readnoise=11,
            sigclip=[4, 4, 4], box=(10, 2),
            filter_size=(1, 1), sigma=5,
-           bkg_estimator=['median'],
+           bkg_estimator=['median', ],
            isplots=0, testing=False, inclass=False):
     """
     Fit sky background with out-of-spectra data. Optimized to remove
@@ -499,35 +499,41 @@ def fitbg3(data, order_mask, readnoise=11,
 
     Parameters
     ----------
-    ata : Xarray Dataset, np.ndarray
+    data : Xarray Dataset, np.ndarray
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     order_mask : np.ndarray
        Array masking where the three NIRISS orders are located.
     readnoise : float, optional
        An estimation of the readnoise of the detector.
-       Default is 5.
+       Default is 11.
     sigclip : list, array; optional
        A list or array of len(n_iiters) corresponding to the
        sigma-level which should be clipped in the cosmic
-       ray removal routine. Default is [4,4,4].
+       ray removal routine. Default is [4, 4, 4].
     box : list, array; optional
        The box size along each axis. Box has two elements: (ny, nx). For best
        results, the box shape should be chosen such that the data are covered
-       by an integer number of boxes in both dimensions. Default is (5,2).
+       by an integer number of boxes in both dimensions. Default is (10, 2).
     filter_size : list, array; optional
        The window size of the 2D median filter to apply to the low-resolution
        background map. Filter_size has two elements: (ny, nx). A filter size of
-       1 (or (1,1)) means no filtering. Default is (2, 2).
+       1 (or (1,1)) means no filtering. Default is (1, 1).
+    sigma : float; optional
+       Sigma to remove above. Default is 5.
     bkg_estimator : list, array; optional
        The value which to approximate the background values as. Options are
-       "mean", "median", or "MMMBackground". Default is "median".
-    testing : bool, optional
-       Evaluates the background across fewer integrations to test and
-       save computational time. Default is False.
+       "mean", "median", or "MMMBackground". Default is ['median', ].
     isplots : int, optional
        The level of output plots to display. Default is 0
        (no plots).
+    testing : bool, optional
+       Evaluates the background across fewer integrations to test and
+       save computational time. Default is False.
+    inclass : bool, optional
+        If False (analyzing NIRISS data using s3_reduce_niriss), copy the
+        data.flux array. Default is False.
 
     Returns
     -------

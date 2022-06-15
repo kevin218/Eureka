@@ -127,14 +127,13 @@ def optimal_spectrum(data, meta, n, m, niriss=False):
                      color='C2', ecolor='C2', label='Optimal Spec')
         return
 
-    intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
-                                          data.stdspec.values,
-                                          data.optspec.values,
-                                          data.opterr.values)
+    intstart, stdspec, opterr = (data.attrs['intstart'],
+                                 data.stdspec.values,
+                                 data.opterr.values)
     plt.figure(3302)
     plt.clf()
 
-    if niriss==False:
+    if not niriss:
         plot_data(data.stdspec.x.values, stdspec[n], opterr[n])
 
     else:
