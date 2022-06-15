@@ -23,8 +23,8 @@ __all__ = ['box_extract', 'dirty_mask',
 
 
 def box_extract(data, var, boxmask):
-    """
-    Quick & dirty box extraction to use in the optimal extraction routine.
+    """Quick & dirty box extraction to use in the optimal extraction routine.
+
     Parameters
     ----------
     data : np.ndarray
@@ -33,6 +33,7 @@ def box_extract(data, var, boxmask):
        Array of variance frames.
     boxmask : np.ndarray
        Array of masks for each individual order.
+
     Returns
     -------
     spec1 : np.ndarray
@@ -154,7 +155,6 @@ def profile_niriss_median(medprof, sigma=50):
 
     Parameters
     ----------
-    data : object
     medprof : np.ndarray
        A median image from all NIRISS images. This
        is a first pass attempt, and optimized in
@@ -168,10 +168,9 @@ def profile_niriss_median(medprof, sigma=50):
     medprof : np.ndarray
        Optimized median profile for optimal extraction.
     """
-
     for i in range(medprof.shape[1]):
 
-        col = medprof[:, i]+0.0
+        col = np.copy(medprof[:, i])
         x = np.arange(0, len(col), 1)
 
         # fits the spatial profile with a savitsky-golay filter

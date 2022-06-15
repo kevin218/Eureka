@@ -263,7 +263,7 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
         """ Masks profiles that have already been fitted. """
         m1 = Moffat1D(x_0=mu, alpha=alpha, gamma=gamma)
         rmv = np.where(m1(x) < 0.01)[0]  # and points beyond the 1st orders
-        newx, newcol = x[rmv] + 0.0, y[rmv] + 0.0
+        newx, newcol = np.copy(x[rmv]), np.copy(y[rmv])
         return newx, newcol
 
     def diagnostic_plotting(x, y, model, model_final):

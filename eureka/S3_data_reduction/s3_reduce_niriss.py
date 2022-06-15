@@ -102,9 +102,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         log = logedit.Logedit(meta.s3_logname)
 
     # Create list of file segments
-    x1d_files = util.readfiles(meta, suffix='x1dints')
+    meta = util.readfiles(meta, suffix='x1dints')
+    meta.x1d_segment_list = np.copy(meta.segment_list)
     meta = util.readfiles(meta)
-    meta.x1d_segment_list = x1d_files
 
     # Get the NIRISS traces
     meta = inst.define_traces(meta, log)
@@ -169,8 +169,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                          f'{meta.num_data_files}', end='\r')
 
         # Read in data frame and header
-        data, meta = inst.read(meta.segment_list[m], data, meta,
-                               meta.f277_filename)
+        data, meta = inst.read(meta.segment_list[m], data, meta)
 
         # Get number of integrations and frame dimensions
         meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -188,7 +187,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         with fits.open(meta.x1d_segment_list[-1]) as hdulist:
             # Get solns from appropriate extention
             for e, ext in enumerate(exts):
-                soln = hdulist[ext].data['WAVELENGTH'] + 0.0
+                soln = hdulist[ext].data['WAVELENGTH']
                 wave_soln[e, :len(soln)] = soln
 
         data['wave_1d'] = (['order', 'x'], wave_soln)

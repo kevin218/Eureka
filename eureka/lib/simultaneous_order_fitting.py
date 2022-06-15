@@ -28,7 +28,8 @@ def fit_orders(data, tab):
     ord1 : np.ndarray
     ord2 : np.ndarray
     """
-    print("Go grab some food. This routing could take up to 30 minutes.")
+    print("Go grab some food. This fit_orders routine could take up "
+          "to 30 minutes.")
 
     def construct_guesses(A, B, sig, length=10):
         # amplitude of gaussian for first order
@@ -38,7 +39,7 @@ def fit_orders(data, tab):
         # std of gaussian profile
         sigs = np.linspace(sig[0], sig[1], length)
         # generates all possible combos
-        combos = np.array(list(itertools.product(*[As, Bs, sigs])))
+        combos = np.array(list(itertools.product(As, Bs, sigs)))
         return combos
 
     pos1, pos2 = tab['order_1'], tab['order_2']

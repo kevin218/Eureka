@@ -27,7 +27,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     plt.clf()
     wmin = wave_1d.min()
     wmax = wave_1d.max()
-    n_int, _, nx = optspec.shape
+    n_int = optspec.shape[0]
     vmin = 0.97
     vmax = 1.03
     normspec = optspec / np.ma.mean(optspec, axis=0)

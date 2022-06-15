@@ -6,8 +6,7 @@ __all__ = ['interpolating_row', 'data_quality_mask',
 
 
 def interpolating_image(data, mask):
-    """
-    Uses `scipy.interpolate.NearestNDInterpolator` to
+    """Uses `scipy.interpolate.NearestNDInterpolator` to
     fill in bad pixels/cosmic rays/whichever mask you
     decide to pass in.
 
@@ -26,9 +25,9 @@ def interpolating_image(data, mask):
        values over the bad masked pixels.
     """
     def interpolate(d, m):
-        try:
+        if m.dtype == bool:
             m = ~m
-        except:
+        else:
             m = m > 0
 
         x, y = np.meshgrid(np.arange(d.shape[1]),
@@ -49,8 +48,7 @@ def interpolating_image(data, mask):
 
 
 def interpolating_row(data, mask, reg=2, arrtype='data'):
-    """
-    Fills in masked pixel values with either a median value from
+    """Fills in masked pixel values with either a median value from
     surrounding pixels along the row, interpolating values,
     or filling with 0.
 
@@ -93,14 +91,13 @@ def interpolating_row(data, mask, reg=2, arrtype='data'):
             newval = np.nanmedian(data[y, loc[1]])
         else:
             newval = 0.0
-        interp[loc[0], loc[1]] = newval + 0.0
+        interp[loc[0], loc[1]] = np.copy(newval)
     return interp
 
 
 def data_quality_mask(dq):
-    """
-    Masks all pixels that are not normal (value != 0)
-    or are reference pixels (value == 2147483648).
+    """Masks all pixels that are neither normal (value != 0)
+    or reference pixels (value == 2147483648).
 
     Parameters
     ----------

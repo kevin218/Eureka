@@ -216,17 +216,22 @@ def time_removal(img, sigma=5, testing=False):
        The array of images (e.g. data from the DataClass()).
     sigma : float, optional
        The sigma outlier by which to mask pixels. Default=5.
+    testing : bool
+        If testing, only performs clipping.time_removal along 10 columns
+        instead of the whole image.
     """
     cr_mask = np.zeros(img.shape)
 
     if not testing:
         y = img.shape[1]
     else:
+        # If testing, only performs clipping.time_removal along 10 columns
+        # instead of the whole image.
         y = 10
 
     for x in tqdm(range(y)):
         for y in range(img.shape[2]):
-            dat = img[:, x, y] + 0.0
+            dat = np.copy(img[:, x, y])
             ind = np.where((dat >= np.nanmedian(dat)+sigma*np.nanstd(dat)) |
                            (dat <= np.nanmedian(dat)-sigma*np.nanstd(dat)))
             ind = ind[0]

@@ -21,20 +21,15 @@ def readfiles(meta, suffix=None):
     """
     if suffix is None:
         suffix = meta.suffix
-        return_meta = True
-    else:
-        return_meta = False
 
     segment_list = []
     for fname in os.listdir(meta.inputdir):
-        if fname.endswith(suffix + '.fits'):
+        if fname.endswith(suffix+'.fits'):
             segment_list.append(os.path.join(meta.inputdir, fname))
 
-    if return_meta:
-        meta.segment_list = np.array(sn.sort_nicely(segment_list))
-        return meta
-    else:
-        return np.array(sn.sort_nicely(segment_list))
+    meta.segment_list = np.array(sn.sort_nicely(segment_list))
+    
+    return meta
 
 
 def trim(data, meta):
