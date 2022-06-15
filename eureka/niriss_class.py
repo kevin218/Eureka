@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from astropy.io import fits
+import time as time_pkg
 
 from .lib.tracing_niriss import mask_method_edges, mask_method_ears, ref_file
 from .lib.masking import data_quality_mask, interpolating_image
@@ -62,6 +63,7 @@ class NIRISS_S3(object):
            when `dirty_mask(return_together == False)`.
         """
         self.filename = filename
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
 
         if data_dir is not None:
             self.data_dir = data_dir
