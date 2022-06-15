@@ -7,9 +7,11 @@ import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
 import xarray as xr
-from . import nircam, sigrej
+from . import nircam, sigrej, source_pos
 from . import hst_scan as hst
-from ..lib import suntimecorr, utc_tt
+from . import background as bg
+from . import bright2flux as b2f
+from ..lib import suntimecorr, utc_tt, util
 
 
 def preparation_step(meta, log):
@@ -50,6 +52,48 @@ def preparation_step(meta, log):
     meta.scanHeight = []
     meta.subdata_ref = []
     meta.subdiffmask_ref = []
+
+    verbose = meta.verbose
+    meta.verbose = False
+    meta.firstFile = False
+    meta.firstInBatch = False
+    meta.int_start = 0
+    # Save the reference frame for each scan direction
+    if not hasattr(meta, 'iref'):
+        meta.iref = [0, 1]
+    # Make sure that the scan directions are in the right order
+    if meta.iref[0] % 2 != 0:
+        meta.iref = meta.iref[::-1]
+    for i in meta.iref:
+        log.writelog(f"Preparing reference frame {i}...")
+        data = xrio.makeDataset()
+        data, meta, log = read(meta.segment_list[i], data, meta, log)
+        meta.n_int, meta.ny, meta.nx = data.flux.shape
+        data, meta = util.trim(data, meta)
+        data, meta = b2f.convert_to_e(data, meta, log)
+        meta.src_ypos = source_pos.source_pos(
+            data, meta, i, header=('SRCYPOS' in data.attrs['shdr']))
+        data['mask'] = (['time', 'y', 'x'],
+                        np.ones(data.flux.shape, dtype=bool))
+        # Check if arrays have NaNs
+        data['mask'] = util.check_nans(data['flux'], data['mask'],
+                                       log, name='FLUX')
+        data['mask'] = util.check_nans(data['err'], data['mask'],
+                                       log, name='ERR')
+        data['mask'] = util.check_nans(data['v0'], data['mask'],
+                                       log, name='V0')
+        # Manually mask regions [colstart, colend, rowstart, rowend]
+        if hasattr(meta, 'manmask'):
+            for i in range(len(meta.manmask)):
+                colstart, colend, rowstart, rowend = meta.manmask[i]
+                data['mask'][rowstart:rowend, colstart:colend] = 0
+        meta.bg_y2 = int(meta.src_ypos + meta.bg_hw)
+        meta.bg_y1 = int(meta.src_ypos - meta.bg_hw)
+        data = flag_bg(data, meta)
+        data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
+        meta.subdata_ref.append(data.flux)
+        meta.subdiffmask_ref.append(data.flatmask)
+    meta.verbose = verbose
 
     return meta, log
 
@@ -457,11 +501,10 @@ def flatfield(data, meta, log):
         The current log.
     '''
     if meta.firstInBatch:
-        log.writelog('  Performing flat fielding.', mute=(not meta.verbose))
-    # Make list of master flat field frames
-    if meta.firstFile:
-        log.writelog(f'  Loading flat frame:\n  {meta.flatfile}',
+        log.writelog(f'  Performing flat fielding using:\n'
+                     f'    {meta.flatfile}.',
                      mute=(not meta.verbose))
+    # Make list of master flat field frames
     tempflat, tempmask = hst.makeflats(meta.flatfile,
                                        [np.mean(data.wave_2d.values,
                                                 axis=0), ],
@@ -665,16 +708,6 @@ def correct_drift2D(data, meta, log, m):
         # Assign to array of spectra and uncertainties
         drift2D[n] = value
         return
-
-    # Save the reference frame for each scan direction if not yet done
-    if len(meta.subdata_ref) < 2:
-        # FINDME: This requires that the reference files be the first
-        # two files. Using other files as the reference files will
-        # require loading in all of the frames at once. This will still work
-        # for observations with only one scan direction, since the second ref
-        # file will never be used.
-        meta.subdata_ref.append(data.flux)
-        meta.subdiffmask_ref.append(data.flatmask)
 
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
     # FINDME: instead of calculating scanHeight, consider fitting

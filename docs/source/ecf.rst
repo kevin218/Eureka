@@ -266,6 +266,9 @@ prof_deg
 ''''''''
 Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It sets the polynomial degree when constructing the spatial profile. Default is 3. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
+iref
+''''
+Currently only used for HST observations. The file indices to use as reference frames for 2D drift correction.
 
 isplots_S3
 ''''''''''
