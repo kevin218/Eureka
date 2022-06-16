@@ -62,10 +62,9 @@ def read(filename, data, meta, log):
     # Otherwise use the wavelength array from the header
     if np.all(hdulist['WAVELENGTH', 1].data == 0):
         if meta.firstFile:
-            print('  WARNING: The wavelength for the simulated MIRI data are '
-                  'currently hardcoded\n'
-                  '           because they are not in the .fits files '
-                  'themselves')
+            log.writelog('  WARNING: The wavelength for the simulated MIRI '
+                         'data are currently hardcoded\nbecause they are not '
+                         'in the .fits files themselves')
         wave_2d = np.tile(wave_MIRI_hardcoded(), (sci.shape[2], 1))[:, ::-1]
     else:
         wave_2d = hdulist['WAVELENGTH', 1].data
@@ -77,10 +76,9 @@ def read(filename, data, meta, log):
         time = read_time(meta, data)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
-            print('  WARNING: The timestamps for the simulated MIRI data are '
-                  'currently hardcoded\n'
-                  '           because they are not in the .fits files '
-                  'themselves')
+            log.writelog('  WARNING: The timestamps for the simulated MIRI '
+                         'data are currently hardcoded\nbecause they are not '
+                         'in the .fits files themselves')
         if ('WASP_80b' in data.attrs['filename']
                 and 'transit' in data.attrs['filename']):
             # Time array for WASP-80b MIRISIM transit observations
