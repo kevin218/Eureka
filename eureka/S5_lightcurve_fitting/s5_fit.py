@@ -52,6 +52,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     ecffile = 'S5_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
