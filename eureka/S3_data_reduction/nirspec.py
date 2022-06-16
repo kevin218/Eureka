@@ -98,39 +98,48 @@ def read(filename, data, meta, log):
     return data, meta, log
 
 
-def flag_bg(data, meta):
+def flag_bg(data, meta, log):
     '''Outlier rejection of sky background along time axis.
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
     data : DataClass
         The updated data object with outlier background pixels flagged.
     '''
-    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
+    log.writelog('  Performing background outlier rejection',
+                 mute=(not meta.verbose))
 
-    bgdata1 = data.flux[:, :y1]
-    bgmask1 = data.mask[:, :y1]
-    bgdata2 = data.flux[:, y2:]
-    bgmask2 = data.mask[:, y2:]
-    # This might not be necessary for real data
-    # bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :y1], 0))
-    # bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, y2:], 0))
+    meta.bg_y2 = meta.src_ypos + meta.bg_hw
+    meta.bg_y1 = meta.src_ypos - meta.bg_hw
 
-    # estsig1 = [bgerr1 for j in range(len(bg_thresh))]
-    # estsig2 = [bgerr2 for j in range(len(bg_thresh))]
+    bgdata1 = data.flux[:, :meta.y1]
+    bgmask1 = data.mask[:, :meta.y1]
+    bgdata2 = data.flux[:, meta.y2:]
+    bgmask2 = data.mask[:, meta.y2:]
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
     # Need to test performance with and without estsig on real data.
-    data['mask'][:, :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1)  # ,
-    #                                      estsig1)
-    data['mask'][:, y2:] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2)  # ,
-    #                                      estsig1)
+    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+        # This might not be necessary for real data
+        bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.y1], 0))
+        bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, meta.y2:], 0))
+        estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
+        estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
+    else:
+        estsig1 = None
+        estsig2 = None
+    data['mask'][:, :meta.y1] = sigrej.sigrej(bgdata1, meta.bg_thresh,
+                                              bgmask1, estsig1)
+    data['mask'][:, meta.y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
+                                              bgmask2, estsig2)
 
     return data
 

@@ -290,35 +290,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    log.writelog("  Masking manually identified bad pixels",
-                                 mute=(not meta.verbose))
-                    for i in range(len(meta.manmask)):
-                        colstart, colend, rowstart, rowend = meta.manmask[i]
-                        data['mask'][rowstart:rowend, colstart:colend] = 0
+                    util.manmask(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
-                log.writelog('  Performing background outlier rejection',
-                             mute=(not meta.verbose))
-                meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
-                meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
-                data = inst.flag_bg(data, meta)
+                data = inst.flag_bg(data, meta, log)
 
+                # Do the background subtraction
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
+                # Make image+background plots
                 if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for background '
-                                 'subtraction', mute=(not meta.verbose))
-                    iterfn = range(meta.int_start, meta.n_int)
-                    if meta.verbose:
-                        iterfn = tqdm(iterfn)
-                    for n in iterfn:
-                        # make image+background plots
-                        plots_s3.image_and_background(data, meta, n, m)
+                    plots_s3.image_and_background(data, meta, log, m)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
-                    log.writelog('  Correcting for 2D drift',
-                                 mute=(not meta.verbose))
                     data, meta, log = inst.correct_drift2D(data, meta, log, m)
 
                 # Select only aperture region
@@ -329,21 +314,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 apmask = data.mask[:, ap_y1:ap_y2].values
                 apbg = data.bg[:, ap_y1:ap_y2].values
                 apv0 = data.v0[:, ap_y1:ap_y2].values
-                # Compute median frame
-                medapdata = np.median(apdata, axis=0)
 
                 # Extract standard spectrum and its variance
-                data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
-                data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
-                data['stdspec'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
-                data['stdspec'].attrs['time_units'] = \
-                    data.flux.attrs['time_units']
-                data['stdvar'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
-                data['stdvar'].attrs['time_units'] = \
-                    data.flux.attrs['time_units']
-                # FINDME: stdvar >> stdspec, which is a problem
+                data = optspex.standard_spectrum(data, apdata, aperr)
 
                 # Extract optimal spectrum with uncertainties
                 log.writelog("  Performing optimal spectral extraction",
@@ -359,10 +332,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data['opterr'].attrs['time_units'] = \
                     data.flux.attrs['time_units']
 
+                # Compute median frame
+                medapdata = np.median(apdata, axis=0)
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                intstart = data.attrs['intstart']
-                iterfn = range(meta.int_start, meta.n_int)
+                iterfn = range(meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
@@ -373,7 +347,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                          p7thresh=meta.p7thresh,
                                          fittype=meta.fittype,
                                          window_len=meta.window_len,
-                                         deg=meta.prof_deg, n=intstart+n,
+                                         deg=meta.prof_deg, n=n, m=m,
                                          meddata=medapdata)
 
                 # Mask out NaNs and Infs

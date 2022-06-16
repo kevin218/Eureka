@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from .source_pos import gauss
 from ..lib.plots import figure_filetype
@@ -45,7 +46,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
         plt.pause(0.2)
 
 
-def image_and_background(data, meta, n, m):
+def image_and_background(data, meta, log, m):
     '''Make image+background plot. (Figs 3301)
 
     Parameters
@@ -54,8 +55,8 @@ def image_and_background(data, meta, n, m):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    n : int
-        The integration number.
+    log : logedit.Logedit
+        The current log.
     m : int
         The file number.
 
@@ -63,39 +64,46 @@ def image_and_background(data, meta, n, m):
     -------
     None
     '''
-    intstart, subdata, submask, subbg = (data.attrs['intstart'],
-                                         data.flux.values, data.mask.values,
-                                         data.bg.values)
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    log.writelog('  Creating figures for background subtraction',
+                 mute=(not meta.verbose))
+    iterfn = range(meta.n_int)
+    if meta.verbose:
+        iterfn = tqdm(iterfn)
+    for n in iterfn:
+        intstart, subdata, submask, subbg = (data.attrs['intstart'],
+                                             data.flux.values,
+                                             data.mask.values,
+                                             data.bg.values)
+        xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+        ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
-    plt.figure(3301, figsize=(8, 8))
-    plt.clf()
-    plt.suptitle(f'Integration {intstart + n}')
-    plt.subplot(211)
-    plt.title('Background-Subtracted Flux')
-    max = np.max(subdata[n] * submask[n])
-    plt.imshow(subdata[n]*submask[n], origin='lower', aspect='auto',
-               vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
-    plt.colorbar()
-    plt.ylabel('Detector Pixel Position')
-    plt.subplot(212)
-    plt.title('Subtracted Background')
-    median = np.median(subbg[n])
-    std = np.std(subbg[n])
-    plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
-               vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
-    plt.colorbar()
-    plt.ylabel('Detector Pixel Position')
-    plt.xlabel('Detector Pixel Position')
-    plt.tight_layout()
-    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
-             '_ImageAndBackground'+figure_filetype)
-    plt.savefig(meta.outputdir+fname, dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
+        plt.figure(3301, figsize=(8, 8))
+        plt.clf()
+        plt.suptitle(f'Integration {intstart + n}')
+        plt.subplot(211)
+        plt.title('Background-Subtracted Flux')
+        max = np.max(subdata[n] * submask[n])
+        plt.imshow(subdata[n]*submask[n], origin='lower', aspect='auto',
+                   vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
+        plt.colorbar()
+        plt.ylabel('Detector Pixel Position')
+        plt.subplot(212)
+        plt.title('Subtracted Background')
+        median = np.median(subbg[n])
+        std = np.std(subbg[n])
+        plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
+                   vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
+        plt.colorbar()
+        plt.ylabel('Detector Pixel Position')
+        plt.xlabel('Detector Pixel Position')
+        plt.tight_layout()
+        file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+        int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
+                 '_ImageAndBackground'+figure_filetype)
+        plt.savefig(meta.outputdir+fname, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
 
 
 def optimal_spectrum(data, meta, n, m):

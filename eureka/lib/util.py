@@ -361,3 +361,29 @@ def read_time(meta, data):
                                        data.attrs['intend']-1]
 
     return time
+
+
+def manmask(data, meta, log):
+    '''Manually mask input bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with requested pixels masked.
+    '''
+    log.writelog("  Masking manually identified bad pixels",
+                 mute=(not meta.verbose))
+    for i in range(len(meta.manmask)):
+        colstart, colend, rowstart, rowend = meta.manmask[i]
+        data['mask'][rowstart:rowend, colstart:colend] = 0
+
+    return data

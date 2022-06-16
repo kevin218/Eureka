@@ -5,6 +5,38 @@ from ..lib import smooth
 from . import plots_s3
 
 
+def standard_spectrum(data, apdata, aperr):
+    """Compute the standard box spectrum.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    apdata : ndarray
+        The pixel values in the aperture region.
+    aperr : ndarray
+        The noise values in the aperture region.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object in which the spectrum data will stored.
+    """
+    data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
+    data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
+    data['stdspec'].attrs['flux_units'] = \
+        data.flux.attrs['flux_units']
+    data['stdspec'].attrs['time_units'] = \
+        data.flux.attrs['time_units']
+    data['stdvar'].attrs['flux_units'] = \
+        data.flux.attrs['flux_units']
+    data['stdvar'].attrs['time_units'] = \
+        data.flux.attrs['time_units']
+    # FINDME: stdvar >> stdspec, which is a problem
+
+    return data
+
+
 def profile_poly(subdata, mask, deg=3, threshold=10, isplots=0):
     '''Construct normalized spatial profile using polynomial fits along the
     wavelength direction.

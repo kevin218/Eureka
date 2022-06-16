@@ -333,7 +333,7 @@ def wave_MIRI_hardcoded():
     return lam_x_full
 
 
-def flag_bg(data, meta):
+def flag_bg(data, meta, log):
     '''Outlier rejection of sky background along time axis.
 
     Uses the code written for NIRCam which works for MIRI as long
@@ -341,17 +341,19 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
     data : DataClass
         The updated data object with outlier background pixels flagged.
     '''
-    return nircam.flag_bg(data, meta)
+    return nircam.flag_bg(data, meta, log)
 
 
 def fit_bg(dataim, datamask, n, meta, isplots=0):
