@@ -164,6 +164,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.linearity.skip = meta.skip_linearity
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
+        if (hasattr(meta, 'jump_rejection_threshold') and
+                isinstance(meta.jump_rejection_threshold, float)):
+            self.jump.rejection_threshold = meta.jump_rejection_threshold
+        else:
+            log.writelog("\nJump rejection threshold is not" +
+                         "defined or not a float, default is used (4.0)")
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
