@@ -209,24 +209,28 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             datasets = []
             for m in range(meta.nbatch):
+                first_file = m*meta.files_per_batch
+                last_file = min([meta.num_data_files,
+                                 (m+1)*meta.files_per_batch])
+                nfiles = last_file-first_file
+                               
                 # Report progress
-                if meta.verbose:
-                    log.writelog(f'Starting batch {m + 1} of '
-                                 f'{meta.nbatch}')
+                if meta.files_per_batch > 1:
+                    message = (f'Starting batch {m + 1} of {meta.nbatch} '
+                               f'with {nfiles} files')
                 else:
-                    log.writelog(f'Starting batch {m + 1} of '
-                                 f'{meta.nbatch}', end='\r')
+                    message = f'Starting file {m + 1} of {meta.num_data_files}'
+                if meta.verbose:
+                    log.writelog(message)
+                else:
+                    log.writelog(message, end='\r')
 
                 # Read in data frame and header
                 batch = []
-                for i in range(m*meta.files_per_batch,
-                               min([meta.num_data_files,
-                                    (m+1)*meta.files_per_batch])):
+                for i in range(first_file, last_file):
                     # Keep track if this is the first file - otherwise
                     # MIRI will keep swapping x and y windows
-                    meta.firstFile = (m == 0 and i == 0 and
-                                      meta.spec_hw == meta.spec_hw_range[0] and
-                                      meta.bg_hw == meta.bg_hw_range[0])
+                    meta.firstFile = m == 0 and i == 0
                     meta.firstInBatch = i == 0
                     # Initialize a new data object
                     data = xrio.makeDataset()

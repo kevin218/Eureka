@@ -154,7 +154,8 @@ def read(filename, data, meta, log):
         v0 = np.swapaxes(v0, 1, 2)[:, :, ::-1]
         if not np.all(hdulist['WAVELENGTH', 1].data == 0):
             wave_2d = np.swapaxes(wave_2d, 0, 1)[:, :, ::-1]
-        if meta.firstFile:
+        if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
+                meta.bg_hw == meta.bg_hw_range[0]):
             # If not, we've already done this and don't want to switch it back
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
