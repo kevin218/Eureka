@@ -130,6 +130,7 @@ dmypy.json
 .pyre/
 
 *.DS_Store
+*.swp
 
 # ecf files
 *.ecf
