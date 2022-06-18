@@ -12,7 +12,7 @@
 
 import os
 import shutil
-import time
+import time as time_pkg
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -55,12 +55,13 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     - 03 Nov 2021 Taylor Bell
         Initial version
     '''
-    t0 = time.time()
+    t0 = time_pkg.time()
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S2_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     if s1_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -157,7 +158,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
         pipeline.run_eurekaS2(filename, meta, log)
 
     # Calculate total run time
-    total = (time.time() - t0) / 60.
+    total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     # Save results

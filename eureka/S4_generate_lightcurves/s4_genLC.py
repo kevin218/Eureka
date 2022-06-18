@@ -62,6 +62,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     ecffile = 'S4_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     if s3_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
