@@ -705,7 +705,7 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         return cordata
 
 
-def calcDrift2D(im1, im2, m, n):
+def calcDrift2D(im1, im2, n):
     """Calulate drift2D
 
     Parameters
@@ -714,8 +714,6 @@ def calcDrift2D(im1, im2, m, n):
         The reference image.
     im2 : ndarray
         The current image.
-    m : int
-        The current file number.
     n : int
         The current integration number.
 
@@ -723,8 +721,6 @@ def calcDrift2D(im1, im2, m, n):
     -------
     drift2D : list
         The x and y offset of im2 with respect to im1.
-    m : int
-        The current file number.
     n : int
         The current integration number.
 
@@ -741,7 +737,7 @@ def calcDrift2D(im1, im2, m, n):
                                   '`pip install .[hst]`')
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
-    return drift2D, m, n
+    return drift2D, n
 
 
 def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):

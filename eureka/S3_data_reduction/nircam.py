@@ -90,7 +90,7 @@ def flag_bg(data, meta, log):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -160,3 +160,49 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
                                 isplots=isplots)
 
     return bg, mask, n
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version based on the code in s3_reduce.py
+    """
+    log.writelog('  Extracting aperture region',
+                 mute=(not meta.verbose))
+
+    ap_y1 = int(meta.src_ypos-meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    apdata = data.flux[:, ap_y1:ap_y2].values
+    aperr = data.err[:, ap_y1:ap_y2].values
+    apmask = data.mask[:, ap_y1:ap_y2].values
+    apbg = data.bg[:, ap_y1:ap_y2].values
+    apv0 = data.v0[:, ap_y1:ap_y2].values
+
+    return apdata, aperr, apmask, apbg, apv0

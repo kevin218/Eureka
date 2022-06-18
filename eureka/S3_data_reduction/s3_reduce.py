@@ -239,7 +239,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     batch.append(data)
 
                 # Combine individual datasets
-                data = xarray.concat(batch, 'time')  # , data_vars='minimal')
+                data = xarray.concat(batch, 'time')
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
 
@@ -303,21 +303,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
                 # Make image+background plots
-                if meta.isplots_S3 >= 3:
-                    plots_s3.image_and_background(data, meta, log, m)
+                # if meta.isplots_S3 >= 3:
+                #     plots_s3.image_and_background(data, meta, log, m)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
                     data, meta, log = inst.correct_drift2D(data, meta, log, m)
 
                 # Select only aperture region
-                ap_y1 = int(meta.src_ypos-spec_hw_val)
-                ap_y2 = int(meta.src_ypos+spec_hw_val)
-                apdata = data.flux[:, ap_y1:ap_y2].values
-                aperr = data.err[:, ap_y1:ap_y2].values
-                apmask = data.mask[:, ap_y1:ap_y2].values
-                apbg = data.bg[:, ap_y1:ap_y2].values
-                apv0 = data.v0[:, ap_y1:ap_y2].values
+                apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
+                                                                      meta,
+                                                                      log)
 
                 # Extract standard spectrum and its variance
                 data = optspex.standard_spectrum(data, apdata, aperr)
@@ -390,8 +386,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Remove large 3D arrays from Dataset
                 del(data['flux'], data['err'], data['dq'], data['v0'],
-                    data['bg'], data['mask'], data.attrs['intstart'],
-                    data.attrs['intend'])
+                    data['bg'], data['mask'], data['wave_2d'],
+                    data.attrs['intstart'], data.attrs['intend'])
+                if meta.inst == 'wfc3':
+                    del(data['flatmask'], data['variance'])
 
                 # Append results for future concatenation
                 datasets.append(data)
@@ -411,14 +409,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
-            log.writelog(f"Stage 3 MAD = "
-                         f"{np.round(meta.mad_s3).astype(int)} ppm")
+            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec)
+            log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
+                plots_s3.lc_nodriftcorr(data, meta, spec.wave_1d, spec.optspec)
+                if meta.inst == 'wfc3':
+                    plots_s3.drift_2D(data, meta)
 
             # Save results
             if meta.save_output:

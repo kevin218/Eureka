@@ -49,6 +49,8 @@ def trim(data, meta):
                         x=np.arange(meta.xwindow[0], meta.xwindow[1]))
     meta.subny = meta.ywindow[1] - meta.ywindow[0]
     meta.subnx = meta.xwindow[1] - meta.xwindow[0]
+    if meta.inst == 'wfc3':
+        subdata['guess'] = subdata.guess - meta.ywindow[0]
 
     return subdata, meta
 
@@ -274,7 +276,7 @@ def find_fits(meta):
     return meta
 
 
-def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
+def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
@@ -282,6 +284,8 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
     ----------
     meta : eureka.lib.readECF.MetaClass
         Unused. The metadata object.
+    log : logedit.Logedit
+        The current log.
     wave_1d : ndarray
         Wavelength array (nx) with trimmed edges depending on xwindow and
         ywindow which have been set in the S3 ecf
@@ -300,7 +304,6 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
         Single MAD value in ppm
     """
     optspec = np.ma.masked_invalid(optspec)
-    n_int, nx = optspec.shape
     if wave_min is not None:
         iwmin = np.argmin(np.abs(wave_1d-wave_min))
     else:
@@ -309,10 +312,53 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
         iwmax = np.argmin(np.abs(wave_1d-wave_max))
     else:
         iwmax = None
-    normspec = optspec / np.ma.mean(optspec, axis=0)
-    ediff = np.ma.zeros(n_int)
-    for m in range(n_int):
-        ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
+
+    # Normalize the spectrum
+    if meta.inst == 'wfc3':
+        normspec = np.copy(optspec)
+        if meta.sum_reads:
+            # Sum each read from a scan together
+            # Reshape to get (nfiles, nreads, nwaves)
+            normspec = normspec.reshape(-1, meta.nreads, normspec.shape[1])
+            # Average together the reads to get (nfiles, nwaves)
+            normspec = normspec.sum(axis=1)
+            scandir = meta.scandir
+            nreads = 1
+        else:
+            # Just leave as (nfiles*nreads, nwaves)
+            scandir = np.repeat(meta.scandir, meta.nreads)
+            nreads = meta.nreads
+        
+        # Normalize the data
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                for r in range(nreads):
+                    normspec[iscans[r::nreads]] /= np.ma.mean(
+                        normspec[iscans[r::nreads]], axis=0)
+        
+        # Compute the MAD
+        n_int = normspec.shape[0]
+        ediff = np.ma.zeros(n_int)
+        for m in range(n_int):
+            ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
+
+        # Compute the MAD for each scan direction
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                mad = np.ma.mean(ediff[iscans])
+                log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
+                setattr(meta, f'mad_scandir{p}', mad)
+    else:
+        # Normalize the spectrum
+        normspec = optspec / np.ma.mean(optspec, axis=0)
+        # Compute the MAD
+        n_int = normspec.shape[0]
+        ediff = np.ma.zeros(n_int)
+        for m in range(n_int):
+            ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
+    
     mad = np.ma.mean(ediff)
     return mad
 

@@ -22,6 +22,7 @@ def test_trim(capsys):
     trim_y1 = 14
 
     meta = MetaClass()
+    meta.inst = 'nircam'
     nt = 7
     ny = 20
     nx = 100

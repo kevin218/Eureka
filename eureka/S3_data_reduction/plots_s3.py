@@ -6,11 +6,13 @@ from .source_pos import gauss
 from ..lib.plots import figure_filetype
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec):
+def lc_nodriftcorr(data, meta, wave_1d, optspec):
     '''Plot a 2D light curve without drift correction. (Fig 3101)
 
     Parameters
     ----------
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     wave_1d : ndarray
@@ -24,23 +26,50 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     None
     '''
     optspec = np.ma.masked_invalid(optspec)
-    plt.figure(3101, figsize=(8, 8))
-    plt.clf()
+    n_int = optspec.shape[0]
     wmin = wave_1d.min()
     wmax = wave_1d.max()
-    n_int, nx = optspec.shape
     vmin = 0.97
     vmax = 1.03
-    normspec = optspec / np.ma.mean(optspec, axis=0)
+
+    if meta.inst == 'wfc3':
+        normspec = np.copy(optspec)
+        if meta.sum_reads:
+            # Sum each read from a scan together
+            nreads = meta.nreads
+            # Reshape to get (nfiles, nreads, nwaves)
+            normspec = normspec.reshape(-1, nreads, normspec.shape[1])
+            # Average together the reads to get (nfiles, nwaves)
+            normspec = normspec.sum(axis=1)
+            scandir = data.scandir.values[::nreads]
+            nreads = 1
+        else:
+            # Just leave as (nfiles*nreads, nwaves)
+            scandir = data.scandir.values
+            nreads = meta.nreads
+        
+        # Normalize the data
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                for r in range(nreads):
+                    normspec[iscans[r::nreads]] /= np.ma.mean(
+                        normspec[iscans[r::nreads]], axis=0)
+    else:
+        # Normalize the data
+        normspec = optspec / np.ma.mean(optspec, axis=0)
+
+    plt.figure(3101, figsize=(8, 8))
+    plt.clf()
     plt.imshow(normspec, origin='lower', aspect='auto',
                extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
-    plt.title("MAD = " + str(np.round(meta.mad_s3, 0).astype(int)) + " ppm")
+    plt.title(f"MAD = {int(np.round(meta.mad_s3, 0))} ppm")
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3101-2D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -97,13 +126,44 @@ def image_and_background(data, meta, log, m):
         plt.ylabel('Detector Pixel Position')
         plt.xlabel('Detector Pixel Position')
         plt.tight_layout()
-        file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+        file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
+                                       + 1))
         int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
         fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
                  '_ImageAndBackground'+figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def drift_2D(data, meta):
+    '''Plot the fitted 2D drift. (Fig 3102)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    plt.figure(3102, figsize=(8, 6))
+    plt.clf()
+    plt.subplot(211)
+    for p in range(2):
+        iscans = np.where(data.scandir.values == p)[0]
+        plt.plot(iscans, data.drift2D[iscans, 1], '.')
+    plt.ylabel(f'Drift Along y ({data.drift2D.drift_units})')
+    plt.subplot(212)
+    for p in range(2):
+        iscans = np.where(data.scandir.values == p)[0]
+        plt.plot(iscans, data.drift2D[iscans, 0], '.')
+    plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = f'figs{os.sep}fig3102_Drift2D{figure_filetype}'
+    plt.savefig(meta.outputdir+fname, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
 
 
 def optimal_spectrum(data, meta, n, m):

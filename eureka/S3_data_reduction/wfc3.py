@@ -7,9 +7,8 @@ import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
 import xarray as xr
-from . import nircam, sigrej, source_pos
+from . import sigrej, source_pos, background
 from . import hst_scan as hst
-from . import background as bg
 from . import bright2flux as b2f
 from ..lib import suntimecorr, utc_tt, util
 
@@ -47,8 +46,7 @@ def preparation_step(meta, log):
 
     # Initialize list to hold centroid positions from later steps in this stage
     meta.centroids = []
-    meta.subflat = []
-    meta.flatmask = []
+    meta.guess = []
     meta.scanHeight = []
     meta.subdata_ref = []
     meta.subdiffmask_ref = []
@@ -70,6 +68,8 @@ def preparation_step(meta, log):
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
         data, meta = util.trim(data, meta)
+        # Need to add guess after trimming
+        meta.guess.append(data.guess)
         data, meta = b2f.convert_to_e(data, meta, log)
         meta.src_ypos = source_pos.source_pos(
             data, meta, i, header=('SRCYPOS' in data.attrs['shdr']))
@@ -87,10 +87,12 @@ def preparation_step(meta, log):
             for i in range(len(meta.manmask)):
                 colstart, colend, rowstart, rowend = meta.manmask[i]
                 data['mask'][rowstart:rowend, colstart:colend] = 0
-        meta.bg_y2 = int(meta.src_ypos + meta.bg_hw)
-        meta.bg_y1 = int(meta.src_ypos - meta.bg_hw)
-        data = flag_bg(data, meta)
-        data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
+        meta.bg_y2 = meta.src_ypos + meta.bg_hw
+        meta.bg_y1 = meta.src_ypos - meta.bg_hw
+        data = flag_bg(data, meta, log)
+        data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
+        meta.files_per_batch = 1
+        _ = cut_aperture(data, meta, log)
         meta.subdata_ref.append(data.flux)
         meta.subdiffmask_ref.append(data.flatmask)
     meta.verbose = verbose
@@ -116,8 +118,7 @@ def conclusion_step(meta, log):
         The updated log.
     """
     meta.centroids = np.array(meta.centroids)
-    meta.subflat = np.array(meta.subflat)
-    meta.flatmask = np.array(meta.flatmask)
+    meta.guess = np.array(meta.guess)
     meta.scanHeight = np.array(meta.scanHeight)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
@@ -303,16 +304,6 @@ def separate_scan_direction(meta, log):
     meta.framenum, meta.batchnum, meta.orbitnum = \
         hst.groupFrames(meta.obstimes)
 
-    # Order frames by scan direction (for batch processing)
-    # order = np.append(np.where(meta.scandir == 0)[0],
-    #                   np.where(meta.scandir == 1)[0])
-    # meta.segment_list = meta.segment_list[order]
-    # meta.scandir = meta.scandir[order]
-    # meta.obstimes = meta.obstimes[order]
-    # meta.postarg1 = meta.postarg1[order]
-    # meta.postarg2 = meta.postarg2[order]
-    # meta.direct_index = meta.direct_index[order]
-
     return meta, log
 
 
@@ -332,8 +323,8 @@ def read(filename, data, meta, log):
 
     Returns
     -------
-    data : DataClass
-        The updated data object with the fits data stored inside
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside
     meta : eureka.lib.readECF.MetaClass
         The metadata object
     log : logedit.Logedit
@@ -367,16 +358,16 @@ def read(filename, data, meta, log):
         # Determine if we are using IMA or FLT files
         if filename.endswith('flt.fits'):
             # FLT files subtract first from last, 2 reads
-            data.attrs['nreads'] = 2
+            meta.nreads = 2
         else:
-            data.attrs['nreads'] = data.attrs['shdr']['SAMPNUM']
+            meta.nreads = data.attrs['shdr']['SAMPNUM']
 
-        sci = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))  # Flux
-        err = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))  # Error
-        dq = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))  # Flags
+        sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
+        err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
+        dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
         jd = []
         j = 0
-        for rd in range(data.attrs['nreads'], 0, -1):
+        for rd in range(meta.nreads, 0, -1):
             sci[j] = hdulist['SCI', rd].data
             err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
@@ -417,7 +408,7 @@ def read(filename, data, meta, log):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.zeros((data.attrs['nreads'], 2))
+    centroids = np.zeros((meta.nreads, 2))
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
@@ -467,14 +458,17 @@ def read(filename, data, meta, log):
     diffdata['wave_2d'].attrs['wave_units'] = wave_units
 
     # Figure out which read this file starts and ends with
-    diffdata.attrs['intstart'] = image_number*(data.attrs['nreads']-1)
-    diffdata.attrs['intend'] = (image_number+1)*(data.attrs['nreads']-1)
+    diffdata.attrs['intstart'] = image_number*(meta.nreads-1)
+    diffdata.attrs['intend'] = (image_number+1)*(meta.nreads-1)
 
     # Copy science and master headers
     diffdata.attrs['shdr'] = data.attrs['shdr']
     diffdata.attrs['mhdr'] = data.attrs['mhdr']
     diffdata.attrs['filename'] = data.attrs['filename']
-    diffdata.attrs['nreads'] = data.attrs['nreads']
+
+    diffdata['scandir'] = (['time'], np.repeat(meta.scandir[filename ==
+                                                            meta.segment_list],
+                                               meta.nreads))
 
     return diffdata, meta, log
 
@@ -484,8 +478,8 @@ def flatfield(data, meta, log):
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -493,8 +487,8 @@ def flatfield(data, meta, log):
 
     Returns
     -------
-    data : DataClass
-        The updated data object with flatfielding applied.
+    data : Xarray Dataset
+        The updated Dataset object with flatfielding applied.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -515,8 +509,10 @@ def flatfield(data, meta, log):
     subflat = tempflat[0]
     flatmask = tempmask[0]
 
-    meta.subflat.append(subflat)
-    meta.flatmask.append(flatmask)
+    time_units = data.flux.attrs['time_units']
+    data['flatmask'] = xrio.makeFluxLikeDA(flatmask[np.newaxis],
+                                           data.time.values[:1], "None",
+                                           time_units, name='flatmask')
 
     # Calculate reduced image
     subflat[np.where(flatmask == 0)] = 1
@@ -531,8 +527,8 @@ def difference_frames(data, meta, log):
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -540,19 +536,19 @@ def difference_frames(data, meta, log):
 
     Returns
     -------
-    data : DataClass
-        The updated data object with differenced frames.
+    data : Xarray Dataset
+        The updated Dataset object differenced frames.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
         The current log.
     '''
-    if data.attrs['nreads'] > 1:
+    if meta.nreads > 1:
         # Subtract pairs of subframes
-        data.attrs['nreads'] -= 1
-        diffflux = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))
-        differr = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))
-        for n in range(data.attrs['nreads']):
+        meta.nreads -= 1
+        diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
+        differr = np.zeros((meta.nreads, meta.ny, meta.nx))
+        for n in range(meta.nreads):
             diffflux[n] = data.flux[n+1]-data.flux[n]
             differr[n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
     else:
@@ -560,10 +556,10 @@ def difference_frames(data, meta, log):
         diffflux = data.flux
         differr = data.err
 
-    diffmask = np.zeros((data.attrs['nreads'], meta.ny, meta.nx))
-    guess = np.zeros((data.attrs['nreads']), dtype=int)
-    for n in range(data.attrs['nreads']):
-        diffmask[n] = np.copy(meta.flatmask[-1][0])
+    diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
+    guess = np.zeros((meta.nreads), dtype=int)
+    for n in range(meta.nreads):
+        diffmask[n] = data['flatmask'][0][0]
         try:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
                         np.median(differr[n], axis=1)[:, np.newaxis])] = 0
@@ -613,27 +609,57 @@ def difference_frames(data, meta, log):
     return diffdata, meta, log
 
 
-def flag_bg(data, meta):
+def flag_bg(data, meta, log):
     '''Outlier rejection of sky background along time axis.
-
-    Uses the code written for NIRCam that also works for WFC3
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
     '''
-    return nircam.flag_bg(data, meta)
+    log.writelog('  Performing background outlier rejection',
+                 mute=(not meta.verbose))
+
+    for p in range(2):
+        iscans = np.where(data.scandir.values == p)[0]
+        if len(iscans) > 0:
+            for n in range(meta.nreads):
+                iscan = iscans[n::meta.nreads]
+                # Set limits on the sky background
+                x1 = (data.guess.values[iscan].min()-meta.bg_hw).astype(int)
+                x2 = (data.guess.values[iscan].max()+meta.bg_hw).astype(int)
+                bgdata1 = data.flux[iscan, :x1]
+                bgmask1 = data.flux[iscan, :x1]
+                bgdata2 = data.flux[iscan, x2:]
+                bgmask2 = data.flux[iscan, x2:]
+                if hasattr(meta, 'use_estsig') and meta.use_estsig:
+                    bgerr1 = np.median(data.err[iscan, :x1])
+                    bgerr2 = np.median(data.err[iscan, x2:])
+                    estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
+                    estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
+                else:
+                    estsig1 = None
+                    estsig2 = None
+                data['mask'][iscan, :x1] = sigrej.sigrej(bgdata1,
+                                                         meta.bg_thresh,
+                                                         bgmask1, estsig1)
+                data['mask'][iscan, x2:] = sigrej.sigrej(bgdata2,
+                                                         meta.bg_thresh,
+                                                         bgmask2, estsig2)
+
+    return data
 
 
-def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
+def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     """Fit for a non-uniform background.
 
     Uses the code written for NIRCam, but adds on some extra steps
@@ -668,7 +694,12 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    bg, mask, n = nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+    y2 = guess + meta.bg_hw
+    y1 = guess - meta.bg_hw
+
+    bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
+                                deg=meta.bg_deg, threshold=meta.p3thresh,
+                                isrotate=2, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
@@ -685,8 +716,8 @@ def correct_drift2D(data, meta, log, m):
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -696,15 +727,15 @@ def correct_drift2D(data, meta, log, m):
 
     Returns
     -------
-    data : DataClass
-        The updated DataClass object.
+    data : Xarray Dataset
+        The updated Dataset object after 2D drift correction.
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     log : logedit.Logedit
         The current log.
     """
     def writeDrift2D(arg):
-        value, m, n = arg
+        value, n = arg
         # Assign to array of spectra and uncertainties
         drift2D[n] = value
         return
@@ -715,32 +746,42 @@ def correct_drift2D(data, meta, log, m):
     drift2D = np.zeros((data.flux.shape[0], 2))
     if meta.ncpu == 1:
         # Only 1 CPU
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
-        for n in range(data.flux.shape[0]):
-            writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][0] *
-                                          meta.subdiffmask_ref[p][0]),
-                                         (data.flux[n] *
-                                          data.flatmask[n]),
-                                         m, n))
+        for f in range(int(data.flux.shape[0]/meta.nreads)):
+            # Get index of reference frame
+            # (0 = forward scan, 1 = reverse scan)
+            p = meta.scandir[f]
+            for r in range(meta.nreads):
+                n = f*meta.nreads + r
+                writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][r] *
+                                              meta.subdiffmask_ref[p][r]),
+                                             (data.flux[n]*data.flatmask[n]),
+                                             n))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
-        for n in range(data.flux.shape[0]):
-            res = pool.apply_async(hst.calcDrift2D,
-                                   args=((meta.subdata_ref[p][0] *
-                                          meta.subdiffmask_ref[p][0]),
-                                         (data.flux[n] *
-                                          data.flatmask[n]),
-                                         m, n),
-                                   callback=writeDrift2D)
+        for f in range(int(data.flux.shape[0]/meta.nreads)):
+            # Get index of reference frame
+            # (0 = forward scan, 1 = reverse scan)
+            p = meta.scandir[f]
+            for r in range(meta.nreads):
+                n = f*meta.nreads + r
+                res = pool.apply_async(hst.calcDrift2D,
+                                       args=((meta.subdata_ref[p][r] *
+                                              meta.subdiffmask_ref[p][r]),
+                                             (data.flux[n]*data.flatmask[n]),
+                                             n),
+                                       callback=writeDrift2D)
         pool.close()
         pool.join()
         res.wait()
+
+    data['drift2D'] = xr.DataArray(drift2D, name='drift2D',
+                                   coords={"time": data.time,
+                                           "axis": ["x", "y"]},
+                                   dims=["time", "axis"],
+                                   attrs={"time_units": data.time.time_units,
+                                          "drift_units": 'pixels'})
+    data.drift2D["time"].attrs["time_units"] = data.time.time_units
 
     log.writelog("  Performing rough, pixel-scale drift correction...",
                  mute=(not meta.verbose))
@@ -765,11 +806,10 @@ def correct_drift2D(data, meta, log, m):
         log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
-            iscan = np.where(meta.scandir == p)[0]*data.attrs['nreads']
+            iscan = np.where(meta.scandir == p)[0]*meta.nreads
             if len(iscan) > 0:
-                for n in range(data.attrs['nreads']):
-                    # FINDME: The following is outdated, and it's not clear how
-                    # it relates to the current variables
+                for n in range(meta.nreads):
+                    # FINDME: The following commented-out code is outdated
                     # y1 = data.guess[meta.iref+n] - meta.spec_hw
                     # y2 = data.guess[meta.iref+n] + meta.spec_hw
                     # estsig = [data.err[meta.iref+n, y1:y2]
@@ -824,12 +864,73 @@ def correct_drift2D(data, meta, log, m):
                             (ix-drift2D[n, 0] +
                              drift2D_int[n, 0]).flatten())
 
-    data['drift2D'] = xr.DataArray(drift2D, name='drift2D',
-                                   coords={"time": data.time,
-                                           "axis": ["x", "y"]},
-                                   dims=["time", "axis"],
-                                   attrs={"time_units": data.time.time_units,
-                                          "drift_units": 'pixels'})
-    data.drift2D["time"].attrs["time_units"] = data.time.time_units
-
     return data, meta, log
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version, edited to work for HST scanned observations.
+    """
+    log.writelog('  Extracting aperture region',
+                 mute=(not meta.verbose))
+
+    apdata = np.zeros((data.flux.shape[0], meta.spec_hw*2,
+                       data.flux.shape[2]))
+    aperr = np.zeros((data.flux.shape[0], meta.spec_hw*2,
+                      data.flux.shape[2]))
+    apmask = np.zeros((data.flux.shape[0], meta.spec_hw*2,
+                       data.flux.shape[2]))
+    apbg = np.zeros((data.flux.shape[0], meta.spec_hw*2,
+                     data.flux.shape[2]))
+    apv0 = np.zeros((data.flux.shape[0], meta.spec_hw*2,
+                     data.flux.shape[2]))
+
+    for f in range(int(data.flux.shape[0]/meta.nreads)):
+        # Get index of reference frame
+        # (0 = forward scan, 1 = reverse scan)
+        p = data.scandir[f*meta.nreads].values
+        for r in range(meta.nreads):
+            # Figure out the index currently being cut out
+            n = f*meta.nreads + r
+
+            # Use the centroid from the relevant reference frame
+            guess = meta.guess[p].values[r]
+            ap_y1 = (guess-meta.spec_hw).astype(int)
+            ap_y2 = (guess+meta.spec_hw).astype(int)
+
+            # Cut out this particular read
+            apdata[n] = data.flux.values[n, ap_y1:ap_y2]
+            aperr[n] = data.err.values[n, ap_y1:ap_y2]
+            apmask[n] = data.mask.values[n, ap_y1:ap_y2]
+            apbg[n] = data.bg.values[n, ap_y1:ap_y2]
+            apv0[n] = data.v0.values[n, ap_y1:ap_y2]
+
+    return apdata, aperr, apmask, apbg, apv0

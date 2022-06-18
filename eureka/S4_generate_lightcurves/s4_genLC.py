@@ -259,8 +259,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # spec['optspec_drift']
 
             # Compute MAD alue
-            meta.mad_s4 = util.get_mad(meta, spec.wave_1d.values, optspec_ma,
-                                       meta.wave_min, meta.wave_max)
+            meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
+                                       optspec_ma, meta.wave_min,
+                                       meta.wave_max)
             log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
             if meta.isplots_S4 >= 1:

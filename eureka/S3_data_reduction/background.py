@@ -92,6 +92,7 @@ def BGsubtraction(data, meta, log, isplots):
                                          data.mask[n].values,
                                          data.v0[n].values,
                                          data.variance[n].values,
+                                         data.guess[n].values,
                                          n, meta, isplots))
             else:
                 writeBG(inst.fit_bg(data.flux[n].values, data.mask[n].values,
@@ -115,8 +116,9 @@ def BGsubtraction(data, meta, log, isplots):
                                      args=(data.flux[n].values,
                                            data.mask[n].values,
                                            data.v0[n].values,
-                                           data.variance[n].values, n, meta,
-                                           isplots,),
+                                           data.variance[n].values, 
+                                           data.guess[n].values,
+                                           n, meta, isplots,),
                                      callback=writeBG_WFC3)
                     for n in range(meta.int_start, meta.n_int)]
         else:

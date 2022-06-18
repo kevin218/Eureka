@@ -104,7 +104,7 @@ def flag_bg(data, meta, log):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -112,8 +112,8 @@ def flag_bg(data, meta, log):
 
     Returns
     -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
     '''
     log.writelog('  Performing background outlier rejection',
                  mute=(not meta.verbose))
@@ -121,25 +121,25 @@ def flag_bg(data, meta, log):
     meta.bg_y2 = meta.src_ypos + meta.bg_hw
     meta.bg_y1 = meta.src_ypos - meta.bg_hw
 
-    bgdata1 = data.flux[:, :meta.y1]
-    bgmask1 = data.mask[:, :meta.y1]
-    bgdata2 = data.flux[:, meta.y2:]
-    bgmask2 = data.mask[:, meta.y2:]
+    bgdata1 = data.flux[:, :meta.bg_y1]
+    bgmask1 = data.mask[:, :meta.bg_y1]
+    bgdata2 = data.flux[:, meta.bg_y2:]
+    bgmask2 = data.mask[:, meta.bg_y2:]
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
     # Need to test performance with and without estsig on real data.
     if hasattr(meta, 'use_estsig') and meta.use_estsig:
         # This might not be necessary for real data
-        bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.y1], 0))
-        bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, meta.y2:], 0))
+        bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.bg_y1], 0))
+        bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, meta.bg_y2:], 0))
         estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
         estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
     else:
         estsig1 = None
         estsig2 = None
-    data['mask'][:, :meta.y1] = sigrej.sigrej(bgdata1, meta.bg_thresh,
-                                              bgmask1, estsig1)
-    data['mask'][:, meta.y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
-                                              bgmask2, estsig2)
+    data['mask'][:, :meta.bg_y1] = sigrej.sigrej(bgdata1, meta.bg_thresh,
+                                                 bgmask1, estsig1)
+    data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
+                                                 bgmask2, estsig2)
 
     return data
 
@@ -172,3 +172,40 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
         The current integration number.
     """
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Uses the code written for NIRCam which works for NIRSpec.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version based on the code in s3_reduce.py
+    """
+    return nircam.cut_aperture(data, meta, log)

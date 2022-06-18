@@ -24,9 +24,9 @@ flatfile        ../tests/data/WFC3/cal/WFC3.IR.G102.flat.2.fits
 diffthresh      10
 
 # Subarray region of interest
-ywindow         [80,250]     # Vertical axis as seen in DS9
+ywindow         [80,250]    # Vertical axis as seen in DS9
 xwindow         [80,250]    # Horizontal axis as seen in DS9
-src_pos_type    gaussian   # Determine source position when not given in header (Options: gaussian, weighted, or max)
+src_pos_type    hst         # Determine source position when not given in header (Options: gaussian, weighted, max, or hst)
 
 # Background parameters
 bg_hw           40          # Half-width of exclusion region for BG subtraction (relative to source position)
@@ -43,7 +43,10 @@ p5thresh        10          # X-sigma threshold for outlier rejection while cons
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
 
 # 2D drift correction parameters
-iref            [2, 3]      # The file indices to use as reference frames
+iref            [0, ]       # The file indices to use as reference frames for each scan direction
+
+# Binning
+sum_reads       True        # Sum together all of the reads from one scan?
 
 # Diagnostics
 isplots_S3      5           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

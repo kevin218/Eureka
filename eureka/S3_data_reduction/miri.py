@@ -343,7 +343,7 @@ def flag_bg(data, meta, log):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -351,8 +351,8 @@ def flag_bg(data, meta, log):
 
     Returns
     -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
     '''
     return nircam.flag_bg(data, meta, log)
 
@@ -386,3 +386,41 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
         The current integration number.
     """
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Uses the code written for NIRCam which works for MIRI as long
+    as the MIRI data gets rotated.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version based on the code in s3_reduce.py
+    """
+    return nircam.cut_aperture(data, meta, log)
