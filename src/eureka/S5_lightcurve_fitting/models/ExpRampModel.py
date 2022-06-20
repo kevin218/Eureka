@@ -51,7 +51,6 @@ class ExpRampModel(Model):
             The sequence of coefficient values.
         """
         # Parse 'r#' keyword arguments as coefficients
-        coeffs = np.zeros((self.nchan,6))
         for k, v in self.parameters.dict.items():
             remvisnum = k.split('_')
             if k.lower().startswith('r') and k[1:].isdigit():
