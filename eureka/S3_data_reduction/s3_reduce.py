@@ -114,13 +114,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
     # each aperture/annulus pair
-    meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
 
             meta.eventlabel = eventlabel
-            meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+            meta.run_s3 = util.makedirectory(meta, 'S3', ap=spec_hw_val,
+                                             bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
