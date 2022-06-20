@@ -54,15 +54,13 @@ def read(filename, data, meta):
         v0 = hdulist['VAR_RNOISE', 1].data
         # var  = hdulist['VAR_POISSON',1].data
         wave_2d = hdulist['WAVELENGTH', 1].data
-        # int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
-        #                                          data.attrs['intend']]
+        int_times = hdulist['INT_TIMES', 1].data
 
         # Record integration mid-times in BJD_TDB
-        try:
-            int_times = hdulist['INT_TIMES', 1].data
+        if len(int_times['int_mid_BJD_TDB']) != 0:
             time = int_times['int_mid_BJD_TDB']
             time_units = 'BJD_TDB'
-        except:
+        else:
             # This exception is (hopefully) only for simulated data
             print("WARNING: INT_TIMES not found."
                   "Using EXPSTART and EXPEND in UTC.")
