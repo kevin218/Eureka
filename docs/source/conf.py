@@ -21,7 +21,7 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'Eureka!'
-copyright = '2021, Eureka! pipeline developers'
+copyright = '2022, Eureka! pipeline developers'
 author = 'Eureka! pipeline developers'
 
 # The full version, including alpha/beta/rc tags
@@ -69,3 +69,9 @@ from recommonmark.parser import CommonMarkParser
 
 source_parsers = {'.md': CommonMarkParser}
 source_suffix = ['.rst', '.md']
+
+# Ignoring duplicated section warnings in api file
+suppress_warnings = ['autosectionlabel.*']
+
+# Remove stub file not found warnings
+numpydoc_class_members_toctree = False

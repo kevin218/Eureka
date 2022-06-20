@@ -139,10 +139,7 @@ dmypy.json
 
 # VS Code workspaces
 *.code-workspace
-.vscode/settings.json
-
-# Ignore installed packages for wfc3 branch
-image_registration/
+.vscode
 
 # Compiled niriss_cython file
 niriss_cython.c
@@ -151,3 +148,10 @@ niriss_cython.c
 Dockerfile
 docker-compose.yml
 docker-setup.sh
+
+# Compiled JOSS paper files
+paper.pdf
+paper.jats
+
+# Ignores for Caroline
+eureka_analysis/JWST/run_eureka_demo.py
