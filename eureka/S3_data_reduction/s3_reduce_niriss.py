@@ -95,6 +95,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     else:
         meta = me.mergeevents(meta, s2_meta)
 
+    # create directories to store data
+    # run_s3 used to make sure we're always looking at the right run for
+    # each order
+    meta.run_s3 = util.makedirectory(meta, 'S3')
+
     # Open new log file
     meta.s3_logname = meta.outputdir + 'S3_' + eventlabel + ".log"
     if s2_meta is not None:
@@ -113,11 +118,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     # TO DO : RECORD THE TRACES IN THE DATA OBJECT
     # want to record the trace in the data object via Astreaus
     # make flux like data command
-
-    # create directories to store data
-    # run_s3 used to make sure we're always looking at the right run for
-    # each order
-    meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3)
 
     # begin process
     t0 = time_pkg.time()
