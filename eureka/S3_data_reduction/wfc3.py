@@ -51,13 +51,18 @@ def preparation_step(meta, log):
     meta.subdata_ref = []
     meta.subdiffmask_ref = []
 
+    # Temporarily override some values
     verbose = meta.verbose
     meta.verbose = False
+    ncpu = meta.ncpu
+    meta.ncpu = 1
+    # Set some default values
     meta.firstFile = False
     meta.firstInBatch = False
     meta.int_start = 0
     # Save the reference frame for each scan direction
     if not hasattr(meta, 'iref'):
+        # Use the first two files by default
         meta.iref = [0, 1]
     # Make sure that the scan directions are in the right order
     if meta.iref[0] % 2 != 0:
@@ -95,7 +100,10 @@ def preparation_step(meta, log):
         _ = cut_aperture(data, meta, log)
         meta.subdata_ref.append(data.flux)
         meta.subdiffmask_ref.append(data.flatmask)
+    
+    # Restore input values
     meta.verbose = verbose
+    meta.ncpu = ncpu
 
     return meta, log
 
@@ -746,31 +754,31 @@ def correct_drift2D(data, meta, log, m):
     drift2D = np.zeros((data.flux.shape[0], 2))
     if meta.ncpu == 1:
         # Only 1 CPU
-        for f in range(int(data.flux.shape[0]/meta.nreads)):
+        for n in range(data.flux.shape[0]):
+            # Get read number
+            r = n % meta.nreads
             # Get index of reference frame
             # (0 = forward scan, 1 = reverse scan)
-            p = meta.scandir[f]
-            for r in range(meta.nreads):
-                n = f*meta.nreads + r
-                writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][r] *
-                                              meta.subdiffmask_ref[p][r]),
-                                             (data.flux[n]*data.flatmask[n]),
-                                             n))
+            p = data.scandir.values[n]
+            writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][r] *
+                                          meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*data.flatmask[n]),
+                                         n))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        for f in range(int(data.flux.shape[0]/meta.nreads)):
+        for n in range(data.flux.shape[0]):
+            # Get read number
+            r = n % meta.nreads
             # Get index of reference frame
             # (0 = forward scan, 1 = reverse scan)
-            p = meta.scandir[f]
-            for r in range(meta.nreads):
-                n = f*meta.nreads + r
-                res = pool.apply_async(hst.calcDrift2D,
-                                       args=((meta.subdata_ref[p][r] *
-                                              meta.subdiffmask_ref[p][r]),
-                                             (data.flux[n]*data.flatmask[n]),
-                                             n),
-                                       callback=writeDrift2D)
+            p = data.scandir.values[n]
+            res = pool.apply_async(hst.calcDrift2D,
+                                   args=((meta.subdata_ref[p][r] *
+                                          meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*data.flatmask[n]),
+                                         n),
+                                   callback=writeDrift2D)
         pool.close()
         pool.join()
         res.wait()
@@ -802,7 +810,11 @@ def correct_drift2D(data, meta, log, m):
                                 mode='constant', cval=0)
 
     # Outlier rejection of full frame along time axis
-    if meta.files_per_batch > 1:
+    if meta.files_per_batch == 1 and meta.firstFile:
+        log.writelog("  WARNING: It is recommended to run Eureka! in batch\n"
+                     "  mode (nfiles > 1) for WFC3 data to allow full-frame\n"
+                     "  outlier rejection.")
+    elif meta.files_per_batch > 1:
         log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
