@@ -62,7 +62,7 @@ def read(filename, data, meta):
             time_units = 'BJD_TDB'
         else:
             # This exception is (hopefully) only for simulated data
-            print("WARNING: INT_TIMES not found. "
+            print("  WARNING: INT_TIMES not found. "
                   "Using EXPSTART and EXPEND in UTC.")
             time = np.linspace(data.attrs['mhdr']['EXPSTART'],
                                data.attrs['mhdr']['EXPEND'],
@@ -71,8 +71,8 @@ def read(filename, data, meta):
             time_units = 'UTC'
             # Check that number of SCI integrations matches NINTS from header
             if data.attrs['NINTS'] != sci.shape[0]:
-                print("WARNING: Number of SCI integrations doesn't match NINTS"
-                      " from header. Updating NINTS.")
+                print("  WARNING: Number of SCI integrations doesn't match "
+                      " NINTS from header. Updating NINTS.")
                 data.attrs['NINTS'] = sci.shape[0]
                 time = time[:data.attrs['NINTS']]
 
