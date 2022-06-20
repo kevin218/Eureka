@@ -3,6 +3,7 @@
 import sys
 import os
 from importlib import reload
+import time as time_pkg
 
 sys.path.insert(0, '..'+os.sep)
 from eureka.lib.readECF import MetaClass
@@ -43,6 +44,7 @@ def test_NIRSpec(capsys):
     # pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel = 'NIRSpec'
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
     meta.topdir = f'..{os.sep}tests'
     ecf_path = f'.{os.sep}NIRSpec_ecfs{os.sep}'
 

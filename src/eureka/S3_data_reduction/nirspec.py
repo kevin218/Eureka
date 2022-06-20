@@ -40,8 +40,6 @@ def read(filename, data, meta):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
-    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
     try:
         data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
         data.attrs['intend'] = data.attrs['mhdr']['INTEND']

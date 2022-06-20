@@ -1,5 +1,5 @@
 import os
-import time
+import time as time_pkg
 import numpy as np
 from astropy.io import fits
 
@@ -43,12 +43,13 @@ def rampfitJWST(eventlabel, ecf_path=None):
     - February 2022 Aarynn Carter and Eva-Maria Ahrer
         Updated for JWST version 1.3.3, code restructure
     """
-    t0 = time.time()
+    t0 = time_pkg.time()
 
     # Load Eureka! control file and store values in Event object
     ecffile = 'S1_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     # Create directories for Stage 1 processing outputs
     run = util.makedirectory(meta, 'S1')
@@ -97,7 +98,7 @@ def rampfitJWST(eventlabel, ecf_path=None):
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time
-    total = (time.time() - t0) / 60.
+    total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     # Save results
@@ -163,6 +164,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.linearity.skip = meta.skip_linearity
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
+        if (hasattr(meta, 'jump_rejection_threshold') and
+                isinstance(meta.jump_rejection_threshold, float)):
+            self.jump.rejection_threshold = meta.jump_rejection_threshold
+        else:
+            log.writelog("\nJump rejection threshold is not" +
+                         "defined or not a float, default is used (4.0)")
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
