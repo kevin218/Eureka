@@ -8,7 +8,6 @@ from .lib.masking import data_quality_mask, interpolating_image
 from .S3_data_reduction.background import fitbg3
 from .S3_data_reduction.niriss_extraction import (dirty_mask, box_extract,
                                                   optimal_extraction_routine)
-# from .S3_data_reduction.niriss import wave_NIRISS as wavelength
 
 
 __all__ = ['NIRISS_S3']
@@ -206,24 +205,6 @@ class NIRISS_S3(object):
         self.var = interpolating_image(self.var, mask=self.dq)
         self.median = interpolating_image(self.median,
                                           mask=np.nanmedian(self.dq, axis=0))
-
-    def map_wavelength(self, orders=[1, 2, 3]):
-        """Retrieves the 2D wavelength maps for the first and second orders.
-
-        Parameters
-        ----------
-        orders : np.array, list, optional
-           A list of which orders to retrieve the wavelength
-           solutions for. Default is [1,2,3]. Options are any
-           single order or combinations of these orders.
-
-        Attributes
-        ----------
-        wavelength_map : np.ndarray
-        """
-        self.wavelength_map = wavelength(os.path.join(self.data_dir,
-                                                      self.filename),
-                                         orders, inclass=True)
 
     def map_trace(self, method='profile', ref_filename=None, isplots=0):
         """Calculates the trace of the first and second NIRISS orders.
