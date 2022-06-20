@@ -34,7 +34,7 @@ skip_extract_1d         False           # Recommended for NIRISS SOSS and WFSS
 
 # Diagnostics
 testing_S2              False
-hide_plots              False           # If True, plots will automatically be closed rather than popping up
+hide_plots              True            # If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir          ../tests
