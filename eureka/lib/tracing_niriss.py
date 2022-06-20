@@ -245,7 +245,7 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
 
     def fit_function(x, y, deg=4):
         """ Fits a n-degree polynomial to x and y data. """
-        q = (not np.isnan(x)) & (not np.isnan(y))
+        q = (~np.isnan(x)) & (~np.isnan(y))
         poly = np.polyfit(x[q], y[q], deg=deg)
         fit = np.poly1d(poly)
         return fit
@@ -342,7 +342,7 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
                 center_2[i] = np.nanmedian(newx[p])
 
         # Fitting polynomial to 3rd order
-        q3 = ((center_3 > 0) & (not np.isnan(center_3)))
+        q3 = ((center_3 > 0) & (~np.isnan(center_3)))
         fit3 = fit_function(x[q3], center_3[q3], deg=degree)
         # Finds bad points
         x3, y3 = find_fit_outliers(x[q3], center_3[q3], fit3(x[q3]))
@@ -353,7 +353,7 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
 
         # Fitting polynomial to 2nd order
         # removes first 500 and last 268 points
-        rmv_nans = ((not np.isnan(center_2)) &
+        rmv_nans = ((~np.isnan(center_2)) &
                     (center_2 > 0) & (x < 1760))
         fit2 = fit_function(x[rmv_nans], center_2[rmv_nans], deg=degree)
         x2, y2 = find_fit_outliers(x[rmv_nans],
