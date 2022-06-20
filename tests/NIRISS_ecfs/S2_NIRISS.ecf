@@ -26,7 +26,7 @@ skip_straylight         True
 skip_fringe             True
 skip_pathloss           False           # Recommended for NIRISS SOSS; not recommended for WFSS
 skip_barshadow          True
-skip_photom             False	        # Recommended to skip to get better uncertainties out of Stage 3.
+skip_photom             True            # Recommended to skip to get better uncertainties out of Stage 3.
 skip_wfss_contam        True            # Not recommended for NIRISS SOSS; recommended for WFSS
 skip_resample           True            # Not run for TSO observations
 skip_cube_build         True
