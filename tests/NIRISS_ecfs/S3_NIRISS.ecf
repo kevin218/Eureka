@@ -34,8 +34,8 @@ hide_plots      False       # If True, plots will automatically be closed rather
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/Users/
+topdir          ../tests
 
 # Directories relative to project dir
-inputdir        /Data/JWST-Sim/NIRISS/Stage2
-outputdir       /Data/JWST-Sim/NIRISS/Stage3
+inputdir        /data/JWST-Sim/NIRISS/Stage2/
+outputdir       /data/JWST-Sim/NIRISS/Stage3/
