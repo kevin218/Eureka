@@ -62,7 +62,7 @@ def read(filename, data, meta):
             time_units = 'BJD_TDB'
         else:
             # This exception is (hopefully) only for simulated data
-            print("WARNING: INT_TIMES not found."
+            print("WARNING: INT_TIMES not found. "
                   "Using EXPSTART and EXPEND in UTC.")
             time = np.linspace(data.attrs['mhdr']['EXPSTART'],
                                data.attrs['mhdr']['EXPEND'],
