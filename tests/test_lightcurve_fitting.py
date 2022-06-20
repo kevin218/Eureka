@@ -1,26 +1,6 @@
 #! /usr/bin/env python
-
-"""Tests for the ``lightcurve_fitting`` package.
-
-Authors
--------
-
-    Joe Filippazzo
-
-Use
----
-
-    These tests can be run via the command line (omit the ``-s`` to
-    suppress verbose output to stdout):
-    ::
-
-        pytest -s test_lightcurve_fitting.py
-"""
-
 import unittest
-
 import numpy as np
-
 import os
 import sys
 sys.path.insert(0, '..'+os.sep)
@@ -32,37 +12,6 @@ from eureka.S5_lightcurve_fitting import s5_fit
 
 meta = MetaClass()
 meta.eventlabel = 'NIRCam'
-
-'''
-NOTE: Currently does not run. Since only a single function of Stage 5 is
-being run here and not the whole process, the metadata from S5_NIRCam.ecf
-and S5_fit_par.ecf is not read into the function. The metadata will have to be
-parsed explicitly here for the test to run correctly. (or the test will need to
-be restructured)
-
-class TestLightcurve(unittest.TestCase):
-    """Tests for the lightcurve.py module"""
-    def setUp(self):
-        """Setup for the lightcurve"""
-        self.time = np.linspace(0, 1, 100)
-        self.unc = np.random.uniform(low=1E-4, high=0.01, size=100)
-        self.flux = np.random.normal(np.ones_like(self.time), scale=self.unc)
-        self.nchannel = 1
-
-    def test_lightcurve(self):
-        """Test that a LightCurve object can be created"""
-        self.lc = lightcurve.LightCurve(self.time, self.flux, self.unc,
-                                        self.nchannel, name='Data')
-
-        # Test that parameters can be assigned
-        params1 = {"c1" : 0.0005, "c0": 0.997, "name": 'linear'}
-        params2 = {"c1" : 0.001, "c0": 0.92, "name": 'linear'}
-        lin1 = models.PolynomialModel(parameters=None, coeff_dict=params1)
-        lin2 = models.PolynomialModel(parameters=None, coeff_dict=params2)
-        comp_model = lin1*lin2
-        # Test the fitting routine
-        self.lc.fit(comp_model, meta.eventlabel, verbose=False)
-'''
 
 
 class TestModels(unittest.TestCase):
@@ -298,6 +247,9 @@ class TestParameters(unittest.TestCase):
                          ['param1', 123.456, 'free'])
         self.assertEqual(self.params.param2.values,
                          ['param2', 234.567, 'free', 200, 300])
+        # Test FileNotFoundError
+        self.assertRaises(FileNotFoundError, Parameters, None,
+                          'non-existent.epf')
 
 
 class TestSimulations(unittest.TestCase):

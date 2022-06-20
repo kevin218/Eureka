@@ -2,157 +2,16 @@
 The Code (API)
 ==============
 
-lib
-'''
-
-lib.astropytable
-----------------
-.. automodule:: eureka.lib.astropytable
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.centroid
-------------
-.. automodule:: eureka.lib.centroid
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.clipping
-------------
-.. automodule:: eureka.lib.clipping
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.disk
---------
-.. automodule:: eureka.lib.disk
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.gaussian
-------------
-.. automodule:: eureka.lib.gaussian
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.gelmanrubin
----------------
-.. automodule:: eureka.lib.gelmanrubin
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.logedit
------------
-.. automodule:: eureka.lib.logedit
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.manageevent
----------------
-.. automodule:: eureka.lib.manageevent
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.medstddev
--------------
-.. automodule:: eureka.lib.medstddev
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.plots
----------
-.. automodule:: eureka.lib.plots
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.readECF
------------
-.. automodule:: eureka.lib.readECF
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.readEPF
------------
-.. automodule:: eureka.lib.readEPF
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.smooth
-----------
-.. automodule:: eureka.lib.smooth
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.smoothing
--------------
-.. automodule:: eureka.lib.smoothing
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.sort_nicely
----------------
-.. automodule:: eureka.lib.sort_nicely
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.splinterp
--------------
-.. automodule:: eureka.lib.splinterp
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.suntimecorr
----------------
-.. automodule:: eureka.lib.suntimecorr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.utc_tt
-----------
-.. automodule:: eureka.lib.utc_tt
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.util
---------
-.. automodule:: eureka.lib.util
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 S1_detector_processing
 ''''''''''''''''''''''
 
-S1_detector_processing.s1_process.rampfitJWST
----------------------------------------------
-.. automodule:: eureka.S1_detector_processing.s1_process.rampfitJWST
+S1_detector_processing.s1_process
+---------------------------------
+.. automodule:: eureka.S1_detector_processing.s1_process
     :members:
     :undoc-members:
     :show-inheritance:
-
-S1_detector_processing.s1_process.EurekaS1Pipeline
---------------------------------------------------
-.. autoclass:: eureka.S1_detector_processing.s1_process.EurekaS1Pipeline
-    :members:
 
 S1_detector_processing.ramp_fitting
 -----------------------------------
@@ -165,22 +24,12 @@ S1_detector_processing.ramp_fitting
 S2_calibrations
 '''''''''''''''
 
-S2_calibrations.s2_calibrate.calibrateJWST
-------------------------------------------
-.. automodule:: eureka.S2_calibrations.s2_calibrate.calibrateJWST
+S2_calibrations.s2_calibrate
+----------------------------
+.. automodule:: eureka.S2_calibrations.s2_calibrate
     :members:
     :undoc-members:
     :show-inheritance:
-
-S2_calibrations.s2_calibrate.EurekaSpec2Pipeline
-------------------------------------------------
-.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaSpec2Pipeline
-    :members:
-
-S2_calibrations.s2_calibrate.EurekaImage2Pipeline
--------------------------------------------------
-.. autoclass:: eureka.S2_calibrations.s2_calibrate.EurekaImage2Pipeline
-    :members:
 
 
 S3_data_reduction
@@ -313,6 +162,55 @@ S4_generate_lightcurves.s4_genLC
 S5_lightcurve_fitting
 '''''''''''''''''''''
 
+S5_lightcurve_fitting.models.BatmanModels
+-----------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.BatmanModels
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.models.ExpRampModel
+-----------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.ExpRampModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.models.GPModel
+------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.GPModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.models.KeplerOrbit
+----------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.KeplerOrbit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.models.Model
+----------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.Model
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.models.PolynomialModel
+--------------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.PolynomialModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S5_lightcurve_fitting.models.SinusoidPhaseCurve
+-----------------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.SinusoidPhaseCurve
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 S5_lightcurve_fitting.fitters
 -----------------------------
 .. automodule:: eureka.S5_lightcurve_fitting.fitters
@@ -341,9 +239,9 @@ S5_lightcurve_fitting.limb_darkening_fit
     :undoc-members:
     :show-inheritance:
 
-S5_lightcurve_fitting.modelgrid.ModelGrid
+S5_lightcurve_fitting.modelgrid
 -----------------------------------------
-.. autoclass:: eureka.S5_lightcurve_fitting.modelgrid.ModelGrid
+.. automodule:: eureka.S5_lightcurve_fitting.modelgrid
     :members:
     :undoc-members:
     :show-inheritance:
@@ -391,6 +289,143 @@ S6_planet_spectra.plots_s6
 S6_planet_spectra.s6_spectra
 ----------------------------
 .. automodule:: eureka.S6_planet_spectra.s6_spectra
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+lib
+'''
+
+lib.astropytable
+----------------
+.. automodule:: eureka.lib.astropytable
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.centroid
+------------
+.. automodule:: eureka.lib.centroid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.clipping
+------------
+.. automodule:: eureka.lib.clipping
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.disk
+--------
+.. automodule:: eureka.lib.disk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.gaussian
+------------
+.. automodule:: eureka.lib.gaussian
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.gelmanrubin
+---------------
+.. automodule:: eureka.lib.gelmanrubin
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.logedit
+-----------
+.. automodule:: eureka.lib.logedit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.manageevent
+---------------
+.. automodule:: eureka.lib.manageevent
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.medstddev
+-------------
+.. automodule:: eureka.lib.medstddev
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.plots
+---------
+.. automodule:: eureka.lib.plots
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.readECF
+-----------
+.. automodule:: eureka.lib.readECF
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.readEPF
+-----------
+.. automodule:: eureka.lib.readEPF
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.smooth
+----------
+.. automodule:: eureka.lib.smooth
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.smoothing
+-------------
+.. automodule:: eureka.lib.smoothing
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.sort_nicely
+---------------
+.. automodule:: eureka.lib.sort_nicely
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.splinterp
+-------------
+.. automodule:: eureka.lib.splinterp
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.suntimecorr
+---------------
+.. automodule:: eureka.lib.suntimecorr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.utc_tt
+----------
+.. automodule:: eureka.lib.utc_tt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.util
+--------
+.. automodule:: eureka.lib.util
     :members:
     :undoc-members:
     :show-inheritance:
