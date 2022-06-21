@@ -5,7 +5,7 @@ import os
 from importlib import reload
 import time as time_pkg
 
-sys.path.insert(0, '..'+os.sep)
+sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
