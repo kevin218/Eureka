@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import os
 
-sys.path.insert(0, '..'+os.sep)
+sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib import util
 from eureka.lib.readECF import MetaClass
 from eureka.lib.medstddev import medstddev
