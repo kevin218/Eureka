@@ -100,6 +100,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     # each order
     meta.run_s3 = util.makedirectory(meta, 'S3')
 
+    # Sets the output directory
+    meta.outputdir = util.pathdirectory(meta, 'S3',
+                                        meta.run_s3)
+
     # Open new log file
     meta.s3_logname = meta.outputdir + 'S3_' + eventlabel + ".log"
     if s2_meta is not None:
@@ -121,10 +125,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
     # begin process
     t0 = time_pkg.time()
-
-    # Sets the output directory
-    meta.outputdir = util.pathdirectory(meta, 'S3',
-                                        meta.run_s3)
 
     log.writelog("\nStarting Stage 3 Reduction\n")
     log.writelog(f"Input directory: {meta.inputdir}")
@@ -185,7 +185,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         exts = np.linspace(1, meta.n_int*3-2, 3, dtype=int)+m
         wave_soln = np.full((meta.n_int, meta.nx), np.nan)
 
-        with fits.open(meta.x1d_segment_list[-1]) as hdulist:
+        with fits.open(meta.x1d_segment_list[m]) as hdulist:
             # Get solns from appropriate extention
             for e, ext in enumerate(exts):
                 soln = hdulist[ext].data['WAVELENGTH']
