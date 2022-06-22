@@ -137,16 +137,28 @@ def conclusion_step(data, meta, log):
         # Sum each read from a scan together
         # Get a copy of the flux and time arrays
         flux = np.copy(data.optspec.values)
+        err = np.copy(data.opterr.values)
+        optmask = np.copy(data.optmask.values)
+        std_flux = np.copy(data.stdspec.values)
+        std_var = np.copy(data.stdvar.values)
         time = np.copy(data.optspec.time.values)
         # Reshape to get (nfiles, nreads, nwaves)
         flux = flux.reshape(-1, meta.nreads, flux.shape[1])
+        err = err.reshape(-1, meta.nreads, err.shape[1])
+        optmask = optmask.reshape(-1, meta.nreads, optmask.shape[1])
+        std_flux = std_flux.reshape(-1, meta.nreads, std_flux.shape[1])
+        std_var = std_var.reshape(-1, meta.nreads, std_var.shape[1])
         time = time.reshape(-1, meta.nreads)
         # Sum together the reads to get (nfiles, nwaves)
         flux = flux.sum(axis=1)
-        # Average together the times
+        std_flux = std_flux.sum(axis=1)
+        # Add errors in quadrature
+        err = np.sqrt(np.sum(err**2, axis=1))
+        std_var = np.sqrt(np.sum(std_var**2, axis=1))
+        # Mask if any of the reads were masked
+        optmask = np.any(optmask, axis=1)
+        # Average together the reads' times
         time = time.mean(axis=1)
-        # Get the scan directions
-        scandir = meta.scandir
         
         # Take every nread value out of the data object
         data = data.isel(time=np.arange(0, len(data.optspec.time),
@@ -156,11 +168,20 @@ def conclusion_step(data, meta, log):
         
         # Update values based on those we've calculated above
         data.optspec.values = flux
-        # FINDME: This is currently missing some time arrays
-        # data.optspec.time.values = time
-        # data.opterr.time.values = time
-        # data.optmask.time.values = time
-        data.scandir.values = scandir
+        data.optspec['time'] = time
+        data.opterr.values = err
+        data.opterr['time'] = time
+        data.optmask.values = optmask
+        data.optmask['time'] = time
+        data.stdspec.values = std_flux
+        data.stdspec['time'] = time
+        data.stdvar.values = std_var
+        data.stdvar['time'] = time
+        # For these values, just use the first read's value
+        data.drift2D['time'] = time
+        data.guess['time'] = time
+        data.scandir['time'] = time
+        data.wave['time'] = time
 
         # Update nreads
         meta.nreads = 1

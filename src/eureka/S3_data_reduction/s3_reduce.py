@@ -398,6 +398,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
 
+            if meta.isplots_S3 >= 1 and meta.inst == 'wfc3':
+                plots_s3.drift_2D(spec, meta)
+
             if meta.inst == 'wfc3':
                 # WFC3 needs a conclusion step to convert lists into
                 # arrays before saving
@@ -417,8 +420,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(spec, meta, spec.wave_1d, spec.optspec)
-                if meta.inst == 'wfc3':
-                    plots_s3.drift_2D(spec, meta)
 
             # Save results
             if meta.save_output:
