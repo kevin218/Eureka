@@ -38,7 +38,7 @@ from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
-from ..lib.masking import interpolating_image
+# from ..lib.masking import interpolating_image
 
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
@@ -205,12 +205,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             data.flux.attrs['flux_units']
 
         # Interpolating over bad pixels from the data quality map
-        data.flux.values = interpolating_image(data.flux.values, mask=data.dq)
-        data.err.values = interpolating_image(data.err.values, mask=data.dq)
-        data.v0.values = interpolating_image(data.v0.values, mask=data.dq)
-        data['medflux'] = (['y', 'x'], interpolating_image(
-            np.nanmedian(data.flux.values, axis=0),
-            mask=np.nanmedian(data.dq.values, axis=0)))
+        # log.writelog("  Interpolating over bad pixels from the dq map",
+        #              mute=(not meta.verbose))
+        # data.flux.values = interpolating_image(data.flux.values,
+        #                                        mask=data.dq)
+        # data.err.values = interpolating_image(data.err.values,
+        #                                       mask=data.dq)
+        # data.v0.values = interpolating_image(data.v0.values,
+        #                                      mask=data.dq)
+        # data['medflux'] = (['y', 'x'], interpolating_image(
+        #     np.nanmedian(data.flux.values, axis=0),
+        #     mask=np.nanmedian(data.dq.values, axis=0)))
 
         # Create bad pixel mask (1 = good, 0 = bad)
         # FINDME: Will want to use DQ array in the future
@@ -219,12 +224,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                     dtype=bool))
 
         # Check if arrays have NaNs
-        data['mask'] = util.check_nans(data['flux'], data['mask'],
-                                       log, name='FLUX')
-        data['mask'] = util.check_nans(data['err'], data['mask'],
-                                       log, name='ERR')
-        data['mask'] = util.check_nans(data['v0'], data['mask'],
-                                       log, name='V0')
+        data.mask.values = util.check_nans(data.flux.values,
+                                           data.mask.values,
+                                           log, name='FLUX')
+        data.mask.values = util.check_nans(data.err.values,
+                                           data.mask.values,
+                                           log, name='ERR')
+        data.mask.values = util.check_nans(data.v0.values,
+                                           data.mask.values,
+                                           log, name='V0')
 
         # Manually mask regions [colstart, colend, rowstart, rowend]
         if hasattr(meta, 'manmask'):
