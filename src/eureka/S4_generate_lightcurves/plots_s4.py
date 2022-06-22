@@ -31,28 +31,22 @@ def binned_lightcurve(meta, lc, i):
     if meta.inst == 'wfc3':
         norm_lcdata = np.copy(lc['data'][i])
         norm_lcerr = np.copy(lc['err'][i])
-        if meta.sum_reads:
-            # Summed each read from a scan together
-            scandir = lc.scandir.values[::meta.nreads]
-            nreads = 1
-        else:
-            # Just left as (nfiles*nreads, nwaves)
-            scandir = lc.scandir.values
-            nreads = meta.nreads
+        scandir = lc.scandir.values
+        nreads = meta.nreads
         
         # Normalize the data
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
                 for r in range(nreads):
+                    norm_lcerr[iscans[r::nreads]] /= np.nanmedian(
+                        norm_lcdata[iscans[r::nreads]], axis=0)
                     norm_lcdata[iscans[r::nreads]] /= np.nanmedian(
                         norm_lcdata[iscans[r::nreads]], axis=0)
-                    norm_lcerr[iscans[r::nreads]] /= np.nanmedian(
-                        norm_lcerr[iscans[r::nreads]], axis=0)
     else:
         # Normalize the data
-        norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i], axis=0)
         norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
+        norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i], axis=0)
     plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
                  color=f'C{i}', mec=f'C{i}', alpha=0.2)
     mad = util.get_mad_1d(norm_lcdata)
