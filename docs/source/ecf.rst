@@ -141,6 +141,13 @@ Currently, the only parallelized part of the code is the **background subtractio
 
 :func:`util.BGsubtraction<eureka.lib.util.BGsubtraction>`
 
+nfiles
+''''''
+Sets the maximum number of data files to analyze batched together.
+
+max_memory
+''''''''''
+Sets the maximum memory fraction (0--1) that should be used by the loaded in data files. This will reduce nfiles if needed. Note that more RAM than this may be used during operations like sigma clipping, so you're best off setting max_memory <= 0.5.
 
 suffix
 ''''''
@@ -162,6 +169,14 @@ As we want to do our own spectral extraction, we set this variable to ``calints`
 	Note that other Instruments might used different suffixes!
 
 
+horizonsfile
+''''''''''''
+Only used for HST analyses. This should be set to the fully qualified path to the horizons file you've downloaded from https://ssd.jpl.nasa.gov/horizons/app.html#/. On that website, select HST as the body, and select a date range that spans the days relevant to your observations. Make sure to download the file as a .vec file.
+
+leapdir
+'''''''
+Only used for HST analyses. The folder where leapsecond calibration files will be saved
+
 ywindow & xwindow
 '''''''''''''''''
 Can be set if one wants to remove edge effects (e.g.: many nans at the edges).
@@ -179,8 +194,31 @@ Everything outside of the box will be discarded and not used in the analysis.
 
 src_pos_type
 ''''''''''''
-Determine the source position on the detector when not given in header (Options: gaussian, weighted, or max).
+Determine the source position on the detector when not given in header (Options: gaussian, weighted, max, or hst).
 
+centroidtrim
+''''''''''''
+Only used for HST analyses. The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
+
+centroidguess
+'''''''''''''
+Only used for HST analyses. A guess for the location of the star in the direct images. This should be a 2 element list with the x and y position.
+
+flatoffset
+''''''''''
+Only used for HST analyses. The positional offset to use for flatfielding. This should be formatted as a 2 element list with x and y offsets.
+
+flatsigma
+'''''''''
+Only used for HST analyses. Used to sigma clip bad values from the flatfield image.
+
+flatfile
+''''''''
+Only used for HST analyses. The fully qualified path to the flatfield file to use.
+
+diffthresh
+''''''''''
+Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
 
 bg_hw & spec_hw
 '''''''''''''''
@@ -268,7 +306,11 @@ Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It 
 
 iref
 ''''
-Currently only used for HST observations. The file indices to use as reference frames for 2D drift correction.
+Only used for HST analyses. The file indices to use as reference frames for 2D drift correction.
+
+sum_reads
+'''''''''
+Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
 
 isplots_S3
 ''''''''''
@@ -286,6 +328,9 @@ hide_plots
 ''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
+verbose
+'''''''
+If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
@@ -369,6 +414,9 @@ hide_plots
 ''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
+verbose
+'''''''
+If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
@@ -403,9 +451,9 @@ fit_par
 '''''''
 Path to Stage 5 priors and fit parameter file.
 
-run_verbose
-'''''''''''
-Boolean to determine whether Stage 5 prints verbose output.
+verbose
+'''''''
+If True, more details will be printed about steps.
 
 fit_method
 ''''''''''
