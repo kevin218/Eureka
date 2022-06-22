@@ -309,26 +309,15 @@ def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
     # Normalize the spectrum
     if meta.inst == 'wfc3':
         normspec = np.copy(optspec[:, iwmin:iwmax])
-        if meta.sum_reads:
-            # Sum each read from a scan together
-            # Reshape to get (nfiles, nreads, nwaves)
-            normspec = normspec.reshape(-1, meta.nreads, normspec.shape[1])
-            # Average together the reads to get (nfiles, nwaves)
-            normspec = normspec.sum(axis=1)
-            scandir = meta.scandir
-            nreads = 1
-        else:
-            # Just leave as (nfiles*nreads, nwaves)
-            scandir = np.repeat(meta.scandir, meta.nreads)
-            nreads = meta.nreads
+        scandir = np.repeat(meta.scandir, meta.nreads)
         
         # Normalize the data
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
-                for r in range(nreads):
-                    normspec[iscans[r::nreads]] /= np.ma.mean(
-                        normspec[iscans[r::nreads]], axis=0)
+                for r in range(meta.nreads):
+                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
+                        normspec[iscans[r::meta.nreads]], axis=0)
         
         # Compute the MAD
         n_int = normspec.shape[0]

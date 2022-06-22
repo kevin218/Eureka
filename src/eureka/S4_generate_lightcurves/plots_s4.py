@@ -134,35 +134,20 @@ def lc_driftcorr(meta, lc, wave_1d, optspec):
     # Normalize the light curve
     if meta.inst == 'wfc3':
         norm_lcdata = np.copy(optspec[:, iwmin:iwmax])
-        if meta.sum_reads:
-            # Summed each read from a scan together
-            # scandir = lc.scandir.values[::meta.nreads]
-            # nreads = 1
-
-            # Sum each read from a scan together
-            nreads = meta.nreads
-            # Reshape to get (nfiles, nreads, nwaves)
-            norm_lcdata = norm_lcdata.reshape(-1, nreads, norm_lcdata.shape[1])
-            # Average together the reads to get (nfiles, nwaves)
-            norm_lcdata = norm_lcdata.sum(axis=1)
-            scandir = lc.scandir.values[::nreads]
-            nreads = 1
-        else:
-            # Just left as (nfiles*nreads, nwaves)
-            scandir = lc.scandir.values
-            nreads = meta.nreads
+        scandir = np.repeat(meta.scandir, meta.nreads)
         
         # Normalize the data
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
-                for r in range(nreads):
-                    norm_lcdata[iscans[r::nreads]] /= np.nanmedian(
-                        norm_lcdata[iscans[r::nreads]], axis=0)
+                for r in range(meta.nreads):
+                    norm_lcdata[iscans[r::meta.nreads]] /= np.ma.mean(
+                        norm_lcdata[iscans[r::meta.nreads]], axis=0)
     else:
         # Normalize the data
         norm_lcdata = (optspec[:, iwmin:iwmax] /
                        np.nanmedian(optspec[:, iwmin:iwmax], axis=0))
+
     plt.imshow(norm_lcdata, origin='lower', aspect='auto',
                extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
@@ -173,7 +158,7 @@ def lc_driftcorr(meta, lc, wave_1d, optspec):
         secax = plt.gca().secondary_xaxis('top')
         xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
         secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
-                        fontsize='xx-small')
+                         fontsize='xx-small')
         plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
 
     plt.ylabel('Integration Number')

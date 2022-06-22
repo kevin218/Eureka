@@ -395,13 +395,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Append results for future concatenation
                 datasets.append(data)
 
+            # Concatenate results along time axis (default)
+            spec = xrio.concat(datasets)
+
             if meta.inst == 'wfc3':
                 # WFC3 needs a conclusion step to convert lists into
                 # arrays before saving
-                meta, log = inst.conclusion_step(meta, log)
-
-            # Concatenate results along time axis (default)
-            spec = xrio.concat(datasets)
+                spec, meta, log = inst.conclusion_step(spec, meta, log)
 
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +

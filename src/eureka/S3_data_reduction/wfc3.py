@@ -108,11 +108,13 @@ def preparation_step(meta, log):
     return meta, log
 
 
-def conclusion_step(meta, log):
+def conclusion_step(data, meta, log):
     """Convert lists into arrays for saving
 
     Parameters
     ----------
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The current metadata object.
     log : logedit.Logedit
@@ -131,7 +133,39 @@ def conclusion_step(meta, log):
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
 
-    return meta, log
+    if meta.sum_reads:
+        # Sum each read from a scan together
+        # Get a copy of the flux and time arrays
+        flux = np.copy(data.optspec.values)
+        time = np.copy(data.optspec.time.values)
+        # Reshape to get (nfiles, nreads, nwaves)
+        flux = flux.reshape(-1, meta.nreads, flux.shape[1])
+        time = time.reshape(-1, meta.nreads)
+        # Sum together the reads to get (nfiles, nwaves)
+        flux = flux.sum(axis=1)
+        # Average together the times
+        time = time.mean(axis=1)
+        # Get the scan directions
+        scandir = meta.scandir
+        
+        # Take every nread value out of the data object
+        data = data.isel(time=np.arange(0, len(data.optspec.time),
+                                        meta.nreads))
+        # FINDME: Need to handle all the other time-dependent arrays
+        # since right now we just take the value from the first read
+        
+        # Update values based on those we've calculated above
+        data.optspec.values = flux
+        # FINDME: This is currently missing some time arrays
+        # data.optspec.time.values = time
+        # data.opterr.time.values = time
+        # data.optmask.time.values = time
+        data.scandir.values = scandir
+
+        # Update nreads
+        meta.nreads = 1
+
+    return data, meta, log
 
 
 def separate_direct(meta, log):
