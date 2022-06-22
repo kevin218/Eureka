@@ -27,9 +27,32 @@ def binned_lightcurve(meta, lc, i):
                  f'{lc.wave_hi.values[i]:.3f}')
     ax = plt.subplot(111)
     time_modifier = np.floor(lc.time.values[0])
-    # Normalized light curve
-    norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i].values)
-    norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
+    # Normalize the light curve
+    if meta.inst == 'wfc3':
+        norm_lcdata = np.copy(lc['data'][i])
+        norm_lcerr = np.copy(lc['err'][i])
+        if meta.sum_reads:
+            # Summed each read from a scan together
+            scandir = lc.scandir.values[::meta.nreads]
+            nreads = 1
+        else:
+            # Just left as (nfiles*nreads, nwaves)
+            scandir = lc.scandir.values
+            nreads = meta.nreads
+        
+        # Normalize the data
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                for r in range(nreads):
+                    norm_lcdata[iscans[r::nreads]] /= np.nanmedian(
+                        norm_lcdata[iscans[r::nreads]], axis=0)
+                    norm_lcerr[iscans[r::nreads]] /= np.nanmedian(
+                        norm_lcerr[iscans[r::nreads]], axis=0)
+    else:
+        # Normalize the data
+        norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i], axis=0)
+        norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
     plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
                  color=f'C{i}', mec=f'C{i}', alpha=0.2)
     mad = util.get_mad_1d(norm_lcdata)
@@ -80,13 +103,15 @@ def drift1d(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, wave_1d, optspec):
+def lc_driftcorr(meta, lc, wave_1d, optspec):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    lc : Xarray Dataset
+        The Dataset object containing light curve and time data.
     wave_1d : ndarray
         Wavelength array with trimmed edges depending on xwindow and ywindow
         which have been set in the S3 ecf.
@@ -99,23 +124,57 @@ def lc_driftcorr(meta, wave_1d, optspec):
     '''
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
-    wmin = np.ma.min(wave_1d)
-    wmax = np.ma.max(wave_1d)
-    n_int, nx = optspec.shape
+    wmin = meta.wave_min
+    wmax = meta.wave_max
+    iwmin = np.nanargmin(np.abs(wave_1d-wmin).values)
+    iwmax = np.nanargmin(np.abs(wave_1d-wmax).values)
+    n_int = optspec.shape[0]
     vmin = 0.97
     vmax = 1.03
-    normspec = optspec / np.ma.mean(optspec, axis=0)
-    plt.imshow(normspec, origin='lower', aspect='auto',
+    # Normalize the light curve
+    if meta.inst == 'wfc3':
+        norm_lcdata = np.copy(optspec[:, iwmin:iwmax])
+        if meta.sum_reads:
+            # Summed each read from a scan together
+            # scandir = lc.scandir.values[::meta.nreads]
+            # nreads = 1
+
+            # Sum each read from a scan together
+            nreads = meta.nreads
+            # Reshape to get (nfiles, nreads, nwaves)
+            norm_lcdata = norm_lcdata.reshape(-1, nreads, norm_lcdata.shape[1])
+            # Average together the reads to get (nfiles, nwaves)
+            norm_lcdata = norm_lcdata.sum(axis=1)
+            scandir = lc.scandir.values[::nreads]
+            nreads = 1
+        else:
+            # Just left as (nfiles*nreads, nwaves)
+            scandir = lc.scandir.values
+            nreads = meta.nreads
+        
+        # Normalize the data
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                for r in range(nreads):
+                    norm_lcdata[iscans[r::nreads]] /= np.nanmedian(
+                        norm_lcdata[iscans[r::nreads]], axis=0)
+    else:
+        # Normalize the data
+        norm_lcdata = (optspec[:, iwmin:iwmax] /
+                       np.nanmedian(optspec[:, iwmin:iwmax], axis=0))
+    plt.imshow(norm_lcdata, origin='lower', aspect='auto',
                extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(meta.mad_s4).astype(int)) + " ppm")
 
-    # Insert vertical dashed lines at spectroscopic channel edges
-    secax = plt.gca().secondary_xaxis('top')
-    xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
-    secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
-                     fontsize='xx-small')
-    plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+    if meta.nspecchan > 1:
+        # Insert vertical dashed lines at spectroscopic channel edges
+        secax = plt.gca().secondary_xaxis('top')
+        xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
+        secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
+                        fontsize='xx-small')
+        plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
 
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')

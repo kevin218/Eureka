@@ -175,6 +175,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                   spec.optspec.attrs['time_units'],
                                   name='err')
             lc = xrio.makeDataset({'data': lcdata, 'err': lcerr})
+            if hasattr(spec, 'scandir'):
+                lc['scandir'] = spec.scandir
+            if hasattr(spec, 'drift2D'):
+                lc['drift2D'] = spec.drift2D
             lc['wave_low'] = (['wavelength'], meta.wave_low)
             lc['wave_hi'] = (['wavelength'], meta.wave_hi)
             lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
@@ -193,8 +197,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Create masked array for steps below
             optspec_ma = np.ma.masked_array(spec.optspec, spec.optmask)
             # Create opterr array with same mask as optspec
-            opterr_ma = np.ma.copy(optspec_ma)
-            opterr_ma = spec.opterr
+            opterr_ma = np.ma.masked_array(spec.opterr, spec.optmask)
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.sigma_clip:
@@ -266,7 +269,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
             if meta.isplots_S4 >= 1:
-                plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
+                plots_s4.lc_driftcorr(meta, lc, spec.wave_1d, optspec_ma)
 
             log.writelog("Generating light curves")
 
