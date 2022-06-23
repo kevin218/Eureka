@@ -21,41 +21,32 @@ def binned_lightcurve(meta, lc, i):
     -------
     None
     '''
+    # Normalize the light curve
+    norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
+                                                      lc['err'][i])
+
     plt.figure(4102, figsize=(8, 6))
     plt.clf()
     plt.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                  f'{lc.wave_hi.values[i]:.3f}')
     ax = plt.subplot(111)
     time_modifier = np.floor(lc.time.values[0])
-    # Normalize the light curve
+    
+    # Plot the normalized light curve
     if meta.inst == 'wfc3':
-        norm_lcdata = np.copy(lc['data'][i])
-        norm_lcerr = np.copy(lc['err'][i])
-        scandir = lc.scandir.values
-        nreads = meta.nreads
-        
-        # Normalize the data
         for p in range(2):
-            iscans = np.where(scandir == p)[0]
-            if len(iscans) > 0:
-                for r in range(nreads):
-                    norm_lcerr[iscans[r::nreads]] /= np.nanmedian(
-                        norm_lcdata[iscans[r::nreads]], axis=0)
-                    norm_lcdata[iscans[r::nreads]] /= np.nanmedian(
-                        norm_lcdata[iscans[r::nreads]], axis=0)
+            iscans = np.where(lc.scandir.values == p)[0]
 
-            plt.errorbar(lc.time[iscans]-time_modifier,
-                         norm_lcdata[iscans]+0.005*p,
-                         norm_lcerr[iscans], fmt='o', color=f'C{p}',
-                         mec=f'C{p}', alpha=0.2)
-            mad = util.get_mad_1d(norm_lcdata[iscans])
-            plt.text(0.05, 0.075+0.05*p,
-                     f"MAD = {np.round(mad).astype(int)} ppm",
-                     transform=ax.transAxes, color=f'C{p}')
+            if len(iscans) > 0:
+                plt.errorbar(lc.time[iscans]-time_modifier,
+                             norm_lcdata[iscans]+0.005*p,
+                             norm_lcerr[iscans], fmt='o', color=f'C{p}',
+                             mec=f'C{p}', alpha=0.2)
+                mad = util.get_mad_1d(norm_lcdata[iscans])
+                plt.text(0.05, 0.075+0.05*p,
+                         f"MAD = {np.round(mad).astype(int)} ppm",
+                         transform=ax.transAxes, color=f'C{p}')
     else:
-        # Normalize the data
-        norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
-        norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i], axis=0)
         plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
                      color=f'C{i}', mec=f'C{i}', alpha=0.2)
         mad = util.get_mad_1d(norm_lcdata)
@@ -134,22 +125,9 @@ def lc_driftcorr(meta, lc, wave_1d, optspec):
     n_int = optspec.shape[0]
     vmin = 0.97
     vmax = 1.03
+
     # Normalize the light curve
-    if meta.inst == 'wfc3':
-        norm_lcdata = np.copy(optspec[:, iwmin:iwmax])
-        scandir = np.repeat(meta.scandir, meta.nreads)
-        
-        # Normalize the data
-        for p in range(2):
-            iscans = np.where(scandir == p)[0]
-            if len(iscans) > 0:
-                for r in range(meta.nreads):
-                    norm_lcdata[iscans[r::meta.nreads]] /= np.ma.mean(
-                        norm_lcdata[iscans[r::meta.nreads]], axis=0)
-    else:
-        # Normalize the data
-        norm_lcdata = (optspec[:, iwmin:iwmax] /
-                       np.nanmedian(optspec[:, iwmin:iwmax], axis=0))
+    norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax])
 
     plt.imshow(norm_lcdata, origin='lower', aspect='auto',
                extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,

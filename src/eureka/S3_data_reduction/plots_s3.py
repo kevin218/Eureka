@@ -3,6 +3,7 @@ import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from .source_pos import gauss
+from ..lib import util
 from ..lib.plots import figure_filetype
 
 
@@ -24,26 +25,12 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     None
     '''
     optspec = np.ma.masked_invalid(optspec)
+    normspec = util.normalize_spectrum(meta, optspec)
     n_int = optspec.shape[0]
     wmin = wave_1d.min()
     wmax = wave_1d.max()
     vmin = 0.97
     vmax = 1.03
-
-    if meta.inst == 'wfc3':
-        normspec = np.copy(optspec)
-        scandir = np.repeat(meta.scandir, meta.nreads)
-        
-        # Normalize the data
-        for p in range(2):
-            iscans = np.where(scandir == p)[0]
-            if len(iscans) > 0:
-                for r in range(meta.nreads):
-                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
-                        normspec[iscans[r::meta.nreads]], axis=0)
-    else:
-        # Normalize the data
-        normspec = optspec / np.ma.mean(optspec, axis=0)
 
     plt.figure(3101, figsize=(8, 8))
     plt.clf()

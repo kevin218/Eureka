@@ -269,6 +269,35 @@ def find_fits(meta):
     return meta
 
 
+def normalize_spectrum(meta, optspec, opterr=None):
+    normspec = np.ma.copy(optspec)
+    if opterr is not None:
+        normerr = np.ma.copy(opterr)
+
+    # Normalize the spectrum
+    if meta.inst == 'wfc3':
+        scandir = np.repeat(meta.scandir, meta.nreads)
+        
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                for r in range(meta.nreads):
+                    if opterr is not None:
+                        normerr[iscans[r::meta.nreads]] /= np.ma.median(
+                            normspec[iscans[r::meta.nreads]], axis=0)
+                    normspec[iscans[r::meta.nreads]] /= np.ma.median(
+                        normspec[iscans[r::meta.nreads]], axis=0)
+    else:
+        if opterr is not None:
+            normerr = normerr/np.ma.median(normspec, axis=0)
+        normspec = normspec/np.ma.median(normspec, axis=0)
+
+    if opterr is not None:
+        return normspec, normerr
+    else:
+        return normspec
+
+
 def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
@@ -307,23 +336,16 @@ def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
         iwmax = None
 
     # Normalize the spectrum
+    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+
+    # Compute the MAD
+    n_int = normspec.shape[0]
+    ediff = np.ma.zeros(n_int)
+    for m in range(n_int):
+        ediff[m] = get_mad_1d(normspec[m])
+
     if meta.inst == 'wfc3':
-        normspec = np.copy(optspec[:, iwmin:iwmax])
         scandir = np.repeat(meta.scandir, meta.nreads)
-        
-        # Normalize the data
-        for p in range(2):
-            iscans = np.where(scandir == p)[0]
-            if len(iscans) > 0:
-                for r in range(meta.nreads):
-                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
-                        normspec[iscans[r::meta.nreads]], axis=0)
-        
-        # Compute the MAD
-        n_int = normspec.shape[0]
-        ediff = np.ma.zeros(n_int)
-        for m in range(n_int):
-            ediff[m] = get_mad_1d(normspec[m])
 
         # Compute the MAD for each scan direction
         for p in range(2):
@@ -331,19 +353,9 @@ def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
             if len(iscans) > 0:
                 mad = np.ma.mean(ediff[iscans])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
-                setattr(meta, f'mad_scandir{p}', mad)
-    else:
-        # Normalize the spectrum
-        normspec = (optspec[:, iwmin:iwmax] /
-                    np.ma.mean(optspec[:, iwmin:iwmax], axis=0))
-        # Compute the MAD
-        n_int = normspec.shape[0]
-        ediff = np.ma.zeros(n_int)
-        for m in range(n_int):
-            ediff[m] = get_mad_1d(normspec[m])
-    
-    mad = np.ma.mean(ediff)
-    return mad
+                setattr(meta, f'mad_scandir{p}', mad)   
+
+    return np.ma.mean(ediff)
 
 
 def get_mad_1d(data, ind_min=0, ind_max=-1):
