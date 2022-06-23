@@ -793,7 +793,7 @@ def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):
     return shift, m, n, i, j
 
 
-def drift_fit2D(meta, data, nreads, validRange=9):
+def drift_fit2D(meta, data, validRange=9):
     '''Measures the spectrum drift over all frames and all non-destructive reads.
 
     Parameters
@@ -802,8 +802,6 @@ def drift_fit2D(meta, data, nreads, validRange=9):
         Event object.
     data : ndarray
         4D data frames.
-    nreads : int
-        The number of reads per file.
     validRange : int
         Trim spectra by +/- pixels to compute valid region of
         cross correlation.
@@ -822,14 +820,14 @@ def drift_fit2D(meta, data, nreads, validRange=9):
     '''
     # if postclip is not None:
     #    postclip = -postclip
-    if nreads > 2:
+    if meta.nreads > 2:
         istart = 1
     else:
         istart = 0
-    drift = np.zeros((meta.num_data_files, nreads-1))
-    # model = np.zeros((meta.num_data_files, n_reads-1))
-    # goodmask = np.zeros((meta.num_data_files, n_reads-1), dtype=int)
-    for n in range(istart, nreads-1):
+    drift = np.zeros((meta.num_data_files, meta.nreads-1))
+    # model = np.zeros((meta.num_data_files, meta.n_reads-1))
+    # goodmask = np.zeros((meta.num_data_files, meta.n_reads-1), dtype=int)
+    for n in range(istart, meta.nreads-1):
         ref_data = np.copy(data[-1, n])
         ref_data[np.where(np.isnan(ref_data))] = 0
         for m in range(meta.num_data_files):
