@@ -91,7 +91,7 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
        Determines whether or not to return one combined
        profile mask or masks for both orders separately.
        Default is True.
-    
+
     Returns
     -------
     """
@@ -299,7 +299,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
                                sigma=20, cr_mask=None, Q=18, proftype='median',
                                isplots=0, per_quad=False, test=False):
     """Optimal extraction routine for NIRISS.
-    
+
     This is different from the general `optspex.optimize` since there are two
     ways to extract the NIRISS data. The first is breaking up the image into
     quadrants. The second is extracting the spectra all together.
@@ -355,7 +355,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
         ev_all = np.zeros(3, dtype=np.ndarray)
         p_all = np.zeros(3, dtype=np.ndarray)
 
-        for quad in range(1, 4):  # CHANGE BACK TO 4
+        for quad in range(1, 4):  
             # Figures out which quadrant location to use
             if quad == 1:  # Isolated first order (top right)
                 x1, x2 = 1000, data.shape[2]
@@ -426,7 +426,7 @@ def extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
     """The actual extraction routine. `optimal extraction` is a wrapper
     for this function, since it needs to loop through *if* you want
     to extract the data via quadrants.
-    
+
     Parameters
     ----------
     data : np.array
