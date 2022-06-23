@@ -36,9 +36,10 @@ def image_filtering(img, radius=1, gf=4):
 
     Returns
     -------
-    img_mask : np.ndarray
-       A mask for the image that isolates where the spectral
-       orders are.
+    z : np.ndarray
+       The identified edges of the first two orders.
+    g : np.ndarray
+       Gaussian filtered image of the orders. Used just for plotting as a check.
     """
     mask = filters.rank.maximum(img/np.nanmax(img),
                                 disk(radius=radius))
@@ -89,6 +90,13 @@ def f277_mask(f277, radius=1, gf=4):
 
     Parameters
     ----------
+    f277 : np.ndarray
+       Frames of the F277W filtered observations.
+    radius : float, optional
+       The size of the radius to use in the image filtering. Default is 1.
+    gf : float, optional
+       The size of the Gaussian filter to use in the image filtering. Default is
+       4.
 
     Returns
     -------
@@ -126,10 +134,18 @@ def mask_method_edges(data, radius=1, gf=4,
 
     Parameters
     ----------
-    data : object
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
+    radius : float, optional
+       The size of the radius to use in the image filtering. Default is 1.
+    gf : float, optional
+       The size of the Gaussian filter to use in the image filtering. Default is
+       4.
     save : bool, optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
+    outdir : str, optional
+       The path where to save the output table, if requested. Default is `none`.
 
     Returns
     -------
@@ -216,7 +232,7 @@ def mask_method_edges(data, radius=1, gf=4,
     return tab
 
 
-def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
+def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=0):
     """A second method to extract the masks for the first and
     second orders in NIRISS data.
 
@@ -225,7 +241,8 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
 
     Parameters
     ----------
-    data : object
+    data : Xarray Dataset
+        The Dataset object in which the fits data will stored.
     degree : int, optional
        The degree of the polynomial to fit to the orders.
        Default is 4.
@@ -233,6 +250,10 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
        Has the option to save the initial guesses for the location
        of the NIRISS orders. This is set in the .ecf control files.
        Default is False.
+    outdir : str, optional
+       The path where to save the output table, if requested. Default is `none`.
+    isplots : int, optional
+        Sets how many diagnostic plots to create. Default is 0.
 
     Returns
     -------

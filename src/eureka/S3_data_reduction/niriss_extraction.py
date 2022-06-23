@@ -94,6 +94,15 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
 
     Returns
     -------
+    mask : np.ndarray
+       Combined box mask for all three orders. Returns if
+       `return_together=True`.
+    m1 : np.ndarray
+       Box mask for the first order. Returns if `return_together=False`.
+    m2 : np.ndarray
+       Box mask for the second order. Returns if `return_together=False`.
+    m3 : np.ndarray
+       Box mask for the third order. Returns if `return_together=False`.
     """
     order1 = np.zeros((boxsize1, len(img[0])))
     order2 = np.zeros((boxsize2, len(img[0])))
@@ -355,7 +364,7 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
         ev_all = np.zeros(3, dtype=np.ndarray)
         p_all = np.zeros(3, dtype=np.ndarray)
 
-        for quad in range(1, 4):  
+        for quad in range(1, 4):
             # Figures out which quadrant location to use
             if quad == 1:  # Isolated first order (top right)
                 x1, x2 = 1000, data.shape[2]

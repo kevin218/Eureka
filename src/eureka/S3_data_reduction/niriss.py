@@ -143,7 +143,6 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4],
     -------
     data : Xarray Dataset
         The Dataset object in which the fits data will stored.
-    bkg : np.ndarray
     """
     if meta.trace_method == 'ears':
         box_mask = dirty_mask(data.medflux.values,
