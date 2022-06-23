@@ -419,7 +419,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(spec, meta, spec.wave_1d, spec.optspec)
+                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
 
             # Save results
             if meta.save_output:

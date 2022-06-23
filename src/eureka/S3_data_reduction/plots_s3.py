@@ -6,13 +6,11 @@ from .source_pos import gauss
 from ..lib.plots import figure_filetype
 
 
-def lc_nodriftcorr(data, meta, wave_1d, optspec):
+def lc_nodriftcorr(meta, wave_1d, optspec):
     '''Plot a 2D light curve without drift correction. (Fig 3101)
 
     Parameters
     ----------
-    data : Xarray Dataset
-        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     wave_1d : ndarray
