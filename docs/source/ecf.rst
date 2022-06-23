@@ -306,7 +306,7 @@ Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It 
 
 iref
 ''''
-Only used for HST analyses. The file indices to use as reference frames for 2D drift correction.
+Only used for HST analyses. The file indices to use as reference frames for 2D drift correction. This should be a 1-2 element list with the reference indices for each scan direction.
 
 sum_reads
 '''''''''
