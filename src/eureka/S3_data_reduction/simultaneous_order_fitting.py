@@ -97,10 +97,8 @@ def fit_orders_fast(data, tab, profile='gaussian'):
     ord2 : np.ndarray
     """
 
-    def residuals(params, data, y1_pos, y2_pos):
+    def residuals(params, data, y1_pos, y2_pos, profile):
         """ Calcualtes residuals for best-fit profile. """
-        nonlocal profile
-
         A, B, sig1 = params
         # Produce the model:
         if profile.lower() == 'gaussian':
@@ -126,7 +124,7 @@ def fit_orders_fast(data, tab, profile='gaussian'):
         x0 = [2, 3, 30]
 
     results = so.least_squares(residuals, x0=np.array(x0),
-                               args=(data.median, pos1, pos2),
+                               args=(data.median, pos1, pos2, profile),
                                xtol=1e-11, ftol=1e-11, max_nfev=1e3)
 
     # creates the final mask
