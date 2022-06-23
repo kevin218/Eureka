@@ -193,8 +193,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Create masked array for steps below
             optspec_ma = np.ma.masked_array(spec.optspec, spec.optmask)
             # Create opterr array with same mask as optspec
-            opterr_ma = np.ma.copy(optspec_ma)
-            opterr_ma = spec.opterr
+            opterr_ma = np.ma.masked_array(spec.opterr, optspec_ma.mask)
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.sigma_clip:
@@ -236,7 +235,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                   optspec_ma[n], k=3, s=0,
                                                   w=weights)
                     spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                   spec.opterr[n], k=3, s=0,
+                                                   opterr_ma[n], k=3, s=0,
                                                    w=weights)
                     optspec_ma[n] = spline(np.arange(meta.subnx) +
                                            lc.drift1d[n].values)
@@ -284,7 +283,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # proper uncertainties
                 lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma[:, index]**2,
                                                   axis=1)) /
-                                np.ma.MaskedArray.count(opterr_ma))
+                                np.ma.MaskedArray.count(opterr_ma[:, index], axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
