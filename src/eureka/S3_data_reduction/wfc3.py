@@ -112,10 +112,10 @@ def get_reference_frames(meta, log):
             util.manmask(data, meta, log)
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
+        meta.guess.append(data.guess)  # Need to add this before cut_aperture
         cut_aperture(data, meta, log)
         
         # Save the reference values
-        meta.guess.append(data.guess)
         meta.subdata_ref.append(data.flux)
         meta.subdiffmask_ref.append(data.flatmask)
 
