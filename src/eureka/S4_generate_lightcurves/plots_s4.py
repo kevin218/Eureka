@@ -43,15 +43,24 @@ def binned_lightcurve(meta, lc, i):
                         norm_lcdata[iscans[r::nreads]], axis=0)
                     norm_lcdata[iscans[r::nreads]] /= np.nanmedian(
                         norm_lcdata[iscans[r::nreads]], axis=0)
+
+            plt.errorbar(lc.time[iscans]-time_modifier,
+                         norm_lcdata[iscans]+0.005*p,
+                         norm_lcerr[iscans], fmt='o', color=f'C{p}',
+                         mec=f'C{p}', alpha=0.2)
+            mad = util.get_mad_1d(norm_lcdata[iscans])
+            plt.text(0.05, 0.075+0.05*p,
+                     f"MAD = {np.round(mad).astype(int)} ppm",
+                     transform=ax.transAxes, color=f'C{p}')
     else:
         # Normalize the data
         norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
         norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i], axis=0)
-    plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
-                 color=f'C{i}', mec=f'C{i}', alpha=0.2)
-    mad = util.get_mad_1d(norm_lcdata)
-    plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
-             transform=ax.transAxes, color='k')
+        plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
+                     color=f'C{i}', mec=f'C{i}', alpha=0.2)
+        mad = util.get_mad_1d(norm_lcdata)
+        plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+                 transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
