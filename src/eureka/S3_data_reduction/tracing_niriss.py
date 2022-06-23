@@ -48,13 +48,17 @@ def image_filtering(img, radius=1, gf=4):
     # applies the mask to the main frame
     data = img*mask
     g = gaussian_filter(data, gf)
-    g[g > 4] = 10000  # Tends to be a good cut-off for what is part of the
-                      # the profile, and what is background. 10000 is simply
-                      # an easy number to identify later.
+
+    # g > 4 to be a good cut-off for what is part of the
+    #   the profile, and what is background. 10000 is simply
+    #   an easy number to identify later.
+    g[g > 4] = 10000
     edges = filters.sobel(g)
-    edges[edges > 0] = 10  # This defines the edges. Edges will have values
-                           # > 0, as set by the filter. 10 is arbitrary and
-                           # simply an easy number to identify later.
+
+    # This defines the edges. Edges will have values
+    #   > 0, as set by the filter. 10 is arbitrary and
+    #   simply an easy number to identify later.
+    edges[edges > 0] = 10
 
     # turns edge array into a boolean array
     edges = (edges-np.nanmax(edges)) * -1
