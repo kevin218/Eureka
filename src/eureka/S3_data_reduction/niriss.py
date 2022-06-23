@@ -4,7 +4,7 @@ from astropy.io import fits
 
 from .background import fitbg3
 from .niriss_extraction import dirty_mask
-import .tracing_niriss as tn
+from .tracing_niriss import mask_method_ears, mask_method_edges
 
 
 __all__ = ['read', 'define_traces', 'fit_bg']
@@ -197,19 +197,19 @@ def define_traces(meta, log):
 
     # identifies the trace for all orders
     if meta.trace_method == 'ears':
-        traces = tn.mask_method_ears(meta,
-                                     degree=meta.poly_order,
-                                     save=meta.save_table,
-                                     outdir=meta.outputdir,
-                                     isplots=meta.isplots_S3)
+        traces = mask_method_ears(meta,
+                                  degree=meta.poly_order,
+                                  save=meta.save_table,
+                                  outdir=meta.outputdir,
+                                  isplots=meta.isplots_S3)
         meta.trace_ear = traces
     elif meta.trace_method == 'edges':
-        traces = tn.mask_method_edges(meta,
-                                      radius=meta.radius,
-                                      gf=meta.filter,
-                                      save=meta.save_table,
-                                      outdir=meta.outputdir,
-                                      isplots=meta.isplots_S3)
+        traces = mask_method_edges(meta,
+                                   radius=meta.radius,
+                                   gf=meta.filter,
+                                   save=meta.save_table,
+                                   outdir=meta.outputdir,
+                                   isplots=meta.isplots_S3)
         meta.trace_edge = traces
     else:
         # This will break if traces cannot be extracted

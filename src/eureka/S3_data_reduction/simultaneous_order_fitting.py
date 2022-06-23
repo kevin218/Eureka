@@ -3,7 +3,7 @@ import scipy.optimize as so
 import pyximport
 import itertools
 pyximport.install()
-import .niriss_extraction as profiles
+from .niriss_extraction import (build_gaussian_images, build_moffat_images)
 
 __all__ = ['fit_orders_fast', 'fit_orders']
 
@@ -48,10 +48,10 @@ def fit_orders(data, tab):
     combos = construct_guesses([0.1, 30], [0.1, 30], [1, 40])
 
     # generates length x length x length number of images and fits to the data
-    img1, sigout1 = profiles.build_gaussian_images(data.median,
-                                                   combos[:, 0], combos[:, 1],
-                                                   combos[:, 2],
-                                                   pos1, pos2)
+    img1, sigout1 = build_gaussian_images(data.median,
+                                          combos[:, 0], combos[:, 1],
+                                          combos[:, 2],
+                                          pos1, pos2)
 
     # Iterates on a smaller region around the best guess
     best_guess = combos[np.argmin(sigout1)]
@@ -62,19 +62,19 @@ def fit_orders(data, tab):
     # generates length x length x length number of
     #   images centered around the previous
     #   guess to optimize the image fit
-    img2, sigout2 = profiles.build_gaussian_images(data.median,
-                                                   combos[:, 0], combos[:, 1],
-                                                   combos[:, 2],
-                                                   pos1, pos2)
+    img2, sigout2 = build_gaussian_images(data.median,
+                                          combos[:, 0], combos[:, 1],
+                                          combos[:, 2],
+                                          pos1, pos2)
 
     # creates a 2D image for the first and second orders
     #    with the best-fit gaussian profiles
     final_guess = combos[np.argmin(sigout2)]
-    ord1, ord2, _ = profiles.build_gaussian_images(data.median,
-                                                   [final_guess[0]],
-                                                   [final_guess[1]],
-                                                   [final_guess[2]],
-                                                   pos1, pos2)
+    ord1, ord2, _ = build_gaussian_images(data.median,
+                                          [final_guess[0]],
+                                          [final_guess[1]],
+                                          [final_guess[2]],
+                                          pos1, pos2)
     return ord1[0], ord2[0]
 
 
@@ -102,11 +102,11 @@ def fit_orders_fast(data, tab, profile='gaussian'):
         A, B, sig1 = params
         # Produce the model:
         if profile.lower() == 'gaussian':
-            model, _ = profiles.build_gaussian_images(data, [A], [B],
-                                                      [sig1], y1_pos, y2_pos)
+            model, _ = build_gaussian_images(data, [A], [B],
+                                             [sig1], y1_pos, y2_pos)
         elif profile.lower() == 'moffat':
-            model, _ = profiles.build_moffat_images(data, [A], [B],
-                                                    [sig1], y1_pos, y2_pos)
+            model, _ = build_moffat_images(data, [A], [B],
+                                           [sig1], y1_pos, y2_pos)
         # Calculate residuals:
         res = (model[0] - data)
         return res.flatten()
@@ -129,12 +129,12 @@ def fit_orders_fast(data, tab, profile='gaussian'):
 
     # creates the final mask
     if profile.lower() == 'gaussian':
-        outputs = profiles.build_gaussian_images(data.median,
-                                                 results.x[0:1],
-                                                 results.x[1:2],
-                                                 results.x[2:3],
-                                                 pos1,
-                                                 pos2,
-                                                 return_together=False)
+        outputs = build_gaussian_images(data.median,
+                                        results.x[0:1],
+                                        results.x[1:2],
+                                        results.x[2:3],
+                                        pos1,
+                                        pos2,
+                                        return_together=False)
         out_img1, out_img2, _ = outputs
     return out_img1[0], out_img2[0]
