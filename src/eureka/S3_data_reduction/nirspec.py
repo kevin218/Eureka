@@ -40,10 +40,10 @@ def read(filename, data, meta):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    try:
+    if data.attrs['mhdr']['INTSTART']:
         data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
         data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    except:
+    else:
         # FINDME: Need to only catch the particular exception we expect
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
         data.attrs['intstart'] = 1
