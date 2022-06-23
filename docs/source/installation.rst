@@ -26,14 +26,14 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 	git clone https://github.com/kevin218/Eureka.git
 	cd Eureka
-	pip install -e .[jwst]
+	pip install -e '.[jwst]'
 
 To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder
 
 .. code-block:: bash
 
 	git pull
-	pip install --upgrade .[jwst]
+	pip install --upgrade '.[jwst]'
 
 b) With ``git`` and ``conda``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
