@@ -3,11 +3,11 @@ import numpy as np
 from astropy.io import fits
 import time as time_pkg
 
-from .lib.tracing_niriss import mask_method_edges, mask_method_ears, ref_file
-from .lib.masking import data_quality_mask, interpolating_image
-from .S3_data_reduction.background import fitbg3
-from .S3_data_reduction.niriss_extraction import (dirty_mask, box_extract,
-                                                  optimal_extraction_routine)
+from ..lib.tracing_niriss import mask_method_edges, mask_method_ears, ref_file
+from ..lib.masking import data_quality_mask, interpolating_image
+from .background import fitbg3
+from .niriss_extraction import (dirty_mask, box_extract,
+                                optimal_extraction_routine)
 
 
 __all__ = ['NIRISS_S3']
@@ -249,7 +249,7 @@ class NIRISS_S3(object):
     def create_box_mask(self, boxsize1=60, boxsize2=50, boxsize3=40,
                         booltype=True, return_together=True):
         """Creates a box mask to extract the first and second NIRISS orders.
-        
+
         Can set different box sizes for each order and also return a single
         mask with both orders (`return_together==True`) or return masks for
         each order (`return_together==False`).
@@ -413,7 +413,7 @@ class NIRISS_S3(object):
     def optimal_extraction(self, proftype='median', sigma=20, Q=1.8,
                            per_quad=True, test=False, isplots=3):
         """Runs the optimal extraction routine for the NIRISS orders.
-        
+
         There is a lot of flexibility in this routine, so please read
         the options carefully. There are 2 options for extracting the
         spectra:
