@@ -3,7 +3,7 @@ import scipy.optimize as so
 import pyximport
 import itertools
 pyximport.install()
-from .niriss_extraction import (build_gaussian_images, build_moffat_images)
+from .niriss_cython import (build_gaussian_images, build_moffat_images)
 
 __all__ = ['fit_orders_fast', 'fit_orders']
 
