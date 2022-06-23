@@ -398,7 +398,7 @@ def manmask(data, meta, log):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit

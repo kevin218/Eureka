@@ -12,7 +12,7 @@ def lc_nodriftcorr(data, meta, wave_1d, optspec):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     wave_1d : ndarray

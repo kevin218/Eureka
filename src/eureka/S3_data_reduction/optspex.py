@@ -11,7 +11,7 @@ def standard_spectrum(data, apdata, aperr):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+        The Dataset object.
     apdata : ndarray
         The pixel values in the aperture region.
     aperr : ndarray
