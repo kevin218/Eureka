@@ -160,6 +160,9 @@ def mask_method_edges(data, radius=1, gf=4,
         return centers
 
     def clean_and_fit(x1, x2, y1, y2):
+        # Cleans up outlier points potentially included when identifying
+        #   the center of each trace. Removes those bad points in the
+        #   profile fitting.
         x1, y1 = x1[y1 > 0], y1[y1 > 0]
         x2, y2 = x2[y2 > 0], y2[y2 > 0]
 
