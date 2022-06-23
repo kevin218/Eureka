@@ -283,7 +283,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # proper uncertainties
                 lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma[:, index]**2,
                                                   axis=1)) /
-                                np.ma.MaskedArray.count(opterr_ma[:, index], axis=1))
+                                np.ma.MaskedArray.count(opterr_ma[:, index],
+                                                        axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
