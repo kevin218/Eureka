@@ -20,7 +20,7 @@ __all__ = ['image_filtering', 'simplify_niriss_img',
 def image_filtering(img, radius=1, gf=4):
     """Does some simple image processing to isolate where the
     spectra are located on the detector.
-    
+
     This routine is optimized for NIRISS S2 processed data and
     the F277W filter.
 
@@ -85,7 +85,7 @@ def f277_mask(f277, radius=1, gf=4):
 
     Parameters
     ----------
-    
+
     Returns
     -------
     mask : np.ndarray
@@ -212,7 +212,7 @@ def mask_method_edges(data, radius=1, gf=4,
 def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=8):
     """A second method to extract the masks for the first and
     second orders in NIRISS data.
-    
+
     This method uses the vertical profile of a summed image to identify the
     borders of each order.
 

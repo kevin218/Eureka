@@ -3,7 +3,7 @@ import scipy.optimize as so
 import pyximport
 import itertools
 pyximport.install()
-from ..S3_data_reduction import niriss_extraction as profiles
+import .niriss_extraction as profiles
 
 __all__ = ['fit_orders_fast', 'fit_orders']
 

@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 import time as time_pkg
 
-from ..lib.tracing_niriss import mask_method_edges, mask_method_ears, ref_file
+from .tracing_niriss import mask_method_edges, mask_method_ears, ref_file
 from ..lib.masking import data_quality_mask, interpolating_image
 from .background import fitbg3
 from .niriss_extraction import (dirty_mask, box_extract,

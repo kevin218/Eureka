@@ -4,7 +4,7 @@ from astropy.io import fits
 
 from .background import fitbg3
 from .niriss_extraction import dirty_mask
-from ..lib import tracing_niriss as tn
+import .tracing_niriss as tn
 
 
 __all__ = ['read', 'define_traces',
@@ -13,7 +13,7 @@ __all__ = ['read', 'define_traces',
 
 def read(filename, data, meta):
     """Reads a single FITS file from JWST's NIRISS instrument.
-    
+
     This takes in the Stage 2 processed files.
 
     Parameters
@@ -104,7 +104,7 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4],
            bkg_estimator=['median', ],
            testing=False, isplots=0):
     """Subtracts background from non-spectral regions.
-    
+
     Uses photutils.background.Background2D to estimate background noise.
     More documentation can be found at:
     https://photutils.readthedocs.io/en/stable/api/photutils.background.Background2D.html
