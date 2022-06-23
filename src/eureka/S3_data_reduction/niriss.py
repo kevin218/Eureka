@@ -7,8 +7,7 @@ from .niriss_extraction import dirty_mask
 import .tracing_niriss as tn
 
 
-__all__ = ['read', 'define_traces',
-           'fit_bg']
+__all__ = ['read', 'define_traces', 'fit_bg']
 
 
 def read(filename, data, meta):
