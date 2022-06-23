@@ -270,9 +270,27 @@ def find_fits(meta):
 
 
 def normalize_spectrum(meta, optspec, opterr=None):
-    normspec = np.ma.copy(optspec)
+    """Normalize a spectrum by its temporal mean.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The new meta object for the current stage processing.
+    optspec : ndarray
+        The spectrum to normalize.
+    opterr : ndarray, optional
+        The noise array to normalize using optspec, by default None.
+
+    Returns
+    -------
+    normspec
+        The normalized spectrum.
+    normerr : ndarray, optional
+        The normalized error. Only returned if opterr is not none.
+    """
+    normspec = np.ma.masked_invalid(np.ma.copy(optspec))
     if opterr is not None:
-        normerr = np.ma.copy(opterr)
+        normerr = np.ma.masked_invalid(np.ma.copy(opterr))
 
     # Normalize the spectrum
     if meta.inst == 'wfc3':
@@ -283,14 +301,14 @@ def normalize_spectrum(meta, optspec, opterr=None):
             if len(iscans) > 0:
                 for r in range(meta.nreads):
                     if opterr is not None:
-                        normerr[iscans[r::meta.nreads]] /= np.ma.median(
+                        normerr[iscans[r::meta.nreads]] /= np.ma.mean(
                             normspec[iscans[r::meta.nreads]], axis=0)
-                    normspec[iscans[r::meta.nreads]] /= np.ma.median(
+                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
                         normspec[iscans[r::meta.nreads]], axis=0)
     else:
         if opterr is not None:
-            normerr = normerr/np.ma.median(normspec, axis=0)
-        normspec = normspec/np.ma.median(normspec, axis=0)
+            normerr = normerr/np.ma.mean(normspec, axis=0)
+        normspec = normspec/np.ma.mean(normspec, axis=0)
 
     if opterr is not None:
         return normspec, normerr

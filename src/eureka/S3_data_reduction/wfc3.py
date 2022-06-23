@@ -97,6 +97,8 @@ def get_reference_frames(meta, log):
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
         data, meta = util.trim(data, meta)
+        # Need to add guess after trimming and before cut_aperture
+        meta.guess.append(data.guess)
         data, meta = b2f.convert_to_e(data, meta, log)
         meta.src_ypos = source_pos.source_pos(
             data, meta, i, header=('SRCYPOS' in data.attrs['shdr']))
@@ -112,7 +114,6 @@ def get_reference_frames(meta, log):
             util.manmask(data, meta, log)
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
-        meta.guess.append(data.guess)  # Need to add this before cut_aperture
         cut_aperture(data, meta, log)
         
         # Save the reference values
