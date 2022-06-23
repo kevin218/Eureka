@@ -109,7 +109,8 @@ def preparation_step(meta, log):
 
 
 def conclusion_step(data, meta, log):
-    """Convert lists into arrays for saving
+    """Convert lists into arrays for saving and applies meta.sum_reads
+    if requested.
 
     Parameters
     ----------
