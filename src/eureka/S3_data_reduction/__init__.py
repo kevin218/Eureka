@@ -10,6 +10,9 @@ from . import nirspec
 from . import optspex
 from . import plots_s3
 from . import s3_reduce
+from . import s3_reduce_niriss
 from . import sigrej
+from . import simultaneous_order_fitting
 from . import source_pos
+from . import tracing_niriss
 from . import wfc3
