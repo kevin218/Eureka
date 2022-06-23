@@ -398,6 +398,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
 
+            # Plot fitted 2D drift
+            # Note: This needs to happen before calling conclusion_step()
             if meta.isplots_S3 >= 1 and meta.inst == 'wfc3':
                 plots_s3.drift_2D(spec, meta)
 
