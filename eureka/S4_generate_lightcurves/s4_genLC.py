@@ -215,7 +215,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              mute=meta.verbose)
 
             # Record and correct for 1D drift/jitter
-            if meta.recordDrift:
+            if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
                 # This can take a long time, so always print this message
                 log.writelog('Recording drift/jitter')
