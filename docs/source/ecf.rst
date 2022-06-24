@@ -171,7 +171,7 @@ As we want to do our own spectral extraction, we set this variable to ``calints`
 
 horizonsfile
 ''''''''''''
-Only used for HST analyses. This should be set to the fully qualified path to the horizons file you've downloaded from https://ssd.jpl.nasa.gov/horizons/app.html#/. On that website, select HST as the body, and select a date range that spans the days relevant to your observations. Make sure to download the file as a .vec file.
+Only used for HST analyses. This should be set to the fully qualified path to the horizons file you've downloaded from https://ssd.jpl.nasa.gov/horizons/app.html#/. On that website, 1. Select "Vector Table", 2. Select "HST", 3. Select "@ssb" (Solar System Barycenter), 4. Select a date range that spans the days relevant to your observations. Then click Generate Ephemeris and click Download Results.
 
 leapdir
 '''''''
