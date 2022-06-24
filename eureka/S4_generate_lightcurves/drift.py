@@ -57,6 +57,8 @@ def spec1D(spectra, meta, log):
     -------
     drift1d : ndarray
         1D array of spectrum drift values.
+    driftwidth : ndarray
+        1D array of spectrum drift fitted Gaussian widths.
     driftmask : ndarray
         1D masked array, where True is masked.
 
@@ -80,6 +82,7 @@ def spec1D(spectra, meta, log):
     if meta.drift_postclip is not None:
         meta.drift_postclip = -meta.drift_postclip
     drift1d = np.zeros(meta.n_int)
+    driftwidth = np.zeros(meta.n_int)
     driftmask = np.zeros(meta.n_int, dtype=bool)
     ref_spec = np.copy(spectra[meta.drift_iref,
                                meta.drift_preclip:meta.drift_postclip])
@@ -120,6 +123,8 @@ def spec1D(spectra, meta, log):
                                                meta.drift_hw*1., 1])
             drift1d[n] = len(vals)//2-params[1]-argmax+meta.drift_hw
             # meta.drift1d[n] = len(vals)/2-params[1]-argmax+meta.drift_hw
+            driftwidth[n] = params[0]
+            
         except:
             # FINDME: Need change this bare except to only
             # catch the specific exception
@@ -127,4 +132,4 @@ def spec1D(spectra, meta, log):
                          f'as bad.')
             driftmask[n] = True
 
-    return drift1d, driftmask
+    return drift1d, driftwidth, driftmask

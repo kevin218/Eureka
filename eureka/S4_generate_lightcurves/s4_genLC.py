@@ -214,41 +214,49 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            # Apply 1D drift/jitter correction
-            if meta.correctDrift:
+            # Record and correct for 1D drift/jitter
+            if meta.recordDrift:
                 # Calculate drift over all frames and non-destructive reads
                 # This can take a long time, so always print this message
-                log.writelog('Applying drift/jitter correction')
+                log.writelog('Recording drift/jitter')
                 # Compute drift/jitter
-                drift1d, driftmask = drift.spec1D(optspec_ma, meta, log)
+                drift1d, driftwidth, driftmask = drift.spec1D(optspec_ma, meta, log)
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
                     drift1d, driftmask, Box1DKernel(meta.box_width))
+                driftwidth = clipping.replace_moving_mean(
+                    driftwidth, driftmask, Box1DKernel(meta.box_width))
                 lc['drift1d'] = (['time'], drift1d)
+                lc['driftwidth'] = (['time'], driftwidth)
+                
                 lc['driftmask'] = (['time'], driftmask)
-                # Correct for drift/jitter
-                for n in range(meta.n_int):
-                    # Need to zero-out the weights of masked data
-                    weights = (~np.ma.getmaskarray(optspec_ma[n])).astype(int)
-                    spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                  optspec_ma[n], k=3, s=0,
-                                                  w=weights)
-                    spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                   spec.opterr[n], k=3, s=0,
-                                                   w=weights)
-                    optspec_ma[n] = spline(np.arange(meta.subnx) +
-                                           lc.drift1d[n].values)
-                    opterr_ma[n] = spline2(np.arange(meta.subnx) +
-                                           lc.drift1d[n].values)
-                    # # Merge conflict: Need to test code below
-                    # # before implementing
-                    # optspec_ma[n] = np.ma.masked_invalid(spline(
-                    #     np.arange(meta.subnx)+lc.drift1d[n].values))
-                    # opterr_ma[n] = np.ma.masked_invalid(spline2(
-                    #     np.arange(meta.subnx)+lc.drift1d[n].values))
+                if meta.correctDrift:
+                    log.writelog('Applying drift/jitter correction')
+
+                    # Correct for drift/jitter
+                    for n in range(meta.n_int):
+                        # Need to zero-out the weights of masked data
+                        weights = (~np.ma.getmaskarray(optspec_ma[n])).astype(int)
+                        spline = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                      optspec_ma[n], k=3, s=0,
+                                                      w=weights)
+                        spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                       spec.opterr[n], k=3, s=0,
+                                                       w=weights)
+                        optspec_ma[n] = spline(np.arange(meta.subnx) +
+                                               lc.drift1d[n].values)
+                        opterr_ma[n] = spline2(np.arange(meta.subnx) +
+                                               lc.drift1d[n].values)
+                        # # Merge conflict: Need to test code below
+                        # # before implementing
+                        # optspec_ma[n] = np.ma.masked_invalid(spline(
+                        #     np.arange(meta.subnx)+lc.drift1d[n].values))
+                        # opterr_ma[n] = np.ma.masked_invalid(spline2(
+                        #     np.arange(meta.subnx)+lc.drift1d[n].values))
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta, lc)
+                    plots_s4.driftwidth(meta, lc)
 
             # FINDME: optspec mask isn't getting updated when correcting
             # for drift. Also, entire integrations are getting flagged.
