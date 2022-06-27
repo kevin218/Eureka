@@ -20,7 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
-from . import plots_s4, drift
+from . import plots_s4, drift, generate_LD
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
