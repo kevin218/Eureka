@@ -9,6 +9,7 @@ dependencies:
     - batman-package
     - bokeh
     - ccdproc
+    - celerite
     - corner
     - cython
     - dynesty[version='>1.0']
@@ -30,12 +31,12 @@ dependencies:
     - scipy[version='>=1.4.0'] # Needed for scipy.fft
     - tqdm
     - pip:
+        - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
         - crds
-        - image_registration @ git+https://github.com/keflavich/image_registration.git@main#egg=image_registration
+        - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
         - jwst==1.3.3
         - myst-parser # Needed for documentation
         - sphinx-rtd-theme # Needed for documentation
         - stcal
         - stdatamodels
         - svo_filters
-        - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
