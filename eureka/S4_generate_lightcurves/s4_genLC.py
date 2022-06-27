@@ -44,6 +44,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
     Returns
     -------
+    spec : Astreaus object 
+        Data object of wavelength-like arrrays.
+    lc : Astreaus object 
+        Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
 
