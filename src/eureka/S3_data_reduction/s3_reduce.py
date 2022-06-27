@@ -70,6 +70,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     ecffile = 'S3_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     if s2_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into

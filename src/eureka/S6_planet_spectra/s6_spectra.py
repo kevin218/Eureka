@@ -43,6 +43,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     ecffile = 'S6_' + eventlabel + '.ecf'
     meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     if s5_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into

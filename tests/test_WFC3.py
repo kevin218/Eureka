@@ -3,8 +3,9 @@
 import sys
 import os
 from importlib import reload
+import time as time_pkg
 
-sys.path.insert(0, '..'+os.sep)
+sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
@@ -28,6 +29,7 @@ def test_WFC3(capsys):
     # pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel = 'WFC3'
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
     meta.topdir = f'..{os.sep}tests'
     ecf_path = f'.{os.sep}WFC3_ecfs{os.sep}'
 
