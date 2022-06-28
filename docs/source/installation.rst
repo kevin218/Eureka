@@ -2,8 +2,14 @@
 Installation
 ============
 
+Installation methods
+--------------------
+
+In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install the most recent stable release of ``Eureka!``, v0.1-alpha. The following installation instructions are written with this in mind, and the most recent stable release is also available as a zipped archive here: https://github.com/kevin218/Eureka/releases/tag/v0.1-alpha
+
+
 Initial environment preparation
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 It is **strongly** recommended that you install ``Eureka!`` in a new ``conda`` environment as other packages you've previously
 installed could have conflicting requirements with ``Eureka!``. You can install a lightweight version of conda at `this link <https://docs.conda.io/en/latest/miniconda.html>`_. Once conda is installed, you can create a
 new environment by doing:
@@ -13,10 +19,6 @@ new environment by doing:
 	conda create -n eureka python==3.9.7
 	conda activate eureka
 
-
-Installation methods
---------------------
-
 a) With ``git`` and ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once in your new conda environment, you can install ``Eureka!`` directly from source on
@@ -24,49 +26,27 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 .. code-block:: bash
 
-	git clone https://github.com/kevin218/Eureka.git
+	git clone -b v0.1-alpha https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
-To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder
+To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder:
 
 .. code-block:: bash
 
 	git pull
 	pip install --upgrade '.[jwst]'
 
-b) With ``git`` and ``conda``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Once in your new conda environment, you can install ``Eureka!`` using ``git`` and ``conda``. This can be done following:
-
-.. code-block:: bash
-
-	git clone https://github.com/kevin218/Eureka.git
-	cd Eureka
-	conda env create --file environment.yml --force
-	conda activate eureka
-	pip install --no-deps .
-
-To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder
-
-.. code-block:: bash
-
-	git pull
-	conda env update --file environment.yml --prune
-	pip install --no-deps --upgrade .
-
-
-c) With ``pip``
-~~~~~~~~~~~~~~~
+b) With ``pip`` only
+~~~~~~~~~~~~~~~~~~~~
 
 Once in your new conda environment, you can install the ``Eureka!`` package with ``pip`` with the following command:
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
+	pip install -e git+https://github.com/kevin218/Eureka.git@v0.1-alpha#egg=eureka[jwst]
 
-where specific branches can be installed using:
+Other specific branches can be installed using:
 
 .. code-block:: bash
 	
@@ -75,12 +55,33 @@ where specific branches can be installed using:
 If you desire any of the files in the `demos folder <https://github.com/kevin218/Eureka/tree/main/demos>`_, you will have to download these from
 GitHub following the method described below.
 
-To update your ``Eureka!`` installation to the most recent version, you can do then do the following
+To update your ``Eureka!`` installation to the most recent version, you can then run the following command:
 
 .. code-block:: bash
 
 	pip install --upgrade git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
 
+
+Setting up a ``conda`` environment directly from the ``git`` repository
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can also download ``Eureka!`` using ``git`` and set up a ``conda`` environment directly from the ``git`` repository if you'd prefer not to use ``pip`` to install dependencies. This can be done following:
+
+.. code-block:: bash
+
+	git clone -b v0.1-alpha https://github.com/kevin218/Eureka.git
+	cd Eureka
+	conda env create --file environment.yml --force
+	conda activate eureka
+	pip install --no-deps .
+
+To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder:
+
+.. code-block:: bash
+
+	git pull
+	conda env update --file environment.yml --prune
+	pip install --no-deps --upgrade .
 
 
 
