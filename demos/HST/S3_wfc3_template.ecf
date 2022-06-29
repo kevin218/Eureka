@@ -13,24 +13,24 @@ horizonsfile    /home/User/Data/HST_Calibrations/horizons/2014_02.vec
 # Folder where leapsecond calibration files will be saved
 leapdir         /home/User/Data/HST_Calibrations/leapdir/
 
+# Subarray region of interest
+ywindow         [80,250]    # Vertical axis as seen in DS9
+xwindow         [80,250]    # Horizontal axis as seen in DS9
+src_pos_type    hst         # Determine source position when not given in header (Options: gaussian, weighted, max, or hst)
+
 # Subarray region for direct images used for wavelength calibration
-centroidtrim    5
-centroidguess   [154,29]
+centroidtrim    5           # The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
+centroidguess   [29, 154]   # A guess for the location of the star in the direct images in the format [x, y].
 
 # Flatfield parameters
 flatoffset      [[374, 374]]  #[[379, 379]]
-flatsigma       3
+flatsigma       50
 flatfile        /home/User/Data/HST_Calibrations/G102_Calibration/WFC3.IR.G102.flat.2.fits
 #flatfile        /home/User/Data/HST_Calibrations/G141_Calibration/WFC3.IR.G141.flat.2.fits
 #flatfile        /home/User/Data/HST_Calibrations/G141_Calibration/sedFFcube-both.fits
 
 # Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs)
 diffthresh      10                
-
-# Subarray region of interest
-ywindow         [80,250]    # Vertical axis as seen in DS9
-xwindow         [80,250]    # Horizontal axis as seen in DS9
-src_pos_type    hst         # Determine source position when not given in header (Options: gaussian, weighted, max, or hst)
 
 # Background parameters
 bg_hw           40           # Half-width of exclusion region for BG subtraction (relative to source position)

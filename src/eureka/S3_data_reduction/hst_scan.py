@@ -22,7 +22,7 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         List of direct image filenames
     guess : array_like
         The initial guess of the position of the star.  Has the form
-        (y, x) of the guess center.
+        (x, y) of the guess center.
     trim : int
         If trim!=0, trims the image in a box of 2*trim pixels around
         the guess center. Must be !=0 for 'col' method.
@@ -70,6 +70,8 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         # Calculate centroid, correct for difference in image size, if any
         # centers.append(centroid.ctrgauss(images[i], guess=guess, trim=trim) -
         #                (images[i].shape[0]-ny)/2.)
+        # Swap the x-y order for the other, older code which used to have (y,x)
+        guess = guess[::-1]
         centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) -
                        (image.shape[0]-ny)/2.)
         xoffset = (CRPIX1 - calhdr1['CRPIX1'] +

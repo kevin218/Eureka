@@ -202,7 +202,7 @@ Only used for HST analyses. The box width to cut around the centroid guess to pe
 
 centroidguess
 '''''''''''''
-Only used for HST analyses. A guess for the location of the star in the direct images. This should be a 2 element list with the x and y position.
+Only used for HST analyses. A guess for the location of the star in the direct images in the format [x, y].
 
 flatoffset
 ''''''''''
