@@ -1,3 +1,4 @@
+.. _quickstart:
 
 ⚡️ Eureka! Quickstart ⚡️
 ==========================
@@ -28,6 +29,9 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 
 3. Set up your run directory 🗂
 -------------------------------
+
+
+.. _demos:
 
 3.1 Gather the demo files
 ~~~~~~~~~~~~~~~~~~~~~~~~~

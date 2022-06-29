@@ -5,7 +5,7 @@ Installation
 Installation methods
 --------------------
 
-In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install the most recent stable release of ``Eureka!``, v0.1-alpha. The following installation instructions are written with this in mind, and the most recent stable release is also available as a zipped archive here: https://github.com/kevin218/Eureka/releases/tag/v0.1-alpha
+In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install the most recent stable release of ``Eureka!``, v0.1-alpha. The following installation instructions are written with this in mind, and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.1-alpha>`_.
 
 
 Initial environment preparation
@@ -52,9 +52,6 @@ Other specific branches can be installed using:
 	
 	pip install -e git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
 
-If you desire any of the files in the `demos folder <https://github.com/kevin218/Eureka/tree/main/demos>`_, you will have to download these from
-GitHub following the method described below.
-
 To update your ``Eureka!`` installation to the most recent version, you can then run the following command:
 
 .. code-block:: bash
@@ -62,8 +59,12 @@ To update your ``Eureka!`` installation to the most recent version, you can then
 	pip install --upgrade git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
 
 
-Setting up a ``conda`` environment directly from the ``git`` repository
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
+
+
+Installing with a ``conda`` environment.yml file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can also download ``Eureka!`` using ``git`` and set up a ``conda`` environment directly from the ``git`` repository if you'd prefer not to use ``pip`` to install dependencies. This can be done following:
 
