@@ -60,6 +60,10 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     nfiles = len(filenames)
     centers = []
     # images = []
+
+    # Swap the x-y order for the other, older code which used to have (y,x)
+    guess = guess[::-1]
+
     for i in range(nfiles):
         # images.append(fits.getdata(filenames[i].rstrip()))
         image = fits.getdata(filenames[i].rstrip())
@@ -70,8 +74,6 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         # Calculate centroid, correct for difference in image size, if any
         # centers.append(centroid.ctrgauss(images[i], guess=guess, trim=trim) -
         #                (images[i].shape[0]-ny)/2.)
-        # Swap the x-y order for the other, older code which used to have (y,x)
-        guess = guess[::-1]
         centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) -
                        (image.shape[0]-ny)/2.)
         xoffset = (CRPIX1 - calhdr1['CRPIX1'] +
