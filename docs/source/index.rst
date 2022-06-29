@@ -1,9 +1,14 @@
 .. Eureka documentation master file.
 
+.. image:: ../media/Eureka_logo.png
+  :width: 256
+  :align: center
+  :alt: Eureka Logo
+
+|
+
 Welcome to Eureka!'s documentation!
 ====================================
-
-**Welcome to the documentation for Eureka!.**
 
 ``Eureka!`` will eventually be capable of reducing data from any JWST instrument and fitting light curves.
 At the moment the package is under heavy development, and currently works on NIRCam, NIRSpec, and MIRI data only.
