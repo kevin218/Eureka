@@ -157,8 +157,6 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
 
 
-
-#define functions that will compute the shifts
 def find_column_coms_and_shifts(data):
     '''
     Takes a data array (int, rows, columns) and find the 
@@ -176,33 +174,30 @@ def find_column_coms_and_shifts(data):
 
     '''
 
-    #get the dimensions of the data
-    nb_int = data.shape[0]
+    # get the dimensions of the data
     nb_rows = data.shape[1]
-    nc_cols = data.shape[-1]
 
-    #define a array of pixel positions (in their centers)
+    # define a array of pixel positions (in their centers)
     pix_centers = np.arange(nb_rows) + 0.5
 
-    #Compute the center of mass of each column and convert to integer (pixels)
-    column_coms = np.sum(pix_centers[None, :,None]*data, axis=1) / np.sum(data, axis=1)
+    # Compute the center of mass of each column and convert to integer (pixels)
+    column_coms = np.sum(pix_centers[None, :, None]*data, axis=1) / np.sum(data, axis=1)
     column_coms = np.around(column_coms).astype(int)
 
-    # #try using the max of each column
+    # # try using the max of each column
     # column_max = np.argmax(data, axis=1)
     # column_coms = column_max.astype(int)
 
-    #define the new center (where we will align the trace) in the middle of the detector
+    # define the new center (where we will align the trace) in the middle of the detector
     new_center = int(nb_rows/2)
 
-    #define an array containing the needed shift to bring the COMs to the
-    #new center for each column of each integration
+    # define an array containing the needed shift to bring the COMs to the
+    # new center for each column of each integration
     shifts = new_center - column_coms
 
-    #ensure columns of zeros or nans are not moved and dont induce bugs
-    shifts[column_coms<0] = 0
-    shifts[column_coms>nb_rows] = 0
-
+    # ensure columns of zeros or nans are not moved and dont induce bugs
+    shifts[column_coms < 0] = 0
+    shifts[column_coms > nb_rows] = 0
 
     return shifts, new_center
 
@@ -224,37 +219,34 @@ def find_column_median_shifts(data):
 
     '''
 
-    #get the dimensions of the data
+    # get the dimensions of the data
     nb_rows = data.shape[0]
-    nc_cols = data.shape[1]
 
-    #define a array of pixel positions (in their centers)
+    # define an array of pixel positions (in their centers)
     pix_centers = np.arange(nb_rows) + 0.5
 
-    #Compute the center of mass of each column and convert to integer (pixels)
-    column_coms = np.sum(pix_centers[:,None]*data, axis=0) / np.sum(data, axis=0)
+    # Compute the center of mass of each column and convert to integer (pixels)
+    column_coms = np.sum(pix_centers[:, None]*data, axis=0) / np.sum(data, axis=0)
     column_coms = np.around(column_coms).astype(int)
 
-    # #try using the max of each column
+    # # try using the max of each column
     # column_max = np.argmax(data, axis=1)
     # column_coms = column_max.astype(int)
 
-    #define the new center (where we will align the trace) in the middle of the detector
+    # define the new center (where we will align the trace) in the middle of the detector
     new_center = int(nb_rows/2)
 
-    #define an array containing the needed shift to bring the COMs to the
-    #new center for each column of each integration
+    # define an array containing the needed shift to bring the COMs to the
+    # new center for each column of each integration
     shifts = new_center - column_coms
 
-    #ensure columns of zeros or nans are not moved and dont induce bugs
-    shifts[column_coms<0] = 0
-    shifts[column_coms>nb_rows] = 0
-
+    # ensure columns of zeros or nans are not moved and dont induce bugs
+    shifts[column_coms < 0] = 0
+    shifts[column_coms > nb_rows] = 0
 
     return shifts, new_center
 
 
-#define a function that will roll the columns
 def roll_columns(data, shifts):
     '''
     For each column of each integration, rolls the columns by the 
@@ -271,35 +263,30 @@ def roll_columns(data, shifts):
 
     '''
 
-
-    #init straight_data
+    # init straight_data
     rolled_data = np.zeros_like(data)
-    #loop over all images (integrations)
+    # loop over all images (integrations)
     for i in range(len(data)):
-        #do the equivalent of 'np.roll' but with a different shift in each column
+        # do the equivalent of 'np.roll' but with a different shift in each column
         
         arr = np.swapaxes(data[i], 0, -1)
-        all_idcs = np.ogrid[[slice(0,n) for n in arr.shape]]
+        all_idcs = np.ogrid[[slice(0, n) for n in arr.shape]]
 
-        #make the shifts positive
+        # make the shifts positive
         shifts_i = shifts[i]
-        shifts_i[shifts_i<0] += arr.shape[-1]
+        shifts_i[shifts_i < 0] += arr.shape[-1]
 
-        #apply the shifts
-        all_idcs[-1] = all_idcs[-1] - shifts_i[:,np.newaxis]
+        # apply the shifts
+        all_idcs[-1] = all_idcs[-1] - shifts_i[:, np.newaxis]
         result = arr[tuple(all_idcs)]
         arr = np.swapaxes(result, -1, 0)
 
-        #store in straight_data
+        # store in straight_data
         rolled_data[i] = arr
 
     return rolled_data
     
 
-
-
-
-#write a wrapper for all these steps
 def straighten_trace(data, meta):
     '''
     Takes a set of integrations with a curved trace and shifts the 
@@ -323,54 +310,37 @@ def straighten_trace(data, meta):
 
     '''
 
-    # # OLD VERSION
-    # #Find the shifts in each integration 
-    # #Find the shifts needed to put a straight spectrum in the center
-    # #using the flux data
-    # shifts, new_center = find_column_coms_and_shifts(data.flux.values)
-
-
-    # # OLD VERSION
-    # #Find the median shift
-    # median_frame = np.copy(data.medflux.values)
-    # #broadcast to the shape expected by the function
-    # median_frame = np.broadcast_to(median_frame, (data.flux.shape[0], data.flux.shape[1], data.flux.shape[2]))
-    # shifts, new_center = find_column_coms_and_shifts(median_frame)
-
-
-    #Find the median shift needed to bring the trace centered on the detector
-    #obtain the median frame
+    # Find the median shift needed to bring the trace centered on the detector
+    # obtain the median frame
     median_frame = np.copy(data.medflux.values)
-    #compute the correction needed from this median frame
+    # compute the correction needed from this median frame
     shifts, new_center = find_column_median_shifts(median_frame)
 
-
-    #Correct wavelength (only one frame) 
+    # Correct wavelength (only one frame) 
     print('Correct the wavelength solution')
-    #broadcast to (1, detector.shape) which is the expected shape of the function
+    # broadcast to (1, detector.shape) which is the expected shape of the function
     single_shift = np.expand_dims(shifts, axis=0)
     wave_data = np.expand_dims(data.wave_2d.values, axis=0)
-    #apply the correction and update wave_1d accordingly
+    # apply the correction and update wave_1d accordingly
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-
     print('Correct the curvature over all integrations')
-    #broadcast the shifts to the number of integrations
-    shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]), (data.flux.shape[0], data.flux.shape[2]), order='F')
+    # broadcast the shifts to the number of integrations
+    shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
+                        (data.flux.shape[0], data.flux.shape[2]), order='F')
 
-    #apply the shifts to the data
+    # apply the shifts to the data
     data.flux.values = roll_columns(data.flux.values, shifts)
     data.err.values = roll_columns(data.err.values, shifts)
     data.dq.values = roll_columns(data.dq.values, shifts)
     data.v0.values = roll_columns(data.v0.values, shifts)
     
-
-    #update the new src_ypos
+    # update the new src_ypos
     print('Update src_ypos to new center, row {}'.format(new_center))
-    meta.src_ypos=new_center
+    meta.src_ypos = new_center
 
-    #update the median frame
+    # update the median frame
     print('Update median frame now that the trace is corrected')
     data.medflux.values = np.median(data.flux.values, axis=0)
 
