@@ -30,7 +30,7 @@ def binned_lightcurve(meta, lc, i):
     plt.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                  f'{lc.wave_hi.values[i]:.3f}')
     ax = plt.subplot(111)
-    time_modifier = np.floor(lc.time.values[0])
+    time_modifier = np.floor(np.ma.min(lc.time.values))
     
     # Plot the normalized light curve
     if meta.inst == 'wfc3':
@@ -38,7 +38,7 @@ def binned_lightcurve(meta, lc, i):
             iscans = np.where(lc.scandir.values == p)[0]
 
             if len(iscans) > 0:
-                plt.errorbar(lc.time[iscans]-time_modifier,
+                plt.errorbar(lc.time.values[iscans]-time_modifier,
                              norm_lcdata[iscans]+0.005*p,
                              norm_lcerr[iscans], fmt='o', color=f'C{p}',
                              mec=f'C{p}', alpha=0.2)
@@ -47,8 +47,8 @@ def binned_lightcurve(meta, lc, i):
                          f"MAD = {np.round(mad).astype(int)} ppm",
                          transform=ax.transAxes, color=f'C{p}')
     else:
-        plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
-                     color=f'C{i}', mec=f'C{i}', alpha=0.2)
+        plt.errorbar(lc.time.values-time_modifier, norm_lcdata, norm_lcerr,
+                     fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
         mad = util.get_mad_1d(norm_lcdata)
         plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
                  transform=ax.transAxes, color='k')
