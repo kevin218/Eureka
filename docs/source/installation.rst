@@ -52,14 +52,6 @@ Other specific branches can be installed using:
 	
 	pip install -e git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
 
-To update your ``Eureka!`` installation to the most recent version, you can then run the following command:
-
-.. code-block:: bash
-
-	pip install --upgrade git+https://github.com/kevin218/Eureka.git#egg=eureka[jwst]
-
-
-
 In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
 
 
