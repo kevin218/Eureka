@@ -36,12 +36,18 @@ authors:
   - name: Caroline Piaulet
     orcid: 0000-0002-2875-917X
     affiliation: 10
+  - name: Björn Benneke
+    orcid: 0000-0001-5578-1498
+    affiliation: 10
   - name: Joseph Filippazzo
     orcid: 0000-0002-0201-8306
     affiliation: 11
   - name: Erin M. May
     orcid: 0000-0002-2739-1465
     affiliation: 12
+  - name: Pierre-Alexis Roy
+    orcid: 0000-0001-6809-3520
+    affiliation: 10
   - name: Laura Kreidberg
     orcid: 0000-0003-0514-1147
     affiliation: 9
