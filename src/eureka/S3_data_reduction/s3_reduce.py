@@ -251,14 +251,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
                     if meta.curvature == 'correct':
-                        log.writelog('  In NIRSpec G395H setting:', mute=(not meta.verbose))
-                        log.writelog('  Correcting curvature and bringing trace in the center '
-                                     'of the detector', mute=(not meta.verbose))
-                        log.writelog('  !!! Ensure that you are using meddata for the optimal '
-                                     'extraction profile !!!', mute=(not meta.verbose))
-                        log.writelog('  Updating src_ypos and median frame '
-                                     'accordingly.', mute=(not meta.verbose))
-                        data, meta = inst.straighten_trace(data, meta)
+                        log.writelog('  In NIRSpec G395H setting with curvature '
+                                     'correction:', mute=(not meta.verbose))
+                        data, meta = inst.straighten_trace(data, meta, log)
 
                 # Create bad pixel mask (1 = good, 0 = bad)
                 # FINDME: Will want to use DQ array in the future

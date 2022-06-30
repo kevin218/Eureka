@@ -287,7 +287,7 @@ def roll_columns(data, shifts):
     return rolled_data
     
 
-def straighten_trace(data, meta):
+def straighten_trace(data, meta, log):
     '''
     Takes a set of integrations with a curved trace and shifts the 
     columns to bring the center of mass to the middle of the detector
@@ -310,6 +310,12 @@ def straighten_trace(data, meta):
 
     '''
 
+    log.writelog('  Correcting curvature and bringing trace in the center '
+    			 'of the detector', mute=(not meta.verbose))
+    # This method only works with the median profile for the extraction
+    log.writelog('  !!! Ensure that you are using meddata for the optimal '
+    			 'extraction profile !!!', mute=(not meta.verbose))
+
     # Find the median shift needed to bring the trace centered on the detector
     # obtain the median frame
     median_frame = np.copy(data.medflux.values)
@@ -317,7 +323,7 @@ def straighten_trace(data, meta):
     shifts, new_center = find_column_median_shifts(median_frame)
 
     # Correct wavelength (only one frame) 
-    print('Correct the wavelength solution')
+    log.writelog('  Correct the wavelength solution', mute=(not meta.verbose))
     # broadcast to (1, detector.shape) which is the expected shape of the function
     single_shift = np.expand_dims(shifts, axis=0)
     wave_data = np.expand_dims(data.wave_2d.values, axis=0)
@@ -325,7 +331,7 @@ def straighten_trace(data, meta):
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-    print('Correct the curvature over all integrations')
+    log.writelog('  Correct the curvature over all integrations', mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
                         (data.flux.shape[0], data.flux.shape[2]), order='F')
@@ -337,11 +343,13 @@ def straighten_trace(data, meta):
     data.v0.values = roll_columns(data.v0.values, shifts)
     
     # update the new src_ypos
-    print('Update src_ypos to new center, row {}'.format(new_center))
+    log.writelog('  Update src_ypos to new center, row {}'.format(new_center),
+    				mute=(not meta.verbose))
     meta.src_ypos = new_center
 
     # update the median frame
-    print('Update median frame now that the trace is corrected')
+    log.writelog('  Update median frame now that the trace is corrected',
+    				mute=(not meta.verbose))
     data.medflux.values = np.median(data.flux.values, axis=0)
 
     return data, meta
