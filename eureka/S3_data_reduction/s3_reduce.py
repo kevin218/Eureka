@@ -35,7 +35,7 @@ from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
-
+from copy import deepcopy
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
@@ -116,6 +116,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val, bg=bg_hw_val)
+
+    if meta.record_ypos:
+        ypos_ds_old = xrio.makeDataset()
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -225,8 +228,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
-                meta.src_ypos = source_pos.source_pos(
-                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                use_header = ('SRCYPOS' in data.attrs['shdr'])
+                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m, header=use_header)
+                    
                 log.writelog(f'  Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
@@ -339,6 +343,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
+                    if meta.record_ypos: # when loop over ints, get exact y pos and width
+                        meta.src_ypos, src_ypos_exact, src_ypos_width = source_pos.source_pos(data, meta, m, n,
+                                                                                              header=use_header)
+                        # print("Appending!!!")
+                        ypos_ds_new = xrio.makeDataset()
+                        ypos_ds_new["bg_hw"] = bg_hw_val
+                        ypos_ds_new["spec_hw"] = spec_hw_val
+                        ypos_ds_new["file_n"] = m
+                        ypos_ds_new["int_n"] = n
+                        ypos_ds_new["src_ypos_exact"] = src_ypos_exact
+                        ypos_ds_new["src_ypos_width"] = src_ypos_width
+                        ypos_ds = xrio.concat([ypos_ds_old, ypos_ds_new], data_vars="all")
+                        ypos_ds_old = deepcopy(ypos_ds)
+
                     data['optspec'][n], data['opterr'][n], mask = \
                         optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
                                          data.stdspec[n].values, gain, apv0[n],
@@ -426,5 +444,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 me.saveevent(meta, fname, save=[])
 
             log.closelog()
+            
+    meta.ypos = ypos_ds_old
 
     return spec, meta
