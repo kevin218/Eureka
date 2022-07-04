@@ -78,7 +78,8 @@ def drift1d(meta, lc):
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
-        
+
+
 def driftwidth(meta, lc):
     '''Plot the 1D drift width results. (Fig 4104)
 
@@ -105,7 +106,7 @@ def driftwidth(meta, lc):
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig4104_Drift'+figure_filetype
+    fname = 'figs'+os.sep+'fig4104_DriftWidth'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
