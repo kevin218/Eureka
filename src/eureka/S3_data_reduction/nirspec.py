@@ -264,10 +264,10 @@ def straighten_trace(data, meta, log):
         The updated metadata object.
     '''
     log.writelog('  Correcting curvature and bringing trace in the center '
-                    'of the detector', mute=(not meta.verbose))
+                 'of the detector', mute=(not meta.verbose))
     # This method only works with the median profile for the extraction
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
-                    'extraction profile !!!', mute=(not meta.verbose))
+                 'extraction profile !!!', mute=(not meta.verbose))
 
     # Find the median shift needed to bring the trace centered on the detector
     # obtain the median frame
@@ -297,12 +297,12 @@ def straighten_trace(data, meta, log):
     
     # update the new src_ypos
     log.writelog('  Update src_ypos to new center, row {}'.format(new_center),
-                mute=(not meta.verbose))
+                 mute=(not meta.verbose))
     meta.src_ypos = new_center
 
     # update the median frame
     log.writelog('  Update median frame now that the trace is corrected',
-                mute=(not meta.verbose))
+                 mute=(not meta.verbose))
     data.medflux.values = np.median(data.flux.values, axis=0)
 
     return data, meta
