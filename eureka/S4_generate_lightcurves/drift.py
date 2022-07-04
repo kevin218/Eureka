@@ -124,7 +124,7 @@ def spec1D(spectra, meta, log):
             drift1d[n] = len(vals)//2-params[1]-argmax+meta.drift_hw
             # meta.drift1d[n] = len(vals)/2-params[1]-argmax+meta.drift_hw
             driftwidth[n] = params[0]
-            
+
         except:
             # FINDME: Need change this bare except to only
             # catch the specific exception
