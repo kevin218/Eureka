@@ -117,8 +117,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val, bg=bg_hw_val)
 
-    if meta.record_ypos:
-        ypos_ds_old = xrio.makeDataset()
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -198,7 +196,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             for m in range(istart, meta.num_data_files):
                 # Initialize data object
                 data = xrio.makeDataset()
-
                 # Keep track if this is the first file - otherwise MIRI will
                 # keep swapping x and y windows
                 meta.firstFile = (m == istart and
@@ -214,6 +211,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Read in data frame and header
                 data, meta = inst.read(meta.segment_list[m], data, meta)
+
+                # Create dataset to store y position and width
+                if meta.record_ypos:
+                    src_ypos_exact = np.zeros_like(data["time"])
+                    src_ypos_width = np.zeros_like(data["time"])
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -344,18 +346,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
                     if meta.record_ypos: # when loop over ints, get exact y pos and width
-                        meta.src_ypos, src_ypos_exact, src_ypos_width = source_pos.source_pos(data, meta, m, n,
+                        meta.src_ypos, ypos_exact, ypos_width = source_pos.source_pos(data, meta, m, n,
                                                                                               header=use_header)
-                        # print("Appending!!!")
-                        ypos_ds_new = xrio.makeDataset()
-                        ypos_ds_new["bg_hw"] = bg_hw_val
-                        ypos_ds_new["spec_hw"] = spec_hw_val
-                        ypos_ds_new["file_n"] = m
-                        ypos_ds_new["int_n"] = n
-                        ypos_ds_new["src_ypos_exact"] = src_ypos_exact
-                        ypos_ds_new["src_ypos_width"] = src_ypos_width
-                        ypos_ds = xrio.concat([ypos_ds_old, ypos_ds_new], data_vars="all")
-                        ypos_ds_old = deepcopy(ypos_ds)
+                        src_ypos_exact[n] = ypos_exact
+                        src_ypos_width[n] = ypos_width
 
                     data['optspec'][n], data['opterr'][n], mask = \
                         optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
@@ -375,6 +369,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data['optmask'] = (['time', 'x'], optmask)
                 # data['optspec'] = np.ma.masked_where(mask, data.optspec)
                 # data['opterr'] = np.ma.masked_where(mask, data.opterr)
+
+                if meta.record_ypos:
+                    data['src_ypos_exact'] = (['time'], src_ypos_exact)
+                    data['src_ypos_width'] = (['time'], src_ypos_width)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
@@ -444,7 +442,5 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 me.saveevent(meta, fname, save=[])
 
             log.closelog()
-            
-    meta.ypos = ypos_ds_old
 
     return spec, meta
