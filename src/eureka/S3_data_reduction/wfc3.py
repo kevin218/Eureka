@@ -83,7 +83,7 @@ def get_reference_frames(meta, log):
 
     # Use the first two files by default
     if not hasattr(meta, 'iref'):
-        meta.iref = [0, 1]
+        meta.iref = [2, 3]
     
     # Make sure that the scan directions are in the right order
     if meta.iref[0] % 2 != 0:
