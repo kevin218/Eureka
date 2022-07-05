@@ -7,7 +7,7 @@ from ..lib import util
 from ..lib.plots import figure_filetype
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec):
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101)
 
     Parameters
@@ -19,13 +19,15 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
         which have been set in the S3 ecf
     optspec : ndarray
         The optimally extracted spectrum.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
 
     Returns
     -------
     None
     '''
-    optspec = np.ma.masked_invalid(optspec)
-    normspec = util.normalize_spectrum(meta, optspec)
+    normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
     wmin = wave_1d.min()
     wmax = wave_1d.max()
     vmin = 0.97

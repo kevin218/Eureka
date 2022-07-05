@@ -239,6 +239,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     batch.append(data)
 
                 # Combine individual datasets
+                if meta.files_per_batch > 1:
+                    log.writelog('  Concatenating files...',
+                                 mute=(not meta.verbose))
                 data = xrio.concat(batch)
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
@@ -256,9 +259,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
+                log.writelog('  Locating source position...',
+                             mute=(not meta.verbose))
                 meta.src_ypos = source_pos.source_pos(
                     data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
-                log.writelog(f'  Source position on detector is row '
+                log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
                 # Compute 1D wavelength solution
@@ -319,7 +324,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = optspex.standard_spectrum(data, apdata, aperr)
 
                 # Extract optimal spectrum with uncertainties
-                log.writelog("  Performing optimal spectral extraction",
+                log.writelog("  Performing optimal spectral extraction...",
                              mute=(not meta.verbose))
                 data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
                 data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
@@ -356,8 +361,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
                                         np.ma.getmaskarray(opterr_ma))
                 data['optmask'] = (['time', 'x'], optmask)
-                # data['optspec'] = np.ma.masked_where(mask, data.optspec)
-                # data['opterr'] = np.ma.masked_where(mask, data.opterr)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
@@ -414,13 +417,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec)
+            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
+                                       optmask=spec.optmask)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
+                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                                        optmask=spec.optmask)
 
             # Save results
             if meta.save_output:

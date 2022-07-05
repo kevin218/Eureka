@@ -97,25 +97,29 @@ def drift1d(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, lc, wave_1d, optspec):
+def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    lc : Xarray Dataset
-        The Dataset object containing light curve and time data.
     wave_1d : ndarray
         Wavelength array with trimmed edges depending on xwindow and ywindow
         which have been set in the S3 ecf.
     optspec : ndarray
         The optimally extracted spectrum.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
 
     Returns
     -------
     None
     '''
+    optspec = np.ma.masked_invalid(optspec)
+    optspec = np.ma.masked_where(optmask, optspec)
+
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     wmin = meta.wave_min

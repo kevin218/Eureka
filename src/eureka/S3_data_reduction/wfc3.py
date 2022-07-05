@@ -47,7 +47,6 @@ def preparation_step(meta, log):
     # Initialize list to hold centroid positions from later steps in this stage
     meta.centroids = []
     meta.guess = []
-    meta.scanHeight = []
     meta.subdata_ref = []
     meta.subdiffmask_ref = []
 
@@ -151,7 +150,6 @@ def conclusion_step(data, meta, log):
     """
     meta.centroids = np.array(meta.centroids)
     meta.guess = np.array(meta.guess)
-    meta.scanHeight = np.array(meta.scanHeight)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
 
@@ -655,6 +653,10 @@ def difference_frames(data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
+    if meta.firstInBatch:
+        log.writelog('  Differencing non-destructive reads...',
+                     mute=(not meta.verbose))
+
     if meta.nreads > 1:
         # Subtract pairs of subframes
         meta.nreads -= 1
@@ -691,19 +693,20 @@ def difference_frames(data, meta, log):
         guess[0] = guess[1]
 
     # Compute full scan length
-    scannedData = np.sum(data.flux[-1], axis=1)
-    xmin = np.min(guess)
-    xmax = np.max(guess)
-    scannedData /= np.median(scannedData[xmin:xmax+1])
-    scannedData -= 0.5
-    yrng = range(meta.ny)
-    spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
-    roots = spline.roots()
-    try:
-        meta.scanHeight.append(roots[1]-roots[0])
-    except:
-        # FINDME: Need to only catch the expected exception
-        pass
+    if meta.firstInBatch:
+        log.writelog('  Computing scan height...',
+                     mute=(not meta.verbose))
+    scanHeight = []
+    for i in range(meta.n_int):
+        scannedData = np.sum(data.flux[i], axis=1)
+        xmin = np.min(guess)
+        xmax = np.max(guess)
+        scannedData /= np.median(scannedData[xmin:xmax+1])
+        scannedData -= 0.5
+        yrng = range(meta.ny)
+        spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
+        roots = spline.roots()
+        scanHeight.append(roots[1]-roots[0])
 
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
@@ -719,7 +722,11 @@ def difference_frames(data, meta, log):
     variance = np.zeros_like(diffdata.flux.values)
     diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
                                                time_units, name='variance')
-    diffdata['guess'] = (['time'], guess)
+    diffdata['guess'] = xrio.makeTimeLikeDA(guess, difftime, 'pixels',
+                                            time_units, 'guess')
+    diffdata['scanHeight'] = xrio.makeTimeLikeDA(scanHeight, difftime,
+                                                 'pixels', time_units,
+                                                 'scanHeight')
 
     return diffdata, meta, log
 
@@ -741,7 +748,7 @@ def flag_bg(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier background pixels flagged.
     '''
-    log.writelog('  Performing background outlier rejection',
+    log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
     for p in range(2):
@@ -856,8 +863,6 @@ def correct_drift2D(data, meta, log, m):
         return
 
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
-    # FINDME: instead of calculating scanHeight, consider fitting
-    # stretch factor
     drift2D = np.zeros((meta.n_int, 2))
     if meta.ncpu == 1:
         # Only 1 CPU
@@ -1018,7 +1023,7 @@ def cut_aperture(data, meta, log):
     - 2022-06-17, Taylor J Bell
         Initial version, edited to work for HST scanned observations.
     """
-    log.writelog('  Extracting aperture region',
+    log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
 
     apdata = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))

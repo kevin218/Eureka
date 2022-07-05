@@ -269,7 +269,7 @@ def find_fits(meta):
     return meta
 
 
-def normalize_spectrum(meta, optspec, opterr=None):
+def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     """Normalize a spectrum by its temporal mean.
 
     Parameters
@@ -280,6 +280,9 @@ def normalize_spectrum(meta, optspec, opterr=None):
         The spectrum to normalize.
     opterr : ndarray, optional
         The noise array to normalize using optspec, by default None.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
 
     Returns
     -------
@@ -289,8 +292,11 @@ def normalize_spectrum(meta, optspec, opterr=None):
         The normalized error. Only returned if opterr is not none.
     """
     normspec = np.ma.masked_invalid(np.ma.copy(optspec))
+    normspec = np.ma.masked_where(optmask, normspec)
+
     if opterr is not None:
         normerr = np.ma.masked_invalid(np.ma.copy(opterr))
+        normerr = np.ma.masked_where(np.ma.getmaskarray(normspec), normerr)
 
     # Normalize the spectrum
     if meta.inst == 'wfc3':
@@ -316,7 +322,8 @@ def normalize_spectrum(meta, optspec, opterr=None):
         return normspec
 
 
-def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
+def get_mad(meta, log, wave_1d, optspec, optmask=None,
+            wave_min=None, wave_max=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
@@ -331,6 +338,9 @@ def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
         ywindow which have been set in the S3 ecf
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
@@ -344,6 +354,8 @@ def get_mad(meta, log, wave_1d, optspec, wave_min=None, wave_max=None):
         Single MAD value in ppm
     """
     optspec = np.ma.masked_invalid(optspec)
+    optspec = np.ma.masked_where(optmask, optspec)
+
     if wave_min is not None:
         iwmin = np.argmin(np.abs(wave_1d-wave_min))
     else:

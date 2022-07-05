@@ -113,7 +113,7 @@ def flag_bg(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier background pixels flagged.
     '''
-    log.writelog('  Performing background outlier rejection',
+    log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
     meta.bg_y2 = meta.src_ypos + meta.bg_hw

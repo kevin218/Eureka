@@ -101,7 +101,7 @@ def flag_bg(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier background pixels flagged.
     '''
-    log.writelog('  Performing background outlier rejection',
+    log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
     meta.bg_y2 = meta.src_ypos + meta.bg_hw
@@ -194,7 +194,7 @@ def cut_aperture(data, meta, log):
     - 2022-06-17, Taylor J Bell
         Initial version based on the code in s3_reduce.py
     """
-    log.writelog('  Extracting aperture region',
+    log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
 
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
