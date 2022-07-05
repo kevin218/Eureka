@@ -27,6 +27,9 @@ prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        60          # X-sigma threshold for outlier rejection during optimal spectral extraction
 
+# G395H curvature treatment
+curvature       correct     # How to manage the curved trace on the detector (Options: None, correct)
+
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S3      False       # Boolean, set True to only use last file and generate select figures

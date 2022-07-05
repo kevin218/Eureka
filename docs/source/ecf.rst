@@ -308,6 +308,11 @@ iref
 ''''
 Only used for HST analyses. The file indices to use as reference frames for 2D drift correction. This should be a 1-2 element list with the reference indices for each scan direction.
 
+curvature
+''''''''
+Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
+
+
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
