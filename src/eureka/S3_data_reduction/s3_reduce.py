@@ -26,7 +26,6 @@ import os
 import time as time_pkg
 import numpy as np
 import astraeus.xarrayIO as xrio
-import xarray
 from astropy.io import fits
 from tqdm import tqdm
 import psutil
@@ -240,7 +239,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     batch.append(data)
 
                 # Combine individual datasets
-                data = xarray.concat(batch, 'time')
+                data = xrio.concat(batch)
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
 
@@ -264,8 +263,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
-                    data['wave_1d'] = (['x'], np.median(
-                        data.wave_2d[:, meta.src_ypos].values, axis=0))
+                    data['wave_1d'] = (['x'],
+                                       data.wave_2d[meta.src_ypos].values)
                     data['wave_1d'].attrs['wave_units'] = \
                         data.wave_2d.attrs['wave_units']
 

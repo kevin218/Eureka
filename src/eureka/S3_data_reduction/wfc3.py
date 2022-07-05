@@ -667,6 +667,9 @@ def difference_frames(data, meta, log):
         # FLT data has already been differenced
         diffflux = data.flux
         differr = data.err
+    
+    # Temporarily set this value for now
+    meta.n_int = meta.nreads
 
     diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
     guess = np.zeros((meta.nreads), dtype=int)
@@ -855,10 +858,10 @@ def correct_drift2D(data, meta, log, m):
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
     # FINDME: instead of calculating scanHeight, consider fitting
     # stretch factor
-    drift2D = np.zeros((data.flux.shape[0], 2))
+    drift2D = np.zeros((meta.n_int, 2))
     if meta.ncpu == 1:
         # Only 1 CPU
-        for n in range(data.flux.shape[0]):
+        for n in range(meta.n_int):
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
@@ -871,7 +874,7 @@ def correct_drift2D(data, meta, log, m):
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        for n in range(data.flux.shape[0]):
+        for n in range(meta.n_int):
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
@@ -899,7 +902,7 @@ def correct_drift2D(data, meta, log, m):
                  mute=(not meta.verbose))
     drift2D_int = np.round(drift2D, 0)
     # Correct for drift by integer pixel numbers, no interpolation
-    for n in range(data.flux.shape[0]):
+    for n in range(meta.n_int):
         data.flux[n] = spni.shift(data.flux[n],
                                   -1*drift2D_int[n, ::-1], order=0,
                                   mode='constant', cval=0)
@@ -916,7 +919,7 @@ def correct_drift2D(data, meta, log, m):
     # Outlier rejection of full frame along time axis
     if meta.files_per_batch == 1 and meta.firstFile:
         log.writelog("  WARNING: It is recommended to run Eureka! in batch\n"
-                     "  mode (nfiles > 1) for WFC3 data to allow full-frame\n"
+                     "  mode (nfiles >> 1) for WFC3 data to allow full-frame\n"
                      "  outlier rejection.")
     elif meta.files_per_batch > 1:
         log.writelog("  Performing full-frame outlier rejection...",
@@ -942,7 +945,7 @@ def correct_drift2D(data, meta, log, m):
     # Define the degrees of the bivariate spline
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
-    for n in range(data.flux.shape[0]):
+    for n in range(meta.n_int):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
@@ -1018,18 +1021,13 @@ def cut_aperture(data, meta, log):
     log.writelog('  Extracting aperture region',
                  mute=(not meta.verbose))
 
-    apdata = np.zeros((data.flux.shape[0], meta.spec_hw*2,
-                       data.flux.shape[2]))
-    aperr = np.zeros((data.flux.shape[0], meta.spec_hw*2,
-                      data.flux.shape[2]))
-    apmask = np.zeros((data.flux.shape[0], meta.spec_hw*2,
-                       data.flux.shape[2]))
-    apbg = np.zeros((data.flux.shape[0], meta.spec_hw*2,
-                     data.flux.shape[2]))
-    apv0 = np.zeros((data.flux.shape[0], meta.spec_hw*2,
-                     data.flux.shape[2]))
+    apdata = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    aperr = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apmask = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apbg = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apv0 = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
 
-    for f in range(int(data.flux.shape[0]/meta.nreads)):
+    for f in range(int(meta.n_int/meta.nreads)):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = data.scandir[f*meta.nreads].values
