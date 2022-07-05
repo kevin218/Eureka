@@ -20,7 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
-from . import plots_s4, drift
+from . import plots_s4, drift, wfc3
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
@@ -262,7 +262,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta, lc)
 
-            # Compute MAD alue
+            if hasattr(meta, 'sum_reads') and meta.sum_reads:
+                # Sum each read from a scan together
+                spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
+
+            # Compute MAD value
             meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
                                        spec.optspec, spec.optmask,
                                        meta.wave_min, meta.wave_max)

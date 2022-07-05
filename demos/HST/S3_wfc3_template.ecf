@@ -50,9 +50,6 @@ p7thresh        10          # X-sigma threshold for outlier rejection during opt
 # 2D drift correction parameters
 iref            [2, 3]      # The file indices to use as reference frames for each scan direction
 
-# Binning
-sum_reads       True        # Sum together all of the reads from one scan?
-
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 testing_S3      False       # Boolean, set True to only use last file and generate select figures

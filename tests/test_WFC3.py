@@ -10,6 +10,7 @@ from eureka.lib.readECF import MetaClass
 from eureka.lib.util import pathdirectory
 import eureka.lib.plots
 from eureka.S3_data_reduction import s3_reduce as s3
+from eureka.S4_generate_lightcurves import s4_genLC as s4
 try:
     import image_registration
     imported_image_registration = True
@@ -34,7 +35,7 @@ def test_WFC3(capsys):
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files "
               "are\nincluded in demo ecf files and documentation "
               "(docs/source/ecf.rst).")
-        print("\nWFC3 S3 test: ", end='', flush=True)
+        print("\nWFC3 S3-4 test: ", end='', flush=True)
 
     # explicitly define meta variables to be able to run
     # pathdirectory fn locally
@@ -45,7 +46,10 @@ def test_WFC3(capsys):
     ecf_path = f'.{os.sep}WFC3_ecfs{os.sep}'
 
     reload(s3)
-    s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    reload(s4)
+    s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path)
+    s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
+                                       s3_meta=s3_meta)
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'
