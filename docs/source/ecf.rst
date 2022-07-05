@@ -308,10 +308,6 @@ iref
 ''''
 Only used for HST analyses. The file indices to use as reference frames for 2D drift correction. This should be a 1-2 element list with the reference indices for each scan direction.
 
-sum_reads
-'''''''''
-Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
-
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
@@ -404,11 +400,45 @@ sub_mean
 ''''''''
 If True, subtract spectrum mean during cross correlation (can help with cross-correlation step).
 
+sub_continuum 
+'''''''''''''
+Set True to subtract the continuum from the spectra using a highpass filter
+
+highpassWidth
+'''''''''''''
+The integer width of the highpass filter when subtracting the continuum
+
+sigma_clip
+''''''''''
+Whether or not sigma clipping should be performed on the 1D time series
+
+sigma
+'''''
+Only used if sigma_clip=True. The number of sigmas a point must be from the rolling median to be considered an outlier
+
+box_width
+'''''''''
+Only used if sigma_clip=True. The width of the box-car filter (used to calculated the rolling median) in units of number of data points
+
+maxiters
+''''''''
+Only used if sigma_clip=True. The number of iterations of sigma clipping that should be performed.
+
+boundary
+''''''''
+Only used if sigma_clip=True. Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
+
+fill_value
+''''''''''
+Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
+
+sum_reads
+'''''''''
+Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
 
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
-
 
 hide_plots
 ''''''''''
