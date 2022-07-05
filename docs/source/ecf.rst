@@ -214,7 +214,7 @@ Only used for HST analyses. Used to sigma clip bad values from the flatfield ima
 
 flatfile
 ''''''''
-Only used for HST analyses. The fully qualified path to the flatfield file to use.
+Only used for HST analyses. The fully qualified path to the flatfield file to use. A WFC3/G102 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G102/WFC3.IR.G102.flat.2.fits.gz>`_ and a WFC3/G141 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G141/WFC3.IR.G141.flat.2.fits.gz>`_; be sure to unzip the files after downloading them.
 
 diffthresh
 ''''''''''
