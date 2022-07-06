@@ -32,7 +32,6 @@ def standard_spectrum(data, apdata, aperr):
         data.flux.attrs['flux_units']
     data['stdvar'].attrs['time_units'] = \
         data.flux.attrs['time_units']
-    # FINDME: stdvar >> stdspec, which is a problem
 
     return data
 
