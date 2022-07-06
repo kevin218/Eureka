@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 4: Generate Lightcurves 
 
+# Stage 4 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4
+
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan       6           # Number of spectroscopic channels
 wave_min        0.8         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.

@@ -53,7 +53,7 @@ def test_WFC3(capsys):
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'
-    name = pathdirectory(meta, 'S3', 1, ap=8, bg=40)
+    name = pathdirectory(meta, 'S3', 1, ap=5, bg=5)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 

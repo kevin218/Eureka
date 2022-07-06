@@ -33,14 +33,13 @@ flatfile        /home/User/Data/HST_Calibrations/G102_Calibration/WFC3.IR.G102.f
 diffthresh      10                
 
 # Background parameters
-bg_hw           40           # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_hw           5           # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
-save_bgsub      False       # Whether or not to save background subtracted FITS files
 
 # Spectral extraction parameters
-spec_hw         8           # Half-width of aperture region for spectral extraction (relative to source position)
+spec_hw         5           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         smooth      # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 window_len      31          # Smoothing window length, when fittype = smooth
 prof_deg        3           # Polynomial degree, when fittype = poly
