@@ -6,7 +6,7 @@ from . import nircam, sigrej
 from ..lib.util import read_time
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
@@ -17,11 +17,17 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
     data : Xarray Dataset
         The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -41,12 +47,12 @@ def read(filename, data, meta):
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
     try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
         data.attrs['intend'] = data.attrs['mhdr']['INTEND']
     except:
         # FINDME: Need to only catch the particular exception we expect
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
-        data.attrs['intstart'] = 1
+        data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
 
     sci = hdulist['SCI', 1].data
@@ -54,12 +60,12 @@ def read(filename, data, meta):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']:
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
-        time = read_time(meta, data)
+        time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
         print('  WARNING: The timestamps for the simulated NIRSpec data are '
@@ -87,7 +93,7 @@ def read(filename, data, meta):
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
 
-    return data, meta
+    return data, meta, log
 
 
 def flag_bg(data, meta):
@@ -181,10 +187,12 @@ def find_column_median_shifts(data):
     pix_centers = np.arange(nb_rows) + 0.5
 
     # Compute the center of mass of each column and convert to integer (pixels)
-    column_coms = np.sum(pix_centers[:, None]*data, axis=0) / np.sum(data, axis=0)
+    column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
+                   np.sum(data, axis=0))
     column_coms = np.around(column_coms).astype(int)
 
-    # define the new center (where we will align the trace) in the middle of the detector
+    # define the new center (where we will align the trace) in the 
+    # middle of the detector
     new_center = int(nb_rows/2)
 
     # define an array containing the needed shift to bring the COMs to the
@@ -218,7 +226,8 @@ def roll_columns(data, shifts):
     rolled_data = np.zeros_like(data)
     # loop over all images (integrations)
     for i in range(len(data)):
-        # do the equivalent of 'np.roll' but with a different shift in each column
+        # do the equivalent of 'np.roll' but with a different shift
+        # in each column
         
         arr = np.swapaxes(data[i], 0, -1)
         all_idcs = np.ogrid[[slice(0, n) for n in arr.shape]]
@@ -277,14 +286,16 @@ def straighten_trace(data, meta, log):
 
     # Correct wavelength (only one frame) 
     log.writelog('  Correct the wavelength solution', mute=(not meta.verbose))
-    # broadcast to (1, detector.shape) which is the expected shape of the function
+    # broadcast to (1, detector.shape) which is the expected shape of
+    # the function
     single_shift = np.expand_dims(shifts, axis=0)
     wave_data = np.expand_dims(data.wave_2d.values, axis=0)
     # apply the correction and update wave_1d accordingly
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-    log.writelog('  Correct the curvature over all integrations', mute=(not meta.verbose))
+    log.writelog('  Correct the curvature over all integrations',
+                 mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
                         (data.flux.shape[0], data.flux.shape[2]), order='F')
