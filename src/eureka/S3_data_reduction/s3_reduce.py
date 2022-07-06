@@ -211,7 +211,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                  f'{meta.num_data_files}', end='\r')
 
                 # Read in data frame and header
-                data, meta = inst.read(meta.segment_list[m], data, meta, log)
+                data, meta, log = inst.read(meta.segment_list[m], data, meta,
+                                            log)
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
