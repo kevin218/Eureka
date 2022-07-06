@@ -20,7 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
-from . import plots_s4, drift
+from . import plots_s4, drift, wfc3
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
@@ -174,7 +174,18 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                   spec.wave_1d.attrs['wave_units'],
                                   spec.optspec.attrs['time_units'],
                                   name='err')
-            lc = xrio.makeDataset({'data': lcdata, 'err': lcerr})
+            lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
+                                            dtype=bool),
+                                   meta.wave, spec.time.values, 'None',
+                                   spec.wave_1d.attrs['wave_units'],
+                                   spec.optspec.attrs['time_units'],
+                                   name='mask')
+            lc = xrio.makeDataset({'data': lcdata, 'err': lcerr,
+                                   'mask': lcmask})
+            if hasattr(spec, 'scandir'):
+                lc['scandir'] = spec.scandir
+            if hasattr(spec, 'drift2D'):
+                lc['drift2D'] = spec.drift2D
             lc['wave_low'] = (['wavelength'], meta.wave_low)
             lc['wave_hi'] = (['wavelength'], meta.wave_hi)
             lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
@@ -188,24 +199,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # The default value before this was added as an option
                 meta.boundary = 'extend'
 
-            # FINDME: The current implementation needs improvement,
-            # consider using optmask instead of masked arrays
-            # Create masked array for steps below
-            optspec_ma = np.ma.masked_array(spec.optspec, spec.optmask)
-            # Create opterr array with same mask as optspec
-            opterr_ma = np.ma.masked_array(spec.opterr, optspec_ma.mask)
-
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.sigma_clip:
                 log.writelog('Sigma clipping unbinned optimal spectra along '
-                             'time axis')
+                             'time axis...')
                 outliers = 0
                 for w in range(meta.subnx):
-                    optspec_ma[:, w], nout = \
-                        clipping.clip_outliers(optspec_ma[:, w], log,
-                                               spec.wave_1d[w], meta.sigma,
-                                               meta.box_width, meta.maxiters,
-                                               meta.boundary, meta.fill_value,
+                    spec.optspec[:, w], spec.optmask[:, w], nout = \
+                        clipping.clip_outliers(spec.optspec[:, w], log,
+                                               spec.wave_1d[w],
+                                               mask=spec.optmask[:, w],
+                                               sigma=meta.sigma,
+                                               box_width=meta.box_width,
+                                               maxiters=meta.maxiters,
+                                               boundary=meta.boundary,
+                                               fill_value=meta.fill_value,
                                                verbose=meta.verbose)
                     outliers += nout
                 # Print summary if not verbose
@@ -221,7 +229,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # This can take a long time, so always print this message
                 log.writelog('Applying drift/jitter correction')
                 # Compute drift/jitter
-                drift1d, driftmask = drift.spec1D(optspec_ma, meta, log)
+                drift1d, driftmask = drift.spec1D(spec.optspec, meta, log,
+                                                  mask=spec.optmask)
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
                     drift1d, driftmask, Box1DKernel(meta.box_width))
@@ -230,41 +239,42 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # Correct for drift/jitter
                 for n in range(meta.n_int):
                     # Need to zero-out the weights of masked data
-                    weights = (~np.ma.getmaskarray(optspec_ma[n])).astype(int)
+                    weights = (~spec.optmask[n]).astype(int)
                     spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                  optspec_ma[n], k=3, s=0,
+                                                  spec.optspec[n], k=3, s=0,
                                                   w=weights)
                     spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                   opterr_ma[n], k=3, s=0,
+                                                   spec.opterr[n], k=3, s=0,
                                                    w=weights)
-                    optspec_ma[n] = spline(np.arange(meta.subnx) +
-                                           lc.drift1d[n].values)
-                    opterr_ma[n] = spline2(np.arange(meta.subnx) +
-                                           lc.drift1d[n].values)
-                    # # Merge conflict: Need to test code below
-                    # # before implementing
-                    # optspec_ma[n] = np.ma.masked_invalid(spline(
-                    #     np.arange(meta.subnx)+lc.drift1d[n].values))
-                    # opterr_ma[n] = np.ma.masked_invalid(spline2(
-                    #     np.arange(meta.subnx)+lc.drift1d[n].values))
+                    optmask = spec.optmask[n].astype(float)
+                    spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                   optmask, k=3, s=0,
+                                                   w=weights)
+                    spec.optspec[n] = spline(np.arange(meta.subnx) +
+                                             lc.drift1d[n].values)
+                    spec.opterr[n] = spline2(np.arange(meta.subnx) +
+                                             lc.drift1d[n].values)
+                    # Also shift mask if moving by >= 0.5 pixels
+                    optmask = spline3(np.arange(meta.subnx) +
+                                      lc.drift1d[n].values)
+                    spec.optmask[n] = optmask >= 0.5
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
                     plots_s4.drift1d(meta, lc)
 
-            # FINDME: optspec mask isn't getting updated when correcting
-            # for drift. Also, entire integrations are getting flagged.
-            # Need to look into these issues.
-            optspec_ma = np.ma.masked_invalid(optspec_ma)
-            opterr_ma = np.ma.masked_array(opterr_ma, optspec_ma.mask)
-            # spec['optspec_drift']
+            if hasattr(meta, 'sum_reads') and meta.sum_reads:
+                # Sum each read from a scan together
+                spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
 
-            # Compute MAD alue
-            meta.mad_s4 = util.get_mad(meta, spec.wave_1d.values, optspec_ma,
+            # Compute MAD value
+            meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
+                                       spec.optspec, spec.optmask,
                                        meta.wave_min, meta.wave_max)
             log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
             if meta.isplots_S4 >= 1:
-                plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
+                plots_s4.lc_driftcorr(meta, spec.wave_1d, spec.optspec,
+                                      optmask=spec.optmask)
 
             log.writelog("Generating light curves")
 
@@ -275,24 +285,30 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # Compute valid indeces within wavelength range
                 index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
                                  (spec.wave_1d < lc.wave_hi.values[i]))[0]
+                # Make masked arrays for easy summing
+                optspec_ma = np.ma.masked_where(spec.optmask[:, index],
+                                                spec.optspec[:, index])
+                opterr_ma = np.ma.masked_where(spec.optmask[:, index],
+                                               spec.opterr[:, index])
                 # Compute mean flux for each spectroscopic channel
                 # Sumation leads to outliers when there are masked points
-                lc['data'][i] = np.ma.mean(optspec_ma[:, index], axis=1)
+                lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
                 # Add uncertainties in quadrature
                 # then divide by number of good points to get
                 # proper uncertainties
-                lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma[:, index]**2,
-                                                  axis=1)) /
-                                np.ma.MaskedArray.count(opterr_ma[:, index],
-                                                        axis=1))
+                lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
+                                np.ma.MaskedArray.count(opterr_ma, axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    lc['data'][i], outliers = clipping.clip_outliers(
-                        lc['data'][i].values, log, lc.wave_mid[i], meta.sigma,
-                        meta.box_width, meta.maxiters, meta.boundary,
-                        meta.fill_value, verbose=False)
-                    log.writelog(f'  Sigma clipped {outliers} outliers in time'
+                    lc['data'][i], lc['mask'][i], nout = \
+                        clipping.clip_outliers(
+                            lc['data'][i], log, lc.wave_mid[i],
+                            mask=lc['mask'][i],
+                            sigma=meta.sigma, box_width=meta.box_width,
+                            maxiters=meta.maxiters, boundary=meta.boundary,
+                            fill_value=meta.fill_value, verbose=False)
+                    log.writelog(f'  Sigma clipped {nout} outliers in time'
                                  f' series', mute=(not meta.verbose))
 
                 # Plot each spectroscopic light curve
