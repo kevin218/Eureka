@@ -73,8 +73,8 @@ def clip_outliers(data, log, wavelength, sigma=10, box_width=5, maxiters=5,
     outliers = np.ma.getmaskarray(residuals)
 
     if np.any(outliers):
-        log.writelog(f'Identified {np.sum(outliers)} outliers for wavelength '
-                     f'{wavelength.values:.4f} '
+        log.writelog(f'  Identified {np.sum(outliers)} outliers for wavelength'
+                     f' {wavelength.values:.4f} '
                      f'{wavelength.attrs["wave_units"]}', mute=(not verbose))
 
     # Replace clipped data

@@ -198,7 +198,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.sigma_clip:
                 log.writelog('Sigma clipping unbinned optimal spectra along '
-                             'time axis')
+                             'time axis...')
                 outliers = 0
                 for w in range(meta.subnx):
                     optspec_ma[:, w], nout = \
@@ -261,7 +261,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Compute MAD alue
             meta.mad_s4 = util.get_mad(meta, spec.wave_1d.values, optspec_ma,
                                        meta.wave_min, meta.wave_max)
-            log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
+            log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
 
             if meta.isplots_S4 >= 1:
                 plots_s4.lc_driftcorr(meta, spec.wave_1d, optspec_ma)
@@ -269,6 +269,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog("Generating light curves")
 
             # Loop over spectroscopic channels
+            meta.mad_s4_binned = []
             for i in range(meta.nspecchan):
                 log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
                              f"{lc.wave_hi.values[i]:.3f}")
@@ -297,7 +298,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
                 # Plot each spectroscopic light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, lc, i)
+                    plots_s4.binned_lightcurve(meta, log, lc, i)
 
             # If requested, also generate white-light light curve
             if hasattr(meta, 'compute_white') and meta.compute_white:
@@ -345,7 +346,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
                 # Plot the white-light light curve
                 if meta.isplots_S4 >= 3:
-                    plots_s4.binned_lightcurve(meta, lc, 0, white=True)
+                    plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.

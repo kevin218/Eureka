@@ -5,13 +5,15 @@ from ..lib import util
 from ..lib.plots import figure_filetype
 
 
-def binned_lightcurve(meta, lc, i, white=False):
+def binned_lightcurve(meta, log, lc, i, white=False):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     lc : Xarray Dataset
         The Dataset object containing light curve and time data.
     i : int
@@ -45,9 +47,11 @@ def binned_lightcurve(meta, lc, i, white=False):
     ax.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
                 color=f'C{i}', mec=f'C{i}', alpha=0.2)
     mad = util.get_mad_1d(norm_lcdata)
-    ax.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
-            transform=ax.transAxes, color='k')
-    ax.set_ylabel('Normalized Flux')
+    meta.mad_s4_binned.append(mad)
+    log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+    plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+             transform=ax.transAxes, color='k')
+    plt.ylabel('Normalized Flux')
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 

@@ -211,7 +211,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                  f'{meta.num_data_files}', end='\r')
 
                 # Read in data frame and header
-                data, meta = inst.read(meta.segment_list[m], data, meta)
+                data, meta, log = inst.read(meta.segment_list[m], data, meta,
+                                            log)
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -226,9 +227,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
+                log.writelog('  Locating source position...',
+                             mute=(not meta.verbose))
                 meta.src_ypos = source_pos.source_pos(
                     data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
-                log.writelog(f'  Source position on detector is row '
+                log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
                 # Compute 1D wavelength solution
@@ -251,8 +254,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
                     if meta.curvature == 'correct':
-                        log.writelog('  In NIRSpec G395H setting with curvature '
-                                     'correction:', mute=(not meta.verbose))
+                        log.writelog('  Correcting for G395H curvature...',
+                                     mute=(not meta.verbose))
                         data, meta = inst.straighten_trace(data, meta, log)
 
                 # Create bad pixel mask (1 = good, 0 = bad)
@@ -262,6 +265,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                             dtype=bool))
 
                 # Check if arrays have NaNs
+                log.writelog('  Masking NaNs in data arrays...',
+                             mute=(not meta.verbose))
                 data['mask'] = util.check_nans(data['flux'], data['mask'],
                                                log, name='FLUX')
                 data['mask'] = util.check_nans(data['err'], data['mask'],
@@ -271,34 +276,35 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    log.writelog("  Masking manually identified bad pixels",
+                    log.writelog("  Masking manually identified bad pixels...",
                                  mute=(not meta.verbose))
                     for i in range(len(meta.manmask)):
                         colstart, colend, rowstart, rowend = meta.manmask[i]
                         data['mask'][rowstart:rowend, colstart:colend] = 0
 
                 # Perform outlier rejection of sky background along time axis
-                log.writelog('  Performing background outlier rejection',
+                log.writelog('  Performing background outlier rejection...',
                              mute=(not meta.verbose))
                 meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
                 meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
                 data = inst.flag_bg(data, meta)
 
+                # Do the background subtraction
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
+                # Make image+background plots
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for background '
-                                 'subtraction', mute=(not meta.verbose))
+                                 'subtraction...', mute=(not meta.verbose))
                     iterfn = range(meta.int_start, meta.n_int)
                     if meta.verbose:
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
-                        # make image+background plots
                         plots_s3.image_and_background(data, meta, n, m)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
-                    log.writelog('  Correcting for 2D drift',
+                    log.writelog('  Correcting for 2D drift...',
                                  mute=(not meta.verbose))
                     inst.correct_drift2D(data, meta, m)
 
@@ -327,7 +333,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # FINDME: stdvar >> stdspec, which is a problem
 
                 # Extract optimal spectrum with uncertainties
-                log.writelog("  Performing optimal spectral extraction",
+                log.writelog("  Performing optimal spectral extraction...",
                              mute=(not meta.verbose))
                 data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
                 data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
@@ -342,7 +348,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                intstart = data.attrs['intstart']
                 iterfn = range(meta.int_start, meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
@@ -354,7 +359,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                          p7thresh=meta.p7thresh,
                                          fittype=meta.fittype,
                                          window_len=meta.window_len,
-                                         deg=meta.prof_deg, n=intstart+n,
+                                         deg=meta.prof_deg, n=n, m=m,
                                          meddata=medapdata)
 
                 # Mask out NaNs and Infs
@@ -380,7 +385,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if meta.save_output:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
-                                   "_FluxData_seg"+str(m+1).zfill(4)+".h5")
+                                   "_FluxData_seg"+str(m).zfill(4)+".h5")
                     success = xrio.writeXR(filename_xr, data, verbose=False,
                                            append=False)
                     if success == 0:
@@ -407,10 +412,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
 
-            # Calculate total time
-            total = (time_pkg.time() - t0) / 60.
-            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                          "_SpecData.h5")
@@ -419,8 +420,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Compute MAD value
             meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
-            log.writelog(f"Stage 3 MAD = "
-                         f"{np.round(meta.mad_s3, 2).astype(int)} ppm")
+            log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
@@ -432,6 +432,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 log.writelog('Saving Metadata')
                 fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
                 me.saveevent(meta, fname, save=[])
+
+            # Calculate total time
+            total = (time_pkg.time() - t0) / 60.
+            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             log.closelog()
 

@@ -5,7 +5,7 @@ from . import sigrej, background
 from ..lib.util import read_time
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
@@ -16,6 +16,8 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -23,6 +25,8 @@ def read(filename, data, meta):
         The updated Dataset object with the fits data stored inside.
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -43,7 +47,7 @@ def read(filename, data, meta):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
     data.attrs['intend'] = data.attrs['mhdr']['INTEND']
 
     sci = hdulist['SCI', 1].data
@@ -51,12 +55,12 @@ def read(filename, data, meta):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']:
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
-        time = read_time(meta, data)
+        time = read_time(meta, data, log)
     else:
         time = int_times['int_mid_BJD_TDB']
 
@@ -76,7 +80,7 @@ def read(filename, data, meta):
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
 
-    return data, meta
+    return data, meta, log
 
 
 def flag_bg(data, meta):

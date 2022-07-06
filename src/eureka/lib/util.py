@@ -81,12 +81,12 @@ def check_nans(data, mask, log, name=''):
     mask : ndarray
         Output mask where 0 will be written where the input data array has NaNs
     """
-    num_nans = np.sum(np.isnan(data))
+    num_nans = np.sum(np.isnan(data.values))
     if num_nans > 0:
         log.writelog(f"  WARNING: {name} has {num_nans} NaNs. Your subregion "
                      f"may be off the edge of the detector subarray.\n"
-                     "Masking NaN region and continuing, but you should really"
-                     " stop and reconsider your choices.")
+                     f"    Masking NaN region and continuing, but you should "
+                     f"really stop and reconsider your choices.")
         inan = np.where(np.isnan(data))
         # subdata[inan]  = 0
         mask[inan] = 0
@@ -340,7 +340,7 @@ def get_mad_1d(data, ind_min=0, ind_max=-1):
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))
 
 
-def read_time(meta, data):
+def read_time(meta, data, log):
     """Read in a time CSV file instead of using the FITS time array.
 
     Parameters
@@ -349,6 +349,8 @@ def read_time(meta, data):
         The metadata object.
     data : Xarray Dataset
         The Dataset object with the fits data stored inside.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -358,8 +360,8 @@ def read_time(meta, data):
     fname = os.path.join(meta.topdir,
                          os.sep.join(meta.time_file.split(os.sep)))
     if meta.firstFile:
-        print('  Note: Using the time stamps from:\n'+fname)
-    time = np.loadtxt(fname).flatten()[data.attrs['intstart']-1:
+        log.writelog('  Note: Using the time stamps from:\n    '+fname)
+    time = np.loadtxt(fname).flatten()[data.attrs['intstart']:
                                        data.attrs['intend']-1]
 
     return time

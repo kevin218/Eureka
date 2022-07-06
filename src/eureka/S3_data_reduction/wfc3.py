@@ -261,7 +261,7 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
     return meta, log
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from HST's WFC3 instrument.
 
     Parameters
@@ -272,6 +272,8 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored
     meta : eureka.lib.readECF.MetaClass
         The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -279,6 +281,8 @@ def read(filename, data, meta):
         The updated data object with the fits data stored inside
     meta : eureka.lib.readECF.MetaClass
         The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -421,7 +425,7 @@ def read(filename, data, meta):
     diffdata.attrs['mhdr'] = data.attrs['mhdr']
     diffdata.attrs['filename'] = data.attrs['filename']
 
-    return diffdata, meta
+    return diffdata, meta, log
 
 
 def flatfield(data, meta):
