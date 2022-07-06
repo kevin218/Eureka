@@ -115,7 +115,7 @@ def read(filename, data, meta):
             # Time array for the newest MIRISIM observations
             time = np.linspace(0, 47.712*(1849)/3600/24, 1849,
                                endpoint=True)[data.attrs['intstart']-1:
-                                              data.attrs['intend']]
+                                              data.attrs['intend']-1]
         elif data.attrs['mhdr']['EFFINTTM'] == 10.3376:
             # There is no time information in the old simulated MIRI data
             # As a placeholder, I am creating timestamps indentical to the

@@ -1,3 +1,4 @@
+.. _quickstart:
 
 ⚡️ Eureka! Quickstart ⚡️
 ==========================
@@ -28,6 +29,9 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 
 3. Set up your run directory 🗂
 -------------------------------
+
+
+.. _demos:
 
 3.1 Gather the demo files
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,7 +70,7 @@ So, let's only copy over the specific files needed to process this NIRSpec datas
 	cp demos/S3_nirspec_fs_template.ecf S3_wasp39b.ecf
 	cp demos/S4_template.ecf S4_wasp39b.ecf
 	cp demos/S5_template.ecf S5_wasp39b.ecf
-	cp demos/S5_fit_par_template.epf S5_fit_par_wasp39b.ecf
+	cp demos/S5_fit_par_template.epf S5_fit_par_wasp39b.epf
 	cp demos/S6_template.ecf S6_wasp39b.ecf
 
 Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's useful to keep this homogenous across files as it is what ``Eureka!`` interprets as an "event label", and is used to locate specific input files when running the pipeline. To see this more clearly, open up the ``run_eureka.py`` file and look at how the individual stages are being called. While you're here, modify the ``eventlabel`` string directly to match the chosen naming:

@@ -267,6 +267,11 @@ prof_deg
 Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It sets the polynomial degree when constructing the spatial profile. Default is 3. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 
+curvature
+''''''''
+Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
+
+
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
