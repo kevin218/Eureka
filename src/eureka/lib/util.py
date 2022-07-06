@@ -361,7 +361,7 @@ def read_time(meta, data, log):
                          os.sep.join(meta.time_file.split(os.sep)))
     if meta.firstFile:
         log.writelog('  Note: Using the time stamps from:\n    '+fname)
-    time = np.loadtxt(fname).flatten()[data.attrs['intstart']-1:
+    time = np.loadtxt(fname).flatten()[data.attrs['intstart']:
                                        data.attrs['intend']-1]
 
     return time
