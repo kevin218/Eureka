@@ -168,14 +168,21 @@ As we want to do our own spectral extraction, we set this variable to ``calints`
 .. note::
 	Note that other Instruments might used different suffixes!
 
+hst_cal
+'''''''
+Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
 
 horizonsfile
 ''''''''''''
-Only used for HST analyses. This should be set to the fully qualified path to the horizons file you've downloaded from https://ssd.jpl.nasa.gov/horizons/app.html#/. On that website, 1. Select "Vector Table", 2. Select "HST", 3. Select "@ssb" (Solar System Barycenter), 4. Select a date range that spans the days relevant to your observations. Then click Generate Ephemeris and click Download Results.
+Only used for HST analyses. The path with respect to hst_cal to the horizons file you've downloaded from https://ssd.jpl.nasa.gov/horizons/app.html#/. To get a new horizons file on that website, 1. Select "Vector Table", 2. Select "HST", 3. Select "@ssb" (Solar System Barycenter), 4. Select a date range that spans the days relevant to your observations. Then click Generate Ephemeris and click Download Results.
 
 leapdir
 '''''''
-Only used for HST analyses. The folder where leapsecond calibration files will be saved
+Only used for HST analyses. The folder with respect to hst_cal where leapsecond calibration files will be saved.
+
+flatfile
+''''''''
+Only used for HST analyses. The path with respect to hst_cal to the flatfield file to use. A WFC3/G102 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G102/WFC3.IR.G102.flat.2.fits.gz>`_ and a WFC3/G141 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G141/WFC3.IR.G141.flat.2.fits.gz>`_; be sure to unzip the files after downloading them.
 
 ywindow & xwindow
 '''''''''''''''''
@@ -212,10 +219,6 @@ flatsigma
 '''''''''
 Only used for HST analyses. Used to sigma clip bad values from the flatfield image.
 
-flatfile
-''''''''
-Only used for HST analyses. The fully qualified path to the flatfield file to use. A WFC3/G102 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G102/WFC3.IR.G102.flat.2.fits.gz>`_ and a WFC3/G141 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G141/WFC3.IR.G141.flat.2.fits.gz>`_; be sure to unzip the files after downloading them.
-
 diffthresh
 ''''''''''
 Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
@@ -246,13 +249,11 @@ The plot below shows you which parts will be used for the background calculation
 
 .. image:: ../media/bg_hw.png
 
-
 bg_thresh
 '''''''''
 Double-iteration X-sigma threshold for outlier rejection along time axis.
 The flux of every background pixel will be considered over time for the current data segment.
 e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed in time for every background pixel. Outliers will be masked and not considered in the background flux calculation.
-
 
 bg_deg
 ''''''
@@ -279,26 +280,21 @@ p3thresh
 ''''''''
 Only important if ``bg_deg => 0`` (see above). # sigma threshold for outlier rejection during background subtraction which corresponds to step 3 of optimal spectral extraction, as defined by Horne (1986).
 
-
 p5thresh
 ''''''''
 Used during Optimal Extraction. # sigma threshold for outlier rejection during step 5 of optimal spectral extraction, as defined by Horne (1986). Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
-
 
 p7thresh
 ''''''''
 Used during Optimal Extraction. # sigma threshold for outlier rejection during step 7 of optimal spectral extraction, as defined by Horne (1986). Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
-
 fittype
 '''''''
 Used during Optimal Extraction. fittype defines how to construct the normalized spatial profile for optimal spectral extraction. Options are: 'smooth', 'meddata', 'wavelet', 'wavelet2D', 'gauss', or 'poly'. Using the median frame (meddata) should work well with JWST. Otherwise, using a smoothing function (smooth) is the most robust and versatile option. Default is meddata. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
-
 window_len
 ''''''''''
 Used during Optimal Extraction. window_len is only used when fittype = 'smooth'. It sets the length scale over which the data are smoothed. Default is 31. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
-
 
 prof_deg
 ''''''''
@@ -311,7 +307,6 @@ Only used for HST analyses. The file indices to use as reference frames for 2D d
 curvature
 ''''''''
 Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
-
 
 isplots_S3
 ''''''''''
@@ -343,7 +338,7 @@ The path to the directory in which to output the Stage 3 JWST data and plots.
 
 topdir + time_file
 ''''''''''''''''''
-The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
+Optional. The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
 
 
 

@@ -7,11 +7,11 @@ nfiles          1           # The max number of data files to analyze simultaneo
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix          ima         # Data file suffix
 
-# Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
-horizonsfile    ../tests/data/WFC3/cal/2014_02.vec
-
-# Folder where leapsecond calibration files will be saved
-leapdir         ../tests/data/WFC3/cal/leapdir/
+# Calibration files
+hst_cal         ../tests/data/WFC3/cal/                # The path to the reference files
+horizonsfile    2014_02.vec                            # Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
+leapdir         leapdir/                               # Folder where leapsecond calibration files will be read/saved
+flatfile        WFC3.IR.G102.flat.2.fits               # The calibration file to use for flat-fielding
 
 # Subarray region of interest
 ywindow         [80,250]    # Vertical axis as seen in DS9
@@ -25,7 +25,6 @@ centroidguess   [29, 154]
 # Flatfield parameters
 flatoffset      [[374, 374]]  #[[379, 379]]
 flatsigma       3
-flatfile        ../tests/data/WFC3/cal/WFC3.IR.G102.flat.2.fits
 
 # Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs)
 diffthresh      10

@@ -1,5 +1,6 @@
 
 # WFC3 specific rountines go here
+import os
 import numpy as np
 import multiprocessing as mp
 from astropy.io import fits
@@ -414,14 +415,23 @@ def read(filename, data, meta, log):
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
     if meta.horizonsfile is not None:
+        horizon_path = os.path.join(meta.hst_cal,
+                                    *meta.horizonsfile.split(os.sep))
+    if meta.horizonsfile is not None and os.path.isfile(horizon_path):
         # Apply light-time correction, convert to BJD_TDB
         # Horizons file created for HST around time of observations
-        bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, meta.horizonsfile)
+        bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, horizon_path)
         bjdutc = jd + bjd_corr/86400.
         # FINDME: this was utc_tt, but I believe it should have
         # been utc_tdb instead
-        time = utc_tt.utc_tdb(bjdutc, meta.leapdir, log)
-        frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., meta.leapdir,
+        if not hasattr(meta, 'leapdir') or meta.leapdir is None:
+            meta.leapdir = 'leapdir'
+        leapdir_path = os.path.join(meta.hst_cal,
+                                    *meta.leapdir.split(os.sep))
+        if leapdir_path[-1] != os.sep:
+            leapdir_path += os.sep
+        time = utc_tt.utc_tdb(bjdutc, leapdir_path, log)
+        frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., leapdir_path,
                                    log)
         time_units = 'BJD_TDB'
     else:
@@ -531,8 +541,10 @@ def flatfield(data, meta, log):
         log.writelog(f'  Performing flat fielding using:\n'
                      f'    {meta.flatfile}',
                      mute=(not meta.verbose))
+    flatfile_path = os.path.join(meta.hst_cal,
+                                 *meta.flatfile.split(os.sep))
     # Make list of master flat field frames
-    tempflat, tempmask = hst.makeflats(meta.flatfile,
+    tempflat, tempmask = hst.makeflats(flatfile_path,
                                        [np.mean(data.wave_2d.values,
                                                 axis=0), ],
                                        [[0, meta.nx], ], [[0, meta.ny], ],

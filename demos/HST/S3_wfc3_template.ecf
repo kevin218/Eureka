@@ -7,11 +7,13 @@ nfiles          1000        # The max number of data files to analyze simultaneo
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix          ima         # Data file suffix
 
-# Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
-horizonsfile    /home/User/Data/HST_Calibrations/horizons/2014_02.vec
-
-# Folder where leapsecond calibration files will be saved
-leapdir         /home/User/Data/HST_Calibrations/leapdir/
+# Calibration files
+hst_cal         /home/User/Data/WF3_Calibration/       # The path to the reference files
+horizonsfile    horizons/horizons_results.vec          # Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
+leapdir         leapdir/                               # Folder where leapsecond calibration files will be read/saved
+flatfile        flats/WFC3.IR.G102.flat.2.fits         # The calibration file to use for flat-fielding
+# flatfile        flats/WFC3.IR.G141.flat.2.fits
+# flatfile        flats/sedFFcube-both.fits
 
 # Subarray region of interest
 ywindow         [80,250]    # Vertical axis as seen in DS9
@@ -25,9 +27,6 @@ centroidguess   [29, 154]   # A guess for the location of the star in the direct
 # Flatfield parameters
 flatoffset      [[374, 374]]  #[[379, 379]]
 flatsigma       50
-flatfile        /home/User/Data/HST_Calibrations/G102_Calibration/WFC3.IR.G102.flat.2.fits
-#flatfile        /home/User/Data/HST_Calibrations/G141_Calibration/WFC3.IR.G141.flat.2.fits
-#flatfile        /home/User/Data/HST_Calibrations/G141_Calibration/sedFFcube-both.fits
 
 # Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs)
 diffthresh      10                
