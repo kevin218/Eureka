@@ -330,6 +330,8 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
     - December 29-30, 2021 Taylor Bell
         Moved code to separate file, added documentation.
     """
+    data = np.ma.masked_invalid(np.ma.copy(data))
+    
     # bin data into multiple bin sizes
     npts = data.size
     if maxnbins is None:
