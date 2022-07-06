@@ -273,7 +273,7 @@ def straighten_trace(data, meta, log):
         The updated metadata object.
     '''
     log.writelog('  Correcting curvature and bringing trace in the center '
-                 'of the detector', mute=(not meta.verbose))
+                 'of the detector...', mute=(not meta.verbose))
     # This method only works with the median profile for the extraction
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
@@ -285,7 +285,8 @@ def straighten_trace(data, meta, log):
     shifts, new_center = find_column_median_shifts(median_frame)
 
     # Correct wavelength (only one frame) 
-    log.writelog('  Correct the wavelength solution', mute=(not meta.verbose))
+    log.writelog('  Correcting the wavelength solution...',
+                 mute=(not meta.verbose))
     # broadcast to (1, detector.shape) which is the expected shape of
     # the function
     single_shift = np.expand_dims(shifts, axis=0)
@@ -294,7 +295,7 @@ def straighten_trace(data, meta, log):
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-    log.writelog('  Correct the curvature over all integrations',
+    log.writelog('  Correcting the curvature over all integrations...',
                  mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
@@ -307,12 +308,12 @@ def straighten_trace(data, meta, log):
     data.v0.values = roll_columns(data.v0.values, shifts)
     
     # update the new src_ypos
-    log.writelog('  Update src_ypos to new center, row {}'.format(new_center),
+    log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
                  mute=(not meta.verbose))
     meta.src_ypos = new_center
 
     # update the median frame
-    log.writelog('  Update median frame now that the trace is corrected',
+    log.writelog('  Updating median frame now that the trace is corrected...',
                  mute=(not meta.verbose))
     data.medflux.values = np.median(data.flux.values, axis=0)
 
