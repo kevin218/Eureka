@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import norm
-from copy import deepcopy
 
 
 def ln_like(theta, lc, model, freenames):
@@ -52,7 +51,7 @@ def ln_like(theta, lc, model, freenames):
                 theta[ind[chan]] * lc.unc[chan*lc.time.size:
                                           (chan+1)*lc.time.size]
     else:
-        lc.unc_fit = deepcopy(lc.unc)
+        lc.unc_fit = np.ma.copy(lc.unc)
     if model.GP:
         ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)
     else:
@@ -290,7 +289,7 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     """
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
-    chi2 = np.sum((residuals / lc.unc_fit) ** 2)
+    chi2 = np.ma.sum((residuals / lc.unc_fit) ** 2)
     chi2red = chi2 / (len(lc.flux) - len(freenames))
 
     log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.verbose))

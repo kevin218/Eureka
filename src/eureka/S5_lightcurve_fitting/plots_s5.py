@@ -188,8 +188,8 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     - December 29, 2021 Taylor Bell
         Moved plotting code to a separate function.
     """
-    samples = np.copy(samples)
-    freenames = np.copy(freenames)
+    samples = samples
+    freenames = freenames
     ndim = len(freenames)+1  # One extra for the 1D histogram
     fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
     fig.clf()
