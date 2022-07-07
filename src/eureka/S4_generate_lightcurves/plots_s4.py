@@ -97,8 +97,9 @@ def lc_driftcorr(meta, wave_1d, optspec):
     -------
     None
     '''
-    plt.figure(4101, figsize=(8, 8))
-    plt.clf()
+    optspec = np.ma.masked_invalid(optspec)
+    normspec = optspec / np.ma.mean(optspec, axis=0)
+
     wmin = np.ma.min(wave_1d)
     wmax = np.ma.max(wave_1d)
     n_int, nx = optspec.shape
@@ -106,22 +107,49 @@ def lc_driftcorr(meta, wave_1d, optspec):
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
         meta.vmax = 1.03
-    normspec = optspec / np.ma.mean(optspec, axis=0)
-    plt.imshow(normspec, origin='lower', aspect='auto',
-               extent=[wmin, wmax, 0, n_int], vmin=meta.vmin, vmax=meta.vmax,
-               cmap=plt.cm.RdYlBu_r)
+    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
+        meta.time_axis = 'left'
+    elif meta.time_axis not in ['left', 'lower']:
+        print("WARNING: meta.time_axis is not one of ['left', 'lower']!"
+              "Using 'left' by default.")
+        meta.time_axis = 'left'
+    
+    plt.figure(4101, figsize=(8, 8))
+    plt.clf()
+    if meta.time_axis == 'left':
+        plt.imshow(normspec, origin='lower', aspect='auto',
+                   extent=[wmin, wmax, 0, n_int], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel('Integration Number')
+        plt.xlabel(r'Wavelength ($\mu m$)')
+        plt.colorbar(label='Normalized Flux')
+
+        if len(meta.wave_low) > 1:
+            # Insert vertical dashed lines at spectroscopic channel edges
+            secax = plt.gca().secondary_xaxis('top')
+            xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
+            xticks_labels = [f'{np.round(xtick, 4):.4f}' for xtick in xticks]
+            secax.set_xticks(xticks, xticks_labels, rotation=90,
+                             fontsize='xx-small')
+            plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+    else:
+        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
+                   extent=[0, n_int, wmin, wmax], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel(r'Wavelength ($\mu m$)')
+        plt.xlabel('Integration Number')
+        plt.colorbar(label='Normalized Flux', pad=0.075)
+
+        if len(meta.wave_low) > 1:
+            # Insert vertical dashed lines at spectroscopic channel edges
+            secax = plt.gca().secondary_yaxis('right')
+            yticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
+            yticks_labels = [f'{np.round(ytick, 4):.4f}' for ytick in yticks]
+            secax.set_yticks(yticks, yticks_labels, rotation=0,
+                             fontsize='xx-small')
+            plt.hlines(yticks, 0, n_int, '0.3', 'dashed')
+
     plt.title("MAD = " + str(np.round(meta.mad_s4).astype(int)) + " ppm")
-
-    # Insert vertical dashed lines at spectroscopic channel edges
-    secax = plt.gca().secondary_xaxis('top')
-    xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
-    secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
-                     fontsize='xx-small')
-    plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
-
-    plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu m$)')
-    plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     fname = 'figs'+os.sep+'fig4101_2D_LC'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
