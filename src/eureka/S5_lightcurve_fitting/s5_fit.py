@@ -413,8 +413,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     key).value
                     ptype = 'free'
                     priorpar1 = value
-                    print(key)
-                    print(best_model.errs)
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
                     par = [value, ptype, priorpar1, priorpar2, prior]
