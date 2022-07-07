@@ -27,30 +27,47 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     if white:
         fig.suptitle(f'White-light Bandpass {i}: {meta.wave_min:.3f} - '
                      f'{meta.wave_max:.3f}')
-        # Normalized light curve
-        norm_lcdata = (lc['flux_white'][0] /
-                       np.nanmedian(lc['flux_white']))
-        norm_lcerr = (lc['err_white'][0] /
-                      np.nanmedian(lc['err_white']))
+        # Normalize the light curve
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta,
+                                                          lc['flux_white'][i],
+                                                          lc['err_white'][i])
         i = 0
         fname_tag = 'white'
     else:
         fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                      f'{lc.wave_hi.values[i]:.3f}')
-        # Normalized light curve
-        norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i].values)
-        norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
+        # Normalize the light curve
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
+                                                          lc['err'][i])
         ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
         fname_tag = f'ch{ch_number}'
+        
+    time_modifier = np.floor(np.ma.min(lc.time.values))
+    
+    # Plot the normalized light curve
+    if meta.inst == 'wfc3':
+        for p in range(2):
+            iscans = np.where(lc.scandir.values == p)[0]
 
-    time_modifier = np.floor(lc.time.values[0])
-    ax.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
-                color=f'C{i}', mec=f'C{i}', alpha=0.2)
-    mad = util.get_mad_1d(norm_lcdata)
-    meta.mad_s4_binned.append(mad)
-    log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
-    plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
-             transform=ax.transAxes, color='k')
+            if len(iscans) > 0:
+                ax.errorbar(lc.time.values[iscans]-time_modifier,
+                            norm_lcdata[iscans]+0.005*p,
+                            norm_lcerr[iscans], fmt='o', color=f'C{p}',
+                            mec=f'C{p}', alpha=0.2)
+                mad = util.get_mad_1d(norm_lcdata[iscans])
+                meta.mad_s4_binned.append(mad)
+                log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+                plt.text(0.05, 0.075+0.05*p,
+                         f"MAD = {np.round(mad).astype(int)} ppm",
+                         transform=ax.transAxes, color=f'C{p}')
+    else:
+        plt.errorbar(lc.time.values-time_modifier, norm_lcdata, norm_lcerr,
+                     fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
+        mad = util.get_mad_1d(norm_lcdata)
+        meta.mad_s4_binned.append(mad)
+        log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+        plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+                 transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
@@ -91,7 +108,7 @@ def drift1d(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, wave_1d, optspec):
+def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
@@ -103,25 +120,39 @@ def lc_driftcorr(meta, wave_1d, optspec):
         which have been set in the S3 ecf.
     optspec : ndarray
         The optimally extracted spectrum.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
     '''
+    optspec = np.ma.masked_invalid(optspec)
+    optspec = np.ma.masked_where(optmask, optspec)
+
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
-    wmin = np.ma.min(wave_1d)
-    wmax = np.ma.max(wave_1d)
-    n_int, nx = optspec.shape
+    wmin = meta.wave_min
+    wmax = meta.wave_max
+    iwmin = np.nanargmin(np.abs(wave_1d-wmin).values)
+    iwmax = np.nanargmin(np.abs(wave_1d-wmax).values)
+    n_int = optspec.shape[0]
     vmin = 0.97
     vmax = 1.03
-    normspec = optspec / np.ma.mean(optspec, axis=0)
-    plt.imshow(normspec, origin='lower', aspect='auto',
+
+    # Normalize the light curve
+    norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+
+    plt.imshow(norm_lcdata, origin='lower', aspect='auto',
                extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
                cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(meta.mad_s4).astype(int)) + " ppm")
-    # Insert vertical dashed lines at spectroscopic channel edges
-    secax = plt.gca().secondary_xaxis('top')
-    xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
-    secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
-                     fontsize='xx-small')
-    plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+
+    if meta.nspecchan > 1:
+        # Insert vertical dashed lines at spectroscopic channel edges
+        secax = plt.gca().secondary_xaxis('top')
+        xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
+        secax.set_xticks(xticks, np.round(xticks, 6), rotation=90,
+                         fontsize='xx-small')
+        plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+
     plt.ylabel('Integration Number')
     plt.xlabel(r'Wavelength ($\mu m$)')
     plt.colorbar(label='Normalized Flux')

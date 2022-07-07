@@ -152,14 +152,18 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                 log.writelog("\nStarting Fit of White-light Light Curve\n")
 
-                # Get the flux and error measurements for the current channel
-                flux = lc.flux_white.values[0, :]
-                flux_err = lc.err_white.values[0, :]
-
-                # Normalize flux and uncertainties to avoid large flux values
-                # FINDME: replace when constant offset is implemented
-                flux_err = flux_err/np.nanmedian(flux)
-                flux = flux/np.nanmedian(flux)
+                # Get the flux and error measurements for
+                # the current channel
+                mask = lc.mask_white.values[0, :]
+                flux = np.ma.masked_where(mask,
+                                          lc.flux_white.values[0, :])
+                flux_err = np.ma.masked_where(mask,
+                                              lc.err_white.values[0, :])
+                
+                # Normalize flux and uncertainties to avoid large
+                # flux values
+                flux_err = flux_err/np.ma.mean(flux)
+                flux = flux/np.ma.mean(flux)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -182,15 +186,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
-                    # FINDME: need to consider optmask
+                    mask = lc.mask.values[channel, :]
+                    flux_temp = np.ma.masked_where(mask,
+                                                   lc.data.values[channel, :])
+                    err_temp = np.ma.masked_where(mask,
+                                                  lc.err.values[channel, :])
                     flux = np.ma.append(flux,
-                                        (lc.data.values[channel, :] /
-                                         np.nanmean(
-                                             lc.data.values[channel, :])))
+                                        flux_temp/np.ma.mean(flux_temp))
                     flux_err = np.ma.append(flux_err,
-                                            (lc.err.values[channel, :] /
-                                             np.nanmean(
-                                                 lc.data.values[channel, :])))
+                                            err_temp/np.ma.mean(flux_temp))
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -208,13 +212,16 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Get the flux and error measurements for
                     # the current channel
-                    flux = lc.data.values[channel, :]
-                    flux_err = lc.err.values[channel, :]
-
+                    mask = lc.mask.values[channel, :]
+                    flux = np.ma.masked_where(mask,
+                                              lc.data.values[channel, :])
+                    flux_err = np.ma.masked_where(mask,
+                                                  lc.err.values[channel, :])
+                    
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/np.nanmean(flux)
-                    flux = flux/np.nanmean(flux)
+                    flux_err = flux_err/np.ma.mean(flux)
+                    flux = flux/np.ma.mean(flux)
 
                     meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
@@ -406,6 +413,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     key).value
                     ptype = 'free'
                     priorpar1 = value
+                    print(key)
+                    print(best_model.errs)
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
                     par = [value, ptype, priorpar1, priorpar2, prior]

@@ -154,7 +154,8 @@ def read(filename, data, meta, log):
         v0 = np.swapaxes(v0, 1, 2)[:, :, ::-1]
         if not np.all(hdulist['WAVELENGTH', 1].data == 0):
             wave_2d = np.swapaxes(wave_2d, 0, 1)[:, :, ::-1]
-        if meta.firstFile:
+        if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
+                meta.bg_hw == meta.bg_hw_range[0]):
             # If not, we've already done this and don't want to switch it back
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
@@ -333,7 +334,7 @@ def wave_MIRI_hardcoded():
     return lam_x_full
 
 
-def flag_bg(data, meta):
+def flag_bg(data, meta, log):
     '''Outlier rejection of sky background along time axis.
 
     Uses the code written for NIRCam which works for MIRI as long
@@ -341,17 +342,19 @@ def flag_bg(data, meta):
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
     '''
-    return nircam.flag_bg(data, meta)
+    return nircam.flag_bg(data, meta, log)
 
 
 def fit_bg(dataim, datamask, n, meta, isplots=0):
@@ -383,3 +386,41 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
         The current integration number.
     """
     return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Uses the code written for NIRCam which works for MIRI as long
+    as the MIRI data gets rotated.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version based on the code in s3_reduce.py
+    """
+    return nircam.cut_aperture(data, meta, log)

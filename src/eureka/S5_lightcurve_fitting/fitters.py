@@ -370,7 +370,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     lower_errs = q[1]-q[0]
 
     model.update(fit_params, freenames)
-    model.errs = errs
+    model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
@@ -846,7 +846,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     lower_errs = q[1]-q[0]
 
     model.update(fit_params, freenames)
-    model.errs = errs
+    model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
