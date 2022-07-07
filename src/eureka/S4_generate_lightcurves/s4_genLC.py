@@ -325,10 +325,27 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 index = np.where((spec.wave_1d >= meta.wave_min) *
                                  (spec.wave_1d < meta.wave_max))[0]
                 central_wavelength = np.mean(spec.wave_1d[index].values)
-                lc.attrs['white_wavelength'] = central_wavelength
-                lc.attrs['flux_white'] = np.zeros(meta.n_int)
-                lc.attrs['err_white'] = np.zeros(meta.n_int)
-                lc.attrs['mask_white'] = np.zeros(meta.n_int, dtype=bool)
+                lc['flux_white'] = xrio.makeTimeLikeDA(np.zeros(meta.n_int),
+                                                       lc.time,
+                                                       lc.data.flux_units,
+                                                       lc.time.time_units,
+                                                       'flux_white')
+                lc['err_white'] = xrio.makeTimeLikeDA(np.zeros(meta.n_int),
+                                                      lc.time,
+                                                      lc.data.flux_units,
+                                                      lc.time.time_units,
+                                                      'err_white')
+                lc['mask_white'] = xrio.makeTimeLikeDA(np.zeros(meta.n_int,
+                                                                dtype=bool),
+                                                       lc.time, 'None',
+                                                       lc.time.time_units,
+                                                       'mask_white')
+                lc.flux_white.attrs['wavelength'] = central_wavelength
+                lc.flux_white.attrs['wave_units'] = lc.data.wave_units
+                lc.err_white.attrs['wavelength'] = central_wavelength
+                lc.err_white.attrs['wave_units'] = lc.data.wave_units
+                lc.mask_white.attrs['wavelength'] = central_wavelength
+                lc.mask_white.attrs['wave_units'] = lc.data.wave_units
                 
                 log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
                              f"{meta.wave_max:.3f}")
@@ -339,20 +356,22 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                spec.opterr.values[:, index])
                 # Compute mean flux for each spectroscopic channel
                 # Sumation leads to outliers when there are masked points
-                lc.attrs['flux_white'] = np.ma.mean(optspec_ma, axis=1)
+                lc.flux_white[:] = np.ma.mean(optspec_ma, axis=1).data
                 # Add uncertainties in quadrature
                 # then divide by number of good points to get
                 # proper uncertainties
-                lc.attrs['err_white'] = (np.sqrt(np.ma.sum(opterr_ma**2,
-                                                           axis=1)) /
-                                         np.ma.MaskedArray.count(opterr_ma,
+                lc.err_white[:] = (np.sqrt(np.ma.sum(opterr_ma**2,
+                                                     axis=1)) /
+                                   np.ma.MaskedArray.count(opterr_ma,
+                                                           axis=1)).data
+                lc.mask_white[:] = np.ma.getmaskarray(np.ma.mean(optspec_ma,
                                                                  axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    lc.attrs['flux_white'], lc.attrs['mask_white'], nout = \
+                    lc.flux_white[:], lc.mask_white[:], nout = \
                         clipping.clip_outliers(
-                            lc.flux_white, log, lc.white_wavelength,
+                            lc.flux_white, log, lc.flux_white.wavelength,
                             lc.data.wave_units, mask=lc.mask_white,
                             sigma=meta.sigma, box_width=meta.box_width,
                             maxiters=meta.maxiters, boundary=meta.boundary,
