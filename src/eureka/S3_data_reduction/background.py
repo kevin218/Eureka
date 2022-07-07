@@ -6,6 +6,7 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 from astropy.nddata import CCDData
 from astropy.stats import SigmaClip
+from scipy.signal import savgol_filter
 from photutils import (MMMBackground, MedianBackground,
                        Background2D, MeanBackground)
 import os
@@ -13,7 +14,8 @@ import os
 from ..lib import clipping
 from ..lib.plots import figure_filetype
 
-__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3', 'bkg_sub']
+__all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3', 'bkg_sub',
+           'savgol_bkg']
 
 
 def BGsubtraction(data, meta, log, isplots):
@@ -593,3 +595,33 @@ def fitbg3(data, order_mask, readnoise=11,
         bkg_var[i] = np.nansum(v, axis=0)
 
     return bkg, bkg_var, rm_crs
+
+def savgol_bkg(data, mask, window_length=7, polyorder=2, mode='nearest'):
+    """
+    Completes a simple Savitsky Golay filter to the background to
+    remove the 1/f noise.
+
+    Parameters
+    ----------
+    data : np.ndarray
+    mask : np.ndarray
+    window_length : int, optional
+       The length of the filter window (i.e. the number of coefficients).
+       window_length must be an odd integer. Default is 7.
+    polyorder : int, optional
+       The order of the polynomial used to fit the samples. polyorder must be
+       less than window_length. Default is 2.
+    mode : str, optional
+       Must be 'mirror', 'constant', 'nearest', 'wrap', or 'interp'. This
+       determines the type of extension to use for the padded signal to which
+       the filter is applied. Default is 'nearest'.
+
+    Returns
+    -------
+    bkg : np.ndarray
+       Array of background pixel values.
+    """
+    bkg = savgol_filter((data*mask), window_length=window_length,
+                        polyorder=polyorder, axis=1,
+                        mode=mode)
+    return bkg

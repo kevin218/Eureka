@@ -98,10 +98,10 @@ def read(filename, data, meta):
     return data, meta
 
 
-def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4],
+def fit_bg(data, meta, which_bkg='simple', readnoise=11, sigclip=[4, 4, 4],
            box=(5, 2), filter_size=(2, 2),
-           bkg_estimator=['median', ],
-           testing=False, isplots=0):
+           bkg_estimator=['median', ], window_length=7, polyorder=2,
+           mode='nearest', testing=False, isplots=0):
     """Subtracts background from non-spectral regions.
 
     Uses photutils.background.Background2D to estimate background noise.
@@ -114,6 +114,11 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4],
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    which_bkg : str, optional
+        Sets a specific background mode to use. Options are 'simple', which
+        estimates the background via a Savitsky Golay filter. Other option is
+        '2D' which does some fancier `photutils` 2D background estimation.
+        '2D' takes longer than 'simple'.
     readnoise : float, optional
        An estimation of the readnoise of the detector.
        Default is 11.
@@ -132,6 +137,16 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4],
     bkg_estimator : list, array; optional
        The value which to approximate the background values as. Options are
        "mean", "median", or "MMMBackground". Default is ['median', ].
+    window_length : int, optional
+       The length of the filter window (i.e. the number of coefficients).
+       window_length must be an odd integer. Default is 7.
+    polyorder : int, optional
+       The order of the polynomial used to fit the samples. polyorder must be
+       less than window_length. Default is 2.
+    mode : str, optional
+       Must be 'mirror', 'constant', 'nearest', 'wrap', or 'interp'. This
+       determines the type of extension to use for the padded signal to which
+       the filter is applied. Default is 'nearest'.
     testing : bool, optional
        Evaluates the background across fewer integrations to test and
        save computational time. Default is False.
@@ -153,20 +168,33 @@ def fit_bg(data, meta, readnoise=11, sigclip=[4, 4, 4],
                               meta.trace_edge, booltype=True,
                               return_together=True)
 
-    bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
-                                   readnoise, sigclip,
-                                   bkg_estimator=bkg_estimator,
-                                   box=box, filter_size=filter_size,
-                                   testing=testing, isplots=isplots)
+    if which_bkg == '2D':
+        bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
+                                       readnoise, sigclip,
+                                       bkg_estimator=bkg_estimator,
+                                       box=box, filter_size=filter_size,
+                                       testing=testing, isplots=isplots)
+        data['bg_var'] = xrio.makeFluxLikeDA(bkg_var, meta.time,
+                                             data['flux'].attrs['flux_units'],
+                                             data['flux'].attrs['time_units'],
+                                             name='bg_var')
+
+    elif which_bkg.lower() == 'simple':
+        bkg = savgol_bkg(data.flux, np.array(box_mask),
+                         window_length=window_length, polyorder=polyorder,
+                         mode=mode)
+    else:
+        log.writelog('Background method not implemented. Please select either \
+                      "2D" or "simple".')
+        raise AssertionError(f'Background method not implemented. Please'
+                             f'select either "2D" or "simple".')
+
 
     data['bg'] = xrio.makeFluxLikeDA(bkg, meta.time,
                                      data['flux'].attrs['flux_units'],
                                      data['flux'].attrs['time_units'],
                                      name='bg')
-    data['bg_var'] = xrio.makeFluxLikeDA(bkg_var, meta.time,
-                                         data['flux'].attrs['flux_units'],
-                                         data['flux'].attrs['time_units'],
-                                         name='bg_var')
+
     data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bg, meta.time,
                                              data['flux'].attrs['flux_units'],
                                              data['flux'].attrs['time_units'],
