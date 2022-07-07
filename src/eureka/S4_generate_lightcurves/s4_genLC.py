@@ -208,7 +208,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     spec.optspec[:, w], spec.optmask[:, w], nout = \
                         clipping.clip_outliers(spec.optspec[:, w], log,
                                                spec.wave_1d[w].values,
-                                               spec.wave_1d.attrs['wave_units'],
+                                               spec.wave_1d.wave_units,
                                                mask=spec.optmask[:, w],
                                                sigma=meta.sigma,
                                                box_width=meta.box_width,
@@ -306,8 +306,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     lc['data'][i], lc['mask'][i], nout = \
                         clipping.clip_outliers(
                             lc.data[i], log, lc.data.wavelength[i].values,
-                            lc.data.attrs["wave_units"],
-                            mask=lc.mask[i],
+                            lc.data.wave_units, mask=lc.mask[i],
                             sigma=meta.sigma, box_width=meta.box_width,
                             maxiters=meta.maxiters, boundary=meta.boundary,
                             fill_value=meta.fill_value, verbose=False)
@@ -327,9 +326,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                  (spec.wave_1d < meta.wave_max))[0]
                 central_wavelength = np.mean(spec.wave_1d[index].values)
                 lc.attrs['white_wavelength'] = central_wavelength
-                lc.attrs['flux_white'] = np.zeros((1, meta.n_int))
-                lc.attrs['err_white'] = np.zeros((1, meta.n_int))
-                lc.attrs['mask_white'] = np.zeros((1, meta.n_int), dtype=bool)
+                lc.attrs['flux_white'] = np.zeros(meta.n_int)
+                lc.attrs['err_white'] = np.zeros(meta.n_int)
+                lc.attrs['mask_white'] = np.zeros(meta.n_int, dtype=bool)
                 
                 log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
                              f"{meta.wave_max:.3f}")
@@ -340,23 +339,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                spec.opterr.values[:, index])
                 # Compute mean flux for each spectroscopic channel
                 # Sumation leads to outliers when there are masked points
-                lc.attrs['flux_white'][0] = np.ma.mean(optspec_ma, axis=1)
+                lc.attrs['flux_white'] = np.ma.mean(optspec_ma, axis=1)
                 # Add uncertainties in quadrature
                 # then divide by number of good points to get
                 # proper uncertainties
-                lc.attrs['err_white'][0] = (np.sqrt(np.ma.sum(opterr_ma**2,
-                                                        axis=1)) /
-                                      np.ma.MaskedArray.count(opterr_ma,
-                                                              axis=1))
+                lc.attrs['err_white'] = (np.sqrt(np.ma.sum(opterr_ma**2,
+                                                           axis=1)) /
+                                         np.ma.MaskedArray.count(opterr_ma,
+                                                                 axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    lc.attrs['flux_white'][0], lc.attrs['mask_white'][0], nout = \
+                    lc.attrs['flux_white'], lc.attrs['mask_white'], nout = \
                         clipping.clip_outliers(
-                            lc.attrs['flux_white'][0], log,
-                            lc.attrs['white_wavelength'],
-                            lc.data.attrs["wave_units"],
-                            mask=lc.attrs['mask_white'][0],
+                            lc.flux_white, log, lc.white_wavelength,
+                            lc.data.wave_units, mask=lc.mask_white,
                             sigma=meta.sigma, box_width=meta.box_width,
                             maxiters=meta.maxiters, boundary=meta.boundary,
                             fill_value=meta.fill_value, verbose=False)

@@ -29,7 +29,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
                      f'{meta.wave_max:.3f}')
         # Normalize the light curve
         norm_lcdata, norm_lcerr = util.normalize_spectrum(
-            meta, lc.attrs['flux_white'][i], lc.attrs['err_white'][i])
+            meta, lc.flux_white, lc.err_white)
         i = 0
         fname_tag = 'white'
     else:
