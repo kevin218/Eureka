@@ -69,7 +69,7 @@ def box_extract(data, var, boxmask):
     return all_spec, all_var
 
 
-def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
+def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=None,
                booltype=False, return_together=False, pos1=None, pos2=None,
                pos3=None, isplots=0):
     """Really dirty box mask for background purposes.
@@ -106,7 +106,8 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
     """
     order1 = np.zeros((boxsize1, len(img[0])))
     order2 = np.zeros((boxsize2, len(img[0])))
-    order3 = np.zeros((boxsize3, len(img[0])))
+    if boxsize3 is not None:
+        order3 = np.zeros((boxsize3, len(img[0])))
     mask = np.zeros(img.shape)
 
     if tab is not None:
@@ -131,10 +132,11 @@ def dirty_mask(img, tab=None, boxsize1=70, boxsize2=60, boxsize3=60,
             pass
 
         # Third order boxmask
-        if not np.isnan(pos3[i]):
-            s, e = int(pos3[i]-boxsize3/2), int(pos3[i]+boxsize3/2)
-            order3[:, i] = img[s:e, i]
-            mask[s:e, i] += m3
+        if boxsize3 is not None:
+            if not np.isnan(pos3[i]):
+                s, e = int(pos3[i]-boxsize3/2), int(pos3[i]+boxsize3/2)
+                order3[:, i] = img[s:e, i]
+                mask[s:e, i] += m3
 
     if isplots >= 6:
         plt.imshow(mask)
