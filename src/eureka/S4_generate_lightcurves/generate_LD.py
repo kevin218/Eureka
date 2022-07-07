@@ -71,5 +71,4 @@ def exotic_ld(meta, spec):
         nonlin_4[i] = \
             sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i], \
                                                          mode)
-    ld_coeffs = [lin_c1, quad, nonlin_3, nonlin_4]
-    return ld_coeffs
+    return lin_c1, quad, nonlin_3, nonlin_4
