@@ -276,6 +276,14 @@ isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
+vmin
+''''
+Optional. Sets the vmin of the color bar for Figure 3101.
+
+vmax
+''''
+Optional. Sets the vmax of the color bar for Figure 3101.
+
 testing_S3
 ''''''''''
 If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run. Also, only five integrations from the last segment will be reduced.
@@ -366,6 +374,13 @@ isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
 
+vmin
+''''
+Optional. Sets the vmin of the color bar for Figure 4101.
+
+vmax
+''''
+Optional. Sets the vmax of the color bar for Figure 4101.
 
 hide_plots
 ''''''''''

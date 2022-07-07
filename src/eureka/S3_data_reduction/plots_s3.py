@@ -28,11 +28,13 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
     wmin = wave_1d.min()
     wmax = wave_1d.max()
     n_int, nx = optspec.shape
-    vmin = 0.97
-    vmax = 1.03
+    if not hasattr(meta, 'vmin') or meta.vmin is None:
+        meta.vmin = 0.97
+    if not hasattr(meta, 'vmax') or meta.vmin is None:
+        meta.vmax = 1.03
     normspec = optspec / np.ma.mean(optspec, axis=0)
     plt.imshow(normspec, origin='lower', aspect='auto',
-               extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
+               extent=[wmin, wmax, 0, n_int], vmin=meta.vmin, vmax=meta.vmax,
                cmap=plt.cm.RdYlBu_r)
     plt.title("MAD = " + str(np.round(meta.mad_s3, 0).astype(int)) + " ppm")
     plt.ylabel('Integration Number')
