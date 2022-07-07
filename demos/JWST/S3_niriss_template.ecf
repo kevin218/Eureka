@@ -14,11 +14,15 @@ radius          1           # Sets the radius for edge extraction method
 filter          4           # Sets the filter size for edge extraction method
 
 # Background parameters
-readnoise       18                      # Estimation of the readnoise
-sigclip         [4,4]                   # Iterations and sigma to find & remove outliers
-box             ((10,2), (5,2))         # Box size to average background values over
-bkg_estimator   ['median', 'median']    # How to calculate and estimate the background over the box size
-filter_size     ((2,1), (1,1))          # Window size to apply the 2D low-resolution background map
+which_bkg       simple                  # Selects which background estimation to use. Options are 'simple' and '2D'
+window_length   7                       # The window size to use for the SavGol filter to estimate the background (only needed for 'simple')
+polyorder       2                       # The polynomial order used to fit to the SavGol filter (only needed for 'simple')
+mode            nearest                 # This determines the type of extension to use for the padded signal to which the filter is applied (only needed for 'simple')
+readnoise       18                      # Estimation of the readnoise (only needed for '2D')
+sigclip         [4,4]                   # Iterations and sigma to find & remove outliers (only needed for '2D')
+box             ((10,2), (5,2))         # Box size to average background values over (only needed for '2D')
+bkg_estimator   ['median', 'median']    # How to calculate and estimate the background over the box size (only needed for '2D')
+filter_size     ((2,1), (1,1))          # Window size to apply the 2D low-resolution background map (only needed for '2D')
 
 # Spectral extraction parameters
 which_table     centers     # Which method used to find centers of orders
