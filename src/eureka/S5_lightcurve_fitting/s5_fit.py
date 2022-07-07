@@ -156,9 +156,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 # the current channel
                 mask = lc.mask_white.values[0, :]
                 flux = np.ma.masked_where(mask,
-                                          lc.flux_white.values[0, :])
+                                          lc.attrs.flux_white.values[0, :])
                 flux_err = np.ma.masked_where(mask,
-                                              lc.err_white.values[0, :])
+                                              lc.attrs.err_white.values[0, :])
                 
                 # Normalize flux and uncertainties to avoid large
                 # flux values

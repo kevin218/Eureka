@@ -207,7 +207,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 for w in range(meta.subnx):
                     spec.optspec[:, w], spec.optmask[:, w], nout = \
                         clipping.clip_outliers(spec.optspec[:, w], log,
-                                               spec.wave_1d[w],
+                                               spec.wave_1d[w].values,
+                                               spec.wave_1d.attrs['wave_units'],
                                                mask=spec.optmask[:, w],
                                                sigma=meta.sigma,
                                                box_width=meta.box_width,
@@ -304,8 +305,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 if meta.sigma_clip:
                     lc['data'][i], lc['mask'][i], nout = \
                         clipping.clip_outliers(
-                            lc['data'][i], log, lc.wave_mid[i],
-                            mask=lc['mask'][i],
+                            lc.data[i], log, lc.data.wavelength[i].values,
+                            lc.data.attrs["wave_units"],
+                            mask=lc.mask[i],
                             sigma=meta.sigma, box_width=meta.box_width,
                             maxiters=meta.maxiters, boundary=meta.boundary,
                             fill_value=meta.fill_value, verbose=False)
@@ -320,57 +322,41 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             if hasattr(meta, 'compute_white') and meta.compute_white:
                 log.writelog("Generating white-light light curve")
 
-                lcdata_white = xrio.makeLCDA(np.ma.zeros((1, meta.n_int)),
-                                             [np.mean(meta.wave), ],
-                                             spec.time.values,
-                                             spec.optspec.attrs['flux_units'],
-                                             spec.wave_1d.attrs['wave_units'],
-                                             spec.optspec.attrs['time_units'],
-                                             name='flux_white')
-                lcerr_white = xrio.makeLCDA(np.ma.zeros((1, meta.n_int)),
-                                            [np.mean(meta.wave), ],
-                                            spec.time.values,
-                                            spec.optspec.attrs['flux_units'],
-                                            spec.wave_1d.attrs['wave_units'],
-                                            spec.optspec.attrs['time_units'],
-                                            name='err_white')
-                mask_white = xrio.makeLCDA(np.zeros((1, meta.n_int),
-                                                    dtype=bool),
-                                           [np.mean(meta.wave), ],
-                                           spec.time.values, 'None',
-                                           spec.wave_1d.attrs['wave_units'],
-                                           spec.optspec.attrs['time_units'],
-                                           name='mask_white')
-                lc['flux_white'] = lcdata_white
-                lc['err_white'] = lcerr_white
-                lc['mask_white'] = mask_white
-
-                log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
-                             f"{meta.wave_max:.3f}")
                 # Compute valid indeces within wavelength range
                 index = np.where((spec.wave_1d >= meta.wave_min) *
                                  (spec.wave_1d < meta.wave_max))[0]
+                central_wavelength = np.mean(spec.wave_1d[index].values)
+                lc.attrs['white_wavelength'] = central_wavelength
+                lc.attrs['flux_white'] = np.zeros((1, meta.n_int))
+                lc.attrs['err_white'] = np.zeros((1, meta.n_int))
+                lc.attrs['mask_white'] = np.zeros((1, meta.n_int), dtype=bool)
+                
+                log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
+                             f"{meta.wave_max:.3f}")
                 # Make masked arrays for easy summing
-                optspec_ma = np.ma.masked_where(spec.optmask[:, index],
-                                                spec.optspec[:, index])
-                opterr_ma = np.ma.masked_where(spec.optmask[:, index],
-                                               spec.opterr[:, index])
+                optspec_ma = np.ma.masked_where(spec.optmask.values[:, index],
+                                                spec.optspec.values[:, index])
+                opterr_ma = np.ma.masked_where(spec.optmask.values[:, index],
+                                               spec.opterr.values[:, index])
                 # Compute mean flux for each spectroscopic channel
                 # Sumation leads to outliers when there are masked points
-                lc['flux_white'][0] = np.ma.mean(optspec_ma, axis=1)
+                lc.attrs['flux_white'][0] = np.ma.mean(optspec_ma, axis=1)
                 # Add uncertainties in quadrature
                 # then divide by number of good points to get
                 # proper uncertainties
-                lc['err_white'][0] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
-                                      np.ma.MaskedArray.count(opterr_ma, axis=1))
+                lc.attrs['err_white'][0] = (np.sqrt(np.ma.sum(opterr_ma**2,
+                                                        axis=1)) /
+                                      np.ma.MaskedArray.count(opterr_ma,
+                                                              axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
-                    lc['flux_white'][0], lc['mask_white'][i], nout = \
+                    lc.attrs['flux_white'][0], lc.attrs['mask_white'][0], nout = \
                         clipping.clip_outliers(
-                            lc['flux_white'][0], log,
-                            np.mean([meta.wave_min, meta.wave_max]),
-                            mask=lc['mask_white'][i],
+                            lc.attrs['flux_white'][0], log,
+                            lc.attrs['white_wavelength'],
+                            lc.data.attrs["wave_units"],
+                            mask=lc.attrs['mask_white'][0],
                             sigma=meta.sigma, box_width=meta.box_width,
                             maxiters=meta.maxiters, boundary=meta.boundary,
                             fill_value=meta.fill_value, verbose=False)

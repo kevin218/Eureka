@@ -8,9 +8,9 @@ from astropy.stats import sigma_clip
 __all__ = ['clip_outliers', 'gauss_removal']
 
 
-def clip_outliers(data, log, wavelength, mask=None, sigma=10, box_width=5,
-                  maxiters=5, boundary='extend', fill_value='mask',
-                  verbose=False):
+def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
+                  sigma=10, box_width=5, maxiters=5, boundary='extend',
+                  fill_value='mask', verbose=False):
     '''Find outliers in 1D time series.
 
     Be careful when using this function on a time-series with known
@@ -26,6 +26,8 @@ def clip_outliers(data, log, wavelength, mask=None, sigma=10, box_width=5,
         The open log in which notes from this step can be added.
     wavelength : float
         The wavelength currently under consideration.
+    wavelength_units : float
+        The wavelength units currently under consideration.
     mask : ndarray (1D), optional
         A mask array to use if data is not a masked array. Defaults to None
         in which case only the invalid values of data will be masked.
@@ -83,8 +85,8 @@ def clip_outliers(data, log, wavelength, mask=None, sigma=10, box_width=5,
 
     if np.any(outliers):
         log.writelog(f'  Identified {np.sum(outliers)} outliers for wavelength'
-                     f' {wavelength.values:.4f} '
-                     f'{wavelength.attrs["wave_units"]}', mute=(not verbose))
+                     f' {wavelength:.4f} '
+                     f'{wavelength_units}', mute=(not verbose))
 
     # Replace clipped data
     if fill_value == 'mask':

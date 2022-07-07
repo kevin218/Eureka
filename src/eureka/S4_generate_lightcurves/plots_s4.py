@@ -28,9 +28,8 @@ def binned_lightcurve(meta, log, lc, i, white=False):
         fig.suptitle(f'White-light Bandpass {i}: {meta.wave_min:.3f} - '
                      f'{meta.wave_max:.3f}')
         # Normalize the light curve
-        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta,
-                                                          lc['flux_white'][i],
-                                                          lc['err_white'][i])
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(
+            meta, lc.attrs['flux_white'][i], lc.attrs['err_white'][i])
         i = 0
         fname_tag = 'white'
     else:
