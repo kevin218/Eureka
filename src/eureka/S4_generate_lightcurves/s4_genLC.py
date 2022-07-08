@@ -20,7 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
-from . import plots_s4, drift
+from . import plots_s4, drift, generate_LD
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
@@ -44,6 +44,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
     Returns
     -------
+    spec : Astreaus object 
+        Data object of wavelength-like arrrays.
+    lc : Astreaus object 
+        Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
 
@@ -302,6 +306,15 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+
+            # Generate limb-darkening coefficients
+            if meta.compute_ld:
+                log.writelog("Generating limb-darkening coefficients")
+                ld_lin, ld_quad, ld_3para, ld_4para = generate_LD.exotic_ld(meta, spec)
+                lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
+                lc['exotic-ld_quad'] = (['wavelength','exotic-ld_2'], ld_quad)
+                lc['exotic-ld_nonlin_3para'] = (['wavelength','exotic-ld_3'], ld_3para)
+                lc['exotic-ld_nonlin_4para'] = (['wavelength','exotic-ld_4'], ld_4para)
 
             log.writelog('Saving results')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
