@@ -298,3 +298,55 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
+
+def spatialpos(data, meta):
+    '''Plot the spatial jitter. (Fig 3601)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    '''
+    plt.figure(3601, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int),
+             np.array(data["src_ypos_exact"]), '.')
+    plt.ylabel('Spectrum spatial profile center')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3601_SpatialPos'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+def spatialwidth(data, meta):
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3602)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    '''
+    plt.figure(3602, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int),
+             np.array(data["src_ypos_width"]), '.')
+    plt.ylabel('Spectrum spatial profile width')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3602_SpatialWidth'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
