@@ -140,6 +140,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             else:
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
+            
+            #Load limb-darkening coefficients if used from Stage 4
+            if hasattr(meta, 'use_generate_ld'):
+                ld_str = meta.use_generate_ld
+                ld_coeffs = [lc[ld_str +'_lin'].values, lc[ld_str +'_quad'].values, 
+                             lc[ld_str +'_nonlin_3para'].values, 
+                             lc[ld_str +'_nonlin_4para'].values]
+            else:
+                ld_coeffs = None
 
             if sharedp:
                 # Make a long list of parameters for each channel
@@ -163,7 +172,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                 meta = fit_channel(meta, time, flux, 0, flux_err, eventlabel,
                                    sharedp, params, log, longparamlist,
-                                   time_units, paramtitles, chanrng)
+                                   time_units, paramtitles, chanrng, ld_coeffs)
 
                 # Save results
                 log.writelog('Saving results')
@@ -192,7 +201,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                     meta = fit_channel(meta, time, flux, channel, flux_err,
                                        eventlabel, sharedp, params, log,
                                        longparamlist, time_units, paramtitles,
-                                       chanrng)
+                                       chanrng, ld_coeffs)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -209,7 +218,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
-                log, longparamlist, time_units, paramtitles, chanrng):
+                log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs):
     """Run a fit for one channel or perform a shared fit.
 
     Parameters
@@ -251,6 +260,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist,
                              unc=flux_err, time_units=time_units,
                              name=eventlabel, share=sharedp)
+    
+
 
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
@@ -274,7 +285,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
                                          fmt='r--', log=log,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
-                                         paramtitles=paramtitles)
+                                         paramtitles=paramtitles, 
+                                         ld_from_S4=meta.use_generate_ld,
+                                         ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
