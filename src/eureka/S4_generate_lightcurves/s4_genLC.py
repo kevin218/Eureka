@@ -307,6 +307,15 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
+            # Generate limb-darkening coefficients
+            if meta.compute_ld:
+                log.writelog("Generating limb-darkening coefficients")
+                ld_lin, ld_quad, ld_3para, ld_4para = generate_LD.exotic_ld(meta, spec)
+                lc['LD_lin'] = (['wavelength'], ld_lin)
+                lc['LD_quad'] = (['wavelength','ld_2'], ld_quad)
+                lc['LD_nonlin_3para'] = (['wavelength','ld_3'], ld_3para)
+                lc['LD_nonlin_4para'] = (['wavelength','ld_4'], ld_4para)
+
             log.writelog('Saving results')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
                            + str(bg_hw_val))
