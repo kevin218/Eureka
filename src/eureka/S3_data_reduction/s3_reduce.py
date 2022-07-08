@@ -26,7 +26,6 @@ import os
 import time as time_pkg
 import numpy as np
 import astraeus.xarrayIO as xrio
-from astropy.io import fits
 from tqdm import tqdm
 import psutil
 from . import optspex
@@ -165,9 +164,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                              f'ending in {meta.suffix}.fits',
                              mute=(not meta.verbose))
 
-            with fits.open(meta.segment_list[-1]) as hdulist:
-                # Figure out which instrument we are using
-                meta.inst = hdulist[0].header['INSTRUME'].lower()
             # Load instrument module
             if meta.inst == 'miri':
                 from . import miri as inst
@@ -286,8 +282,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
                     if meta.curvature == 'correct':
-                        log.writelog('  In NIRSpec G395H setting with curvature '
-                                     'correction:', mute=(not meta.verbose))
+                        log.writelog('  In NIRSpec G395H setting with '
+                                     'curvature correction:',
+                                     mute=(not meta.verbose))
                         data, meta = inst.straighten_trace(data, meta, log)
 
                 # Create bad pixel mask (1 = good, 0 = bad)
