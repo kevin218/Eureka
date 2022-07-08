@@ -1,12 +1,14 @@
 
 import numpy as np
-import re, shutil, os
+import re
+import shutil
+import os
 from astroquery.mast import Observations
 import astropy.io.fits as pf
 
+
 def columnNames():
-    """
-    Print column names from MAST Observation table.
+    """Print column names from MAST Observation table.
 
     Notes
     -----
@@ -20,9 +22,9 @@ def columnNames():
         print(val)
     return
 
+
 def login(mast_token=None):
-    """
-    Log into the MAST portal.
+    """Log into the MAST portal.
 
     Parameters
     ----------
@@ -42,9 +44,9 @@ def login(mast_token=None):
     Observations.login(mast_token)
     return
 
+
 def logout():
-    """
-    Log out of current MAST session.
+    """Log out of current MAST session.
 
     Notes
     -----
@@ -56,27 +58,24 @@ def logout():
     Observations.logout()
     return
 
-def download(proposal_id, visit, inst='WFC3', download_dir='.', subgroup='IMA'):
-    """
-    Download observation visit number from specified proposal ID.
+
+def download(proposal_id, visit, inst='WFC3', download_dir='.',
+             subgroup='IMA'):
+    """Download observation visit number from specified proposal ID.
 
     Parameters
     ----------
     proposal_id : string or int
         HST proposal/program ID (e.g., 13467).
-
     visit : string or int
         HST visit number listed on the Visit Status Report (e.g., 60).
         See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
         where XXXXX is the proposal/program ID.
-
     inst : string
         HST instrument name, can be upper or lower case.
         Supported options include: WFC3, STIS, COS, or FGS.
-
     download_dir : string (optional)
         Temporary download directory will be 'download_dir'/mastDownload/...
-
     subgroup : string, (optional)
         FITS file type (usually IMA, sometimes FLT)
 
@@ -123,7 +122,7 @@ def download(proposal_id, visit, inst='WFC3', download_dir='.', subgroup='IMA'):
     # so sometimes it identifies extra, unwanted files.
     # Using regex to remove these unwanted files
     counter = 0
-    for ii,val in enumerate(sci_table['obs_id']):
+    for ii, val in enumerate(sci_table['obs_id']):
         if not re.search('i...'+visit, val):
             sci_table.remove_row(ii-counter)
             # Increment counter to get index right
@@ -134,8 +133,8 @@ def download(proposal_id, visit, inst='WFC3', download_dir='.', subgroup='IMA'):
     data_products_by_id = Observations.get_product_list(sci_table)
 
     # Filter for IMA files
-    filtered = Observations.filter_products(data_products_by_id,
-                                            productSubGroupDescription=subgroup)
+    filtered = Observations.filter_products(
+        data_products_by_id, productSubGroupDescription=subgroup)
     nimage = np.sum(filtered['dataproduct_type'] == 'image')
     nspec = np.sum(filtered['dataproduct_type'] == 'spectrum')
     print("Number of image products:", nimage)
@@ -146,15 +145,15 @@ def download(proposal_id, visit, inst='WFC3', download_dir='.', subgroup='IMA'):
                                             download_dir=download_dir)
     return result
 
+
 def consolidate(result, final_dir):
-    """
-    Consolidate downloaded files into a single directory
+    """Consolidate downloaded files into a single directory
 
     Parameters
     ----------
     result : AstroPy Table
-        The manifest of files downloaded, returned from mastDownload.download().
-
+        The manifest of files downloaded, returned from
+        mastDownload.download().
     final_dir : string
         Final destination of files.
 
@@ -173,23 +172,21 @@ def consolidate(result, final_dir):
     for path in result['Local Path']:
         filename = path.split('/')[-1]
         try:
-            shutil.move(path, os.path.join(final_dir,filename))
+            shutil.move(path, os.path.join(final_dir, filename))
         except:
             print(f"File not found: {path}")
     return
 
+
 def sort(final_dir, sci_dir='sci', cal_dir='cal'):
-    """
-    Sort files into science and calibration subdirectories.
+    """Sort files into science and calibration subdirectories.
 
     Parameters
     ----------
     final_dir : string
         Final destination of files.
-
     sci_dir : string
         Name of science subdirectory within 'final_dir'.
-
     cal_dir : string
         Name of calibration subdirectory within 'final_dir'.
 
@@ -201,29 +198,29 @@ def sort(final_dir, sci_dir='sci', cal_dir='cal'):
         Initial version
     """
     # Create directories
-    if not os.path.exists(os.path.join(final_dir,sci_dir)):
-        os.makedirs(os.path.join(final_dir,sci_dir))
-    if not os.path.exists(os.path.join(final_dir,cal_dir)):
-        os.makedirs(os.path.join(final_dir,cal_dir))
+    if not os.path.exists(os.path.join(final_dir, sci_dir)):
+        os.makedirs(os.path.join(final_dir, sci_dir))
+    if not os.path.exists(os.path.join(final_dir, cal_dir)):
+        os.makedirs(os.path.join(final_dir, cal_dir))
 
     # Move files
     for filename in os.listdir(final_dir):
         if filename.endswith('.fits'):
-            hdr = pf.getheader(os.path.join(final_dir,filename))
+            hdr = pf.getheader(os.path.join(final_dir, filename))
             # If spectrum, move to science directory
             if hdr['filter'].startswith('G'):
-                shutil.move(os.path.join(final_dir,filename),
-                            os.path.join(final_dir,sci_dir,filename))
+                shutil.move(os.path.join(final_dir, filename),
+                            os.path.join(final_dir, sci_dir, filename))
             # If image, move to calibration directory
             elif hdr['filter'].startswith('F'):
-                shutil.move(os.path.join(final_dir,filename),
-                            os.path.join(final_dir,cal_dir,filename))
+                shutil.move(os.path.join(final_dir, filename),
+                            os.path.join(final_dir, cal_dir, filename))
             # Otherwise, leave file in current location
     return
 
+
 def cleanup(download_dir='.'):
-    """
-    Remove empty folders from download directory.
+    """Remove empty folders from download directory.
 
     Parameters
     ----------

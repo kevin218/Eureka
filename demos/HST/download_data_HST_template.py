@@ -30,7 +30,7 @@ md.login(mast_token)
 for vis in visits:
     # Download data from MAST Archive
     result = md.download(proposal_id, vis, inst, download_dir, subgroup)
-    if result != None:
+    if result is not None:
         # Consolodate and move data into new directory
         md.consolidate(result, final_dir)
         # Sort data into science and calibration folders (scan vs direct image)
