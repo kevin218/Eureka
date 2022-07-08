@@ -14,6 +14,7 @@ dependencies:
     - cython
     - dynesty[version='>1.0']
     - emcee[version='>3.0.0']
+    - exotic-ld
     - george
     - gwcs
     - h5py[version='<3.2']
