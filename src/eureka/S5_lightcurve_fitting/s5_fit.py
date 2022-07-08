@@ -140,11 +140,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             else:
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
-            
+
             #Load limb-darkening coefficients if used from Stage 4
             if hasattr(meta, 'use_generate_ld'):
                 ld_str = meta.use_generate_ld
-                ld_coeffs = [lc[ld_str +'_lin'].values, lc[ld_str +'_quad'].values, 
+                log.writelog("\nUsing generated limb-darkening coefficients" +
+                             f"with {ld_str} \n")
+                ld_coeffs = [lc[ld_str +'_lin'].values, 
+                             lc[ld_str +'_quad'].values, 
                              lc[ld_str +'_nonlin_3para'].values, 
                              lc[ld_str +'_nonlin_4para'].values]
             else:
