@@ -384,6 +384,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
+                    if meta.record_ypos:
+                        # make y position and width plots
+                        plots_s3.spatialpos(data, meta)
+                        plots_s3.spatialwidth(data, meta)
 
                 if meta.save_output:
                     # Save flux data from current segment
