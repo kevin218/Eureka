@@ -273,7 +273,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         medapdata = np.median(data.flux, axis=0)
 
         # creates mask for the traces
-        box_masks = niriss_extraction.dirty_mask(medapdata, meta.trace_edge,
+        box_masks = niriss_extraction.dirty_mask(medapdata, meta.trace,
                                                  boxsize1=meta.boxsize1,
                                                  boxsize2=meta.boxsize2,
                                                  boxsize3=meta.boxsize3,
@@ -320,9 +320,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         for n in iterfn:
             optspec, opterr, profile = optimal_extraction_routine(
                 data.flux.values, data.err.values, stdflux, stdvar,
-                pos1=meta.trace_edge['order_1'],
-                pos2=meta.trace_edge['order_2'],
-                pos3=meta.trace_edge['order_3'], sky_bkg=data.bg.values,
+                pos1=meta.trace['order_1'],
+                pos2=meta.trace['order_2'],
+                pos3=meta.trace['order_3'], sky_bkg=data.bg.values,
                 medframe=medapdata, sigma=meta.opt_sigma,
                 per_quad=meta.per_quad, proftype=meta.proftype,
                 test=meta.testing_S3, isplots=meta.isplots_S3)

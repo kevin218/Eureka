@@ -2,7 +2,7 @@ import numpy as np
 import astraeus.xarrayIO as xrio
 from astropy.io import fits
 
-from .background import fitbg3
+from .background import fitbg3, savgol_bkg
 from .niriss_extraction import dirty_mask
 from .tracing_niriss import mask_method_ears, mask_method_edges
 
@@ -159,14 +159,9 @@ def fit_bg(data, meta, which_bkg='simple', readnoise=11, sigclip=[4, 4, 4],
     data : Xarray Dataset
         The Dataset object in which the fits data will stored.
     """
-    if meta.trace_method == 'ears':
-        box_mask = dirty_mask(data.medflux.values,
-                              meta.trace_ear, booltype=True,
-                              return_together=True)
-    elif meta.trace_method == 'edges':
-        box_mask = dirty_mask(data.medflux.values,
-                              meta.trace_edge, booltype=True,
-                              return_together=True)
+    box_mask = dirty_mask(data.medflux.values,
+                          meta.trace, booltype=True,
+                          return_together=True)
 
     if which_bkg == '2D':
         bkg, bkg_var, cr_mask = fitbg3(data, np.array(box_mask-1, dtype=bool),
@@ -184,18 +179,15 @@ def fit_bg(data, meta, which_bkg='simple', readnoise=11, sigclip=[4, 4, 4],
                          window_length=window_length, polyorder=polyorder,
                          mode=mode)
     else:
-        log.writelog('Background method not implemented. Please select either \
-                      "2D" or "simple".')
-        raise AssertionError(f'Background method not implemented. Please'
-                             f'select either "2D" or "simple".')
+        raise AssertionError('Background method not implemented. Please'
+                             'select either "2D" or "simple".')
 
-
-    data['bg'] = xrio.makeFluxLikeDA(bkg, meta.time,
+    data['bg'] = xrio.makeFluxLikeDA(bkg, data.time,
                                      data['flux'].attrs['flux_units'],
                                      data['flux'].attrs['time_units'],
                                      name='bg')
 
-    data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bg, meta.time,
+    data['bg_removed'] = xrio.makeFluxLikeDA(data.flux - data.bg, data.time,
                                              data['flux'].attrs['flux_units'],
                                              data['flux'].attrs['time_units'],
                                              name='bg_removed')
@@ -230,7 +222,7 @@ def define_traces(meta, log):
                                   save=meta.save_table,
                                   outdir=meta.outputdir,
                                   isplots=meta.isplots_S3)
-        meta.trace_ear = traces
+        meta.trace = traces
     elif meta.trace_method == 'edges':
         traces = mask_method_edges(meta,
                                    radius=meta.radius,
@@ -238,7 +230,7 @@ def define_traces(meta, log):
                                    save=meta.save_table,
                                    outdir=meta.outputdir,
                                    isplots=meta.isplots_S3)
-        meta.trace_edge = traces
+        meta.trace = traces
     else:
         # This will break if traces cannot be extracted
         log.writelog('Method for identifying NIRISS trace'
