@@ -7,6 +7,7 @@ from .niriss_cython import (build_gaussian_images, build_moffat_images)
 
 __all__ = ['fit_orders_fast', 'fit_orders']
 
+
 def fit_orders(data, tab):
     """
     Creates a 2D image optimized to fit the data. Currently

@@ -596,6 +596,7 @@ def fitbg3(data, order_mask, readnoise=11,
 
     return bkg, bkg_var, rm_crs
 
+
 def savgol_bkg(data, mask, window_length=7, polyorder=2, mode='nearest'):
     """
     Completes a simple Savitsky Golay filter to the background to

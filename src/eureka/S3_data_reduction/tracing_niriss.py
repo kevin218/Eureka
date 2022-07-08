@@ -39,7 +39,7 @@ def image_filtering(img, radius=1, gf=4):
     z : np.ndarray
        The identified edges of the first two orders.
     g : np.ndarray
-       Gaussian filtered image of the orders. Used just for plotting as a check.
+       Gaussian filtered image of the orders. Used for plotting as a check.
     """
     mask = filters.rank.maximum(img/np.nanmax(img),
                                 disk(radius=radius))
@@ -99,8 +99,8 @@ def f277_mask(f277, radius=1, gf=4):
     radius : float, optional
        The size of the radius to use in the image filtering. Default is 1.
     gf : float, optional
-       The size of the Gaussian filter to use in the image filtering. Default is
-       4.
+       The size of the Gaussian filter to use in the image filtering. Default
+       is 4.
 
     Returns
     -------
@@ -143,13 +143,14 @@ def mask_method_edges(data, radius=1, gf=4,
     radius : float, optional
        The size of the radius to use in the image filtering. Default is 1.
     gf : float, optional
-       The size of the Gaussian filter to use in the image filtering. Default is
-       4.
+       The size of the Gaussian filter to use in the image filtering. Default
+       is 4.
     save : bool, optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
     outdir : str, optional
-       The path where to save the output table, if requested. Default is `none`.
+       The path where to save the output table, if requested. Default is
+       None.
 
     Returns
     -------
@@ -255,7 +256,8 @@ def mask_method_ears(data, degree=4, save=False, outdir=None, isplots=0):
        of the NIRISS orders. This is set in the .ecf control files.
        Default is False.
     outdir : str, optional
-       The path where to save the output table, if requested. Default is `none`.
+       The path where to save the output table, if requested. Default is
+       None.
     isplots : int, optional
         Sets how many diagnostic plots to create. Default is 0.
 
