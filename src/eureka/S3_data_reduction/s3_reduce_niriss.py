@@ -183,8 +183,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
         # Extract 1D wavelength solution from x1d file
         exts = np.linspace(1, meta.n_int*3-2, 3, dtype=int)+m
-        wave_soln = np.full((meta.n_int, meta.nx), np.nan)
-
+        wave_soln = np.full((3, meta.nx), np.nan)
         with fits.open(meta.x1d_segment_list[m]) as hdulist:
             # Get solns from appropriate extention
             for e, ext in enumerate(exts):

@@ -1,8 +1,9 @@
 import numpy as np
+from scipy.interpolate import interp1d
 from scipy.interpolate import NearestNDInterpolator
 
 __all__ = ['interpolating_row', 'data_quality_mask',
-           'interpolating_image']
+           'interpolating_image', 'interpolating_col']
 
 
 def interpolating_image(data, mask):
@@ -123,3 +124,49 @@ def data_quality_mask(dq):
         return('Data quality array should be 2D.')
 
     return ~dq_mask
+
+def interpolating_col(data, mask, reg=2):
+    """
+    Fills in masked pixel values with either a median value from
+    surrounding pixels along the column.
+
+    Parameters
+    ----------
+    data : np.ndarray
+       Image frame.
+    mask : np.ndarray
+       Mask of integers, where values greater than 0 are bad
+       pixels.
+    reg : int, optional
+       The number of pixels along the row to interpolate over.
+       Default is 2.
+
+    Returns
+    -------
+    interp : np.ndarray
+       Image where the bad pixels are filled in with the
+       appropriate values. Should return the same shape
+       as `data`.
+    """
+    newdata = np.zeros(data.shape)
+
+    for i in tqdm(range(data.shape[0])):
+        for col in range(data.shape[2]):
+            good = np.where(mask[i,:,col]==True)[0] # finds the good data points
+            bad = np.where(mask[i,:,col]==False)[0] # finds the bad data points
+
+            try: # doesn't handle the NaN cols/rows well
+                interp = interp1d(np.arange(data.shape[1])[good],
+                                  data[i,:,col][good])
+                new = np.copy(data[i,:,col])
+
+                for b in bad:
+                    try:
+                        new[b] = interp(b)
+                    except ValueError: # doesn't handle the NaN cols/rows well
+                        new[b] = 0.0
+                newdata[i,:,col] = new
+
+            except ValueError:
+                newdata[i,:,col] = np.zeros(data.shape[1])
+    return newdata
