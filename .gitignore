@@ -130,6 +130,7 @@ dmypy.json
 .pyre/
 
 *.DS_Store
+*.swp
 
 # ecf files
 *.ecf
@@ -155,3 +156,6 @@ paper.jats
 
 # Ignores for Caroline
 eureka_analysis/JWST/run_eureka_demo.py
+
+# Ignores for Taylor
+*.dat
