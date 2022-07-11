@@ -375,26 +375,61 @@ filter
 ''''''
 Sets the Gaussian filter size to blur out the orders in order to find the edges. This is used in the "edges" trace extraction method.
 
+boxsize1
+''''''''
+Sets the box width (in pixels) for extracting the first order. This is used as the example box-extracted spectrum in the optimal extraction routine.
+
+boxsize2
+''''''''
+Sets the box width (in pixels) for extracting the second order. This is used as the example box-extracted spectrum in the optimal extraction routine.
+
+boxsize3
+''''''''
+Sets the box width (in pixels) for extracting the third order. This is used as the example box-extracted spectrum in the optimal extraction routine. If booxsize3 = None, the routine will ignore the third order entirely.
+
+which_bkg
+'''''''''
+Selects which background estimation to use. Options are 'simple' (estimates the background with a Savitsky Golay filter) and '2D' (uses `photutils` background routines). 2D is a bit slower, but captures the 1/f noise fairly well without overfitting.
+
+window_length
+'''''''''''''
+The window size to use for the SavGol filter to estimate the background. Only needed for 'simple'.
+
+polyorder
+'''''''''
+The polynomial order used to fit to the SavGol filter. Only needed for 'simple'.
+
+mode
+''''
+This determines the type of extension to use for the padded signal to which the filter is applied. Only needed for 'simple'.
 
 sigclip
 '''''''
-Iterations and sigma outlier threshold to find and remove bad pixels or cosmic ray events. `sigclip` can be a list of any length. The default is `sigclip = [4,4,4]`.
+Iterations and sigma outlier threshold to find and remove bad pixels or cosmic ray events. `sigclip` can be a list of any length. The default is `sigclip = [4,4,4]`. Only needed for 'which_bkg=2D'.
 
 box
 '''
-The box size of pixels in (ny,nx) to calculate the background over. Should be the same length as `sigclip`.
+The box size of pixels in (ny,nx) to calculate the background over. Should be the same length as `sigclip`. Only needed for 'which_bkg=2D'.
 
 bkg_estimator
 '''''''''''''
-How to calculate and estimate the background over a given box size. Options include 'median', 'mean', and 'MMMBackground' (3 * median - 2 * mean). More information on `MMMBackground` routine can be found in the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.MMMBackground.html?highlight=mmmbackground#photutils.background.MMMBackground>`__. Should be the same length as `sigclip`.
+How to calculate and estimate the background over a given box size. Options include 'median', 'mean', and 'MMMBackground' (3 * median - 2 * mean). More information on `MMMBackground` routine can be found in the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.MMMBackground.html?highlight=mmmbackground#photutils.background.MMMBackground>`__. Should be the same length as `sigclip`. Only needed for 'which_bkg=2D'.
 
 filter_size
 '''''''''''
-The filter size of pixels in (ny,nx) to filter over. A filter size of 1 or (1, 1) means no filtering. For more information see the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.Background2D.html>`__. Should be the same length as `sigclip`.
+The filter size of pixels in (ny,nx) to filter over. A filter size of 1 or (1, 1) means no filtering. For more information see the `photutils documentation <https://photutils.readthedocs.io/en/stable/api/photutils.background.Background2D.html>`__. Should be the same length as `sigclip`. Only needed for 'which_bkg=2D'.
+
+which_table
+'''''''''''
+Sets which method of trace estimation to use in the optimal extraction routine.
 
 proftype
 ''''''''
 What profile model to use for the optimal extraction. Options are 'median', 'gaussian', and 'moffat'. Recommended is 'median'.
+
+opt_sigma
+'''''''''
+What sigma outlier to reject in the optimal extraction routine.
 
 per_quad
 ''''''''
@@ -456,7 +491,7 @@ sub_mean
 ''''''''
 If True, subtract spectrum mean during cross correlation (can help with cross-correlation step).
 
-sub_continuum 
+sub_continuum
 '''''''''''''
 Set True to subtract the continuum from the spectra using a highpass filter
 
