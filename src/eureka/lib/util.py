@@ -27,7 +27,7 @@ def readfiles(meta, suffix=None):
     meta.segment_list = []
 
     # Look for files in the input directory
-    for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
+    for fname in glob.glob(meta.inputdir+'*'+suffix+'.fits'):
         meta.segment_list.append(fname)
 
     # Need to allow for separated sci and cal directories for WFC3
@@ -36,13 +36,13 @@ def readfiles(meta, suffix=None):
         if not hasattr(meta, 'sci_dir') or meta.sci_dir is None:
             meta.sci_dir = 'sci'
         sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
-        for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
+        for fname in glob.glob(sci_path+'*'+suffix+'.fits'):
             meta.segment_list.append(fname)
         # Add files from the cal directory if present
         if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
             meta.cal_dir = 'cal'
         cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
-        for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
+        for fname in glob.glob(cal_path+'*'+suffix+'.fits'):
             meta.segment_list.append(fname)
 
     with fits.open(meta.segment_list[-1]) as hdulist:
