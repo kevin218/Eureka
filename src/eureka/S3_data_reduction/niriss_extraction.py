@@ -10,6 +10,7 @@ import scipy.optimize as so
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
+from tqdm import tqdm
 
 import pyximport
 pyximport.install()
@@ -305,10 +306,11 @@ def profile_niriss_moffat(data, pos1, pos2):
     return out_img1[0], out_img2[0]
 
 
-def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
-                               medframe=None, pos1=None, pos2=None, pos3=None,
-                               sigma=20, cr_mask=None, Q=18, proftype='median',
-                               isplots=0, per_quad=False, test=False):
+def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
+                               sky_bkg, medframe=None, pos1=None, pos2=None,
+                               pos3=None, sigma=20, cr_mask=None, Q=18,
+                               proftype='median', isplots=0, per_quad=False,
+                               test=False):
     """Optimal extraction routine for NIRISS.
 
     This is different from the general `optspex.optimize` since there are two
@@ -319,6 +321,10 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
     ----------
     data : np.ndarray
        Set of raw NIRISS 2D images.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
     spectrum : np.ndarray
        Box-extracted spectra for each image to use in the
        optimal extraction routine.
@@ -404,8 +410,10 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
             newvar = np.copy(var[:, y1:y2, x1:x2])
             new_spectrum_var = np.copy(np.array(spectrum_var)[index, :, x1:x2])
 
+            log.writelog(f'    Extracting quadrant {quad}...',
+                         mute=(not meta.verbose))
             # Run the optimal extraction routine on the quadrant
-            es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2],
+            es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2], meta,
                                            newvar, new_spectrum,
                                            new_spectrum_var, new_sky_bkg,
                                            medframe=medframe[y1:y2, x1:x2],
@@ -413,7 +421,8 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
                                            sigma=sigma,
                                            cr_mask=new_cr_mask, Q=Q,
                                            proftype=proftype, isplots=isplots,
-                                           test=test) #, pos3=pos3[x1:x2]
+                                           test=test)
+            #                                , pos3=pos3[x1:x2]
             es_all[quad-1] = np.copy(es)
             ev_all[quad-1] = np.copy(ev)
             p_all[quad-1] = np.copy(p)
@@ -421,16 +430,18 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
         return es_all, ev_all, p_all
 
     else:  # Full image
-        es, ev, p = extraction_routine(data, var, spectrum, spectrum_var,
+        es, ev, p = extraction_routine(data, meta, var, spectrum, spectrum_var,
                                        sky_bkg, medframe=medframe,
                                        pos1=pos1, pos2=pos2,
                                        sigma=sigma, cr_mask=cr_mask,
                                        Q=Q, proftype=proftype,
-                                       isplots=isplots, test=test) #, pos3=pos3
+                                       isplots=isplots, test=test)
+        #                                , pos3=pos3
 
         return es, ev, p
 
-def extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
+
+def extraction_routine(data, meta, var, spectrum, spectrum_var, sky_bkg,
                        medframe=None, pos1=None, pos2=None, pos3=None,
                        sigma=20, cr_mask=None, Q=18, proftype='median',
                        isplots=0, test=False):
@@ -442,6 +453,8 @@ def extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
     ----------
     data : np.array
        Raw data frames.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
     var : np.array
        Variance frames.
     spectrum : np.array
@@ -462,7 +475,10 @@ def extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
         frames = len(data)
 
     # Loop through each frame
-    for i in range(frames):
+    iterfn = range(frames)
+    if meta.verbose:
+        iterfn = tqdm(iterfn)
+    for i in iterfn:
         median = np.nanmedian(data, axis=0)
         median[median < 0] = 0
 
@@ -473,7 +489,6 @@ def extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
         fill_vals = np.zeros(data[i].shape)
 
         reference = np.copy(spectrum[i])
-        print(isnewprofile)
         while isnewprofile:
             # 5. construct spatial profile
             if proftype.lower() == 'median':

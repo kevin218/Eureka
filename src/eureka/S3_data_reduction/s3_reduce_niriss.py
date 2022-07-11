@@ -223,12 +223,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                     dtype=bool))
 
         # Check if arrays have NaNs
-        data['mask'] = util.check_nans(data['flux'], data['mask'],
-                                       log, name='FLUX')
-        data['mask'] = util.check_nans(data['err'], data['mask'],
-                                       log, name='ERR')
-        data['mask'] = util.check_nans(data['v0'], data['mask'],
-                                       log, name='V0')
+        data.mask.values = util.check_nans(data.flux.values, data.mask.values,
+                                           log, name='FLUX')
+        data.mask.values = util.check_nans(data.err.values, data.mask.values,
+                                           log, name='ERR')
+        data.mask.values = util.check_nans(data.v0.values, data.mask.values,
+                                           log, name='V0')
 
         # Manually mask regions [colstart, colend, rowstart, rowend]
         if hasattr(meta, 'manmask'):
@@ -293,19 +293,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
         log.writelog("  Performing optimal spectral extraction",
                      mute=(not meta.verbose))
-        # Already converted DN to electrons, so gain = 1 for optspex
-        iterfn = range(meta.int_start, meta.n_int)
-        if meta.verbose:
-            iterfn = tqdm(iterfn)
-        for n in iterfn:
-            optspec, opterr, profile = optimal_extraction_routine(
-                data.flux.values, data.err.values, stdflux, stdvar,
-                pos1=meta.trace['order_1'],
-                pos2=meta.trace['order_2'],
-                pos3=meta.trace['order_3'], sky_bkg=data.bg.values,
-                medframe=medapdata, sigma=meta.opt_sigma,
-                per_quad=meta.per_quad, proftype=meta.proftype,
-                test=meta.testing_S3, isplots=meta.isplots_S3)
+        optspec, opterr, profile = optimal_extraction_routine(
+            data.flux.values, meta, log, data.err.values, stdflux, stdvar,
+            pos1=meta.trace['order_1'],
+            pos2=meta.trace['order_2'],
+            pos3=meta.trace['order_3'], sky_bkg=data.bg.values,
+            medframe=medapdata, sigma=meta.opt_sigma,
+            per_quad=meta.per_quad, proftype=meta.proftype,
+            test=meta.testing_S3, isplots=meta.isplots_S3)
 
         # Mask out NaNs and Infs
         optspec_ma = np.ma.masked_invalid(data.optspec.values)
