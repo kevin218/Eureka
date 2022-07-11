@@ -403,20 +403,22 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
 
     # Compute the MAD
-    mad = np.ma.zeros(meta.n_int)
-    ediff = np.ma.zeros(meta.n_int)
-
-    for m in range(meta.n_int):
-        if len(optspec.shape) == 3:
-            # Need to handle NIRISS's multiple quadrants
-            ny = normspec.shape[0]
-            temp = np.ma.zeros(ny)
-            for n in range(ny):
+    if len(optspec.shape) == 3:
+        # Need to handle NIRISS's multiple quadrants
+        mads = np.ma.zeros(optspec.shape[0])
+        ny = normspec.shape[0]
+        temp = np.ma.zeros(ny)
+        for n in range(ny):
+            for m in range(meta.n_int):
                 temp[n] = get_mad_1d(normspec[n][m])
-            mad[m] = np.ma.mean(temp)
-        else:
-            # Standard case
-            ediff[m] = get_mad_1d(normspec[m])
+            mads[n] = np.ma.mean(temp)
+
+        return mads
+
+    # Standard case
+    ediff = np.ma.zeros(meta.n_int)
+    for m in range(meta.n_int):
+        ediff[m] = get_mad_1d(normspec[m])
 
     if meta.inst == 'wfc3':
         # Compute the MAD for each WFC3 scan direction
@@ -428,12 +430,8 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)   
 
-    if len(optspec.shape) == 3:
-        # Dealing with NIRISS's many orders
-        return mad
-    else:
-        # Standard case
-        return np.ma.mean(ediff)
+    # Standard case
+    return np.ma.mean(ediff)
 
 
 def get_mad_1d(data, ind_min=0, ind_max=-1):
