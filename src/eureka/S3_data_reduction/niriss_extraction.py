@@ -410,26 +410,23 @@ def optimal_extraction_routine(data, var, spectrum, spectrum_var, sky_bkg,
                                            new_spectrum_var, new_sky_bkg,
                                            medframe=medframe[y1:y2, x1:x2],
                                            pos1=pos1[x1:x2], pos2=pos2[x1:x2],
-                                           #pos3=pos3[x1:x2],
                                            sigma=sigma,
                                            cr_mask=new_cr_mask, Q=Q,
                                            proftype=proftype, isplots=isplots,
-                                           test=test)
+                                           test=test) #, pos3=pos3[x1:x2]
             es_all[quad-1] = np.copy(es)
             ev_all[quad-1] = np.copy(ev)
             p_all[quad-1] = np.copy(p)
-
-        #es_all, ev_all = stitch_together(es_all, ev_all)
 
         return es_all, ev_all, p_all
 
     else:  # Full image
         es, ev, p = extraction_routine(data, var, spectrum, spectrum_var,
                                        sky_bkg, medframe=medframe,
-                                       pos1=pos1, pos2=pos2, #pos3=pos3,
+                                       pos1=pos1, pos2=pos2,
                                        sigma=sigma, cr_mask=cr_mask,
                                        Q=Q, proftype=proftype,
-                                       isplots=isplots, test=test)
+                                       isplots=isplots, test=test) #, pos3=pos3
 
         return es, ev, p
 

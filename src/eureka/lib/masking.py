@@ -150,23 +150,23 @@ def interpolating_col(data, mask, reg=2):
     """
     newdata = np.zeros(data.shape)
 
-    for i in tqdm(range(data.shape[0])):
+    for i in range(data.shape[0]):
         for col in range(data.shape[2]):
-            good = np.where(mask[i,:,col]==True)[0] # finds the good data points
-            bad = np.where(mask[i,:,col]==False)[0] # finds the bad data points
+            good = np.where(mask[i, :, col] == True)[0] # finds the good data
+            bad = np.where(mask[i, :, col] == False)[0] # finds the bad data
 
             try: # doesn't handle the NaN cols/rows well
                 interp = interp1d(np.arange(data.shape[1])[good],
-                                  data[i,:,col][good])
-                new = np.copy(data[i,:,col])
+                                  data[i, :, col][good])
+                new = np.copy(data[i, :, col])
 
                 for b in bad:
                     try:
                         new[b] = interp(b)
                     except ValueError: # doesn't handle the NaN cols/rows well
                         new[b] = 0.0
-                newdata[i,:,col] = new
+                newdata[i, :, col] = new
 
             except ValueError:
-                newdata[i,:,col] = np.zeros(data.shape[1])
+                newdata[i, :, col] = np.zeros(data.shape[1])
     return newdata
