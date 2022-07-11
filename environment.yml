@@ -26,7 +26,6 @@ dependencies:
     - photutils
     - pip # required for the pip installs below
     - pytest
-    - recommonmark # Needed for documentation
     - requests
     - scipy[version='>=1.4.0'] # Needed for scipy.fft
     - tqdm

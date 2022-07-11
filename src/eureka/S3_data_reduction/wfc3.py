@@ -1,14 +1,17 @@
 
 # WFC3 specific rountines go here
+import os
 import numpy as np
 import multiprocessing as mp
 from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-from . import nircam
+import xarray as xr
+from . import sigrej, source_pos, background
 from . import hst_scan as hst
-from ..lib import suntimecorr, utc_tt
+from . import bright2flux as b2f
+from ..lib import suntimecorr, utc_tt, util
 
 
 def preparation_step(meta, log):
@@ -33,35 +36,108 @@ def preparation_step(meta, log):
     """
     meta.gain = 1
 
-    obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log = \
-        separate_direct(meta, log)
-    meta, log = separate_scan_direction(obstimes, postarg2, meta, log)
+    meta, log = separate_direct(meta, log)
+    meta, log = separate_scan_direction(meta, log)
 
     # Calculate centroid of direct image(s)
     meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
-                                      meta.centroidtrim, ny, CRPIX1, CRPIX2,
-                                      postarg1, postarg2)
+                                      meta.centroidtrim, meta.ny, meta.CRPIX1,
+                                      meta.CRPIX2, meta.postarg1,
+                                      meta.postarg2, meta, log)
 
-    # Initialize listto hold centroid positions from later steps in this stage
+    # Initialize list to hold centroid positions from later steps in this stage
     meta.centroids = []
-    meta.subflat = []
-    meta.flatmask = []
-    meta.scanHeight = []
-    meta.diffmask = []
-    meta.subdiffmask = []
-    meta.drift2D = []
-    meta.drift2D_int = []
+    meta.guess = []
     meta.subdata_ref = []
-    meta.diffmask_ref = []
+    meta.subdiffmask_ref = []
+
+    meta, log = get_reference_frames(meta, log)
 
     return meta, log
 
 
-def conclusion_step(meta, log):
-    """Convert lists into arrays for saving
+def get_reference_frames(meta, log):
+    """Process the reference frames for each scan direction and save them
+    in the meta object.
 
     Parameters
     ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    """
+    # Temporarily override some values
+    verbose = meta.verbose
+    meta.verbose = False
+    ncpu = meta.ncpu
+    meta.ncpu = 1
+
+    # Set some default values
+    meta.firstFile = False
+    meta.firstInBatch = False
+    meta.int_start = 0
+    meta.files_per_batch = 1
+
+    # Use the first two files by default
+    if not hasattr(meta, 'iref'):
+        raise AttributeError(
+            'You must set the meta.iref parameter in your ECF for WFC3 '
+            'observations. The recommended setting is [2, 3].'
+        )
+    
+    # Make sure that the scan directions are in the right order
+    if meta.iref[0] % 2 != 0:
+        meta.iref = meta.iref[::-1]
+
+    # Save the reference frame for each scan direction
+    for i in meta.iref:
+        log.writelog(f"Preparing reference frame {i}...")
+        data = xrio.makeDataset()
+        data, meta, log = read(meta.segment_list[i], data, meta, log)
+        meta.n_int, meta.ny, meta.nx = data.flux.shape
+        data, meta = util.trim(data, meta)
+        # Need to add guess after trimming and before cut_aperture
+        meta.guess.append(data.guess)
+        data, meta = b2f.convert_to_e(data, meta, log)
+        meta.src_ypos = source_pos.source_pos(
+            data, meta, i, header=('SRCYPOS' in data.attrs['shdr']))
+        data['mask'] = (['time', 'y', 'x'],
+                        np.ones(data.flux.shape, dtype=bool))
+        data['mask'] = util.check_nans(data['flux'], data['mask'],
+                                       log, name='FLUX')
+        data['mask'] = util.check_nans(data['err'], data['mask'],
+                                       log, name='ERR')
+        data['mask'] = util.check_nans(data['v0'], data['mask'],
+                                       log, name='V0')
+        if hasattr(meta, 'manmask'):
+            util.manmask(data, meta, log)
+        data = flag_bg(data, meta, log)
+        data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
+        cut_aperture(data, meta, log)
+        
+        # Save the reference values
+        meta.subdata_ref.append(data.flux)
+        meta.subdiffmask_ref.append(data.flatmask)
+
+    # Restore input values
+    meta.verbose = verbose
+    meta.ncpu = ncpu
+
+    return meta, log
+
+
+def conclusion_step(data, meta, log):
+    """Convert lists into arrays for saving and applies meta.sum_reads
+    if requested.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The current metadata object.
     log : logedit.Logedit
@@ -69,27 +145,23 @@ def conclusion_step(meta, log):
 
     Returns
     -------
+    data : Xarray Dataset
+        The updated Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     log : logedit.Logedit
         The updated log.
     """
     meta.centroids = np.array(meta.centroids)
-    meta.subflat = np.array(meta.subflat)
-    meta.flatmask = np.array(meta.flatmask)
-    meta.scanHeight = np.array(meta.scanHeight)
-    meta.diffmask = np.array(meta.diffmask)
-    meta.subdiffmask = np.array(meta.subdiffmask)
-    meta.drift2D = np.array(meta.drift2D)
-    meta.drift2D_int = np.array(meta.drift2D_int)
+    meta.guess = np.array(meta.guess)
     meta.subdata_ref = np.array(meta.subdata_ref)
-    meta.diffmask_ref = np.array(meta.diffmask_ref)
+    meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
 
-    return meta, log
+    return data, meta, log
 
 
 def separate_direct(meta, log):
-    """_summary_
+    """Separate out the direct observations from the science observations.
 
     Parameters
     ----------
@@ -205,10 +277,17 @@ def separate_direct(meta, log):
             meta.direct_index[i] = \
                 np.where(science_times[i] > direct_times)[0][-1]
 
-    return obstimes, CRPIX1, CRPIX2, postarg1, postarg2, ny, meta, log
+    meta.obstimes = obstimes
+    meta.CRPIX1 = CRPIX1
+    meta.CRPIX2 = CRPIX2
+    meta.postarg1 = postarg1
+    meta.postarg2 = postarg2
+    meta.ny = ny
+
+    return meta, log
 
 
-def separate_scan_direction(obstimes, postarg2, meta, log):
+def separate_scan_direction(meta, log):
     """Separate alternating scan directions.
 
     Parameters
@@ -239,12 +318,12 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
         meta.scandir = np.zeros(meta.num_data_files, dtype=int)
         meta.n_scan0 = 0
         meta.n_scan1 = 0
-        scan0 = postarg2[0]
-        scan1 = postarg2[1]
+        scan0 = meta.postarg2[0]
+        scan1 = meta.postarg2[1]
         for m in range(meta.num_data_files):
-            if postarg2[m] == scan0:
+            if meta.postarg2[m] == scan0:
                 meta.n_scan0 += 1
-            elif postarg2[m] == scan1:
+            elif meta.postarg2[m] == scan1:
                 meta.scandir[m] = 1
                 meta.n_scan1 += 1
             else:
@@ -256,12 +335,13 @@ def separate_scan_direction(obstimes, postarg2, meta, log):
                  mute=(not meta.verbose))
 
     # Group frames into frame, batch, and orbit number
-    meta.framenum, meta.batchnum, meta.orbitnum = hst.groupFrames(obstimes)
+    meta.framenum, meta.batchnum, meta.orbitnum = \
+        hst.groupFrames(meta.obstimes)
 
     return meta, log
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from HST's WFC3 instrument.
 
     Parameters
@@ -272,13 +352,17 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored
     meta : eureka.lib.readECF.MetaClass
         The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with the fits data stored inside
+    data : Xarray Dataset
+        The updated Dataset object with the fits data stored inside
     meta : eureka.lib.readECF.MetaClass
         The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -291,7 +375,6 @@ def read(filename, data, meta):
     - May 9, 2022 Kevin Stevenson
         Convert to using Xarray Dataset
     '''
-
     # Determine image size and filter/grism
     with fits.open(filename) as hdulist:
         data.attrs['filename'] = filename
@@ -313,21 +396,14 @@ def read(filename, data, meta):
         else:
             meta.nreads = data.attrs['shdr']['SAMPNUM']
 
-        if flux_units == 'ELECTRONS/S':
-            # Science data and uncertainties were previously in units
-            # of e-/sec, therefore multiply by sample time to get electrons.
-            samptime = data.attrs['shdr']['SAMPTIME']
-        else:
-            samptime = 1
-
         sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
         err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
         dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
         jd = []
         j = 0
         for rd in range(meta.nreads, 0, -1):
-            sci[j] = hdulist['SCI', rd].data*samptime
-            err[j] = hdulist['ERR', rd].data*samptime
+            sci[j] = hdulist['SCI', rd].data
+            err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
             jd.append(2400000.5+hdulist['SCI', rd].header['ROUTTIME']
                       - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
@@ -339,14 +415,24 @@ def read(filename, data, meta):
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
     if meta.horizonsfile is not None:
+        horizon_path = os.path.join(meta.hst_cal,
+                                    *meta.horizonsfile.split(os.sep))
+    if meta.horizonsfile is not None and os.path.isfile(horizon_path):
         # Apply light-time correction, convert to BJD_TDB
         # Horizons file created for HST around time of observations
-        bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, meta.horizonsfile)
+        bjd_corr = suntimecorr.suntimecorr(ra, dec, jd, horizon_path)
         bjdutc = jd + bjd_corr/86400.
         # FINDME: this was utc_tt, but I believe it should have
         # been utc_tdb instead
-        time = utc_tt.utc_tdb(bjdutc, meta.leapdir)
-        frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., meta.leapdir)
+        if not hasattr(meta, 'leapdir') or meta.leapdir is None:
+            meta.leapdir = 'leapdir'
+        leapdir_path = os.path.join(meta.hst_cal,
+                                    *meta.leapdir.split(os.sep))
+        if leapdir_path[-1] != os.sep:
+            leapdir_path += os.sep
+        time = utc_tt.utc_tdb(bjdutc, leapdir_path, log)
+        frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., leapdir_path,
+                                   log)
         time_units = 'BJD_TDB'
     else:
         if meta.firstFile:
@@ -365,7 +451,7 @@ def read(filename, data, meta):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.zeros((meta.nreads-1, 2))
+    centroids = np.zeros((meta.nreads, 2))
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
@@ -375,7 +461,9 @@ def read(filename, data, meta):
     meta.centroids.append(centroids)
 
     # Calculate trace
-    print("Calculating wavelength assuming " + meta.grism + " filter/grism...")
+    if meta.firstInBatch:
+        log.writelog(f"  Calculating wavelength assuming {meta.grism} "
+                     f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
     wave = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4
@@ -386,13 +474,13 @@ def read(filename, data, meta):
     data['wave_2d'].attrs['wave_units'] = wave_units
 
     # Divide data by flat field
-    if meta.flatfile is None:
-        print('No flat frames found.')
+    if meta.flatfile is None and meta.firstFile:
+        log.writelog('No flat frames found.')
     else:
-        data, meta = flatfield(data, meta)
+        data, meta, log = flatfield(data, meta, log)
 
     # Compute differences between non-destructive reads
-    diffdata, meta = difference_frames(data, meta)
+    diffdata, meta, log = difference_frames(data, meta, log)
 
     # Determine read noise and gain
     readNoise = np.mean((data.attrs['mhdr']['READNSEA'],
@@ -421,31 +509,42 @@ def read(filename, data, meta):
     diffdata.attrs['mhdr'] = data.attrs['mhdr']
     diffdata.attrs['filename'] = data.attrs['filename']
 
-    return diffdata, meta
+    diffdata['scandir'] = (['time'], np.repeat(meta.scandir[filename ==
+                                                            meta.segment_list],
+                                               meta.nreads))
+
+    return diffdata, meta, log
 
 
-def flatfield(data, meta):
+def flatfield(data, meta, log):
     '''Perform flatfielding.
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with flatfielding applied.
+    data : Xarray Dataset
+        The updated Dataset object with flatfielding applied.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     '''
+    if meta.firstInBatch:
+        log.writelog(f'  Performing flat fielding using:\n'
+                     f'    {meta.flatfile}',
+                     mute=(not meta.verbose))
+    flatfile_path = os.path.join(meta.hst_cal,
+                                 *meta.flatfile.split(os.sep))
     # Make list of master flat field frames
-
-    print('Loading flat frames...')
-    print(meta.flatfile)
-    tempflat, tempmask = hst.makeflats(meta.flatfile,
+    tempflat, tempmask = hst.makeflats(flatfile_path,
                                        [np.mean(data.wave_2d.values,
                                                 axis=0), ],
                                        [[0, meta.nx], ], [[0, meta.ny], ],
@@ -455,57 +554,71 @@ def flatfield(data, meta):
     subflat = tempflat[0]
     flatmask = tempmask[0]
 
-    meta.subflat.append(subflat)
-    meta.flatmask.append(flatmask)
+    time_units = data.flux.attrs['time_units']
+    data['flatmask'] = xrio.makeFluxLikeDA(flatmask[np.newaxis],
+                                           data.time.values[:1], "None",
+                                           time_units, name='flatmask')
 
     # Calculate reduced image
     subflat[np.where(flatmask == 0)] = 1
     subflat[np.where(subflat == 0)] = 1
     data['flux'] /= subflat
 
-    return data, meta
+    return data, meta, log
 
 
-def difference_frames(data, meta):
+def difference_frames(data, meta, log):
     '''Compute differenced frames.
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with differenced frames.
+    data : Xarray Dataset
+        The updated Dataset object differenced frames.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     '''
+    if meta.firstInBatch:
+        log.writelog('  Differencing non-destructive reads...',
+                     mute=(not meta.verbose))
+
     if meta.nreads > 1:
         # Subtract pairs of subframes
-        diffflux = np.zeros((meta.nreads-1, meta.ny, meta.nx))
-        differr = np.zeros((meta.nreads-1, meta.ny, meta.nx))
-        for n in range(meta.nreads-1):
+        meta.nreads -= 1
+        diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
+        differr = np.zeros((meta.nreads, meta.ny, meta.nx))
+        for n in range(meta.nreads):
             diffflux[n] = data.flux[n+1]-data.flux[n]
             differr[n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
     else:
         # FLT data has already been differenced
         diffflux = data.flux
         differr = data.err
+    
+    # Temporarily set this value for now
+    meta.n_int = meta.nreads
 
-    diffmask = np.zeros((meta.nreads-1, meta.ny, meta.nx))
-    guess = np.zeros((meta.nreads-1), dtype=int)
-    for n in range(meta.nreads-1):
-        diffmask[n] = np.copy(meta.flatmask[-1][0])
+    diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
+    guess = np.zeros((meta.nreads), dtype=int)
+    for n in range(meta.nreads):
+        diffmask[n] = data['flatmask'][0][0]
         try:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
                         np.median(differr[n], axis=1)[:, np.newaxis])] = 0
         except:
             # FINDME: Need to only catch the expected exception
             # May fail for FLT files
-            print("Diffthresh failed - this may happen for FLT files.")
+            log.writelog("Diffthresh failed - this may happen for FLT files.")
 
         masked_data = diffflux[n]*diffmask[n]
         guess[n] = np.median(np.where(masked_data > np.mean(masked_data)
@@ -515,19 +628,20 @@ def difference_frames(data, meta):
         guess[0] = guess[1]
 
     # Compute full scan length
-    scannedData = np.sum(data.flux[-1], axis=1)
-    xmin = np.min(guess)
-    xmax = np.max(guess)
-    scannedData /= np.median(scannedData[xmin:xmax+1])
-    scannedData -= 0.5
-    yrng = range(meta.ny)
-    spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
-    roots = spline.roots()
-    try:
-        meta.scanHeight.append(roots[1]-roots[0])
-    except:
-        # FINDME: Need to only catch the expected exception
-        pass
+    if meta.firstInBatch:
+        log.writelog('  Computing scan height...',
+                     mute=(not meta.verbose))
+    scanHeight = []
+    for i in range(meta.n_int):
+        scannedData = np.sum(data.flux[i], axis=1)
+        xmin = np.min(guess)
+        xmax = np.max(guess)
+        scannedData /= np.median(scannedData[xmin:xmax+1])
+        scannedData -= 0.5
+        yrng = range(meta.ny)
+        spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
+        roots = spline.roots()
+        scanHeight.append(roots[1]-roots[0])
 
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
@@ -538,47 +652,71 @@ def difference_frames(data, meta):
                                            time_units, name='flux')
     diffdata['err'] = xrio.makeFluxLikeDA(differr, difftime, flux_units,
                                           time_units, name='err')
-    diffdata['mask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
-                                           time_units, name='mask')
+    diffdata['flatmask'] = xrio.makeFluxLikeDA(diffmask, difftime, "None",
+                                               time_units, name='mask')
     variance = np.zeros_like(diffdata.flux.values)
     diffdata['variance'] = xrio.makeFluxLikeDA(variance, difftime, flux_units,
                                                time_units, name='variance')
-    diffdata['guess'] = (['time'], guess)
+    diffdata['guess'] = xrio.makeTimeLikeDA(guess, difftime, 'pixels',
+                                            time_units, 'guess')
+    diffdata['scanHeight'] = xrio.makeTimeLikeDA(scanHeight, difftime,
+                                                 'pixels', time_units,
+                                                 'scanHeight')
 
-    meta.diffmask.append(diffmask)
-    # # Save the non-differenced frame data in case it is useful
-    # data.raw_data = np.copy(data.data)
-    # data.raw_err = np.copy(data.err)
-    # # Overwrite the data array with the differenced data since that's
-    # # what we'll use for the other steps
-    # data.data = diffdata
-    # data.err = differr
-    # data.time = data.time[1:]
-
-    return diffdata, meta
+    return diffdata, meta, log
 
 
-def flag_bg(data, meta):
+def flag_bg(data, meta, log):
     '''Outlier rejection of sky background along time axis.
-
-    Uses the code written for NIRCam that also works for WFC3
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
     '''
-    return nircam.flag_bg(data, meta)
+    log.writelog('  Performing background outlier rejection...',
+                 mute=(not meta.verbose))
+
+    for p in range(2):
+        iscans = np.where(data.scandir.values == p)[0]
+        if len(iscans) > 0:
+            for n in range(meta.nreads):
+                iscan = iscans[n::meta.nreads]
+                # Set limits on the sky background
+                x1 = (data.guess.values[iscan].min()-meta.bg_hw).astype(int)
+                x2 = (data.guess.values[iscan].max()+meta.bg_hw).astype(int)
+                bgdata1 = data.flux[iscan, :x1]
+                bgmask1 = data.flux[iscan, :x1]
+                bgdata2 = data.flux[iscan, x2:]
+                bgmask2 = data.flux[iscan, x2:]
+                if hasattr(meta, 'use_estsig') and meta.use_estsig:
+                    bgerr1 = np.median(data.err[iscan, :x1])
+                    bgerr2 = np.median(data.err[iscan, x2:])
+                    estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
+                    estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
+                else:
+                    estsig1 = None
+                    estsig2 = None
+                data['mask'][iscan, :x1] = sigrej.sigrej(bgdata1,
+                                                         meta.bg_thresh,
+                                                         bgmask1, estsig1)
+                data['mask'][iscan, x2:] = sigrej.sigrej(bgdata2,
+                                                         meta.bg_thresh,
+                                                         bgmask2, estsig2)
+
+    return data
 
 
-def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
+def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
     """Fit for a non-uniform background.
 
     Uses the code written for NIRCam, but adds on some extra steps
@@ -613,130 +751,141 @@ def fit_bg(dataim, datamask, datav0, datavariance, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    bg, mask, n = nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+    y2 = guess + meta.bg_hw
+    y1 = guess - meta.bg_hw
+
+    bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
+                                deg=meta.bg_deg, threshold=meta.p3thresh,
+                                isrotate=2, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
-    bgerr = np.std(bg[n], axis=0)/np.sqrt(np.sum(meta.subdiffmask[-1][n],
-                                                 axis=0))
-    bgerr[np.where(np.logical_not(np.isfinite(bgerr)))] = 0.
+    bgerr = np.std(bg, axis=0)/np.sqrt(np.sum(datamask, axis=0))
+    bgerr[np.logical_not(np.isfinite(bgerr))] = 0.
     datav0 += np.mean(bgerr**2)
     datavariance = abs(dataim) / meta.gain + datav0
 
     return bg, mask, datav0, datavariance, n
 
 
-def correct_drift2D(data, meta, m):
+def correct_drift2D(data, meta, log, m):
     """Correct for calculated 2D drift.
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     m : int
         The current file number.
 
     Returns
     -------
-    data : DataClass
-        The updated DataClass object.
+    data : Xarray Dataset
+        The updated Dataset object after 2D drift correction.
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
+    log : logedit.Logedit
+        The current log.
     """
     def writeDrift2D(arg):
-        drift2D, m, n = arg
+        value, n = arg
         # Assign to array of spectra and uncertainties
-        meta.drift2D[-1][n] = drift2D
+        drift2D[n] = value
         return
 
-    # Save the reference frame for each scan direction if not yet done
-    if m < 2:
-        # FINDME: This requires that the reference files be the first
-        # two files. Using other files as the reference files will
-        # require loading in all of the frames at once. This will still work
-        # for observations with only one scan direction, since the second ref
-        # file will never be used.
-        meta.subdata_ref.append(data.flux)
-        meta.diffmask_ref.append(meta.diffmask[-1])
-
-    print("Calculating 2D drift...")
-    # FINDME: instead of calculating scanHeight, consider fitting
-    # stretch factor
-    drift2D = np.zeros((meta.nreads-1, 2))
-    meta.drift2D.append(drift2D)
+    log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
+    drift2D = np.zeros((meta.n_int, 2))
     if meta.ncpu == 1:
         # Only 1 CPU
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
-        for n in range(meta.nreads-1):
-            writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][0] *
-                                          meta.subdiffmask[p][0]),
-                                         (data.flux[n] *
-                                          meta.subdiffmask[-1][n]),
-                                         m, n))
+        for n in range(meta.n_int):
+            # Get read number
+            r = n % meta.nreads
+            # Get index of reference frame
+            # (0 = forward scan, 1 = reverse scan)
+            p = data.scandir.values[n]
+            writeDrift2D(hst.calcDrift2D((meta.subdata_ref[p][r] *
+                                          meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*data.flatmask[n]),
+                                         n))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
-        for n in range(meta.nreads-1):
+        for n in range(meta.n_int):
+            # Get read number
+            r = n % meta.nreads
+            # Get index of reference frame
+            # (0 = forward scan, 1 = reverse scan)
+            p = data.scandir.values[n]
             res = pool.apply_async(hst.calcDrift2D,
-                                   args=((meta.subdata_ref[p][0] *
-                                          meta.subdiffmask[p][0]),
-                                         (data.flux[n] *
-                                          meta.subdiffmask[-1][n]),
-                                         m, n),
+                                   args=((meta.subdata_ref[p][r] *
+                                          meta.subdiffmask_ref[p][r]),
+                                         (data.flux[n]*data.flatmask[n]),
+                                         n),
                                    callback=writeDrift2D)
         pool.close()
         pool.join()
         res.wait()
 
-    print("Performing rough, pixel-scale drift correction...")
-    meta.drift2D_int.append(np.round(meta.drift2D[-1], 0))
+    data['drift2D'] = xr.DataArray(drift2D, name='drift2D',
+                                   coords={"time": data.time,
+                                           "axis": ["x", "y"]},
+                                   dims=["time", "axis"],
+                                   attrs={"time_units": data.time.time_units,
+                                          "drift_units": 'pixels'})
+    data.drift2D["time"].attrs["time_units"] = data.time.time_units
+
+    log.writelog("  Performing rough, pixel-scale drift correction...",
+                 mute=(not meta.verbose))
+    drift2D_int = np.round(drift2D, 0)
     # Correct for drift by integer pixel numbers, no interpolation
-    for n in range(meta.nreads-1):
+    for n in range(meta.n_int):
         data.flux[n] = spni.shift(data.flux[n],
-                                  -1*meta.drift2D_int[-1][n, ::-1], order=0,
+                                  -1*drift2D_int[n, ::-1], order=0,
                                   mode='constant', cval=0)
         data.mask[n] = spni.shift(data.mask[n],
-                                  -1*meta.drift2D_int[-1][n, ::-1], order=0,
+                                  -1*drift2D_int[n, ::-1], order=0,
                                   mode='constant', cval=0)
         data.variance[n] = spni.shift(data.variance[n],
-                                      -1*meta.drift2D_int[-1][n, ::-1],
+                                      -1*drift2D_int[n, ::-1],
                                       order=0, mode='constant', cval=0)
         data.bg[n] = spni.shift(data.bg[n],
-                                -1*meta.drift2D_int[-1][n, ::-1], order=0,
+                                -1*drift2D_int[n, ::-1], order=0,
                                 mode='constant', cval=0)
 
-    # FINDME: The following cannot be run since we don't have the
-    # full time axis.
     # Outlier rejection of full frame along time axis
-    # print("Performing full-frame outlier rejection...")
-    # for p in range(2):
-    #     iscan   = np.where(ev.scandir == p)[0]
-    #     if len(iscan) > 0:
-    #         for n in range(meta.nreads-1):
-    #             #y1  = data.guess[ev.iref,n] - meta.spec_hw
-    #             #y2  = data.guess[ev.iref,n] + meta.spec_hw
-    #             #estsig      = [differr[ev.iref,n,y1:y2]
-    #                             for j in range(len(ev.sigthresh))]
-    #             shiftmask[iscan,n] = sigrej.sigrej(shiftdata[iscan,n],
-    #                                                ev.sigthresh,
-    #                                                shiftmask[iscan,n])  # ,
-    #                                                # estsig)
+    if meta.files_per_batch == 1 and meta.firstFile:
+        log.writelog("  WARNING: It is recommended to run Eureka! in batch\n"
+                     "  mode (nfiles >> 1) for WFC3 data to allow full-frame\n"
+                     "  outlier rejection.")
+    elif meta.files_per_batch > 1:
+        log.writelog("  Performing full-frame outlier rejection...",
+                     mute=(not meta.verbose))
+        for p in range(2):
+            iscan = np.where(meta.scandir == p)[0]*meta.nreads
+            if len(iscan) > 0:
+                for n in range(meta.nreads):
+                    # FINDME: The following commented-out code is outdated
+                    # y1 = data.guess[meta.iref+n] - meta.spec_hw
+                    # y2 = data.guess[meta.iref+n] + meta.spec_hw
+                    # estsig = [data.err[meta.iref+n, y1:y2]
+                    #           for j in range(len(meta.bg_thresh))]
+                    data.mask[iscan+n] = sigrej.sigrej(data.flux[iscan+n],
+                                                       meta.bg_thresh,
+                                                       data.mask[iscan+n])
 
-    print("Performing sub-pixel drift correction...")
+    log.writelog("  Performing sub-pixel drift correction...",
+                 mute=(not meta.verbose))
     # Get indices for each pixel
     ix = range(meta.subnx)
     iy = range(meta.subny)
     # Define the degrees of the bivariate spline
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
-    for n in range(meta.nreads-1):
+    for n in range(meta.n_int):
         # Get index of reference frame
         # (0 = forward scan, 1 = reverse scan)
         p = meta.scandir[m]
@@ -747,27 +896,95 @@ def correct_drift2D(data, meta, m):
         # the reference image)
         # "Measures the amount im2 is offset from im1 (i.e., shift im2 by
         # -1 * these #'s to match im1)"
-        data.flux[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                               meta.drift2D_int[-1][n, 1]).flatten(),
-                              (ix-meta.drift2D[-1][n, 0] +
-                               meta.drift2D_int[-1][n, 0]).flatten())
+        data.flux[n] = spline((iy-drift2D[n, 1] +
+                               drift2D_int[n, 1]).flatten(),
+                              (ix-drift2D[n, 0] +
+                               drift2D_int[n, 0]).flatten())
+        # Need to be careful with shifting the mask. Do the shifting, and
+        # mask whichever pixel was closest to the one that had been masked
         spline = spi.RectBivariateSpline(iy, ix, data.mask[n], kx=kx,
                                          ky=ky, s=0)
-        data.mask[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                               meta.drift2D_int[-1][n, 1]).flatten(),
-                              (ix-meta.drift2D[-1][n, 0] +
-                               meta.drift2D_int[-1][n, 0]).flatten())
+        data.mask[n] = spline((iy-drift2D[n, 1] +
+                               drift2D_int[n, 1]).flatten(),
+                              (ix-drift2D[n, 0] +
+                               drift2D_int[n, 0]).flatten())
+        # Fractional masking won't work - make sure it is all integer
+        data.mask[n] = np.round(data.mask[n]).astype(int)
         spline = spi.RectBivariateSpline(iy, ix, data.variance[n], kx=kx,
                                          ky=ky, s=0)
-        data.variance[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                                   meta.drift2D_int[-1][n, 1]).flatten(),
-                                  (ix-meta.drift2D[-1][n, 0] +
-                                   meta.drift2D_int[-1][n, 0]).flatten())
+        data.variance[n] = spline((iy-drift2D[n, 1] +
+                                   drift2D_int[n, 1]).flatten(),
+                                  (ix-drift2D[n, 0] +
+                                   drift2D_int[n, 0]).flatten())
         spline = spi.RectBivariateSpline(iy, ix, data.bg[n], kx=kx,
                                          ky=ky, s=0)
-        data.bg[n] = spline((iy-meta.drift2D[-1][n, 1] +
-                             meta.drift2D_int[-1][n, 1]).flatten(),
-                            (ix-meta.drift2D[-1][n, 0] +
-                             meta.drift2D_int[-1][n, 0]).flatten())
+        data.bg[n] = spline((iy-drift2D[n, 1] +
+                             drift2D_int[n, 1]).flatten(),
+                            (ix-drift2D[n, 0] +
+                             drift2D_int[n, 0]).flatten())
 
-    return data, meta
+    return data, meta, log
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version, edited to work for HST scanned observations.
+    """
+    log.writelog('  Extracting aperture region...',
+                 mute=(not meta.verbose))
+
+    apdata = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    aperr = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apmask = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apbg = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apv0 = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+
+    for f in range(int(meta.n_int/meta.nreads)):
+        # Get index of reference frame
+        # (0 = forward scan, 1 = reverse scan)
+        p = data.scandir[f*meta.nreads].values
+        for r in range(meta.nreads):
+            # Figure out the index currently being cut out
+            n = f*meta.nreads + r
+
+            # Use the centroid from the relevant reference frame
+            guess = meta.guess[p].values[r]
+            ap_y1 = (guess-meta.spec_hw).astype(int)
+            ap_y2 = (guess+meta.spec_hw).astype(int)
+
+            # Cut out this particular read
+            apdata[n] = data.flux.values[n, ap_y1:ap_y2]
+            aperr[n] = data.err.values[n, ap_y1:ap_y2]
+            apmask[n] = data.mask.values[n, ap_y1:ap_y2]
+            apbg[n] = data.bg.values[n, ap_y1:ap_y2]
+            apv0[n] = data.v0.values[n, ap_y1:ap_y2]
+
+    return apdata, aperr, apmask, apbg, apv0
