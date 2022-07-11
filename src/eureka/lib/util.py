@@ -107,7 +107,7 @@ def check_nans(data, mask, log, name=''):
         log.writelog(f"  WARNING: {name} has {num_nans} NaNs. Your subregion "
                      f"may be off the edge of the detector subarray.\n"
                      "  Masking NaN region and continuing, but you should "
-                     " really stop and reconsider your choices.")
+                     "really stop and reconsider your choices.")
         inan = np.where(np.isnan(data))
         # subdata[inan]  = 0
         mask[inan] = 0
@@ -404,10 +404,10 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     for m in range(meta.n_int):
         if len(optspec.shape) == 3:
             # Dealing with NIRISS's many orders
-            ny = normspec.shape[1]
+            ny = normspec.shape[0]
             temp = np.ma.zeros(ny)
             for n in range(ny):
-                temp[n] = get_mad_1d(normspec[m][n])
+                temp[n] = get_mad_1d(normspec[n][m])
             mad[m] = np.ma.mean(temp)
         else:
             # Standard case
