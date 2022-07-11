@@ -139,15 +139,15 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     if not hasattr(meta, 'vmax') or meta.vmin is None:
         meta.vmax = 1.03
     if not hasattr(meta, 'time_axis') or meta.time_axis is None:
-        meta.time_axis = 'left'
-    elif meta.time_axis not in ['left', 'lower']:
-        print("WARNING: meta.time_axis is not one of ['left', 'lower']!"
-              "Using 'left' by default.")
-        meta.time_axis = 'left'
+        meta.time_axis = 'y'
+    elif meta.time_axis not in ['y', 'x']:
+        print("WARNING: meta.time_axis is not one of ['y', 'x']!"
+              "Using 'y' by default.")
+        meta.time_axis = 'y'
     
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
-    if meta.time_axis == 'left':
+    if meta.time_axis == 'y':
         plt.imshow(norm_lcdata, origin='lower', aspect='auto',
                    extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
                    vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)

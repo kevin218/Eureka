@@ -322,7 +322,7 @@ Optional. Sets the vmax of the color bar for Figure 3101. Defaults to 1.03.
 
 time_axis
 '''''''''
-Optional. Determines whether the time axis in Figure 3101 is along the y-axis ('left') or the x-axis ('bottom'). Defaults to 'left'.
+Optional. Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x'). Defaults to 'y'.
 
 testing_S3
 ''''''''''
@@ -470,7 +470,7 @@ Optional. Sets the vmax of the color bar for Figure 4101. Defaults to 1.03.
 
 time_axis
 '''''''''
-Optional. Determines whether the time axis in Figure 4101 is along the y-axis ('left') or the x-axis ('bottom'). Defaults to 'left'.
+Optional. Determines whether the time axis in Figure 4101 is along the y-axis ('y') or the x-axis ('x'). Defaults to 'y'.
 
 hide_plots
 ''''''''''
