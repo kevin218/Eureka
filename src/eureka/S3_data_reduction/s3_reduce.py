@@ -76,9 +76,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
     if hasattr(meta, 'trace_method') and meta.trace_method is not None:
         # This pushes S3 to s3_reduce_niriss if accidentally called
-        s3_reduce_niriss.reduce(eventlabel,
-                                ecf_path=ecf_path,
-                                s2_meta=s2_meta)
+        return s3_reduce_niriss.reduce(eventlabel, ecf_path=ecf_path,
+                                       s2_meta=s2_meta)
 
     if s2_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -180,9 +179,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                              'you should edit the flag_bg() function in '
                              'nirspec.py and look at Issue #193 on Github!')
             elif meta.inst == 'niriss':
-                s3_reduce_niriss.reduce(eventlabel,
-                                        ecf_path=ecf_path,
-                                        s2_meta=s2_meta)
+                return s3_reduce_niriss.reduce(eventlabel, ecf_path=ecf_path,
+                                               s2_meta=s2_meta)
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
                 meta, log = inst.preparation_step(meta, log)
