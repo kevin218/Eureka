@@ -309,7 +309,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    util.manmask(data, meta, log)
+                    data = util.manmask(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)

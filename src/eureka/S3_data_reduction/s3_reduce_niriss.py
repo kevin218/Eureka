@@ -223,23 +223,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                     dtype=bool))
 
         # Check if arrays have NaNs
-        data.mask.values = util.check_nans(data.flux.values,
-                                           data.mask.values,
-                                           log, name='FLUX')
-        data.mask.values = util.check_nans(data.err.values,
-                                           data.mask.values,
-                                           log, name='ERR')
-        data.mask.values = util.check_nans(data.v0.values,
-                                           data.mask.values,
-                                           log, name='V0')
+        data['mask'] = util.check_nans(data['flux'], data['mask'],
+                                       log, name='FLUX')
+        data['mask'] = util.check_nans(data['err'], data['mask'],
+                                       log, name='ERR')
+        data['mask'] = util.check_nans(data['v0'], data['mask'],
+                                       log, name='V0')
 
         # Manually mask regions [colstart, colend, rowstart, rowend]
         if hasattr(meta, 'manmask'):
-            log.writelog("  Masking manually identified bad pixels",
-                         mute=(not meta.verbose))
-            for i in range(len(meta.manmask)):
-                colstart, colend, rowstart, rowend = meta.manmask[i]
-                data['mask'][rowstart:rowend, colstart:colend] = 0
+            data = util.manmask(data, meta, log)
 
         # Perform outlier rejection of sky background along time axis
         log.writelog('  Performing background outlier rejection',
@@ -252,21 +245,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                            testing=meta.testing_S3,
                            isplots=meta.isplots_S3)
 
+        # Make image+background plots
         if meta.isplots_S3 >= 3:
-            log.writelog('  Creating figures for background '
-                         'subtraction', mute=(not meta.verbose))
-            iterfn = range(meta.int_start, meta.n_int)
-            if meta.verbose:
-                iterfn = tqdm(iterfn)
-            for n in iterfn:
-                # make image+background plots
-                plots_s3.image_and_background(data, meta, n, m)
-
-        # Calulate and correct for 2D drift
-        if hasattr(inst, 'correct_drift2D'):
-            log.writelog('  Correcting for 2D drift',
-                         mute=(not meta.verbose))
-            inst.correct_drift2D(data, meta, m)
+            plots_s3.image_and_background(data, meta, log, m)
 
         # Compute median frame
         medapdata = np.median(data.flux, axis=0)
@@ -360,18 +341,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
         # Remove large 3D arrays from Dataset
         del(data['flux'], data['err'], data['dq'], data['v0'],
-            data['bg'], data['mask'], data.attrs['intstart'],
-            data.attrs['intend'])
+            data['bg'], data['mask'], data['wave_2d'],
+            data.attrs['intstart'], data.attrs['intend'])
 
         # Append results for future concatenation
         datasets.append(data)
 
     # Concatenate results along time axis (default)
     spec = xrio.concat(datasets)
-
-    # Calculate total time
-    total = (time_pkg.time() - t0) / 60.
-    log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     # Save Dataset object containing time-series of 1D spectra
     meta.filename_S3_SpecData = (meta.outputdir+'S3_'+meta.eventlabel +
@@ -380,19 +357,25 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                            verbose=True)
 
     # Compute MAD value
-    meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
+    meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
+                               optmask=spec.optmask)
     log.writelog(f"Stage 3 MAD = {np.round(meta.mad_s3).astype(int)} ppm")
 
     if meta.isplots_S3 >= 1:
         log.writelog('Generating figure')
         # 2D light curve without drift correction
-        plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
+        plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                                optmask=spec.optmask)
 
     # Save results
     if meta.save_output:
         log.writelog('Saving Metadata')
         fname = meta.outputdir + 'S3_' + meta.eventlabel + "_Meta_Save"
         me.saveevent(meta, fname, save=[])
+
+    # Calculate total time
+    total = (time_pkg.time() - t0) / 60.
+    log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     log.closelog()
 
