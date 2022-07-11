@@ -52,8 +52,8 @@ def box_extract(data, var, boxmask):
             masked[(total == 4)] = 1
         return masked
 
-    all_spec = np.zeros((3, data.shape[0], data.shape[2]))
-    all_var = np.zeros((3, data.shape[0], data.shape[2]))
+    all_spec = np.nan*np.ones((3, data.shape[0], data.shape[2]))
+    all_var = np.nan*np.ones((3, data.shape[0], data.shape[2]))
 
     m1, m2, m3 = boxmask
 
@@ -369,9 +369,11 @@ def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
 
     # Loops over each quadrant
     if per_quad:
-        es_all = np.zeros(3, dtype=np.ndarray)
-        ev_all = np.zeros(3, dtype=np.ndarray)
-        p_all = np.zeros(3, dtype=np.ndarray)
+        # es_all = np.zeros(3, dtype=np.ndarray)
+        # ev_all = np.zeros(3, dtype=np.ndarray)
+        # p_all = np.zeros(3, dtype=np.ndarray)
+        es_all = np.nan*np.ones((3, data.shape[0], data.shape[2]))
+        ev_all = np.nan*np.ones((3, data.shape[0], data.shape[2]))
 
         for quad in range(1, 4):
             # Figures out which quadrant location to use
@@ -422,11 +424,11 @@ def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
                                            proftype=proftype, isplots=isplots,
                                            test=test)
             #                                , pos3=pos3[x1:x2]
-            es_all[quad-1] = np.copy(es)
-            ev_all[quad-1] = np.copy(ev)
-            p_all[quad-1] = np.copy(p)
+            es_all[quad-1, :, x1:x2] = es
+            ev_all[quad-1, :, x1:x2] = ev
+            # p_all[quad-1, :, x1:x2] = p
 
-        return es_all, ev_all, p_all
+        return es_all, ev_all  # , p_all
 
     else:  # Full image
         es, ev, p = extraction_routine(data, meta, var, spectrum, spectrum_var,
@@ -437,7 +439,7 @@ def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
                                        isplots=isplots, test=test)
         #                                , pos3=pos3
 
-        return es, ev, p
+        return es, ev  # , p
 
 
 def extraction_routine(data, meta, var, spectrum, spectrum_var, sky_bkg,

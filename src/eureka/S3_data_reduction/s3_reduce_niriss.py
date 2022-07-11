@@ -292,14 +292,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         data[opterr_key].attrs['time_units'] = data.flux.attrs['time_units']
 
         log.writelog("  Performing optimal spectral extraction")
-        optspec, opterr, profile = optimal_extraction_routine(
-            data.flux.values, meta, log, data.err.values, stdflux, stdvar,
-            pos1=meta.trace['order_1'],
-            pos2=meta.trace['order_2'],
-            pos3=meta.trace['order_3'], sky_bkg=data.bg.values,
-            medframe=medapdata, sigma=meta.opt_sigma,
-            per_quad=meta.per_quad, proftype=meta.proftype,
-            test=meta.testing_S3, isplots=meta.isplots_S3)
+        data.optspec.values, data.opterr.values = \
+            optimal_extraction_routine(
+                data.flux.values, meta, log, data.err.values, stdflux, stdvar,
+                pos1=meta.trace['order_1'],
+                pos2=meta.trace['order_2'],
+                pos3=meta.trace['order_3'], sky_bkg=data.bg.values,
+                medframe=medapdata, sigma=meta.opt_sigma,
+                per_quad=meta.per_quad, proftype=meta.proftype,
+                test=meta.testing_S3, isplots=meta.isplots_S3)
 
         # Mask out NaNs and Infs
         optspec_ma = np.ma.masked_invalid(data.optspec.values)
