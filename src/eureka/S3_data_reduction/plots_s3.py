@@ -33,20 +33,40 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     vmin = 0.97
     vmax = 1.03
 
-    plt.figure(3101, figsize=(8, 8))
-    plt.clf()
-    plt.imshow(normspec, origin='lower', aspect='auto',
-               extent=[wmin, wmax, 0, meta.n_int], vmin=vmin, vmax=vmax,
-               cmap=plt.cm.RdYlBu_r)
-    plt.title(f"MAD = {int(np.round(meta.mad_s3, 0))} ppm")
-    plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu m$)')
-    plt.colorbar(label='Normalized Flux')
-    plt.tight_layout()
-    fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
-    plt.savefig(meta.outputdir+fname, dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
+    if len(normspec.shape) == 3:
+        # Need to handle NIRISS's multiple quadrants
+        for i in range(normspec.shape[0]):
+            plt.figure(3101, figsize=(8, 8))
+            plt.clf()
+            plt.imshow(normspec[i], origin='lower', aspect='auto',
+                       extent=[wmin, wmax, 0, meta.n_int],
+                       vmin=vmin, vmax=vmax,
+                       cmap=plt.cm.RdYlBu_r)
+            plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+            plt.ylabel('Integration Number')
+            plt.xlabel(r'Wavelength ($\mu m$)')
+            plt.colorbar(label='Normalized Flux')
+            plt.tight_layout()
+            fname = f'figs{os.sep}fig3101_quad{i}-2D_LC'+figure_filetype
+            plt.savefig(meta.outputdir+fname, dpi=300)
+            if not meta.hide_plots:
+                plt.pause(0.2)
+    else:
+        # Standard case
+        plt.figure(3101, figsize=(8, 8))
+        plt.clf()
+        plt.imshow(normspec, origin='lower', aspect='auto',
+                   extent=[wmin, wmax, 0, meta.n_int], vmin=vmin, vmax=vmax,
+                   cmap=plt.cm.RdYlBu_r)
+        plt.title(f"MAD = {int(np.round(meta.mad_s3, 0))} ppm")
+        plt.ylabel('Integration Number')
+        plt.xlabel(r'Wavelength ($\mu m$)')
+        plt.colorbar(label='Normalized Flux')
+        plt.tight_layout()
+        fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
+        plt.savefig(meta.outputdir+fname, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
 
 
 def image_and_background(data, meta, log, m):

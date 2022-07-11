@@ -339,6 +339,11 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
                             normspec[iscans[r::meta.nreads]], axis=0)
                     normspec[iscans[r::meta.nreads]] /= np.ma.mean(
                         normspec[iscans[r::meta.nreads]], axis=0)
+    elif meta.inst == 'niriss':
+        # Need to handle NIRISS's multiple quadrants
+        if opterr is not None:
+            normerr = normerr/np.ma.mean(normspec, axis=1)[:, np.newaxis]
+        normspec = normspec/np.ma.mean(normspec, axis=1)[:, np.newaxis]
     else:
         if opterr is not None:
             normerr = normerr/np.ma.mean(normspec, axis=0)
@@ -403,7 +408,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
 
     for m in range(meta.n_int):
         if len(optspec.shape) == 3:
-            # Dealing with NIRISS's many orders
+            # Need to handle NIRISS's multiple quadrants
             ny = normspec.shape[0]
             temp = np.ma.zeros(ny)
             for n in range(ny):
