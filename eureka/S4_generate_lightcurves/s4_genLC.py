@@ -118,7 +118,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
                          mute=(not meta.verbose))
             spec = xrio.readXR(meta.filename_S3_SpecData)
-
+            
             if meta.wave_min is None:
                 meta.wave_min = np.min(spec.wave_1d.values)
                 log.writelog(f'No value was provided for meta.wave_min, so '
@@ -181,10 +181,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             lc.wave_low.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_hi.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
-
+            
             if not hasattr(meta, 'boundary'):
                 # The default value before this was added as an option
                 meta.boundary = 'extend'
+
 
             # FINDME: The current implementation needs improvement,
             # consider using optmask instead of masked arrays
@@ -214,39 +215,49 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
+
+            lc['driftypos'] = (['time'], spec.driftypos.data)
+            lc['driftywidth'] = (['time'], spec.driftywidth.data)
+            
             # Record and correct for 1D drift/jitter
             if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
                 # This can take a long time, so always print this message
                 log.writelog('Recording drift/jitter')
                 # Compute drift/jitter
-                drift1d, driftwidth, driftmask = drift.spec1D(optspec_ma, meta, log)
+                drift1d, driftwidth, driftmask = drift.spec1D(optspec_ma, meta,
+                                                              log)
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
                     drift1d, driftmask, Box1DKernel(meta.box_width))
                 driftwidth = clipping.replace_moving_mean(
                     driftwidth, driftmask, Box1DKernel(meta.box_width))
-                lc['drift1d'] = (['time'], drift1d)
-                lc['driftwidth'] = (['time'], driftwidth)
-                
+                lc['driftxpos'] = (['time'], drift1d)
+                lc['driftxwidth'] = (['time'], driftwidth)
                 lc['driftmask'] = (['time'], driftmask)
+                
+                spec['driftxpos'] = (['time'], drift1d)
+                spec['driftxwidth'] = (['time'], driftwidth)
+                spec['driftmask'] = (['time'], driftmask)
+                
                 if meta.correctDrift:
                     log.writelog('Applying drift/jitter correction')
 
                     # Correct for drift/jitter
                     for n in range(meta.n_int):
                         # Need to zero-out the weights of masked data
-                        weights = (~np.ma.getmaskarray(optspec_ma[n])).astype(int)
+                        weights = ~np.ma.getmaskarray(optspec_ma[n])
+                        weights = weights.astype(int)
                         spline = spi.UnivariateSpline(np.arange(meta.subnx),
                                                       optspec_ma[n], k=3, s=0,
                                                       w=weights)
                         spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                       spec.opterr[n], k=3, s=0,
-                                                       w=weights)
+                                                       spec.opterr[n], k=3,
+                                                       s=0, w=weights)
                         optspec_ma[n] = spline(np.arange(meta.subnx) +
-                                               lc.drift1d[n].values)
+                                               lc.driftxpos[n].values)
                         opterr_ma[n] = spline2(np.arange(meta.subnx) +
-                                               lc.drift1d[n].values)
+                                               lc.driftxpos[n].values)
                         # # Merge conflict: Need to test code below
                         # # before implementing
                         # optspec_ma[n] = np.ma.masked_invalid(spline(
@@ -255,8 +266,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                         #     np.arange(meta.subnx)+lc.drift1d[n].values))
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
-                    plots_s4.drift1d(meta, lc)
-                    plots_s4.driftwidth(meta, lc)
+                    plots_s4.driftxpos(meta, lc)
+                    plots_s4.driftxwidth(meta, lc)
 
             # FINDME: optspec mask isn't getting updated when correcting
             # for drift. Also, entire integrations are getting flagged.
@@ -310,12 +321,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             log.writelog('Saving results')
+            
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
                            + str(bg_hw_val))
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S4_SpecData = (meta.outputdir + 'S4_' + event_ap_bg
                                          + "_SpecData.h5")
             xrio.writeXR(meta.filename_S4_SpecData, spec, verbose=True)
+            
             # Save Dataset object containing binned light curves
             meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
                                        + "_LCData.h5")

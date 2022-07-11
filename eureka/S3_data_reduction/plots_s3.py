@@ -299,7 +299,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     if not meta.hide_plots:
         plt.pause(0.1)
 
-def spatialpos(data, meta):
+def driftypos(data, meta):
     '''Plot the spatial jitter. (Fig 3601)
 
     Parameters
@@ -316,16 +316,16 @@ def spatialpos(data, meta):
     plt.figure(3601, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int),
-             np.array(data["src_ypos_exact"]), '.')
+             np.array(data["driftypos"]), '.')
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3601_SpatialPos'+figure_filetype
+    fname = 'figs'+os.sep+'fig3601_DriftYPos'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
-def spatialwidth(data, meta):
+def driftywidth(data, meta):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3602)
 
     Parameters
@@ -342,11 +342,11 @@ def spatialwidth(data, meta):
     plt.figure(3602, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int),
-             np.array(data["src_ypos_width"]), '.')
+             np.array(data["driftywidth"]), '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3602_SpatialWidth'+figure_filetype
+    fname = 'figs'+os.sep+'fig3602_DriftYWidth'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

@@ -48,7 +48,7 @@ def binned_lightcurve(meta, lc, i):
         plt.pause(0.2)
 
 
-def drift1d(meta, lc):
+def driftxpos(meta, lc):
     '''Plot the 1D drift/jitter results. (Fig 4103)
 
     Parameters
@@ -65,22 +65,22 @@ def drift1d(meta, lc):
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.drift1d[np.where(~lc.driftmask)], '.',
+             lc.driftxpos[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
     plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.drift1d[np.where(lc.driftmask)], '.',
+             lc.driftxpos[np.where(lc.driftmask)], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig4103_Drift'+figure_filetype
+    fname = 'figs'+os.sep+'fig4103_DriftXPos'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def driftwidth(meta, lc):
+def driftxwidth(meta, lc):
     '''Plot the 1D drift width results. (Fig 4104)
 
     Parameters
@@ -97,16 +97,16 @@ def driftwidth(meta, lc):
     plt.figure(4104, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.driftwidth[np.where(~lc.driftmask)], '.',
+             lc.driftxwidth[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
     plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.driftwidth[np.where(lc.driftmask)], '.',
+             lc.driftxwidth[np.where(lc.driftmask)], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift CC Width Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig4104_DriftWidth'+figure_filetype
+    fname = 'figs'+os.sep+'fig4104_DriftXWidth'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

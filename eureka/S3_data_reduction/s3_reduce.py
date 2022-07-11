@@ -371,8 +371,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # data['opterr'] = np.ma.masked_where(mask, data.opterr)
 
                 if meta.record_ypos:
-                    data['src_ypos_exact'] = (['time'], src_ypos_exact)
-                    data['src_ypos_width'] = (['time'], src_ypos_width)
+                    data['driftypos'] = (['time'], src_ypos_exact)
+                    data['driftywidth'] = (['time'], src_ypos_width)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
@@ -386,8 +386,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         plots_s3.optimal_spectrum(data, meta, n, m)
                     if meta.record_ypos:
                         # make y position and width plots
-                        plots_s3.spatialpos(data, meta)
-                        plots_s3.spatialwidth(data, meta)
+                        plots_s3.driftypos(data, meta)
+                        plots_s3.driftywidth(data, meta)
 
                 if meta.save_output:
                     # Save flux data from current segment
