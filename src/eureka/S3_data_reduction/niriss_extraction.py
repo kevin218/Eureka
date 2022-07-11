@@ -410,8 +410,7 @@ def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
             newvar = np.copy(var[:, y1:y2, x1:x2])
             new_spectrum_var = np.copy(np.array(spectrum_var)[index, :, x1:x2])
 
-            log.writelog(f'    Extracting quadrant {quad}...',
-                         mute=(not meta.verbose))
+            log.writelog(f'    Extracting quadrant {quad}...')
             # Run the optimal extraction routine on the quadrant
             es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2], meta,
                                            newvar, new_spectrum,

@@ -291,8 +291,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         data[opterr_key].attrs['flux_units'] = data.flux.attrs['flux_units']
         data[opterr_key].attrs['time_units'] = data.flux.attrs['time_units']
 
-        log.writelog("  Performing optimal spectral extraction",
-                     mute=(not meta.verbose))
+        log.writelog("  Performing optimal spectral extraction")
         optspec, opterr, profile = optimal_extraction_routine(
             data.flux.values, meta, log, data.err.values, stdflux, stdvar,
             pos1=meta.trace['order_1'],
