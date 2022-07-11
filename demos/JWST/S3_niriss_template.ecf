@@ -13,6 +13,11 @@ extract_order3  False       # Sets whether to extract the 3rd order or mask it
 radius          1           # Sets the radius for edge extraction method
 filter          4           # Sets the filter size for edge extraction method
 
+# Simple box mask Parameters
+boxsize1        60    # Box width (in pixels) for the first order
+boxsize2        50    # Box width (in pixels) for the second order
+boxsize3        None  # Box width (in pixels) for the third order. "None" means ignore the order completely
+
 # Background parameters
 which_bkg       simple                  # Selects which background estimation to use. Options are 'simple' and '2D'
 window_length   7                       # The window size to use for the SavGol filter to estimate the background (only needed for 'simple')
