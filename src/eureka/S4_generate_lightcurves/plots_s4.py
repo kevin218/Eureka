@@ -5,13 +5,15 @@ from ..lib import util
 from ..lib.plots import figure_filetype
 
 
-def binned_lightcurve(meta, lc, i):
+def binned_lightcurve(meta, log, lc, i):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     lc : Xarray Dataset
         The Dataset object containing light curve and time data.
     i : int
@@ -21,20 +23,41 @@ def binned_lightcurve(meta, lc, i):
     -------
     None
     '''
+    # Normalize the light curve
+    norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
+                                                      lc['err'][i])
+
     plt.figure(4102, figsize=(8, 6))
     plt.clf()
     plt.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                  f'{lc.wave_hi.values[i]:.3f}')
     ax = plt.subplot(111)
-    time_modifier = np.floor(lc.time.values[0])
-    # Normalized light curve
-    norm_lcdata = lc['data'][i]/np.nanmedian(lc['data'][i].values)
-    norm_lcerr = lc['err'][i]/np.nanmedian(lc['data'][i].values)
-    plt.errorbar(lc.time-time_modifier, norm_lcdata, norm_lcerr, fmt='o',
-                 color=f'C{i}', mec=f'C{i}', alpha=0.2)
-    mad = util.get_mad_1d(norm_lcdata)
-    plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
-             transform=ax.transAxes, color='k')
+    time_modifier = np.floor(np.ma.min(lc.time.values))
+    
+    # Plot the normalized light curve
+    if meta.inst == 'wfc3':
+        for p in range(2):
+            iscans = np.where(lc.scandir.values == p)[0]
+
+            if len(iscans) > 0:
+                plt.errorbar(lc.time.values[iscans]-time_modifier,
+                             norm_lcdata[iscans]+0.005*p,
+                             norm_lcerr[iscans], fmt='o', color=f'C{p}',
+                             mec=f'C{p}', alpha=0.2)
+                mad = util.get_mad_1d(norm_lcdata[iscans])
+                meta.mad_s4_binned.append(mad)
+                log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+                plt.text(0.05, 0.075+0.05*p,
+                         f"MAD = {np.round(mad).astype(int)} ppm",
+                         transform=ax.transAxes, color=f'C{p}')
+    else:
+        plt.errorbar(lc.time.values-time_modifier, norm_lcdata, norm_lcerr,
+                     fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
+        mad = util.get_mad_1d(norm_lcdata)
+        meta.mad_s4_binned.append(mad)
+        log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
+        plt.text(0.05, 0.1, f"MAD = {np.round(mad).astype(int)} ppm",
+                 transform=ax.transAxes, color='k')
     plt.ylabel('Normalized Flux')
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
@@ -80,7 +103,7 @@ def drift1d(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, wave_1d, optspec):
+def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
@@ -92,17 +115,25 @@ def lc_driftcorr(meta, wave_1d, optspec):
         which have been set in the S3 ecf.
     optspec : ndarray
         The optimally extracted spectrum.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
 
     Returns
     -------
     None
     '''
     optspec = np.ma.masked_invalid(optspec)
-    normspec = optspec / np.ma.mean(optspec, axis=0)
+    optspec = np.ma.masked_where(optmask, optspec)
+    
+    wmin = meta.wave_min
+    wmax = meta.wave_max
+    iwmin = np.nanargmin(np.abs(wave_1d-wmin).values)
+    iwmax = np.nanargmin(np.abs(wave_1d-wmax).values)
 
-    wmin = np.ma.min(wave_1d)
-    wmax = np.ma.max(wave_1d)
-    n_int, nx = optspec.shape
+    # Normalize the light curve
+    norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -117,8 +148,8 @@ def lc_driftcorr(meta, wave_1d, optspec):
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'left':
-        plt.imshow(normspec, origin='lower', aspect='auto',
-                   extent=[wmin, wmax, 0, n_int], vmin=meta.vmin,
+        plt.imshow(norm_lcdata, origin='lower', aspect='auto',
+                   extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
                    vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
         plt.ylabel('Integration Number')
         plt.xlabel(r'Wavelength ($\mu m$)')
@@ -131,10 +162,10 @@ def lc_driftcorr(meta, wave_1d, optspec):
             xticks_labels = [f'{np.round(xtick, 4):.4f}' for xtick in xticks]
             secax.set_xticks(xticks, xticks_labels, rotation=90,
                              fontsize='xx-small')
-            plt.vlines(xticks, 0, n_int, '0.3', 'dashed')
+            plt.vlines(xticks, 0, meta.n_int, '0.3', 'dashed')
     else:
-        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
-                   extent=[0, n_int, wmin, wmax], vmin=meta.vmin,
+        plt.imshow(norm_lcdata.swapaxes(0, 1), origin='lower', aspect='auto',
+                   extent=[0, meta.n_int, wmin, wmax], vmin=meta.vmin,
                    vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
         plt.ylabel(r'Wavelength ($\mu m$)')
         plt.xlabel('Integration Number')
@@ -147,9 +178,9 @@ def lc_driftcorr(meta, wave_1d, optspec):
             yticks_labels = [f'{np.round(ytick, 4):.4f}' for ytick in yticks]
             secax.set_yticks(yticks, yticks_labels, rotation=0,
                              fontsize='xx-small')
-            plt.hlines(yticks, 0, n_int, '0.3', 'dashed')
+            plt.hlines(yticks, 0, meta.n_int, '0.3', 'dashed')
 
-    plt.title("MAD = " + str(np.round(meta.mad_s4).astype(int)) + " ppm")
+    plt.title(f"MAD = {np.round(meta.mad_s4).astype(int)} ppm")
     plt.tight_layout()
     fname = 'figs'+os.sep+'fig4101_2D_LC'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
@@ -157,6 +188,7 @@ def lc_driftcorr(meta, wave_1d, optspec):
         plt.close()
     else:
         plt.pause(0.2)
+
     return
 
 

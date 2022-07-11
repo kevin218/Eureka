@@ -141,6 +141,13 @@ Currently, the only parallelized part of the code is the **background subtractio
 
 :func:`util.BGsubtraction<eureka.lib.util.BGsubtraction>`
 
+nfiles
+''''''
+Sets the maximum number of data files to analyze batched together.
+
+max_memory
+''''''''''
+Sets the maximum memory fraction (0--1) that should be used by the loaded in data files. This will reduce nfiles if needed. Note that more RAM than this may be used during operations like sigma clipping, so you're best off setting max_memory <= 0.5.
 
 suffix
 ''''''
@@ -161,6 +168,21 @@ As we want to do our own spectral extraction, we set this variable to ``calints`
 .. note::
 	Note that other Instruments might used different suffixes!
 
+hst_cal
+'''''''
+Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
+
+horizonsfile
+''''''''''''
+Only used for HST analyses. The path with respect to hst_cal to the horizons file you've downloaded from https://ssd.jpl.nasa.gov/horizons/app.html#/. To get a new horizons file on that website, 1. Select "Vector Table", 2. Select "HST", 3. Select "@ssb" (Solar System Barycenter), 4. Select a date range that spans the days relevant to your observations. Then click Generate Ephemeris and click Download Results.
+
+leapdir
+'''''''
+Only used for HST analyses. The folder with respect to hst_cal where leapsecond calibration files will be saved.
+
+flatfile
+''''''''
+Only used for HST analyses. The path with respect to hst_cal to the flatfield file to use. A WFC3/G102 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G102/WFC3.IR.G102.flat.2.fits.gz>`_ and a WFC3/G141 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G141/WFC3.IR.G141.flat.2.fits.gz>`_; be sure to unzip the files after downloading them.
 
 ywindow & xwindow
 '''''''''''''''''
@@ -179,8 +201,27 @@ Everything outside of the box will be discarded and not used in the analysis.
 
 src_pos_type
 ''''''''''''
-Determine the source position on the detector when not given in header (Options: gaussian, weighted, or max).
+Determine the source position on the detector when not given in header (Options: gaussian, weighted, max, or hst).
 
+centroidtrim
+''''''''''''
+Only used for HST analyses. The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
+
+centroidguess
+'''''''''''''
+Only used for HST analyses. A guess for the location of the star in the direct images in the format [x, y].
+
+flatoffset
+''''''''''
+Only used for HST analyses. The positional offset to use for flatfielding. This should be formatted as a 2 element list with x and y offsets.
+
+flatsigma
+'''''''''
+Only used for HST analyses. Used to sigma clip bad values from the flatfield image.
+
+diffthresh
+''''''''''
+Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
 
 bg_hw & spec_hw
 '''''''''''''''
@@ -208,13 +249,11 @@ The plot below shows you which parts will be used for the background calculation
 
 .. image:: ../media/bg_hw.png
 
-
 bg_thresh
 '''''''''
 Double-iteration X-sigma threshold for outlier rejection along time axis.
 The flux of every background pixel will be considered over time for the current data segment.
 e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed in time for every background pixel. Outliers will be masked and not considered in the background flux calculation.
-
 
 bg_deg
 ''''''
@@ -241,36 +280,33 @@ p3thresh
 ''''''''
 Only important if ``bg_deg => 0`` (see above). # sigma threshold for outlier rejection during background subtraction which corresponds to step 3 of optimal spectral extraction, as defined by Horne (1986).
 
-
 p5thresh
 ''''''''
 Used during Optimal Extraction. # sigma threshold for outlier rejection during step 5 of optimal spectral extraction, as defined by Horne (1986). Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
-
 
 p7thresh
 ''''''''
 Used during Optimal Extraction. # sigma threshold for outlier rejection during step 7 of optimal spectral extraction, as defined by Horne (1986). Default is 10. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
-
 fittype
 '''''''
 Used during Optimal Extraction. fittype defines how to construct the normalized spatial profile for optimal spectral extraction. Options are: 'smooth', 'meddata', 'wavelet', 'wavelet2D', 'gauss', or 'poly'. Using the median frame (meddata) should work well with JWST. Otherwise, using a smoothing function (smooth) is the most robust and versatile option. Default is meddata. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
-
 
 window_len
 ''''''''''
 Used during Optimal Extraction. window_len is only used when fittype = 'smooth'. It sets the length scale over which the data are smoothed. Default is 31. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
-
 prof_deg
 ''''''''
 Used during Optimal Extraction. prof_deg is only used when fittype = 'poly'. It sets the polynomial degree when constructing the spatial profile. Default is 3. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
+iref
+''''
+Only used for HST analyses. The file indices to use as reference frames for 2D drift correction. This should be a 1-2 element list with the reference indices for each scan direction.
 
 curvature
 ''''''''
 Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
-
 
 isplots_S3
 ''''''''''
@@ -300,10 +336,21 @@ hide_plots
 ''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
+verbose
+'''''''
+If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 2 JWST data.
+The path to the directory containing the Stage 2 JWST data. For HST observations, the sci_dir and cal_dir folders will only be checked if this folder does not contain FITS files.
+
+topdir + inputdir + sci_dir
+'''''''''''''''''''''''''''
+Optional, only used for HST analyses. The path to the folder containing the science spectra. Defaults to 'sci'.
+
+topdir + inputdir + cal_dir
+'''''''''''''''''''''''''''
+Optional, only used for HST analyses. The path to the folder containing the wavelength calibration imaging mode observations. Defaults to 'cal'.
 
 topdir + outputdir
 ''''''''''''''''''
@@ -311,7 +358,7 @@ The path to the directory in which to output the Stage 3 JWST data and plots.
 
 topdir + time_file
 ''''''''''''''''''
-The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
+Optional. The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
 
 
 
@@ -373,6 +420,41 @@ sub_mean
 ''''''''
 If True, subtract spectrum mean during cross correlation (can help with cross-correlation step).
 
+sub_continuum 
+'''''''''''''
+Set True to subtract the continuum from the spectra using a highpass filter
+
+highpassWidth
+'''''''''''''
+The integer width of the highpass filter when subtracting the continuum
+
+sigma_clip
+''''''''''
+Whether or not sigma clipping should be performed on the 1D time series
+
+sigma
+'''''
+Only used if sigma_clip=True. The number of sigmas a point must be from the rolling median to be considered an outlier
+
+box_width
+'''''''''
+Only used if sigma_clip=True. The width of the box-car filter (used to calculated the rolling median) in units of number of data points
+
+maxiters
+''''''''
+Only used if sigma_clip=True. The number of iterations of sigma clipping that should be performed.
+
+boundary
+''''''''
+Only used if sigma_clip=True. Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
+
+fill_value
+''''''''''
+Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
+
+sum_reads
+'''''''''
+Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
 
 isplots_S4
 ''''''''''
@@ -394,6 +476,9 @@ hide_plots
 ''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
 
+verbose
+'''''''
+If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
@@ -428,9 +513,9 @@ fit_par
 '''''''
 Path to Stage 5 priors and fit parameter file.
 
-run_verbose
-'''''''''''
-Boolean to determine whether Stage 5 prints verbose output.
+verbose
+'''''''
+If True, more details will be printed about steps.
 
 fit_method
 ''''''''''

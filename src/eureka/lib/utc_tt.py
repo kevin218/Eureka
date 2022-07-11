@@ -5,7 +5,7 @@ import re
 import time
 
 
-def leapdates(rundir):
+def leapdates(rundir, log):
     '''Generates an array of leap second dates.
 
     The array is automatically updated every six months.
@@ -17,6 +17,8 @@ def leapdates(rundir):
     ----------
     rundir : str
         The folder in which to cache the leapdates array.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -37,7 +39,8 @@ def leapdates(rundir):
     else:
         expiration = -np.inf
     if time.time() + ntpepoch > expiration:
-        print("Leap-second file expired.	Retrieving new file.")
+        log.writelog("  Leap-second file expired. Retrieving new file.",
+                     mute=True)
         try:
             with urllib.request.urlopen('ftp://ftp.boulder.nist.gov/'
                                         'pub/time/leap-seconds.list') as nist:
@@ -56,12 +59,12 @@ def leapdates(rundir):
             with open(rundir+"leap-seconds."+newexp, 'w') as newfile:
                 newfile.write(doc)
             table = doc.split('#@')[1].split('\n#\r\n')[1].split('\n')
-            print("Leap second file updated.")
+            log.writelog("  Leap second file updated.", mute=True)
     else:
         use_fallback = False
-        print("Local leap second file retrieved.")
-        print("Next update: " +
-              time.asctime(time.localtime(expiration-ntpepoch)))
+        log.writelog("  Local leap second file retrieved.", mute=True)
+        t_next = time.asctime(time.localtime(expiration-ntpepoch))
+        log.writelog(f"  Next update: {t_next}", mute=True)
 
     if not use_fallback:
         ls = np.zeros(len(table))
@@ -70,14 +73,16 @@ def leapdates(rundir):
         jd = ls/86400+2415020.5
         return jd
     else:
-        print('NIST leap-second file not available.	Using stored table.')
+        log.writelog('  NIST leap-second file not available. '
+                     'Using stored table.')
 
-        return np.array([2441316.5, 2441682.5, 2442047.5, 2442412.5,
-                         2442777.5, 2443143.5, 2443508.5, 2443873.5,
-                         2444238.5, 2444785.5, 2445150.5, 2445515.5,
-                         2446246.5, 2447160.5, 2447891.5, 2448256.5,
-                         2448803.5, 2449168.5, 2449533.5, 2450082.5,
-                         2450629.5, 2451178.5, 2453735.5, 2454831.5])+1
+        return np.array([2441316.5, 2441498.5, 2441682.5, 2442047.5,
+                         2442412.5, 2442777.5, 2443143.5, 2443508.5,
+                         2443873.5, 2444238.5, 2444785.5, 2445150.5,
+                         2445515.5, 2446246.5, 2447160.5, 2447891.5,
+                         2448256.5, 2448803.5, 2449168.5, 2449533.5,
+                         2450082.5, 2450629.5, 2451178.5, 2453735.5,
+                         2454831.5, 2456108.5, 2457203.5, 2457753.5])+1
 
 
 def leapseconds(jd_utc, dates):
@@ -100,7 +105,7 @@ def leapseconds(jd_utc, dates):
     return tt_tai + utc_tai
 
 
-def utc_tt(jd_utc, leapdir):
+def utc_tt(jd_utc, leapdir, log):
     '''Converts UTC Julian dates to Terrestrial Time (TT).
 
     Parameters
@@ -109,13 +114,15 @@ def utc_tt(jd_utc, leapdir):
         UTC Julian date.
     leapdir : str
         The folder containing leapdir save files.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
     array-like
         Time in TT.
     '''
-    dates = leapdates(leapdir)
+    dates = leapdates(leapdir, log)
     if len(jd_utc) > 1:
         dt = np.zeros(len(jd_utc))
         for i in range(len(jd_utc)):
@@ -125,7 +132,7 @@ def utc_tt(jd_utc, leapdir):
     return jd_utc+dt/86400.
 
 
-def utc_tdb(jd_utc, leapdir):
+def utc_tdb(jd_utc, leapdir, log):
     '''Converts UTC Julian dates to Barycentric Dynamical Time (TDB).
 
     Formula taken from USNO Circular 179, based on that found in Fairhead
@@ -137,13 +144,15 @@ def utc_tdb(jd_utc, leapdir):
         UTC Julian date.
     leapdir : str
         The folder containing leapdir save files.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
     array-like
         time in JD_TDB.
     '''
-    jd_tt = utc_tt(jd_utc, leapdir)
+    jd_tt = utc_tt(jd_utc, leapdir, log)
     T = (jd_tt-2451545.)/36525
     jd_tdb = jd_tt + (0.001657*np.sin(628.3076*T + 6.2401) +
                       0.000022*np.sin(575.3385*T + 4.2970) +

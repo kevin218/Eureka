@@ -22,11 +22,12 @@
 # 16. Save Stage 3 data products
 # 17. Produce plots DONE
 
+import os
 import time as time_pkg
 import numpy as np
 import astraeus.xarrayIO as xrio
-from astropy.io import fits
 from tqdm import tqdm
+import psutil
 from . import optspex
 from . import plots_s3, source_pos
 from . import background as bg
@@ -163,9 +164,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                              f'ending in {meta.suffix}.fits',
                              mute=(not meta.verbose))
 
-            with fits.open(meta.segment_list[-1]) as hdulist:
-                # Figure out which instrument we are using
-                meta.inst = hdulist[0].header['INSTRUME'].lower()
             # Load instrument module
             if meta.inst == 'miri':
                 from . import miri as inst
@@ -185,7 +183,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
 
-            datasets = []
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to
             # True in ecf
@@ -193,25 +190,57 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 istart = meta.num_data_files - 1
             else:
                 istart = 0
-            for m in range(istart, meta.num_data_files):
-                # Initialize data object
-                data = xrio.makeDataset()
 
-                # Keep track if this is the first file - otherwise MIRI will
-                # keep swapping x and y windows
-                meta.firstFile = (m == istart and
-                                  meta.spec_hw == meta.spec_hw_range[0] and
-                                  meta.bg_hw == meta.bg_hw_range[0])
+            # Group files into batches
+            if not hasattr(meta, 'max_memory'):
+                meta.max_memory = 0.5
+            if not hasattr(meta, 'nfiles'):
+                meta.nfiles = 1
+            system_RAM = psutil.virtual_memory().total
+            filesize = os.path.getsize(meta.segment_list[istart])
+            maxfiles = max([1, int(system_RAM*meta.max_memory/filesize)])
+            meta.files_per_batch = min([maxfiles, meta.nfiles])
+            meta.nbatch = int(np.ceil((meta.num_data_files-istart) /
+                                      meta.files_per_batch))
+
+            datasets = []
+            for m in range(meta.nbatch):
+                first_file = m*meta.files_per_batch
+                last_file = min([meta.num_data_files,
+                                 (m+1)*meta.files_per_batch])
+                nfiles = last_file-first_file
+                               
                 # Report progress
-                if meta.verbose:
-                    log.writelog(f'Reading file {m + 1} of '
-                                 f'{meta.num_data_files}')
+                if meta.files_per_batch > 1:
+                    message = (f'Starting batch {m + 1} of {meta.nbatch} '
+                               f'with {nfiles} files')
                 else:
-                    log.writelog(f'Reading file {m + 1} of '
-                                 f'{meta.num_data_files}', end='\r')
+                    message = f'Starting file {m + 1} of {meta.num_data_files}'
+                if meta.verbose:
+                    log.writelog(message)
+                else:
+                    log.writelog(message, end='\r')
 
                 # Read in data frame and header
-                data, meta = inst.read(meta.segment_list[m], data, meta)
+                batch = []
+                for i in range(first_file, last_file):
+                    # Keep track if this is the first file - otherwise
+                    # MIRI will keep swapping x and y windows
+                    meta.firstFile = m == 0 and i == 0
+                    meta.firstInBatch = i == 0
+                    # Initialize a new data object
+                    data = xrio.makeDataset()
+                    data, meta, log = inst.read(meta.segment_list[i], data, 
+                                                meta, log)
+                    batch.append(data)
+
+                # Combine individual datasets
+                if meta.files_per_batch > 1:
+                    log.writelog('  Concatenating files...',
+                                 mute=(not meta.verbose))
+                data = xrio.concat(batch)
+                data.attrs['intstart'] = batch[0].attrs['intstart']
+                data.attrs['intend'] = batch[-1].attrs['intend']
 
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -226,9 +255,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
+                log.writelog('  Locating source position...',
+                             mute=(not meta.verbose))
                 meta.src_ypos = source_pos.source_pos(
                     data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
-                log.writelog(f'  Source position on detector is row '
+                log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
                 # Compute 1D wavelength solution
@@ -251,15 +282,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
                     if meta.curvature == 'correct':
-                        log.writelog('  In NIRSpec G395H setting with curvature '
-                                     'correction:', mute=(not meta.verbose))
+                        log.writelog('  In NIRSpec G395H setting with '
+                                     'curvature correction:',
+                                     mute=(not meta.verbose))
                         data, meta = inst.straighten_trace(data, meta, log)
 
                 # Create bad pixel mask (1 = good, 0 = bad)
                 # FINDME: Will want to use DQ array in the future
                 # to flag certain pixels
-                data['mask'] = (['time', 'y', 'x'], np.ones(data.flux.shape,
-                                                            dtype=bool))
+                data['mask'] = (['time', 'y', 'x'],
+                                np.ones(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs
                 data['mask'] = util.check_nans(data['flux'], data['mask'],
@@ -271,63 +303,32 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    log.writelog("  Masking manually identified bad pixels",
-                                 mute=(not meta.verbose))
-                    for i in range(len(meta.manmask)):
-                        colstart, colend, rowstart, rowend = meta.manmask[i]
-                        data['mask'][rowstart:rowend, colstart:colend] = 0
+                    util.manmask(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
-                log.writelog('  Performing background outlier rejection',
-                             mute=(not meta.verbose))
-                meta.bg_y2 = int(meta.src_ypos + bg_hw_val)
-                meta.bg_y1 = int(meta.src_ypos - bg_hw_val)
-                data = inst.flag_bg(data, meta)
+                data = inst.flag_bg(data, meta, log)
 
+                # Do the background subtraction
                 data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
+                # Make image+background plots
                 if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for background '
-                                 'subtraction', mute=(not meta.verbose))
-                    iterfn = range(meta.int_start, meta.n_int)
-                    if meta.verbose:
-                        iterfn = tqdm(iterfn)
-                    for n in iterfn:
-                        # make image+background plots
-                        plots_s3.image_and_background(data, meta, n, m)
+                    plots_s3.image_and_background(data, meta, log, m)
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
-                    log.writelog('  Correcting for 2D drift',
-                                 mute=(not meta.verbose))
-                    inst.correct_drift2D(data, meta, m)
+                    data, meta, log = inst.correct_drift2D(data, meta, log, m)
 
                 # Select only aperture region
-                ap_y1 = int(meta.src_ypos-spec_hw_val)
-                ap_y2 = int(meta.src_ypos+spec_hw_val)
-                apdata = data.flux[:, ap_y1:ap_y2].values
-                aperr = data.err[:, ap_y1:ap_y2].values
-                apmask = data.mask[:, ap_y1:ap_y2].values
-                apbg = data.bg[:, ap_y1:ap_y2].values
-                apv0 = data.v0[:, ap_y1:ap_y2].values
-                # Compute median frame
-                medapdata = np.median(apdata, axis=0)
+                apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
+                                                                      meta,
+                                                                      log)
 
                 # Extract standard spectrum and its variance
-                data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
-                data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
-                data['stdspec'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
-                data['stdspec'].attrs['time_units'] = \
-                    data.flux.attrs['time_units']
-                data['stdvar'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
-                data['stdvar'].attrs['time_units'] = \
-                    data.flux.attrs['time_units']
-                # FINDME: stdvar >> stdspec, which is a problem
+                data = optspex.standard_spectrum(data, apdata, aperr)
 
                 # Extract optimal spectrum with uncertainties
-                log.writelog("  Performing optimal spectral extraction",
+                log.writelog("  Performing optimal spectral extraction...",
                              mute=(not meta.verbose))
                 data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
                 data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
@@ -340,10 +341,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data['opterr'].attrs['time_units'] = \
                     data.flux.attrs['time_units']
 
+                # Compute median frame
+                medapdata = np.median(apdata, axis=0)
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                intstart = data.attrs['intstart']
-                iterfn = range(meta.int_start, meta.n_int)
+                iterfn = range(meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
@@ -354,7 +356,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                          p7thresh=meta.p7thresh,
                                          fittype=meta.fittype,
                                          window_len=meta.window_len,
-                                         deg=meta.prof_deg, n=intstart+n,
+                                         deg=meta.prof_deg, n=n, m=m,
                                          meddata=medapdata)
 
                 # Mask out NaNs and Infs
@@ -363,8 +365,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
                                         np.ma.getmaskarray(opterr_ma))
                 data['optmask'] = (['time', 'x'], optmask)
-                # data['optspec'] = np.ma.masked_where(mask, data.optspec)
-                # data['opterr'] = np.ma.masked_where(mask, data.opterr)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
@@ -380,7 +380,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if meta.save_output:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
-                                   "_FluxData_seg"+str(m+1).zfill(4)+".h5")
+                                   "_FluxData_seg"+str(m).zfill(4)+".h5")
                     success = xrio.writeXR(filename_xr, data, verbose=False,
                                            append=False)
                     if success == 0:
@@ -393,23 +393,26 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Remove large 3D arrays from Dataset
                 del(data['flux'], data['err'], data['dq'], data['v0'],
-                    data['bg'], data['mask'], data.attrs['intstart'],
-                    data.attrs['intend'])
+                    data['bg'], data['mask'], data['wave_2d'],
+                    data.attrs['intstart'], data.attrs['intend'])
+                if meta.inst == 'wfc3':
+                    del(data['flatmask'], data['variance'])
 
                 # Append results for future concatenation
                 datasets.append(data)
 
-            if meta.inst == 'wfc3':
-                # WFC3 needs a conclusion step to convert lists into
-                # arrays before saving
-                meta, log = inst.conclusion_step(meta, log)
-
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
 
-            # Calculate total time
-            total = (time_pkg.time() - t0) / 60.
-            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+            # Plot fitted 2D drift
+            # Note: This needs to happen before calling conclusion_step()
+            if meta.isplots_S3 >= 1 and meta.inst == 'wfc3':
+                plots_s3.drift_2D(spec, meta)
+
+            if meta.inst == 'wfc3':
+                # WFC3 needs a conclusion step to convert lists into
+                # arrays before saving
+                spec, meta, log = inst.conclusion_step(spec, meta, log)
 
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
@@ -418,20 +421,25 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, spec.wave_1d, spec.optspec)
-            log.writelog(f"Stage 3 MAD = "
-                         f"{np.round(meta.mad_s3, 2).astype(int)} ppm")
+            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
+                                       optmask=spec.optmask)
+            log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
-                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec)
+                plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
+                                        optmask=spec.optmask)
 
             # Save results
             if meta.save_output:
                 log.writelog('Saving Metadata')
                 fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
                 me.saveevent(meta, fname, save=[])
+
+            # Calculate total time
+            total = (time_pkg.time() - t0) / 60.
+            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             log.closelog()
 

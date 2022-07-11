@@ -1,8 +1,9 @@
 # Eureka! Control File for Stage 3: Data Reduction
 
 ncpu        1           # Number of CPUs
+nfiles      1           # The number of data files to analyze simultaneously
+max_memory  0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix      calints     # Data file suffix
-inst        nircam
 
 # Subarray region of interest
 ywindow     [5,64]      # Vertical axis as seen in DS9
@@ -25,7 +26,7 @@ p5thresh    10          # X-sigma threshold for outlier rejection while construc
 p7thresh    10          # X-sigma threshold for outlier rejection during optimal spectral extraction
 
 # Diagnostics
-isplots_S3  5           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+isplots_S3  3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 vmin        0.97        # Sets the vmin of the color bar for Figure 3101.
 vmax        1.03        # Sets the vmax of the color bar for Figure 3101.
 time_axis   'left'      # Determines whether the time axis in Figure 3101 is along the y-axis ('left') or the x-axis ('bottom')
