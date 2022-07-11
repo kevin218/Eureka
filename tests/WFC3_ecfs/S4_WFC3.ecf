@@ -3,13 +3,13 @@
 # Stage 4 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4
 
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan       6           # Number of spectroscopic channels
-wave_min        0.8         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
-wave_max        1.15        # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
-allapers        True        # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
+nspecchan       1           # Number of spectroscopic channels
+wave_min        0.85        # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
+wave_max        1.175       # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
+allapers        False       # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Parameters for drift correction of 1D spectra
-correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
+correctDrift    True    # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
 drift_preclip   0       # Ignore first drift_preclip points of spectrum
 drift_postclip  100     # Ignore last drift_postclip points of spectrum, None = no clipping
 drift_range     11      # Trim spectra by +/-X pixels to compute valid region of cross correlation
@@ -27,17 +27,17 @@ maxiters        5       # The number of iterations of sigma clipping that should
 boundary        'fill'  # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
 fill_value      mask    # Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-# Temporal binning
+# Temporal Binning
 sum_reads       True    # Sum together all of the reads from one scan?
 
 # Diagnostics
-isplots_S4      5       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-hide_plots      False   # If True, plots will automatically be closed rather than popping up
+isplots_S4      3       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+hide_plots      True    # If True, plots will automatically be closed rather than popping up
 verbose         False   # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User
+topdir          ../tests
 
 # Directories relative to project dir
-inputdir        /Data/TargetName/WFC3/Stage3 # The folder containing the outputs from Eureka!'s S3 (will be overwritten if calling S3 and S4 sequentially)
-outputdir       /Data/TargetName/WFC3/Stage4
+inputdir        /data/WFC3/Stage3 # The folder containing the outputs from Eureka!'s S3 (will be overwritten if calling S3 and S4 sequentially)
+outputdir       /data/WFC3/Stage4
