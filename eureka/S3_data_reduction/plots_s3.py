@@ -312,6 +312,13 @@ def driftypos(data, meta):
     Returns
     -------
     None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
     '''
     plt.figure(3601, figsize=(8, 4))
     plt.clf()
@@ -338,6 +345,13 @@ def driftywidth(data, meta):
     Returns
     -------
     None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
     '''
     plt.figure(3602, figsize=(8, 4))
     plt.clf()

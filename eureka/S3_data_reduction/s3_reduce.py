@@ -35,7 +35,6 @@ from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
-from copy import deepcopy
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
@@ -64,6 +63,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         Initial version
     - October 2021 Taylor Bell
         Updated to allow for inputs from S2
+    - July 2022 Caroline Piaulet
+        Now computing the y pos and width for each integration 
+        + stored in Spec and add diagnostics plots
     '''
 
     # Load Eureka! control file and store values in Event object

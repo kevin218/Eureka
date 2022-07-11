@@ -32,6 +32,14 @@ def source_pos(data, meta, m, integ=0, header=False):
     src_ypos_width : float
         If gaussian fit, the std of the Gaussian fitted to the image
         Otherwise, array of zeros.
+        
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        Enable recording of the width if the source is fitted with a Gaussian
+        + add an option to fit any integration (not hardcoded to be the first)
     '''
     if header:
         src_ypos = data.attrs['shdr']['SRCYPOS'] - meta.ywindow[0]
@@ -82,6 +90,8 @@ def source_pos_max(flux, meta, m, integ=0, plot=True):
         Initial version
     - 2021-07-14 Sebastian Zieba
         Modified
+    - July 11, 2022 Caroline Piaulet
+        Add option to fit any integration (not hardcoded to be the first)
     '''
 
     x_dim = flux.shape[1]
@@ -128,6 +138,8 @@ def source_pos_FWM(flux, meta, m, integ=0):
         Initial version
     - 2021-07-14 Sebastian Zieba
         Modified
+    - 2022-07-11 Caroline Piaulet
+        Add option to fit any integration (not hardcoded to be the first)
     '''
 
     x_dim = flux.shape[1]
@@ -213,6 +225,9 @@ def source_pos_gauss(flux, meta, m, integ=0):
         Initial version
     - 2021-10-15 Taylor Bell
         Tweaked to allow for cleaner plots_s3.py
+    - 2022-07-11 Caroline Piaulet
+        Enable recording of the width if the source is fitted with a Gaussian
+        + add an option to fit any integration (not hardcoded to be the first)
     '''
     x_dim = flux.shape[1]
 

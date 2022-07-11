@@ -57,6 +57,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         Updated to allow for inputs from new S3
     - April 2022 Kevin Stevenson
         Enabled Astraeus
+    - July 2022 Caroline Piaulet
+        Recording of x (computed in S4) and y (computed in S3) pos drifts and 
+        widths in Spec and LC objects
     '''
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'

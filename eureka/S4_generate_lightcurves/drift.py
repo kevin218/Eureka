@@ -58,7 +58,7 @@ def spec1D(spectra, meta, log):
     drift1d : ndarray
         1D array of spectrum drift values.
     driftwidth : ndarray
-        1D array of spectrum drift fitted Gaussian widths.
+        1D array of the widths of the Gaussians fitted to the CCFs.
     driftmask : ndarray
         1D masked array, where True is masked.
 
@@ -78,6 +78,8 @@ def spec1D(spectra, meta, log):
     - Apr 23, 2022 Kevin Stevenson
         Switched defition of mask to coincide with np.ma definition
         Removed drift1d and driftmask from meta
+    - Jul 11, 2022 Caroline Piaulet
+        Added recording of driftwidth
     '''
     if meta.drift_postclip is not None:
         meta.drift_postclip = -meta.drift_postclip

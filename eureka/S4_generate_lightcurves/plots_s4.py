@@ -61,6 +61,13 @@ def driftxpos(meta, lc):
     Returns
     -------
     None
+    
+    Notes
+    -----
+    History:
+
+    - Jul 11, 2022 Caroline Piaulet
+        Edited this function to use the new naming convention for drift
     '''
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
@@ -93,6 +100,13 @@ def driftxwidth(meta, lc):
     Returns
     -------
     None
+    
+    Notes
+    -----
+    History:
+
+    - Jul 11, 2022 Caroline Piaulet
+        Created this function
     '''
     plt.figure(4104, figsize=(8, 4))
     plt.clf()
