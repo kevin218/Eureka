@@ -42,7 +42,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
                        extent=[wmin, wmax, 0, meta.n_int],
                        vmin=vmin, vmax=vmax,
                        cmap=plt.cm.RdYlBu_r)
-            plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+            plt.title(f"MAD = {int(np.round(meta.mad_s3[i], 0))} ppm")
             plt.ylabel('Integration Number')
             plt.xlabel(r'Wavelength ($\mu m$)')
             plt.colorbar(label='Normalized Flux')
