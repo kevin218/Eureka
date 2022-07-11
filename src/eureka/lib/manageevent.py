@@ -246,7 +246,7 @@ def findevent(meta, stage, allowFail=False):
         # There may be no rateints files in the inputdir or any of its
         # children directories - raise an error and give a helpful message
         print(f'WARNING: Unable to find an output metadata file from '
-              f'Eureka!\'s {stage} in the folder:\n"{meta.inputdir}"\n'
+              f'Eureka!\'s {stage} in the folder:\n  "{meta.inputdir}"\n'
               f'Assuming this {stage} data was produced by the JWST pipeline '
               f'instead.')
         return None, meta.inputdir, meta.inputdir_raw
