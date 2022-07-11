@@ -300,12 +300,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                 np.ones(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs
-                data['mask'] = util.check_nans(data['flux'], data['mask'],
-                                               log, name='FLUX')
-                data['mask'] = util.check_nans(data['err'], data['mask'],
-                                               log, name='ERR')
-                data['mask'] = util.check_nans(data['v0'], data['mask'],
-                                               log, name='V0')
+                data.mask.values = util.check_nans(data.flux.values,
+                                                   data.mask.values,
+                                                   log, name='FLUX')
+                data.mask.values = util.check_nans(data.err.values,
+                                                   data.mask.values,
+                                                   log, name='ERR')
+                data.mask.values = util.check_nans(data.v0.values,
+                                                   data.mask.values,
+                                                   log, name='V0')
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
