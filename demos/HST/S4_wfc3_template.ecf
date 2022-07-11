@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 4: Generate Lightcurves 
 
+# Stage 4 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4
+
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan       6           # Number of spectroscopic channels
 wave_min        0.8         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
@@ -24,6 +26,9 @@ box_width       10      # The width of the box-car filter (used to calculated th
 maxiters        5       # The number of iterations of sigma clipping that should be performed.
 boundary        'fill'  # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
 fill_value      mask    # Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
+
+# Temporal binning
+sum_reads       True    # Sum together all of the reads from one scan?
 
 # Diagnostics
 isplots_S4      5       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

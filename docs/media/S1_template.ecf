@@ -22,6 +22,9 @@ skip_jump           False
 skip_ramp_fitting   False
 skip_gain_scale     False
 
+#Pipeline stages parameters
+jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
+
 # Project directory
 topdir              /home/User
 

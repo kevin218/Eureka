@@ -130,6 +130,7 @@ dmypy.json
 .pyre/
 
 *.DS_Store
+*.swp
 
 # ecf files
 *.ecf
@@ -139,7 +140,7 @@ dmypy.json
 
 # VS Code workspaces
 *.code-workspace
-.vscode/settings.json
+.vscode
 
 # Compiled niriss_cython file
 niriss_cython.c
@@ -148,4 +149,13 @@ niriss_cython.c
 Dockerfile
 docker-compose.yml
 docker-setup.sh
+
+# Compiled JOSS paper files
+paper.pdf
+paper.jats
+
+# Ignores for Caroline
 eureka_analysis/JWST/run_eureka_demo.py
+
+# Ignores for Taylor
+*.dat

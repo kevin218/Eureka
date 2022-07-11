@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import os
 import sys
-sys.path.insert(0, '..'+os.sep)
+
+sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.S5_lightcurve_fitting import models, simulations
 from eureka.lib.readEPF import Parameters, Parameter
 from eureka.lib.readECF import MetaClass
