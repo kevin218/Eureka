@@ -312,6 +312,18 @@ isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
+vmin
+''''
+Optional. Sets the vmin of the color bar for Figure 3101. Defaults to 0.97.
+
+vmax
+''''
+Optional. Sets the vmax of the color bar for Figure 3101. Defaults to 1.03.
+
+time_axis
+'''''''''
+Optional. Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x'). Defaults to 'y'.
+
 testing_S3
 ''''''''''
 If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run. Also, only five integrations from the last segment will be reduced.
@@ -447,6 +459,18 @@ Only used for HST analyses. Should differential non-destructive reads be summed 
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
+
+vmin
+''''
+Optional. Sets the vmin of the color bar for Figure 4101. Defaults to 0.97.
+
+vmax
+''''
+Optional. Sets the vmax of the color bar for Figure 4101. Defaults to 1.03.
+
+time_axis
+'''''''''
+Optional. Determines whether the time axis in Figure 4101 is along the y-axis ('y') or the x-axis ('x'). Defaults to 'y'.
 
 hide_plots
 ''''''''''

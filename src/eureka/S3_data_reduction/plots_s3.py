@@ -28,19 +28,35 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     None
     '''
     normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
-    wmin = wave_1d.min()
-    wmax = wave_1d.max()
-    vmin = 0.97
-    vmax = 1.03
-
+    wmin = np.ma.min(wave_1d)
+    wmax = np.ma.max(wave_1d)
+    if not hasattr(meta, 'vmin') or meta.vmin is None:
+        meta.vmin = 0.97
+    if not hasattr(meta, 'vmax') or meta.vmin is None:
+        meta.vmax = 1.03
+    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
+        meta.time_axis = 'y'
+    elif meta.time_axis not in ['y', 'x']:
+        print("WARNING: meta.time_axis is not one of ['y', 'x']!"
+              "Using 'y' by default.")
+        meta.time_axis = 'y'
+    
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
-    plt.imshow(normspec, origin='lower', aspect='auto',
-               extent=[wmin, wmax, 0, meta.n_int], vmin=vmin, vmax=vmax,
-               cmap=plt.cm.RdYlBu_r)
-    plt.title(f"MAD = {int(np.round(meta.mad_s3, 0))} ppm")
-    plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu m$)')
+    if meta.time_axis == 'y':
+        plt.imshow(normspec, origin='lower', aspect='auto',
+                   extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel('Integration Number')
+        plt.xlabel(r'Wavelength ($\mu m$)')
+    else:
+        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
+                   extent=[0, meta.n_int, wmin, wmax], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel(r'Wavelength ($\mu m$)')
+        plt.xlabel('Integration Number')
+
+    plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
