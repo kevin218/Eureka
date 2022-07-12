@@ -179,10 +179,8 @@ def fit_bg(data, meta, which_bkg='simple', readnoise=11, sigclip=[4, 4, 4],
                          window_length=window_length, polyorder=polyorder,
                          mode=mode)
     else:
-        log.writelog('Background method not implemented. Please select either \
-                      "2D" or "simple".')
-        raise AssertionError(f'Background method not implemented. Please'
-                             f'select either "2D" or "simple".')
+        raise AssertionError('Background method not implemented. Please'
+                             'select either "2D" or "simple".')
 
     data['bg'] = xrio.makeFluxLikeDA(bkg, data.time,
                                      data['flux'].attrs['flux_units'],

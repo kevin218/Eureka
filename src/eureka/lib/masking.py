@@ -125,7 +125,8 @@ def data_quality_mask(dq):
 
     return ~dq_mask
 
-def interpolating_col(data, mask, reg=2):
+
+def interpolating_col(data, mask):
     """
     Fills in masked pixel values with either a median value from
     surrounding pixels along the column.
@@ -137,9 +138,6 @@ def interpolating_col(data, mask, reg=2):
     mask : np.ndarray
        Mask of integers, where values greater than 0 are bad
        pixels.
-    reg : int, optional
-       The number of pixels along the row to interpolate over.
-       Default is 2.
 
     Returns
     -------
@@ -152,10 +150,10 @@ def interpolating_col(data, mask, reg=2):
 
     for i in range(data.shape[0]):
         for col in range(data.shape[2]):
-            good = np.where(mask[i, :, col] == True)[0] # finds the good data
-            bad = np.where(mask[i, :, col] == False)[0] # finds the bad data
+            good = np.where(mask[i, :, col])[0]  # finds the good data
+            bad = np.where(~mask[i, :, col])[0]  # finds the bad data
 
-            try: # doesn't handle the NaN cols/rows well
+            try:  # doesn't handle the NaN cols/rows well
                 interp = interp1d(np.arange(data.shape[1])[good],
                                   data[i, :, col][good])
                 new = np.copy(data[i, :, col])
@@ -163,7 +161,7 @@ def interpolating_col(data, mask, reg=2):
                 for b in bad:
                     try:
                         new[b] = interp(b)
-                    except ValueError: # doesn't handle the NaN cols/rows well
+                    except ValueError:  # doesn't handle the NaN cols/rows well
                         new[b] = 0.0
                 newdata[i, :, col] = new
 
