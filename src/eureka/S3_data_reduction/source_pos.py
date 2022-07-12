@@ -48,18 +48,18 @@ def source_pos(data, meta, m, integ=0, header=False):
         src_ypos = source_pos_FWM(data.flux.values, meta, m, integ=integ)
     elif meta.src_pos_type == 'gaussian':
         # find the source location using a gaussian fit
-        src_ypos, src_ywidth = source_pos_gauss(data.flux.values, meta, m, integ=integ)
+        src_ypos, src_ywidth = source_pos_gauss(data.flux.values, meta, m,
+                                                integ=integ)
     elif meta.src_pos_type == 'hst':
         src_ypos = data.guess.values[0]
     else:
         # brightest row for source location
         src_ypos = source_pos_max(data.flux.values, meta, m, integ=integ)
 
-    if meta.src_pos_type == 'gaussian':
+    if meta.src_pos_type == 'gaussian' and header is False:
         return int(round(src_ypos)), src_ypos, src_ywidth
     else:
         return int(round(src_ypos)), src_ypos, np.zeros_like(src_ypos)
-
 
 
 def source_pos_max(flux, meta, m, integ=0, plot=True):

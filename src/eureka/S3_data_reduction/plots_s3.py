@@ -342,6 +342,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     if not meta.hide_plots:
         plt.pause(0.1)
 
+
 def driftypos(data, meta):
     '''Plot the spatial jitter. (Fig 3601)
 
@@ -374,6 +375,7 @@ def driftypos(data, meta):
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
+
 
 def driftywidth(data, meta):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3602)

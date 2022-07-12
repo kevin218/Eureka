@@ -37,6 +37,7 @@ from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
 
+
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
@@ -120,7 +121,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val, bg=bg_hw_val)
-
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -263,8 +263,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
-                use_header = ('SRCYPOS' in data.attrs['shdr'])
-                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m, header=use_header)
+                use_hdr = ('SRCYPOS' in data.attrs['shdr'])
+                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m,
+                                                            header=use_hdr)
                     
                 log.writelog(f'  Source position on detector is row '
 
@@ -357,9 +358,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
-                    if meta.record_ypos: # when loop over ints, get exact y pos and width
-                        meta.src_ypos, ypos_exact, ypos_width = source_pos.source_pos(data, meta, m, n,
-                                                                                              header=use_header)
+                    # when loop over ints, get exact y pos and width
+                    if meta.record_ypos:
+                        src_pos_results = source_pos.source_pos(data, meta,
+                                                                m, n,
+                                                                header=use_hdr)
+                        meta.src_ypos, ypos_exact, ypos_width = src_pos_results
                         src_ypos_exact[n] = ypos_exact
                         src_ypos_width[n] = ypos_width
 

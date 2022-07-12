@@ -226,9 +226,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-
-            lc['driftypos'] = (['time'], spec.driftypos.data)
-            lc['driftywidth'] = (['time'], spec.driftywidth.data)
+            if meta.record_ypos:
+                lc['driftypos'] = (['time'], spec.driftypos.data)
+                lc['driftywidth'] = (['time'], spec.driftywidth.data)
             
             # Record and correct for 1D drift/jitter
             if meta.recordDrift or meta.correctDrift:
@@ -236,8 +236,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # This can take a long time, so always print this message
                 log.writelog('Recording drift/jitter')
                 # Compute drift/jitter
-                drift1d, driftwidth, driftmask = drift.spec1D(spec.optspec, meta, log,
-                                                  mask=spec.optmask)
+                drift_results = drift.spec1D(spec.optspec, meta, log,
+                                             mask=spec.optmask)
+                drift1d, driftwidth, driftmask = drift_results
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
                     drift1d, driftmask, Box1DKernel(meta.box_width))
@@ -254,17 +255,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 if meta.correctDrift:
                     log.writelog('Applying drift/jitter correction')
 
-
                     # Correct for drift/jitter
                     for n in range(meta.n_int):
                         # Need to zero-out the weights of masked data
                         weights = (~spec.optmask[n]).astype(int)
                         spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                      spec.optspec[n], k=3, s=0,
-                                                      w=weights)
+                                                     spec.optspec[n], k=3, s=0,
+                                                     w=weights)
                         spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                       spec.opterr[n], k=3, s=0,
-                                                       w=weights)
+                                                      spec.opterr[n], k=3, s=0,
+                                                      w=weights)
                         optmask = spec.optmask[n].astype(float)
                         spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
                                                        optmask, k=3, s=0,
