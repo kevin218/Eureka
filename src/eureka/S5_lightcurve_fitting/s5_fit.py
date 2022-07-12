@@ -127,7 +127,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             for arg, val in params.dict.items():
                 if 'shared' in val:
                     meta.sharedp = True
-                if 'white' in val:
+                if 'white_free' in val or 'white_fixed' in val:
                     meta.whitep = True
 
             if meta.sharedp and meta.testing_S5:
@@ -143,8 +143,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
 
-            # If any of the parameters' ptypes are set to 'white', enforce a
-            # Gaussian prior based on a white-light light curve fit
+            # If any of the parameters' ptypes are set to 'white_free', enforce
+            # a Gaussian prior based on a white-light light curve fit. If any
+            # are 'white_fixed' freeze them to the white-light curve best fit
             if meta.whitep:
                 # Make a long list of parameters for each channel
                 longparamlist, paramtitles = make_longparamlist(meta, params,
@@ -406,10 +407,11 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                 raise AssertionError('Unable to find the dynesty fitter '
                                      'results')
             for key in params.params:
-                if getattr(params, key).ptype == 'white':
+                ptype = getattr(params, key).ptype
+                if 'white' in ptype:
                     value = getattr(best_model.components[0].parameters,
                                     key).value
-                    ptype = 'free'
+                    ptype = ptype[6:]  # Remove 'white_'
                     priorpar1 = value
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
@@ -426,10 +428,11 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
             if best_model is None:
                 raise AssertionError('Unable to find the emcee fitter results')
             for key in params.params:
-                if getattr(params, key).ptype == 'white':
+                ptype = getattr(params, key).ptype
+                if 'white' in ptype:
                     value = getattr(best_model.components[0].parameters,
                                     key).value
-                    ptype = 'free'
+                    ptype = ptype[6:]  # Remove 'white_'
                     priorpar1 = value
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
@@ -446,7 +449,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
             # Update the params to the values from this white-light light
             # curve fit
             for key in params.params:
-                if getattr(params, key).ptype == 'white':
+                ptype = getattr(params, key).ptype
+                if 'white' in ptype:
                     value = getattr(best_model.components[0].parameters,
                                     key).value
                     ptype = 'fixed'

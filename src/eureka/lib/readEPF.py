@@ -17,7 +17,7 @@ class Parameter:
             The value of the parameter.
         ptype : str
             The parameter type from ['free','fixed','independent','shared',
-            'white'].
+            'white_free', 'white_fixed'].
         priorpar1 : float, int, str, list, tuple; optional
             The first prior input value: lower-bound for uniform/log uniform
             priors, or mean for normal priors. Defaults to None.
@@ -114,16 +114,17 @@ class Parameter:
         Parameters
         ----------
         param_type : str
-            Parameter type, ['free','fixed','independent','shared']
+            Parameter type, ['free','fixed','independent','shared',
+            'white_free', 'white_fixed']
         """
         if param_type in [True, False]:
             raise ValueError("Boolean ptype values are deprecated. ptype must "
                              "now be 'free', 'fixed', 'independent', "
-                             "'shared', or 'white'")
+                             "'shared', 'white_free', oe 'white_fixed'")
         elif param_type not in ['free', 'fixed', 'independent', 'shared',
-                                'white']:
+                                'white_free', 'white_fixed']:
             raise ValueError("ptype must be 'free', 'fixed', 'independent', "
-                             "'shared', or 'white'")
+                             "'shared', 'white_free', or 'white_fixed'")
 
         self._ptype = param_type
 

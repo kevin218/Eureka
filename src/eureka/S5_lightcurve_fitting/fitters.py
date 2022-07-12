@@ -1103,7 +1103,7 @@ def group_variables(model):
         name, param = item
         # param = list(param)
         if ((param[1] == 'free') or (param[1] == 'shared')
-                or (param[1] == 'white')):
+                or ('white' in param[1])):
             freenames.append(name)
             freepars.append(param[0])
             if len(param) == 5:  # If prior is specified.

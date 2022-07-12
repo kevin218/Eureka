@@ -1,4 +1,8 @@
-#Name	 	Value	 			Free?			PriorPar1		PriorPar2	PriorType
+# Stage 5 Fit Parameters Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5-fit-parameters
+
+
+# Name	 	Value	 			Free?			PriorPar1		PriorPar2	PriorType
+# "Free?" can be free, fixed, white_free, white_fixed, shared, or independent
 # PriorType can be U (Uniform), LU (Log Uniform), or N (Normal).
 # If U/LU, PriorPar1 and PriorPar2 represent upper and lower limits of the parameter/log(the parameter).
 # If N, PriorPar1 is the mean and PriorPar2 is the standard deviation of a Gaussian prior.
@@ -8,19 +12,19 @@ fp			0.00721333946967835	'free'			0.008000		0.006000	N
 # ------------------
 # Orbital parameters
 # ------------------
-per			0.766894378762		'white'			0.7668944		0.0000003	N	
-t0   		0.520935022161196	'white'			0.5209350221611 0.0001		N
+per			0.766894378762		'white_fixed'	0.7668944		0.0000003	N	
+t0   		0.520935022161196	'white_free'	0.5209350221611 0.0001		N
 time_offset	0					'independent'
-inc  		79.0448701805676	'white'			79.044870180567	1			N	# Exoplanet Archive value for b is seemingly not helpful
-a    		4.42519793519358	'white'			4.447	 		0.132		N
+inc  		79.0448701805676	'white_fixed'	79.044870180567	1			N	# Exoplanet Archive value for b is seemingly not helpful
+a    		4.42519793519358	'white_free'	4.447	 		0.132		N
 ecc  		0.0	 				'fixed' 		0 				1			U
 w    		90.					'fixed' 		0 				180			U
 # -------------------------
 # Limb darkening parameters
 # -------------------------
-limb_dark	'kipping2013' 		'independent'
-u1			0.0530883021553253	'free'			0				1			U
-u2			0.384470535735614	'free'			0				1			U
+limb_dark	'quadratic' 		'independent'
+u1			0.					'free'			-1				1			U
+u2			0.					'free'			-1				1			U
 # ----------------------
 # Phase curve parameters
 # ----------------------
