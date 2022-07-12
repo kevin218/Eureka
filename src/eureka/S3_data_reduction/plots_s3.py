@@ -67,7 +67,7 @@ def image_and_background(data, meta, log, m):
     -------
     None
     '''
-    log.writelog('  Creating figures for background subtraction',
+    log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
 
     intstart, subdata, submask, subbg = (data.attrs['intstart'],
