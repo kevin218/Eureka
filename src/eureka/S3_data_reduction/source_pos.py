@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 from . import plots_s3
 
 
-def source_pos(data, meta, m, header=False):
+def source_pos(data, meta, m):
     '''Make image+background plot.
 
     Parameters
@@ -16,16 +16,17 @@ def source_pos(data, meta, m, header=False):
         The metadata object.
     m : int
         The file number.
-    header : bool; optional
-        If True, use the source position in the FITS header.
-        Defaults to False.
 
     Returns
     -------
     src_ypos : int
         The central position of the star.
     '''
-    if header:
+    if meta.src_pos_type == 'header':
+        if 'SRCYPOS' not in data.attrs['shdr']:
+            raise AttributeError('There is no SRCYPOS in the FITS header. '
+                                 'You must select a different value for '
+                                 'meta.src_pos_type')
         src_ypos = data.attrs['shdr']['SRCYPOS'] - meta.ywindow[0]
     elif meta.src_pos_type == 'weighted':
         # find the source location using a flux-weighted mean approach

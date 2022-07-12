@@ -257,8 +257,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Locate source postion
                 log.writelog('  Locating source position...',
                              mute=(not meta.verbose))
-                meta.src_ypos = source_pos.source_pos(
-                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                meta.src_ypos = source_pos.source_pos(data, meta, m)
                 log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 

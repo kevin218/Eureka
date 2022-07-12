@@ -201,7 +201,7 @@ Everything outside of the box will be discarded and not used in the analysis.
 
 src_pos_type
 ''''''''''''
-Determine the source position on the detector when not given in header (Options: gaussian, weighted, max, or hst).
+Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
 
 centroidtrim
 ''''''''''''
