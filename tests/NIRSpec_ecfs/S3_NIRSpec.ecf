@@ -8,14 +8,13 @@ suffix      calints     # Data file suffix
 # Subarray region of interest
 ywindow     [0,31]      # Vertical axis as seen in DS9
 xwindow     [65,400]    # Horizontal axis as seen in DS9
-src_pos_type gaussian   # Determine source position when not given in header (Options: gaussian, weighted, or max)
+src_pos_type gaussian   # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 
 # Background parameters
 bg_hw       10         # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh   [15,15]    # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg      0          # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh    2          # X-sigma threshold for outlier rejection during background subtraction
-save_bgsub  False      # Whether or not to save background subtracted FITS files
 
 # Spectral extraction parameters
 spec_hw     8          # Half-width of aperture region for spectral extraction (relative to source position)

@@ -16,7 +16,7 @@ flatfile        WFC3.IR.G102.flat.2.fits               # The calibration file to
 # Subarray region of interest
 ywindow         [80,250]    # Vertical axis as seen in DS9
 xwindow         [80,250]    # Horizontal axis as seen in DS9
-src_pos_type    hst         # Determine source position when not given in header (Options: gaussian, weighted, max, or hst)
+src_pos_type    hst         # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 
 # Subarray region for direct images used for wavelength calibration
 centroidtrim    5

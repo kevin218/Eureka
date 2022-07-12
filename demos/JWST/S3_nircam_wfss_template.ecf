@@ -10,7 +10,7 @@ suffix          calints     # Data file suffix
 # Subarray region of interest
 ywindow         [5,64]      # Vertical axis as seen in DS9
 xwindow         [100,1700]  # Horizontal axis as seen in DS9
-src_pos_type    gaussian    # Determine source position when not given in header (Options: gaussian, weighted, or max)
+src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 
 # Background parameters
 bg_hw           8           # Half-width of exclusion region for BG subtraction (relative to source position)
