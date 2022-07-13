@@ -52,8 +52,8 @@ class BatmanTransitModel(Model):
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
         self.ld_S4_array = kwargs.get('ld_coeffs')[len_params-2]
         
-        #Replace fixed u parameters with generated limb-darkening values
-        if self.ld_from_S4 != None:
+        # Replace fixed u parameters with generated limb-darkening values
+        if self.ld_from_S4 is not None:
             for c in np.arange(self.nchan):
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
@@ -63,7 +63,6 @@ class BatmanTransitModel(Model):
                         if self.parameters.dict[item][1] == 'fixed':
                             self.parameters.dict[item][0] = \
                                 self.ld_S4_array[c][param-1]
-            
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.

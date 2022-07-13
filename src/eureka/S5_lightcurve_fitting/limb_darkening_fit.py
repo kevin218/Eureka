@@ -24,7 +24,7 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', category=FutureWarning)
 
 
-def ld_profile(name='quadratic', latex=False, use_gen_ld = 'batman'):
+def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
     """Define the function to fit the limb darkening profile.
 
     Parameters

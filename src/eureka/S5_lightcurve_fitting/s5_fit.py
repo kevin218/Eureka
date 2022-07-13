@@ -141,15 +141,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
 
-            #Load limb-darkening coefficients if used from Stage 4
+            # Load limb-darkening coefficients if used from Stage 4
             if hasattr(meta, 'use_generate_ld'):
                 ld_str = meta.use_generate_ld
                 log.writelog("\nUsing generated limb-darkening coefficients" +
                              f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str +'_lin'].values, 
-                             lc[ld_str +'_quad'].values, 
-                             lc[ld_str +'_nonlin_3para'].values, 
-                             lc[ld_str +'_nonlin_4para'].values]
+                ld_coeffs = [lc[ld_str + '_lin'].values, 
+                             lc[ld_str + '_quad'].values, 
+                             lc[ld_str + '_nonlin_3para'].values, 
+                             lc[ld_str + '_nonlin_4para'].values]
             else:
                 ld_coeffs = None
 
@@ -267,8 +267,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
                              unc=flux_err, time_units=time_units,
                              name=eventlabel, share=sharedp)
     
-
-
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
