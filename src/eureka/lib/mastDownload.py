@@ -5,6 +5,7 @@ import shutil
 import os
 from astroquery.mast import Observations
 import astropy.io.fits as pf
+from astropy.io import ascii
 
 
 def columnNames():
@@ -22,6 +23,25 @@ def columnNames():
         print(val)
     return
 
+def writeTable(table, filename, format='csv'):
+    """Write intermediate results from Astropy Table to an ASCII file
+
+    Parameters
+    ----------
+    table :
+        Astropy Table
+    filename : string
+        Name of output file
+
+    Notes
+    -----
+    History:
+
+    - July 2022 Kevin Stevenson
+        Initial version
+    """
+    ascii.write(table, filename, format=format)
+    return
 
 def login(mast_token=None):
     """Log into the MAST portal.
@@ -59,7 +79,7 @@ def logout():
     return
 
 
-def download(proposal_id, visit, inst='WFC3', download_dir='.',
+def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
              subgroup='IMA'):
     """Download observation visit number from specified proposal ID.
 
@@ -139,6 +159,69 @@ def download(proposal_id, visit, inst='WFC3', download_dir='.',
     nspec = np.sum(filtered['dataproduct_type'] == 'spectrum')
     print("Number of image products:", nimage)
     print("Number of spectrum products:", nspec)
+
+    # Download data products
+    result = Observations.download_products(filtered, curl_flag=False,
+                                            download_dir=download_dir)
+    return result
+
+def downloadJWST(proposal_id, visit, calib_level, subgroup, download_dir='.'):
+    """Download observation visit number from specified proposal ID.
+
+    Parameters
+    ----------
+    proposal_id : string or int
+        HST proposal/program ID (e.g., 13467).
+    visit : string or int
+        HST visit number listed on the Visit Status Report (e.g., 60).
+        See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
+        where XXXXX is the proposal/program ID.
+    calib_level : list
+        Product Calibration Level (0 = raw, 1 = uncalibrated, 2 = calibrated,
+        3 = science product, 4 = contributed science product)
+    subgroup : string
+        FITS file type, varies by calib_level.
+        1: UNCAL, GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK
+        2: CAL, CALINTS, RATE, RATEINTS, X1DINTS, ANNNN_CRFINTS,
+        GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK, RAMP
+        3: X1DINTS, WHTLT
+    download_dir : string (optional)
+        Temporary download directory will be 'download_dir'/mastDownload/...
+
+    Returns
+    -------
+    result : AstroPy Table
+        The manifest of files downloaded.
+
+    Notes
+    -----
+    History:
+
+    - July 2022 Kevin Stevenson
+        Initial version
+    """
+    # Convert to string
+    if type(proposal_id) is not str:
+        proposal_id = str(proposal_id).zfill(5)
+    if type(visit) is not str:
+        visit = str(visit).zfill(3)
+    if type(calib_level) is int:
+        calib_level = [calib_level]
+    # Specify obsid using wildcards
+    obsid = 'jw'+'*'+visit+'*'
+
+    # Query MAST for requested visit
+    sci_table = Observations.query_criteria(proposal_id=proposal_id,
+                                            obs_id=obsid)
+
+    # Get product list
+    data_products_by_id = Observations.get_product_list(sci_table)
+
+    # Filter for IMA files
+    filtered = Observations.filter_products(data_products_by_id,
+                            productSubGroupDescription=subgroup,
+                            calib_level=calib_level)
+    print("Number of science products:", len(filtered))
 
     # Download data products
     result = Observations.download_products(filtered, curl_flag=False,

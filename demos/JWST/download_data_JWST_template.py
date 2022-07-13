@@ -3,38 +3,43 @@
 import eureka.lib.mastDownload as md
 
 # Proposal/Program ID, can be string or int
-proposal_id = '13467'
+proposal_id = '02734'
 
 # List of one or more visit numbers
-visits = [60]
-# visits = np.arange(60,85)
+visits = [2]
+# visits = np.arange(1,4)
 
-# Instrument name, can be upper or lower case.
-# Supported options include: WFC3, STIS, COS, or FGS.
-inst = 'WFC3'
+# Calibration level, list
+# (0 = raw, 1 = uncalibrated, 2 = calibrated, 3 = science product,
+# 4 = contributed science product)
+calib_level = [1]
+
+# FITS file type, varies by calib_level.
+# 1: UNCAL, GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK
+# 2: CAL, CALINTS, RATE, RATEINTS, X1DINTS, ANNNN_CRFINTS,
+# GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK, RAMP
+# 3: X1DINTS, WHTLT
+subgroup = 'UNCAL'
 
 # Temporary download directory will be 'download_dir'/mastDownload/...
 download_dir = '.'
-
-# FITS file type (usually IMA, sometimes FLT)
-subgroup = 'IMA'
 
 # MAST API token for accessing data with exclusive access
 mast_token = None
 
 # Final destination of files after calling mast.consolidate
-final_dir = './HD209458/ima'
+final_dir = './wasp96b/S1'
 
 # If data are public, no need to call md.login() or md.logout()
 md.login(mast_token)
 for vis in visits:
     # Download data from MAST Archive
-    result = md.downloadHST(proposal_id, vis, inst, download_dir, subgroup)
+    result = md.downloadJWST(proposal_id, vis, calib_level, subgroup, download_dir)
     if result is not None:
         # Consolodate and move data into new directory
         md.consolidate(result, final_dir)
         # Sort data into science and calibration folders (scan vs direct image)
-        md.sort(final_dir)
+        # md.sort(final_dir)
 
 # Delete empty temporary directory structure
 md.cleanup(download_dir)
