@@ -197,7 +197,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             lc.wave_hi.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
-            
+
             if not hasattr(meta, 'boundary'):
                 # The default value before this was added as an option
                 meta.boundary = 'extend'
