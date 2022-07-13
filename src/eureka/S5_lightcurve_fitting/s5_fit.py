@@ -146,7 +146,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 ld_str = meta.use_generate_ld
                 if not hasattr(lc, 'exotic-ld_lin'):
                     raise Exception("Exotic-ld coefficients have not been" +
-                                   "caluclated in Stage 4")
+                                    "caluclated in Stage 4")
                 log.writelog("\nUsing generated limb-darkening coefficients" +
                              f"with {ld_str} \n")
                 ld_coeffs = [lc[ld_str + '_lin'].values, 
