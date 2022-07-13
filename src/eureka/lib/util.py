@@ -1,7 +1,8 @@
 import numpy as np
-from . import sort_nicely as sn
 import os
 import glob
+from astropy.io import fits
+from . import sort_nicely as sn
 
 
 def readfiles(meta):
@@ -19,9 +20,30 @@ def readfiles(meta):
         data fits files.
     """
     meta.segment_list = []
-    for fname in os.listdir(meta.inputdir):
-        if fname.endswith(meta.suffix + '.fits'):
-            meta.segment_list.append(meta.inputdir + fname)
+
+    # Look for files in the input directory
+    for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
+        meta.segment_list.append(fname)
+
+    # Need to allow for separated sci and cal directories for WFC3
+    if len(meta.segment_list) == 0:
+        # Add files from the sci directory if present
+        if not hasattr(meta, 'sci_dir') or meta.sci_dir is None:
+            meta.sci_dir = 'sci'
+        sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
+        for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
+            meta.segment_list.append(fname)
+        # Add files from the cal directory if present
+        if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
+            meta.cal_dir = 'cal'
+        cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
+        for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
+            meta.segment_list.append(fname)
+
+    with fits.open(meta.segment_list[-1]) as hdulist:
+        # Figure out which instrument we are using
+        meta.inst = hdulist[0].header['INSTRUME'].lower()
+
     meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
     return meta
 
@@ -453,7 +475,7 @@ def manmask(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with requested pixels masked.
     '''
-    log.writelog("  Masking manually identified bad pixels",
+    log.writelog("  Masking manually identified bad pixels...",
                  mute=(not meta.verbose))
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]

@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from copy import deepcopy
 
 from . import models as m
 from . import fitters as f
@@ -88,7 +87,7 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
-        self.unc_fit = deepcopy(self.unc)
+        self.unc_fit = np.ma.copy(self.unc)
 
         # Place to save the fit results
         self.results = []
@@ -166,9 +165,9 @@ class LightCurve(m.Model):
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
             if "unc_fit" in self.__dict__.keys():
-                unc = deepcopy(self.unc_fit)
+                unc = np.ma.copy(self.unc_fit)
             else:
-                unc = deepcopy(self.unc)
+                unc = np.ma.copy(self.unc)
             if self.share:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]

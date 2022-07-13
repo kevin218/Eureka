@@ -127,7 +127,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.copy(lc.unc)
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
                 (fit_params[ind[chan]] *
@@ -178,7 +178,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     # Make a new model instance
-    best_model = copy.copy(model)
+    best_model = copy.deepcopy(model)
     best_model.components[0].update(fit_params, freenames)
 
     # Save the covariance matrix in case it's needed to estimate step size
@@ -466,7 +466,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
 
     # Make a new model instance
-    best_model = copy.copy(model)
+    best_model = copy.deepcopy(model)
     best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
@@ -919,7 +919,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_corner(samples, lc, meta, freenames, fitter='dynesty')
 
     # Make a new model instance
-    best_model = copy.copy(model)
+    best_model = copy.deepcopy(model)
     best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
@@ -1035,7 +1035,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_res_distr(lc, model, meta, fitter='lmfitter')
 
     # Create new model with best fit parameters
-    best_model = copy.copy(model)
+    best_model = copy.deepcopy(model)
     best_model.components[0].update(fit_params, freenames)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)

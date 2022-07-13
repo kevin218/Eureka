@@ -201,7 +201,7 @@ Everything outside of the box will be discarded and not used in the analysis.
 
 src_pos_type
 ''''''''''''
-Determine the source position on the detector when not given in header (Options: gaussian, weighted, max, or hst).
+Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
 
 centroidtrim
 ''''''''''''
@@ -312,6 +312,18 @@ isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
+vmin
+''''
+Optional. Sets the vmin of the color bar for Figure 3101. Defaults to 0.97.
+
+vmax
+''''
+Optional. Sets the vmax of the color bar for Figure 3101. Defaults to 1.03.
+
+time_axis
+'''''''''
+Optional. Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x'). Defaults to 'y'.
+
 testing_S3
 ''''''''''
 If set to ``True`` only the last segment (which is usually the smallest) in the ``inputdir`` will be run. Also, only five integrations from the last segment will be reduced.
@@ -330,7 +342,15 @@ If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 2 JWST data.
+The path to the directory containing the Stage 2 JWST data. For HST observations, the sci_dir and cal_dir folders will only be checked if this folder does not contain FITS files.
+
+topdir + inputdir + sci_dir
+'''''''''''''''''''''''''''
+Optional, only used for HST analyses. The path to the folder containing the science spectra. Defaults to 'sci'.
+
+topdir + inputdir + cal_dir
+'''''''''''''''''''''''''''
+Optional, only used for HST analyses. The path to the folder containing the wavelength calibration imaging mode observations. Defaults to 'cal'.
 
 topdir + outputdir
 ''''''''''''''''''
@@ -444,6 +464,18 @@ Only used for HST analyses. Should differential non-destructive reads be summed 
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
+
+vmin
+''''
+Optional. Sets the vmin of the color bar for Figure 4101. Defaults to 0.97.
+
+vmax
+''''
+Optional. Sets the vmax of the color bar for Figure 4101. Defaults to 1.03.
+
+time_axis
+'''''''''
+Optional. Determines whether the time axis in Figure 4101 is along the y-axis ('y') or the x-axis ('x'). Defaults to 'y'.
 
 hide_plots
 ''''''''''

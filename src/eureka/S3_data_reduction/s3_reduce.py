@@ -26,7 +26,6 @@ import os
 import time as time_pkg
 import numpy as np
 import astraeus.xarrayIO as xrio
-from astropy.io import fits
 from tqdm import tqdm
 import psutil
 from . import optspex
@@ -165,9 +164,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                              f'ending in {meta.suffix}.fits',
                              mute=(not meta.verbose))
 
-            with fits.open(meta.segment_list[-1]) as hdulist:
-                # Figure out which instrument we are using
-                meta.inst = hdulist[0].header['INSTRUME'].lower()
             # Load instrument module
             if meta.inst == 'miri':
                 from . import miri as inst
@@ -261,8 +257,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Locate source postion
                 log.writelog('  Locating source position...',
                              mute=(not meta.verbose))
-                meta.src_ypos = source_pos.source_pos(
-                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                meta.src_ypos = source_pos.source_pos(data, meta, m)
                 log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
