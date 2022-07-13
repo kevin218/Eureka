@@ -6,7 +6,7 @@ from . import nircam, sigrej
 from ..lib.util import read_time
 
 
-def read(filename, data, meta):
+def read(filename, data, meta, log):
     '''Reads single FITS file from JWST's NIRCam instrument.
 
     Parameters
@@ -17,11 +17,17 @@ def read(filename, data, meta):
         The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
     data : Xarray Dataset
         The updated Dataset object with the fits data stored inside.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object
+    log : logedit.Logedit
+        The current log.
 
     Notes
     -----
@@ -41,12 +47,12 @@ def read(filename, data, meta):
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
     try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
         data.attrs['intend'] = data.attrs['mhdr']['INTEND']
     except:
         # FINDME: Need to only catch the particular exception we expect
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
-        data.attrs['intstart'] = 1
+        data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
 
     sci = hdulist['SCI', 1].data
@@ -54,12 +60,12 @@ def read(filename, data, meta):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']:
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
-        time = read_time(meta, data)
+        time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
         print('  WARNING: The timestamps for the simulated NIRSpec data are '
@@ -87,42 +93,51 @@ def read(filename, data, meta):
     data['wave_2d'] = (['y', 'x'], wave_2d)
     data['wave_2d'].attrs['wave_units'] = wave_units
 
-    return data, meta
+    return data, meta, log
 
 
-def flag_bg(data, meta):
+def flag_bg(data, meta, log):
     '''Outlier rejection of sky background along time axis.
 
     Parameters
     ----------
-    data : DataClass
-        The data object in which the fits data will stored.
+    data : Xarray Dataset
+        The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
-    data : DataClass
-        The updated data object with outlier background pixels flagged.
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
     '''
-    y1, y2, bg_thresh = meta.bg_y1, meta.bg_y2, meta.bg_thresh
+    log.writelog('  Performing background outlier rejection...',
+                 mute=(not meta.verbose))
 
-    bgdata1 = data.flux[:, :y1]
-    bgmask1 = data.mask[:, :y1]
-    bgdata2 = data.flux[:, y2:]
-    bgmask2 = data.mask[:, y2:]
-    # This might not be necessary for real data
-    # bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :y1], 0))
-    # bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, y2:], 0))
+    meta.bg_y2 = meta.src_ypos + meta.bg_hw
+    meta.bg_y1 = meta.src_ypos - meta.bg_hw
 
-    # estsig1 = [bgerr1 for j in range(len(bg_thresh))]
-    # estsig2 = [bgerr2 for j in range(len(bg_thresh))]
+    bgdata1 = data.flux[:, :meta.bg_y1]
+    bgmask1 = data.mask[:, :meta.bg_y1]
+    bgdata2 = data.flux[:, meta.bg_y2:]
+    bgmask2 = data.mask[:, meta.bg_y2:]
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
     # Need to test performance with and without estsig on real data.
-    data['mask'][:, :y1] = sigrej.sigrej(bgdata1, bg_thresh, bgmask1)  # ,
-    #                                      estsig1)
-    data['mask'][:, y2:] = sigrej.sigrej(bgdata2, bg_thresh, bgmask2)  # ,
-    #                                      estsig1)
+    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+        # This might not be necessary for real data
+        bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.bg_y1], 0))
+        bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, meta.bg_y2:], 0))
+        estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
+        estsig2 = [bgerr2 for j in range(len(meta.bg_thresh))]
+    else:
+        estsig1 = None
+        estsig2 = None
+    data['mask'][:, :meta.bg_y1] = sigrej.sigrej(bgdata1, meta.bg_thresh,
+                                                 bgmask1, estsig1)
+    data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
+                                                 bgmask2, estsig2)
 
     return data
 
@@ -181,10 +196,12 @@ def find_column_median_shifts(data):
     pix_centers = np.arange(nb_rows) + 0.5
 
     # Compute the center of mass of each column and convert to integer (pixels)
-    column_coms = np.sum(pix_centers[:, None]*data, axis=0) / np.sum(data, axis=0)
+    column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
+                   np.sum(data, axis=0))
     column_coms = np.around(column_coms).astype(int)
 
-    # define the new center (where we will align the trace) in the middle of the detector
+    # define the new center (where we will align the trace) in the 
+    # middle of the detector
     new_center = int(nb_rows/2)
 
     # define an array containing the needed shift to bring the COMs to the
@@ -218,7 +235,8 @@ def roll_columns(data, shifts):
     rolled_data = np.zeros_like(data)
     # loop over all images (integrations)
     for i in range(len(data)):
-        # do the equivalent of 'np.roll' but with a different shift in each column
+        # do the equivalent of 'np.roll' but with a different shift
+        # in each column
         
         arr = np.swapaxes(data[i], 0, -1)
         all_idcs = np.ogrid[[slice(0, n) for n in arr.shape]]
@@ -250,7 +268,7 @@ def straighten_trace(data, meta, log):
     Parameters
     ----------
     data : Xarray Dataset
-        The Dataset object in which the fits data will stored.
+            The Dataset object in which the fits data will stored.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
@@ -264,7 +282,7 @@ def straighten_trace(data, meta, log):
         The updated metadata object.
     '''
     log.writelog('  Correcting curvature and bringing trace in the center '
-                 'of the detector', mute=(not meta.verbose))
+                 'of the detector...', mute=(not meta.verbose))
     # This method only works with the median profile for the extraction
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
@@ -276,15 +294,18 @@ def straighten_trace(data, meta, log):
     shifts, new_center = find_column_median_shifts(median_frame)
 
     # Correct wavelength (only one frame) 
-    log.writelog('  Correct the wavelength solution', mute=(not meta.verbose))
-    # broadcast to (1, detector.shape) which is the expected shape of the function
+    log.writelog('  Correcting the wavelength solution...',
+                 mute=(not meta.verbose))
+    # broadcast to (1, detector.shape) which is the expected shape of
+    # the function
     single_shift = np.expand_dims(shifts, axis=0)
     wave_data = np.expand_dims(data.wave_2d.values, axis=0)
     # apply the correction and update wave_1d accordingly
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-    log.writelog('  Correct the curvature over all integrations', mute=(not meta.verbose))
+    log.writelog('  Correcting the curvature over all integrations...',
+                 mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
                         (data.flux.shape[0], data.flux.shape[2]), order='F')
@@ -296,13 +317,50 @@ def straighten_trace(data, meta, log):
     data.v0.values = roll_columns(data.v0.values, shifts)
     
     # update the new src_ypos
-    log.writelog('  Update src_ypos to new center, row {}'.format(new_center),
+    log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
                  mute=(not meta.verbose))
     meta.src_ypos = new_center
 
     # update the median frame
-    log.writelog('  Update median frame now that the trace is corrected',
+    log.writelog('  Updating median frame now that the trace is corrected...',
                  mute=(not meta.verbose))
     data.medflux.values = np.median(data.flux.values, axis=0)
 
     return data, meta
+
+
+def cut_aperture(data, meta, log):
+    """Select the aperture region out of each trimmed image.
+
+    Uses the code written for NIRCam which works for NIRSpec.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    apdata : ndarray
+        The flux values over the aperture region.
+    aperr : ndarray
+        The noise values over the aperture region.
+    apmask : ndarray
+        The mask values over the aperture region.
+    apbg : ndarray
+        The background flux values over the aperture region.
+    apv0 : ndarray
+        The v0 values over the aperture region.
+
+    Notes
+    -----
+    History:
+
+    - 2022-06-17, Taylor J Bell
+        Initial version based on the code in s3_reduce.py
+    """
+    return nircam.cut_aperture(data, meta, log)
