@@ -142,7 +142,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             meta.time = lc.time.values
 
             # Load limb-darkening coefficients if used from Stage 4
-            if meta.use_generate_ld is not None:
+            if meta.use_generate_ld:
                 ld_str = meta.use_generate_ld
                 if not hasattr(lc, ld_str + '_lin'):
                     raise Exception("Exotic-ld coefficients have not been" +
