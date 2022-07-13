@@ -25,7 +25,7 @@ maxiters		5		# The number of iterations of sigma clipping that should be perform
 fill_value		mask	# Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
 #Limb-darkening parameters needed to compute exotic-ld
-compute_ld      True
+compute_ld      False
 inst_filter     F322W2 #filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
 metallicity     0.1 #metallicity of the star 
 teff            6000 #effective temperature of the star in K
