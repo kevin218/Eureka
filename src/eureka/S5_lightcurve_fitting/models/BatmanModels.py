@@ -50,10 +50,10 @@ class BatmanTransitModel(Model):
                              use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
-        self.ld_S4_array = kwargs.get('ld_coeffs')[len_params-2]
         
         # Replace fixed u parameters with generated limb-darkening values
         if self.ld_from_S4 is not None:
+            self.ld_S4_array = kwargs.get('ld_coeffs')[len_params-2]
             for c in np.arange(self.nchan):
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
