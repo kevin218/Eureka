@@ -25,6 +25,7 @@ subgroup = 'UNCAL'
 download_dir = '.'
 
 # MAST API token for accessing data with exclusive access
+# This can be generated at https://auth.mast.stsci.edu/token
 mast_token = None
 
 # Final destination of files after calling mast.consolidate

@@ -23,6 +23,7 @@ def columnNames():
         print(val)
     return
 
+
 def writeTable(table, filename, format='csv'):
     """Write intermediate results from Astropy Table to an ASCII file
 
@@ -30,8 +31,10 @@ def writeTable(table, filename, format='csv'):
     ----------
     table :
         Astropy Table
-    filename : string
+    filename : str
         Name of output file
+    format : str; optional
+        The file format to use. Defaults to 'csv'.
 
     Notes
     -----
@@ -42,6 +45,7 @@ def writeTable(table, filename, format='csv'):
     """
     ascii.write(table, filename, format=format)
     return
+
 
 def login(mast_token=None):
     """Log into the MAST portal.
@@ -80,24 +84,26 @@ def logout():
 
 
 def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
-             subgroup='IMA'):
+                subgroup='IMA'):
     """Download observation visit number from specified proposal ID.
 
     Parameters
     ----------
-    proposal_id : string or int
+    proposal_id : str or int
         HST proposal/program ID (e.g., 13467).
-    visit : string or int
+    visit : str or int
         HST visit number listed on the Visit Status Report (e.g., 60).
         See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
         where XXXXX is the proposal/program ID.
-    inst : string
+    inst : str; optional
         HST instrument name, can be upper or lower case.
         Supported options include: WFC3, STIS, COS, or FGS.
-    download_dir : string (optional)
+        Defaults to 'WFC3'.
+    download_dir : str; optional
         Temporary download directory will be 'download_dir'/mastDownload/...
-    subgroup : string, (optional)
-        FITS file type (usually IMA, sometimes FLT)
+        Defaults to '.'.
+    subgroup : str; optional
+        FITS file type (usually IMA, sometimes FLT). Defaults to 'IMA'.
 
     Returns
     -------
@@ -165,15 +171,16 @@ def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
                                             download_dir=download_dir)
     return result
 
+
 def downloadJWST(proposal_id, visit, calib_level, subgroup, download_dir='.'):
     """Download observation visit number from specified proposal ID.
 
     Parameters
     ----------
-    proposal_id : string or int
-        HST proposal/program ID (e.g., 13467).
-    visit : string or int
-        HST visit number listed on the Visit Status Report (e.g., 60).
+    proposal_id : str or int
+        JWST proposal/program ID (e.g., 13467).
+    visit : str or int
+        JWST visit number listed on the Visit Status Report (e.g., 60).
         See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
         where XXXXX is the proposal/program ID.
     calib_level : list
@@ -187,6 +194,7 @@ def downloadJWST(proposal_id, visit, calib_level, subgroup, download_dir='.'):
         3: X1DINTS, WHTLT
     download_dir : string (optional)
         Temporary download directory will be 'download_dir'/mastDownload/...
+        Defaults to '.'.
 
     Returns
     -------
@@ -218,9 +226,9 @@ def downloadJWST(proposal_id, visit, calib_level, subgroup, download_dir='.'):
     data_products_by_id = Observations.get_product_list(sci_table)
 
     # Filter for IMA files
-    filtered = Observations.filter_products(data_products_by_id,
-                            productSubGroupDescription=subgroup,
-                            calib_level=calib_level)
+    filtered = Observations.filter_products(
+        data_products_by_id, productSubGroupDescription=subgroup,
+        calib_level=calib_level)
     print("Number of science products:", len(filtered))
 
     # Download data products
@@ -237,7 +245,7 @@ def consolidate(result, final_dir):
     result : AstroPy Table
         The manifest of files downloaded, returned from
         mastDownload.download().
-    final_dir : string
+    final_dir : str
         Final destination of files.
 
     Notes
@@ -266,12 +274,14 @@ def sort(final_dir, sci_dir='sci', cal_dir='cal'):
 
     Parameters
     ----------
-    final_dir : string
+    final_dir : str
         Final destination of files.
-    sci_dir : string
+    sci_dir : str; optional
         Name of science subdirectory within 'final_dir'.
-    cal_dir : string
+        Defaults to 'sci'.
+    cal_dir : str; optional
         Name of calibration subdirectory within 'final_dir'.
+        Defaults to 'cal'.
 
     Notes
     -----
@@ -309,6 +319,7 @@ def cleanup(download_dir='.'):
     ----------
     download_dir : string (optional)
         Temporary download directory specified for mastDownload.download().
+        Defaults to '.'.
 
     Notes
     -----
