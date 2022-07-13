@@ -142,16 +142,16 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             meta.time = lc.time.values
 
             # Load limb-darkening coefficients if used from Stage 4
-            if hasattr(meta, 'use_generate_ld'):
+            if meta.use_generate_ld is not None:
                 ld_str = meta.use_generate_ld
-                if not hasattr(lc, 'exotic-ld_lin'):
+                if not hasattr(lc, ld_str + '_lin'):
                     raise Exception("Exotic-ld coefficients have not been" +
-                                    "caluclated in Stage 4")
+                                    "calculated in Stage 4")
                 log.writelog("\nUsing generated limb-darkening coefficients" +
                              f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values, 
-                             lc[ld_str + '_quad'].values, 
-                             lc[ld_str + '_nonlin_3para'].values, 
+                ld_coeffs = [lc[ld_str + '_lin'].values,
+                             lc[ld_str + '_quad'].values,
+                             lc[ld_str + '_nonlin_3para'].values,
                              lc[ld_str + '_nonlin_4para'].values]
             else:
                 ld_coeffs = None
@@ -166,15 +166,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 for channel in range(chanrng):
-                    mask = lc.mask.values[channel, :]
-                    flux_temp = np.ma.masked_where(mask,
-                                                   lc.data.values[channel, :])
-                    err_temp = np.ma.masked_where(mask,
-                                                  lc.err.values[channel, :])
+                    # FINDME: need to consider optmask
                     flux = np.ma.append(flux,
-                                        flux_temp/np.ma.mean(flux_temp))
+                                        (lc.data.values[channel, :] /
+                                         np.nanmean(
+                                             lc.data.values[channel, :])))
                     flux_err = np.ma.append(flux_err,
-                                            err_temp/np.ma.mean(flux_temp))
+                                            (lc.err.values[channel, :] /
+                                             np.nanmean(
+                                                 lc.data.values[channel, :])))
 
                 meta = fit_channel(meta, time, flux, 0, flux_err, eventlabel,
                                    sharedp, params, log, longparamlist,
@@ -196,16 +196,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Get the flux and error measurements for
                     # the current channel
-                    mask = lc.mask.values[channel, :]
-                    flux = np.ma.masked_where(mask,
-                                              lc.data.values[channel, :])
-                    flux_err = np.ma.masked_where(mask,
-                                                  lc.err.values[channel, :])
-                    
+                    flux = lc.data.values[channel, :]
+                    flux_err = lc.err.values[channel, :]
+
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/np.ma.mean(flux)
-                    flux = flux/np.ma.mean(flux)
+                    flux_err = flux_err/np.nanmean(flux)
+                    flux = flux/np.nanmean(flux)
 
                     meta = fit_channel(meta, time, flux, channel, flux_err,
                                        eventlabel, sharedp, params, log,
