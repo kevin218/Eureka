@@ -30,7 +30,6 @@ from ..lib import clipping
 
 def genlc(eventlabel, ecf_path=None, s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
-
     Parameters
     ----------
     eventlabel : str
@@ -41,7 +40,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
-
     Returns
     -------
     spec : Astreaus object 
@@ -50,11 +48,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
-
     Notes
     -----
     History:
-
     - June 2021 Kevin Stevenson
         Initial version
     - October 2021 Taylor Bell
@@ -329,9 +325,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 log.writelog("Generating limb-darkening coefficients")
                 ld_lin, ld_quad, ld_3para, ld_4para = generate_LD.exotic_ld(meta, spec)
                 lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
-                lc['exotic-ld_quad'] = (['wavelength','exotic-ld_2'], ld_quad)
-                lc['exotic-ld_nonlin_3para'] = (['wavelength','exotic-ld_3'], ld_3para)
-                lc['exotic-ld_nonlin_4para'] = (['wavelength','exotic-ld_4'], ld_4para)
+                lc['exotic-ld_quad'] = (['wavelength', 'exotic-ld_2'], ld_quad)
+                lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'], ld_3para)
+                lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'], ld_4para)
 
             log.writelog('Saving results')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
@@ -356,12 +352,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
 def load_specific_s3_meta_info(meta):
     """Load the specific S3 MetaClass object used to make this aperture pair.
-
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current metadata object.
-
     Returns
     -------
     eureka.lib.readECF.MetaClass

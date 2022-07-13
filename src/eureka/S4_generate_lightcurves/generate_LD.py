@@ -54,21 +54,21 @@ def exotic_ld(meta, spec):
     # Tell it which stellar model grid you would like to use: '1D' or '3D'
     ld_model = meta.exotic_ld_grid
     
-    #compute stellar limb darkening model
-    sld =  StellarLimbDarkening(M_H, Teff, logg, ld_model, ld_data_path) 
+    # compute stellar limb darkening model
+    sld = StellarLimbDarkening(M_H, Teff, logg, ld_model, ld_data_path) 
     
-    lin_c1 = np.zeros((meta.nspecchan,1));
-    quad = np.zeros((meta.nspecchan,2))
-    nonlin_3 = np.zeros((meta.nspecchan,3))
-    nonlin_4 = np.zeros((meta.nspecchan,4))
+    lin_c1 = np.zeros((meta.nspecchan, 1))
+    quad = np.zeros((meta.nspecchan, 2))
+    nonlin_3 = np.zeros((meta.nspecchan, 3))
+    nonlin_4 = np.zeros((meta.nspecchan, 4))
     for i in range(meta.nspecchan):
-        #generate limb-darkening coefficients for each bin
+        # generate limb-darkening coefficients for each bin
         lin_c1[i] = [sld.compute_linear_ld_coeffs(wavelength_range[i], mode)[0]]
         quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode)
         nonlin_3[i] = \
-            sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i], \
+            sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i], 
                                                          mode)
         nonlin_4[i] = \
-            sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i], \
+            sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i], 
                                                          mode)
     return lin_c1, quad, nonlin_3, nonlin_4
