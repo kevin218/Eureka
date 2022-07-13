@@ -16,7 +16,7 @@ def source_pos(data, meta, m, integ=0, header=False):
         The metadata object.
     m : int
         The file number.
-    integ : int
+    integ : int, optional
         The integration number.
         Default is 0 (first integration)
     header : bool; optional
@@ -73,7 +73,7 @@ def source_pos_max(flux, meta, m, integ=0, plot=True):
         The metadata object.
     m : int
         The file number.
-    integ : int
+    integ : int, optional
         The integration number.
         Default is 0 (first integration)
     plot : bool; optional
@@ -124,7 +124,7 @@ def source_pos_FWM(flux, meta, m, integ=0):
         The metadata object.
     m : int
         The file number.
-    integ : int
+    integ : int, optional
         The integration number.
         Default is 0 (first integration)
 
@@ -210,7 +210,7 @@ def source_pos_gauss(flux, meta, m, integ=0):
         The metadata object.
     m : int
         The file number.
-    integ : int
+    integ : int, optional
         The integration number.
         Default is 0 (first integration)
 

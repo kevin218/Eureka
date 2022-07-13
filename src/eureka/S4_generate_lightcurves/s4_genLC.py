@@ -122,7 +122,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
                          mute=(not meta.verbose))
             spec = xrio.readXR(meta.filename_S3_SpecData)
-            
+
             if meta.wave_min is None:
                 meta.wave_min = np.min(spec.wave_1d.values)
                 log.writelog(f'No value was provided for meta.wave_min, so '
@@ -226,7 +226,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if meta.record_ypos:
+            if hasattr(meta, 'record_ypos') and meta.record_ypos:
                 lc['driftypos'] = (['time'], spec.driftypos.data)
                 lc['driftywidth'] = (['time'], spec.driftywidth.data)
             
@@ -234,7 +234,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
                 # This can take a long time, so always print this message
-                log.writelog('Recording drift/jitter')
+                log.writelog('Computing drift/jitter')
                 # Compute drift/jitter
                 drift_results = drift.spec1D(spec.optspec, meta, log,
                                              mask=spec.optmask)

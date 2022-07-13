@@ -363,7 +363,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         src_pos_results = source_pos.source_pos(data, meta,
                                                                 m, n,
                                                                 header=use_hdr)
-                        meta.src_ypos, ypos_exact, ypos_width = src_pos_results
+                        _, ypos_exact, ypos_width = src_pos_results
                         src_ypos_exact[n] = ypos_exact
                         src_ypos_width[n] = ypos_width
 
