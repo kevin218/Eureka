@@ -5,6 +5,7 @@ import shutil
 import os
 from astroquery.mast import Observations
 import astropy.io.fits as pf
+from astropy.io import ascii
 
 
 def columnNames():
@@ -20,6 +21,29 @@ def columnNames():
     meta_table = Observations.get_metadata("observations")
     for val in meta_table['Column Name']:
         print(val)
+    return
+
+
+def writeTable(table, filename, format='csv'):
+    """Write intermediate results from Astropy Table to an ASCII file
+
+    Parameters
+    ----------
+    table :
+        Astropy Table
+    filename : str
+        Name of output file
+    format : str; optional
+        The file format to use. Defaults to 'csv'.
+
+    Notes
+    -----
+    History:
+
+    - July 2022 Kevin Stevenson
+        Initial version
+    """
+    ascii.write(table, filename, format=format)
     return
 
 
@@ -59,25 +83,27 @@ def logout():
     return
 
 
-def download(proposal_id, visit, inst='WFC3', download_dir='.',
-             subgroup='IMA'):
+def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
+                subgroup='IMA'):
     """Download observation visit number from specified proposal ID.
 
     Parameters
     ----------
-    proposal_id : string or int
+    proposal_id : str or int
         HST proposal/program ID (e.g., 13467).
-    visit : string or int
+    visit : str or int
         HST visit number listed on the Visit Status Report (e.g., 60).
         See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
         where XXXXX is the proposal/program ID.
-    inst : string
+    inst : str; optional
         HST instrument name, can be upper or lower case.
         Supported options include: WFC3, STIS, COS, or FGS.
-    download_dir : string (optional)
+        Defaults to 'WFC3'.
+    download_dir : str; optional
         Temporary download directory will be 'download_dir'/mastDownload/...
-    subgroup : string, (optional)
-        FITS file type (usually IMA, sometimes FLT)
+        Defaults to '.'.
+    subgroup : str; optional
+        FITS file type (usually IMA, sometimes FLT). Defaults to 'IMA'.
 
     Returns
     -------
@@ -146,6 +172,71 @@ def download(proposal_id, visit, inst='WFC3', download_dir='.',
     return result
 
 
+def downloadJWST(proposal_id, visit, calib_level, subgroup, download_dir='.'):
+    """Download observation visit number from specified proposal ID.
+
+    Parameters
+    ----------
+    proposal_id : str or int
+        JWST proposal/program ID (e.g., 13467).
+    visit : str or int
+        JWST visit number listed on the Visit Status Report (e.g., 60).
+        See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
+        where XXXXX is the proposal/program ID.
+    calib_level : list
+        Product Calibration Level (0 = raw, 1 = uncalibrated, 2 = calibrated,
+        3 = science product, 4 = contributed science product)
+    subgroup : string
+        FITS file type, varies by calib_level.
+        1: UNCAL, GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK
+        2: CAL, CALINTS, RATE, RATEINTS, X1DINTS, ANNNN_CRFINTS,
+        GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK, RAMP
+        3: X1DINTS, WHTLT
+    download_dir : string (optional)
+        Temporary download directory will be 'download_dir'/mastDownload/...
+        Defaults to '.'.
+
+    Returns
+    -------
+    result : AstroPy Table
+        The manifest of files downloaded.
+
+    Notes
+    -----
+    History:
+
+    - July 2022 Kevin Stevenson
+        Initial version
+    """
+    # Convert to string
+    if type(proposal_id) is not str:
+        proposal_id = str(proposal_id).zfill(5)
+    if type(visit) is not str:
+        visit = str(visit).zfill(3)
+    if type(calib_level) is int:
+        calib_level = [calib_level]
+    # Specify obsid using wildcards
+    obsid = 'jw'+'*'+visit+'*'
+
+    # Query MAST for requested visit
+    sci_table = Observations.query_criteria(proposal_id=proposal_id,
+                                            obs_id=obsid)
+
+    # Get product list
+    data_products_by_id = Observations.get_product_list(sci_table)
+
+    # Filter for IMA files
+    filtered = Observations.filter_products(
+        data_products_by_id, productSubGroupDescription=subgroup,
+        calib_level=calib_level)
+    print("Number of science products:", len(filtered))
+
+    # Download data products
+    result = Observations.download_products(filtered, curl_flag=False,
+                                            download_dir=download_dir)
+    return result
+
+
 def consolidate(result, final_dir):
     """Consolidate downloaded files into a single directory
 
@@ -154,7 +245,7 @@ def consolidate(result, final_dir):
     result : AstroPy Table
         The manifest of files downloaded, returned from
         mastDownload.download().
-    final_dir : string
+    final_dir : str
         Final destination of files.
 
     Notes
@@ -183,12 +274,14 @@ def sort(final_dir, sci_dir='sci', cal_dir='cal'):
 
     Parameters
     ----------
-    final_dir : string
+    final_dir : str
         Final destination of files.
-    sci_dir : string
+    sci_dir : str; optional
         Name of science subdirectory within 'final_dir'.
-    cal_dir : string
+        Defaults to 'sci'.
+    cal_dir : str; optional
         Name of calibration subdirectory within 'final_dir'.
+        Defaults to 'cal'.
 
     Notes
     -----
@@ -226,6 +319,7 @@ def cleanup(download_dir='.'):
     ----------
     download_dir : string (optional)
         Temporary download directory specified for mastDownload.download().
+        Defaults to '.'.
 
     Notes
     -----
