@@ -4,7 +4,7 @@ channels:
     - defaults
 dependencies:
     - python==3.9.7
-    - asdf[version='>=2.7.1,<2.11.0'] # Needed for jwst==1.3.3
+    - asdf
     - astropy
     - batman-package
     - bokeh
@@ -14,6 +14,7 @@ dependencies:
     - cython
     - dynesty[version='>1.0']
     - emcee[version='>3.0.0']
+    - exotic-ld
     - george
     - gwcs
     - h5py[version='<3.2']
@@ -33,7 +34,7 @@ dependencies:
         - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
         - crds
         - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
-        - jwst==1.3.3
+        - jwst==1.6.0
         - myst-parser # Needed for documentation
         - sphinx-rtd-theme # Needed for documentation
         - stcal

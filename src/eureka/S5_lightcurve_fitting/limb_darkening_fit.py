@@ -24,7 +24,7 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', category=FutureWarning)
 
 
-def ld_profile(name='quadratic', latex=False):
+def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
     """Define the function to fit the limb darkening profile.
 
     Parameters
@@ -33,9 +33,12 @@ def ld_profile(name='quadratic', latex=False):
         The name of the limb darkening profile function to use,
         including 'uniform', 'linear', 'quadratic', 'kipping2013',
         'square-root', 'logarithmic', 'exponential', '3-parameter',
-        and '4-parameter'. Detaults to 'quadratic'.
+        and '4-parameter'. Defaults to 'quadratic'.
     latex : bool; optional
         Return the function as a LaTeX formatted string. Defaults to False.
+    use_gen_ld : str; optional
+        Which tool will be doing the limb darkening modelling from
+        ['batman', 'exotic-ld']. Defaults to 'batman'.
 
     Returns
     -------
@@ -49,10 +52,16 @@ def ld_profile(name='quadratic', latex=False):
     References
     ----------
     https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
+    https://exotic-ld.readthedocs.io/en/latest/views/quick_start.html
     """
     # Supported profiles a la BATMAN
     names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
+    
+    # Generated profiles by exotic-ld 
+    exotic_ld_names = ['linear', 'quadratic', '3-parameter', '4-parameter']
+    if use_gen_ld == 'exotic-ld':
+        names = exotic_ld_names
 
     # Check that the profile is supported
     if name in names:
@@ -86,7 +95,8 @@ def ld_profile(name='quadratic', latex=False):
 
         return profile
     else:
-        raise Exception(f"'{name}' is not a supported profile. Try {names}")
+        raise Exception(f"'{name}' is not a supported profile by "
+                        f"'{use_gen_ld}'. Try {names}")
 
 
 def uniform(m):

@@ -47,12 +47,12 @@ def read(filename, data, meta, log):
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
     try:
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
         data.attrs['intend'] = data.attrs['mhdr']['INTEND']
     except:
         # FINDME: Need to only catch the particular exception we expect
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
-        data.attrs['intstart'] = 1
+        data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
 
     sci = hdulist['SCI', 1].data
@@ -60,12 +60,12 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
     wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']:
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
-        time = read_time(meta, data)
+        time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
         print('  WARNING: The timestamps for the simulated NIRSpec data are '
@@ -282,7 +282,7 @@ def straighten_trace(data, meta, log):
         The updated metadata object.
     '''
     log.writelog('  Correcting curvature and bringing trace in the center '
-                 'of the detector', mute=(not meta.verbose))
+                 'of the detector...', mute=(not meta.verbose))
     # This method only works with the median profile for the extraction
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
@@ -294,7 +294,8 @@ def straighten_trace(data, meta, log):
     shifts, new_center = find_column_median_shifts(median_frame)
 
     # Correct wavelength (only one frame) 
-    log.writelog('  Correct the wavelength solution', mute=(not meta.verbose))
+    log.writelog('  Correcting the wavelength solution...',
+                 mute=(not meta.verbose))
     # broadcast to (1, detector.shape) which is the expected shape of
     # the function
     single_shift = np.expand_dims(shifts, axis=0)
@@ -303,7 +304,7 @@ def straighten_trace(data, meta, log):
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-    log.writelog('  Correct the curvature over all integrations',
+    log.writelog('  Correcting the curvature over all integrations...',
                  mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
@@ -316,12 +317,12 @@ def straighten_trace(data, meta, log):
     data.v0.values = roll_columns(data.v0.values, shifts)
     
     # update the new src_ypos
-    log.writelog('  Update src_ypos to new center, row {}'.format(new_center),
+    log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
                  mute=(not meta.verbose))
     meta.src_ypos = new_center
 
     # update the median frame
-    log.writelog('  Update median frame now that the trace is corrected',
+    log.writelog('  Updating median frame now that the trace is corrected...',
                  mute=(not meta.verbose))
     data.medflux.values = np.median(data.flux.values, axis=0)
 

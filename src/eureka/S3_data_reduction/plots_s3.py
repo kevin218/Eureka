@@ -28,19 +28,35 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     None
     '''
     normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
-    wmin = wave_1d.min()
-    wmax = wave_1d.max()
-    vmin = 0.97
-    vmax = 1.03
-
+    wmin = np.ma.min(wave_1d)
+    wmax = np.ma.max(wave_1d)
+    if not hasattr(meta, 'vmin') or meta.vmin is None:
+        meta.vmin = 0.97
+    if not hasattr(meta, 'vmax') or meta.vmin is None:
+        meta.vmax = 1.03
+    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
+        meta.time_axis = 'y'
+    elif meta.time_axis not in ['y', 'x']:
+        print("WARNING: meta.time_axis is not one of ['y', 'x']!"
+              "Using 'y' by default.")
+        meta.time_axis = 'y'
+    
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
-    plt.imshow(normspec, origin='lower', aspect='auto',
-               extent=[wmin, wmax, 0, meta.n_int], vmin=vmin, vmax=vmax,
-               cmap=plt.cm.RdYlBu_r)
-    plt.title(f"MAD = {int(np.round(meta.mad_s3, 0))} ppm")
-    plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu m$)')
+    if meta.time_axis == 'y':
+        plt.imshow(normspec, origin='lower', aspect='auto',
+                   extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel('Integration Number')
+        plt.xlabel(r'Wavelength ($\mu m$)')
+    else:
+        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
+                   extent=[0, meta.n_int, wmin, wmax], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel(r'Wavelength ($\mu m$)')
+        plt.xlabel('Integration Number')
+
+    plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
     fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
@@ -67,7 +83,7 @@ def image_and_background(data, meta, log, m):
     -------
     None
     '''
-    log.writelog('  Creating figures for background subtraction',
+    log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
 
     intstart, subdata, submask, subbg = (data.attrs['intstart'],
@@ -341,3 +357,69 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
+
+
+def driftypos(data, meta):
+    '''Plot the spatial jitter. (Fig 3305)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3305, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
+    plt.ylabel('Spectrum spatial profile center')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3305_DriftYPos'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def driftywidth(data, meta):
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3306)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3306, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
+    plt.ylabel('Spectrum spatial profile width')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3306_DriftYWidth'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)

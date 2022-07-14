@@ -8,16 +8,16 @@ suffix      calints     # Data file suffix
 # Subarray region of interest
 ywindow     [0,31]      # Vertical axis as seen in DS9
 xwindow     [65,400]    # Horizontal axis as seen in DS9
-src_pos_type gaussian   # Determine source position when not given in header (Options: gaussian, weighted, or max)
+src_pos_type gaussian   # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 
 # Background parameters
 bg_hw       10         # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh   [15,15]    # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg      0          # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh    2          # X-sigma threshold for outlier rejection during background subtraction
-save_bgsub  False      # Whether or not to save background subtracted FITS files
 
 # Spectral extraction parameters
+record_ypos True       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 spec_hw     8          # Half-width of aperture region for spectral extraction (relative to source position)
 fittype     smooth     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 window_len  5          # Smoothing window length, when fittype = smooth
@@ -30,6 +30,9 @@ curvature   correct    # How to manage the curved trace on the detector (Options
 
 # Diagnostics
 isplots_S3  5          # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+vmin        0.97       # Sets the vmin of the color bar for Figure 3101.
+vmax        1.03       # Sets the vmax of the color bar for Figure 3101.
+time_axis   'y'        # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
 testing_S3  True       # Boolean, set True to only use last file and generate select figures
 hide_plots  True       # If True, plots will automatically be closed rather than popping up
 save_output True       # Save outputs for use in S4

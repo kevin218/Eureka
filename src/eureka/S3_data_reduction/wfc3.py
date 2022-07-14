@@ -103,8 +103,7 @@ def get_reference_frames(meta, log):
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
         data, meta = b2f.convert_to_e(data, meta, log)
-        meta.src_ypos = source_pos.source_pos(
-            data, meta, i, header=('SRCYPOS' in data.attrs['shdr']))
+        meta.src_ypos = source_pos.source_pos(data, meta, i)
         data['mask'] = (['time', 'y', 'x'],
                         np.ones(data.flux.shape, dtype=bool))
         data['mask'] = util.check_nans(data['flux'], data['mask'],

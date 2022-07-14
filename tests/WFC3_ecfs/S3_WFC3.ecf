@@ -16,7 +16,7 @@ flatfile        WFC3.IR.G102.flat.2.fits               # The calibration file to
 # Subarray region of interest
 ywindow         [80,250]    # Vertical axis as seen in DS9
 xwindow         [80,250]    # Horizontal axis as seen in DS9
-src_pos_type    hst         # Determine source position when not given in header (Options: gaussian, weighted, max, or hst)
+src_pos_type    hst         # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 
 # Subarray region for direct images used for wavelength calibration
 centroidtrim    5
@@ -30,6 +30,7 @@ flatsigma       3
 diffthresh      10
 
 # Background parameters
+record_ypos     False       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 bg_hw           5           # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
@@ -48,6 +49,9 @@ iref            [0, ]       # The file indices to use as reference frames for ea
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
+vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
+time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
 hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4

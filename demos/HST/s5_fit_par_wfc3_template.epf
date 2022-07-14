@@ -1,4 +1,8 @@
-#Name        Value         Free?          PriorPar1    PriorPar2    PriorType
+# Stage 5 Fit Parameters Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5-fit-parameters
+
+
+# Name        Value         Free?          PriorPar1    PriorPar2    PriorType
+# "Free?" can be free, fixed, white_free, white_fixed, shared, or independent
 # PriorType can be U (Uniform), LU (Log Uniform), or N (Normal).
 # If U/LU, PriorPar1 and PriorPar2 represent upper and lower limits of the parameter/log(the parameter).
 # If N, PriorPar1 is the mean and PriorPar2 is the standard deviation of a Gaussian prior.
@@ -28,7 +32,8 @@ ecc          0.0           'fixed'        0            1            U
 w            90.           'fixed'        0            180          U
 # -------------------------
 # ** Limb darkening parameters **
-# Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']
+# Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential','3-parameter', '4-parameter']
+# When using generated limb-darkening coefficients from exotic-ld choose from ['linear', 'quadratic', '3-parameter', '4-parameter']
 # -------------------------
 limb_dark    'kipping2013' 'independent'
 u1           0.3           'free'         0            1            U
@@ -37,6 +42,7 @@ u2           0.1           'free'         0            1            U
 # ** Systematic variables **
 # polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
 # expramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# GP model parameters (A, WN, m1, m2) in log scale
 # --------------------
 c0           1             'free'         0.95         1.05         U
 # -----------
