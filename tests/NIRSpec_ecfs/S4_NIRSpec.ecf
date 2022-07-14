@@ -31,7 +31,7 @@ inst_filter     Prism #filter of JWST/HST instrument, supported list see https:/
 metallicity     0.1 #metallicity of the star 
 teff            6000 #effective temperature of the star in K
 logg            4.0 #surface gravity in log g
-exotic_ld_direc ./data/exotic-ld_testdata #directory for ancillary files for exotic-ld
+exotic_ld_direc ../tests/data/exotic_ld_testdata #directory for ancillary files for exotic-ld
 exotic_ld_grid  3D #1D or 3D model grid
 
 # Diagnostics
