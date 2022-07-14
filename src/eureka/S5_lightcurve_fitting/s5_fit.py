@@ -122,11 +122,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             log.writelog('Copying S5 parameter control file',
                          mute=(not meta.verbose))
             params.write(meta.outputdir)
-            sharedp = False
+            meta.sharedp = False
+            meta.whitep = False
             for arg, val in params.dict.items():
                 if 'shared' in val:
-                    sharedp = True
-            meta.sharedp = sharedp
+                    meta.sharedp = True
+                if 'white_free' in val or 'white_fixed' in val:
+                    meta.whitep = True
 
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
@@ -156,11 +158,43 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             else:
                 ld_coeffs = None
 
-            if sharedp:
+            # If any of the parameters' ptypes are set to 'white_free', enforce
+            # a Gaussian prior based on a white-light light curve fit. If any
+            # are 'white_fixed' freeze them to the white-light curve best fit
+            if meta.whitep:
                 # Make a long list of parameters for each channel
                 longparamlist, paramtitles = make_longparamlist(meta, params,
-                                                                chanrng)
+                                                                1)
 
+                log.writelog("\nStarting Fit of White-light Light Curve\n")
+
+                # Get the flux and error measurements for
+                # the current channel
+                mask = lc.mask_white.values
+                flux = np.ma.masked_where(mask, lc.flux_white.values)
+                flux_err = np.ma.masked_where(mask, lc.err_white.values)
+                
+                # Normalize flux and uncertainties to avoid large
+                # flux values
+                flux_err = flux_err/np.ma.mean(flux)
+                flux = flux/np.ma.mean(flux)
+
+                meta, params = fit_channel(meta, time, flux, 0, flux_err,
+                                           eventlabel, params, log,
+                                           longparamlist, time_units,
+                                           paramtitles, 1, ld_coeffs, True)
+
+                # Save results
+                log.writelog('Saving results', mute=(not meta.verbose))
+                me.saveevent(meta, meta.outputdir+'S5_'+meta.eventlabel +
+                             "_white_Meta_Save", save=[])
+
+            # Make a long list of parameters for each channel
+            longparamlist, paramtitles = make_longparamlist(meta, params,
+                                                            chanrng)
+
+            # Now fit the multi-wavelength light curves
+            if meta.sharedp:
                 log.writelog(f"\nStarting Shared Fit of {chanrng} Channels\n")
 
                 flux = np.ma.masked_array([])
@@ -176,9 +210,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                              np.nanmean(
                                                  lc.data.values[channel, :])))
 
-                meta = fit_channel(meta, time, flux, 0, flux_err, eventlabel,
-                                   sharedp, params, log, longparamlist,
-                                   time_units, paramtitles, chanrng, ld_coeffs)
+                meta, params = fit_channel(meta, time, flux, 0, flux_err,
+                                           eventlabel, params, log,
+                                           longparamlist, time_units,
+                                           paramtitles, chanrng, ld_coeffs)
 
                 # Save results
                 log.writelog('Saving results')
@@ -186,11 +221,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                     "_Meta_Save"), save=[])
             else:
                 for channel in range(chanrng):
-                    # Make a long list of parameters for each channel
-                    longparamlist, paramtitles = make_longparamlist(meta,
-                                                                    params,
-                                                                    chanrng)
-
                     log.writelog(f"\nStarting Channel {channel+1} of "
                                  f"{chanrng}\n")
 
@@ -204,10 +234,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                     flux_err = flux_err/np.nanmean(flux)
                     flux = flux/np.nanmean(flux)
 
-                    meta = fit_channel(meta, time, flux, channel, flux_err,
-                                       eventlabel, sharedp, params, log,
-                                       longparamlist, time_units, paramtitles,
-                                       chanrng, ld_coeffs)
+                    meta, params = fit_channel(meta, time, flux, channel,
+                                               flux_err, eventlabel, params,
+                                               log, longparamlist, time_units,
+                                               paramtitles, chanrng, ld_coeffs)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -223,9 +253,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     return meta
 
 
-def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
-                log, longparamlist, time_units, paramtitles, chanrng,
-                ldcoeffs):
+def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
+                log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs
+                white=False):
     """Run a fit for one channel or perform a shared fit.
 
     Parameters
@@ -242,8 +272,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
         The uncertainty on each data point.
     eventlabel : str
         The unique identifier for this analysis.
-    sharedp : bool
-        Whether or not this is a shared fit.
     params : eureka.lib.readEPF.Parameters
         The Parameters object containing the fitted parameters
         and their priors.
@@ -257,6 +285,10 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
         The names of the fitted parameters.
     chanrng : int
         The number of fitted channels.
+    ldcoeffs : list
+        Limb-darkening coefficients if used from Stage 4, otherwise None.
+    white : bool; optional
+        Is this a white-light fit? Defaults to False.
 
     Returns
     -------
@@ -266,7 +298,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
     # Load the relevant values into the LightCurve model object
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist,
                              unc=flux_err, time_units=time_units,
-                             name=eventlabel, share=sharedp)
+                             name=eventlabel, share=meta.sharedp,
+                             white=white)
 
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
@@ -378,7 +411,73 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
     if meta.isplots_S5 >= 1:
         lc_model.plot(meta)
 
-    return meta
+    if white:
+        if 'dynesty' in meta.fit_method:
+            # Update the params to the values and uncertainties from
+            # this white-light light curve fit
+            best_model = None
+            for model in lc_model.results:
+                if model.fitter == 'dynesty':
+                    best_model = model
+            if best_model is None:
+                raise AssertionError('Unable to find the dynesty fitter '
+                                     'results')
+            for key in params.params:
+                ptype = getattr(params, key).ptype
+                if 'white' in ptype:
+                    value = getattr(best_model.components[0].parameters,
+                                    key).value
+                    ptype = ptype[6:]  # Remove 'white_'
+                    priorpar1 = value
+                    priorpar2 = best_model.errs[key]
+                    prior = 'N'
+                    par = [value, ptype, priorpar1, priorpar2, prior]
+                    print(getattr(params, key).values, par)
+                    setattr(params, key, par)
+        elif 'emcee' in meta.fit_method:
+            # Update the params to the values and uncertainties from
+            # this white-light light curve fit
+            best_model = None
+            for model in lc_model.results:
+                if model.fitter == 'emcee':
+                    best_model = model
+            if best_model is None:
+                raise AssertionError('Unable to find the emcee fitter results')
+            for key in params.params:
+                ptype = getattr(params, key).ptype
+                if 'white' in ptype:
+                    value = getattr(best_model.components[0].parameters,
+                                    key).value
+                    ptype = ptype[6:]  # Remove 'white_'
+                    priorpar1 = value
+                    priorpar2 = best_model.errs[key]
+                    prior = 'N'
+                    par = [value, ptype, priorpar1, priorpar2, prior]
+                    print(getattr(params, key).values, par)
+                    setattr(params, key, par)
+        elif 'lsq' in meta.fit_method:
+            best_model = None
+            for model in lc_model.results:
+                if model.fitter == 'lsq':
+                    best_model = model
+            if best_model is None:
+                raise AssertionError('Unable to find the lsq fitter results')
+            # Update the params to the values from this white-light light
+            # curve fit
+            for key in params.params:
+                ptype = getattr(params, key).ptype
+                if 'white' in ptype:
+                    value = getattr(best_model.components[0].parameters,
+                                    key).value
+                    ptype = 'fixed'
+                    priorpar1 = None
+                    priorpar2 = None
+                    prior = None
+                    par = [value, ptype, priorpar1, priorpar2, prior]
+                    print(getattr(params, key).values, par)
+                    setattr(params, key, par)
+
+    return meta, params
 
 
 def make_longparamlist(meta, params, chanrng):
