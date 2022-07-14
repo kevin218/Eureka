@@ -20,7 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
-from . import plots_s4, drift, wfc3
+from . import plots_s4, drift, generate_LD, wfc3
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
@@ -30,7 +30,6 @@ from ..lib import clipping
 
 def genlc(eventlabel, ecf_path=None, s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
-
     Parameters
     ----------
     eventlabel : str
@@ -41,16 +40,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
-
     Returns
     -------
+    spec : Astreaus object 
+        Data object of wavelength-like arrrays.
+    lc : Astreaus object 
+        Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
-
     Notes
     -----
     History:
-
     - June 2021 Kevin Stevenson
         Initial version
     - October 2021 Taylor Bell
@@ -383,11 +383,20 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 if meta.isplots_S4 >= 3:
                     plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
 
-            # Calculate total time
-            total = (time_pkg.time() - t0) / 60.
-            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
+            # Generate limb-darkening coefficients
+            if hasattr(meta, 'compute_ld') and meta.compute_ld:
+                log.writelog("Generating limb-darkening coefficients...",
+                             mute=(not meta.verbose))
+                ld_lin, ld_quad, ld_3para, ld_4para = \
+                    generate_LD.exotic_ld(meta, spec)
+                lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
+                lc['exotic-ld_quad'] = (['wavelength', 'exotic-ld_2'], ld_quad)
+                lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'],
+                                                ld_3para)
+                lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
+                                                ld_4para)
 
-            log.writelog('Saving results')
+            log.writelog('Saving results...')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
                            + str(bg_hw_val))
             # Save Dataset object containing time-series of 1D spectra
@@ -402,6 +411,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Save results
             fname = meta.outputdir+'S4_'+meta.eventlabel+"_Meta_Save"
             me.saveevent(meta, fname, save=[])
+
+            # Calculate total time
+            total = (time_pkg.time() - t0) / 60.
+            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             log.closelog()
 

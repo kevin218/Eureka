@@ -143,6 +143,21 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
 
+            # Load limb-darkening coefficients if used from Stage 4
+            if meta.use_generate_ld:
+                ld_str = meta.use_generate_ld
+                if not hasattr(lc, ld_str + '_lin'):
+                    raise Exception("Exotic-ld coefficients have not been" +
+                                    "calculated in Stage 4")
+                log.writelog("\nUsing generated limb-darkening coefficients" +
+                             f"with {ld_str} \n")
+                ld_coeffs = [lc[ld_str + '_lin'].values,
+                             lc[ld_str + '_quad'].values,
+                             lc[ld_str + '_nonlin_3para'].values,
+                             lc[ld_str + '_nonlin_4para'].values]
+            else:
+                ld_coeffs = None
+
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
             # are 'white_fixed' freeze them to the white-light curve best fit
@@ -167,7 +182,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, 1, True)
+                                           paramtitles, 1, ld_coeffs, True)
 
                 # Save results
                 log.writelog('Saving results', mute=(not meta.verbose))
@@ -198,7 +213,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng)
+                                           paramtitles, chanrng, ld_coeffs)
 
                 # Save results
                 log.writelog('Saving results')
@@ -216,7 +231,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                               lc.data.values[channel, :])
                     flux_err = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
-                    
+
                     # Normalize flux and uncertainties to avoid large
                     # flux values
                     flux_err = flux_err/np.ma.mean(flux)
@@ -225,7 +240,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                     meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
-                                               paramtitles, chanrng)
+                                               paramtitles, chanrng, ld_coeffs)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -242,7 +257,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
-                log, longparamlist, time_units, paramtitles, chanrng,
+                log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
                 white=False):
     """Run a fit for one channel or perform a shared fit.
 
@@ -273,6 +288,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         The names of the fitted parameters.
     chanrng : int
         The number of fitted channels.
+    ldcoeffs : list
+        Limb-darkening coefficients if used from Stage 4, otherwise None.
     white : bool; optional
         Is this a white-light fit? Defaults to False.
 
@@ -309,7 +326,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          fmt='r--', log=log,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
-                                         paramtitles=paramtitles)
+                                         paramtitles=paramtitles, 
+                                         ld_from_S4=meta.use_generate_ld,
+                                         ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
