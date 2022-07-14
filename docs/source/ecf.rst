@@ -461,6 +461,34 @@ sum_reads
 '''''''''
 Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.
 
+compute_ld
+''''''''''
+Whether or not to compute limb-darkening coefficients using exotic-ld.
+
+inst_filter
+'''''''''''
+Used by exotic-ld if compute_ld=True. The filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html (leave off the observatory and instrument so that JWST_NIRSpec_Prism becomes just Prism).
+
+metallicity
+'''''''''''
+Used by exotic-ld if compute_ld=True. The metallicity of the star.
+
+teff
+''''
+Used by exotic-ld if compute_ld=True. The effective temperature of the star in K.
+
+logg
+''''
+Used by exotic-ld if compute_ld=True. The surface gravity in log g.
+
+exotic_ld_direc
+'''''''''''''''
+Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld.
+
+exotic_ld_grid
+''''''''''''''
+Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
+
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
@@ -530,6 +558,9 @@ run_myfuncs
 '''''''''''
 Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial]
 
+use_generate_ld
+'''''''''''''''
+If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''
