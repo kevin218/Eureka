@@ -267,7 +267,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
     lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist,
                              unc=flux_err, time_units=time_units,
                              name=eventlabel, share=sharedp)
-    
+
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm

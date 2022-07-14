@@ -321,13 +321,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             # Generate limb-darkening coefficients
-            if meta.compute_ld:
+            if hasattr(meta, 'compute_ld') and meta.compute_ld:
                 log.writelog("Generating limb-darkening coefficients")
-                ld_lin, ld_quad, ld_3para, ld_4para = generate_LD.exotic_ld(meta, spec)
+                ld_lin, ld_quad, ld_3para, ld_4para = \
+                    generate_LD.exotic_ld(meta, spec)
                 lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
                 lc['exotic-ld_quad'] = (['wavelength', 'exotic-ld_2'], ld_quad)
-                lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'], ld_3para)
-                lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'], ld_4para)
+                lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'],
+                                                ld_3para)
+                lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
+                                                ld_4para)
 
             log.writelog('Saving results')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
@@ -352,10 +355,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
 def load_specific_s3_meta_info(meta):
     """Load the specific S3 MetaClass object used to make this aperture pair.
+
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current metadata object.
+
     Returns
     -------
     eureka.lib.readECF.MetaClass
