@@ -302,16 +302,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Check if arrays have NaNs
                 log.writelog('  Masking NaNs in data arrays...',
                              mute=(not meta.verbose))
-                data['mask'] = util.check_nans(data['flux'], data['mask'],
-                                               log, name='FLUX')
-                data['mask'] = util.check_nans(data['err'], data['mask'],
-                                               log, name='ERR')
-                data['mask'] = util.check_nans(data['v0'], data['mask'],
-                                               log, name='V0')
+                data.mask.values = util.check_nans(data.flux.values,
+                                                   data.mask.values,
+                                                   log, name='FLUX')
+                data.mask.values = util.check_nans(data.err.values,
+                                                   data.mask.values,
+                                                   log, name='ERR')
+                data.mask.values = util.check_nans(data.v0.values,
+                                                   data.mask.values,
+                                                   log, name='V0')
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
-                    util.manmask(data, meta, log)
+                    data = util.manmask(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)
