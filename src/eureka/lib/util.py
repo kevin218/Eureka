@@ -97,15 +97,15 @@ def check_nans(data, mask, log, name=''):
         Output mask where 0 will be written where the input data array has NaNs
         or infs.
     """
-    data = np.ma.masked_where(mask, data)
-    num_nans = np.sum(~np.ma.isfinite(data))
+    data = np.ma.masked_where(mask == 0, np.copy(data))
+    num_nans = np.sum(np.ma.masked_invalid(data).mask)
     if num_nans > 0:
         log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. Your "
                      "subregion may be off the edge of the detector "
                      "subarray.\n    Masking NaN region and continuing, "
                      "but you should really stop and reconsider your"
                      "choices.")
-        inan = np.where(~np.ma.isfinite(data))
+        inan = np.where(np.ma.masked_invalid(data).mask)
         # subdata[inan]  = 0
         mask[inan] = 0
     return mask
