@@ -224,7 +224,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, sharedp, params,
-                log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs):
+                log, longparamlist, time_units, paramtitles, chanrng,
+                ldcoeffs):
     """Run a fit for one channel or perform a shared fit.
 
     Parameters
