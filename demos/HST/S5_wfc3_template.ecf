@@ -7,7 +7,7 @@ rescale_err     False                  # Rescale uncertainties to have reduced c
 fit_par         ./S5_fit_par_wfc3_template.epf # What fitting epf do you want to use?
 verbose         True                   # If True, more details will be printed about steps
 fit_method      [dynesty]              #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, and polynomial (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Limb darkening controls
 use_generate_ld  exotic-ld #use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None
