@@ -20,7 +20,7 @@ p3thresh        5           # X-sigma threshold for outlier rejection during bac
 save_bgsub      False       # Whether or not to save background subtracted FITS files
 
 # Spectral extraction parameters
-record_ypos     False        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+record_ypos     False       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 spec_hw         4           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 window_len      31          # Smoothing window length, when fittype = smooth
