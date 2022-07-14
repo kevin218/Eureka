@@ -96,7 +96,7 @@ def check_nans(data, mask, log, name=''):
     mask : ndarray
         Output mask where 0 will be written where the input data array has NaNs
     """
-    num_nans = np.sum(np.isnan(data.values))
+    num_nans = np.sum(np.isnan(data))
     if num_nans > 0:
         log.writelog(f"  WARNING: {name} has {num_nans} NaNs. Your subregion "
                      f"may be off the edge of the detector subarray.\n"
