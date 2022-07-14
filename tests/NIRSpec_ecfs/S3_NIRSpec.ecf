@@ -17,6 +17,7 @@ bg_deg      0          # Polynomial order for column-by-column background subtra
 p3thresh    2          # X-sigma threshold for outlier rejection during background subtraction
 
 # Spectral extraction parameters
+record_ypos True       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 spec_hw     8          # Half-width of aperture region for spectral extraction (relative to source position)
 fittype     smooth     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 window_len  5          # Smoothing window length, when fittype = smooth

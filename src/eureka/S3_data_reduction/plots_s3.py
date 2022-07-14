@@ -357,3 +357,69 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
+
+
+def driftypos(data, meta):
+    '''Plot the spatial jitter. (Fig 3305)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3305, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
+    plt.ylabel('Spectrum spatial profile center')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3305_DriftYPos'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def driftywidth(data, meta):
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3306)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3306, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
+    plt.ylabel('Spectrum spatial profile width')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3306_DriftYWidth'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)

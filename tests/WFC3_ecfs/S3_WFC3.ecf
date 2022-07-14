@@ -30,6 +30,7 @@ flatsigma       3
 diffthresh      10
 
 # Background parameters
+record_ypos     False       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 bg_hw           5           # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame

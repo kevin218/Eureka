@@ -65,6 +65,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         Initial version
     - October 2021 Taylor Bell
         Updated to allow for inputs from S2
+    - July 2022 Caroline Piaulet
+        Now computing the y pos and width for each integration 
+        + stored in Spec and add diagnostics plots
     '''
 
     # Load Eureka! control file and store values in Event object
@@ -242,6 +245,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
 
+                # Create dataset to store y position and width
+                if meta.record_ypos:
+                    src_ypos_exact = np.zeros_like(data["time"])
+                    src_ypos_width = np.zeros_like(data["time"])
+
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
                 if meta.testing_S3:
@@ -257,7 +265,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Locate source postion
                 log.writelog('  Locating source position...',
                              mute=(not meta.verbose))
-                meta.src_ypos = source_pos.source_pos(data, meta, m)
+                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m)
                 log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
@@ -349,6 +357,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
+                    # when loop over ints, get exact y pos and width
+                    if meta.record_ypos:
+                        src_pos_results = source_pos.source_pos(data, meta,
+                                                                m, n)
+                        _, ypos_exact, ypos_width = src_pos_results
+                        src_ypos_exact[n] = ypos_exact
+                        src_ypos_width[n] = ypos_width
+
                     data['optspec'][n], data['opterr'][n], mask = \
                         optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
                                          data.stdspec[n].values, gain, apv0[n],
@@ -366,6 +382,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                         np.ma.getmaskarray(opterr_ma))
                 data['optmask'] = (['time', 'x'], optmask)
 
+                if meta.record_ypos:
+                    data['driftypos'] = (['time'], src_ypos_exact)
+                    data['driftywidth'] = (['time'], src_ypos_width)
+
                 # Plot results
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for optimal spectral '
@@ -376,6 +396,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
+                    if meta.record_ypos:
+                        # make y position and width plots
+                        plots_s3.driftypos(data, meta)
+                        plots_s3.driftywidth(data, meta)
 
                 if meta.save_output:
                     # Save flux data from current segment

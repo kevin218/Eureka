@@ -223,6 +223,10 @@ diffthresh
 ''''''''''
 Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
 
+record_ypos
+''''''''''
+Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
+
 bg_hw & spec_hw
 '''''''''''''''
 ``bg_hw`` and  ``spec_hw`` set the background and spectrum aperture relative to the source position.
@@ -389,6 +393,11 @@ Start and End of the wavelength range being considered. Set to None to use the s
 allapers
 ''''''''
 If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
+
+
+recordDrift
+''''''''
+If True, compute drift/jitter in 1D spectra (always recorded if correctDrift is True)
 
 
 correctDrift

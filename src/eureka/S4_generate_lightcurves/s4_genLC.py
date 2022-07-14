@@ -57,6 +57,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         Updated to allow for inputs from new S3
     - April 2022 Kevin Stevenson
         Enabled Astraeus
+    - July 2022 Caroline Piaulet
+        Recording of x (computed in S4) and y (computed in S3) pos drifts and 
+        widths in Spec and LC objects
     '''
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'
@@ -224,44 +227,61 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            # Apply 1D drift/jitter correction
-            if meta.correctDrift:
+            if hasattr(meta, 'record_ypos') and meta.record_ypos:
+                lc['driftypos'] = (['time'], spec.driftypos.data)
+                lc['driftywidth'] = (['time'], spec.driftywidth.data)
+            
+            # Record and correct for 1D drift/jitter
+            if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
                 # This can take a long time, so always print this message
-                log.writelog('Applying drift/jitter correction')
+                log.writelog('Computing drift/jitter')
                 # Compute drift/jitter
-                drift1d, driftmask = drift.spec1D(spec.optspec, meta, log,
-                                                  mask=spec.optmask)
+                drift_results = drift.spec1D(spec.optspec, meta, log,
+                                             mask=spec.optmask)
+                drift1d, driftwidth, driftmask = drift_results
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
                     drift1d, driftmask, Box1DKernel(meta.box_width))
-                lc['drift1d'] = (['time'], drift1d)
+                driftwidth = clipping.replace_moving_mean(
+                    driftwidth, driftmask, Box1DKernel(meta.box_width))
+                lc['driftxpos'] = (['time'], drift1d)
+                lc['driftxwidth'] = (['time'], driftwidth)
                 lc['driftmask'] = (['time'], driftmask)
-                # Correct for drift/jitter
-                for n in range(meta.n_int):
-                    # Need to zero-out the weights of masked data
-                    weights = (~spec.optmask[n]).astype(int)
-                    spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                  spec.optspec[n], k=3, s=0,
-                                                  w=weights)
-                    spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                   spec.opterr[n], k=3, s=0,
-                                                   w=weights)
-                    optmask = spec.optmask[n].astype(float)
-                    spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                   optmask, k=3, s=0,
-                                                   w=weights)
-                    spec.optspec[n] = spline(np.arange(meta.subnx) +
-                                             lc.drift1d[n].values)
-                    spec.opterr[n] = spline2(np.arange(meta.subnx) +
-                                             lc.drift1d[n].values)
-                    # Also shift mask if moving by >= 0.5 pixels
-                    optmask = spline3(np.arange(meta.subnx) +
-                                      lc.drift1d[n].values)
-                    spec.optmask[n] = optmask >= 0.5
+                
+                spec['driftxpos'] = (['time'], drift1d)
+                spec['driftxwidth'] = (['time'], driftwidth)
+                spec['driftmask'] = (['time'], driftmask)
+                
+                if meta.correctDrift:
+                    log.writelog('Applying drift/jitter correction')
+
+                    # Correct for drift/jitter
+                    for n in range(meta.n_int):
+                        # Need to zero-out the weights of masked data
+                        weights = (~spec.optmask[n]).astype(int)
+                        spline = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                      spec.optspec[n], k=3,
+                                                      s=0, w=weights)
+                        spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                       spec.opterr[n], k=3,
+                                                       s=0, w=weights)
+                        optmask = spec.optmask[n].astype(float)
+                        spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
+                                                       optmask, k=3, s=0,
+                                                       w=weights)
+                        spec.optspec[n] = spline(np.arange(meta.subnx) +
+                                                 lc.driftxpos[n].values)
+                        spec.opterr[n] = spline2(np.arange(meta.subnx) +
+                                                 lc.driftxpos[n].values)
+                        # Also shift mask if moving by >= 0.5 pixels
+                        optmask = spline3(np.arange(meta.subnx) +
+                                          lc.driftxpos[n].values)
+                        spec.optmask[n] = optmask >= 0.5
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
-                    plots_s4.drift1d(meta, lc)
+                    plots_s4.driftxpos(meta, lc)
+                    plots_s4.driftxwidth(meta, lc)
 
             if hasattr(meta, 'sum_reads') and meta.sum_reads:
                 # Sum each read from a scan together
@@ -397,12 +417,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                 ld_4para)
 
             log.writelog('Saving results...')
+
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
                            + str(bg_hw_val))
             # Save Dataset object containing time-series of 1D spectra
             meta.filename_S4_SpecData = (meta.outputdir + 'S4_' + event_ap_bg
                                          + "_SpecData.h5")
             xrio.writeXR(meta.filename_S4_SpecData, spec, verbose=True)
+            
             # Save Dataset object containing binned light curves
             meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
                                        + "_LCData.h5")
