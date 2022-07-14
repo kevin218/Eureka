@@ -72,16 +72,32 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
     data = np.ma.masked_where(mask, data)
         
     kernel = Box1DKernel(box_width)
-    # Compute the moving mean
-    bound_val = np.ma.median(data)  # Only used if boundary=='fill'
-    smoothed_data = convolve(data, kernel, boundary=boundary,
-                             fill_value=bound_val)
-    # Compare data to the moving mean (to remove astrophysical signals)
-    residuals = data-smoothed_data
-    # Sigma clip residuals to find bad points in data
-    residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters,
-                           cenfunc=np.ma.median)
-    outliers = np.ma.getmaskarray(residuals)
+    
+    outliers = np.zeros_like(data, dtype=bool)
+    new_clipped = True
+    i = 0
+    while i < maxiters and new_clipped:
+        i += 1
+
+        # Compute the moving mean
+        bound_val = np.ma.median(data)  # Only used if boundary=='fill'
+        smoothed_data = convolve(data, kernel, boundary=boundary,
+                                 fill_value=bound_val)
+        # Compare data to the moving mean (to remove astrophysical signals)
+        residuals = data-smoothed_data
+        # Sigma clip residuals to find bad points in data
+        residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters,
+                               cenfunc=np.ma.median)
+        new_outliers = np.ma.getmaskarray(residuals)
+        if np.all(new_outliers == outliers):
+            new_clipped = False
+        else:
+            outliers = new_outliers
+            data = np.ma.masked_where(outliers, data)
+
+    if i == maxiters:
+        log.writelog('WARNING: maxiters has been reached during clip_outliers '
+                     'without converging!')
 
     if np.any(outliers):
         log.writelog(f'  Identified {np.sum(outliers)} outliers for wavelength'
