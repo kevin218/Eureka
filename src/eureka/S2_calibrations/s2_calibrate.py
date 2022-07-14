@@ -157,15 +157,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
 
         pipeline.run_eurekaS2(filename, meta, log)
 
-    # Calculate total run time
-    total = (time_pkg.time() - t0) / 60.
-    log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
     # Save results
     if not meta.testing_S2:
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir+'S2_'+meta.eventlabel+"_Meta_Save",
                      save=[])
+
+    # Calculate total run time
+    total = (time_pkg.time() - t0) / 60.
+    log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
     log.closelog()
 
