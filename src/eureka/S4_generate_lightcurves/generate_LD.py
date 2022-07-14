@@ -44,7 +44,7 @@ def exotic_ld(meta, spec):
         wavelength_range.append([wsdata[i], wsdata[i+1]])
     wavelength_range = np.array(wavelength_range)
     if spec.wave_1d.attrs['wave_units'] == 'microns':
-        wavelength_range /= 1e4
+        wavelength_range *= 1e4
 
     # compute stellar limb darkening model
     sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
