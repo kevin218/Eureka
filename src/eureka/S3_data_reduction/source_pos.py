@@ -40,7 +40,7 @@ def source_pos(data, meta, m, integ=0):
         + add an option to fit any integration (not hardcoded to be the first)
     '''
     # Mask any clipped values
-    flux = np.ma.masked_invalid(data.flux.values)
+    flux = np.ma.masked_where(~data.mask.values, data.flux.values)
 
     if meta.src_pos_type == 'header':
         if 'SRCYPOS' not in data.attrs['shdr']:

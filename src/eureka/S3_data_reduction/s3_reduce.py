@@ -262,6 +262,29 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
+                # Create bad pixel mask (1 = good, 0 = bad)
+                # FINDME: Will want to use DQ array in the future
+                # to flag certain pixels
+                data['mask'] = (['time', 'y', 'x'],
+                                np.ones(data.flux.shape, dtype=bool))
+
+                # Check if arrays have NaNs
+                log.writelog('  Masking NaNs in data arrays...',
+                             mute=(not meta.verbose))
+                data.mask.values = util.check_nans(data.flux.values,
+                                                   data.mask.values,
+                                                   log, name='FLUX')
+                data.mask.values = util.check_nans(data.err.values,
+                                                   data.mask.values,
+                                                   log, name='ERR')
+                data.mask.values = util.check_nans(data.v0.values,
+                                                   data.mask.values,
+                                                   log, name='V0')
+
+                # Manually mask regions [colstart, colend, rowstart, rowend]
+                if hasattr(meta, 'manmask'):
+                    data = util.manmask(data, meta, log)
+
                 # Locate source postion
                 log.writelog('  Locating source position...',
                              mute=(not meta.verbose))
@@ -292,29 +315,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         log.writelog('  Correcting for G395H curvature...',
                                      mute=(not meta.verbose))
                         data, meta = inst.straighten_trace(data, meta, log)
-
-                # Create bad pixel mask (1 = good, 0 = bad)
-                # FINDME: Will want to use DQ array in the future
-                # to flag certain pixels
-                data['mask'] = (['time', 'y', 'x'],
-                                np.ones(data.flux.shape, dtype=bool))
-
-                # Check if arrays have NaNs
-                log.writelog('  Masking NaNs in data arrays...',
-                             mute=(not meta.verbose))
-                data.mask.values = util.check_nans(data.flux.values,
-                                                   data.mask.values,
-                                                   log, name='FLUX')
-                data.mask.values = util.check_nans(data.err.values,
-                                                   data.mask.values,
-                                                   log, name='ERR')
-                data.mask.values = util.check_nans(data.v0.values,
-                                                   data.mask.values,
-                                                   log, name='V0')
-
-                # Manually mask regions [colstart, colend, rowstart, rowend]
-                if hasattr(meta, 'manmask'):
-                    data = util.manmask(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)

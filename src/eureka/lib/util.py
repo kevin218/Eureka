@@ -77,7 +77,7 @@ def trim(data, meta):
 
 
 def check_nans(data, mask, log, name=''):
-    """Checks where a data array has NaNs.
+    """Checks where a data array has NaNs or infs.
 
     Parameters
     ----------
@@ -95,14 +95,17 @@ def check_nans(data, mask, log, name=''):
     -------
     mask : ndarray
         Output mask where 0 will be written where the input data array has NaNs
+        or infs.
     """
-    num_nans = np.sum(np.isnan(data))
+    data = np.ma.masked_where(mask, data)
+    num_nans = np.sum(~np.ma.isfinite(data))
     if num_nans > 0:
-        log.writelog(f"  WARNING: {name} has {num_nans} NaNs. Your subregion "
-                     f"may be off the edge of the detector subarray.\n"
-                     f"    Masking NaN region and continuing, but you should "
-                     f"really stop and reconsider your choices.")
-        inan = np.where(np.isnan(data))
+        log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. Your "
+                     "subregion may be off the edge of the detector "
+                     "subarray.\n    Masking NaN region and continuing, "
+                     "but you should really stop and reconsider your"
+                     "choices.")
+        inan = np.where(~np.ma.isfinite(data))
         # subdata[inan]  = 0
         mask[inan] = 0
     return mask
