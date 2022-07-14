@@ -3,9 +3,7 @@ import numpy as np
 
 
 def exotic_ld(meta, spec):
-    '''Generate limb-darkening coefficients using 
-       the exotic_ld package
-       code based on exotic_ld documentation
+    '''Generate limb-darkening coefficients using the exotic_ld package.
 
     Parameters
     ----------
@@ -16,10 +14,15 @@ def exotic_ld(meta, spec):
 
     Returns
     -------
-    ld_coeffs : array
+    ld_coeffs : tuple
         Linear, Quadratic, Non-linear (3 and 4) limb-darkening coefficients
-        
-    
+
+    Notes
+    -----
+    History:
+
+    - July 2022, Eva-Maria Ahrer
+        Initial version based on exotic_ld documentation.
     '''
     # Set the observing mode
     if meta.inst == 'miri':
@@ -41,7 +44,7 @@ def exotic_ld(meta, spec):
         wavelength_range.append([wsdata[i], wsdata[i+1]])
     wavelength_range = np.array(wavelength_range)
     if spec.wave_1d.attrs['wave_units'] == 'microns':
-        wavelength_range *= 1e4
+        wavelength_range /= 1e4
 
     # compute stellar limb darkening model
     sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
@@ -53,8 +56,8 @@ def exotic_ld(meta, spec):
     nonlin_4 = np.zeros((meta.nspecchan, 4))
     for i in range(meta.nspecchan):
         # generate limb-darkening coefficients for each bin
-        lin_c1[i] = [sld.compute_linear_ld_coeffs(wavelength_range[i],
-                                                  mode)[0]]
+        lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
+                                                 mode)[0]
         quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode)
         nonlin_3[i] = \
             sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i], 
