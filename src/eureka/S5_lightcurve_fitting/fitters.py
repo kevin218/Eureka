@@ -1252,36 +1252,27 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         Record an astropy table for mean, median, percentiles,
         +/- 1 sigma, all params
     """
-    ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-    # Save the fitted parameters and their uncertainties (if possible)
-    if lc.white:
-        fname = f'S5_{fitter}_fitparams_white'
-    elif lc.share:
-        fname = f'S5_{fitter}_fitparams_shared'
-    else:
-        fname = f'S5_{fitter}_fitparams_ch{ch_number}'
-    results_table.write(meta.outputdir+fname+'.csv', format='csv',
-                        overwrite=False)
-
-    # Save the chain from the sampler (if a chain was provided)
-    if len(samples) != 0:
-        if lc.white:
-            fname = f'S5_{fitter}_samples_white'
-        elif lc.share:
-            fname = f'S5_{fitter}_samples_shared'
-        else:
-            fname = f'S5_{fitter}_samples_ch{ch_number}'
-        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
-            hf.create_dataset("samples", data=samples)
-
-    # Save the S5 outputs in a human readable ecsv file
-    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
     if lc.white:
         channel_tag = '_white'
     elif lc.share:
         channel_tag = '_shared'
     else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         channel_tag = f'_ch{ch_number}'
+
+    # Save the fitted parameters and their uncertainties (if possible)
+    fname = f'S5_{fitter}_fitparams{channel_tag}'
+    results_table.write(meta.outputdir+fname+'.csv', format='csv',
+                        overwrite=False)
+
+    # Save the chain from the sampler (if a chain was provided)
+    if len(samples) != 0:
+        fname = f'S5_{fitter}_samples{channel_tag}'
+        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
+            hf.create_dataset("samples", data=samples)
+
+    # Save the S5 outputs in a human readable ecsv file
+    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),
