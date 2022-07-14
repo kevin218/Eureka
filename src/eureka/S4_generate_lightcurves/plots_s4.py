@@ -5,7 +5,7 @@ from ..lib import util
 from ..lib.plots import figure_filetype
 
 
-def binned_lightcurve(meta, log, lc, i):
+def binned_lightcurve(meta, log, lc, i, white=False):
     '''Plot each spectroscopic light curve. (Figs 4102)
 
     Parameters
@@ -18,20 +18,29 @@ def binned_lightcurve(meta, log, lc, i):
         The Dataset object containing light curve and time data.
     i : int
         The current bandpass number.
-
-    Returns
-    -------
-    None
+    white : bool, optional
+        Is this figure for the additional white-light light curve
     '''
-    # Normalize the light curve
-    norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
-                                                      lc['err'][i])
-
-    plt.figure(4102, figsize=(8, 6))
-    plt.clf()
-    plt.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
-                 f'{lc.wave_hi.values[i]:.3f}')
-    ax = plt.subplot(111)
+    fig = plt.figure(4102, figsize=(8, 6))
+    fig.clf()
+    ax = fig.gca()
+    if white:
+        fig.suptitle(f'White-light Bandpass {i}: {meta.wave_min:.3f} - '
+                     f'{meta.wave_max:.3f}')
+        # Normalize the light curve
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(
+            meta, lc.flux_white, lc.err_white)
+        i = 0
+        fname_tag = 'white'
+    else:
+        fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
+                     f'{lc.wave_hi.values[i]:.3f}')
+        # Normalize the light curve
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
+                                                          lc['err'][i])
+        ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
+        fname_tag = f'ch{ch_number}'
+        
     time_modifier = np.floor(np.ma.min(lc.time.values))
     
     # Plot the normalized light curve
@@ -40,10 +49,10 @@ def binned_lightcurve(meta, log, lc, i):
             iscans = np.where(lc.scandir.values == p)[0]
 
             if len(iscans) > 0:
-                plt.errorbar(lc.time.values[iscans]-time_modifier,
-                             norm_lcdata[iscans]+0.005*p,
-                             norm_lcerr[iscans], fmt='o', color=f'C{p}',
-                             mec=f'C{p}', alpha=0.2)
+                ax.errorbar(lc.time.values[iscans]-time_modifier,
+                            norm_lcdata[iscans]+0.005*p,
+                            norm_lcerr[iscans], fmt='o', color=f'C{p}',
+                            mec=f'C{p}', alpha=0.2)
                 mad = util.get_mad_1d(norm_lcdata[iscans])
                 meta.mad_s4_binned.append(mad)
                 log.writelog(f'    MAD = {np.round(mad).astype(int)} ppm')
@@ -62,11 +71,10 @@ def binned_lightcurve(meta, log, lc, i):
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
-    plt.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90,
+    fig.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
-    ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
-    fname = 'figs'+os.sep+f'fig4102_ch{ch_number}_1D_LC'+figure_filetype
-    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    fname = f'figs{os.sep}Fig4102_{fname_tag}_1D_LC'+figure_filetype
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -80,10 +88,6 @@ def driftxpos(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-
-    Returns
-    -------
-    None
     
     Notes
     -----
@@ -164,10 +168,6 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     optmask : ndarray (1D), optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
-
-    Returns
-    -------
-    None
     '''
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)
@@ -252,10 +252,6 @@ def cc_spec(meta, ref_spec, fit_spec, n):
         The extracted spectrum for the current integration.
     n : int
         The current integration number.
-
-    Returns
-    -------
-    None
     '''
     plt.figure(4301, figsize=(8, 8))
     plt.clf()
@@ -284,10 +280,6 @@ def cc_vals(meta, vals, n):
         The cross-correlation strength.
     n : int
         The current integration number.
-
-    Returns
-    -------
-    None
     '''
     plt.figure(4302, figsize=(8, 8))
     plt.clf()
