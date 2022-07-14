@@ -260,11 +260,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                         # Need to zero-out the weights of masked data
                         weights = (~spec.optmask[n]).astype(int)
                         spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                     spec.optspec[n], k=3, s=0,
-                                                     w=weights)
+                                                      spec.optspec[n], k=3,
+                                                      s=0, w=weights)
                         spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                      spec.opterr[n], k=3, s=0,
-                                                      w=weights)
+                                                       spec.opterr[n], k=3,
+                                                       s=0, w=weights)
                         optmask = spec.optmask[n].astype(float)
                         spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
                                                        optmask, k=3, s=0,

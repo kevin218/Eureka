@@ -360,8 +360,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     # when loop over ints, get exact y pos and width
                     if meta.record_ypos:
                         src_pos_results = source_pos.source_pos(data, meta,
-                                                                m, n,
-                                                                header=use_hdr)
+                                                                m, n)
                         _, ypos_exact, ypos_width = src_pos_results
                         src_ypos_exact[n] = ypos_exact
                         src_ypos_width[n] = ypos_width
