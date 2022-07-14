@@ -26,7 +26,7 @@ skip_barshadow			True	# Not run for MIRI LRS Slitless
 skip_photom				True
 skip_resample			True	# Not run for MIRI LRS Slitless
 skip_cube_build			True	# Not run for MIRI LRS Slitless
-skip_extract_1d			False
+skip_extract_1d			True
 
 # Diagnostics
 testing_S2				False

@@ -383,13 +383,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 if meta.isplots_S4 >= 3:
                     plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
 
-            # Calculate total time
-            total = (time_pkg.time() - t0) / 60.
-            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
-
             # Generate limb-darkening coefficients
             if hasattr(meta, 'compute_ld') and meta.compute_ld:
-                log.writelog("Generating limb-darkening coefficients")
+                log.writelog("Generating limb-darkening coefficients...",
+                             mute=(not meta.verbose))
                 ld_lin, ld_quad, ld_3para, ld_4para = \
                     generate_LD.exotic_ld(meta, spec)
                 lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
@@ -399,7 +396,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
 
-            log.writelog('Saving results')
+            log.writelog('Saving results...')
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
                            + str(bg_hw_val))
             # Save Dataset object containing time-series of 1D spectra
@@ -414,6 +411,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Save results
             fname = meta.outputdir+'S4_'+meta.eventlabel+"_Meta_Save"
             me.saveevent(meta, fname, save=[])
+
+            # Calculate total time
+            total = (time_pkg.time() - t0) / 60.
+            log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
             log.closelog()
 
