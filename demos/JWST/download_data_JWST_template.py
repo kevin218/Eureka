@@ -35,7 +35,8 @@ final_dir = './wasp96b/S1'
 md.login(mast_token)
 for vis in visits:
     # Download data from MAST Archive
-    result = md.downloadJWST(proposal_id, vis, calib_level, subgroup, download_dir)
+    result = md.downloadJWST(proposal_id, vis, calib_level, subgroup,
+                             download_dir)
     if result is not None:
         # Consolodate and move data into new directory
         md.consolidate(result, final_dir)

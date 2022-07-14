@@ -43,19 +43,9 @@ def exotic_ld(meta, spec):
     if spec.wave_1d.attrs['wave_units'] == 'microns':
         wavelength_range *= 1e4
 
-    # Set up the stellar parameters
-    M_H = meta.metallicity
-    Teff = meta.teff
-    logg = meta.logg
-
-    # Tell it where the data from the Zenodo link has been placed
-    ld_data_path = meta.exotic_ld_direc
-
-    # Tell it which stellar model grid you would like to use: '1D' or '3D'
-    ld_model = meta.exotic_ld_grid
-    
     # compute stellar limb darkening model
-    sld = StellarLimbDarkening(M_H, Teff, logg, ld_model, ld_data_path) 
+    sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
+                               meta.exotic_ld_grid, meta.exotic_ld_direc) 
     
     lin_c1 = np.zeros((meta.nspecchan, 1))
     quad = np.zeros((meta.nspecchan, 2))
@@ -63,7 +53,8 @@ def exotic_ld(meta, spec):
     nonlin_4 = np.zeros((meta.nspecchan, 4))
     for i in range(meta.nspecchan):
         # generate limb-darkening coefficients for each bin
-        lin_c1[i] = [sld.compute_linear_ld_coeffs(wavelength_range[i], mode)[0]]
+        lin_c1[i] = [sld.compute_linear_ld_coeffs(wavelength_range[i],
+                                                  mode)[0]]
         quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode)
         nonlin_3[i] = \
             sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i], 

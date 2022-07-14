@@ -39,7 +39,10 @@ r0			-0.124315778343348	'free' 			-0.12			0.05		N
 r1			35.5170488452062	'free' 			35 				20			N
 r2			-0.603176745805961	'free' 			-0.5 			0.4			N
 # -----------
-# White noise
+# ** White noise **
+# Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
+# Use scatter_ppm to fit the noise level in ppm
+# Use WN parameter in GP model parameters to account for white noise in the GP model
 # -----------
 scatter_mult	1				'free'			1				1			N
 # ---------------------------------------

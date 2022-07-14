@@ -33,9 +33,12 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
         The name of the limb darkening profile function to use,
         including 'uniform', 'linear', 'quadratic', 'kipping2013',
         'square-root', 'logarithmic', 'exponential', '3-parameter',
-        and '4-parameter'. Detaults to 'quadratic'.
+        and '4-parameter'. Defaults to 'quadratic'.
     latex : bool; optional
         Return the function as a LaTeX formatted string. Defaults to False.
+    use_gen_ld : str; optional
+        Which tool will be doing the limb darkening modelling from
+        ['batman', 'exotic-ld']. Defaults to 'batman'.
 
     Returns
     -------
@@ -92,7 +95,8 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
 
         return profile
     else:
-        raise Exception(f"'{name}' is not a supported profile by '{use_gen_ld}'. Try {names}")
+        raise Exception(f"'{name}' is not a supported profile by "
+                        f"'{use_gen_ld}'. Try {names}")
 
 
 def uniform(m):
