@@ -205,7 +205,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.sigma_clip:
                 log.writelog('Sigma clipping unbinned optimal spectra along '
-                             'time axis')
+                             'time axis...')
                 outliers = 0
                 for w in range(meta.subnx):
                     spec.optspec[:, w], spec.optmask[:, w], nout = \
@@ -290,7 +290,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
                                        spec.optspec, spec.optmask,
                                        meta.wave_min, meta.wave_max)
-            log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
+            log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
 
             if meta.isplots_S4 >= 1:
                 plots_s4.lc_driftcorr(meta, spec.wave_1d, spec.optspec,

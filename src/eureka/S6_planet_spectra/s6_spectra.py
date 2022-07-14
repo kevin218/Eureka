@@ -145,20 +145,17 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 meta.spectrum_median, meta.spectrum_err = \
                     parse_s5_saves(meta, fit_methods, y_param, 'shared')
             else:
-                meta.spectrum_median = []
-                meta.spectrum_err = []
+                meta.spectrum_median = np.zeros(0)
+                meta.spectrum_err = np.zeros((2, 0))
                 for channel in range(meta.nspecchan):
                     ch_number = str(channel).zfill(len(str(meta.nspecchan)))
                     channel_key = f'ch{ch_number}'
                     median, err = parse_s5_saves(meta, fit_methods, y_param,
                                                  channel_key)
-                    meta.spectrum_median.append(median[0])
-                    meta.spectrum_err.append(np.array(err).reshape(-1))
-                meta.spectrum_median = np.array(meta.spectrum_median)
-                meta.spectrum_median = meta.spectrum_median.reshape(-1)
-                meta.spectrum_err = np.array(meta.spectrum_err).swapaxes(0, 1)
-                meta.spectrum_median = np.array(meta.spectrum_median)
-                meta.spectrum_err = np.array(meta.spectrum_err)
+                    meta.spectrum_median = np.append(meta.spectrum_median,
+                                                     median, axis=0)
+                    meta.spectrum_err = np.append(meta.spectrum_err, err,
+                                                  axis=1)
 
             # Convert the y-axis unit to the user-provided value if needed
             if meta.y_unit in ['(Rp/Rs)^2', '(Rp/R*)^2']:
@@ -391,10 +388,17 @@ def parse_s5_saves(meta, fit_methods, y_param, channel_key='shared'):
                 raise AssertionError(f'Parameter {y_param} was not in the list'
                                      ' of fitted parameters which includes: '
                                      ', '.join(full_keys))
-            if "50th" in fitted_values.keys():
-                medians = np.array(fitted_values["50th"])
-            else:  # if lsq (no uncertainties)
-                medians = np.array(fitted_values["Mean"])
+            
+            medians = []
+            for i, key in enumerate(keys):
+                ind = np.where(fitted_values["Parameter"] == key)[0][0]
+                if "50th" in fitted_values.keys():
+                    medians.append(fitted_values["50th"][ind])
+                else:
+                    medians.append(fitted_values["Mean"][ind])
+            medians = np.array(medians)
+
+            # if lsq (no uncertainties)
             errs = np.ones((2, len(medians)))*np.nan
 
     return medians, errs

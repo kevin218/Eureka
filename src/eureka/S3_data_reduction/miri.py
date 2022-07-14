@@ -51,7 +51,7 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
     data.attrs['intend'] = data.attrs['mhdr']['INTEND']
 
     sci = hdulist['SCI', 1].data
@@ -63,21 +63,21 @@ def read(filename, data, meta, log):
     if np.all(hdulist['WAVELENGTH', 1].data == 0):
         if meta.firstFile:
             log.writelog('  WARNING: The wavelength for the simulated MIRI '
-                         'data are currently hardcoded\nbecause they are not '
+                         'data are currently hardcoded because they are not '
                          'in the .fits files themselves')
         wave_2d = np.tile(wave_MIRI_hardcoded(), (sci.shape[2], 1))[:, ::-1]
     else:
         wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']:
                                              data.attrs['intend']]
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
-        time = read_time(meta, data)
+        time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
             log.writelog('  WARNING: The timestamps for the simulated MIRI '
-                         'data are currently hardcoded\nbecause they are not '
+                         'data are currently hardcoded because they are not '
                          'in the .fits files themselves')
         if ('WASP_80b' in data.attrs['filename']
                 and 'transit' in data.attrs['filename']):
@@ -94,7 +94,7 @@ def read(filename, data, meta, log):
             while time_f < time_i:
                 time_f += per
             time = np.linspace(time_i, time_f, 4507,
-                               endpoint=True)[data.attrs['intstart']-1:
+                               endpoint=True)[data.attrs['intstart']:
                                               data.attrs['intend']-1]
         elif ('WASP_80b' in data.attrs['filename']
               and 'eclipse' in data.attrs['filename']):
@@ -111,12 +111,12 @@ def read(filename, data, meta, log):
             while time_f < time_i:
                 time_f += per
             time = np.linspace(time_i, time_f, 4506,
-                               endpoint=True)[data.attrs['intstart']-1:
+                               endpoint=True)[data.attrs['intstart']:
                                               data.attrs['intend']-1]
         elif 'new_drift' in data.attrs['filename']:
             # Time array for the newest MIRISIM observations
             time = np.linspace(0, 47.712*(1849)/3600/24, 1849,
-                               endpoint=True)[data.attrs['intstart']-1:
+                               endpoint=True)[data.attrs['intstart']:
                                               data.attrs['intend']-1]
         elif data.attrs['mhdr']['EFFINTTM'] == 10.3376:
             # There is no time information in the old simulated MIRI data
@@ -124,13 +124,13 @@ def read(filename, data, meta, log):
             # ones in STSci-SimDataJWST/MIRI/Ancillary_files/times.dat.txt
             # converted to days
             time = np.linspace(0, 17356.28742796742/3600/24, 1680,
-                               endpoint=True)[data.attrs['intstart']-1:
+                               endpoint=True)[data.attrs['intstart']:
                                               data.attrs['intend']]
         elif data.attrs['mhdr']['EFFINTTM'] == 47.712:
             # A new manually created time array for the new MIRI simulations
             # Need to subtract an extra 1 from intend for these data
             time = np.linspace(0, 47.712*(42*44-1)/3600/24, 42*44,
-                               endpoint=True)[data.attrs['intstart']-1:
+                               endpoint=True)[data.attrs['intstart']:
                                               data.attrs['intend']-1]
         else:
             raise AssertionError('Eureka does not currently know how to '

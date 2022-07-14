@@ -263,12 +263,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Locate source postion
-                use_hdr = ('SRCYPOS' in data.attrs['shdr'])
-                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m,
-                                                            header=use_hdr)
-                    
-                log.writelog(f'  Source position on detector is row '
-
+                log.writelog('  Locating source position...',
+                             mute=(not meta.verbose))
+                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m)
+                log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
                 # Compute 1D wavelength solution
@@ -291,8 +289,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
                     if meta.curvature == 'correct':
-                        log.writelog('  In NIRSpec G395H setting with '
-                                     'curvature correction:',
+                        log.writelog('  Correcting for G395H curvature...',
                                      mute=(not meta.verbose))
                         data, meta = inst.straighten_trace(data, meta, log)
 
@@ -303,6 +300,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                 np.ones(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs
+                log.writelog('  Masking NaNs in data arrays...',
+                             mute=(not meta.verbose))
                 data['mask'] = util.check_nans(data['flux'], data['mask'],
                                                log, name='FLUX')
                 data['mask'] = util.check_nans(data['err'], data['mask'],
@@ -354,7 +353,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 medapdata = np.median(apdata, axis=0)
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                iterfn = range(meta.n_int)
+                iterfn = range(meta.int_start, meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
