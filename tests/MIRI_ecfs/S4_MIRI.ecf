@@ -2,6 +2,7 @@
 
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan   	1		# Number of spectroscopic channels
+compute_white   True    # Also compute the white-light lightcurve 
 wave_min    	None	# Minimum wavelength
 wave_max    	None	# Maximum wavelength
 allapers		True	# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir

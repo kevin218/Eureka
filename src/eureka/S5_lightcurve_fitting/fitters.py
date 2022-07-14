@@ -197,7 +197,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     #     cov_mat = None
     cov_mat = None
     best_model.__setattr__('cov_mat', cov_mat)
-
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 
@@ -359,6 +358,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     q = np.percentile(samples, [16, 50, 84], axis=0)
     fit_params = q[1]  # median
     mean_params = np.mean(samples, axis=0)
+    errs = np.std(samples, axis=0)
 
     # Create table of results
     t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
@@ -370,6 +370,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     lower_errs = q[1]-q[0]
 
     model.update(fit_params, freenames)
+    model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
@@ -454,6 +455,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot residuals distribution
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
+
+    if meta.isplots_S5 >= 3:
+        plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
+                         fitter='emcee', burnin=True, nburn=meta.run_nburn)
+        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
+                         freenames, fitter='emcee', burnin=False)
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='emcee')
@@ -827,6 +834,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     q = np.percentile(samples, [16, 50, 84], axis=0)
     fit_params = q[1]  # median
     mean_params = np.mean(samples, axis=0)
+    errs = np.std(samples, axis=0)
 
     # Create table of results
     t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
@@ -838,6 +846,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     lower_errs = q[1]-q[0]
 
     model.update(fit_params, freenames)
+    model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
@@ -1093,7 +1102,8 @@ def group_variables(model):
     for ii, item in enumerate(all_params):
         name, param = item
         # param = list(param)
-        if (param[1] == 'free') or (param[1] == 'shared'):
+        if ((param[1] == 'free') or (param[1] == 'shared')
+                or ('white' in param[1])):
             freenames.append(name)
             freepars.append(param[0])
             if len(param) == 5:  # If prior is specified.
@@ -1242,30 +1252,27 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         Record an astropy table for mean, median, percentiles,
         +/- 1 sigma, all params
     """
-    ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-
-    if lc.share:
-        fname = f'S5_{fitter}_fitparams_shared'
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
     else:
-        fname = f'S5_{fitter}_fitparams_ch{ch_number}'
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_tag = f'_ch{ch_number}'
+
+    # Save the fitted parameters and their uncertainties (if possible)
+    fname = f'S5_{fitter}_fitparams{channel_tag}'
     results_table.write(meta.outputdir+fname+'.csv', format='csv',
                         overwrite=False)
 
     # Save the chain from the sampler (if a chain was provided)
     if len(samples) != 0:
-        if lc.share:
-            fname = f'S5_{fitter}_samples_shared'
-        else:
-            fname = f'S5_{fitter}_samples_ch{ch_number}'
+        fname = f'S5_{fitter}_samples{channel_tag}'
         with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
             hf.create_dataset("samples", data=samples)
 
     # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
-    if lc.share:
-        channel_tag = '_shared'
-    else:
-        channel_tag = f'_ch{ch_number}'
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),

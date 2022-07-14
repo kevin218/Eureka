@@ -92,8 +92,12 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         fig.subplots_adjust(hspace=0)
         fig.align_ylabels(ax)
 
-        ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = ('figs'+os.sep+f'fig5101_ch{ch_number}_lc_{fitter}'
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5101_{fname_tag}_lc_{fitter}'
                  + figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
@@ -157,8 +161,13 @@ def plot_rms(lc, model, meta, fitter):
         plt.xticks(size=12)
         plt.yticks(size=12)
         plt.legend()
-        ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = ('figs'+os.sep+f'fig5301_ch{ch_number}_allanplot_{fitter}'
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5301_{fname_tag}_allanplot_{fitter}'
                  + figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
@@ -191,6 +200,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     ndim = len(freenames)+1  # One extra for the 1D histogram
     fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
     fig.clf()
+
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
@@ -203,8 +213,13 @@ def plot_corner(samples, lc, meta, freenames, fitter):
                         title_fmt='.3', title_kwargs={"fontsize": 10},
                         label_kwargs={"fontsize": 10}, fontsize=10,
                         labelpad=0.25)
-    ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-    fname = ('figs'+os.sep+f'fig5501_ch{ch_number}_corner_{fitter}'
+
+    if lc.white:
+        fname_tag = 'white'
+    else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        fname_tag = f'ch{ch_number}'
+    fname = (f'figs{os.sep}fig5501_{fname_tag}_corner_{fitter}'
              + figure_filetype)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05,
                 dpi=300)
@@ -293,8 +308,12 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                 k += 1
         fig.tight_layout(h_pad=0.0)
 
-        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        fname = 'figs'+os.sep+f'fig5303_ch{ch_number}'
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs{os.sep}fig5303_{fname_tag}'
         if burnin:
             fname += '_burninchain'
         else:
@@ -361,8 +380,12 @@ def plot_res_distr(lc, model, meta, fitter):
         px = stats.norm.pdf(x, loc=0, scale=1)
         plt.plot(x, px*(bins[1]-bins[0])*len(residuals), 'k-', lw=2)
         plt.xlabel("Residuals/Uncertainty", fontsize=14)
-        ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = ('figs'+os.sep+f'fig5302_ch{ch_number}_res_distri_{fitter}'
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
                  + figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
@@ -448,8 +471,12 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        ch_number = str(channel).zfill(len(str(lc.nchannel)))
-        fname = ('figs'+os.sep+f'fig5102_ch{ch_number}_lc_GP_{fitter}'
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
                  + figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
