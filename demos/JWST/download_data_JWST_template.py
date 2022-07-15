@@ -32,6 +32,7 @@ download_dir = './wasp96b'
 final_dir = './wasp96b/S0'
 
 # MAST API token for accessing data with exclusive access
+# This can be generated at https://auth.mast.stsci.edu/token
 mast_token = None
 # If data are public, no need to call md.login() or md.logout()
 md.login(mast_token)
@@ -59,4 +60,3 @@ md.cleanup(download_dir)
 
 # Logout
 md.logout()
-
