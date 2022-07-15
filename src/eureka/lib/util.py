@@ -52,9 +52,10 @@ def readfiles(meta, log):
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
     else:
+        mute = hasattr(meta, 'verbose') and not meta.verbose
         log.writelog(f'\nFound {meta.num_data_files} data file(s) '
                      f'ending in {meta.suffix}.fits',
-                     mute=(not meta.verbose))
+                     mute=mute)
 
         with fits.open(meta.segment_list[-1]) as hdulist:
             # Figure out which instrument we are using
