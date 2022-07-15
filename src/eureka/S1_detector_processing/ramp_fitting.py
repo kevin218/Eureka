@@ -712,7 +712,7 @@ def create_image_model(input_model, image_info):
     out_model.var_poisson = var_poisson
     out_model.var_rnoise = var_rnoise
     out_model.err = err
-    int_model.int_times = input_model.int_times
+    out_model.int_times = input_model.int_times
 
     return out_model
 
@@ -739,7 +739,7 @@ def create_integration_model(input_model, integ_info):
         var_poisson=np.zeros(data.shape, dtype=np.float32),
         var_rnoise=np.zeros(data.shape, dtype=np.float32),
         err=np.zeros(data.shape, dtype=np.float32))
-    
+
     int_model.update(input_model)  # ... and add all keys from input
 
     int_model.data = data
