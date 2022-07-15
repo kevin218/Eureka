@@ -30,6 +30,7 @@ from ..lib import clipping
 
 def genlc(eventlabel, ecf_path=None, s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
+
     Parameters
     ----------
     eventlabel : str
@@ -40,6 +41,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
+
     Returns
     -------
     spec : Astreaus object 
@@ -48,9 +50,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
         Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
+
     Notes
     -----
     History:
+
     - June 2021 Kevin Stevenson
         Initial version
     - October 2021 Taylor Bell
