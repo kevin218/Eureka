@@ -41,7 +41,7 @@ md.login(mast_token)
 table = md.filterJWST(proposal_id, observation, visit, calib_level, subgroup)
 
 # Optional, write out list of products from filtered table
-# ascii.write(table, download_dir+"/output.csv", format='csv')
+ascii.write(table, download_dir+"/output.csv", format='csv')
 # Optional, write out all products from given program, observation, visit
 # md.writeTable_JWST(proposal_id, observation, visit, download_dir+"/output.csv", format='csv')
 
