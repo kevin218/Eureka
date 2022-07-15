@@ -63,6 +63,10 @@ def read(filename, data, meta, log):
         time = read_time(meta, data, log)
     else:
         time = int_times['int_mid_BJD_TDB']
+        if len(time) > len(sci):
+            # This line is needed to still handle the simulated data
+            # which had the full time array for all segments
+            time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
