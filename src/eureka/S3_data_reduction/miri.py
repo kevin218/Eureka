@@ -68,8 +68,7 @@ def read(filename, data, meta, log):
         wave_2d = np.tile(wave_MIRI_hardcoded(), (sci.shape[2], 1))[:, ::-1]
     else:
         wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']:
-                                             data.attrs['intend']]
+    int_times = hdulist['INT_TIMES', 1].data
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
