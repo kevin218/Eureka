@@ -29,13 +29,13 @@ def writeTable_JWST(proposal_id, observation, visit, filename, format='csv'):
 
     Parameters
     ----------
-    proposal_id : string or int
+    proposal_id : str or int
         JWST proposal/program ID (e.g., 1366).
-    observation : string or int
+    observation : str or int
         JWST observation number listed on the Visit Status Report (e.g., 2).
         See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
         where XXXXX is the proposal/program ID.
-    visit : string or int
+    visit : str or int
         JWST visit number listed on the Visit Status Report (e.g., 1).
         See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
         where XXXXX is the proposal/program ID.
@@ -71,7 +71,7 @@ def login(mast_token=None):
 
     Parameters
     ----------
-    mast_token : string (optional)
+    mast_token : str; optional
         The token to authenticate the user. Default is None.
         This can be generated at https://auth.mast.stsci.edu/token.
         If not supplied, it will be prompted for if not in the keyring
