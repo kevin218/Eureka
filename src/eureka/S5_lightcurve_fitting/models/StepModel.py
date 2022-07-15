@@ -65,8 +65,8 @@ class StepModel(Model):
         - 2022 July 14, Taylor J Bell
             Initial version.
         """
-        self.steps = np.zeros((self.nchan, 0))
-        self.steptimes = np.zeros((self.nchan, 0))
+        self.steps = np.zeros((self.nchan, 10))
+        self.steptimes = np.zeros((self.nchan, 10))
         for k, v in self.parameters.dict.items():
             remvisnum = k.split('_')
 
@@ -77,7 +77,8 @@ class StepModel(Model):
             key2_len = len(key2)
 
             # Parse 'step#' keyword arguments
-            if k.lower().startswith(key1) and k[key1_len:].isdigit():
+            if (len(k) > key1_len and k.lower().startswith(key1) 
+                    and k[key1_len:].isdigit()):
                 self.steps[0, int(k[key1_len:])] = v[0]
             elif (len(remvisnum) > 1 and self.nchan > 1 and
                   remvisnum[0].lower().startswith(key1) and
@@ -86,7 +87,8 @@ class StepModel(Model):
                 self.steps[int(remvisnum[1]),
                            int(remvisnum[0][key1_len:])] = v[0]
             # Parse 'steptime#' keyword arguments
-            elif k.lower().startswith(key2) and k[key2_len:].isdigit():
+            elif (len(k) > key1_len and k.lower().startswith(key2)
+                  and k[key2_len:].isdigit()):
                 self.steptimes[0, int(k[key2_len:])] = v[0]
             elif (len(remvisnum) > 1 and self.nchan > 1 and
                   remvisnum[0].lower().startswith(key2) and
@@ -115,7 +117,7 @@ class StepModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.ones((self.nchan, len(self.time)))
         for c in range(self.nchan):
-            for s in range(len(self.steps)):
+            for s in np.where(self.steps[c] != 0)[0]:
                 lcfinal[c, self.time >= self.steptimes[c, s]] += \
                     self.steps[c, s]
-        return lcfinal
+        return lcfinal.flatten()
