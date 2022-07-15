@@ -100,10 +100,7 @@ def get_reference_frames(meta, log):
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
         data, meta = util.trim(data, meta)
-        # Need to add guess after trimming and before cut_aperture
-        meta.guess.append(data.guess)
-        data, meta = b2f.convert_to_e(data, meta, log)
-        meta.src_ypos = source_pos.source_pos(data, meta, i)
+        # Create bad pixel mask (1 = good, 0 = bad)
         data['mask'] = (['time', 'y', 'x'],
                         np.ones(data.flux.shape, dtype=bool))
         data['mask'] = util.check_nans(data['flux'], data['mask'],
@@ -114,6 +111,10 @@ def get_reference_frames(meta, log):
                                        log, name='V0')
         if hasattr(meta, 'manmask'):
             util.manmask(data, meta, log)
+        # Need to add guess after trimming and before cut_aperture
+        meta.guess.append(data.guess)
+        data, meta = b2f.convert_to_e(data, meta, log)
+        meta.src_ypos = source_pos.source_pos(data, meta, i)
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
         cut_aperture(data, meta, log)
