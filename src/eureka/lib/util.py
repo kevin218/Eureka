@@ -5,13 +5,15 @@ from astropy.io import fits
 from . import sort_nicely as sn
 
 
-def readfiles(meta):
+def readfiles(meta, log):
     """Reads in the files saved in topdir + inputdir and saves them into a list.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -40,11 +42,24 @@ def readfiles(meta):
         for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
             meta.segment_list.append(fname)
 
-    with fits.open(meta.segment_list[-1]) as hdulist:
-        # Figure out which instrument we are using
-        meta.inst = hdulist[0].header['INSTRUME'].lower()
-
     meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+
+    meta.num_data_files = len(meta.segment_list)
+    if meta.num_data_files == 0:
+        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
+                             f'in the inputdir: \n"{meta.inputdir}"!\n'
+                             f'You likely need to change the inputdir in '
+                             f'{meta.filename} to point to the folder '
+                             f'containing the "{meta.suffix}.fits" files.')
+    else:
+        log.writelog(f'\nFound {meta.num_data_files} data file(s) '
+                     f'ending in {meta.suffix}.fits',
+                     mute=(not meta.verbose))
+
+        with fits.open(meta.segment_list[-1]) as hdulist:
+            # Figure out which instrument we are using
+            meta.inst = hdulist[0].header['INSTRUME'].lower()
+
     return meta
 
 
