@@ -23,6 +23,7 @@ def columnNames():
         print(val)
     return
 
+
 def writeTable_JWST(proposal_id, observation, visit, filename, format='csv'):
     """Write all products from specified visit to an ASCII file
 
@@ -32,11 +33,11 @@ def writeTable_JWST(proposal_id, observation, visit, filename, format='csv'):
         JWST proposal/program ID (e.g., 1366).
     observation : string or int
         JWST observation number listed on the Visit Status Report (e.g., 2).
-        See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
         where XXXXX is the proposal/program ID.
     visit : string or int
         JWST visit number listed on the Visit Status Report (e.g., 1).
-        See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
         where XXXXX is the proposal/program ID.
     filename : str; optional
         The file format to use. Defaults to 'csv'.
@@ -63,6 +64,7 @@ def writeTable_JWST(proposal_id, observation, visit, filename, format='csv'):
                                             obs_id=obsid)
     ascii.write(sci_table, filename, format=format)
     return
+
 
 def login(mast_token=None):
     """Log into the MAST portal.
@@ -188,6 +190,7 @@ def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
                                             download_dir=download_dir)
     return result
 
+
 def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
     """Find JWST data products by applying standard filters.
 
@@ -197,11 +200,11 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
         JWST proposal/program ID (e.g., 1366).
     observation : str or int
         JWST observation number listed on the Visit Status Report (e.g., 2).
-        See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
         where XXXXX is the proposal/program ID.
     visit : str or int
         JWST visit number listed on the Visit Status Report (e.g., 2).
-        See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
         where XXXXX is the proposal/program ID.
     calib_level : list or int
         Product Calibration Level (0 = raw, 1 = uncalibrated, 2 = calibrated,
@@ -246,11 +249,11 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
 
     # Filter for desired files
     table = Observations.filter_products(data_products_by_id,
-                            productSubGroupDescription=subgroup,
-                            calib_level=calib_level)
+                                         productSubGroupDescription=subgroup,
+                                         calib_level=calib_level)
     print("Total number of data products:", len(table))
     print("Number of data products with exclusive access:",
-            np.sum(table['dataRights']=='EXCLUSIVE_ACCESS'))
+          np.sum(table['dataRights'] == 'EXCLUSIVE_ACCESS'))
 
     return table
 
@@ -286,6 +289,7 @@ def consolidate(result, final_dir):
             print(f"File not found: {path}")
     return
 
+
 def sortJWST(source_dir, target_dir, filetype):
     """
 
@@ -301,6 +305,7 @@ def sortJWST(source_dir, target_dir, filetype):
                         os.path.join(target_dir, filename))
 
     return
+
 
 def sortHST(final_dir, sci_dir='sci', cal_dir='cal'):
     """Sort files into science and calibration subdirectories.
