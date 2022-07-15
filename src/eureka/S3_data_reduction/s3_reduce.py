@@ -153,19 +153,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             meta.copy_ecf()
 
             # Create list of file segments
-            meta = util.readfiles(meta)
-            meta.num_data_files = len(meta.segment_list)
-            if meta.num_data_files == 0:
-                log.writelog(f'Unable to find any "{meta.suffix}.fits" files '
-                             f'in the inputdir: \n"{meta.inputdir}"!',
-                             mute=True)
-                raise AssertionError(f'Unable to find any "{meta.suffix}.fits"'
-                                     f' files in the inputdir: \n'
-                                     f'"{meta.inputdir}"!')
-            else:
-                log.writelog(f'\nFound {meta.num_data_files} data file(s) '
-                             f'ending in {meta.suffix}.fits',
-                             mute=(not meta.verbose))
+            meta = util.readfiles(meta, log)
 
             # Load instrument module
             if meta.inst == 'miri':
