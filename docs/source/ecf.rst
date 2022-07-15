@@ -565,7 +565,7 @@ Fitting routines to run for Stage 5 lightcurve fitting. Can be one or more of th
 
 run_myfuncs
 '''''''''''
-Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial]
+Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step]
 
 use_generate_ld
 '''''''''''''''
@@ -683,7 +683,10 @@ This file describes the transit/eclipse and systematics parameters and their pri
    - Limb Darkening Parameters
       - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']``
       - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``square-root``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
-   - Systematics Parameters - Depending on the model specified in the Stage 5 ECF, set either polynomial model coefficients ``c0--c9`` for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them to ``0``.
+   - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
+      - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results.
+      - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``. Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters; instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.
+      - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events). For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 
 
