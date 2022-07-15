@@ -365,6 +365,13 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nchan=lc_model.nchannel_fitted,
                                       paramtitles=paramtitles)
         modellist.append(t_polynom)
+    if 'step' in meta.run_myfuncs:
+        t_step = m.StepModel(parameters=params, name='step', fmt='r--',
+                             log=log,
+                             longparamlist=lc_model.longparamlist,
+                             nchan=lc_model.nchannel_fitted,
+                             paramtitles=paramtitles)
+        modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
                                 log=log,
