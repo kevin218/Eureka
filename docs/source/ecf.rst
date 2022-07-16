@@ -33,7 +33,7 @@ skip_*
 If True, skip the named step. 
 
 .. note::
-   Note that some instruments and observing modes might skip a step either way! See `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
+   Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
 topdir + inputdir
 '''''''''''''''''
@@ -52,7 +52,7 @@ default_ramp_fit_weighting
 Define the method by which individual frame pixels will be weighted during the default ramp fitting process. The is specifically for the case where ``ramp_fit_algorithm`` is ``default``. Options are ``default``, ``fixed``, ``interpolated``, ``flat``, or ``custom``.
 
 
-``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
+``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
 
 In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above). 
 
@@ -100,7 +100,7 @@ skip_*
 If True, skip the named step.
 
 .. note::
-	Note that some instruments and observing modes might skip a step either way! See `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
+	Note that some instruments and observing modes might skip a step either way! See the `calwebb_spec2 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
 
 testing_S2
@@ -182,7 +182,7 @@ Only used for HST analyses. The folder with respect to hst_cal where leapsecond 
 
 flatfile
 ''''''''
-Only used for HST analyses. The path with respect to hst_cal to the flatfield file to use. A WFC3/G102 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G102/WFC3.IR.G102.flat.2.fits.gz>`_ and a WFC3/G141 flat can be downloaded `here <http://www.stsci.edu/~WFC3/grism-resources/G141/WFC3.IR.G141.flat.2.fits.gz>`_; be sure to unzip the files after downloading them.
+Only used for HST analyses. The path with respect to hst_cal to the flatfield file to use. The WFC3 flats can be downloaded `here (G102) <http://www.stsci.edu/~WFC3/grism-resources/G102/WFC3.IR.G102.flat.2.fits.gz>`_ and `here (G141) <http://www.stsci.edu/~WFC3/grism-resources/G141/WFC3.IR.G141.flat.2.fits.gz>`_; be sure to unzip the files after downloading them.
 
 ywindow & xwindow
 '''''''''''''''''
@@ -224,7 +224,7 @@ diffthresh
 Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
 
 record_ypos
-''''''''''
+'''''''''''
 Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
 
 bg_hw & spec_hw
@@ -309,7 +309,7 @@ iref
 Only used for HST analyses. The file indices to use as reference frames for 2D drift correction. This should be a 1-2 element list with the reference indices for each scan direction.
 
 curvature
-''''''''
+'''''''''
 Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
 
 isplots_S3
@@ -396,7 +396,7 @@ If True, run S4 on all of the apertures considered in S3. Otherwise the code wil
 
 
 recordDrift
-''''''''
+'''''''''''
 If True, compute drift/jitter in 1D spectra (always recorded if correctDrift is True)
 
 
