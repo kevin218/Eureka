@@ -224,6 +224,7 @@ def source_pos_gauss(flux, meta, m, integ=0):
         The central position of the star.
     y_width : int
         The std of the fitted Gaussian.
+
     Notes
     -----
     History:

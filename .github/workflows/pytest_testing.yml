@@ -14,7 +14,10 @@ jobs:
       OS: 'ubuntu-latest'
       PYTHON: '3.9'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/setup-python@v1
         with:
           python-version: 3.9
@@ -25,6 +28,8 @@ jobs:
           mkdir $HOME/crds_cache
           echo "CRDS_PATH=$HOME/crds_cache" >> $GITHUB_ENV
           echo "CRDS_SERVER_URL=https://jwst-crds.stsci.edu" >> $GITHUB_ENV
+      - name: Log the current Eureka version
+        run: pip show eureka
       - name: Run tests, generate coverage report
         run: pytest tests --cov=./src/eureka --cov-report=xml
       - name: Upload coverage reports to Codecov with GitHub Action
