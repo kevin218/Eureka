@@ -271,7 +271,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     plt.plot(range(nx), bg[j], 'g-')
                     fname = 'figs'+os.sep+'Fig6_BG_'+str(j)+figure_filetype
                     plt.savefig(meta.outputdir + fname, dpi=300)
-                    plt.pause(1)
+                    plt.pause(0.01)
 
     if isrotate == 1:
         bg = (bg.T)[::-1]

@@ -353,7 +353,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 medapdata = np.median(apdata, axis=0)
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                iterfn = range(meta.int_start, meta.n_int)#[-100:]
+                iterfn = range(meta.int_start, meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
@@ -374,10 +374,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                          window_len=meta.window_len,
                                          deg=meta.prof_deg, n=n, m=m,
                                          meddata=medapdata)
-
-                # import matplotlib.pyplot as plt
-                # plt.plot(range(len(src_ypos_exact)), src_ypos_exact)
-                # plt.show()
 
                 # Mask out NaNs and Infs
                 optspec_ma = np.ma.masked_invalid(data.optspec.values)

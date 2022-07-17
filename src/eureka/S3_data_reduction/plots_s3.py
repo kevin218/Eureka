@@ -28,11 +28,8 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     None
     '''
     normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
-    
-
     wmin = np.nanmin(wave_1d)
     wmax = np.nanmax(wave_1d)
-
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -107,7 +104,7 @@ def image_and_background(data, meta, log, m):
         plt.title('Background-Subtracted Flux')
         max = np.ma.max(subdata[n])
         plt.imshow(subdata[n], origin='lower', aspect='auto',
-                   vmin=0, vmax=max/100, extent=[xmin, xmax, ymin, ymax])
+                   vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.subplot(212)
