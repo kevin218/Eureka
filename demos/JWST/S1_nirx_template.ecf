@@ -25,6 +25,16 @@ skip_gain_scale     False
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
 
+#Background subtraction
+grouplevel_bg 		True
+ncpu				8
+bg_y1 				6
+bg_y2 				26
+bg_deg 				0
+p3thresh			3
+verbose				True
+isplots 			1
+
 # Project directory
 topdir              /home/User
 

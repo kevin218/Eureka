@@ -256,6 +256,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data['mask'] = (['time', 'y', 'x'],
                                 np.ones(data.flux.shape, dtype=bool))
 
+                # Start masking pixels based on DQ flags
+                if meta.dqmask:
+                    dqmask = np.where(data['dq'] != 0)
+                    data['mask'].values[dqmask] = 0
+
                 # Check if arrays have NaNs
                 log.writelog('  Masking NaNs in data arrays...',
                              mute=(not meta.verbose))
@@ -308,11 +313,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = inst.flag_bg(data, meta, log)
 
                 # Do the background subtraction
-                data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
+                if meta.perform_bgsub:
+                    data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
-                # Make image+background plots
-                if meta.isplots_S3 >= 3:
-                    plots_s3.image_and_background(data, meta, log, m)
+                    # Make image+background plots
+                    if meta.isplots_S3 >= 3:
+                        plots_s3.image_and_background(data, meta, log, m)
+                else:
+                    data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+                    data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
 
                 # Calulate and correct for 2D drift
                 if hasattr(inst, 'correct_drift2D'):
@@ -344,7 +353,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 medapdata = np.median(apdata, axis=0)
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                iterfn = range(meta.int_start, meta.n_int)
+                iterfn = range(meta.int_start, meta.n_int)#[-100:]
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
@@ -365,6 +374,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                          window_len=meta.window_len,
                                          deg=meta.prof_deg, n=n, m=m,
                                          meddata=medapdata)
+
+                # import matplotlib.pyplot as plt
+                # plt.plot(range(len(src_ypos_exact)), src_ypos_exact)
+                # plt.show()
 
                 # Mask out NaNs and Infs
                 optspec_ma = np.ma.masked_invalid(data.optspec.values)

@@ -90,9 +90,9 @@ def rampfitJWST(eventlabel, ecf_path=None):
             if hdulist[0].header['INSTRUME'] == 'NIRCAM':
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
-
+            
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
-
+        
     # Calculate total run time
     total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
@@ -182,6 +182,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
         self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
+        self.ramp_fit.s1_meta = meta
+        self.ramp_fit.s1_log = log
 
         # Default ramp fitting settings
         if self.ramp_fit.algorithm == 'default':
