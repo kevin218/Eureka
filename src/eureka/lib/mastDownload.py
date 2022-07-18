@@ -5,6 +5,7 @@ import shutil
 import os
 from astroquery.mast import Observations
 import astropy.io.fits as pf
+from astropy.io import ascii
 
 
 def columnNames():
@@ -23,12 +24,54 @@ def columnNames():
     return
 
 
+def writeTable_JWST(proposal_id, observation, visit, filename, format='csv'):
+    """Write all products from specified visit to an ASCII file
+
+    Parameters
+    ----------
+    proposal_id : str or int
+        JWST proposal/program ID (e.g., 1366).
+    observation : str or int
+        JWST observation number listed on the Visit Status Report (e.g., 2).
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        where XXXXX is the proposal/program ID.
+    visit : str or int
+        JWST visit number listed on the Visit Status Report (e.g., 1).
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        where XXXXX is the proposal/program ID.
+    filename : str; optional
+        The file format to use. Defaults to 'csv'.
+
+    Notes
+    -----
+    History:
+
+    - July 2022 Kevin Stevenson
+        Initial version
+    """
+    # Convert to string
+    if type(proposal_id) is not str:
+        proposal_id = str(proposal_id).zfill(5)
+    if type(observation) is not str:
+        observation = str(observation).zfill(3)
+    if type(visit) is not str:
+        visit = str(visit).zfill(3)
+    # Specify obsid using wildcards
+    obsid = 'jw'+proposal_id+observation+visit+'*'
+
+    # Query MAST for requested visit
+    sci_table = Observations.query_criteria(proposal_id=proposal_id,
+                                            obs_id=obsid)
+    ascii.write(sci_table, filename, format=format)
+    return
+
+
 def login(mast_token=None):
     """Log into the MAST portal.
 
     Parameters
     ----------
-    mast_token : string (optional)
+    mast_token : str; optional
         The token to authenticate the user. Default is None.
         This can be generated at https://auth.mast.stsci.edu/token.
         If not supplied, it will be prompted for if not in the keyring
@@ -59,25 +102,27 @@ def logout():
     return
 
 
-def download(proposal_id, visit, inst='WFC3', download_dir='.',
-             subgroup='IMA'):
+def downloadHST(proposal_id, visit, inst='WFC3', download_dir='.',
+                subgroup='IMA'):
     """Download observation visit number from specified proposal ID.
 
     Parameters
     ----------
-    proposal_id : string or int
+    proposal_id : str or int
         HST proposal/program ID (e.g., 13467).
-    visit : string or int
+    visit : str or int
         HST visit number listed on the Visit Status Report (e.g., 60).
         See https://www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX,
         where XXXXX is the proposal/program ID.
-    inst : string
+    inst : str; optional
         HST instrument name, can be upper or lower case.
         Supported options include: WFC3, STIS, COS, or FGS.
-    download_dir : string (optional)
+        Defaults to 'WFC3'.
+    download_dir : str; optional
         Temporary download directory will be 'download_dir'/mastDownload/...
-    subgroup : string, (optional)
-        FITS file type (usually IMA, sometimes FLT)
+        Defaults to '.'.
+    subgroup : str; optional
+        FITS file type (usually IMA, sometimes FLT). Defaults to 'IMA'.
 
     Returns
     -------
@@ -146,6 +191,73 @@ def download(proposal_id, visit, inst='WFC3', download_dir='.',
     return result
 
 
+def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
+    """Find JWST data products by applying standard filters.
+
+    Parameters
+    ----------
+    proposal_id : str or int
+        JWST proposal/program ID (e.g., 1366).
+    observation : str or int
+        JWST observation number listed on the Visit Status Report (e.g., 2).
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        where XXXXX is the proposal/program ID.
+    visit : str or int
+        JWST visit number listed on the Visit Status Report (e.g., 2).
+        See www.stsci.edu/cgi-bin/get-visit-status?id=XXXXX&observatory=JWST,
+        where XXXXX is the proposal/program ID.
+    calib_level : list or int
+        Product Calibration Level (0 = raw, 1 = uncalibrated, 2 = calibrated,
+        3 = science product, 4 = contributed science product)
+    subgroup : str
+        FITS file type, varies by calib_level.
+        1: UNCAL, GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK
+        2: CAL, CALINTS, RATE, RATEINTS, X1DINTS, ANNNN_CRFINTS,
+        GS-ACQ1, GS-ACQ2, GS-FG, GS-ID, GS-TRACK, RAMP
+        3: X1DINTS, WHTLT
+
+    Returns
+    -------
+    table : AstroPy Table
+        The filtered table of data products.
+
+    Notes
+    -----
+    History:
+
+    - July 2022 Kevin Stevenson
+        Initial version
+    """
+    # Convert to string
+    if type(proposal_id) is not str:
+        proposal_id = str(proposal_id).zfill(5)
+    if type(observation) is not str:
+        observation = str(observation).zfill(3)
+    if type(visit) is not str:
+        visit = str(visit).zfill(3)
+    if type(calib_level) is int:
+        calib_level = [calib_level]
+    # Specify obsid using wildcards
+    obsid = 'jw'+proposal_id+observation+visit+'_04*'
+
+    # Query MAST for requested visit
+    sci_table = Observations.query_criteria(proposal_id=proposal_id,
+                                            obs_id=obsid)
+
+    # Get product list
+    data_products_by_id = Observations.get_product_list(sci_table)
+
+    # Filter for desired files
+    table = Observations.filter_products(data_products_by_id,
+                                         productSubGroupDescription=subgroup,
+                                         calib_level=calib_level)
+    print("Total number of data products:", len(table))
+    print("Number of data products with exclusive access:",
+          np.sum(table['dataRights'] == 'EXCLUSIVE_ACCESS'))
+
+    return table
+
+
 def consolidate(result, final_dir):
     """Consolidate downloaded files into a single directory
 
@@ -154,7 +266,7 @@ def consolidate(result, final_dir):
     result : AstroPy Table
         The manifest of files downloaded, returned from
         mastDownload.download().
-    final_dir : string
+    final_dir : str
         Final destination of files.
 
     Notes
@@ -178,17 +290,36 @@ def consolidate(result, final_dir):
     return
 
 
-def sort(final_dir, sci_dir='sci', cal_dir='cal'):
+def sortJWST(source_dir, target_dir, filetype):
+    """
+
+    """
+    # Create directory
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    # Move files
+    for filename in os.listdir(source_dir):
+        if filename.endswith(filetype):
+            shutil.move(os.path.join(source_dir, filename),
+                        os.path.join(target_dir, filename))
+
+    return
+
+
+def sortHST(final_dir, sci_dir='sci', cal_dir='cal'):
     """Sort files into science and calibration subdirectories.
 
     Parameters
     ----------
-    final_dir : string
+    final_dir : str
         Final destination of files.
-    sci_dir : string
+    sci_dir : str; optional
         Name of science subdirectory within 'final_dir'.
-    cal_dir : string
+        Defaults to 'sci'.
+    cal_dir : str; optional
         Name of calibration subdirectory within 'final_dir'.
+        Defaults to 'cal'.
 
     Notes
     -----
@@ -224,8 +355,9 @@ def cleanup(download_dir='.'):
 
     Parameters
     ----------
-    download_dir : string (optional)
+    download_dir : str; optional
         Temporary download directory specified for mastDownload.download().
+        Defaults to '.'.
 
     Notes
     -----

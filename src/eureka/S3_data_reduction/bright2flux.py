@@ -84,7 +84,15 @@ def dn2electrons(data, meta):
     ny = data.attrs['mhdr']['SUBSIZE2']
 
     # Load gain array in units of e-/ADU
-    gain = fits.getdata(meta.gainfile)[ystart:ystart+ny, xstart:xstart+nx]
+    gain_header = fits.getheader(meta.gainfile)
+    xstart_gain = gain_header['SUBSTRT1']
+    ystart_gain = gain_header['SUBSTRT2']
+
+    ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero                                                         
+    xstart_trim = xstart-xstart_gain + 1
+
+    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny,
+                                       xstart_trim:xstart_trim+nx]
 
     # Like in the case of MIRI data, the gain file data has to be
     # rotated by 90 degrees
@@ -273,7 +281,7 @@ def convert_to_e(data, meta, log):
 
     if data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S':
         log.writelog('  Automatically getting reference files to convert units'
-                     ' to electrons', mute=(not meta.verbose))
+                     ' to electrons...', mute=(not meta.verbose))
         if data.attrs['mhdr']['TELESCOP'] != 'JWST':
             message = ('Error: Currently unable to automatically download '
                        'reference files for non-JWST observations!')
@@ -282,23 +290,23 @@ def convert_to_e(data, meta, log):
         meta.photfile, meta.gainfile = retrieve_ancil(data.attrs['filename'])
     else:
         log.writelog('  Converting from electrons per second (e/s) to '
-                     'electrons', mute=(not meta.verbose))
+                     'electrons...', mute=(not meta.verbose))
 
     if data.attrs['shdr']['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to DN/s
         log.writelog('  Converting from brightness units (MJy/sr) to '
-                     'electrons')
+                     'electrons...')
         data = bright2dn(data, meta)
         data = dn2electrons(data, meta)
     elif data.attrs['shdr']['BUNIT'] == 'MJy':
         # Convert from brightness units (MJy) to DN/s
-        log.writelog('  Converting from brightness units MJy to electrons')
+        log.writelog('  Converting from brightness units MJy to electrons...')
         data = bright2dn(data, meta, mjy=True)
         data = dn2electrons(data, meta)
     elif data.attrs['shdr']['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
         log.writelog('  Converting from data numbers per second (DN/s) to '
-                     'electrons', mute=(not meta.verbose))
+                     'electrons...', mute=(not meta.verbose))
         data = dn2electrons(data, meta)
     elif data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S':
         message = (f'Currently unable to convert from input units '

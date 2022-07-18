@@ -712,6 +712,7 @@ def create_image_model(input_model, image_info):
     out_model.var_poisson = var_poisson
     out_model.var_rnoise = var_rnoise
     out_model.err = err
+    out_model.int_times = input_model.int_times
 
     return out_model
 
@@ -731,14 +732,14 @@ def create_integration_model(input_model, integ_info):
     int_model : CubeModel
         The output CubeModel to be returned from the ramp fit step.
     """
-    data, dq, var_poisson, var_rnoise, int_times, err = integ_info
+    data, dq, var_poisson, var_rnoise, err = integ_info
     int_model = datamodels.CubeModel(
         data=np.zeros(data.shape, dtype=np.float32),
         dq=np.zeros(data.shape, dtype=np.uint32),
         var_poisson=np.zeros(data.shape, dtype=np.float32),
         var_rnoise=np.zeros(data.shape, dtype=np.float32),
         err=np.zeros(data.shape, dtype=np.float32))
-    int_model.int_times = None
+
     int_model.update(input_model)  # ... and add all keys from input
 
     int_model.data = data
@@ -746,7 +747,7 @@ def create_integration_model(input_model, integ_info):
     int_model.var_poisson = var_poisson
     int_model.var_rnoise = var_rnoise
     int_model.err = err
-    int_model.int_times = int_times
+    int_model.int_times = input_model.int_times
 
     return int_model
 

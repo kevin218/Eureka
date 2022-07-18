@@ -112,7 +112,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         log = logedit.Logedit(meta.s3_logname)
 
     # Create list of file segments
-    meta = util.readfiles(meta, suffix='x1dints')
+    meta = util.readfiles(meta, log, suffix='x1dints')
     meta.x1d_segment_list = np.copy(meta.segment_list)
     meta = util.readfiles(meta)
 

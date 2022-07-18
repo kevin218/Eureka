@@ -302,7 +302,16 @@ def mergeevents(new_meta, old_meta):
         Initial version.
     """
     # Load current ECF into old MetaClass
+    old_meta.read(new_meta.folder, new_meta.filename)
+
+    # Load any missing parameters from current MetaClass into old MetaClass
     for key in new_meta.__dict__:
-        setattr(old_meta, key, getattr(new_meta, key))
+        if key not in old_meta.__dict__:
+            setattr(old_meta, key, getattr(new_meta, key))
+
+    # Make sure inputdir is correct
+    old_meta.inputdir = new_meta.inputdir
+    old_meta.inputdir_raw = new_meta.inputdir_raw
+    old_meta.datetime = new_meta.datetime
 
     return old_meta

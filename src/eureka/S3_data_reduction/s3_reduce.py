@@ -66,6 +66,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         Initial version
     - October 2021 Taylor Bell
         Updated to allow for inputs from S2
+    - July 2022 Caroline Piaulet
+        Now computing the y pos and width for each integration 
+        + stored in Spec and add diagnostics plots
     '''
 
     # Load Eureka! control file and store values in Event object
@@ -154,19 +157,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             meta.copy_ecf()
 
             # Create list of file segments
-            meta = util.readfiles(meta)
-            meta.num_data_files = len(meta.segment_list)
-            if meta.num_data_files == 0:
-                log.writelog(f'Unable to find any "{meta.suffix}.fits" files '
-                             f'in the inputdir: \n"{meta.inputdir}"!',
-                             mute=True)
-                raise AssertionError(f'Unable to find any "{meta.suffix}.fits"'
-                                     f' files in the inputdir: \n'
-                                     f'"{meta.inputdir}"!')
-            else:
-                log.writelog(f'\nFound {meta.num_data_files} data file(s) '
-                             f'ending in {meta.suffix}.fits',
-                             mute=(not meta.verbose))
+            meta = util.readfiles(meta, log)
 
             # Load instrument module
             if meta.inst == 'miri':
@@ -246,6 +237,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data.attrs['intstart'] = batch[0].attrs['intstart']
                 data.attrs['intend'] = batch[-1].attrs['intend']
 
+                # Create dataset to store y position and width
+                if meta.record_ypos:
+                    src_ypos_exact = np.zeros_like(data["time"])
+                    src_ypos_width = np.zeros_like(data["time"])
+
                 # Get number of integrations and frame dimensions
                 meta.n_int, meta.ny, meta.nx = data.flux.shape
                 if meta.testing_S3:
@@ -258,11 +254,33 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
+                # Create bad pixel mask (1 = good, 0 = bad)
+                # FINDME: Will want to use DQ array in the future
+                # to flag certain pixels
+                data['mask'] = (['time', 'y', 'x'],
+                                np.ones(data.flux.shape, dtype=bool))
+
+                # Check if arrays have NaNs
+                log.writelog('  Masking NaNs in data arrays...',
+                             mute=(not meta.verbose))
+                data.mask.values = util.check_nans(data.flux.values,
+                                                   data.mask.values,
+                                                   log, name='FLUX')
+                data.mask.values = util.check_nans(data.err.values,
+                                                   data.mask.values,
+                                                   log, name='ERR')
+                data.mask.values = util.check_nans(data.v0.values,
+                                                   data.mask.values,
+                                                   log, name='V0')
+
+                # Manually mask regions [colstart, colend, rowstart, rowend]
+                if hasattr(meta, 'manmask'):
+                    data = util.manmask(data, meta, log)
+
                 # Locate source postion
                 log.writelog('  Locating source position...',
                              mute=(not meta.verbose))
-                meta.src_ypos = source_pos.source_pos(
-                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                meta.src_ypos, _, _ = source_pos.source_pos(data, meta, m)
                 log.writelog(f'    Source position on detector is row '
                              f'{meta.src_ypos}.', mute=(not meta.verbose))
 
@@ -286,31 +304,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
                     if meta.curvature == 'correct':
-                        log.writelog('  In NIRSpec G395H setting with '
-                                     'curvature correction:',
+                        log.writelog('  Correcting for G395H curvature...',
                                      mute=(not meta.verbose))
                         data, meta = inst.straighten_trace(data, meta, log)
-
-                # Create bad pixel mask (1 = good, 0 = bad)
-                # FINDME: Will want to use DQ array in the future
-                # to flag certain pixels
-                data['mask'] = (['time', 'y', 'x'],
-                                np.ones(data.flux.shape, dtype=bool))
-
-                # Check if arrays have NaNs
-                data.mask.values = util.check_nans(data.flux.values,
-                                                   data.mask.values,
-                                                   log, name='FLUX')
-                data.mask.values = util.check_nans(data.err.values,
-                                                   data.mask.values,
-                                                   log, name='ERR')
-                data.mask.values = util.check_nans(data.v0.values,
-                                                   data.mask.values,
-                                                   log, name='V0')
-
-                # Manually mask regions [colstart, colend, rowstart, rowend]
-                if hasattr(meta, 'manmask'):
-                    data = util.manmask(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)
@@ -352,10 +348,18 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 medapdata = np.median(apdata, axis=0)
                 # Already converted DN to electrons, so gain = 1 for optspex
                 gain = 1
-                iterfn = range(meta.n_int)
+                iterfn = range(meta.int_start, meta.n_int)
                 if meta.verbose:
                     iterfn = tqdm(iterfn)
                 for n in iterfn:
+                    # when loop over ints, get exact y pos and width
+                    if meta.record_ypos:
+                        src_pos_results = source_pos.source_pos(data, meta,
+                                                                m, n)
+                        _, ypos_exact, ypos_width = src_pos_results
+                        src_ypos_exact[n] = ypos_exact
+                        src_ypos_width[n] = ypos_width
+
                     data['optspec'][n], data['opterr'][n], mask = \
                         optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
                                          data.stdspec[n].values, gain, apv0[n],
@@ -373,6 +377,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                         np.ma.getmaskarray(opterr_ma))
                 data['optmask'] = (['time', 'x'], optmask)
 
+                if meta.record_ypos:
+                    data['driftypos'] = (['time'], src_ypos_exact)
+                    data['driftywidth'] = (['time'], src_ypos_width)
+
                 # Plot results
                 if meta.isplots_S3 >= 3:
                     log.writelog('  Creating figures for optimal spectral '
@@ -383,6 +391,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
+                    if meta.record_ypos:
+                        # make y position and width plots
+                        plots_s3.driftypos(data, meta)
+                        plots_s3.driftywidth(data, meta)
 
                 if meta.save_output:
                     # Save flux data from current segment

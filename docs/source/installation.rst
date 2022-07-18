@@ -5,13 +5,16 @@ Installation
 Installation methods
 --------------------
 
-In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install the most recent stable release of ``Eureka!``, v0.1-alpha. The following installation instructions are written with this in mind, and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.1-alpha>`_.
+In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
+the most recent stable release of ``Eureka!``, v0.3. The following installation instructions are written with this in mind,
+and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.3>`_.
 
 
 Initial environment preparation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 It is **strongly** recommended that you install ``Eureka!`` in a new ``conda`` environment as other packages you've previously
-installed could have conflicting requirements with ``Eureka!``. You can install a lightweight version of conda at `this link <https://docs.conda.io/en/latest/miniconda.html>`_. Once conda is installed, you can create a
+installed could have conflicting requirements with ``Eureka!``. You can install a lightweight version of conda at
+`this link <https://docs.conda.io/en/latest/miniconda.html>`_. Once conda is installed, you can create a
 new environment by doing:
 
 .. code-block:: bash
@@ -26,7 +29,7 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 .. code-block:: bash
 
-	git clone -b v0.1-alpha https://github.com/kevin218/Eureka.git
+	git clone -b v0.3 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
@@ -44,12 +47,12 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@v0.1-alpha#egg=eureka[jwst]
+	pip install -e git+https://github.com/kevin218/Eureka.git@v0.3#egg=eureka[jwst]
 
 Other specific branches can be installed using:
 
 .. code-block:: bash
-	
+
 	pip install -e git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
 
 In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
@@ -58,11 +61,12 @@ In order to use any of the demo ECF files, follow the instructions in the :ref:`
 Installing with a ``conda`` environment.yml file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can also download ``Eureka!`` using ``git`` and set up a ``conda`` environment directly from the ``git`` repository if you'd prefer not to use ``pip`` to install dependencies. This can be done following:
+You can also download ``Eureka!`` using ``git`` and set up a ``conda`` environment directly from the ``git`` repository if
+you'd prefer not to use ``pip`` to install dependencies. This can be done following:
 
 .. code-block:: bash
 
-	git clone -b v0.1-alpha https://github.com/kevin218/Eureka.git
+	git clone -b v0.3 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	conda env create --file environment.yml --force
 	conda activate eureka
@@ -90,7 +94,7 @@ e.g. ``/Users/your_name/crds_cache`` for Mac users or ``/home/your_name/crds_cac
 	.. code-block:: bash
 
 		export CRDS_PATH=/PATH/TO/FOLDER/crds_cache
-		
+
 		export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
 
 If these environment variables are not set, Stages 1-3 of the pipeline will fail.
