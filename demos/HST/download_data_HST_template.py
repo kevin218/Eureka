@@ -35,7 +35,7 @@ for vis in visits:
         # Consolodate and move data into new directory
         md.consolidate(result, final_dir)
         # Sort data into science and calibration folders (scan vs direct image)
-        md.sort(final_dir)
+        md.sortHST(final_dir)
 
 # Delete empty temporary directory structure
 md.cleanup(download_dir)

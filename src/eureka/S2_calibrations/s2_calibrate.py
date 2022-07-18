@@ -24,6 +24,9 @@ from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib.plots import figure_filetype
 
+import jwst.assign_wcs.nirspec
+from functools import partial
+
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
@@ -98,17 +101,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     meta.copy_ecf()
 
     # Create list of file segments
-    meta = util.readfiles(meta)
-    meta.num_data_files = len(meta.segment_list)
-    if meta.num_data_files == 0:
-        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
-                             f'in the inputdir: \n"{meta.inputdir}"!\n'
-                             f'You likely need to change the inputdir in '
-                             f'{meta.filename} to point to the folder '
-                             f'containing the "{meta.suffix}.fits" files.')
-    else:
-        log.writelog(f'\nFound {meta.num_data_files} data file(s) ending in '
-                     f'{meta.suffix}.fits')
+    meta = util.readfiles(meta, log)
 
     # If testing, only run the last file
     if meta.testing_S2:
@@ -130,6 +123,14 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
             # EXP_TYPE doesn't say image, so it should be a spectrum
             # (or someone is putting weird files into Eureka!)
             pipeline = EurekaSpec2Pipeline()
+
+            # By default pipeline can trim the dispersion axis,
+            # override the function that does this with specific 
+            # wavelength range that you want to trim to.
+            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
+                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
+                    wavelength_range=[meta.waverange_start,
+                                        meta.waverange_end])
     elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
         # Clean up temporary folder
@@ -210,6 +211,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             Fragmented code to allow reuse of code between spectral and image
             analysis.
         '''
+        
         if meta.slit_y_low is not None:
             # Controls the cross-dispersion extraction
             self.assign_wcs.slit_y_low = meta.slit_y_low
@@ -217,25 +219,6 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         if meta.slit_y_high is not None:
             # Controls the cross-dispersion extraction
             self.assign_wcs.slit_y_high = meta.slit_y_high
-
-        if meta.waverange_start is not None:
-            # Control the dispersion extraction
-            # FIX: Does not actually change dispersion direction extraction
-            log.writelog('Editing (in place) the waverange in the input file')
-            with datamodels.open(filename) as m:
-                m.meta.wcsinfo.waverange_start = meta.waverange_start
-                m.save(filename)
-
-        if meta.waverange_end is not None:
-            # Control the dispersion extraction
-            # FIX: Does not actually change dispersion direction extraction
-            if meta.waverange_start is None:
-                # Only log this once
-                log.writelog('Editing (in place) the waverange in the input '
-                             'file')
-            with datamodels.open(filename) as m:
-                m.meta.wcsinfo.waverange_end = meta.waverange_end
-                m.save(filename)
 
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract

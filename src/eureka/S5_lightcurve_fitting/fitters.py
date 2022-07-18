@@ -514,9 +514,7 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
     fname = f'S5_emcee_fitparams_{channel_key}.csv'
     fitted_values = pd.read_csv(os.path.join(foldername, fname),
                                 escapechar='#', skipinitialspace=True)
-    full_keys = np.array(fitted_values.keys())
-    # Remove the " " from the start of the first key
-    full_keys[0] = full_keys[0][1:]
+    full_keys = np.array(fitted_values['Parameter'])
 
     if np.all(full_keys != freenames):
         message = ('Old chain does not have the same fitted parameters and '

@@ -84,7 +84,14 @@ def dn2electrons(data, meta):
     ny = data.attrs['mhdr']['SUBSIZE2']
 
     # Load gain array in units of e-/ADU
-    gain = fits.getdata(meta.gainfile)[ystart:ystart+ny, xstart:xstart+nx]
+    gain_header = fits.getheader(meta.gainfile)
+    xstart_gain = gain_header['SUBSTRT1']
+    ystart_gain = gain_header['SUBSTRT2']
+
+    ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero                                                         
+    xstart_trim = xstart-xstart_gain + 1
+
+    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny, xstart_trim:xstart_trim+nx]
 
     # Like in the case of MIRI data, the gain file data has to be
     # rotated by 90 degrees
