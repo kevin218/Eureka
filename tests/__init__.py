@@ -3,5 +3,5 @@
 import os
 # VS Code runs tests from the root directory, so need to chdir into
 # the tests directory
-if os.getcwd().split(os.sep)[-1] == "Eureka":
+if os.getcwd().split(os.sep)[-1] != "tests":
     os.chdir('tests')

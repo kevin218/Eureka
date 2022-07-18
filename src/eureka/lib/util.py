@@ -1,16 +1,19 @@
 import numpy as np
-from . import sort_nicely as sn
 import os
 import glob
+from astropy.io import fits
+from . import sort_nicely as sn
 
 
-def readfiles(meta):
+def readfiles(meta, log):
     """Reads in the files saved in topdir + inputdir and saves them into a list.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -19,10 +22,45 @@ def readfiles(meta):
         data fits files.
     """
     meta.segment_list = []
-    for fname in os.listdir(meta.inputdir):
-        if fname.endswith(meta.suffix + '.fits'):
-            meta.segment_list.append(meta.inputdir + fname)
+
+    # Look for files in the input directory
+    for fname in glob.glob(meta.inputdir+'*'+meta.suffix+'.fits'):
+        meta.segment_list.append(fname)
+
+    # Need to allow for separated sci and cal directories for WFC3
+    if len(meta.segment_list) == 0:
+        # Add files from the sci directory if present
+        if not hasattr(meta, 'sci_dir') or meta.sci_dir is None:
+            meta.sci_dir = 'sci'
+        sci_path = os.path.join(meta.inputdir, meta.sci_dir)+os.sep
+        for fname in glob.glob(sci_path+'*'+meta.suffix+'.fits'):
+            meta.segment_list.append(fname)
+        # Add files from the cal directory if present
+        if not hasattr(meta, 'cal_dir') or meta.cal_dir is None:
+            meta.cal_dir = 'cal'
+        cal_path = os.path.join(meta.inputdir, meta.cal_dir)+os.sep
+        for fname in glob.glob(cal_path+'*'+meta.suffix+'.fits'):
+            meta.segment_list.append(fname)
+
     meta.segment_list = np.array(sn.sort_nicely(meta.segment_list))
+
+    meta.num_data_files = len(meta.segment_list)
+    if meta.num_data_files == 0:
+        raise AssertionError(f'Unable to find any "{meta.suffix}.fits" files '
+                             f'in the inputdir: \n"{meta.inputdir}"!\n'
+                             f'You likely need to change the inputdir in '
+                             f'{meta.filename} to point to the folder '
+                             f'containing the "{meta.suffix}.fits" files.')
+    else:
+        mute = hasattr(meta, 'verbose') and not meta.verbose
+        log.writelog(f'\nFound {meta.num_data_files} data file(s) '
+                     f'ending in {meta.suffix}.fits',
+                     mute=mute)
+
+        with fits.open(meta.segment_list[-1]) as hdulist:
+            # Figure out which instrument we are using
+            meta.inst = hdulist[0].header['INSTRUME'].lower()
+
     return meta
 
 
@@ -48,21 +86,14 @@ def trim(data, meta):
                         x=np.arange(meta.xwindow[0], meta.xwindow[1]))
     meta.subny = meta.ywindow[1] - meta.ywindow[0]
     meta.subnx = meta.xwindow[1] - meta.xwindow[0]
-    if hasattr(meta, 'diffmask'):
-        # Need to crop diffmask and variance from WFC3 as well
-        meta.subdiffmask.append(
-            meta.diffmask[-1][:, meta.ywindow[0]:meta.ywindow[1],
-                              meta.xwindow[0]:meta.xwindow[1]])
-        # data.subvariance = np.copy(
-        #     data.variance[:, meta.ywindow[0]:meta.ywindow[1],
-        #     meta.xwindow[0]:meta.xwindow[1]])
-        # delattr(data, 'variance')
+    if meta.inst == 'wfc3':
+        subdata['guess'] = subdata.guess - meta.ywindow[0]
 
     return subdata, meta
 
 
 def check_nans(data, mask, log, name=''):
-    """Checks where a data array has NaNs.
+    """Checks where a data array has NaNs or infs.
 
     Parameters
     ----------
@@ -80,14 +111,17 @@ def check_nans(data, mask, log, name=''):
     -------
     mask : ndarray
         Output mask where 0 will be written where the input data array has NaNs
+        or infs.
     """
-    num_nans = np.sum(np.isnan(data))
+    data = np.ma.masked_where(mask == 0, np.copy(data))
+    num_nans = np.sum(np.ma.masked_invalid(data).mask)
     if num_nans > 0:
-        log.writelog(f"  WARNING: {name} has {num_nans} NaNs. Your subregion "
-                     f"may be off the edge of the detector subarray.\n"
-                     "Masking NaN region and continuing, but you should really"
-                     " stop and reconsider your choices.")
-        inan = np.where(np.isnan(data))
+        log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. Your "
+                     "subregion may be off the edge of the detector "
+                     "subarray.\n    Masking NaN region and continuing, "
+                     "but you should really stop and reconsider your"
+                     "choices.")
+        inan = np.where(np.ma.masked_invalid(data).mask)
         # subdata[inan]  = 0
         mask[inan] = 0
     return mask
@@ -276,7 +310,61 @@ def find_fits(meta):
     return meta
 
 
-def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
+def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
+    """Normalize a spectrum by its temporal mean.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The new meta object for the current stage processing.
+    optspec : ndarray
+        The spectrum to normalize.
+    opterr : ndarray, optional
+        The noise array to normalize using optspec, by default None.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
+
+    Returns
+    -------
+    normspec
+        The normalized spectrum.
+    normerr : ndarray, optional
+        The normalized error. Only returned if opterr is not none.
+    """
+    normspec = np.ma.masked_invalid(np.ma.copy(optspec))
+    normspec = np.ma.masked_where(optmask, normspec)
+
+    if opterr is not None:
+        normerr = np.ma.masked_invalid(np.ma.copy(opterr))
+        normerr = np.ma.masked_where(np.ma.getmaskarray(normspec), normerr)
+
+    # Normalize the spectrum
+    if meta.inst == 'wfc3':
+        scandir = np.repeat(meta.scandir, meta.nreads)
+        
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                for r in range(meta.nreads):
+                    if opterr is not None:
+                        normerr[iscans[r::meta.nreads]] /= np.ma.mean(
+                            normspec[iscans[r::meta.nreads]], axis=0)
+                    normspec[iscans[r::meta.nreads]] /= np.ma.mean(
+                        normspec[iscans[r::meta.nreads]], axis=0)
+    else:
+        if opterr is not None:
+            normerr = normerr/np.ma.mean(normspec, axis=0)
+        normspec = normspec/np.ma.mean(normspec, axis=0)
+
+    if opterr is not None:
+        return normspec, normerr
+    else:
+        return normspec
+
+
+def get_mad(meta, log, wave_1d, optspec, optmask=None,
+            wave_min=None, wave_max=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
@@ -284,11 +372,16 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
     ----------
     meta : eureka.lib.readECF.MetaClass
         Unused. The metadata object.
+    log : logedit.Logedit
+        The current log.
     wave_1d : ndarray
         Wavelength array (nx) with trimmed edges depending on xwindow and
         ywindow which have been set in the S3 ecf
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
@@ -302,7 +395,8 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
         Single MAD value in ppm
     """
     optspec = np.ma.masked_invalid(optspec)
-    n_int, nx = optspec.shape
+    optspec = np.ma.masked_where(optmask, optspec)
+
     if wave_min is not None:
         iwmin = np.argmin(np.abs(wave_1d-wave_min))
     else:
@@ -311,12 +405,28 @@ def get_mad(meta, wave_1d, optspec, wave_min=None, wave_max=None):
         iwmax = np.argmin(np.abs(wave_1d-wave_max))
     else:
         iwmax = None
-    normspec = optspec / np.ma.mean(optspec, axis=0)
+
+    # Normalize the spectrum
+    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+
+    # Compute the MAD
+    n_int = normspec.shape[0]
     ediff = np.ma.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = get_mad_1d(normspec[m], iwmin, iwmax)
-    mad = np.ma.mean(ediff)
-    return mad
+        ediff[m] = get_mad_1d(normspec[m])
+
+    if meta.inst == 'wfc3':
+        scandir = np.repeat(meta.scandir, meta.nreads)
+
+        # Compute the MAD for each scan direction
+        for p in range(2):
+            iscans = np.where(scandir == p)[0]
+            if len(iscans) > 0:
+                mad = np.ma.mean(ediff[iscans])
+                log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
+                setattr(meta, f'mad_scandir{p}', mad)   
+
+    return np.ma.mean(ediff)
 
 
 def get_mad_1d(data, ind_min=0, ind_max=-1):
@@ -340,7 +450,7 @@ def get_mad_1d(data, ind_min=0, ind_max=-1):
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))
 
 
-def read_time(meta, data):
+def read_time(meta, data, log):
     """Read in a time CSV file instead of using the FITS time array.
 
     Parameters
@@ -349,6 +459,8 @@ def read_time(meta, data):
         The metadata object.
     data : Xarray Dataset
         The Dataset object with the fits data stored inside.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -358,8 +470,34 @@ def read_time(meta, data):
     fname = os.path.join(meta.topdir,
                          os.sep.join(meta.time_file.split(os.sep)))
     if meta.firstFile:
-        print('  Note: Using the time stamps from:\n'+fname)
-    time = np.loadtxt(fname).flatten()[data.attrs['intstart']-1:
+        log.writelog('  Note: Using the time stamps from:\n    '+fname)
+    time = np.loadtxt(fname).flatten()[data.attrs['intstart']:
                                        data.attrs['intend']-1]
 
     return time
+
+
+def manmask(data, meta, log):
+    '''Manually mask input bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with requested pixels masked.
+    '''
+    log.writelog("  Masking manually identified bad pixels...",
+                 mute=(not meta.verbose))
+    for i in range(len(meta.manmask)):
+        colstart, colend, rowstart, rowend = meta.manmask[i]
+        data['mask'][rowstart:rowend, colstart:colend] = 0
+
+    return data

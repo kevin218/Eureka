@@ -1,11 +1,13 @@
 import numpy as np
 import os
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from .source_pos import gauss
+from ..lib import util
 from ..lib.plots import figure_filetype
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec):
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101)
 
     Parameters
@@ -17,35 +19,53 @@ def lc_nodriftcorr(meta, wave_1d, optspec):
         which have been set in the S3 ecf
     optspec : ndarray
         The optimally extracted spectrum.
+    optmask : ndarray (1D), optional
+        A mask array to use if optspec is not a masked array. Defaults to None
+        in which case only the invalid values of optspec will be masked.
 
     Returns
     -------
     None
     '''
-    optspec = np.ma.masked_invalid(optspec)
+    normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
+    wmin = np.ma.min(wave_1d)
+    wmax = np.ma.max(wave_1d)
+    if not hasattr(meta, 'vmin') or meta.vmin is None:
+        meta.vmin = 0.97
+    if not hasattr(meta, 'vmax') or meta.vmin is None:
+        meta.vmax = 1.03
+    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
+        meta.time_axis = 'y'
+    elif meta.time_axis not in ['y', 'x']:
+        print("WARNING: meta.time_axis is not one of ['y', 'x']!"
+              "Using 'y' by default.")
+        meta.time_axis = 'y'
+    
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
-    wmin = wave_1d.min()
-    wmax = wave_1d.max()
-    n_int, nx = optspec.shape
-    vmin = 0.97
-    vmax = 1.03
-    normspec = optspec / np.ma.mean(optspec, axis=0)
-    plt.imshow(normspec, origin='lower', aspect='auto',
-               extent=[wmin, wmax, 0, n_int], vmin=vmin, vmax=vmax,
-               cmap=plt.cm.RdYlBu_r)
-    plt.title("MAD = " + str(np.round(meta.mad_s3, 0).astype(int)) + " ppm")
-    plt.ylabel('Integration Number')
-    plt.xlabel(r'Wavelength ($\mu m$)')
+    if meta.time_axis == 'y':
+        plt.imshow(normspec, origin='lower', aspect='auto',
+                   extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel('Integration Number')
+        plt.xlabel(r'Wavelength ($\mu m$)')
+    else:
+        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
+                   extent=[0, meta.n_int, wmin, wmax], vmin=meta.vmin,
+                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylabel(r'Wavelength ($\mu m$)')
+        plt.xlabel('Integration Number')
+
+    plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3101-2D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def image_and_background(data, meta, n, m):
+def image_and_background(data, meta, log, m):
     '''Make image+background plot. (Figs 3301)
 
     Parameters
@@ -54,8 +74,8 @@ def image_and_background(data, meta, n, m):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    n : int
-        The integration number.
+    log : logedit.Logedit
+        The current log.
     m : int
         The file number.
 
@@ -63,36 +83,75 @@ def image_and_background(data, meta, n, m):
     -------
     None
     '''
-    intstart, subdata, submask, subbg = (data.attrs['intstart'],
-                                         data.flux.values, data.mask.values,
-                                         data.bg.values)
+    log.writelog('  Creating figures for background subtraction...',
+                 mute=(not meta.verbose))
+
+    intstart = data.attrs['intstart']
+    subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
+    subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
+
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
-    plt.figure(3301, figsize=(8, 8))
+    iterfn = range(meta.n_int)
+    if meta.verbose:
+        iterfn = tqdm(iterfn)
+    for n in iterfn:
+        plt.figure(3301, figsize=(8, 8))
+        plt.clf()
+        plt.suptitle(f'Integration {intstart + n}')
+        plt.subplot(211)
+        plt.title('Background-Subtracted Flux')
+        max = np.ma.max(subdata[n])
+        plt.imshow(subdata[n], origin='lower', aspect='auto',
+                   vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
+        plt.colorbar()
+        plt.ylabel('Detector Pixel Position')
+        plt.subplot(212)
+        plt.title('Subtracted Background')
+        median = np.ma.median(subbg[n])
+        std = np.ma.std(subbg[n])
+        plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
+                   vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
+        plt.colorbar()
+        plt.ylabel('Detector Pixel Position')
+        plt.xlabel('Detector Pixel Position')
+        plt.tight_layout()
+        file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
+                                       + 1))
+        int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
+                 '_ImageAndBackground'+figure_filetype)
+        plt.savefig(meta.outputdir+fname, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+def drift_2D(data, meta):
+    '''Plot the fitted 2D drift. (Fig 3102)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    '''
+    plt.figure(3102, figsize=(8, 6))
     plt.clf()
-    plt.suptitle(f'Integration {intstart + n}')
     plt.subplot(211)
-    plt.title('Background-Subtracted Flux')
-    max = np.max(subdata[n] * submask[n])
-    plt.imshow(subdata[n]*submask[n], origin='lower', aspect='auto',
-               vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
-    plt.colorbar()
-    plt.ylabel('Detector Pixel Position')
+    for p in range(2):
+        iscans = np.where(data.scandir.values == p)[0]
+        plt.plot(iscans, data.drift2D[iscans, 1], '.')
+    plt.ylabel(f'Drift Along y ({data.drift2D.drift_units})')
     plt.subplot(212)
-    plt.title('Subtracted Background')
-    median = np.median(subbg[n])
-    std = np.std(subbg[n])
-    plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
-               vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
-    plt.colorbar()
-    plt.ylabel('Detector Pixel Position')
-    plt.xlabel('Detector Pixel Position')
+    for p in range(2):
+        iscans = np.where(data.scandir.values == p)[0]
+        plt.plot(iscans, data.drift2D[iscans, 0], '.')
+    plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
+    plt.xlabel('Frame Number')
     plt.tight_layout()
-    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
-             '_ImageAndBackground'+figure_filetype)
+    fname = f'figs{os.sep}fig3102_Drift2D{figure_filetype}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -298,3 +357,69 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
+
+
+def driftypos(data, meta):
+    '''Plot the spatial jitter. (Fig 3305)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3305, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
+    plt.ylabel('Spectrum spatial profile center')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3305_DriftYPos'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def driftywidth(data, meta):
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3306)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3306, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
+    plt.ylabel('Spectrum spatial profile width')
+    plt.xlabel('Frame Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3306_DriftYWidth'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)

@@ -74,7 +74,7 @@ def BGsubtraction(data, meta, log, isplots):
         return
 
     # Compute background for each integration
-    log.writelog('  Performing background subtraction',
+    log.writelog('  Performing background subtraction...',
                  mute=(not meta.verbose))
     data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
     data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
@@ -92,6 +92,7 @@ def BGsubtraction(data, meta, log, isplots):
                                          data.mask[n].values,
                                          data.v0[n].values,
                                          data.variance[n].values,
+                                         data.guess[n].values,
                                          n, meta, isplots))
             else:
                 writeBG(inst.fit_bg(data.flux[n].values, data.mask[n].values,
@@ -115,8 +116,9 @@ def BGsubtraction(data, meta, log, isplots):
                                      args=(data.flux[n].values,
                                            data.mask[n].values,
                                            data.v0[n].values,
-                                           data.variance[n].values, n, meta,
-                                           isplots,),
+                                           data.variance[n].values, 
+                                           data.guess[n].values,
+                                           n, meta, isplots,),
                                      callback=writeBG_WFC3)
                     for n in range(meta.int_start, meta.n_int)]
         else:

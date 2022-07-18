@@ -13,7 +13,10 @@ jobs:
     name: flake8
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref }}
     - uses: tonybajan/flake8-check-action@v1.4.0
       with:
         select: E1,E2,E3,E4,E5,E7,W6,F

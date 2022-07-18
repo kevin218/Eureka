@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from copy import deepcopy
 
 from . import models as m
 from . import fitters as f
@@ -12,7 +11,7 @@ from ..lib.plots import figure_filetype
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  unc=None, parameters=None, time_units='BJD',
-                 name='My Light Curve', share=False):
+                 name='My Light Curve', share=False, white=False):
         """
         A class to store the actual light curve
 
@@ -29,7 +28,7 @@ class LightCurve(m.Model):
         log : logedit.Logedit
             The open log in which notes from this step can be added.
         unc : sequence
-            The uncertainty on the flux.
+            The uncertainty on the flux
         parameters : str or object; optional
             Unused. The orbital parameters of the star/planet system,
             may be a path to a JSON file or a parameter object.
@@ -39,6 +38,8 @@ class LightCurve(m.Model):
             A name for the object.
         share : bool; optional
             Whether the fit shares parameters between spectral channels.
+        white : bool; optional
+            Whether the current fit is for a white-light light curve
 
         Notes
         -----
@@ -55,6 +56,7 @@ class LightCurve(m.Model):
 
         self.name = name
         self.share = share
+        self.white = white
         self.channel = channel
         self.nchannel = nchannel
         if self.share:
@@ -85,7 +87,7 @@ class LightCurve(m.Model):
             self.unc = unc
         else:
             self.unc = np.array([np.nan]*len(self.time))
-        self.unc_fit = deepcopy(self.unc)
+        self.unc_fit = np.ma.copy(self.unc)
 
         # Place to save the fit results
         self.results = []
@@ -163,9 +165,9 @@ class LightCurve(m.Model):
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
             if "unc_fit" in self.__dict__.keys():
-                unc = deepcopy(self.unc_fit)
+                unc = np.ma.copy(self.unc_fit)
             else:
-                unc = deepcopy(self.unc)
+                unc = np.ma.copy(self.unc)
             if self.share:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
@@ -193,13 +195,14 @@ class LightCurve(m.Model):
             ax.legend(loc='best')
             fig.tight_layout()
 
-            ch_number = str(channel).zfill(len(str(self.nchannel)))
-            fname = ('figs'+os.sep+f'fig5103_ch{ch_number}_all_fits' +
-                     figure_filetype)
-            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-            if meta.hide_plots:
-                plt.close()
+            if self.white:
+                fname_tag = 'white'
             else:
+                ch_number = str(channel).zfill(len(str(self.nchannel)))
+                fname_tag = f'ch{ch_number}'
+            fname = f'figs{os.sep}fig5103_{fname_tag}_all_fits'+figure_filetype
+            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+            if not meta.hide_plots:
                 plt.pause(0.2)
 
     def reset(self):

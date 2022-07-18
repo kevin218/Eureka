@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 from . import plots_s3
 
 
-def source_pos(data, meta, m, header=False):
+def source_pos(data, meta, m, integ=0):
     '''Make image+background plot.
 
     Parameters
@@ -16,31 +16,58 @@ def source_pos(data, meta, m, header=False):
         The metadata object.
     m : int
         The file number.
-    header : bool; optional
-        If True, use the source position in the FITS header.
-        Defaults to False.
+    integ : int, optional
+        The integration number.
+        Default is 0 (first integration)
+
 
     Returns
     -------
     src_ypos : int
         The central position of the star.
+    src_ypos_exact : float
+        The exact (not rounded) central position of the star.
+    src_ypos_width : float
+        If gaussian fit, the std of the Gaussian fitted to the image
+        Otherwise, array of zeros.
+        
+    Notes
+    -----
+    History:
+    
+    - 2022-07-11 Caroline Piaulet
+        Enable recording of the width if the source is fitted with a Gaussian
+        + add an option to fit any integration (not hardcoded to be the first)
     '''
-    if header:
+    # Mask any clipped values
+    flux = np.ma.masked_where(~data.mask.values, data.flux.values)
+
+    if meta.src_pos_type == 'header':
+        if 'SRCYPOS' not in data.attrs['shdr']:
+            raise AttributeError('There is no SRCYPOS in the FITS header. '
+                                 'You must select a different value for '
+                                 'meta.src_pos_type')
         src_ypos = data.attrs['shdr']['SRCYPOS'] - meta.ywindow[0]
     elif meta.src_pos_type == 'weighted':
         # find the source location using a flux-weighted mean approach
-        src_ypos = source_pos_FWM(data.flux.values, meta, m)
+        src_ypos = source_pos_FWM(flux, meta, m, integ=integ)
     elif meta.src_pos_type == 'gaussian':
         # find the source location using a gaussian fit
-        src_ypos = source_pos_gauss(data.flux.values, meta, m)
+        src_ypos, src_ywidth = source_pos_gauss(flux, meta, m,
+                                                integ=integ)
+    elif meta.src_pos_type == 'hst':
+        src_ypos = data.guess.values[0]
     else:
         # brightest row for source location
-        src_ypos = source_pos_max(data.flux.values, meta, m)
+        src_ypos = source_pos_max(flux, meta, m, integ=integ)
 
-    return round(src_ypos)
+    if meta.src_pos_type == 'gaussian':
+        return int(round(src_ypos)), src_ypos, src_ywidth
+    else:
+        return int(round(src_ypos)), src_ypos, np.zeros_like(src_ypos)
 
 
-def source_pos_max(flux, meta, m, plot=True):
+def source_pos_max(flux, meta, m, integ=0, plot=True):
     '''A simple function to find the brightest row for source location
 
     Parameters
@@ -51,6 +78,9 @@ def source_pos_max(flux, meta, m, plot=True):
         The metadata object.
     m : int
         The file number.
+    integ : int, optional
+        The integration number.
+        Default is 0 (first integration)
     plot : bool; optional
         If True, plot the source position determination.
         Defaults to True.
@@ -68,24 +98,25 @@ def source_pos_max(flux, meta, m, plot=True):
         Initial version
     - 2021-07-14 Sebastian Zieba
         Modified
+    - July 11, 2022 Caroline Piaulet
+        Add option to fit any integration (not hardcoded to be the first)
     '''
 
     x_dim = flux.shape[1]
 
-    sum_row = np.sum(flux[0], axis=1)
-    pos_max = np.argmax(sum_row)
-
-    y_pixels = np.arange(0, x_dim)
+    sum_row = np.ma.sum(flux[integ], axis=1)
+    pos_max = np.ma.argmax(sum_row)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 3 and plot:
+        y_pixels = np.arange(0, x_dim)
         plots_s3.source_position(meta, x_dim, pos_max, m, y_pixels=y_pixels,
                                  sum_row=sum_row)
 
     return pos_max
 
 
-def source_pos_FWM(flux, meta, m):
+def source_pos_FWM(flux, meta, m, integ=0):
     '''An alternative function to find the source location using a
     flux-weighted mean approach.
 
@@ -97,10 +128,13 @@ def source_pos_FWM(flux, meta, m):
         The metadata object.
     m : int
         The file number.
+    integ : int, optional
+        The integration number.
+        Default is 0 (first integration)
 
     Returns
     -------
-    y_pos : int
+    y_pos : float
         The central position of the star.
 
     Notes
@@ -111,6 +145,8 @@ def source_pos_FWM(flux, meta, m):
         Initial version
     - 2021-07-14 Sebastian Zieba
         Modified
+    - 2022-07-11 Caroline Piaulet
+        Add option to fit any integration (not hardcoded to be the first)
     '''
 
     x_dim = flux.shape[1]
@@ -119,11 +155,11 @@ def source_pos_FWM(flux, meta, m):
 
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
-    sum_row = np.sum(flux[0],
-                     axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
+    sum_row = np.ma.sum(flux[integ],
+                        axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
     sum_row -= (sum_row[0]+sum_row[-1])/2
 
-    y_pos = np.sum(sum_row * y_pixels) / np.sum(sum_row)
+    y_pos = np.ma.sum(sum_row * y_pixels)/np.ma.sum(sum_row)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 3:
@@ -167,7 +203,7 @@ def gauss(x, a, x0, sigma, off):
     return a*np.exp(-(x-x0)**2/(2*sigma**2))+off
 
 
-def source_pos_gauss(flux, meta, m):
+def source_pos_gauss(flux, meta, m, integ=0):
     '''A function to find the source location using a gaussian fit.
 
     Parameters
@@ -178,11 +214,16 @@ def source_pos_gauss(flux, meta, m):
         The metadata object.
     m : int
         The file number.
+    integ : int, optional
+        The integration number.
+        Default is 0 (first integration)
 
     Returns
     -------
-    y_pos : int
+    y_pos : float
         The central position of the star.
+    y_width : int
+        The std of the fitted Gaussian.
 
     Notes
     -----
@@ -192,18 +233,23 @@ def source_pos_gauss(flux, meta, m):
         Initial version
     - 2021-10-15 Taylor Bell
         Tweaked to allow for cleaner plots_s3.py
+    - 2022-07-11 Caroline Piaulet
+        Enable recording of the width if the source is fitted with a Gaussian
+        + add an option to fit any integration (not hardcoded to be the first)
     '''
     x_dim = flux.shape[1]
 
     # Data cutout around the maximum row
-    pos_max = source_pos_max(flux, meta, m, plot=False)
+    pos_max = source_pos_max(flux, meta, m, integ=integ, plot=False)
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    sum_row = np.sum(flux[0],
-                     axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
+    sum_row = np.ma.sum(flux[integ],
+                        axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
     # Initial Guesses
-    sigma0 = np.sqrt(np.sum(sum_row*(y_pixels-pos_max)**2)/np.sum(sum_row))
-    p0 = [np.max(sum_row), pos_max, sigma0, np.median(sum_row)]
+    sigma0 = np.ma.sqrt(np.ma.sum(sum_row*(y_pixels-pos_max)**2) /
+                        np.ma.sum(sum_row))
+
+    p0 = [np.ma.max(sum_row), pos_max, sigma0, np.ma.median(sum_row)]
 
     # Fit
     popt, pcov = curve_fit(gauss, y_pixels, sum_row, p0)
@@ -213,5 +259,4 @@ def source_pos_gauss(flux, meta, m):
         plots_s3.source_position(meta, x_dim, pos_max, m, isgauss=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  popt=popt)
-
-    return popt[1]
+    return popt[1], popt[2]
