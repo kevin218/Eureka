@@ -480,3 +480,18 @@ def manmask(data, meta, log):
         data['mask'][rowstart:rowend, colstart:colend] = 0
 
     return data
+
+
+#photometry
+def apphot_status(data):
+    """
+    Prints a warning if aperture step had errors.
+    """
+    if sum(data.status != 0) > 0:
+        print('An error has accured during the aperture extraction!')
+        if 1 in data.status:
+            print('there are masked pixel(s) in the photometry aperture')
+        elif 2 in data.status:
+            print('the aperture is off the edge of the image')
+        elif 3 in data.status:
+            print('a fraction less than skyfrac of the sky annulus pixels is in the image and not masked')

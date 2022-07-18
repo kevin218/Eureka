@@ -36,7 +36,7 @@ from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
-
+from ..lib import centerdriver, apphot, badmask, chunkbad #photometry
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
@@ -254,13 +254,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
-                # Locate source postion
-                log.writelog('  Locating source position...',
-                             mute=(not meta.verbose))
-                meta.src_ypos = source_pos.source_pos(
-                    data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
-                log.writelog(f'    Source position on detector is row '
-                             f'{meta.src_ypos}.', mute=(not meta.verbose))
+                if meta.photometry:
+                    meta.src_ypos = 0
+                else:
+                    # Locate source postion
+                    log.writelog('  Locating source position...',
+                                 mute=(not meta.verbose))
+                    meta.src_ypos = source_pos.source_pos(
+                        data, meta, m, header=('SRCYPOS' in data.attrs['shdr']))
+                    log.writelog(f'    Source position on detector is row '
+                                 f'{meta.src_ypos}.', mute=(not meta.verbose))
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
@@ -305,77 +308,136 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if hasattr(meta, 'manmask'):
                     util.manmask(data, meta, log)
 
-                # Perform outlier rejection of sky background along time axis
-                data = inst.flag_bg(data, meta, log)
 
-                # Do the background subtraction
-                data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
+                if meta.photometry:
+                    #Do outlier reduction  along time axis
+                    data = inst.flag_bg_phot(data, meta, log)
 
-                # Make image+background plots
-                if meta.isplots_S3 >= 3:
-                    plots_s3.image_and_background(data, meta, log, m)
+                    # Setting up arrays for photometry reduction
+                    data['centroid_x'] = (['time'], np.zeros_like(data.time))
+                    data['centroid_y'] = (['time'], np.zeros_like(data.time))
+                    data['centroid_sx'] = (['time'], np.zeros_like(data.time))
+                    data['centroid_sy'] = (['time'], np.zeros_like(data.time))
+                    # Arrays for aperture extraction
+                    data['aplev'], data['aperr'], data['nappix'], data['skylev'], data['skyerr'], \
+                    data['nskypix'], data['nskyideal'], data['status'], data['betaper'] =  \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time))
 
-                # Calulate and correct for 2D drift
-                if hasattr(inst, 'correct_drift2D'):
-                    data, meta, log = inst.correct_drift2D(data, meta, log, m)
+                    data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
+                    data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']
+                    data['aperr'].attrs['flux_units'] = data.flux.attrs['flux_units']
+                    data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
 
-                # Select only aperture region
-                apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
-                                                                      meta,
-                                                                      log)
+                    for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
+                        # Determine centroid position
+                        position, extra = centerdriver.centerdriver(meta.phot_method, data.flux[i].values,
+                                                                    meta.phot_guess, 0, 0, 0,mask=None, uncd=None,
+                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
+                                                                    psfctr=None)
+                        log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
+                                     + str(np.transpose(position)), mute=(not meta.verbose))
+                        data['centroid_y'][i], data['centroid_x'][i] = position
+                        if meta.phot_method == "fgc":
+                            data['centroid_sy'][i] = extra[0]
+                            data['centroid_sx'][i] = extra[1]
 
-                # Extract standard spectrum and its variance
-                data = optspex.standard_spectrum(data, apdata, aperr)
+                        # Calculate flux in aperture and subtract background flux
+                        aphot = apphot.apphot(i, m, meta, image=data.flux[i].values,
+                        ctr = (data['centroid_y'][i], data['centroid_x'][i]),
+                        photap = meta.photap, skyin = meta.skyin, skyout = meta.skyout,
+                        betahw = 1, targpos = position,
+                        mask = data.mask[i].values,
+                        imerr = data.err[i].values,
+                        skyfrac = 0.1, med = False,
+                        expand = 1, isbeta = False,
+                        nochecks = False, aperr = True, nappix = True,
+                        skylev = True, skyerr = True, nskypix = True,
+                        nskyideal = True, status = True, betaper = True)
 
-                # Extract optimal spectrum with uncertainties
-                log.writelog("  Performing optimal spectral extraction...",
-                             mute=(not meta.verbose))
-                data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-                data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-                data['optspec'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
-                data['optspec'].attrs['time_units'] = \
-                    data.flux.attrs['time_units']
-                data['opterr'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
-                data['opterr'].attrs['time_units'] = \
-                    data.flux.attrs['time_units']
+                        data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], data['skyerr'][i], \
+                        data['nskypix'][i], data['nskyideal'][i], data['status'][i], data['betaper'][i] = aphot
 
-                # Compute median frame
-                medapdata = np.median(apdata, axis=0)
-                # Already converted DN to electrons, so gain = 1 for optspex
-                gain = 1
-                iterfn = range(meta.n_int)
-                if meta.verbose:
-                    iterfn = tqdm(iterfn)
-                for n in iterfn:
-                    data['optspec'][n], data['opterr'][n], mask = \
-                        optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
-                                         data.stdspec[n].values, gain, apv0[n],
-                                         p5thresh=meta.p5thresh,
-                                         p7thresh=meta.p7thresh,
-                                         fittype=meta.fittype,
-                                         window_len=meta.window_len,
-                                         deg=meta.prof_deg, n=n, m=m,
-                                         meddata=medapdata)
+                        # Plot 2D frame and the centroid position
+                        if meta.isplots_S3 >= 3:
+                            plots_s3.phot_centroid_frame(meta, m, i, data)
+                            #plots_s3.phot_centroid_frame_err(meta, m, i, data)
+                            #plots_s3.phot_centroid_frame_mask(meta, m, i, data)
+                else:
+                    # Perform outlier rejection of sky background along time axis
+                    data = inst.flag_bg(data, meta, log)
 
-                # Mask out NaNs and Infs
-                optspec_ma = np.ma.masked_invalid(data.optspec.values)
-                opterr_ma = np.ma.masked_invalid(data.opterr.values)
-                optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
-                                        np.ma.getmaskarray(opterr_ma))
-                data['optmask'] = (['time', 'x'], optmask)
+                    # Do the background subtraction
+                    data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
-                # Plot results
-                if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for optimal spectral '
-                                 'extraction', mute=(not meta.verbose))
-                    iterfn = range(meta.int_start, meta.n_int)
+                    # Make image+background plots
+                    if meta.isplots_S3 >= 3:
+                        plots_s3.image_and_background(data, meta, log, m)
+
+                    # Calulate and correct for 2D drift
+                    if hasattr(inst, 'correct_drift2D'):
+                        data, meta, log = inst.correct_drift2D(data, meta, log, m)
+
+                    # Select only aperture region
+                    apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
+                                                                          meta,
+                                                                          log)
+
+                    # Extract standard spectrum and its variance
+                    data = optspex.standard_spectrum(data, apdata, aperr)
+
+                    # Extract optimal spectrum with uncertainties
+                    log.writelog("  Performing optimal spectral extraction...",
+                                 mute=(not meta.verbose))
+                    data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
+                    data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
+                    data['optspec'].attrs['flux_units'] = \
+                        data.flux.attrs['flux_units']
+                    data['optspec'].attrs['time_units'] = \
+                        data.flux.attrs['time_units']
+                    data['opterr'].attrs['flux_units'] = \
+                        data.flux.attrs['flux_units']
+                    data['opterr'].attrs['time_units'] = \
+                        data.flux.attrs['time_units']
+
+                    # Compute median frame
+                    medapdata = np.median(apdata, axis=0)
+                    # Already converted DN to electrons, so gain = 1 for optspex
+                    gain = 1
+                    iterfn = range(meta.n_int)
                     if meta.verbose:
                         iterfn = tqdm(iterfn)
                     for n in iterfn:
-                        # make optimal spectrum plot
-                        plots_s3.optimal_spectrum(data, meta, n, m)
+                        data['optspec'][n], data['opterr'][n], mask = \
+                            optspex.optimize(meta, apdata[n], apmask[n], apbg[n],
+                                             data.stdspec[n].values, gain, apv0[n],
+                                             p5thresh=meta.p5thresh,
+                                             p7thresh=meta.p7thresh,
+                                             fittype=meta.fittype,
+                                             window_len=meta.window_len,
+                                             deg=meta.prof_deg, n=n, m=m,
+                                             meddata=medapdata)
+
+                    # Mask out NaNs and Infs
+                    optspec_ma = np.ma.masked_invalid(data.optspec.values)
+                    opterr_ma = np.ma.masked_invalid(data.opterr.values)
+                    optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
+                                            np.ma.getmaskarray(opterr_ma))
+                    data['optmask'] = (['time', 'x'], optmask)
+
+                    # Plot results
+                    if meta.isplots_S3 >= 3:
+                        log.writelog('  Creating figures for optimal spectral '
+                                     'extraction', mute=(not meta.verbose))
+                        iterfn = range(meta.int_start, meta.n_int)
+                        if meta.verbose:
+                            iterfn = tqdm(iterfn)
+                        for n in iterfn:
+                            # make optimal spectrum plot
+                            plots_s3.optimal_spectrum(data, meta, n, m)
 
                 if meta.save_output:
                     # Save flux data from current segment
@@ -393,9 +455,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Remove large 3D arrays from Dataset
                 del(data['flux'], data['err'], data['dq'], data['v0'],
-                    data['bg'], data['mask'], data['wave_2d'],
+                    data['mask'], data['wave_2d'],
                     data.attrs['intstart'], data.attrs['intend'])
-                if meta.inst == 'wfc3':
+                if not meta.photometry:
+                    del (data['bg'])
+                elif meta.inst == 'wfc3':
                     del(data['flatmask'], data['variance'])
 
                 # Append results for future concatenation
@@ -403,6 +467,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
+
+            # Plot light curve and centroids over time
+            if meta.isplots_S3 >= 1 and meta.photometry:
+                plots_s3.phot_lc(meta, spec)
+                plots_s3.phot_bg(meta, spec)
+                plots_s3.phot_centroid(meta, spec)
+                plots_s3.phot_npix(meta, data)
+
+            if meta.photometry:
+                util.apphot_status(spec)
 
             # Plot fitted 2D drift
             # Note: This needs to happen before calling conclusion_step()
@@ -421,15 +495,18 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
-                                       optmask=spec.optmask)
-            log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
+            if not meta.photometry:
+                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
+                                           optmask=spec.optmask)
+                log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
-            if meta.isplots_S3 >= 1:
+            if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                                         optmask=spec.optmask)
+
+            print(meta.photometry)
 
             # Save results
             if meta.save_output:

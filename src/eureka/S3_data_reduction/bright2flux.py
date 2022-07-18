@@ -138,9 +138,13 @@ def bright2dn(data, meta, mjy=False):
     # Load response function and wavelength
     phot = fits.getdata(meta.photfile)
     if meta.inst == 'nircam':
-        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
-                       (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
-                       (phot['order'] == 1))[0][0]
+        if meta.photometry:
+            ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+                           (phot['pupil'] == data.attrs['mhdr']['PUPIL']))[0][0]
+        else:
+            ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+                           (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
+                           (phot['order'] == 1))[0][0]
     elif meta.inst == 'miri':
         ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
                        (phot['subarray'] == data.attrs['mhdr']['SUBARRAY'])
@@ -159,15 +163,18 @@ def bright2dn(data, meta, mjy=False):
                          f'currently only handle JWST niriss, nirspec, nircam,'
                          f' and miri observations.')
 
-    response_wave = phot['wavelength'][ind]
-    response_vals = phot['relresponse'][ind]
-    igood = np.where(response_wave > 0)[0]
-    response_wave = response_wave[igood]
-    response_vals = response_vals[igood]
-    # Interpolate response at desired wavelengths
-    f = spi.interp1d(response_wave, response_vals, kind='cubic',
-                     bounds_error=False, fill_value='extrapolate')
-    response = f(data.wave_1d)
+    if meta.photometry:
+        response = 1
+    else:
+        response_wave = phot['wavelength'][ind]
+        response_vals = phot['relresponse'][ind]
+        igood = np.where(response_wave > 0)[0]
+        response_wave = response_wave[igood]
+        response_vals = response_vals[igood]
+        # Interpolate response at desired wavelengths
+        f = spi.interp1d(response_wave, response_vals, kind='cubic',
+                         bounds_error=False, fill_value='extrapolate')
+        response = f(data.wave_1d)
 
     scalar = data.attrs['shdr']['PHOTMJSR']
     if mjy:

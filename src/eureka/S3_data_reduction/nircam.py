@@ -4,6 +4,7 @@ from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import sigrej, background
 from ..lib.util import read_time
+from tqdm import tqdm
 
 
 def read(filename, data, meta, log):
@@ -48,16 +49,24 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
-    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-    wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart']-1:
-                                             data.attrs['intend']]
+    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
+    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart'] - 1: data.attrs['intend']]
+    if hdulist[0].header['CHANNEL'] == 'SHORT':  # Photometry will have "SHORT" as CHANNEL
+        meta.photometry = True
+        data.attrs['shdr']['DISPAXIS'] = 1 # This argument does not exist for photmetry data. Added it here so that code in other sections doesnt have to be changed
+        #time = np.linspace(hdulist[0].header['EXPSTART'], hdulist[0].header['EXPEND'], (hdulist[0].header['INTEND']-hdulist[0].header['INTSTART']+1))
+        if hdulist[0].header['FILTER'] == 'F210M': #TODO make this better for all filters
+            wave_2d = np.ones_like(sci[0])*2.1
+
+    elif hdulist[0].header['CHANNEL'] == 'LONG':  # Spectroscopy will have "LONG" as CHANNEL
+        meta.photometry = False
+        wave_2d = hdulist['WAVELENGTH', 1].data
+
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
@@ -206,3 +215,47 @@ def cut_aperture(data, meta, log):
     apv0 = data.v0[:, ap_y1:ap_y2].values
 
     return apdata, aperr, apmask, apbg, apv0
+
+
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of segment along time axis for photometry pipeline.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    log.writelog('  Performing outlier rejection...',
+                 mute=(not meta.verbose))
+
+    flux = data.flux.values
+    mask = data.mask.values
+    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
+    # Need to test performance with and without estsig on real data.
+    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+        bgerr = np.median(data.err)
+        estsig = [bgerr for j in range(len(meta.bg_thresh))]
+    else:
+        estsig = None
+
+    nbadpix_total = 0
+    for i in tqdm(range(flux.shape[1]), desc='Looping over Rows for outlier removal'):
+        for j in range(flux.shape[2]):
+            ngoodpix = np.sum(mask[:,i,j]==True)
+            data['mask'][:,i,j] = sigrej.sigrej(flux[:,i,j], meta.bg_thresh, mask[:,i,j], estsig)
+            if not all(data['mask'][:,i,j].values):
+                #counting the amount of flagged bad pixels
+                nbadpix = ngoodpix - np.sum(data['mask'][:,i,j].values)
+                nbadpix_total += nbadpix
+    print("{0}% of the pixels have been flagged as outliers\n".format(nbadpix_total/np.product(flux.shape)*100))
+
+    return data

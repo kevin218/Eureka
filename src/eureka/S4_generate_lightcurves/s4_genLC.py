@@ -139,7 +139,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'({meta.wave_max}) is larger than the longest '
                              f'wavelength ({np.max(spec.wave_1d.values)})')
 
-            meta.n_int, meta.subnx = spec.optspec.shape
+            if meta.photometry:
+                meta.n_int, meta.subnx = spec.aplev.shape[0], 1
+            else:
+                meta.n_int, meta.subnx = spec.optspec.shape
 
             # Determine wavelength bins
             if not hasattr(meta, 'wave_hi'):
@@ -162,24 +165,44 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.wave = (meta.wave_low + meta.wave_hi)/2
 
             # Define light curve DataArray
-            lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
-                                   meta.wave, spec.time.values,
-                                   spec.optspec.attrs['flux_units'],
-                                   spec.wave_1d.attrs['wave_units'],
-                                   spec.optspec.attrs['time_units'],
-                                   name='data')
-            lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
-                                  meta.wave, spec.time.values,
-                                  spec.optspec.attrs['flux_units'],
-                                  spec.wave_1d.attrs['wave_units'],
-                                  spec.optspec.attrs['time_units'],
-                                  name='err')
-            lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
-                                            dtype=bool),
-                                   meta.wave, spec.time.values, 'None',
-                                   spec.wave_1d.attrs['wave_units'],
-                                   spec.optspec.attrs['time_units'],
-                                   name='mask')
+            if meta.photometry:
+                lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                       meta.wave, spec.time.values,
+                                       spec.aplev.attrs['flux_units'],
+                                       spec.wave_1d.attrs['wave_units'],
+                                       spec.aplev.attrs['time_units'],
+                                       name='data')
+                lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                      meta.wave, spec.time.values,
+                                      spec.aplev.attrs['flux_units'],
+                                      spec.wave_1d.attrs['wave_units'],
+                                      spec.aplev.attrs['time_units'],
+                                      name='err')
+                lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
+                                                dtype=bool),
+                                       meta.wave, spec.time.values, 'None',
+                                       spec.wave_1d.attrs['wave_units'],
+                                       spec.aplev.attrs['time_units'],
+                                       name='mask')
+            else:
+                lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                       meta.wave, spec.time.values,
+                                       spec.optspec.attrs['flux_units'],
+                                       spec.wave_1d.attrs['wave_units'],
+                                       spec.optspec.attrs['time_units'],
+                                       name='data')
+                lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                      meta.wave, spec.time.values,
+                                      spec.optspec.attrs['flux_units'],
+                                      spec.wave_1d.attrs['wave_units'],
+                                      spec.optspec.attrs['time_units'],
+                                      name='err')
+                lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
+                                                dtype=bool),
+                                       meta.wave, spec.time.values, 'None',
+                                       spec.wave_1d.attrs['wave_units'],
+                                       spec.optspec.attrs['time_units'],
+                                       name='mask')
             lc = xrio.makeDataset({'data': lcdata, 'err': lcerr,
                                    'mask': lcmask})
             if hasattr(spec, 'scandir'):
@@ -266,39 +289,44 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # Sum each read from a scan together
                 spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
 
-            # Compute MAD value
-            meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
-                                       spec.optspec, spec.optmask,
-                                       meta.wave_min, meta.wave_max)
-            log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
+            if not meta.photometry:
+                # Compute MAD value
+                meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
+                                           spec.optspec, spec.optmask,
+                                           meta.wave_min, meta.wave_max)
+                log.writelog(f"Stage 4 MAD = {str(np.round(meta.mad_s4, 2))} ppm")
 
-            if meta.isplots_S4 >= 1:
-                plots_s4.lc_driftcorr(meta, spec.wave_1d, spec.optspec,
-                                      optmask=spec.optmask)
+                if meta.isplots_S4 >= 1:
+                    plots_s4.lc_driftcorr(meta, spec.wave_1d, spec.optspec,
+                                          optmask=spec.optmask)
 
             log.writelog("Generating light curves")
 
             # Loop over spectroscopic channels
             meta.mad_s4_binned = []
             for i in range(meta.nspecchan):
-                log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
-                             f"{lc.wave_hi.values[i]:.3f}")
-                # Compute valid indeces within wavelength range
-                index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
-                                 (spec.wave_1d < lc.wave_hi.values[i]))[0]
-                # Make masked arrays for easy summing
-                optspec_ma = np.ma.masked_where(spec.optmask[:, index],
-                                                spec.optspec[:, index])
-                opterr_ma = np.ma.masked_where(spec.optmask[:, index],
-                                               spec.opterr[:, index])
-                # Compute mean flux for each spectroscopic channel
-                # Sumation leads to outliers when there are masked points
-                lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
-                # Add uncertainties in quadrature
-                # then divide by number of good points to get
-                # proper uncertainties
-                lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
+                if not meta.photometry:
+                    log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
+                                 f"{lc.wave_hi.values[i]:.3f}")
+                    # Compute valid indeces within wavelength range
+                    index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
+                                     (spec.wave_1d < lc.wave_hi.values[i]))[0]
+                    # Make masked arrays for easy summing
+                    optspec_ma = np.ma.masked_where(spec.optmask[:, index],
+                                                    spec.optspec[:, index])
+                    opterr_ma = np.ma.masked_where(spec.optmask[:, index],
+                                                   spec.opterr[:, index])
+                    # Compute mean flux for each spectroscopic channel
+                    # Sumation leads to outliers when there are masked points
+                    lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
+                    # Add uncertainties in quadrature
+                    # then divide by number of good points to get
+                    # proper uncertainties
+                    lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
                                 np.ma.MaskedArray.count(opterr_ma, axis=1))
+                elif meta.photometry:
+                    lc['data'][i] = spec.aplev
+                    lc['err'][i] = spec.aperr
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.sigma_clip:
