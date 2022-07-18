@@ -13,7 +13,7 @@ from ..lib import centroid, smoothing
 
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
-                  POSTARG2):
+                  POSTARG2, meta, log):
     '''Calculate centroid for a list of direct images.
 
     Parameters
@@ -22,7 +22,7 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         List of direct image filenames
     guess : array_like
         The initial guess of the position of the star.  Has the form
-        (y, x) of the guess center.
+        (x, y) of the guess center.
     trim : int
         If trim!=0, trims the image in a box of 2*trim pixels around
         the guess center. Must be !=0 for 'col' method.
@@ -36,6 +36,10 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         The value of POSTARG1 in the science FITS header
     POSTARG2 : float
         The value of POSTARG2 in the science FITS header
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -56,6 +60,10 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
     nfiles = len(filenames)
     centers = []
     # images = []
+
+    # Swap the x-y order for the other, older code which used to have (y,x)
+    guess = guess[::-1]
+
     for i in range(nfiles):
         # images.append(fits.getdata(filenames[i].rstrip()))
         image = fits.getdata(filenames[i].rstrip())
@@ -74,7 +82,10 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                    (POSTARG2[i] - calhdr0['POSTARG2'])/0.121)
         centers[i][0] += yoffset
         centers[i][1] += xoffset
-        print(f"Adding {xoffset},{yoffset} pixels to x,y centroid position.")
+        log.writelog(f"Adding {np.round(xoffset, 3)}, {np.round(yoffset, 3)}"
+                     f" pixels to x, y centroid position for integrations "
+                     f"related to staring-mode image #{i}.",
+                     mute=(not meta.verbose))
         """
         if calhdr0['APERTURE'] == 'IRSUB256':
             # centers[i][1] -= 111
@@ -698,7 +709,7 @@ def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
         return cordata
 
 
-def calcDrift2D(im1, im2, m, n):
+def calcDrift2D(im1, im2, n):
     """Calulate drift2D
 
     Parameters
@@ -707,8 +718,6 @@ def calcDrift2D(im1, im2, m, n):
         The reference image.
     im2 : ndarray
         The current image.
-    m : int
-        The current file number.
     n : int
         The current integration number.
 
@@ -716,8 +725,6 @@ def calcDrift2D(im1, im2, m, n):
     -------
     drift2D : list
         The x and y offset of im2 with respect to im1.
-    m : int
-        The current file number.
     n : int
         The current integration number.
 
@@ -734,7 +741,7 @@ def calcDrift2D(im1, im2, m, n):
                                   '`pip install .[hst]`')
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
-    return drift2D, m, n
+    return drift2D, n
 
 
 def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):
@@ -822,8 +829,8 @@ def drift_fit2D(meta, data, validRange=9):
     else:
         istart = 0
     drift = np.zeros((meta.num_data_files, meta.nreads-1))
-    # model = np.zeros((ev.n_files, ev.n_reads-1))
-    # goodmask = np.zeros((ev.n_files, ev.n_reads-1),dtype=int)
+    # model = np.zeros((meta.num_data_files, meta.n_reads-1))
+    # goodmask = np.zeros((meta.num_data_files, meta.n_reads-1), dtype=int)
     for n in range(istart, meta.nreads-1):
         ref_data = np.copy(data[-1, n])
         ref_data[np.where(np.isnan(ref_data))] = 0
@@ -854,10 +861,10 @@ def drift_fit2D(meta, data, validRange=9):
                 subvals = vals[argmax-width:argmax+width+1]
                 params, err = g.fitgaussian(subvals/subvals.max(),
                                             guess=[width/5., width*1., 1])
-                drift[n,m,i]= len(vals)/2 - params[1] - argmax + width
-                goodmask[n,m,i] = 1
+                drift[n, m, i]= len(vals)/2 - params[1] - argmax + width
+                goodmask[n, m, i] = 1
             except:
-                print('Spectrum ' +str(n)+','+str(m)+','+str(i)
+                print('Spectrum '+str(n)+','+str(m)+','+str(i)
                       ' marked as bad.')
             '''
 

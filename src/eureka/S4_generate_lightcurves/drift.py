@@ -39,7 +39,7 @@ def highpassfilt(signal, highpassWidth):
     return convolve(signal, g, boundary='extend')
 
 
-def spec1D(spectra, meta, log):
+def spec1D(spectra, meta, log, mask=None):
     '''Measures the 1D spectrum drift over all integrations.
 
     Measure spectrum drift over all frames and all non-destructive reads.
@@ -52,11 +52,16 @@ def spec1D(spectra, meta, log):
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
+    mask : ndarray (1D), optional
+        A mask array to use if spectra is not a masked array. Defaults to None
+        in which case only the invalid values of spectra will be masked.
 
     Returns
     -------
     drift1d : ndarray
         1D array of spectrum drift values.
+    driftwidth : ndarray
+        1D array of the widths of the Gaussians fitted to the CCFs.
     driftmask : ndarray
         1D masked array, where True is masked.
 
@@ -76,13 +81,19 @@ def spec1D(spectra, meta, log):
     - Apr 23, 2022 Kevin Stevenson
         Switched defition of mask to coincide with np.ma definition
         Removed drift1d and driftmask from meta
+    - Jul 11, 2022 Caroline Piaulet
+        Added recording of driftwidth
     '''
+    spectra = np.ma.masked_invalid(np.ma.copy(spectra))
+    spectra = np.ma.masked_where(mask, spectra)
+    
     if meta.drift_postclip is not None:
         meta.drift_postclip = -meta.drift_postclip
     drift1d = np.zeros(meta.n_int)
+    driftwidth = np.zeros(meta.n_int)
     driftmask = np.zeros(meta.n_int, dtype=bool)
-    ref_spec = np.copy(spectra[meta.drift_iref,
-                               meta.drift_preclip:meta.drift_postclip])
+    ref_spec = np.ma.copy(spectra[meta.drift_iref,
+                                  meta.drift_preclip:meta.drift_postclip])
     if meta.sub_continuum:
         # Subtract off the continuum as computed using a highpass filter
         ref_spec -= highpassfilt(ref_spec, meta.highpassWidth)
@@ -120,6 +131,8 @@ def spec1D(spectra, meta, log):
                                                meta.drift_hw*1., 1])
             drift1d[n] = len(vals)//2-params[1]-argmax+meta.drift_hw
             # meta.drift1d[n] = len(vals)/2-params[1]-argmax+meta.drift_hw
+            driftwidth[n] = params[0]
+
         except:
             # FINDME: Need change this bare except to only
             # catch the specific exception
@@ -127,4 +140,4 @@ def spec1D(spectra, meta, log):
                          f'as bad.')
             driftmask[n] = True
 
-    return drift1d, driftmask
+    return drift1d, driftwidth, driftmask

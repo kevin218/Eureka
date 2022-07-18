@@ -4,4 +4,5 @@ from .GPModel import GPModel
 from .Model import Model, CompositeModel
 from .PolynomialModel import PolynomialModel
 from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
+from .StepModel import StepModel
 from .PyMC3Models import StarryModel
