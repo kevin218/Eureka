@@ -506,6 +506,10 @@ isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
 
+nplots
+''''''
+Sets how many of each type of figure you want to make (only impacts drift correction figures 4301 and 4302).
+
 vmin
 ''''
 Optional. Sets the vmin of the color bar for Figure 4101. Defaults to 0.97.
