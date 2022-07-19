@@ -273,7 +273,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data = util.manmask(data, meta, log)
 
                 # Locate source postion
-                data, meta, log = source_pos.source_pos(data, meta, log, m)
+                data, meta, log = source_pos.source_pos_wrapper(data, meta,
+                                                                log, m)
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
@@ -317,8 +318,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = optspex.standard_spectrum(data, apdata, aperr)
 
                 # Perform optimal extraction
-                data, meta, log = optspex.optimize(data, meta, log, apdata,
-                                                   apmask, apbg, apv0, m=m)
+                data, meta, log = optspex.optimize_wrapper(data, meta, log,
+                                                           apdata, apmask,
+                                                           apbg, apv0, m=m)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
