@@ -306,8 +306,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data, meta, log = inst.correct_drift2D(data, meta, log, m)
                 elif meta.record_ypos:
                     # Record y position and width for all integrations
-                    data, meta, log = source_pos.source_pos(data, meta, log, m,
-                                                            integ=None)
+                    data, meta, log = source_pos.source_pos_wrapper(data, meta,
+                                                                    log, m,
+                                                                    integ=None)
 
                 # Select only aperture region
                 apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
