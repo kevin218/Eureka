@@ -539,7 +539,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
 
     # Compute median frame
-    data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
+    data_ma = np.ma.masked_where(apmask == 0, apdata)
     medflux = np.ma.median(data_ma, axis=0).data
 
     # Perform optimal extraction on each of the frames
