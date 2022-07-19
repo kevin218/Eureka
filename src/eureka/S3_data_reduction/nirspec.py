@@ -280,15 +280,16 @@ def straighten_trace(data, meta, log):
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     '''
-    log.writelog('  Correcting curvature and bringing trace in the center '
-                 'of the detector...', mute=(not meta.verbose))
+    log.writelog('  Correcting G395H curvature and bringing the trace to the '
+                 'center of the detector...', mute=(not meta.verbose))
     # This method only works with the median profile for the extraction
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
 
     # Find the median shift needed to bring the trace centered on the detector
     # obtain the median frame
-    median_frame = np.copy(data.medflux.values)
+    data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
+    median_frame = np.ma.median(data_ma, axis=0).data
     # compute the correction needed from this median frame
     shifts, new_center = find_column_median_shifts(median_frame)
 
@@ -319,11 +320,6 @@ def straighten_trace(data, meta, log):
     log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
                  mute=(not meta.verbose))
     meta.src_ypos = new_center
-
-    # update the median frame
-    log.writelog('  Updating median frame now that the trace is corrected...',
-                 mute=(not meta.verbose))
-    data.medflux.values = np.median(data.flux.values, axis=0)
 
     return data, meta
 
