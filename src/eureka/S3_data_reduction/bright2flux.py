@@ -91,12 +91,14 @@ def dn2electrons(data, meta):
     ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero                                                         
     xstart_trim = xstart-xstart_gain + 1
 
-    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny, xstart_trim:xstart_trim+nx]
+    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny,
+                                       xstart_trim:xstart_trim+nx]
 
-    # Like in the case of MIRI data, the gain file data has to be
-    # rotated by 90 degrees
     if data.attrs['shdr']['DISPAXIS'] == 2:
-        gain = np.swapaxes(gain, 0, 1)
+        # In the case of MIRI data, the gain file data has to be
+        # rotated by 90 degrees and mirrored along that new x-axis
+        # so that wavelength increases to the right
+        gain = np.swapaxes(gain, 0, 1)[:, ::-1]
 
     # Gain subarray
     subgain = gain[meta.ywindow[0]:meta.ywindow[1],

@@ -56,5 +56,4 @@ c1           0              'free'         0            0.01          N
 # Use scatter_ppm to fit the noise level in ppm
 # Use WN parameter in GP model parameters to account for white noise in the GP model
 # -----------
-#scatter_mult 1.1            'free'         1            0.1          N
-scatter_ppm  500            'free'         500          100          N
+scatter_mult 1.1            'free'         1.1            1          N
