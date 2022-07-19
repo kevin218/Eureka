@@ -148,6 +148,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
             meta.n_int, meta.subnx = spec.optspec.shape
 
+            # Set the max number of copies of a figure
+            if not hasattr(meta, 'nplots'):
+                meta.nplots = meta.n_int
+
             # Determine wavelength bins
             if not hasattr(meta, 'wave_hi'):
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
