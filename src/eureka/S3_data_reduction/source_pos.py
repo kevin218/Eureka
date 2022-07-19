@@ -7,7 +7,7 @@ import multiprocessing as mp
 from . import plots_s3
 
 
-def source_pos(data, meta, log, m, integ=0):
+def source_pos_wrapper(data, meta, log, m, integ=0):
     '''Make image+background plot.
 
     Parameters
@@ -39,8 +39,8 @@ def source_pos(data, meta, log, m, integ=0):
     History:
     
     - 2022-07-18, Taylor J Bell
-        Changed source_pos to source_pos_one and using this function to
-        allow multiple frames to get source positions in parallel.
+        Added source_pos_wrapper to allow multiple frames to get
+        source positions in parallel.
     '''
     # Mask any clipped values
     flux = np.ma.masked_where(~data.mask.values, data.flux.values)
@@ -70,12 +70,12 @@ def source_pos(data, meta, log, m, integ=0):
             if meta.verbose:
                 iterfn = tqdm(iterfn)
             for n in iterfn:
-                writePos(source_pos_one(flux[n], meta, data.attrs['shdr'],
-                                        m, n, False, guess))
+                writePos(source_pos(flux[n], meta, data.attrs['shdr'],
+                                    m, n, False, guess))
         else:
             # Multiple CPUs
             pool = mp.Pool(meta.ncpu)
-            jobs = [pool.apply_async(func=source_pos_one,
+            jobs = [pool.apply_async(func=source_pos,
                                      args=(flux[n], meta,
                                            data.attrs['shdr'], m,
                                            n, False, guess),
@@ -96,8 +96,8 @@ def source_pos(data, meta, log, m, integ=0):
         # Get the source position of frame `integ`
         log.writelog('  Locating source position...', mute=(not meta.verbose))
 
-        meta.src_ypos = source_pos_one(flux[integ], meta, data.attrs['shdr'],
-                                       m, integ, True, guess)[0]
+        meta.src_ypos = source_pos(flux[integ], meta, data.attrs['shdr'],
+                                   m, integ, True, guess)[0]
 
         log.writelog('    Source position on detector is row '
                      f'{meta.src_ypos}.', mute=(not meta.verbose))
@@ -105,7 +105,7 @@ def source_pos(data, meta, log, m, integ=0):
         return data, meta, log
 
 
-def source_pos_one(flux, meta, shdr, m, n, plot=True, guess=None):
+def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
     '''Make image+background plot.
 
     Parameters
@@ -144,7 +144,7 @@ def source_pos_one(flux, meta, shdr, m, n, plot=True, guess=None):
         Enable recording of the width if the source is fitted with a Gaussian
         + add an option to fit any integration (not hardcoded to be the first)
     - 2022-07-18, Taylor J Bell
-        Allowing parallelized code if fitting multiple frames.
+        Tweaked to allow parallelized code if fitting multiple frames.
     '''
     if meta.src_pos_type == 'header':
         if 'SRCYPOS' not in shdr:
@@ -209,7 +209,7 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
     pos_max = np.ma.argmax(sum_row)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3 and plot:
+    if meta.isplots_S3 >= 1 and plot:
         y_pixels = np.arange(0, x_dim)
         plots_s3.source_position(meta, x_dim, pos_max, m, n, y_pixels=y_pixels,
                                  sum_row=sum_row)
@@ -264,7 +264,7 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
     y_pos = np.ma.sum(sum_row*y_pixels)/np.ma.sum(sum_row)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3 and plot:
+    if meta.isplots_S3 >= 1 and plot:
         plots_s3.source_position(meta, x_dim, pos_max, m, n, isFWM=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  y_pos=y_pos)
@@ -360,7 +360,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     popt, pcov = curve_fit(gauss, y_pixels, sum_row, p0)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3 and plot:
+    if meta.isplots_S3 >= 1 and plot:
         plots_s3.source_position(meta, x_dim, pos_max, m, n, isgauss=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  popt=popt)

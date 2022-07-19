@@ -478,8 +478,8 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def optimize(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
-             windowtype='hanning', m=0):
+def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
+                     windowtype='hanning', m=0):
     '''Extract optimal spectrum with uncertainties.
 
     Parameters
@@ -523,8 +523,7 @@ def optimize(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     History:
     
     - 2022-07-18, Taylor J Bell
-        Changed optimize to optimize_one and using this function to
-        iterate over each frame.
+        Added optimize_wrapper to iterate over each frame.
     '''
     # Extract optimal spectrum with uncertainties
     log.writelog("  Performing optimal spectral extraction...",
@@ -540,7 +539,7 @@ def optimize(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
 
     # Compute median frame
-    data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
+    data_ma = np.ma.masked_where(apmask == 0, apdata)
     medflux = np.ma.median(data_ma, axis=0).data
 
     # Perform optimal extraction on each of the frames
@@ -549,14 +548,14 @@ def optimize(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
         iterfn = tqdm(iterfn)
     for n in iterfn:
         data['optspec'][n], data['opterr'][n], _ = \
-            optimize_one(meta, apdata[n], apmask[n], apbg[n],
-                         data.stdspec[n].values, gain, apv0[n],
-                         p5thresh=meta.p5thresh,
-                         p7thresh=meta.p7thresh,
-                         fittype=meta.fittype,
-                         window_len=meta.window_len,
-                         deg=meta.prof_deg, windowtype=windowtype,
-                         n=n, m=m, meddata=medflux)
+            optimize(meta, apdata[n], apmask[n], apbg[n],
+                     data.stdspec[n].values, gain, apv0[n],
+                     p5thresh=meta.p5thresh,
+                     p7thresh=meta.p7thresh,
+                     fittype=meta.fittype,
+                     window_len=meta.window_len,
+                     deg=meta.prof_deg, windowtype=windowtype,
+                     n=n, m=m, meddata=medflux)
 
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
@@ -568,9 +567,9 @@ def optimize(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     return data, meta, log
 
 
-def optimize_one(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
-                 p7thresh=10, fittype='smooth', window_len=21, deg=3,
-                 windowtype='hanning', n=0, m=0, meddata=None):
+def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
+             p7thresh=10, fittype='smooth', window_len=21, deg=3,
+             windowtype='hanning', n=0, m=0, meddata=None):
     '''Extract optimal spectrum with uncertainties.
 
     Parameters
@@ -623,14 +622,6 @@ def optimize_one(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         The standard deviation on the spectrum.
     submask : ndarray
         The mask array.
-    
-    Notes
-    -----
-    History:
-    
-    - 2022-07-18, Taylor J Bell
-        Changed optimize to optimize_one and keeping this function to
-        process just one frame.
     '''
     submask = np.copy(mask)
     ny, nx = subdata.shape

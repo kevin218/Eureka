@@ -29,7 +29,7 @@ import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
 from . import optspex
-from . import plots_s3, source_pos
+from . import plots_s3, source_pos, straighten
 from . import background as bg
 from . import bright2flux as b2f
 from ..lib import logedit
@@ -240,7 +240,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     meta.int_start = np.max((0, meta.n_int-5))
                 else:
                     meta.int_start = 0
-                if not hasattr(meta, 'nplots'):
+                if not hasattr(meta, 'nplots') or meta.nplots is None:
+                    meta.int_end = meta.n_int
+                elif meta.int_start+meta.nplots > meta.n_int:
+                    # Too many figures requested, so reduce it
                     meta.int_end = meta.n_int
                 else:
                     meta.int_end = meta.int_start+meta.nplots
@@ -273,7 +276,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data = util.manmask(data, meta, log)
 
                 # Locate source postion
-                data, meta, log = source_pos.source_pos(data, meta, log, m)
+                data, meta, log = source_pos.source_pos_wrapper(data, meta,
+                                                                log, m)
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
@@ -286,10 +290,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
 
-                # correct G395H curvature
-                if (meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H'
-                        and meta.curvature == 'correct'):
-                    data, meta = inst.straighten_trace(data, meta, log)
+                # correct spectral curvature
+                if hasattr(meta, 'curvature') and meta.curvature == 'correct':
+                    data, meta = straighten.straighten_trace(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)
@@ -306,8 +309,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data, meta, log = inst.correct_drift2D(data, meta, log, m)
                 elif meta.record_ypos:
                     # Record y position and width for all integrations
-                    data, meta, log = source_pos.source_pos(data, meta, log, m,
-                                                            integ=None)
+                    data, meta, log = source_pos.source_pos_wrapper(data, meta,
+                                                                    log, m,
+                                                                    integ=None)
+                    if meta.isplots_S3 >= 1:
+                        # make y position and width plots
+                        plots_s3.driftypos(data, meta)
+                        plots_s3.driftywidth(data, meta)
 
                 # Select only aperture region
                 apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
@@ -318,8 +326,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data = optspex.standard_spectrum(data, apdata, aperr)
 
                 # Perform optimal extraction
-                data, meta, log = optspex.optimize(data, meta, log, apdata,
-                                                   apmask, apbg, apv0, m=m)
+                data, meta, log = optspex.optimize_wrapper(data, meta, log,
+                                                           apdata, apmask,
+                                                           apbg, apv0, m=m)
 
                 # Plot results
                 if meta.isplots_S3 >= 3:
@@ -331,10 +340,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
-                    if meta.record_ypos:
-                        # make y position and width plots
-                        plots_s3.driftypos(data, meta)
-                        plots_s3.driftywidth(data, meta)
 
                 if meta.save_output:
                     # Save flux data from current segment

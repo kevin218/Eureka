@@ -310,7 +310,7 @@ Only used for HST analyses. The file indices to use as reference frames for 2D d
 
 curvature
 '''''''''
-Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
+Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
 isplots_S3
 ''''''''''
@@ -318,7 +318,7 @@ Sets how many plots should be saved when running Stage 3. A full description of 
 
 nplots
 ''''''
-Sets how many of each type of figure you want to make per file.
+Sets how many integrations will be used for per-integration figures (Figs 3301, 3302, 3303, 3501). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
@@ -505,6 +505,10 @@ Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
+
+nplots
+''''''
+Sets how many integrations will be used for per-integration figures (Figs 4301 and 4302). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
