@@ -209,7 +209,7 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
     pos_max = np.ma.argmax(sum_row)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3 and plot:
+    if meta.isplots_S3 >= 1 and plot:
         y_pixels = np.arange(0, x_dim)
         plots_s3.source_position(meta, x_dim, pos_max, m, n, y_pixels=y_pixels,
                                  sum_row=sum_row)
@@ -264,7 +264,7 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
     y_pos = np.ma.sum(sum_row*y_pixels)/np.ma.sum(sum_row)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3 and plot:
+    if meta.isplots_S3 >= 1 and plot:
         plots_s3.source_position(meta, x_dim, pos_max, m, n, isFWM=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  y_pos=y_pos)
@@ -360,7 +360,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     popt, pcov = curve_fit(gauss, y_pixels, sum_row, p0)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3 and plot:
+    if meta.isplots_S3 >= 1 and plot:
         plots_s3.source_position(meta, x_dim, pos_max, m, n, isgauss=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  popt=popt)
