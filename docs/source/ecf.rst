@@ -508,7 +508,7 @@ Sets how many plots should be saved when running Stage 4. A full description of 
 
 nplots
 ''''''
-Sets how many of each type of figure you want to make (only impacts drift correction figures 4301 and 4302).
+Sets how many integrations will be used for per-integration figures (Figs 4301 and 4302). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
