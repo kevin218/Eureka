@@ -203,6 +203,10 @@ src_pos_type
 ''''''''''''
 Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
 
+record_ypos
+'''''''''''
+Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
+
 centroidtrim
 ''''''''''''
 Only used for HST analyses. The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
@@ -222,10 +226,6 @@ Only used for HST analyses. Used to sigma clip bad values from the flatfield ima
 diffthresh
 ''''''''''
 Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
-
-record_ypos
-'''''''''''
-Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
 
 bg_hw & spec_hw
 '''''''''''''''
@@ -315,6 +315,10 @@ Used only for G395H observations which display curvature in the trace. Current o
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
+
+nplots
+''''''
+Sets how many of each type of figure you want to make per file.
 
 vmin
 ''''
