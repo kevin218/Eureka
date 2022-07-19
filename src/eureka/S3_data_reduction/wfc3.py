@@ -113,7 +113,7 @@ def get_reference_frames(meta, log):
             util.manmask(data, meta, log)
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
-        data, meta, log = source_pos.source_pos(data, meta, log, i)
+        data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
         data, meta = b2f.convert_to_e(data, meta, log)
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
