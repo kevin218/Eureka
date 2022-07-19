@@ -151,6 +151,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             # Set the max number of copies of a figure
             if not hasattr(meta, 'nplots') or meta.nplots is None:
                 meta.nplots = meta.n_int
+            elif meta.int_start+meta.nplots > meta.n_int:
+                # Too many figures requested, so reduce it
+                meta.nplots = meta.n_int
 
             # Determine wavelength bins
             if not hasattr(meta, 'wave_hi'):
