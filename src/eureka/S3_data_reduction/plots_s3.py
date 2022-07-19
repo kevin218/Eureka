@@ -38,7 +38,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         meta.time_axis = 'y'
     elif meta.time_axis not in ['y', 'x']:
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
-              "Using 'y' by default.")
+              " Using 'y' by default.")
         meta.time_axis = 'y'
     
     plt.figure(3101, figsize=(8, 8))
