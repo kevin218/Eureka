@@ -240,7 +240,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     meta.int_start = np.max((0, meta.n_int-5))
                 else:
                     meta.int_start = 0
-                if not hasattr(meta, 'nplots'):
+                if not hasattr(meta, 'nplots') or meta.nplots is None:
                     meta.int_end = meta.n_int
                 else:
                     meta.int_end = meta.int_start+meta.nplots
