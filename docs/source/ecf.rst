@@ -318,7 +318,7 @@ Sets how many plots should be saved when running Stage 3. A full description of 
 
 nplots
 ''''''
-Sets how many of each type of figure you want to make per file.
+Sets how many integrations will be used for per-integration figures (Figs 3301, 3302, 3303, 3501). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
