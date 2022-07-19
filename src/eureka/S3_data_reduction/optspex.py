@@ -480,7 +480,52 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
 
 def optimize(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
              windowtype='hanning', m=0):
+    '''Extract optimal spectrum with uncertainties.
 
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    apdata : ndarray
+        Background subtracted data.
+    apmask : ndarray
+        Outlier mask.
+    apbg : ndarray
+        Background array.
+    apv0 : ndarray
+        Variance array for data.
+    gain : float
+        The gain factor. Defaults to 1 as the flux should already be in
+        electrons.
+    windowtype : str; optional
+        UNUSED. One of {'flat', 'hanning', 'hamming',
+        'bartlett', 'blackman'}.
+        The type of window. A flat window will produce a moving
+        average smoothing. Defaults to 'hanning'.
+    m : int; optional
+        File number. Defaults to 0.
+    
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+
+    Notes
+    -----
+    History:
+    
+    - 2022-07-18, Taylor J Bell
+        Changed optimize to optimize_one and using this function to
+        iterate over each frame.
+    '''
     # Extract optimal spectrum with uncertainties
     log.writelog("  Performing optimal spectral extraction...",
                  mute=(not meta.verbose))
@@ -578,6 +623,14 @@ def optimize_one(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         The standard deviation on the spectrum.
     submask : ndarray
         The mask array.
+    
+    Notes
+    -----
+    History:
+    
+    - 2022-07-18, Taylor J Bell
+        Changed optimize to optimize_one and keeping this function to
+        process just one frame.
     '''
     submask = np.copy(mask)
     ny, nx = subdata.shape

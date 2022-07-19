@@ -16,6 +16,8 @@ def source_pos(data, meta, log, m, integ=0):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     m : int
         The file number.
     integ : int or None; optional
@@ -25,8 +27,12 @@ def source_pos(data, meta, log, m, integ=0):
 
     Returns
     -------
-    src_ypos : int
-        The central position of the star.
+    data : Xarray Dataset
+        The updated Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
         
     Notes
     -----
@@ -120,7 +126,6 @@ def source_pos_one(flux, meta, shdr, m, n, plot=True, guess=None):
     guess : float, optional
         The guess at the source position for WFC3 data.
 
-
     Returns
     -------
     src_ypos : int
@@ -198,7 +203,6 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
     - July 11, 2022 Caroline Piaulet
         Add option to fit any integration (not hardcoded to be the first)
     '''
-
     x_dim = flux.shape[0]
 
     sum_row = np.ma.sum(flux, axis=1)
