@@ -29,7 +29,7 @@ import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
 from . import optspex
-from . import plots_s3, source_pos
+from . import plots_s3, source_pos, straighten
 from . import background as bg
 from . import bright2flux as b2f
 from ..lib import logedit
@@ -286,10 +286,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
 
-                # correct G395H curvature
-                if (meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H'
-                        and meta.curvature == 'correct'):
-                    data, meta = inst.straighten_trace(data, meta, log)
+                # correct spectral curvature
+                if hasattr(meta, 'curvature') and meta.curvature == 'correct':
+                    data, meta = straighten.straighten_trace(data, meta, log)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)
