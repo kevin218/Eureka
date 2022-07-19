@@ -13,10 +13,10 @@ Stage 2 Outputs
 
 If ``skip_extract_1d`` is set in the Stage 2 ECF, the 1-dimensional spectrum will not be extracted, and no plots will be made. Otherwise, Stage 2 will extract the 1-dimensional spectrum from the calibrated images, and will plot the spectrum.
 
-.. figure:: ../media/S2_out/fig2100.png
+.. figure:: ../media/S2_out/fig2101_file1_x1dints.png
    :alt: Stage 2 1-dimensional spectrum plot
 
-   Stage 2 output: 1-Dimensional Spectrum Plot
+   Fig 2101: 1-Dimensional Spectrum Plot
 
 
 .. _s3-out:
@@ -27,41 +27,56 @@ Stage 3 Outputs
 In Stage 3 through Stage 5, output plots are controlled with the ``isplots_SX`` parameter. The resulting plots are cumulative: setting ``isplots_S3 = 5`` will also create the plots specified in ``isplots_S3 = 3`` and ``isplots_S3 = 1``.
 
 In Stage 3:
-   - If ``isplots_S3`` = 1: ``Eureka!`` will plot the 2-dimensional, non-drift-corrected light curve. 
+   - If ``isplots_S3`` = 1: ``Eureka!`` will plot the 2-dimensional, non-drift-corrected light curve, as well as variations in the source position and width on the detector.
 
-   .. figure:: ../media/S3_out/fig3101.png
+   .. figure:: ../media/S3_out/fig3101-2D_LC.png
       :alt: Stage 3 2-dimensional spectrum plot
 
-      Stage 3 output: 2-Dimensional Spectrum Plot
+      Fig 3101: 2-Dimensional Spectrum Plot
 
-   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation, as well as the source position on the detector.
-
-   .. figure:: ../media/S3_out/fig3301.png
-      :alt: Stage 3 background subtracted flux plot
-
-      Stage 3 output: Background Subtracted Flux Plot
-
-   .. figure:: ../media/S3_out/fig3302.png
-      :alt: Stage 3 1-dimensional spectrum plot
-
-      Stage 3 output: 1-Dimensional Spectrum Plot
-
-   .. figure:: ../media/S3_out/fig3303.png
+   .. figure:: ../media/S3_out/fig3102_file0_int00_source_pos.png
       :alt: Stage 3 source position fit
 
-      Stage 3 output: Source Position Fit Plot
+      Fig 3102: Source Position Fit Plot
 
-   .. figure:: ../media/S3_out/fig3305.png
+   .. figure:: ../media/S3_out/fig3103_DriftYPos.png
+      :alt: Stage 3 y drift
+
+      Fig 3013: Variations in the spatial-axis position
+
+   .. figure:: ../media/S3_out/fig3104_DriftYWidth.png
+      :alt: Stage 3 y PSF width changes
+
+      Fig 3104: Variations in the spatial-axis PSF width
+
+   .. figure:: ../media/S3_out/fig3105_Drift2D.png
+      :alt: Stage 3 2D drift fit
+
+      Fig 3105: 2D drift fit (currently only produced for WFC3)
+
+   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation.
+
+   .. figure:: ../media/S3_out/fig3301_file0_int00_ImageAndBackground.png
+      :alt: Stage 3 background subtracted flux plot
+
+      Fig 3301: Background Subtracted Flux Plot
+
+   .. figure:: ../media/S3_out/fig3302_file0_int00_Spectrum.png
+      :alt: Stage 3 1-dimensional spectrum plot
+
+      Fig 3302: 1-Dimensional Spectrum Plot
+
+   .. figure:: ../media/S3_out/fig3303_file0_int00_Profile.png
       :alt: Stage 3 weighting profile
 
-      Stage 3 output: Weighting Profile Plot
+      Fig 3303: Weighting Profile Plot
 
    - If ``isplots_S3`` = 5: ``Eureka!`` will plot the Subdata plots from the optimal spectral extraction step.
 
-   .. figure:: ../media/S3_out/fig3501.png
+   .. figure:: ../media/S3_out/fig3501_file0_int00_col259_subdata.png
       :alt: Stage 3 subdata plot
 
-      Stage 3 output: Spectral Extraction Subdata Plot
+      Fig 3501: Spectral Extraction Subdata Plot
    
 .. _s4-out:
 
