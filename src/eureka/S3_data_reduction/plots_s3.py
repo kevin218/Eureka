@@ -93,7 +93,7 @@ def image_and_background(data, meta, log, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
-    iterfn = range(meta.n_int)
+    iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -200,7 +200,7 @@ def optimal_spectrum(data, meta, n, m):
         plt.pause(0.2)
 
 
-def source_position(meta, x_dim, pos_max, m,
+def source_position(meta, x_dim, pos_max, m, n,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
     '''Plot source position for MIRI data. (Figs 3303)
@@ -215,6 +215,8 @@ def source_position(meta, x_dim, pos_max, m,
         The brightest row.
     m : int
         The file number.
+    n : int
+        The integration number.
     isgauss : bool; optional
         Used a guassian centring method.
     x : type; optional
@@ -262,8 +264,9 @@ def source_position(meta, x_dim, pos_max, m,
     plt.legend()
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = ('figs'+os.sep+f'fig3303_file{file_number}_source_pos' +
-             figure_filetype)
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}' +
+             '_source_pos'+figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

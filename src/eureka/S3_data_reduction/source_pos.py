@@ -2,10 +2,12 @@
 
 import numpy as np
 from scipy.optimize import curve_fit
+from tqdm import tqdm
+import multiprocessing as mp
 from . import plots_s3
 
 
-def source_pos(data, meta, m, integ=0):
+def source_pos(data, meta, log, m, integ=0):
     '''Make image+background plot.
 
     Parameters
@@ -14,12 +16,115 @@ def source_pos(data, meta, m, integ=0):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The current log.
     m : int
         The file number.
-    integ : int, optional
-        The integration number.
-        Default is 0 (first integration)
+    integ : int or None; optional
+        The integration number. Default is 0 (first integration).
+        If set to None, the source position and width for each frame will be
+        calculated and stored in data.driftypos and data.driftywidth.
 
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+        
+    Notes
+    -----
+    History:
+    
+    - 2022-07-18, Taylor J Bell
+        Changed source_pos to source_pos_one and using this function to
+        allow multiple frames to get source positions in parallel.
+    '''
+    # Mask any clipped values
+    flux = np.ma.masked_where(~data.mask.values, data.flux.values)
+
+    if meta.src_pos_type == 'hst':
+        guess = data.guess.values[0]
+    else:
+        guess = None
+
+    if integ is None:
+        log.writelog("  Recording y position and width for all "
+                     "integrations...", mute=(not meta.verbose))
+        # Get the source position of every frame
+        src_ypos_exact = np.zeros_like(data["time"])
+        src_ypos_width = np.zeros_like(data["time"])
+
+        # Write source_positions
+        def writePos(arg):
+            src_ypos, src_yexact, src_ywidth, n = arg
+            src_ypos_exact[n] = src_yexact
+            src_ypos_width[n] = src_ywidth
+            return
+
+        if meta.ncpu == 1:
+            # Only 1 CPU
+            iterfn = range(meta.int_start, meta.n_int)
+            if meta.verbose:
+                iterfn = tqdm(iterfn)
+            for n in iterfn:
+                writePos(source_pos_one(flux[n], meta, data.attrs['shdr'],
+                                        m, n, False, guess))
+        else:
+            # Multiple CPUs
+            pool = mp.Pool(meta.ncpu)
+            jobs = [pool.apply_async(func=source_pos_one,
+                                     args=(flux[n], meta,
+                                           data.attrs['shdr'], m,
+                                           n, False, guess),
+                                     callback=writePos)
+                    for n in range(meta.int_start, meta.n_int)]
+            pool.close()
+            iterfn = jobs
+            if meta.verbose:
+                iterfn = tqdm(iterfn)
+            for job in iterfn:
+                job.get()
+
+        data['driftypos'] = (['time'], src_ypos_exact)
+        data['driftywidth'] = (['time'], src_ypos_width)
+
+        return data, meta, log
+    else:
+        # Get the source position of frame `integ`
+        log.writelog('  Locating source position...', mute=(not meta.verbose))
+
+        meta.src_ypos = source_pos_one(flux[integ], meta, data.attrs['shdr'],
+                                       m, integ, True, guess)[0]
+
+        log.writelog('    Source position on detector is row '
+                     f'{meta.src_ypos}.', mute=(not meta.verbose))
+
+        return data, meta, log
+
+
+def source_pos_one(flux, meta, shdr, m, n, plot=True, guess=None):
+    '''Make image+background plot.
+
+    Parameters
+    ----------
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    shdr : astropy.io.fits.header.Header    
+        The science header of the file being processed.
+    m : int
+        The file number.
+    n : int
+        The integration number.
+    plot : bool; optional
+        If True, plot the source position determination.
+        Defaults to True.
+    guess : float, optional
+        The guess at the source position for WFC3 data.
 
     Returns
     -------
@@ -38,49 +143,46 @@ def source_pos(data, meta, m, integ=0):
     - 2022-07-11 Caroline Piaulet
         Enable recording of the width if the source is fitted with a Gaussian
         + add an option to fit any integration (not hardcoded to be the first)
+    - 2022-07-18, Taylor J Bell
+        Allowing parallelized code if fitting multiple frames.
     '''
-    # Mask any clipped values
-    flux = np.ma.masked_where(~data.mask.values, data.flux.values)
-
     if meta.src_pos_type == 'header':
-        if 'SRCYPOS' not in data.attrs['shdr']:
+        if 'SRCYPOS' not in shdr:
             raise AttributeError('There is no SRCYPOS in the FITS header. '
                                  'You must select a different value for '
                                  'meta.src_pos_type')
-        src_ypos = data.attrs['shdr']['SRCYPOS'] - meta.ywindow[0]
+        src_ypos = shdr['SRCYPOS'] - meta.ywindow[0]
     elif meta.src_pos_type == 'weighted':
         # find the source location using a flux-weighted mean approach
-        src_ypos = source_pos_FWM(flux, meta, m, integ=integ)
+        src_ypos = source_pos_FWM(flux, meta, m, n, plot)
     elif meta.src_pos_type == 'gaussian':
         # find the source location using a gaussian fit
-        src_ypos, src_ywidth = source_pos_gauss(flux, meta, m,
-                                                integ=integ)
+        src_ypos, src_ywidth = source_pos_gauss(flux, meta, m, n, plot)
     elif meta.src_pos_type == 'hst':
-        src_ypos = data.guess.values[0]
+        src_ypos = guess
     else:
         # brightest row for source location
-        src_ypos = source_pos_max(flux, meta, m, integ=integ)
+        src_ypos = source_pos_max(flux, meta, m, n, plot)
 
     if meta.src_pos_type == 'gaussian':
-        return int(round(src_ypos)), src_ypos, src_ywidth
+        return int(round(src_ypos)), src_ypos, src_ywidth, n
     else:
-        return int(round(src_ypos)), src_ypos, np.zeros_like(src_ypos)
+        return int(round(src_ypos)), src_ypos, np.zeros_like(src_ypos), n
 
 
-def source_pos_max(flux, meta, m, integ=0, plot=True):
+def source_pos_max(flux, meta, m, n=0, plot=True):
     '''A simple function to find the brightest row for source location
 
     Parameters
     ----------
     flux : ndarray
-        The 3D array of flux values.
+        The 2D array of flux values.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
         The file number.
-    integ : int, optional
-        The integration number.
-        Default is 0 (first integration)
+    n : int, optional
+        The integration number. Default is 0 (first integration).
     plot : bool; optional
         If True, plot the source position determination.
         Defaults to True.
@@ -101,36 +203,37 @@ def source_pos_max(flux, meta, m, integ=0, plot=True):
     - July 11, 2022 Caroline Piaulet
         Add option to fit any integration (not hardcoded to be the first)
     '''
+    x_dim = flux.shape[0]
 
-    x_dim = flux.shape[1]
-
-    sum_row = np.ma.sum(flux[integ], axis=1)
+    sum_row = np.ma.sum(flux, axis=1)
     pos_max = np.ma.argmax(sum_row)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 3 and plot:
         y_pixels = np.arange(0, x_dim)
-        plots_s3.source_position(meta, x_dim, pos_max, m, y_pixels=y_pixels,
+        plots_s3.source_position(meta, x_dim, pos_max, m, n, y_pixels=y_pixels,
                                  sum_row=sum_row)
 
     return pos_max
 
 
-def source_pos_FWM(flux, meta, m, integ=0):
+def source_pos_FWM(flux, meta, m, n=0, plot=True):
     '''An alternative function to find the source location using a
     flux-weighted mean approach.
 
     Parameters
     ----------
     flux : ndarray
-        The 3D array of flux values.
+        The 2D array of flux values.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
         The file number.
-    integ : int, optional
-        The integration number.
-        Default is 0 (first integration)
+    n : int, optional
+        The integration number. Default is 0 (first integration).
+    plot : bool; optional
+        If True, plot the source position determination.
+        Defaults to True.
 
     Returns
     -------
@@ -148,22 +251,21 @@ def source_pos_FWM(flux, meta, m, integ=0):
     - 2022-07-11 Caroline Piaulet
         Add option to fit any integration (not hardcoded to be the first)
     '''
+    x_dim = flux.shape[0]
 
-    x_dim = flux.shape[1]
-
-    pos_max = source_pos_max(flux, meta, m, plot=False)
+    pos_max = source_pos_max(flux, meta, m, n=n, plot=False)
 
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
-    sum_row = np.ma.sum(flux[integ],
-                        axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
+    sum_row = np.ma.sum(flux, axis=1)[pos_max-meta.spec_hw:
+                                      pos_max+meta.spec_hw]
     sum_row -= (sum_row[0]+sum_row[-1])/2
 
-    y_pos = np.ma.sum(sum_row * y_pixels)/np.ma.sum(sum_row)
+    y_pos = np.ma.sum(sum_row*y_pixels)/np.ma.sum(sum_row)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3:
-        plots_s3.source_position(meta, x_dim, pos_max, m, isFWM=True,
+    if meta.isplots_S3 >= 3 and plot:
+        plots_s3.source_position(meta, x_dim, pos_max, m, n, isFWM=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  y_pos=y_pos)
 
@@ -203,7 +305,7 @@ def gauss(x, a, x0, sigma, off):
     return a*np.exp(-(x-x0)**2/(2*sigma**2))+off
 
 
-def source_pos_gauss(flux, meta, m, integ=0):
+def source_pos_gauss(flux, meta, m, n=0, plot=True):
     '''A function to find the source location using a gaussian fit.
 
     Parameters
@@ -214,9 +316,12 @@ def source_pos_gauss(flux, meta, m, integ=0):
         The metadata object.
     m : int
         The file number.
-    integ : int, optional
+    n : int, optional
         The integration number.
         Default is 0 (first integration)
+    plot : bool; optional
+        If True, plot the source position determination.
+        Defaults to True.
 
     Returns
     -------
@@ -237,13 +342,13 @@ def source_pos_gauss(flux, meta, m, integ=0):
         Enable recording of the width if the source is fitted with a Gaussian
         + add an option to fit any integration (not hardcoded to be the first)
     '''
-    x_dim = flux.shape[1]
+    x_dim = flux.shape[0]
 
     # Data cutout around the maximum row
-    pos_max = source_pos_max(flux, meta, m, integ=integ, plot=False)
+    pos_max = source_pos_max(flux, meta, m, n=n, plot=False)
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    sum_row = np.ma.sum(flux[integ],
-                        axis=1)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
+    sum_row = np.ma.sum(flux, axis=1)[pos_max-meta.spec_hw:
+                                      pos_max+meta.spec_hw]
 
     # Initial Guesses
     sigma0 = np.ma.sqrt(np.ma.sum(sum_row*(y_pixels-pos_max)**2) /
@@ -255,8 +360,9 @@ def source_pos_gauss(flux, meta, m, integ=0):
     popt, pcov = curve_fit(gauss, y_pixels, sum_row, p0)
 
     # Diagnostic plot
-    if meta.isplots_S3 >= 3:
-        plots_s3.source_position(meta, x_dim, pos_max, m, isgauss=True,
+    if meta.isplots_S3 >= 3 and plot:
+        plots_s3.source_position(meta, x_dim, pos_max, m, n, isgauss=True,
                                  y_pixels=y_pixels, sum_row=sum_row,
                                  popt=popt)
+
     return popt[1], popt[2]
