@@ -311,7 +311,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 if meta.photometry:
                     #Do outlier reduction  along time axis
-                    data = inst.flag_bg_phot(data, meta, log)
+                    #data = inst.flag_bg_phot(data, meta, log)
 
                     # Setting up arrays for photometry reduction
                     data['centroid_x'] = (['time'], np.zeros_like(data.time))
@@ -334,16 +334,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                     for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
                         # Determine centroid position
-                        position, extra = centerdriver.centerdriver(meta.phot_method, data.flux[i].values,
-                                                                    meta.phot_guess, 0, 0, 0,mask=None, uncd=None,
+                        position, _ = centerdriver.centerdriver('col', data.flux[i].values,
+                                                                    [len(data.flux[:,0])//2,len(data.flux[0])//2], 0, 0, 0,mask=None, uncd=None,
                                                                     fitbg=1, maskstar=True, expand=1.0, psf=None,
                                                                     psfctr=None)
+                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
+                                                                    position, 8, 0, 0,mask=None, uncd=None,
+                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
+                                                                    psfctr=None, i=i, m=m, meta=meta)
                         log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
                                      + str(np.transpose(position)), mute=(not meta.verbose))
                         data['centroid_y'][i], data['centroid_x'][i] = position
-                        if meta.phot_method == "fgc":
-                            data['centroid_sy'][i] = extra[0]
-                            data['centroid_sx'][i] = extra[1]
+                        data['centroid_sy'][i] = extra[0]
+                        data['centroid_sx'][i] = extra[1]
 
                         # Calculate flux in aperture and subtract background flux
                         aphot = apphot.apphot(i, m, meta, image=data.flux[i].values,

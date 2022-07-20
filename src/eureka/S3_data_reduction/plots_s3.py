@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from .source_pos import gauss
 from ..lib import util
 from ..lib.plots import figure_filetype
+import scipy.stats as stats
 
 
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
@@ -348,14 +349,14 @@ def phot_lc(meta, data):
     """
     Plots the flux as a function of time.
     """
-    plt.figure(3102)
+    plt.figure(3103)
     plt.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3102-1D_LC' + figure_filetype)
+    fname = (f'figs{os.sep}fig3103-1D_LC' + figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -379,7 +380,7 @@ def phot_centroid(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
-    plt.figure(3305)
+    plt.figure(3306)
     plt.clf()
     plt.suptitle('Centroid positions over time')
     fig, ax = plt.subplots(4,1)
@@ -387,25 +388,66 @@ def phot_centroid(meta, data):
     ax[1].plot(range(len(data.centroid_y)), data.centroid_y, label='y')
     ax[2].plot(range(len(data.centroid_sx)), data.centroid_sy, label='sx')
     ax[3].plot(range(len(data.centroid_sy)), data.centroid_sy, label='sy')
-    plt.legend()
-    fig.savefig(meta.outputdir + '/figs/centroid.png', dpi=250)
+    fig.legend()
+    fname = (f'figs{os.sep}fig3306-Centroid' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
+    plt.figure(3502)
+    plt.clf()
+    plt.suptitle('Centroid gaussian fit')
+    fig, ax = plt.subplots(2,2, figsize=(8,8))
+    fig.delaxes(ax[1,1])
+    ax[0,0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+
+    ax[1,0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
+    x_plot = np.linspace(0, len(np.sum(img, axis=0)))
+    ax[1,0].plot(x_plot, stats.norm.pdf(x_plot, x, sx)/np.max(stats.norm.pdf(x_plot, x, sx))*np.max(np.sum(img, axis=0)))
+
+    ax[0,1].plot(np.sum(img, axis=1), range(len(np.sum(img, axis=1))))
+    y_plot = np.linspace(0, len(np.sum(img, axis=1)))
+    ax[0,1].plot(stats.norm.pdf(y_plot, y, sy)/np.max(stats.norm.pdf(y_plot, y, sy))*np.max(np.sum(img, axis=1)), y_plot)
+
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.tight_layout()
+    fname = (f'figs{os.sep}fig3502_file{file_number}_int{int_number}_centroid_fgc' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
+    if not meta.hide_plots:
+        plt.pause(0.2)
 
 
 def phot_centroid_frame(meta, m, i, data):
     """
     Plots the 2D frame together with the centroid position.
     """
+    plt.figure(3307)
+    plt.clf()
+    plt.suptitle('2D frame with Centroid')
     flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
     fig, ax = plt.subplots()
     ax.imshow(flux, vmax=5e3, origin='lower')
     ax.scatter(centroid_x, centroid_y, marker='x', s=25, c='r')
-    fig.savefig(meta.outputdir + '/figs/frame_{0}_{1}.png'.format(m, i), dpi=250)
+
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.tight_layout()
+    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_centroid' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
+    if not meta.hide_plots:
+        plt.pause(0.2)
 
 
-def phot_aperture(meta, image, targpos, skyann, apmask, mmm, iii):
+def phot_aperture(meta, image, targpos, skyann, apmask, m, i):
     """
     Plots the 2D frame with the target and background aperture.
     """
+    plt.figure(3308)
+    plt.clf()
+    plt.suptitle('2D frame with Apertures')
     plt.imshow(image, origin='lower', vmax = 5e3)
     plt.scatter(targpos[1], targpos[0], marker='x', s=25, c='r')
     alphas = np.zeros(image.shape)
@@ -415,15 +457,28 @@ def phot_aperture(meta, image, targpos, skyann, apmask, mmm, iii):
     alphas[np.where(apmask == True)] = 0.4
     plt.imshow(~apmask, origin='lower', alpha=alphas)
     plt.tight_layout()
-    plt.savefig(meta.outputdir + '/figs/frame_bg_{0}_{1}.png'.format(mmm, iii))
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.tight_layout()
+    fname = (f'figs{os.sep}fig3308_file{file_number}_int{int_number}_2D_aperture' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
+    if not meta.hide_plots:
+        plt.pause(0.2)
 
 
 def phot_npix(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
+    plt.figure(3309)
+    plt.clf()
+    plt.suptitle('Aperture sizes over time')
     fig, ax = plt.subplots(2,1)
     ax[0].plot(range(len(data.nappix)), data.nappix, label='nappix')
     ax[1].plot(range(len(data.nskypix)), data.nskypix, label='nskypix')
-    plt.legend()
-    fig.savefig(meta.outputdir + '/figs/npix.png', dpi=250)
+    fig.legend()
+    plt.tight_layout()
+    fname = (f'figs{os.sep}fig3309_aperture_size' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
+    if not meta.hide_plots:
+        plt.pause(0.2)

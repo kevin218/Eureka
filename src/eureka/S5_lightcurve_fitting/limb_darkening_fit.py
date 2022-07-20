@@ -51,7 +51,7 @@ def ld_profile(name='quadratic', latex=False):
     https://www.cfa.harvard.edu/~lkreidberg/batman/tutorial.html#limb-darkening-options
     """
     # Supported profiles a la BATMAN
-    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root',
+    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
 
     # Check that the profile is supported
@@ -65,7 +65,7 @@ def ld_profile(name='quadratic', latex=False):
             profile = quadratic
         elif name == 'kipping2013':
             profile = kipping2013
-        elif name == 'square-root':
+        elif name == 'squareroot':
             profile = square_root
         elif name == 'logarithmic':
             profile = logarithmic

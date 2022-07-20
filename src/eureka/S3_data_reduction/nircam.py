@@ -53,20 +53,23 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']
-    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-    int_times = hdulist['INT_TIMES', 1].data[data.attrs['intstart'] - 1: data.attrs['intend']]
+    int_times = hdulist['INT_TIMES', 1].data
     if hdulist[0].header['CHANNEL'] == 'SHORT':  # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
         data.attrs['shdr']['DISPAXIS'] = 1 # This argument does not exist for photmetry data. Added it here so that code in other sections doesnt have to be changed
         #time = np.linspace(hdulist[0].header['EXPSTART'], hdulist[0].header['EXPEND'], (hdulist[0].header['INTEND']-hdulist[0].header['INTSTART']+1))
         if hdulist[0].header['FILTER'] == 'F210M': #TODO make this better for all filters
-            wave_2d = np.ones_like(sci[0])*2.1
+            wave_2d = np.ones_like(sci[0]) * 2.1
+        elif hdulist[0].header['FILTER'] == 'F187N':
+            wave_2d = np.ones_like(sci[0]) * 1.87
 
     elif hdulist[0].header['CHANNEL'] == 'LONG':  # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
         wave_2d = hdulist['WAVELENGTH', 1].data
-
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
