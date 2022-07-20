@@ -68,6 +68,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     - July 2022 Caroline Piaulet
         Now computing the y pos and width for each integration 
         + stored in Spec and add diagnostics plots
+    - July 2022 Sebastian Zieba
+        Added photometry S3
     '''
 
     # Load Eureka! control file and store values in Event object
