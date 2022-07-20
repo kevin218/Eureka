@@ -14,7 +14,6 @@ dependencies:
     - cython
     - dynesty[version='>1.0']
     - emcee[version='>3.0.0']
-    - exotic-ld
     - george
     - gwcs
     - h5py[version='<3.2']
@@ -33,6 +32,7 @@ dependencies:
     - pip:
         - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
         - crds
+        - exotic-ld
         - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
         - jwst==1.6.0
         - myst-parser # Needed for documentation
