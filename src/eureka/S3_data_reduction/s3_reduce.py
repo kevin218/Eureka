@@ -254,9 +254,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
-                if meta.photometry:
-                    meta.src_ypos = 0
-                else:
+                if not meta.photometry:
                     # Locate source postion
                     log.writelog('  Locating source position...',
                                  mute=(not meta.verbose))
@@ -276,11 +274,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
 
-                # Compute median frame
-                data['medflux'] = (['y', 'x'], np.median(data.flux.values,
-                                                         axis=0))
-                data['medflux'].attrs['flux_units'] = \
-                    data.flux.attrs['flux_units']
+                if not meta.photometry:
+                    # Compute median frame
+                    data['medflux'] = (['y', 'x'], np.median(data.flux.values,
+                                                             axis=0))
+                    data['medflux'].attrs['flux_units'] = \
+                        data.flux.attrs['flux_units']
 
                 # correct G395H curvature
                 if meta.inst == 'nirspec' and data.mhdr['GRATING'] == 'G395H':
@@ -308,69 +307,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if hasattr(meta, 'manmask'):
                     util.manmask(data, meta, log)
 
-
-                if meta.photometry:
-                    #Do outlier reduction  along time axis
-                    data = inst.flag_bg_phot(data, meta, log)
-
-                    # Setting up arrays for photometry reduction
-                    data['centroid_x'] = (['time'], np.zeros_like(data.time))
-                    data['centroid_y'] = (['time'], np.zeros_like(data.time))
-                    data['centroid_sx'] = (['time'], np.zeros_like(data.time))
-                    data['centroid_sy'] = (['time'], np.zeros_like(data.time))
-                    # Arrays for aperture extraction
-                    data['aplev'], data['aperr'], data['nappix'], data['skylev'], data['skyerr'], \
-                    data['nskypix'], data['nskyideal'], data['status'], data['betaper'] =  \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time))
-
-                    data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                    data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']
-                    data['aperr'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                    data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
-
-                    for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
-                        # Determine centroid position
-                        guess=[data.flux.shape[1]//2, data.flux.shape[2]//2]
-                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
-                                                                    guess, 0, 0, 0, mask=None, uncd=None,
-                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
-                                                                    psfctr=None, i=i, m=m, meta=meta)
-
-                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
-                                                                    position, 7, 0, 0, mask=data.mask[i].values, uncd=None,
-                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
-                                                                    psfctr=None, i=i, m=m, meta=meta)
-
-                        #log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
-                        #             + str(np.transpose(position)), mute=(not meta.verbose))
-                        data['centroid_y'][i], data['centroid_x'][i] = position
-                        data['centroid_sy'][i] = extra[0]
-                        data['centroid_sx'][i] = extra[1]
-
-                        # Calculate flux in aperture and subtract background flux
-                        aphot = apphot.apphot(i, m, meta, image=data.flux[i].values,
-                        ctr = (data['centroid_y'][i], data['centroid_x'][i]),
-                        photap = meta.photap, skyin = meta.skyin, skyout = meta.skyout,
-                        betahw = 1, targpos = position,
-                        mask = data.mask[i].values,
-                        imerr = data.err[i].values,
-                        skyfrac = 0.1, med = False,
-                        expand = 1, isbeta = False,
-                        nochecks = False, aperr = True, nappix = True,
-                        skylev = True, skyerr = True, nskypix = True,
-                        nskyideal = True, status = True, betaper = True)
-
-                        data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], data['skyerr'][i], \
-                        data['nskypix'][i], data['nskyideal'][i], data['status'][i], data['betaper'][i] = aphot
-
-                        # Plot 2D frame and the centroid position
-                        if meta.isplots_S3 >= 3:
-                            plots_s3.phot_centroid_frame(meta, m, i, data)
-                else:
+                if not meta.photometry:
                     # Perform outlier rejection of sky background along time axis
                     data = inst.flag_bg(data, meta, log)
 
@@ -442,6 +379,70 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         for n in iterfn:
                             # make optimal spectrum plot
                             plots_s3.optimal_spectrum(data, meta, n, m)
+                else:
+                    # Do outlier reduction along time axis
+                    data = inst.flag_bg_phot(data, meta, log)
+
+                    # Setting up arrays for photometry reduction
+                    data['centroid_x'] = (['time'], np.zeros_like(data.time))
+                    data['centroid_y'] = (['time'], np.zeros_like(data.time))
+                    data['centroid_sx'] = (['time'], np.zeros_like(data.time))
+                    data['centroid_sy'] = (['time'], np.zeros_like(data.time))
+                    # Arrays for aperture extraction
+                    data['aplev'], data['aperr'], data['nappix'], data['skylev'], data['skyerr'], \
+                    data['nskypix'], data['nskyideal'], data['status'], data['betaper'] =  \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+                        (['time'], np.zeros_like(data.time))
+
+                    data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
+                    data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']
+                    data['aperr'].attrs['flux_units'] = data.flux.attrs['flux_units']
+                    data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
+
+                    for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
+                        # Determine centroid position
+                        # Use the center of the frame as an initial guess
+                        centroid_guess=[data.flux.shape[1]//2, data.flux.shape[2]//2]
+                        # Do a 2D gaussian fit to the whole frame
+                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
+                                                                    centroid_guess, 0, 0, 0, mask=None, uncd=None,
+                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
+                                                                    psfctr=None, i=i, m=m, meta=meta)
+                        # Use the determined centroid, cutout a 7x7 area round the centroid and perform another 2D gaussian fit
+                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
+                                                                    position, 7, 0, 0, mask=data.mask[i].values, uncd=None,
+                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
+                                                                    psfctr=None, i=i, m=m, meta=meta)
+
+                        #log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
+                        #             + str(np.transpose(position)), mute=(not meta.verbose))
+
+                        data['centroid_y'][i], data['centroid_x'][i] = position
+                        data['centroid_sy'][i] = extra[0]
+                        data['centroid_sx'][i] = extra[1]
+
+                        # Plot 2D frame, the centroid and the centroid position
+                        if meta.isplots_S3 >= 3:
+                            plots_s3.phot_2D_frame(meta, m, i, data)
+
+                        # Calculate flux in aperture and subtract background flux
+                        aphot = apphot.apphot(image=data.flux[i].values,
+                        ctr = (data['centroid_y'][i], data['centroid_x'][i]),
+                        photap = meta.photap, skyin = meta.skyin, skyout = meta.skyout,
+                        betahw = 1, targpos = position,
+                        mask = data.mask[i].values,
+                        imerr = data.err[i].values,
+                        skyfrac = 0.1, med = False,
+                        expand = 1, isbeta = False,
+                        nochecks = False, aperr = True, nappix = True,
+                        skylev = True, skyerr = True, nskypix = True,
+                        nskyideal = True, status = True, betaper = True)
+
+                        data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], data['skyerr'][i], \
+                        data['nskypix'][i], data['nskyideal'][i], data['status'][i], data['betaper'][i] = aphot
 
                 if meta.save_output:
                     # Save flux data from current segment
@@ -459,10 +460,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 # Remove large 3D arrays from Dataset
                 del(data['flux'], data['err'], data['dq'], data['v0'],
-                    data['mask'], data['wave_2d'],
+                    data['mask'],
                     data.attrs['intstart'], data.attrs['intend'])
                 if not meta.photometry:
-                    del (data['bg'])
+                    del (data['bg'], data['wave_2d'])
                 elif meta.inst == 'wfc3':
                     del(data['flatmask'], data['variance'])
 

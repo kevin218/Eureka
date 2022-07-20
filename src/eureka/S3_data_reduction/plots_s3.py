@@ -370,6 +370,9 @@ def phot_bg(meta, data):
     plt.clf()
     plt.suptitle('Photometric background light curve')
     plt.errorbar(data.time, data['skylev'], yerr=data['skyerr'], c='k', fmt='.')
+    plt.ylabel('Flux')
+    plt.xlabel('Time')
+    plt.tight_layout()
     fname = (f'figs{os.sep}fig3305-1D_BG_LC' + figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
@@ -385,21 +388,21 @@ def phot_centroid(meta, data):
     plt.suptitle('Centroid positions over time')
 
     plt.subplot(411)
-    plt.plot(range(len(data.centroid_x)), data.centroid_x-np.mean(data.centroid_x))
+    plt.plot(data.time, data.centroid_x-np.mean(data.centroid_x))
     plt.ylabel('Delta x')
 
     plt.subplot(412)
-    plt.plot(range(len(data.centroid_y)), data.centroid_y-np.mean(data.centroid_y))
+    plt.plot(data.time, data.centroid_y-np.mean(data.centroid_y))
     plt.ylabel('Delta y')
 
     plt.subplot(413)
-    plt.plot(range(len(data.centroid_sx)), data.centroid_sy-np.mean(data.centroid_sx))
+    plt.plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
     plt.ylabel('Delta sx')
 
     plt.subplot(414)
-    plt.plot(range(len(data.centroid_sy)), data.centroid_sy-np.mean(data.centroid_sy))
+    plt.plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
     plt.ylabel('Delta sy')
-
+    plt.xlabel('Time')
     plt.tight_layout()
     fname = (f'figs{os.sep}fig3306-Centroid' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -432,48 +435,38 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
         plt.pause(0.2)
 
 
-def phot_2D_frame(meta, m, i, data, image, targpos, skyann, apmask):
+def phot_2D_frame(meta, m, i, data):
     """
     Plots the 2D frame together with the centroid position and apertures.
     """
     plt.figure(3307)
     plt.clf()
-    plt.suptitle('2D frame with Centroid and apertures')
+    plt.suptitle('2D frame with centroid and apertures')
     flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
-    fig, ax = plt.subplots()
-    ax.imshow(flux, vmax=5e3, origin='lower')
-    ax.scatter(centroid_x, centroid_y, marker='x', s=25, c='r')
-
+    plt.imshow(flux, vmax=5e3, origin='lower')
+    plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
+    #alphas = np.zeros(image.shape)
+    #alphas[np.where(skyann == True)] = 0.9
+    #plt.imshow(~skyann, origin='lower', alpha=alphas, cmap='magma')
+    #alphas = np.zeros(image.shape)
+    #alphas[np.where(apmask == True)] = 0.4
+    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r', fill=False, lw=3, alpha=0.7, label='target aperture')
+    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w', fill=False, lw=4, alpha=0.8, label='sky aperture')
+    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w', fill=False, lw=4, alpha=0.8)
+    plt.gca().add_patch(circle1)
+    plt.gca().add_patch(circle2)
+    plt.gca().add_patch(circle3)
+    #plt.imshow(~apmask, origin='lower', alpha=alphas)
+    plt.xlim(0, flux.shape[1])
+    plt.ylim(0, flux.shape[0])
+    plt.xlabel('x pixels')
+    plt.ylabel('y pixels')
+    plt.legend()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_centroid' + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
-    if not meta.hide_plots:
-        plt.pause(0.2)
-
-
-def phot_aperture(meta, image, targpos, skyann, apmask, m, i):
-    """
-    Plots the 2D frame with the target and background aperture.
-    """
-    plt.figure(3308)
-    plt.clf()
-    plt.suptitle('2D frame with Apertures')
-    plt.imshow(image, origin='lower', vmax = 5e3)
-    plt.scatter(targpos[1], targpos[0], marker='x', s=25, c='r')
-    alphas = np.zeros(image.shape)
-    alphas[np.where(skyann == True)] = 0.9
-    plt.imshow(~skyann, origin='lower', alpha=alphas, cmap='magma')
-    alphas = np.zeros(image.shape)
-    alphas[np.where(apmask == True)] = 0.4
-    plt.imshow(~apmask, origin='lower', alpha=alphas)
-    plt.tight_layout()
-    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.tight_layout()
-    fname = (f'figs{os.sep}fig3308_file{file_number}_int{int_number}_2D_aperture' + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
+    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_frame' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -485,10 +478,14 @@ def phot_npix(meta, data):
     plt.figure(3308)
     plt.clf()
     plt.suptitle('Aperture sizes over time')
-    fig, ax = plt.subplots(2,1)
-    ax[0].plot(range(len(data.nappix)), data.nappix, label='nappix')
-    ax[1].plot(range(len(data.nskypix)), data.nskypix, label='nskypix')
-    fig.legend()
+    plt.subplot(211)
+    plt.plot(range(len(data.nappix)), data.nappix)
+    plt.xlabel('nappix')
+    plt.subplot(212)
+    plt.plot(range(len(data.nskypix)), data.nskypix)
+    plt.xlabel('nappix')
+    plt.legend()
+    plt.xlabel('Time')
     plt.tight_layout()
     fname = (f'figs{os.sep}fig3308_aperture_size' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)

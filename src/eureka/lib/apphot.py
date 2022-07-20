@@ -12,7 +12,7 @@ from . import interp2d as i2d
 from ..S3_data_reduction import plots_s3
 
 
-def apphot(iii, mmm, meta, image, ctr, photap, skyin, skyout, betahw, targpos,
+def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
            mask=None, imerr=None, skyfrac=0.0,
            med=False, nochecks=False,
            expand=1, order=1,
@@ -530,9 +530,6 @@ def apphot(iii, mmm, meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     apmask, dstatus = di.disk(iphotap, ictr, isz, status=True)
     if dstatus:  # is the aperture fully on the image?
         status |= statap
-
-    if meta.isplots_S3 >= 3:
-        plots_s3.phot_aperture(meta, image, targpos, skyann, apmask, mmm, iii)
 
     aploc = np.where(apmask)  # report number of pixels in aperture
     ret[nappix] = np.sum(apmask[aploc]) / iexpand ** 2.0  # make it unexpended pixels
