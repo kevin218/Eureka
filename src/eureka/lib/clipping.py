@@ -8,9 +8,9 @@ from astropy.stats import sigma_clip
 __all__ = ['clip_outliers', 'gauss_removal']
 
 
-def clip_outliers(data, log, wavelength, mask=None, sigma=10, box_width=5,
-                  maxiters=5, boundary='extend', fill_value='mask',
-                  verbose=False):
+def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
+                  sigma=10, box_width=5, maxiters=5, boundary='extend',
+                  fill_value='mask', verbose=False):
     '''Find outliers in 1D time series.
 
     Be careful when using this function on a time-series with known
@@ -26,6 +26,8 @@ def clip_outliers(data, log, wavelength, mask=None, sigma=10, box_width=5,
         The open log in which notes from this step can be added.
     wavelength : float
         The wavelength currently under consideration.
+    wavelength_units : float
+        The wavelength units currently under consideration.
     mask : ndarray (1D), optional
         A mask array to use if data is not a masked array. Defaults to None
         in which case only the invalid values of data will be masked.
@@ -70,21 +72,37 @@ def clip_outliers(data, log, wavelength, mask=None, sigma=10, box_width=5,
     data = np.ma.masked_where(mask, data)
         
     kernel = Box1DKernel(box_width)
-    # Compute the moving mean
-    bound_val = np.ma.median(data)  # Only used if boundary=='fill'
-    smoothed_data = convolve(data, kernel, boundary=boundary,
-                             fill_value=bound_val)
-    # Compare data to the moving mean (to remove astrophysical signals)
-    residuals = data-smoothed_data
-    # Sigma clip residuals to find bad points in data
-    residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters,
-                           cenfunc=np.ma.median)
-    outliers = np.ma.getmaskarray(residuals)
+    
+    outliers = np.zeros_like(data, dtype=bool)
+    new_clipped = True
+    i = 0
+    while i < maxiters and new_clipped:
+        i += 1
+
+        # Compute the moving mean
+        bound_val = np.ma.median(data)  # Only used if boundary=='fill'
+        smoothed_data = convolve(data, kernel, boundary=boundary,
+                                 fill_value=bound_val)
+        # Compare data to the moving mean (to remove astrophysical signals)
+        residuals = data-smoothed_data
+        # Sigma clip residuals to find bad points in data
+        residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters,
+                               cenfunc=np.ma.median)
+        new_outliers = np.ma.getmaskarray(residuals)
+        if np.all(new_outliers == outliers):
+            new_clipped = False
+        else:
+            outliers = new_outliers
+            data = np.ma.masked_where(outliers, data)
+
+    if i == maxiters:
+        log.writelog('WARNING: maxiters has been reached during clip_outliers '
+                     'without converging!')
 
     if np.any(outliers):
-        log.writelog(f'Identified {np.sum(outliers)} outliers for wavelength '
-                     f'{wavelength.values:.4f} '
-                     f'{wavelength.attrs["wave_units"]}', mute=(not verbose))
+        log.writelog(f'  Identified {np.sum(outliers)} outliers for wavelength'
+                     f' {wavelength:.4f} '
+                     f'{wavelength_units}', mute=(not verbose))
 
     # Replace clipped data
     if fill_value == 'mask':

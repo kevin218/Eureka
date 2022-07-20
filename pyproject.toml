@@ -1,3 +1,6 @@
 [build-system]
-requires = ["setuptools>=40.9.0", "wheel", "cython"]
+requires = ["setuptools>=42", "wheel", "cython", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/eureka/version.py"

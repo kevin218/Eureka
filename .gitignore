@@ -159,3 +159,6 @@ eureka_analysis/JWST/run_eureka_demo.py
 
 # Ignores for Taylor
 *.dat
+
+# Ignore version.py to allow automated version numbering
+version.py

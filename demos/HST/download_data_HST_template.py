@@ -20,6 +20,7 @@ download_dir = '.'
 subgroup = 'IMA'
 
 # MAST API token for accessing data with exclusive access
+# This can be generated at https://auth.mast.stsci.edu/token
 mast_token = None
 
 # Final destination of files after calling mast.consolidate
@@ -29,12 +30,12 @@ final_dir = './HD209458/ima'
 md.login(mast_token)
 for vis in visits:
     # Download data from MAST Archive
-    result = md.download(proposal_id, vis, inst, download_dir, subgroup)
+    result = md.downloadHST(proposal_id, vis, inst, download_dir, subgroup)
     if result is not None:
         # Consolodate and move data into new directory
         md.consolidate(result, final_dir)
         # Sort data into science and calibration folders (scan vs direct image)
-        md.sort(final_dir)
+        md.sortHST(final_dir)
 
 # Delete empty temporary directory structure
 md.cleanup(download_dir)

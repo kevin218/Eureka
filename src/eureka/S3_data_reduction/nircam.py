@@ -49,20 +49,21 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
+
+    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
+
     int_times = hdulist['INT_TIMES', 1].data
     if hdulist[0].header['CHANNEL'] == 'LONG':  # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
         wave_2d = hdulist['WAVELENGTH', 1].data
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
     elif hdulist[0].header['CHANNEL'] == 'SHORT':  # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
-        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
         data.attrs['shdr']['DISPAXIS'] = 1 # This argument does not exist for photmetry data.
         # Added it here so that code in other sections doesnt have to be changed
         if hdulist[0].header['FILTER'] == 'F210M': #TODO make this better for all filters
@@ -70,12 +71,18 @@ def read(filename, data, meta, log):
         elif hdulist[0].header['FILTER'] == 'F187N':
             wave_1d = np.ones_like(sci[0,0]) * 1.87
 
+    int_times = hdulist['INT_TIMES', 1].data
+
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
-        time = read_time(meta, data)
+        time = read_time(meta, data, log)
     else:
         time = int_times['int_mid_BJD_TDB']
+        if len(time) > len(sci):
+            # This line is needed to still handle the simulated data
+            # which had the full time array for all segments
+            time = time[data.attrs['intstart']:data.attrs['intend']]
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']

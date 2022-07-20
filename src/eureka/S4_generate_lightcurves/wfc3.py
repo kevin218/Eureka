@@ -75,7 +75,8 @@ def sum_reads(spec, lc, meta):
     spec.scandir['time'] = time
     lc.drift2D['time'] = time
     lc.scandir['time'] = time
-    lc.drift1d['time'] = time
+    lc.driftxpos['time'] = time
+    lc.driftxwidth['time'] = time
     lc.driftmask['time'] = time
 
     # Update nreads
