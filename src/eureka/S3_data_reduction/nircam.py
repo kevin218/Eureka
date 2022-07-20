@@ -58,12 +58,12 @@ def read(filename, data, meta, log):
         meta.photometry = True
         data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
         data.attrs['intend'] = data.attrs['mhdr']['INTEND']
-        data.attrs['shdr']['DISPAXIS'] = 1 # This argument does not exist for photmetry data. Added it here so that code in other sections doesnt have to be changed
-        #time = np.linspace(hdulist[0].header['EXPSTART'], hdulist[0].header['EXPEND'], (hdulist[0].header['INTEND']-hdulist[0].header['INTSTART']+1))
+        data.attrs['shdr']['DISPAXIS'] = 1 # This argument does not exist for photmetry data.
+        # Added it here so that code in other sections doesnt have to be changed
         if hdulist[0].header['FILTER'] == 'F210M': #TODO make this better for all filters
-            wave_2d = np.ones_like(sci[0]) * 2.1
+            wave_1d = np.ones_like(sci[0][0]) * 2.1
         elif hdulist[0].header['FILTER'] == 'F187N':
-            wave_2d = np.ones_like(sci[0]) * 1.87
+            wave_1d = np.ones_like(sci[0][0]) * 1.87
 
     elif hdulist[0].header['CHANNEL'] == 'LONG':  # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
@@ -90,9 +90,12 @@ def read(filename, data, meta, log):
                                      name='dq')
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0')
-    data['wave_2d'] = (['y', 'x'], wave_2d)
-    data['wave_2d'].attrs['wave_units'] = wave_units
-
+    if not meta.photometry:
+        data['wave_2d'] = (['y', 'x'], wave_2d)
+        data['wave_2d'].attrs['wave_units'] = wave_units
+    else:
+        data['wave_1d'] = (['x'], wave_1d)
+        data['wave_1d'].attrs['wave_units'] = wave_units
     return data, meta, log
 
 

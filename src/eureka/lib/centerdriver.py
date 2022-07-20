@@ -87,8 +87,8 @@ def centerdriver(method, data, guess, trim, radius, size,
         sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk, weights=weights,
                                      fitbg=fitbg, maskg=maskstar)[0][0:4]
         extra = sy, sx  # Gaussian 1-sigma half-widths
-
-        plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
+        if meta.isplots_S3 >= 5:
+            plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     elif method == 'col':
         y, x = ctr.col(img)

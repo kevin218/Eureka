@@ -311,7 +311,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 if meta.photometry:
                     #Do outlier reduction  along time axis
-                    #data = inst.flag_bg_phot(data, meta, log)
+                    data = inst.flag_bg_phot(data, meta, log)
 
                     # Setting up arrays for photometry reduction
                     data['centroid_x'] = (['time'], np.zeros_like(data.time))
@@ -334,16 +334,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                     for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
                         # Determine centroid position
-                        position, _ = centerdriver.centerdriver('col', data.flux[i].values,
-                                                                    [len(data.flux[:,0])//2,len(data.flux[0])//2], 0, 0, 0,mask=None, uncd=None,
-                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
-                                                                    psfctr=None)
+                        guess=[data.flux.shape[1]//2, data.flux.shape[2]//2]
                         position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
-                                                                    position, 8, 0, 0,mask=None, uncd=None,
+                                                                    guess, 0, 0, 0, mask=None, uncd=None,
                                                                     fitbg=1, maskstar=True, expand=1.0, psf=None,
                                                                     psfctr=None, i=i, m=m, meta=meta)
-                        log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
-                                     + str(np.transpose(position)), mute=(not meta.verbose))
+
+                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
+                                                                    position, 7, 0, 0, mask=data.mask[i].values, uncd=None,
+                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
+                                                                    psfctr=None, i=i, m=m, meta=meta)
+
+                        #log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
+                        #             + str(np.transpose(position)), mute=(not meta.verbose))
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i] = extra[0]
                         data['centroid_sx'][i] = extra[1]
@@ -367,8 +370,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         # Plot 2D frame and the centroid position
                         if meta.isplots_S3 >= 3:
                             plots_s3.phot_centroid_frame(meta, m, i, data)
-                            #plots_s3.phot_centroid_frame_err(meta, m, i, data)
-                            #plots_s3.phot_centroid_frame_mask(meta, m, i, data)
                 else:
                     # Perform outlier rejection of sky background along time axis
                     data = inst.flag_bg(data, meta, log)
@@ -476,7 +477,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 plots_s3.phot_lc(meta, spec)
                 plots_s3.phot_bg(meta, spec)
                 plots_s3.phot_centroid(meta, spec)
-                plots_s3.phot_npix(meta, data)
+                plots_s3.phot_npix(meta, spec)
 
             if meta.photometry:
                 util.apphot_status(spec)
@@ -508,8 +509,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                                         optmask=spec.optmask)
-
-            print(meta.photometry)
 
             # Save results
             if meta.save_output:

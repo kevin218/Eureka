@@ -383,12 +383,24 @@ def phot_centroid(meta, data):
     plt.figure(3306)
     plt.clf()
     plt.suptitle('Centroid positions over time')
-    fig, ax = plt.subplots(4,1)
-    ax[0].plot(range(len(data.centroid_x)), data.centroid_x, label='x')
-    ax[1].plot(range(len(data.centroid_y)), data.centroid_y, label='y')
-    ax[2].plot(range(len(data.centroid_sx)), data.centroid_sy, label='sx')
-    ax[3].plot(range(len(data.centroid_sy)), data.centroid_sy, label='sy')
-    fig.legend()
+
+    plt.subplot(411)
+    plt.plot(range(len(data.centroid_x)), data.centroid_x-np.mean(data.centroid_x))
+    plt.ylabel('Delta x')
+
+    plt.subplot(412)
+    plt.plot(range(len(data.centroid_y)), data.centroid_y-np.mean(data.centroid_y))
+    plt.ylabel('Delta y')
+
+    plt.subplot(413)
+    plt.plot(range(len(data.centroid_sx)), data.centroid_sy-np.mean(data.centroid_sx))
+    plt.ylabel('Delta sx')
+
+    plt.subplot(414)
+    plt.plot(range(len(data.centroid_sy)), data.centroid_sy-np.mean(data.centroid_sy))
+    plt.ylabel('Delta sy')
+
+    plt.tight_layout()
     fname = (f'figs{os.sep}fig3306-Centroid' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
@@ -420,13 +432,13 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
         plt.pause(0.2)
 
 
-def phot_centroid_frame(meta, m, i, data):
+def phot_2D_frame(meta, m, i, data, image, targpos, skyann, apmask):
     """
-    Plots the 2D frame together with the centroid position.
+    Plots the 2D frame together with the centroid position and apertures.
     """
     plt.figure(3307)
     plt.clf()
-    plt.suptitle('2D frame with Centroid')
+    plt.suptitle('2D frame with Centroid and apertures')
     flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
     fig, ax = plt.subplots()
     ax.imshow(flux, vmax=5e3, origin='lower')
@@ -470,7 +482,7 @@ def phot_npix(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
-    plt.figure(3309)
+    plt.figure(3308)
     plt.clf()
     plt.suptitle('Aperture sizes over time')
     fig, ax = plt.subplots(2,1)
@@ -478,7 +490,7 @@ def phot_npix(meta, data):
     ax[1].plot(range(len(data.nskypix)), data.nskypix, label='nskypix')
     fig.legend()
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3309_aperture_size' + figure_filetype)
+    fname = (f'figs{os.sep}fig3308_aperture_size' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)

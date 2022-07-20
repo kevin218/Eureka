@@ -488,6 +488,7 @@ def apphot_status(data):
     Prints a warning if aperture step had errors.
     """
     if sum(data.status != 0) > 0:
+        print('Unique error flags which occurred: ', np.unique(data.status))
         print('An error has accured during the aperture extraction!')
         if 1 in data.status:
             print('there are masked pixel(s) in the photometry aperture')
