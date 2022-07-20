@@ -1,7 +1,12 @@
 # !/usr/bin/python
 import os
 
-from .version import __version__
+try:
+    from .version import __version__
+except ModuleNotFoundError:
+    from setuptools_scm import get_version
+    __version__ = get_version(root=f'..{os.sep}..{os.sep}',
+                              relative_to=__file__)
 
 from . import lib
 try:

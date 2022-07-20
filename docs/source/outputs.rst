@@ -13,10 +13,10 @@ Stage 2 Outputs
 
 If ``skip_extract_1d`` is set in the Stage 2 ECF, the 1-dimensional spectrum will not be extracted, and no plots will be made. Otherwise, Stage 2 will extract the 1-dimensional spectrum from the calibrated images, and will plot the spectrum.
 
-.. figure:: ../media/S2_out/fig2100.png
+.. figure:: ../media/S2_out/fig2101_file1_x1dints.png
    :alt: Stage 2 1-dimensional spectrum plot
 
-   Stage 2 output: 1-Dimensional Spectrum Plot
+   Fig 2101: 1-Dimensional Spectrum Plot
 
 
 .. _s3-out:
@@ -27,41 +27,56 @@ Stage 3 Outputs
 In Stage 3 through Stage 5, output plots are controlled with the ``isplots_SX`` parameter. The resulting plots are cumulative: setting ``isplots_S3 = 5`` will also create the plots specified in ``isplots_S3 = 3`` and ``isplots_S3 = 1``.
 
 In Stage 3:
-   - If ``isplots_S3`` = 1: ``Eureka!`` will plot the 2-dimensional, non-drift-corrected light curve. 
+   - If ``isplots_S3`` = 1: ``Eureka!`` will plot the 2-dimensional, non-drift-corrected light curve, as well as variations in the source position and width on the detector.
 
-   .. figure:: ../media/S3_out/fig3101.png
+   .. figure:: ../media/S3_out/fig3101-2D_LC.png
       :alt: Stage 3 2-dimensional spectrum plot
 
-      Stage 3 output: 2-Dimensional Spectrum Plot
+      Fig 3101: 2-Dimensional Spectrum Plot
 
-   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation, as well as the source position on the detector.
-
-   .. figure:: ../media/S3_out/fig3301.png
-      :alt: Stage 3 background subtracted flux plot
-
-      Stage 3 output: Background Subtracted Flux Plot
-
-   .. figure:: ../media/S3_out/fig3302.png
-      :alt: Stage 3 1-dimensional spectrum plot
-
-      Stage 3 output: 1-Dimensional Spectrum Plot
-
-   .. figure:: ../media/S3_out/fig3303.png
+   .. figure:: ../media/S3_out/fig3102_file0_int00_source_pos.png
       :alt: Stage 3 source position fit
 
-      Stage 3 output: Source Position Fit Plot
+      Fig 3102: Source Position Fit Plot
 
-   .. figure:: ../media/S3_out/fig3305.png
+   .. figure:: ../media/S3_out/fig3103_DriftYPos.png
+      :alt: Stage 3 y drift
+
+      Fig 3013: Variations in the spatial-axis position
+
+   .. figure:: ../media/S3_out/fig3104_DriftYWidth.png
+      :alt: Stage 3 y PSF width changes
+
+      Fig 3104: Variations in the spatial-axis PSF width
+
+   .. figure:: ../media/S3_out/fig3105_Drift2D.png
+      :alt: Stage 3 2D drift fit
+
+      Fig 3105: 2D drift fit (currently only produced for WFC3)
+
+   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation.
+
+   .. figure:: ../media/S3_out/fig3301_file0_int00_ImageAndBackground.png
+      :alt: Stage 3 background subtracted flux plot
+
+      Fig 3301: Background Subtracted Flux Plot
+
+   .. figure:: ../media/S3_out/fig3302_file0_int00_Spectrum.png
+      :alt: Stage 3 1-dimensional spectrum plot
+
+      Fig 3302: 1-Dimensional Spectrum Plot
+
+   .. figure:: ../media/S3_out/fig3303_file0_int00_Profile.png
       :alt: Stage 3 weighting profile
 
-      Stage 3 output: Weighting Profile Plot
+      Fig 3303: Weighting Profile Plot
 
    - If ``isplots_S3`` = 5: ``Eureka!`` will plot the Subdata plots from the optimal spectral extraction step.
 
-   .. figure:: ../media/S3_out/fig3501.png
+   .. figure:: ../media/S3_out/fig3501_file0_int00_col259_subdata.png
       :alt: Stage 3 subdata plot
 
-      Stage 3 output: Spectral Extraction Subdata Plot
+      Fig 3501: Spectral Extraction Subdata Plot
    
 .. _s4-out:
 
@@ -69,36 +84,34 @@ Stage 4 Outputs
 ---------------
 
 In Stage 4:
-   - If ``isplots_S4`` = 1: ``Eureka!`` will plot the spectral drift per exposure, and the drift-corrected 2-dimensional lightcurve with extracted bins overlaid.
+   - If ``isplots_S4`` = 1: ``Eureka!`` will plot the spectral drift per exposure, the drift-corrected 2-dimensional lightcurve with extracted bins overlaid, and the 1D light curves.
 
-   .. figure:: ../media/S4_out/fig4101.png
+   .. figure:: ../media/S4_out/fig4101_2D_LC.png
+      :alt: Stage 4 2-dimensional spectrum
+
+      Fig 4101: 2-Dimensional Spectrum
+
+   .. figure:: ../media/S4_out/fig4102_ch0_1D_LC.png
+      :alt: Stage 4 1-dimensional binned spectrum
+
+      Fig 4102: 1-Dimensional Binned Spectrum
+
+   .. figure:: ../media/S4_out/fig4103_DriftXPos.png
       :alt: Stage 4 spectral drift plot
 
-      Stage 4 output: Spectral Drift Plot
+      Fig 4103: Spectral Drift Plot
 
-   .. figure:: ../media/S4_out/fig4201.png
-      :alt: Stage 4 2-dimensional binned spectrum
+   - If ``isplots_S4`` = 3: ``Eureka!`` will plot the cross-correlated reference spectrum with the current spectrum for each integration, and the cross-correlation strength for each integration.
 
-      Stage 4 output: 2-Dimensional Binned Spectrum
-
-   - If ``isplots_S4`` = 3: ``Eureka!`` will plot the spectroscopic lightcurves for each wavelength bin.
-
-   .. figure:: ../media/S4_out/fig4301.png
-      :alt: Stage 4 spectroscopic lightcurve
-
-      Stage 4 output: Spectroscopic Lightcurve
-
-   - If ``isplots_S4`` = 5: ``Eureka!`` will plot the cross-correlated reference spectrum with the current spectrum for each integration, and the cross-correlation strength for each integration.
-
-   .. figure:: ../media/S4_out/fig4401.png
+   .. figure:: ../media/S4_out/fig4301_int00_CC_Spec.png
       :alt: Stage 4 cross correlated reference spectrum
 
-      Stage 4 output: Cross-Correlated Reference Spectrum
+      Fig 4301: Cross-Correlated Reference Spectrum
 
-   .. figure:: ../media/S4_out/fig4501.png
+   .. figure:: ../media/S4_out/fig4302_int00_CC_Vals.png
       :alt: Stage 4 cross correlation strength
 
-      Stage 4 output: Cross-Correlation Strength
+      Fig 4302: Cross-Correlation Strength
 
 
 .. _s5-out:
@@ -107,46 +120,49 @@ Stage 5 Outputs
 ---------------
 
 In Stage 5:
-   - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel.
+   - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel. If fitting with a GP, an additional figure will be made showing the GP component. Finally, an additional plot compares the fits from different fitters.
    
-   .. figure:: ../media/S5_out/fig5101.png
+   .. figure:: ../media/S5_out/fig5101_ch0_lc_emcee.png
       :alt: Stage 5 fit data and lightcurve
 
-      Stage 5 output: Fitted lightcurve
+      Fig 5101: Fitted Lightcurve, Model, and Residual Plot
+
+   .. figure:: ../media/S5_out/fig5102_ch0_lc_GP_emcee.png
+      :alt: Stage 5 GP plot
+
+      Fig 5102: Fitted Lightcurve, GP Model, and Residual Plot
+   
+   .. figure:: ../media/S5_out/fig5103_ch0_all_fits.png
+      :alt: Stage 5 All fits comparison
+
+      Fig 5102: Comparison of Different Fitters
 
    - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
 
-   .. figure:: ../media/S5_out/fig5201.png
+   .. figure:: ../media/S5_out/fig5301_ch0_allanplot_emcee.png
       :alt: Stage 5 RMS deviation plot
 
-      Stage 5 output: RMS Deviation Plot
+      Fig 5301: RMS Deviation Plot
    
-   .. figure:: ../media/S5_out/fig5501.png
+   .. figure:: ../media/S5_out/fig5302_ch0_res_distri_emcee.png
       :alt: Stage 5 residual distribution
 
-      Stage 5 output: Residual Distribution
+      Fig 5302: Residual Distribution
    
-   .. figure:: ../media/S5_out/fig5402.png
+   .. figure:: ../media/S5_out/fig5303_ch0_burninchain.png
       :alt: Stage 5 fitting chains
    
-   .. figure:: ../media/S5_out/fig5403.png
+   .. figure:: ../media/S5_out/fig5303_ch0_chain.png
       :alt: Stage 5 fitting chains
 
-      Stage 5 output: Fitting Chains. Only made for ``emcee`` runs. Two version of the plot will be saved, one including the burn in steps and one without the burn in steps. 
+      Figs 5303: Fitting Chains. Only made for ``emcee`` runs. Two version of the plot will be saved, one including the burn in steps and one without the burn in steps.
 
    - If ``isplots_S5`` = 5, and if ``emcee`` or ``dynesty`` were used as the fitter: ``Eureka!`` will plot a corner plot for each channel.
 
-   .. figure:: ../media/S5_out/fig5301.png
+   .. figure:: ../media/S5_out/fig5501_ch0_corner_emcee.png
       :alt: Stage 5 corner plot
 
-      Stage 5 output: Corner Plot
-
-   - If a GP model was used in the fit, then ``Eureka!`` will plot the lightcurve, the GP model, and the residuals.
-
-   .. figure:: ../media/S5_out/fig5121_lc_GP.png
-      :alt: Stage 5 GP plot
-
-      Stage 5 output: Lightcurve, GP model, and Residual Plot
+      Fig 5501: Corner Plot
 
 
 .. _s6-out:
@@ -156,17 +172,18 @@ Stage 6 Outputs
 
 In Stage 6:
    - If ``isplots_S6`` = 1: ``Eureka!`` will plot the transmission or emission spectrum, depending
-     on the setting of ``y_unit``.
+     on the setting of ``y_unit``. If a model is provided, it will be plotted on the same figure
+     along with points binned from that model to the resolution of the data.
 
    .. figure:: ../media/S6_out/fig6101_transmission.png
       :alt: Stage 6 transmission spectrum.
 
-      Stage 6 output: Transmission Spectrum.
+      Fig 6101: Transmission Spectrum.
 
    .. figure:: ../media/S6_out/fig6101_emission.png
       :alt: Stage 6 emission spectrum.
 
-      Stage 6 output: Emission Spectrum.
+      Fig 6101: Emission Spectrum.
 
    - If ``isplots_S6`` = 3: ``Eureka!`` will make another transmission plot (if ``y_unit`` is
      transmission type) with a second y-axis which is in units of atmospheric scale height.
@@ -174,4 +191,4 @@ In Stage 6:
    .. figure:: ../media/S6_out/fig6301_transmission.png
       :alt: Stage 6 transmission spectrum with a second y-axis in units of atmospheric scale height.
 
-      Stage 6 output: Transmission Spectrum with Double y-axis.
+      Fig 6301: Transmission Spectrum with Double y-axis.
