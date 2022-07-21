@@ -9,6 +9,7 @@ wave_max        1.15        # Maximum wavelength. Set to None to use the longest
 allapers        True        # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Parameters for drift correction of 1D spectra
+recordDrift     False   # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
 correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
 drift_preclip   0       # Ignore first drift_preclip points of spectrum
 drift_postclip  100     # Ignore last drift_postclip points of spectrum, None = no clipping
