@@ -201,7 +201,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel(r'Wavelength ($\mu m$)')
         plt.colorbar(label='Normalized Flux')
 
-        if len(meta.wave) > 1 and len(meta.wave) != meta.nspecchan:
+        if len(meta.wave) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_xaxis('top')
             xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
@@ -217,7 +217,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel('Integration Number')
         plt.colorbar(label='Normalized Flux', pad=0.075)
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave_low) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_yaxis('right')
             yticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
