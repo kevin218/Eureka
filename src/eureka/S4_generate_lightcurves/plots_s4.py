@@ -73,7 +73,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
 
     fig.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
-    fname = f'figs{os.sep}Fig4102_{fname_tag}_1D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
