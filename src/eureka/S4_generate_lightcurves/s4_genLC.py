@@ -156,6 +156,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.nplots = meta.n_int
 
             # Determine wavelength bins
+            if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
+                meta.nspecchan = meta.subnx
             if not hasattr(meta, 'wave_hi'):
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,

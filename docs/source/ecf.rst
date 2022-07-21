@@ -381,7 +381,7 @@ Stage 4
 
 nspecchan
 '''''''''
-Number of spectroscopic channels spread evenly over given wavelength range
+Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 
 
 compute_white

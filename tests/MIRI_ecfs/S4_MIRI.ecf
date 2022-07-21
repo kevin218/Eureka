@@ -1,7 +1,7 @@
 # Eureka! Control File for Stage 4: Generate Lightcurves 
 
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan   	1		# Number of spectroscopic channels
+nspecchan   	1		# Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 compute_white   True    # Also compute the white-light lightcurve 
 wave_min    	None	# Minimum wavelength
 wave_max    	None	# Maximum wavelength
