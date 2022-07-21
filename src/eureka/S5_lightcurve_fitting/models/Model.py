@@ -410,7 +410,7 @@ class CompositeModel(Model):
         else:
             new_time = self.time
 
-        flux = np.ones(len(self.time)*self.nchan)
+        flux = np.ones(len(new_time)*self.nchan)
 
         # Evaluate flux at each model
         for model in self.components:
