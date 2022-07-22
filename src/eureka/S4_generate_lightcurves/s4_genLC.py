@@ -310,6 +310,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     plots_s4.driftxpos(meta, lc)
                     plots_s4.driftxwidth(meta, lc)
 
+            if hasattr(meta, 'clip') and meta.clip is not None:
+                # Remove requested frames
+                util.manual_clip(spec, lc, meta, log)
+
             if hasattr(meta, 'sum_reads') and meta.sum_reads:
                 # Sum each read from a scan together
                 spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
