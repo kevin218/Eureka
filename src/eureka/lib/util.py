@@ -92,6 +92,56 @@ def trim(data, meta):
     return subdata, meta
 
 
+def manual_clip(spec, lc, meta, log):
+    """Manually clip integrations along time axis.
+
+    Parameters
+    ----------
+    spec : Xarray Dataset
+        The Dataset object containing the 2D spectra.
+    lc : Xarray Dataset
+        The Dataset object containing light curve and time data.
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    spec : Xarray Dataset
+        The Dataset object containing the 2D spectra
+        with the requested integrations removed.
+    lc : Xarray Dataset
+        The updated Dataset object containing light curve and time data
+        with the requested integrations removed.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
+    log.writelog('Manually removing frames from meta.clip...',
+                 mute=(not meta.verbose))
+
+    meta.clip = np.array(meta.clip)
+    if len(meta.clip.shape) == 1:
+        # The user didn't quite enter things right, so reshape
+        meta.clip = meta.clip[np.newaxis]
+    
+    # Figure out which indices are being clipped
+    time_bool = np.ones(len(lc.data.time), dtype=bool)
+    for inds in meta.clip:
+        time_bool[inds[0]:inds[1]] = False
+    time_inds = np.arange(len(lc.data.time))[time_bool]
+    
+    # Remove the requested integrations
+    spec = spec.isel(time=time_inds)
+    lc = lc.isel(time=time_inds)
+    if hasattr(meta, 'scandir'):
+        meta.scandir = meta.scandir[time_bool[::meta.nreads]]
+    
+    return meta, lc, spec, log
+
+
 def check_nans(data, mask, log, name=''):
     """Checks where a data array has NaNs or infs.
 
