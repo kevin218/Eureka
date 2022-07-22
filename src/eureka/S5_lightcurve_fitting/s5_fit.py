@@ -173,11 +173,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 mask = lc.mask_white.values
                 flux = np.ma.masked_where(mask, lc.flux_white.values)
                 flux_err = np.ma.masked_where(mask, lc.err_white.values)
-                
+
                 # Normalize flux and uncertainties to avoid large
                 # flux values
-                flux_err = flux_err/np.ma.mean(flux)
-                flux = flux/np.ma.mean(flux)
+                flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -205,10 +204,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                                    lc.data.values[channel, :])
                     err_temp = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
-                    flux = np.ma.append(flux,
-                                        flux_temp/np.ma.mean(flux_temp))
-                    flux_err = np.ma.append(flux_err,
-                                            err_temp/np.ma.mean(flux_temp))
+                    flux_temp, err_temp = util.normalize_spectrum(meta,
+                                                                  flux_temp,
+                                                                  err_temp)
+                    flux = np.ma.append(flux, flux_temp)
+                    flux_err = np.ma.append(flux_err, err_temp)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -234,8 +234,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/np.ma.mean(flux)
-                    flux = flux/np.ma.mean(flux)
+                    flux, flux_err = util.normalize_spectrum(meta, flux,
+                                                             flux_err)
 
                     meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
