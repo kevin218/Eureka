@@ -19,6 +19,7 @@ flatfile        flats/WFC3.IR.G102.flat.2.fits         # The calibration file to
 ywindow         [80,250]    # Vertical axis as seen in DS9
 xwindow         [80,250]    # Horizontal axis as seen in DS9
 src_pos_type    hst         # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
+record_ypos     False       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 
 # Subarray region for direct images used for wavelength calibration
 centroidtrim    5           # The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
@@ -50,6 +51,7 @@ iref            [2, 3]      # The file indices to use as reference frames for ea
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+nplots          5           # How many of each type of figure do you want to make per file?
 vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
 vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
 time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')

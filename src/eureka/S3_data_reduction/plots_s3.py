@@ -38,7 +38,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         meta.time_axis = 'y'
     elif meta.time_axis not in ['y', 'x']:
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
-              "Using 'y' by default.")
+              " Using 'y' by default.")
         meta.time_axis = 'y'
     
     plt.figure(3101, figsize=(8, 8))
@@ -93,7 +93,7 @@ def image_and_background(data, meta, log, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
-    iterfn = range(meta.n_int)
+    iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -128,7 +128,7 @@ def image_and_background(data, meta, log, m):
 
 
 def drift_2D(data, meta):
-    '''Plot the fitted 2D drift. (Fig 3102)
+    '''Plot the fitted 2D drift. (Fig 3105)
 
     Parameters
     ----------
@@ -137,7 +137,7 @@ def drift_2D(data, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    plt.figure(3102, figsize=(8, 6))
+    plt.figure(3105, figsize=(8, 6))
     plt.clf()
     plt.subplot(211)
     for p in range(2):
@@ -151,7 +151,7 @@ def drift_2D(data, meta):
     plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    fname = f'figs{os.sep}fig3102_Drift2D{figure_filetype}'
+    fname = f'figs{os.sep}fig3105_Drift2D{figure_filetype}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -200,10 +200,10 @@ def optimal_spectrum(data, meta, n, m):
         plt.pause(0.2)
 
 
-def source_position(meta, x_dim, pos_max, m,
+def source_position(meta, x_dim, pos_max, m, n,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
-    '''Plot source position for MIRI data. (Figs 3303)
+    '''Plot source position for MIRI data. (Figs 3102)
 
     Parameters
     ----------
@@ -215,6 +215,8 @@ def source_position(meta, x_dim, pos_max, m,
         The brightest row.
     m : int
         The file number.
+    n : int
+        The integration number.
     isgauss : bool; optional
         Used a guassian centring method.
     x : type; optional
@@ -245,7 +247,7 @@ def source_position(meta, x_dim, pos_max, m,
     - Oct 15, 2021: Taylor Bell
         Tidied up the code a bit to reduce repeated code.
     '''
-    plt.figure(3303)
+    plt.figure(3102)
     plt.clf()
     plt.plot(y_pixels, sum_row, 'o', label='Data')
     if isgauss:
@@ -262,15 +264,16 @@ def source_position(meta, x_dim, pos_max, m,
     plt.legend()
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = ('figs'+os.sep+f'fig3303_file{file_number}_source_pos' +
-             figure_filetype)
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    fname = (f'figs{os.sep}fig3102_file{file_number}_int{int_number}' +
+             '_source_pos'+figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
 def profile(meta, profile, submask, n, m):
-    '''Plot weighting profile from optimal spectral extraction routine. (Figs 3304)
+    '''Plot weighting profile from optimal spectral extraction routine. (Figs 3303)
 
     Parameters
     ----------
@@ -297,7 +300,7 @@ def profile(meta, profile, submask, n, m):
     submask = np.ma.masked_where(mask, submask)
     vmax = 0.05*np.ma.max(profile*submask)
     vmin = np.ma.min(profile*submask)
-    plt.figure(3304)
+    plt.figure(3303)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
@@ -307,7 +310,7 @@ def profile(meta, profile, submask, n, m):
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3304_file{file_number}_int{int_number}_Profile' +
+    fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}_Profile' +
              figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
@@ -360,7 +363,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
 
 
 def driftypos(data, meta):
-    '''Plot the spatial jitter. (Fig 3305)
+    '''Plot the spatial jitter. (Fig 3103)
 
     Parameters
     ----------
@@ -380,20 +383,20 @@ def driftypos(data, meta):
     - 2022-07-11 Caroline Piaulet
         First version of this function
     '''
-    plt.figure(3305, figsize=(8, 4))
+    plt.figure(3103, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3305_DriftYPos'+figure_filetype
+    fname = 'figs'+os.sep+'fig3103_DriftYPos'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
 def driftywidth(data, meta):
-    '''Plot the spatial profile's fitted Gaussian width. (Fig 3306)
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3104)
 
     Parameters
     ----------
@@ -413,13 +416,13 @@ def driftywidth(data, meta):
     - 2022-07-11 Caroline Piaulet
         First version of this function
     '''
-    plt.figure(3306, figsize=(8, 4))
+    plt.figure(3104, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Frame Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3306_DriftYWidth'+figure_filetype
+    fname = 'figs'+os.sep+'fig3104_DriftYWidth'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
