@@ -68,7 +68,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     - October 2021 Taylor Bell
         Updated to allow for inputs from S2
     - July 2022 Caroline Piaulet
-        Now computing the y pos and width for each integration 
+        Now computing the y pos and width for each integration
         + stored in Spec and add diagnostics plots
     '''
 
@@ -221,7 +221,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 last_file = min([meta.num_data_files,
                                  (m+1)*meta.files_per_batch])
                 nfiles = last_file-first_file
-                               
+
                 # Report progress
                 if meta.files_per_batch > 1:
                     message = (f'Starting batch {m + 1} of {meta.nbatch} '
@@ -242,7 +242,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     meta.firstInBatch = i == 0
                     # Initialize a new data object
                     data = xrio.makeDataset()
-                    data, meta, log = inst.read(meta.segment_list[i], data, 
+                    data, meta, log = inst.read(meta.segment_list[i], data,
                                                 meta, log)
                     batch.append(data)
 
