@@ -110,6 +110,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     elif 'F_' in ylabel:
         fname += '_emission'
 
+    fig.tight_layout()
     fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight',
                 dpi=300)
     if not meta.hide_plots:
