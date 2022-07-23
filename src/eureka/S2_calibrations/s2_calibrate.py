@@ -27,6 +27,8 @@ from ..lib.plots import figure_filetype
 import jwst.assign_wcs.nirspec
 from functools import partial
 
+import sys
+from citations import CITATIONS
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
@@ -157,6 +159,25 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
                 hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
+
+    # Store citations to relevant dependencies in the meta file
+    # get currently imported modules (top level only)
+    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
+    
+    # get modules for which we have citations
+    citemods = np.intersect1d(mods, list(CITATIONS))
+
+    # check if meta has existing list of citations/bibitems, if it does, make sure we have imports from previous stages in our citations
+    try: 
+        hasattr(meta, 'citations')
+        citemods = np.union1d(citemods, meta.citations)
+    except AttributeError:
+        # otherwise, if we're starting from this stage, just use the current list of imports
+        pass
+    
+    # save list of imports and the bibliography to the meta object
+    meta.citations = citemods
+    meta.bibliography = np.concatenate([CITATIONS[entry][1] for entry in citemods])
 
     # Save results
     if not meta.testing_S2:
