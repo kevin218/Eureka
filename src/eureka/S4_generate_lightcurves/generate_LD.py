@@ -29,7 +29,7 @@ def exotic_ld(meta, spec, log):
     '''
     
     log.writelog("...using exotic-ld package...",
-                             mute=(not meta.verbose))
+                 mute=(not meta.verbose))
     
     # Set the observing mode
     custom_wavelengths = None
