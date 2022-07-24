@@ -147,9 +147,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.use_generate_ld:
                 ld_str = meta.use_generate_ld
                 if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been" +
+                    raise Exception("Exotic-ld coefficients have not been " +
                                     "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients" +
+                log.writelog("\nUsing generated limb-darkening coefficients " +
                              f"with {ld_str} \n")
                 ld_coeffs = [lc[ld_str + '_lin'].values,
                              lc[ld_str + '_quad'].values,
@@ -173,7 +173,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 mask = lc.mask_white.values
                 flux = np.ma.masked_where(mask, lc.flux_white.values)
                 flux_err = np.ma.masked_where(mask, lc.err_white.values)
-                
+
                 # Normalize flux and uncertainties to avoid large
                 # flux values
                 flux_err = flux_err/np.ma.mean(flux)
@@ -326,7 +326,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          fmt='r--', log=log,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
-                                         paramtitles=paramtitles, 
+                                         paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
                                          ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
