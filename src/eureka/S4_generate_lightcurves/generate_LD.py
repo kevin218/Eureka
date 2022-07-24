@@ -1,8 +1,9 @@
 from exotic_ld import StellarLimbDarkening
 import numpy as np
+import pandas as pd
 
 
-def exotic_ld(meta, spec):
+def exotic_ld(meta, spec, log):
     '''Generate limb-darkening coefficients using the exotic_ld package.
 
     Parameters
@@ -11,6 +12,8 @@ def exotic_ld(meta, spec):
         The metadata object.
     spec :  Astreaus object 
         Data object of wavelength-like arrrays.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -24,8 +27,24 @@ def exotic_ld(meta, spec):
     - July 2022, Eva-Maria Ahrer
         Initial version based on exotic_ld documentation.
     '''
+    
+    log.writelog("...using exotic-ld package...",
+                             mute=(not meta.verbose))
+    
     # Set the observing mode
-    if meta.inst == 'miri':
+    custom_wavelengths = None
+    custom_throughput = None
+    
+    if hasattr(meta, 'exotic_ld_file'):
+        mode = 'custom'
+        log.writelog("Using custom throughput file " +
+                     meta.exotic_ld_file,
+                     mute=(not meta.verbose))
+        # load custom file
+        custom_data = pd.read_csv(meta.exotic_ld_file)
+        custom_wavelengths = custom_data['wave'].values
+        custom_throughput = custom_data['tp'].values
+    elif meta.inst == 'miri':
         mode = 'JWST_MIRI_' + meta.inst_filter
     elif meta.inst == 'nircam':
         mode = 'JWST_NIRCam_' + meta.inst_filter
@@ -57,12 +76,19 @@ def exotic_ld(meta, spec):
     for i in range(meta.nspecchan):
         # generate limb-darkening coefficients for each bin
         lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
-                                                 mode)[0]
-        quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode)
+                                                 mode, custom_wavelengths,
+                                                 custom_throughput)[0]
+        quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode, 
+                                                  custom_wavelengths,
+                                                  custom_throughput)
         nonlin_3[i] = \
             sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i], 
-                                                         mode)
+                                                         mode, 
+                                                         custom_wavelengths,
+                                                         custom_throughput)
         nonlin_4[i] = \
             sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i], 
-                                                         mode)
+                                                         mode, 
+                                                         custom_wavelengths,
+                                                         custom_throughput)
     return lin_c1, quad, nonlin_3, nonlin_4
