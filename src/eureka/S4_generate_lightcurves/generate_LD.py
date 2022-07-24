@@ -35,7 +35,7 @@ def exotic_ld(meta, spec, log):
     custom_wavelengths = None
     custom_throughput = None
     
-    if hasattr(meta, 'exotic_ld_file'):
+    if meta.exotic_ld_file:
         mode = 'custom'
         log.writelog("Using custom throughput file " +
                      meta.exotic_ld_file,
