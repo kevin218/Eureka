@@ -399,7 +399,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                                  axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
-                if meta.sigma_clip:
+                if meta.clip_binned:
                     lc.flux_white[:], lc.mask_white[:], nout = \
                         clipping.clip_outliers(
                             lc.flux_white, log, lc.flux_white.wavelength,
