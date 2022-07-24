@@ -245,7 +245,7 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
     sci_table = Observations.query_criteria(proposal_id=proposal_id,
                                             obs_id=obsid)
     sci_table2 = Observations.query_criteria(proposal_id=proposal_id,
-                                            obs_id=obsid2)
+                                             obs_id=obsid2)
 
     # Get product list
     data_products_by_id = Observations.get_product_list(sci_table)
@@ -256,8 +256,8 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
                                          productSubGroupDescription=subgroup,
                                          calib_level=calib_level)
     table2 = Observations.filter_products(data_products_by_id2,
-                                         productSubGroupDescription=subgroup,
-                                         calib_level=calib_level)
+                                          productSubGroupDescription=subgroup,
+                                          calib_level=calib_level)
 
     # Concatenate tables one row at a time, checking for uniqueness
     for row in range(len(table2)):
