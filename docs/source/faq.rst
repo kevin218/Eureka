@@ -22,6 +22,13 @@ If you are following the installation instructions and still encounter an error,
 `GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ and paste the full error message you are getting along
 with details about which python version and operating system you are using.
 
+Installation issues with M1 processors
+''''''''''''''''''''''''''''''''''''''
+
+Note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
+installation instructions as we have had reports that the pip dependencies fail to build on the M1 processor.
+
+
 Issues installing or importing batman
 '''''''''''''''''''''''''''''''''''''
 
