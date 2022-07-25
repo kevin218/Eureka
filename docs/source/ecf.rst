@@ -14,13 +14,13 @@ Stage 1
 .. include:: ../media/S1_template.ecf
    :literal:
 
-suffix 
+suffix
 ''''''
 Data file suffix (e.g. uncal).
 
 ramp_fit_algorithm
 ''''''''''''''''''
-Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently. 
+Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
 ramp_fit_max_cores
@@ -30,7 +30,7 @@ Fraction of processor cores to use to compute the ramp fits, options are ``none`
 
 skip_*
 ''''''
-If True, skip the named step. 
+If True, skip the named step.
 
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
@@ -54,16 +54,16 @@ Define the method by which individual frame pixels will be weighted during the d
 
 ``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
 
-In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above). 
+In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above).
 
 
 ``fixed``: As with default, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
 
 
-``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation. 
+``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation.
 
 
-``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally. 
+``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally.
 
 
 ``custom``: As with default, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
@@ -438,7 +438,7 @@ sub_mean
 ''''''''
 If True, subtract spectrum mean during cross correlation (can help with cross-correlation step).
 
-sub_continuum 
+sub_continuum
 '''''''''''''
 Set True to subtract the continuum from the spectra using a highpass filter
 
@@ -446,9 +446,14 @@ highpassWidth
 '''''''''''''
 The integer width of the highpass filter when subtracting the continuum
 
-sigma_clip
+clip_unbinned
 ''''''''''
-Whether or not sigma clipping should be performed on the 1D time series
+Whether or not sigma clipping should be performed on the unbinned 1D time series
+
+clip_binned
+''''''''''
+Whether or not sigma clipping should be performed on the binned 1D time series
+
 
 sigma
 '''''
@@ -594,7 +599,7 @@ Float to determine the tolerance of the scipy.optimize.minimize method.
 
 Emcee Fitting Parameters
 ''''''''''''''''''''''''
-The following set the parameters for running emcee. 
+The following set the parameters for running emcee.
 
 old_chain
 '''''''''
@@ -684,7 +689,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
    - Phase Curve Parameters - the phase curve model allows for the addition of up to four sinusoids into a single phase curve
-      - ``AmpCos1`` - Amplitude of the first cosine 
+      - ``AmpCos1`` - Amplitude of the first cosine
       - ``AmpSin1`` - Amplitude of the first sine
       - ``AmpCos2`` - Amplitude of the second cosine
       - ``AmpSin2`` - Amplitude of the second sine
