@@ -1,7 +1,7 @@
 from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
-
+import glob
 
 def exotic_ld(meta, spec, log):
     '''Generate limb-darkening coefficients using the exotic_ld package.
@@ -30,6 +30,13 @@ def exotic_ld(meta, spec, log):
     
     log.writelog("...using exotic-ld package...",
                  mute=(not meta.verbose))
+    
+    # Check if exotic-ld directory includes csv files
+    exotic_ld_files = glob.glob(meta.exotic_ld_direc + '/**/*.flx',
+                                recursive=True)
+    if not exotic_ld_files:
+        raise AssertionError('Unable to find ancillary files.' +
+                             'Have you downloaded them? (see Zenodo link)')
     
     # Set the observing mode
     custom_wavelengths = None
