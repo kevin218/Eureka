@@ -470,6 +470,10 @@ fill_value
 ''''''''''
 Only used if sigma_clip=True. Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
+manual_clip
+'''''''''''
+Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
+
 sum_reads
 '''''''''
 Only used for HST analyses. Should differential non-destructive reads be summed together to reduce noise and data volume or not.

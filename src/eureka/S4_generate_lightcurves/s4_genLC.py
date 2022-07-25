@@ -310,7 +310,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     plots_s4.driftxpos(meta, lc)
                     plots_s4.driftxwidth(meta, lc)
 
-            if hasattr(meta, 'clip') and meta.clip is not None:
+            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
                 # Remove requested frames
                 util.manual_clip(spec, lc, meta, log)
 
