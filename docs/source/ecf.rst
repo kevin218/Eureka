@@ -502,6 +502,10 @@ exotic_ld_grid
 ''''''''''''''
 Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
 
+exotic_ld_file
+''''''''''''''
+Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files.
+
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
