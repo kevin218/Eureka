@@ -37,6 +37,7 @@ teff            6000 #effective temperature of the star in K
 logg            4.0 #surface gravity in log g
 exotic_ld_direc /home/User/exotic-ld_data/ #directory for ancillary files for exotic-ld
 exotic_ld_grid  3D #1D or 3D model grid
+exotic_ld_file  #/home/User/exotic-ld_data/Custom_throughput_file.csv
 
 # Temporal Binning
 sum_reads       True    # Sum together all of the reads from one scan?
