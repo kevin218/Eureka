@@ -110,7 +110,7 @@ To speed up the Stage 5 dynesty fit, you can also reduce the number of live poin
 	ndim * (ndim + 1) / 2
 
 and our fit presently has ndim=10 free values in the EPF, so that means a bare minimum of 55 live points. As a compromise, let's use 256 live points instead to
-get a fairly nice corner plot but also speed up the fit, so set the following in ``S5_fit_par_wasp39b.epf``:
+get a fairly nice corner plot but also speed up the fit, so set the following in ``S5_wasp39b.ecf``:
 
 .. code-block:: bash
 	
