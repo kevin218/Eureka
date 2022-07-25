@@ -447,11 +447,11 @@ highpassWidth
 The integer width of the highpass filter when subtracting the continuum
 
 clip_unbinned
-''''''''''
+'''''''''''''
 Whether or not sigma clipping should be performed on the unbinned 1D time series
 
 clip_binned
-''''''''''
+'''''''''''
 Whether or not sigma clipping should be performed on the binned 1D time series
 
 
