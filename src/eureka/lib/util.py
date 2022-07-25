@@ -92,13 +92,11 @@ def trim(data, meta):
     return subdata, meta
 
 
-def manual_clip(spec, lc, meta, log):
+def manual_clip(lc, meta, log):
     """Manually clip integrations along time axis.
 
     Parameters
     ----------
-    spec : Xarray Dataset
-        The Dataset object containing the 2D spectra.
     lc : Xarray Dataset
         The Dataset object containing light curve and time data.
     meta : eureka.lib.readECF.MetaClass
@@ -108,9 +106,6 @@ def manual_clip(spec, lc, meta, log):
 
     Returns
     -------
-    spec : Xarray Dataset
-        The Dataset object containing the 2D spectra
-        with the requested integrations removed.
     lc : Xarray Dataset
         The updated Dataset object containing light curve and time data
         with the requested integrations removed.
@@ -119,7 +114,7 @@ def manual_clip(spec, lc, meta, log):
     log : logedit.Logedit
         The updated log.
     """
-    log.writelog('Manually removing frames from meta.clip...',
+    log.writelog('Manually removing data points from meta.manual_clip...',
                  mute=(not meta.verbose))
 
     meta.clip = np.array(meta.clip)
@@ -134,12 +129,11 @@ def manual_clip(spec, lc, meta, log):
     time_inds = np.arange(len(lc.data.time))[time_bool]
     
     # Remove the requested integrations
-    spec = spec.isel(time=time_inds)
     lc = lc.isel(time=time_inds)
     if hasattr(meta, 'scandir'):
         meta.scandir = meta.scandir[time_bool[::meta.nreads]]
     
-    return meta, lc, spec, log
+    return meta, lc, log
 
 
 def check_nans(data, mask, log, name=''):

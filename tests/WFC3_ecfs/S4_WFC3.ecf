@@ -29,9 +29,6 @@ maxiters        5       # The number of iterations of sigma clipping that should
 boundary        'fill'  # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
 fill_value      mask    # Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-# Manual clipping in time
-manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
-
 # Limb-darkening parameters needed to compute exotic-ld
 compute_ld      False
 inst_filter     G102 #filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 

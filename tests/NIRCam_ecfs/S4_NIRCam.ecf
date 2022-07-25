@@ -26,9 +26,6 @@ box_width		10		# The width of the box-car filter (used to calculated the rolling
 maxiters		5		# The number of iterations of sigma clipping that should be performed.
 fill_value		mask	# Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-# Manual clipping in time
-manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
-
 #  parameters needed to compute exotic-ld
 compute_ld      False
 inst_filter     F322W2 #filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 

@@ -133,6 +133,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
+            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+                # Remove requested data points
+                util.manual_clip(lc, meta, log)
+
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
             offset = params.time_offset.value
