@@ -496,7 +496,7 @@ Used by exotic-ld if compute_ld=True. The surface gravity in log g.
 
 exotic_ld_direc
 '''''''''''''''
-Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, download at https://zenodo.org/record/6344946#.Yt66YnaZND8.
+Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, download at https://zenodo.org/record/6344946.
 
 exotic_ld_grid
 ''''''''''''''
