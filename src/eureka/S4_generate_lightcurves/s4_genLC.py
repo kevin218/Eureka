@@ -419,7 +419,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 log.writelog("Generating limb-darkening coefficients...",
                              mute=(not meta.verbose))
                 ld_lin, ld_quad, ld_3para, ld_4para = \
-                    generate_LD.exotic_ld(meta, spec)
+                    generate_LD.exotic_ld(meta, spec, log)
                 lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
                 lc['exotic-ld_quad'] = (['wavelength', 'exotic-ld_2'], ld_quad)
                 lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'],
