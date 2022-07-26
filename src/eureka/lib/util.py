@@ -117,14 +117,14 @@ def manual_clip(lc, meta, log):
     log.writelog('Manually removing data points from meta.manual_clip...',
                  mute=(not meta.verbose))
 
-    meta.clip = np.array(meta.clip)
+    meta.manual_clip = np.array(meta.manual_clip)
     if len(meta.clip.shape) == 1:
         # The user didn't quite enter things right, so reshape
-        meta.clip = meta.clip[np.newaxis]
+        meta.manual_clip = meta.manual_clip[np.newaxis]
     
     # Figure out which indices are being clipped
     time_bool = np.ones(len(lc.data.time), dtype=bool)
-    for inds in meta.clip:
+    for inds in meta.manual_clip:
         time_bool[inds[0]:inds[1]] = False
     time_inds = np.arange(len(lc.data.time))[time_bool]
     
