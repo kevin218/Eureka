@@ -44,9 +44,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
     Returns
     -------
-    spec : Astreaus object 
+    spec : Astreaus object
         Data object of wavelength-like arrrays.
-    lc : Astreaus object 
+    lc : Astreaus object
         Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
@@ -62,7 +62,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     - April 2022 Kevin Stevenson
         Enabled Astraeus
     - July 2022 Caroline Piaulet
-        Recording of x (computed in S4) and y (computed in S3) pos drifts and 
+        Recording of x (computed in S4) and y (computed in S3) pos drifts and
         widths in Spec and LC objects
     '''
     # Load Eureka! control file and store values in Event object
@@ -214,7 +214,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.boundary = 'extend'
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
-            if meta.sigma_clip:
+            if meta.clip_unbinned:
                 log.writelog('Sigma clipping unbinned optimal spectra along '
                              'time axis...')
                 outliers = 0
@@ -241,7 +241,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             if hasattr(meta, 'record_ypos') and meta.record_ypos:
                 lc['driftypos'] = (['time'], spec.driftypos.data)
                 lc['driftywidth'] = (['time'], spec.driftywidth.data)
-            
+
             # Record and correct for 1D drift/jitter
             if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
@@ -259,11 +259,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 lc['driftxpos'] = (['time'], drift1d)
                 lc['driftxwidth'] = (['time'], driftwidth)
                 lc['driftmask'] = (['time'], driftmask)
-                
+
                 spec['driftxpos'] = (['time'], drift1d)
                 spec['driftxwidth'] = (['time'], driftwidth)
                 spec['driftmask'] = (['time'], driftmask)
-                
+
                 if meta.correctDrift:
                     log.writelog('Applying drift/jitter correction')
 
@@ -333,7 +333,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                 np.ma.MaskedArray.count(opterr_ma, axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
-                if meta.sigma_clip:
+                if meta.clip_binned:
                     lc['data'][i], lc['mask'][i], nout = \
                         clipping.clip_outliers(
                             lc.data[i], log, lc.data.wavelength[i].values,
@@ -377,7 +377,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 lc.err_white.attrs['wave_units'] = lc.data.wave_units
                 lc.mask_white.attrs['wavelength'] = central_wavelength
                 lc.mask_white.attrs['wave_units'] = lc.data.wave_units
-                
+
                 log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
                              f"{meta.wave_max:.3f}")
                 # Make masked arrays for easy summing
@@ -399,7 +399,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                                  axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
-                if meta.sigma_clip:
+                if meta.clip_binned:
                     lc.flux_white[:], lc.mask_white[:], nout = \
                         clipping.clip_outliers(
                             lc.flux_white, log, lc.flux_white.wavelength,
@@ -435,7 +435,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.filename_S4_SpecData = (meta.outputdir + 'S4_' + event_ap_bg
                                          + "_SpecData.h5")
             xrio.writeXR(meta.filename_S4_SpecData, spec, verbose=True)
-            
+
             # Save Dataset object containing binned light curves
             meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
                                        + "_LCData.h5")

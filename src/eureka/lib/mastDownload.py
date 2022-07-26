@@ -237,20 +237,33 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
         visit = str(visit).zfill(3)
     if type(calib_level) is int:
         calib_level = [calib_level]
-    # Specify obsid using wildcards
-    obsid = 'jw'+proposal_id+observation+visit+'_04*'
+    # Specify obsid using wildcards, obs_id can come in two flavours
+    obsid = f'jw{proposal_id}{observation}{visit}_04*'
+    obsid2 = f'jw{proposal_id}-o{observation}_t{visit}*'
 
     # Query MAST for requested visit
     sci_table = Observations.query_criteria(proposal_id=proposal_id,
                                             obs_id=obsid)
+    sci_table2 = Observations.query_criteria(proposal_id=proposal_id,
+                                             obs_id=obsid2)
 
     # Get product list
     data_products_by_id = Observations.get_product_list(sci_table)
+    data_products_by_id2 = Observations.get_product_list(sci_table2)
 
     # Filter for desired files
     table = Observations.filter_products(data_products_by_id,
                                          productSubGroupDescription=subgroup,
                                          calib_level=calib_level)
+    table2 = Observations.filter_products(data_products_by_id2,
+                                          productSubGroupDescription=subgroup,
+                                          calib_level=calib_level)
+
+    # Concatenate tables one row at a time, checking for uniqueness
+    for row in range(len(table2)):
+        if (~(table['obsID'] == table2['obsID'][row])).all():
+            table.add_row(table2[row])
+
     print("Total number of data products:", len(table))
     print("Number of data products with exclusive access:",
           np.sum(table['dataRights'] == 'EXCLUSIVE_ACCESS'))

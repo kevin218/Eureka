@@ -40,7 +40,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
               " Using 'y' by default.")
         meta.time_axis = 'y'
-    
+
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
@@ -149,7 +149,7 @@ def drift_2D(data, meta):
         iscans = np.where(data.scandir.values == p)[0]
         plt.plot(iscans, data.drift2D[iscans, 0], '.')
     plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
-    plt.xlabel('Frame Number')
+    plt.xlabel('Integration Number')
     plt.tight_layout()
     fname = f'figs{os.sep}fig3105_Drift2D{figure_filetype}'
     plt.savefig(meta.outputdir+fname, dpi=300)
@@ -375,11 +375,11 @@ def driftypos(data, meta):
     Returns
     -------
     None
-    
+
     Notes
     -----
     History:
-    
+
     - 2022-07-11 Caroline Piaulet
         First version of this function
     '''
@@ -387,7 +387,7 @@ def driftypos(data, meta):
     plt.clf()
     plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
     plt.ylabel('Spectrum spatial profile center')
-    plt.xlabel('Frame Number')
+    plt.xlabel('Integration Number')
     plt.tight_layout()
     fname = 'figs'+os.sep+'fig3103_DriftYPos'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
@@ -408,11 +408,11 @@ def driftywidth(data, meta):
     Returns
     -------
     None
-    
+
     Notes
     -----
     History:
-    
+
     - 2022-07-11 Caroline Piaulet
         First version of this function
     '''
@@ -420,7 +420,7 @@ def driftywidth(data, meta):
     plt.clf()
     plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
-    plt.xlabel('Frame Number')
+    plt.xlabel('Integration Number')
     plt.tight_layout()
     fname = 'figs'+os.sep+'fig3104_DriftYWidth'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
