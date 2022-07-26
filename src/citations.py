@@ -1,6 +1,5 @@
 CITATIONS = {
-    "eureka": (
-        ("eureka"), 
+    "eureka": 
         [r"""@ARTICLE{eureka,
                 author = {{Bell}, Taylor J. and {Ahrer}, Eva-Maria and {Brande}, Jonathan and {Carter}, Aarynn L. and 
                 {Feinstein}, Adina D. and {Guzman Caloca}, Giannina and {Mansfield}, Megan and {Zieba}, Sebastian and 
@@ -18,10 +17,8 @@ CITATIONS = {
             primaryClass = {astro-ph.IM},
                 adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXiv220703585B},
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-            }"""]
-    ),
-    "numpy": (
-        ("numpy"),
+            }"""],
+    "numpy": 
         [r"""@Article{numpy,
             title         = {Array programming with {NumPy}},
             author        = {Charles R. Harris and K. Jarrod Millman and St{\'{e}}fan J.
@@ -43,10 +40,8 @@ CITATIONS = {
             doi           = {10.1038/s41586-020-2649-2},
             publisher     = {Springer Science and Business Media {LLC}},
             url           = {https://doi.org/10.1038/s41586-020-2649-2}
-        }"""]
-    ),
-    "matplotlib": (
-        ("matplotlib"),
+        }"""],
+    "matplotlib": 
         [r"""@Article{matplotlib,
             Author    = {Hunter, J. D.},
             Title     = {Matplotlib: A 2D graphics environment},
@@ -60,10 +55,8 @@ CITATIONS = {
             publisher = {IEEE COMPUTER SOC},
             doi       = {10.1109/MCSE.2007.55},
             year      = 2007
-            }"""]
-    ),
-    "scipy": (
-        ("scipy"),
+            }"""],
+    "scipy": 
         [r"""@ARTICLE{scipy,
             author  = {Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E. and
                         Haberland, Matt and Reddy, Tyler and Cournapeau, David and
@@ -86,10 +79,8 @@ CITATIONS = {
             pages   = {261--272},
             adsurl  = {https://rdcu.be/b08Wh},
             doi     = {10.1038/s41592-019-0686-2},
-        }"""]
-    ),
-    "astropy": (
-        ("astropy"),
+        }"""],
+    "astropy": 
         [r"""@article{astropy2013,
             Adsnote = {Provided by the SAO/NASA Astrophysics Data System},
             Adsurl = {http://adsabs.harvard.edu/abs/2013A%26A...558A..33A},
@@ -167,6 +158,140 @@ CITATIONS = {
         primaryClass = {astro-ph.IM},
             adsurl = {https://ui.adsabs.harvard.edu/abs/2018AJ....156..123A},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-        }"""]
-    ),
+        }"""],
+    "nirspec": 
+        ["""@ARTICLE{birkmann2022,
+            author = {{Birkmann}, S.~M. and {Ferruit}, P. and {Giardino}, G. and {Nielsen}, L.~D. and {Garc{\'\i}a Mu{\~n}oz}, A. and {Kendrew}, S. and {Rauscher}, B.~J. and {Beck}, T.~L. and {Keyes}, C. and {Valenti}, J.~A. and {Jakobsen}, P. and {Dorner}, B. and {Alves de Oliveira}, C. and {Arribas}, S. and {B{\"o}ker}, T. and {Bunker}, A.~J. and {Charlot}, S. and {de Marchi}, G. and {Kumari}, N. and {L{\'o}pez-Caniego}, M. and {L{\"u}tzgendorf}, N. and {Maiolino}, R. and {Manjavacas}, E. and {Marston}, A. and {Moseley}, S.~H. and {Prizkal}, N. and {Proffitt}, C. and {Rawle}, T. and {Rix}, H. -W. and {te Plate}, M. and {Sabbi}, E. and {Sirianni}, M. and {Willott}, C.~J. and {Zeidler}, P.},
+                title = "{The Near-Infrared Spectrograph (NIRSpec) on the James Webb Space Telescope. IV. Capabilities and predicted performance for exoplanet characterization}",
+            journal = {\aap},
+            keywords = {space vehicles: instruments, instrumentation: spectrographs, techniques: spectroscopic, planets and satellites: atmospheres, methods: observational, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
+                year = 2022,
+                month = may,
+            volume = {661},
+                eid = {A83},
+                pages = {A83},
+                doi = {10.1051/0004-6361/202142592},
+        archivePrefix = {arXiv},
+            eprint = {2202.03309},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2022A&A...661A..83B},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",
+        """@ARTICLE{jakobsen2022,
+            author = {{Jakobsen}, P. and {Ferruit}, P. and {Alves de Oliveira}, C. and {Arribas}, S. and {Bagnasco}, G. and {Barho}, R. and {Beck}, T.~L. and {Birkmann}, S. and {B{\"o}ker}, T. and {Bunker}, A.~J. and {Charlot}, S. and {de Jong}, P. and {de Marchi}, G. and {Ehrenwinkler}, R. and {Falcolini}, M. and {Fels}, R. and {Franx}, M. and {Franz}, D. and {Funke}, M. and {Giardino}, G. and {Gnata}, X. and {Holota}, W. and {Honnen}, K. and {Jensen}, P.~L. and {Jentsch}, M. and {Johnson}, T. and {Jollet}, D. and {Karl}, H. and {Kling}, G. and {K{\"o}hler}, J. and {Kolm}, M. -G. and {Kumari}, N. and {Lander}, M.~E. and {Lemke}, R. and {L{\'o}pez-Caniego}, M. and {L{\"u}tzgendorf}, N. and {Maiolino}, R. and {Manjavacas}, E. and {Marston}, A. and {Maschmann}, M. and {Maurer}, R. and {Messerschmidt}, B. and {Moseley}, S.~H. and {Mosner}, P. and {Mott}, D.~B. and {Muzerolle}, J. and {Pirzkal}, N. and {Pittet}, J. -F. and {Plitzke}, A. and {Posselt}, W. and {Rapp}, B. and {Rauscher}, B.~J. and {Rawle}, T. and {Rix}, H. -W. and {R{\"o}del}, A. and {Rumler}, P. and {Sabbi}, E. and {Salvignol}, J. -C. and {Schmid}, T. and {Sirianni}, M. and {Smith}, C. and {Strada}, P. and {te Plate}, M. and {Valenti}, J. and {Wettemann}, T. and {Wiehe}, T. and {Wiesmayer}, M. and {Willott}, C.~J. and {Wright}, R. and {Zeidler}, P. and {Zincke}, C.},
+                title = "{The Near-Infrared Spectrograph (NIRSpec) on the James Webb Space Telescope. I. Overview of the instrument and its capabilities}",
+            journal = {\aap},
+            keywords = {instrumentation: spectrographs, space vehicles: instruments, Astrophysics - Instrumentation and Methods for Astrophysics},
+                year = 2022,
+                month = may,
+            volume = {661},
+                eid = {A80},
+                pages = {A80},
+                doi = {10.1051/0004-6361/202142663},
+        archivePrefix = {arXiv},
+            eprint = {2202.03305},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2022A&A...661A..80J},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",],
+    "nircam": 
+        ["""@ARTICLE{greene2017,
+            author = {{Greene}, Thomas P. and {Kelly}, Douglas M. and {Stansberry}, John and {Leisenring}, Jarron and {Egami}, Eiichi and {Schlawin}, Everett and {Chu}, Laurie and {Hodapp}, Klaus W. and {Rieke}, Marcia},
+                title = "{{\ensuremath{\lambda}} = 2.4 to 5 {\ensuremath{\mu}}m spectroscopy with the James Webb Space Telescope NIRCam instrument}",
+            journal = {Journal of Astronomical Telescopes, Instruments, and Systems},
+                year = 2017,
+                month = jul,
+            volume = {3},
+                eid = {035001},
+                pages = {035001},
+                doi = {10.1117/1.JATIS.3.3.035001},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2017JATIS...3c5001G},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }"""],
+    "niriss": 
+        ["""@ARTICLE{willott2022,
+            author = {{Willott}, Chris J. and {Doyon}, Ren{\'e} and {Albert}, Loic and {Brammer}, Gabriel B. and {Dixon}, William V. and {Muzic}, Koraljka and {Ravindranath}, Swara and {Scholz}, Aleks and {Abraham}, Roberto and {Artigau}, {\'E}tienne and {Brada{\v{c}}}, Maru{\v{s}}a and {Goudfrooij}, Paul and {Hutchings}, John B. and {Iyer}, Kartheik G. and {Jayawardhana}, Ray and {LaMassa}, Stephanie and {Martis}, Nicholas and {Meyer}, Michael R. and {Morishita}, Takahiro and {Mowla}, Lamiya and {Muzzin}, Adam and {Noirot}, Ga{\"e}l and {Pacifici}, Camilla and {Rowlands}, Neil and {Sarrouh}, Ghassan and {Sawicki}, Marcin and {Taylor}, Joanna M. and {Volk}, Kevin and {Zabl}, Johannes},
+                title = "{The Near-infrared Imager and Slitless Spectrograph for the James Webb Space Telescope. II. Wide Field Slitless Spectroscopy}",
+            journal = {\pasp},
+            keywords = {Astronomical instrumentation, Infrared telescopes, Spectrometers, Astrophysics - Instrumentation and Methods for Astrophysics},
+                year = 2022,
+                month = feb,
+            volume = {134},
+            number = {1032},
+                eid = {025002},
+                pages = {025002},
+                doi = {10.1088/1538-3873/ac5158},
+        archivePrefix = {arXiv},
+            eprint = {2202.01714},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2022PASP..134b5002W},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",
+        """@INPROCEEDINGS{doyon2012,
+            author = {{Doyon}, Ren{\'e} and {Hutchings}, John B. and {Beaulieu}, Mathilde and {Albert}, Loic and {Lafreni{\`e}re}, David and {Willott}, Chris and {Touahri}, Driss and {Rowlands}, Neil and {Maszkiewicz}, Micheal and {Fullerton}, Alex W. and {Volk}, Kevin and {Martel}, Andr{\'e} R. and {Chayer}, Pierre and {Sivaramakrishnan}, Anand and {Abraham}, Roberto and {Ferrarese}, Laura and {Jayawardhana}, Ray and {Johnstone}, Doug and {Meyer}, Michael and {Pipher}, Judith L. and {Sawicki}, Marcin},
+                title = "{The JWST Fine Guidance Sensor (FGS) and Near-Infrared Imager and Slitless Spectrograph (NIRISS)}",
+            booktitle = {Space Telescopes and Instrumentation 2012: Optical, Infrared, and Millimeter Wave},
+                year = 2012,
+            editor = {{Clampin}, Mark C. and {Fazio}, Giovanni G. and {MacEwen}, Howard A. and {Oschmann}, Jacobus M., Jr.},
+            series = {Society of Photo-Optical Instrumentation Engineers (SPIE) Conference Series},
+            volume = {8442},
+                month = sep,
+                eid = {84422R},
+                pages = {84422R},
+                doi = {10.1117/12.926578},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2012SPIE.8442E..2RD},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",],
+    "miri": 
+        ["""@ARTICLE{rieke2015,
+            author = {{Rieke}, G.~H. and {Wright}, G.~S. and {B{\"o}ker}, T. and {Bouwman}, J. and {Colina}, L. and {Glasse}, Alistair and {Gordon}, K.~D. and {Greene}, T.~P. and {G{\"u}del}, Manuel and {Henning}, Th. and {Justtanont}, K. and {Lagage}, P. -O. and {Meixner}, M.~E. and {N{\o}rgaard-Nielsen}, H. -U. and {Ray}, T.~P. and {Ressler}, M.~E. and {van Dishoeck}, E.~F. and {Waelkens}, C.},
+                title = "{The Mid-Infrared Instrument for the James Webb Space Telescope, I: Introduction}",
+            journal = {\pasp},
+            keywords = {Astrophysics - Instrumentation and Methods for Astrophysics},
+                year = 2015,
+                month = jul,
+            volume = {127},
+            number = {953},
+                pages = {584},
+                doi = {10.1086/682252},
+        archivePrefix = {arXiv},
+            eprint = {1508.02294},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..584R},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",
+        """@ARTICLE{kendrew2015,
+            author = {{Kendrew}, Sarah and {Scheithauer}, Silvia and {Bouchet}, Patrice and {Amiaux}, Jerome and {Azzollini}, Ruym{\'a}n and {Bouwman}, Jeroen and {Chen}, C.~H. and {Dubreuil}, D. and {Fischer}, Sebastian and {Glasse}, Alistair and {Greene}, T.~P. and {Lagage}, P. -O. and {Lahuis}, Fred and {Ronayette}, Samuel and {Wright}, David and {Wright}, G.~S.},
+                title = "{The Mid-Infrared Instrument for the James Webb Space Telescope, IV: The Low-Resolution Spectrometer}",
+            journal = {\pasp},
+            keywords = {Astrophysics - Instrumentation and Methods for Astrophysics},
+                year = 2015,
+                month = jul,
+            volume = {127},
+            number = {953},
+                pages = {623},
+                doi = {10.1086/682255},
+        archivePrefix = {arXiv},
+            eprint = {1512.03000},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..623K},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",
+        """@ARTICLE{wells2015,
+            author = {{Wells}, Martyn and {Pel}, J. -W. and {Glasse}, Alistair and {Wright}, G.~S. and {Aitink-Kroes}, Gabby and {Azzollini}, Ruym{\'a}n and {Beard}, Steven and {Brandl}, B.~R. and {Gallie}, Angus and {Geers}, V.~C. and {Glauser}, A.~M. and {Hastings}, Peter and {Henning}, Th. and {Jager}, Rieks and {Justtanont}, K. and {Kruizinga}, Bob and {Lahuis}, Fred and {Lee}, David and {Martinez-Delgado}, I. and {Mart{\'\i}nez-Galarza}, J.~R. and {Meijers}, M. and {Morrison}, Jane E. and {M{\"u}ller}, Friedrich and {Nakos}, Thodori and {O'Sullivan}, Brian and {Oudenhuysen}, Ad and {Parr-Burman}, P. and {Pauwels}, Evert and {Rohloff}, R. -R. and {Schmalzl}, Eva and {Sykes}, Jon and {Thelen}, M.~P. and {van Dishoeck}, E.~F. and {Vandenbussche}, Bart and {Venema}, Lars B. and {Visser}, Huib and {Waters}, L.~B.~F.~M. and {Wright}, David},
+                title = "{The Mid-Infrared Instrument for the James Webb Space Telescope, VI: The Medium Resolution Spectrometer}",
+            journal = {\pasp},
+            keywords = {Astrophysics - Instrumentation and Methods for Astrophysics},
+                year = 2015,
+                month = jul,
+            volume = {127},
+            number = {953},
+                pages = {646},
+                doi = {10.1086/682281},
+        archivePrefix = {arXiv},
+            eprint = {1508.03070},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..646W},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }""",],
 }

@@ -88,6 +88,12 @@ def rampfitJWST(eventlabel, ecf_path=None):
                      filename.split(os.sep)[-1])
 
         with fits.open(filename, mode='update') as hdulist:
+            # record instrument information in meta object for citations
+            if hasattr(meta, 'inst'):
+                pass
+            else:
+                meta.inst = hdulist[0].header["INSTRUME"].lower()
+
             # jwst 1.3.3 breaks unless NDITHPTS/NRIMDTPT are integers rather
             # than the strings that they are in the old simulated NIRCam data
             if hdulist[0].header['INSTRUME'] == 'NIRCAM':
@@ -108,8 +114,8 @@ def rampfitJWST(eventlabel, ecf_path=None):
     citemods = np.intersect1d(mods, list(CITATIONS))
 
     # concatenate the bibitems into a bibliography
-    meta.citations = citemods
-    meta.bibliography = np.concatenate([CITATIONS[entry][1] for entry in citemods])
+    meta.citations = np.append(citemods, meta.inst)
+    meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
 
     # Save results
     if not meta.testing_S1:

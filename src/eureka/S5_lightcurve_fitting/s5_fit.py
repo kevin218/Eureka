@@ -91,25 +91,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
                                              ap=spec_hw_val, bg=bg_hw_val)
 
-    # Store citations to relevant dependencies in the meta file
-    # get currently imported modules (top level only)
-    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-            
-    # get modules for which we have citations
-    citemods = np.intersect1d(mods, list(CITATIONS))
-
-    # check if meta has existing list of citations/bibitems, if it does, make sure we have imports from previous stages in our citations
-    try: 
-        hasattr(meta, 'citations')
-        citemods = np.union1d(citemods, meta.citations)
-    except AttributeError:
-        # otherwise, if we're starting from this stage, just use the current list of imports
-        pass
-            
-    # save list of imports and the bibliography to the meta object
-    meta.citations = citemods
-    meta.bibliography = np.concatenate([CITATIONS[entry][1] for entry in citemods])
-
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
 
@@ -178,6 +159,25 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                              lc[ld_str + '_nonlin_4para'].values]
             else:
                 ld_coeffs = None
+
+            # Store citations to relevant dependencies in the meta file
+            # get currently imported modules (top level only)
+            mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
+                        
+            # get modules for which we have citations
+            citemods = np.intersect1d(mods, list(CITATIONS))
+
+            # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
+            if hasattr(meta, 'citations'):
+                citemods = np.union1d(citemods, meta.citations)
+                            
+                    
+            # save list of imports and the bibliography to the meta object
+            if meta.inst in citemods:
+                meta.citations = citemods
+            else:
+                meta.citations = np.append(citemods, meta.inst)
+            meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
 
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
