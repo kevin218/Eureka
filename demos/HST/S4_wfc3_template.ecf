@@ -33,13 +33,17 @@ fill_value      mask    # Either the string 'mask' to mask the outlier values (r
 sum_reads       True    # Sum together all of the reads from one scan?
 
 # Limb-darkening parameters needed to compute exotic-ld
-compute_ld      True
-inst_filter     Prism #filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
-metallicity     0.1 #metallicity of the star 
-teff            6000 #effective temperature of the star in K
-logg            4.0 #surface gravity in log g
-exotic_ld_direc /home/User/exotic-ld_data/ #directory for ancillary files for exotic-ld
-exotic_ld_grid  3D #1D or 3D model grid
+compute_ld      False
+inst_filter     G102    # Filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
+metallicity     0.1     # Metallicity of the star 
+teff            6000    # Effective temperature of the star in K
+logg            4.0     # Surface gravity in log g
+exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/record/6344946
+exotic_ld_grid  3D      # 1D or 3D model grid
+exotic_ld_file  #/home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
+
+# Temporal Binning
+sum_reads       True    # Sum together all of the reads from one scan?
 
 # Diagnostics
 isplots_S4      5       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
