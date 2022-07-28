@@ -116,7 +116,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     t_results = table.Table([freenames, fit_params],
                             names=("Parameter", "Mean"))
 
-    model.update(fit_params, freenames)
+    model.update(fit_params)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
@@ -179,7 +179,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Make a new model instance
     best_model = copy.deepcopy(model)
-    best_model.components[0].update(fit_params, freenames)
+    best_model.components[0].update(fit_params)
 
     # Save the covariance matrix in case it's needed to estimate step size
     # for a sampler
@@ -369,7 +369,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
 
-    model.update(fit_params, freenames)
+    model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -467,7 +467,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     # Make a new model instance
     best_model = copy.deepcopy(model)
-    best_model.components[0].update(fit_params, freenames)
+    best_model.components[0].update(fit_params)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 
@@ -843,7 +843,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
 
-    model.update(fit_params, freenames)
+    model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -918,7 +918,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Make a new model instance
     best_model = copy.deepcopy(model)
-    best_model.components[0].update(fit_params, freenames)
+    best_model.components[0].update(fit_params)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 
@@ -990,7 +990,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
     t_results = table.Table([freenames, fit_params],
                             names=("Parameter", "Mean"))
 
-    model.update(fit_params, freenames)
+    model.update(fit_params)
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
@@ -1034,7 +1034,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
 
     # Create new model with best fit parameters
     best_model = copy.deepcopy(model)
-    best_model.components[0].update(fit_params, freenames)
+    best_model.components[0].update(fit_params)
     best_model.__setattr__('chi2red', chi2red)
     best_model.__setattr__('fit_params', fit_params)
 

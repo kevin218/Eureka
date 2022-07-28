@@ -319,11 +319,17 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
+    freenames = []
+    for key in params.dict:
+        if params.dict[key][1] in ['free', 'shared', 'white_free', 'white_fixed']:
+            freenames.append(key)
+
     # Make the astrophysical and detector models
     modellist = []
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = m.BatmanTransitModel(parameters=params, name='transit',
                                          fmt='r--', log=log,
+                                         freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles, 
@@ -333,6 +339,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
                                          fmt='r--', log=log,
+                                         freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles)
@@ -352,6 +359,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log,
+                                      freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
                                       paramtitles=paramtitles,
@@ -361,6 +369,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom',
                                       fmt='r--', log=log,
+                                      freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
                                       paramtitles=paramtitles)
@@ -368,6 +377,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'step' in meta.run_myfuncs:
         t_step = m.StepModel(parameters=params, name='step', fmt='r--',
                              log=log,
+                             freenames=freenames,
                              longparamlist=lc_model.longparamlist,
                              nchan=lc_model.nchannel_fitted,
                              paramtitles=paramtitles)
@@ -375,6 +385,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
                                 log=log,
+                                freenames=freenames,
                                 longparamlist=lc_model.longparamlist,
                                 nchan=lc_model.nchannel_fitted,
                                 paramtitles=paramtitles)
@@ -383,6 +394,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                          parameters=params, name='GP', fmt='r--', log=log,
                          gp_code=meta.GP_package,
+                         freenames=freenames,
                          longparamlist=lc_model.longparamlist,
                          nchan=lc_model.nchannel_fitted,
                          paramtitles=paramtitles)
