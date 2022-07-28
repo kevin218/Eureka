@@ -127,24 +127,25 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                          mute=(not meta.verbose))
             spec = xrio.readXR(meta.filename_S3_SpecData)
 
+            wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
-                meta.wave_min = np.min(spec.wave_1d.values)
+                meta.wave_min = np.min(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_min, so '
                              f'defaulting to {meta.wave_min}.',
                              mute=(not meta.verbose))
-            elif meta.wave_min < np.min(spec.wave_1d.values):
+            elif meta.wave_min < np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min '
                              f'({meta.wave_min}) is smaller than the shortest '
-                             f'wavelength ({np.min(spec.wave_1d.values)})')
+                             f'wavelength ({np.min(wave_1d)})')
             if meta.wave_max is None:
-                meta.wave_max = np.max(spec.wave_1d.values)
+                meta.wave_max = np.max(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
                              f'defaulting to {meta.wave_max}.',
                              mute=(not meta.verbose))
-            elif meta.wave_max > np.max(spec.wave_1d.values):
+            elif meta.wave_max > np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
-                             f'wavelength ({np.max(spec.wave_1d.values)})')
+                             f'wavelength ({np.max(wave_1d)})')
 
             meta.n_int, meta.subnx = spec.optspec.shape
 
@@ -156,7 +157,19 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.nplots = meta.n_int
 
             # Determine wavelength bins
-            if not hasattr(meta, 'wave_hi'):
+            if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
+                # User wants unbinned spectra
+                dwav = np.ediff1d(wave_1d)/2
+                # Approximate the first dwav as the same as the second
+                dwav = np.append(dwav[0], dwav)
+                indices = np.logical_and(wave_1d >= meta.wave_min,
+                                         wave_1d <= meta.wave_max)
+                dwav = dwav[indices]/2
+                meta.wave = wave_1d[indices]
+                meta.wave_low = meta.wave-dwav
+                meta.wave_hi = meta.wave+dwav
+                meta.nspecchan = len(meta.wave)
+            elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,
                                                      meta.wave_max-binsize,
@@ -164,16 +177,19 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.wave_hi = np.round(np.linspace(meta.wave_min+binsize,
                                                     meta.wave_max,
                                                     meta.nspecchan), 3)
-            elif (meta.nspecchan is not None
-                  and meta.nspecchan != len(meta.wave_hi)):
-                log.writelog(f'WARNING: Your nspecchan value of '
-                             f'{meta.nspecchan} differs from the size of '
-                             f'wave_hi ({len(meta.wave_hi)}). Using the '
-                             f'latter instead.')
-                meta.nspecchan = len(meta.wave_hi)
-            meta.wave_low = np.array(meta.wave_low)
-            meta.wave_hi = np.array(meta.wave_hi)
-            meta.wave = (meta.wave_low + meta.wave_hi)/2
+                meta.wave = (meta.wave_low + meta.wave_hi)/2
+            else:
+                # wave_low and wave_hi were passed in - make them arrays
+                meta.wave_low = np.array(meta.wave_low)
+                meta.wave_hi = np.array(meta.wave_hi)
+                meta.wave = (meta.wave_low + meta.wave_hi)/2
+                if (meta.nspecchan is not None
+                        and meta.nspecchan != len(meta.wave)):
+                    log.writelog(f'WARNING: Your nspecchan value of '
+                                 f'{meta.nspecchan} differs from the size of '
+                                 f'wave_hi ({len(meta.wave)}). Using the '
+                                 f'latter instead.')
+                    meta.nspecchan = len(meta.wave)
 
             # Define light curve DataArray
             lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),

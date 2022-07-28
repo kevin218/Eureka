@@ -73,7 +73,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
 
     fig.subplots_adjust(left=0.12, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
-    fname = f'figs{os.sep}Fig4102_{fname_tag}_1D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -201,7 +201,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel(r'Wavelength ($\mu m$)')
         plt.colorbar(label='Normalized Flux')
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_xaxis('top')
             xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
@@ -217,7 +217,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel('Integration Number')
         plt.colorbar(label='Normalized Flux', pad=0.075)
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave_low) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_yaxis('right')
             yticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
