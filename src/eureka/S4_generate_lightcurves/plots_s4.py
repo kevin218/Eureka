@@ -40,9 +40,9 @@ def binned_lightcurve(meta, log, lc, i, white=False):
                                                           lc['err'][i])
         ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
         fname_tag = f'ch{ch_number}'
-        
+
     time_modifier = np.floor(np.ma.min(lc.time.values))
-    
+
     # Plot the normalized light curve
     if meta.inst == 'wfc3':
         for p in range(2):
@@ -71,9 +71,9 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
-    fig.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90,
+    fig.subplots_adjust(left=0.12, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
-    fname = f'figs{os.sep}Fig4102_{fname_tag}_1D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -88,7 +88,7 @@ def driftxpos(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-    
+
     Notes
     -----
     History:
@@ -127,7 +127,7 @@ def driftxwidth(meta, lc):
     Returns
     -------
     None
-    
+
     Notes
     -----
     History:
@@ -171,7 +171,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     '''
     optspec = np.ma.masked_invalid(optspec)
     optspec = np.ma.masked_where(optmask, optspec)
-    
+
     wmin = meta.wave_min
     wmax = meta.wave_max
     iwmin = np.nanargmin(np.abs(wave_1d-wmin).values)
@@ -190,7 +190,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
               " Using 'y' by default.")
         meta.time_axis = 'y'
-    
+
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
@@ -201,7 +201,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel(r'Wavelength ($\mu m$)')
         plt.colorbar(label='Normalized Flux')
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_xaxis('top')
             xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
@@ -217,7 +217,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel('Integration Number')
         plt.colorbar(label='Normalized Flux', pad=0.075)
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave_low) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_yaxis('right')
             yticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))

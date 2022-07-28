@@ -133,6 +133,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
+            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+                # Remove requested data points
+                util.manual_clip(lc, meta, log)
+
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
             offset = params.time_offset.value
@@ -147,9 +151,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.use_generate_ld:
                 ld_str = meta.use_generate_ld
                 if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been" +
+                    raise Exception("Exotic-ld coefficients have not been " +
                                     "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients" +
+                log.writelog("\nUsing generated limb-darkening coefficients " +
                              f"with {ld_str} \n")
                 ld_coeffs = [lc[ld_str + '_lin'].values,
                              lc[ld_str + '_quad'].values,
@@ -173,11 +177,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 mask = lc.mask_white.values
                 flux = np.ma.masked_where(mask, lc.flux_white.values)
                 flux_err = np.ma.masked_where(mask, lc.err_white.values)
-                
+
                 # Normalize flux and uncertainties to avoid large
                 # flux values
-                flux_err = flux_err/np.ma.mean(flux)
-                flux = flux/np.ma.mean(flux)
+                flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -205,10 +208,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                                    lc.data.values[channel, :])
                     err_temp = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
-                    flux = np.ma.append(flux,
-                                        flux_temp/np.ma.mean(flux_temp))
-                    flux_err = np.ma.append(flux_err,
-                                            err_temp/np.ma.mean(flux_temp))
+                    flux_temp, err_temp = util.normalize_spectrum(meta,
+                                                                  flux_temp,
+                                                                  err_temp)
+                    flux = np.ma.append(flux, flux_temp)
+                    flux_err = np.ma.append(flux_err, err_temp)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -234,8 +238,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/np.ma.mean(flux)
-                    flux = flux/np.ma.mean(flux)
+                    flux, flux_err = util.normalize_spectrum(meta, flux,
+                                                             flux_err)
 
                     meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
@@ -326,7 +330,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          fmt='r--', log=log,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
-                                         paramtitles=paramtitles, 
+                                         paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
                                          ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
