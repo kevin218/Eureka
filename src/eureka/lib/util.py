@@ -118,7 +118,7 @@ def manual_clip(lc, meta, log):
                  mute=(not meta.verbose))
 
     meta.manual_clip = np.array(meta.manual_clip)
-    if len(meta.clip.shape) == 1:
+    if len(meta.manual_clip.shape) == 1:
         # The user didn't quite enter things right, so reshape
         meta.manual_clip = meta.manual_clip[np.newaxis]
     
