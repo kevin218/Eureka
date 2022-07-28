@@ -2,7 +2,7 @@
 
 # Number of spectroscopic channels spread evenly over given wavelength range
 nspecchan   1           # Number of spectroscopic channels
-compute_white False     # Also compute the white-light lightcurve 
+compute_white False     # Also compute the white-light lightcurve
 wave_min    2.5         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
 wave_max    4.0         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 allapers	True		# Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
@@ -20,20 +20,22 @@ sub_continuum	True	# Set True to subtract the continuum from the spectra using a
 highpassWidth	10		# The integer width of the highpass filter when subtracting the continuum
 
 # Parameters for sigma clipping
-sigma_clip		True	# Whether or not sigma clipping should be performed on the 1D time series
+clip_unbinned   False   # Whether or not sigma clipping should be performed on the unbinned 1D time series
+clip_binned     True    # Whether or not sigma clipping should be performed on the binned 1D time series
 sigma			10		# The number of sigmas a point must be from the rolling median to be considered an outlier
 box_width		10		# The width of the box-car filter (used to calculated the rolling median) in units of number of data points
 maxiters		5		# The number of iterations of sigma clipping that should be performed.
 fill_value		mask	# Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-  parameters needed to compute exotic-ld
+# Limb-darkening parameters needed to compute exotic-ld
 compute_ld      False
-inst_filter     F322W2 #filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
-metallicity     0.1 #metallicity of the star 
-teff            6000 #effective temperature of the star in K
-logg            4.0 #surface gravity in log g
-exotic_ld_direc /home/User/exotic-ld_data/ #directory for ancillary files for exotic-ld
-exotic_ld_grid  3D #1D or 3D model grid
+inst_filter     F322W2  # filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
+metallicity     0.1     # metallicity of the star 
+teff            6000    # effective temperature of the star in K
+logg            4.0     # surface gravity in log g
+exotic_ld_direc /home/User/exotic-ld_data/ # directory for ancillary files for exotic-ld, download from: https://zenodo.org/record/6344946
+exotic_ld_grid  3D      # 1D or 3D model grid
+exotic_ld_file  #/home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
 
 # Diagnostics
 isplots_S4  5           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
