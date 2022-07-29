@@ -7,9 +7,7 @@
 import numpy as np
 from . import disk as di
 from . import meanerr as me
-import matplotlib as plt
 from . import interp2d as i2d
-from ..S3_data_reduction import plots_s3
 
 
 def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
