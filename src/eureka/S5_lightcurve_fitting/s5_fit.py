@@ -325,8 +325,10 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
 
     freenames = []
     for key in params.dict:
-        if params.dict[key][1] in ['free', 'shared', 'white_free', 'white_fixed']:
+        if params.dict[key][1] in ['free', 'shared', 'white_free',
+                                   'white_fixed']:
             freenames.append(key)
+    freenames = np.array(freenames)
 
     # Make the astrophysical and detector models
     modellist = []
