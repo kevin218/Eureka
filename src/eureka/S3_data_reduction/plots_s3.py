@@ -465,7 +465,7 @@ def residualBackground(data, meta, m):
     vmin = -200
     vmax = 1000
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
-                                 num=3304, figsize=(6.5, 3.5))
+                                 num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap='plasma')
     a0.hlines([meta.bg_y1, meta.bg_y2], 0, meta.subnx, color='orange')
@@ -482,17 +482,18 @@ def residualBackground(data, meta, m):
     a1.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
+    a1.legend(loc='upper right', fontsize=8)
     a1.axes.set_xlabel("Flux [e-]")
     a1.axes.set_xlim(vmin, vmax)
     a1.axes.set_ylim(0, meta.subny)
     a1.axes.set_yticklabels([])
     # a1.yaxis.set_visible(False)
-    a1.axes.set_xticks(np.linspace(vmin, vmax, 4))
+    a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
     fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(vmin, vmax),
                  cmap='plasma'), ax=a1)
     fig.subplots_adjust(top=0.97,
-                        bottom=0.14,
-                        left=0.085,
+                        bottom=0.155,
+                        left=0.08,
                         right=0.925,
                         hspace=0.2,
                         wspace=0.08)
