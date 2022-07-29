@@ -381,7 +381,7 @@ Stage 4
 
 nspecchan
 '''''''''
-Number of spectroscopic channels spread evenly over given wavelength range
+Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 
 
 compute_white
@@ -583,6 +583,10 @@ Fitting routines to run for Stage 5 lightcurve fitting. Can be one or more of th
 run_myfuncs
 '''''''''''
 Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step]
+
+manual_clip
+'''''''''''
+Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
 
 use_generate_ld
 '''''''''''''''

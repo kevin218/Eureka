@@ -3,12 +3,14 @@
 # Stage 4 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-4
 
 # Number of spectroscopic channels spread evenly over given wavelength range
-nspecchan       6           # Number of spectroscopic channels
+nspecchan       6           # Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
+compute_white   True        # Also compute the white-light lightcurve 
 wave_min        0.8         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
 wave_max        1.15        # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 allapers        True        # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Parameters for drift correction of 1D spectra
+recordDrift     False   # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
 correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
 drift_preclip   0       # Ignore first drift_preclip points of spectrum
 drift_postclip  100     # Ignore last drift_postclip points of spectrum, None = no clipping

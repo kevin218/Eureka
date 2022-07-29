@@ -92,6 +92,50 @@ def trim(data, meta):
     return subdata, meta
 
 
+def manual_clip(lc, meta, log):
+    """Manually clip integrations along time axis.
+
+    Parameters
+    ----------
+    lc : Xarray Dataset
+        The Dataset object containing light curve and time data.
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    lc : Xarray Dataset
+        The updated Dataset object containing light curve and time data
+        with the requested integrations removed.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
+    log.writelog('Manually removing data points from meta.manual_clip...',
+                 mute=(not meta.verbose))
+
+    meta.manual_clip = np.array(meta.manual_clip)
+    if len(meta.manual_clip.shape) == 1:
+        # The user didn't quite enter things right, so reshape
+        meta.manual_clip = meta.manual_clip[np.newaxis]
+    
+    # Figure out which indices are being clipped
+    time_bool = np.ones(len(lc.data.time), dtype=bool)
+    for inds in meta.manual_clip:
+        time_bool[inds[0]:inds[1]] = False
+    time_inds = np.arange(len(lc.data.time))[time_bool]
+    
+    # Remove the requested integrations
+    lc = lc.isel(time=time_inds)
+    if hasattr(meta, 'scandir'):
+        meta.scandir = meta.scandir[time_bool[::meta.nreads]]
+    
+    return meta, lc, log
+
+
 def check_nans(data, mask, log, name=''):
     """Checks where a data-like array is invalid (contains NaNs or infs).
 

@@ -133,6 +133,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
+            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+                # Remove requested data points
+                util.manual_clip(lc, meta, log)
+
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
             offset = params.time_offset.value
@@ -176,8 +180,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                 # Normalize flux and uncertainties to avoid large
                 # flux values
-                flux_err = flux_err/np.ma.mean(flux)
-                flux = flux/np.ma.mean(flux)
+                flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -205,10 +208,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                                    lc.data.values[channel, :])
                     err_temp = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
-                    flux = np.ma.append(flux,
-                                        flux_temp/np.ma.mean(flux_temp))
-                    flux_err = np.ma.append(flux_err,
-                                            err_temp/np.ma.mean(flux_temp))
+                    flux_temp, err_temp = util.normalize_spectrum(meta,
+                                                                  flux_temp,
+                                                                  err_temp)
+                    flux = np.ma.append(flux, flux_temp)
+                    flux_err = np.ma.append(flux_err, err_temp)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -234,8 +238,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/np.ma.mean(flux)
-                    flux = flux/np.ma.mean(flux)
+                    flux, flux_err = util.normalize_spectrum(meta, flux,
+                                                             flux_err)
 
                     meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
