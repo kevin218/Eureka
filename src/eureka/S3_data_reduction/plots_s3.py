@@ -95,6 +95,7 @@ def image_and_background(data, meta, log, m):
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     iterfn = range(meta.int_end-meta.int_start)
+    max = np.ma.max(subdata)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -103,7 +104,6 @@ def image_and_background(data, meta, log, m):
         plt.suptitle(f'Integration {intstart + n}')
         plt.subplot(211)
         plt.title('Background-Subtracted Flux')
-        max = np.ma.max(subdata[n])
         plt.imshow(subdata[n], origin='lower', aspect='auto',
                    vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
@@ -429,7 +429,7 @@ def driftywidth(data, meta):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m):
+def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
 
@@ -441,6 +441,10 @@ def residualBackground(data, meta, m):
         The metadata object.
     m : int
         The file number.
+    vmin : int
+        Minimum value of colormap
+    vmax : int
+        Maximum value of colormap
 
     Returns
     -------
@@ -454,6 +458,9 @@ def residualBackground(data, meta, m):
         First version
     '''
     # Median flux of segment
+    # Don't us masked arrays so that we can see flux in masked areas
+    # subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
+    # flux = np.ma.median(subdata, axis=0)
     flux = np.median(data.flux, axis=0)
     # Compute vertical slice of with 10 columns
     slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
@@ -462,8 +469,6 @@ def residualBackground(data, meta, m):
     ny_hr = np.arange(0, meta.subny-1, 0.01)
     flux_hr = f(ny_hr)
 
-    vmin = -200
-    vmax = 1000
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
