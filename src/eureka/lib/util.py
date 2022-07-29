@@ -116,11 +116,11 @@ def check_nans(data, mask, log, name=''):
     data = np.ma.masked_where(mask == 0, np.copy(data))
     num_nans = np.sum(np.ma.masked_invalid(data).mask)
     if num_nans > 0:
-        log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. Your "
-                     "subregion may be off the edge of the detector "
-                     "subarray.\n    Masking NaN region and continuing, "
-                     "but you should really stop and reconsider your "
-                     "choices.")
+        log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. If this "
+                     "number is large, your subregion may be off the edge of "
+                     "the detector subarray.  Masking NaN/inf regions and "
+                     "continuing, but you should really stop and reconsider "
+                     "your choices.")
         inan = np.where(np.ma.masked_invalid(data).mask)
         # subdata[inan]  = 0
         mask[inan] = 0
