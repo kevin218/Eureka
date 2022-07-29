@@ -118,6 +118,8 @@ class Model:
             eureka.S5_lightcurve_fitting.models.Model class.
         """
         for val, arg in zip(newparams, self.freenames):
+            # For now, the dict and Parameter are separate
+            self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
         self._parse_coeffs()
         return
