@@ -6,6 +6,8 @@ from .source_pos import gauss
 from ..lib import util
 from ..lib.plots import figure_filetype
 import scipy.stats as stats
+from matplotlib.colors import LogNorm
+from mpl_toolkits import axes_grid1
 
 
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
@@ -455,7 +457,7 @@ def phot_bg(meta, data):
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3305-1D_BG_LC' + figure_filetype)
+    fname = (f'figs{os.sep}fig3305-1D_LC_BG' + figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -465,90 +467,32 @@ def phot_centroid(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
-    plt.figure(3306)
+    plt.figure(3104)
     plt.clf()
     plt.suptitle('Centroid positions over time')
 
-    plt.subplot(411)
-    plt.plot(data.time, data.centroid_x-np.mean(data.centroid_x))
+    cx = data.centroid_x
+    cx_rms = np.sqrt(np.mean(((cx - np.mean(cx)) / cx) ** 2))
+    cy = data.centroid_y
+    cy_rms = np.sqrt(np.mean(((cy - np.mean(cy)) / cy) ** 2))
+
+    ax = plt.subplot(411)
+    plt.plot(data.time, data.centroid_x-np.mean(data.centroid_x), label='scatter in x = {0} pixels'.format(cx_rms))
     plt.ylabel('Delta x')
-
-    plt.subplot(412)
-    plt.plot(data.time, data.centroid_y-np.mean(data.centroid_y))
+    plt.subplot(412, sharex=ax)
+    plt.plot(data.time, data.centroid_y-np.mean(data.centroid_y), label='scatter in y = {0} pixels'.format(cy_rms))
     plt.ylabel('Delta y')
-
-    plt.subplot(413)
+    plt.subplot(413, sharex=ax)
     plt.plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
     plt.ylabel('Delta sx')
-
-    plt.subplot(414)
+    plt.subplot(414, sharex=ax)
     plt.plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
     plt.ylabel('Delta sy')
     plt.xlabel('Time')
-    plt.tight_layout()
-    fname = (f'figs{os.sep}fig3306-Centroid' + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
-    if not meta.hide_plots:
-        plt.pause(0.2)
-
-
-def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
-    plt.figure(3502)
-    plt.clf()
-    plt.suptitle('Centroid gaussian fit')
-    fig, ax = plt.subplots(2,2, figsize=(8,8))
-    fig.delaxes(ax[1,1])
-    ax[0,0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
-
-    ax[1,0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
-    x_plot = np.linspace(0, len(np.sum(img, axis=0)))
-    ax[1,0].plot(x_plot, stats.norm.pdf(x_plot, x, sx)/np.max(stats.norm.pdf(x_plot, x, sx))*np.max(np.sum(img, axis=0)))
-
-    ax[0,1].plot(np.sum(img, axis=1), range(len(np.sum(img, axis=1))))
-    y_plot = np.linspace(0, len(np.sum(img, axis=1)))
-    ax[0,1].plot(stats.norm.pdf(y_plot, y, sy)/np.max(stats.norm.pdf(y_plot, y, sy))*np.max(np.sum(img, axis=1)), y_plot)
-
-    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.tight_layout()
-    fname = (f'figs{os.sep}fig3502_file{file_number}_int{int_number}_centroid_fgc' + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
-    if not meta.hide_plots:
-        plt.pause(0.2)
-
-
-def phot_2D_frame(meta, m, i, data):
-    """
-    Plots the 2D frame together with the centroid position and apertures.
-    """
-    plt.figure(3307)
-    plt.clf()
-    plt.suptitle('2D frame with centroid and apertures')
-    flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
-    plt.imshow(flux, vmax=5e3, origin='lower')
-    plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
-    #alphas = np.zeros(image.shape)
-    #alphas[np.where(skyann == True)] = 0.9
-    #plt.imshow(~skyann, origin='lower', alpha=alphas, cmap='magma')
-    #alphas = np.zeros(image.shape)
-    #alphas[np.where(apmask == True)] = 0.4
-    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r', fill=False, lw=3, alpha=0.7, label='target aperture')
-    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w', fill=False, lw=4, alpha=0.8, label='sky aperture')
-    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w', fill=False, lw=4, alpha=0.8)
-    plt.gca().add_patch(circle1)
-    plt.gca().add_patch(circle2)
-    plt.gca().add_patch(circle3)
-    #plt.imshow(~apmask, origin='lower', alpha=alphas)
-    plt.xlim(0, flux.shape[1])
-    plt.ylim(0, flux.shape[0])
-    plt.xlabel('x pixels')
-    plt.ylabel('y pixels')
     plt.legend()
-    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_frame' + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    fname = (f'figs{os.sep}fig3104-Centroid' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -557,19 +501,210 @@ def phot_npix(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
-    plt.figure(3308)
+    plt.figure(3502)
     plt.clf()
     plt.suptitle('Aperture sizes over time')
     plt.subplot(211)
     plt.plot(range(len(data.nappix)), data.nappix)
-    plt.xlabel('nappix')
+    plt.ylabel('nappix')
     plt.subplot(212)
     plt.plot(range(len(data.nskypix)), data.nskypix)
-    plt.xlabel('nappix')
-    plt.legend()
+    plt.ylabel('nskypix')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3308_aperture_size' + figure_filetype)
+    fname = (f'figs{os.sep}fig3502_aperture_size' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
+
+
+
+def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
+    plt.figure(3503)
+    plt.clf()
+
+    fig, ax = plt.subplots(2,2, figsize=(8,8))
+    plt.suptitle('Centroid gaussian fit')
+    fig.delaxes(ax[1,1])
+    ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+
+    ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
+    x_plot = np.linspace(0, len(np.sum(img, axis=0)))
+    ax[1, 0].plot(x_plot, stats.norm.pdf(x_plot, x, sx)/np.max(stats.norm.pdf(x_plot, x, sx))*np.max(np.sum(img, axis=0)))
+    ax[1, 0].set_xlabel('x position')
+    ax[1, 0].set_ylabel('Flux (electrons)')
+
+    ax[0, 1].plot(np.sum(img, axis=1), range(len(np.sum(img, axis=1))))
+    y_plot = np.linspace(0, len(np.sum(img, axis=1)))
+    ax[0, 1].plot(stats.norm.pdf(y_plot, y, sy)/np.max(stats.norm.pdf(y_plot, y, sy))*np.max(np.sum(img, axis=1)), y_plot)
+    ax[0, 1].set_ylabel('y position')
+    ax[0, 1].set_xlabel('Flux (electrons)')
+
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    plt.tight_layout()
+    fname = (f'figs{os.sep}fig3503_file{file_number}_int{int_number}_Centroid_Fit' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
+    """
+    Add a vertical color bar to an image plot.
+    Taken from: https://stackoverflow.com/questions/18195758/set-matplotlib-colorbar-size-to-match-graph
+    """
+    divider = axes_grid1.make_axes_locatable(im.axes)
+    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+    current_ax = plt.gca()
+    cax = divider.append_axes("right", size=width, pad=pad)
+    plt.sca(current_ax)
+    return im.axes.figure.colorbar(im, cax=cax, **kwargs)
+
+
+def phot_2d_frame(meta, m, i, data):
+    """
+    Plots the 2D frame together with the centroid position and apertures.
+    """
+    plt.figure(3306, figsize=(8, 3))
+    plt.clf()
+    plt.suptitle('2D frame with centroid and apertures')
+
+    flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
+
+    xmin, xmax = data.flux.x.min().values-meta.xwindow[0], data.flux.x.max().values-meta.xwindow[0]
+    ymin, ymax = data.flux.y.min().values-meta.ywindow[0], data.flux.y.max().values-meta.ywindow[0]
+
+    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal', extent=[xmin, xmax, ymin, ymax])
+    plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
+    plt.title('Full Frame')
+    plt.ylabel('y pixels')
+    plt.xlabel('x pixels')
+
+    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r', fill=False, lw=3, alpha=0.7, label='target aperture')
+    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w', fill=False, lw=4, alpha=0.8, label='sky aperture')
+    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w', fill=False, lw=4, alpha=0.8)
+    plt.gca().add_patch(circle1)
+    plt.gca().add_patch(circle2)
+    plt.gca().add_patch(circle3)
+    add_colorbar(im, label='Flux (electrons)')
+    plt.xlim(0, flux.shape[1])
+    plt.ylim(0, flux.shape[0])
+    plt.xlabel('x pixels')
+    plt.ylabel('y pixels')
+
+    plt.legend()
+    plt.tight_layout()
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+
+    fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def phot_2d_frame_zoom(meta, m, i, data):
+    """
+    Plots the 2D frame together with the centroid position and apertures.
+    """
+    plt.figure(3504, figsize=(6, 5))
+    plt.clf()
+    plt.suptitle('2D frame with centroid and apertures (zoom-in)')
+    flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
+
+    xmin, xmax = data.flux.x.min().values-meta.xwindow[0], data.flux.x.max().values-meta.xwindow[0]
+    ymin, ymax = data.flux.y.min().values-meta.ywindow[0], data.flux.y.max().values-meta.ywindow[0]
+
+    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal', extent=[xmin, xmax, ymin, ymax])
+    plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
+    plt.title('Full Frame')
+    plt.ylabel('y pixels')
+    plt.xlabel('x pixels')
+
+    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r', fill=False, lw=3, alpha=0.7, label='target aperture')
+    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w', fill=False, lw=4, alpha=0.8, label='sky aperture')
+    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w', fill=False, lw=4, alpha=0.8)
+    plt.gca().add_patch(circle1)
+    plt.gca().add_patch(circle2)
+    plt.gca().add_patch(circle3)
+
+    add_colorbar(im, label='Flux (electrons)')
+    xlim_min = max(0, centroid_x - meta.skyout - 10)
+    xlim_max = min(centroid_x + meta.skyout + 10, flux.shape[1])
+    ylim_min = max(0, centroid_y - meta.skyout - 10)
+    ylim_max = min(centroid_y + meta.skyout + 10, flux.shape[0])
+
+    plt.xlim(xlim_min, xlim_max)
+    plt.ylim(ylim_min, ylim_max)
+    plt.xlabel('x pixels')
+    plt.ylabel('y pixels')
+
+    plt.legend()
+    plt.tight_layout()
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+
+    fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def phot_2d_frame_oof(meta, m, i, data, flux_w_oof):
+    """
+    Plots the 2D frame together with the centroid position and apertures.
+    """
+    fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
+
+    im0 = ax[0].imshow(flux_w_oof, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
+    ax[0].set_title('Before 1/f correction')
+    ax[0].set_ylabel('y pixels')
+
+    flux = data.flux.values[i]
+    im1 = ax[1].imshow(flux, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
+    ax[1].set_title('After 1/f correction')
+    ax[1].set_xlabel('x pixels')
+    ax[1].set_ylabel('y pixels')
+
+    plt.subplots_adjust(hspace=0.3)
+
+    cbar = fig.colorbar(im1, ax=ax)
+    cbar.ax.set_ylabel('Flux (electrons)')
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    fig.suptitle((f'Segment {file_number}, Integration {int_number}'), y=0.99)
+
+    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_Frame_OOF' + figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def phot_2d_frame_diff(meta, data):
+    """
+    Plots the 2D frame together with the centroid position and apertures.
+    """
+    for i in range(len(data.aplev.values)-1):
+        plt.figure(3505)
+        plt.clf()
+        plt.suptitle('2D frame differences')
+        flux1 = data.flux.values[i]
+        flux2 = data.flux.values[i+1]
+        plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
+        plt.xlim(1064-120-512, 1064+120-512)
+        plt.ylim(0, flux1.shape[0])
+        plt.xlabel('x pixels')
+        plt.ylabel('y pixels')
+
+        plt.colorbar(label = 'Delta Flux (electrons)')
+        plt.tight_layout()
+        #file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files)) + 1))
+        int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int)) + 1))
+        plt.suptitle((f'Integration {int_number}'), y=0.99)
+
+        fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff' + figure_filetype)
+        plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+        if not meta.hide_plots:
+            plt.pause(0.2)

@@ -173,7 +173,7 @@ def bright2dn(data, meta, mjy=False):
                          f' and miri observations.')
 
     if meta.photometry:
-        response = 1
+        response = 1.0
     else:
         response_wave = phot['wavelength'][ind]
         response_vals = phot['relresponse'][ind]
