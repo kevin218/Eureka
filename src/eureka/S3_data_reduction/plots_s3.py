@@ -2,6 +2,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import scipy.interpolate as spi
 from .source_pos import gauss
 from ..lib import util
 from ..lib.plots import figure_filetype
@@ -426,3 +427,78 @@ def driftywidth(data, meta):
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
+
+
+def residualBackground(data, meta, m):
+    '''Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    History:
+
+    - 2022-07-29 KBS
+        First version
+    '''
+    # Median flux of segment
+    flux = np.median(data.flux, axis=0)
+    # Compute vertical slice of with 10 columns
+    slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
+    # Interpolate to 0.01-pixel resolution
+    f = spi.interp1d(np.arange(meta.subny), slice, 'cubic')
+    ny_hr = np.arange(0, meta.subny-1, 0.01)
+    flux_hr = f(ny_hr)
+
+    vmin = -200
+    vmax = 1000
+    fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
+                                 num=3304, figsize=(6.5, 3.5))
+    a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
+              cmap='plasma')
+    a0.hlines([meta.bg_y1, meta.bg_y2], 0, meta.subnx, color='orange')
+    a0.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], 0,
+              meta.subnx, color='mediumseagreen', linestyle='dashed')
+    a0.axes.set_xlim(0, meta.subnx)
+    a0.axes.set_ylabel("Pixel Position")
+    a0.axes.set_xlabel("Pixel Position")
+    a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap='plasma',
+               norm=plt.Normalize(vmin, vmax))
+    a1.vlines([0], 0, meta.subny, color='0.5', linestyle='dotted')
+    a1.hlines([meta.bg_y1, meta.bg_y2], vmin, vmax, color='orange',
+              linestyle='solid', label='bg'+str(meta.bg_hw))
+    a1.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], vmin,
+              vmax, color='mediumseagreen', linestyle='dashed',
+              label='ap'+str(meta.spec_hw))
+    a1.axes.set_xlabel("Flux [e-]")
+    a1.axes.set_xlim(vmin, vmax)
+    a1.axes.set_ylim(0, meta.subny)
+    a1.axes.set_yticklabels([])
+    # a1.yaxis.set_visible(False)
+    a1.axes.set_xticks(np.linspace(vmin, vmax, 4))
+    fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(vmin, vmax),
+                 cmap='plasma'), ax=a1)
+    fig.subplots_adjust(top=0.97,
+                        bottom=0.14,
+                        left=0.085,
+                        right=0.925,
+                        hspace=0.2,
+                        wspace=0.08)
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3304_file{file_number}' +
+             '_ResidualBG'+figure_filetype)
+    plt.savefig(meta.outputdir+fname, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)
