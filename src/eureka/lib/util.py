@@ -3,6 +3,7 @@ import os
 import glob
 from astropy.io import fits
 from . import sort_nicely as sn
+from scipy.interpolate import griddata
 
 
 def readfiles(meta, log):
@@ -504,16 +505,84 @@ def manmask(data, meta, log):
 
 
 #photometry
+def interp_masked(data, meta, i):
+    """
+    Interpolates masked pixels.
+    Based on the example here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+    """
+    print('Interpolating masked values...')
+    flux = data.flux.values[i]
+    mask = data.mask.values[i]
+    nx = flux.shape[1]
+    ny = flux.shape[0]
+    grid_x, grid_y = np.mgrid[0:ny-1:complex(0,ny), 0:nx-1:complex(0,nx)]
+    points = np.where(mask == 1)
+    points_t = np.array(points).transpose() #x,y positions of not masked pixels
+    values = flux[np.where(mask == 1)] #flux values of not masked pixels
+
+    # Use scipy.interpolate.griddata to interpolate
+    if meta.interp_method == 'nearest':
+        grid_z = griddata(points_t, values, (grid_x, grid_y), method='nearest')
+    elif meta.interp_method == 'linear':
+        grid_z = griddata(points_t, values, (grid_x, grid_y), method='linear')
+    elif meta.interp_method == 'cubic':
+        grid_z = griddata(points_t, values, (grid_x, grid_y), method='cubic')
+    else:
+        print('Your method for interpolation is not supported! Please choose between None, nearest, linear or cubic.')
+
+    data.flux.values[i] = grid_z
+
+    return data
+
+
+def flag_bad_dq(data):
+    """
+    Masks pixels with a bad quality flag. I.e., they are odd, thus including the "DO_NOT_USE" bit value.
+    See all flags used by the jwst package here:
+    https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+    """
+    print('Flagging Pixels using the Data Quality array...')
+    mask_DQ = np.ones_like(data.dq.values)
+    mask_DQ[np.where(data.dq.values % 2 != 0)] = 0 # %2 != 0 looks for odd entries
+    data.mask.values = data.mask.values * mask_DQ #update the already existing mask
+    return data
+
+
+def phot_arrays(data):
+    """
+    Setting up arrays for the photometry routine.
+    These arrays will be populated by the returns coming from centerdriver.py and apphot.py
+    """
+    data['centroid_x'] = (['time'], np.zeros_like(data.time))
+    data['centroid_y'] = (['time'], np.zeros_like(data.time))
+    data['centroid_sx'] = (['time'], np.zeros_like(data.time))
+    data['centroid_sy'] = (['time'], np.zeros_like(data.time))
+    # Arrays for aperture extraction
+    data['aplev'], data['aperr'], data['nappix'], data['skylev'], data['skyerr'], \
+    data['nskypix'], data['nskyideal'], data['status'], data['betaper'] = \
+        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
+        (['time'], np.zeros_like(data.time))
+
+    data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
+    data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['aperr'].attrs['flux_units'] = data.flux.attrs['flux_units']
+    data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
+
+    return data
+
+
 def apphot_status(data):
     """
     Prints a warning if aperture step had errors.
     """
     if sum(data.status != 0) > 0:
-        print('Unique error flags which occurred: ', np.unique(data.status))
-        print('An error has accured during the aperture extraction!')
-        if 1 in data.status:
+        print('A warning by the aperture photometry routine:')
+        if 1 in np.unique(data.status):
             print('there are masked pixel(s) in the photometry aperture')
-        elif 2 in data.status:
+        elif 2 in np.unique(data.status):
             print('the aperture is off the edge of the image')
-        elif 3 in data.status:
+        elif 3 in np.unique(data.status):
             print('a fraction less than skyfrac of the sky annulus pixels is in the image and not masked')
