@@ -340,7 +340,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
-                    plots_s3.residualBackground(data, meta, m)
+                    if meta.inst != 'wfc3':
+                        plots_s3.residualBackground(data, meta, m)
 
                 if meta.save_output:
                     # Save flux data from current segment
