@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from tqdm import tqdm
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
 from .source_pos import gauss
@@ -95,7 +96,11 @@ def image_and_background(data, meta, log, m):
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     iterfn = range(meta.int_end-meta.int_start)
-    max = np.ma.max(subdata)
+    # FINDME: Max calculation is broken and I can't figure out how to fix it
+    # max = np.nanmax(~data.mask.values*subdata)
+    max = 10000
+    median = np.ma.median(subbg)
+    std = np.ma.std(subbg)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -103,15 +108,13 @@ def image_and_background(data, meta, log, m):
         plt.clf()
         plt.suptitle(f'Integration {intstart + n}')
         plt.subplot(211)
-        plt.title('Background-Subtracted Flux')
+        plt.title('Background-Subtracted Frame')
         plt.imshow(subdata[n], origin='lower', aspect='auto',
                    vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.subplot(212)
         plt.title('Subtracted Background')
-        median = np.ma.median(subbg[n])
-        std = np.ma.std(subbg[n])
         plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
                    vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
@@ -459,20 +462,23 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     '''
     # Median flux of segment
     # Don't us masked arrays so that we can see flux in masked areas
-    # subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
-    # flux = np.ma.median(subdata, axis=0)
-    flux = np.median(data.flux, axis=0)
+    subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
+    flux = np.ma.median(subdata, axis=0)
+    # flux = np.median(data.flux, axis=0)
     # Compute vertical slice of with 10 columns
     slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
     # Interpolate to 0.01-pixel resolution
     f = spi.interp1d(np.arange(meta.subny), slice, 'cubic')
     ny_hr = np.arange(0, meta.subny-1, 0.01)
     flux_hr = f(ny_hr)
+    # Set bad pixels to plot as black
+    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap.set_bad('k', 1.)
 
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
-              cmap='plasma')
+              cmap=cmap)
     a0.hlines([meta.bg_y1, meta.bg_y2], 0, meta.subnx, color='orange')
     a0.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], 0,
               meta.subnx, color='mediumseagreen', linestyle='dashed')
