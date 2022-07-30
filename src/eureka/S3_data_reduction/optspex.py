@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.interpolate as spi
 from tqdm import tqdm
 from ..lib import gaussian as g
 from ..lib import smooth
@@ -508,7 +509,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
         average smoothing. Defaults to 'hanning'.
     m : int; optional
         File number. Defaults to 0.
-    
+
     Returns
     -------
     data : Xarray Dataset
@@ -521,7 +522,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     Notes
     -----
     History:
-    
+
     - 2022-07-18, Taylor J Bell
         Added optimize_wrapper to iterate over each frame.
     '''
@@ -540,7 +541,15 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 
     # Compute median frame
     data_ma = np.ma.masked_where(apmask == 0, apdata)
-    medflux = np.ma.median(data_ma, axis=0).data
+    medflux = np.ma.median(data_ma, axis=0)
+    # Replace masked pixels through interpolation
+    ny, nx = medflux.shape
+    xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
+    x1 = xx[~medflux.mask]
+    y1 = yy[~medflux.mask]
+    goodmed = medflux[~medflux.mask]
+    interpmed = spi.griddata((x1, y1), goodmed.ravel(), (xx, yy),
+                             method='cubic', fill_value=0)
 
     # Perform optimal extraction on each of the frames
     iterfn = range(meta.int_start, meta.n_int)
@@ -555,7 +564,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                      fittype=meta.fittype,
                      window_len=meta.window_len,
                      deg=meta.prof_deg, windowtype=windowtype,
-                     n=n, m=m, meddata=medflux)
+                     n=n, m=m, meddata=interpmed)
 
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
