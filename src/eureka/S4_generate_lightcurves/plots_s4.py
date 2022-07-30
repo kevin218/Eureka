@@ -153,7 +153,7 @@ def driftxwidth(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
+def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
@@ -163,19 +163,19 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     wave_1d : ndarray
         Wavelength array with trimmed edges depending on xwindow and ywindow
         which have been set in the S3 ecf.
-    optspec : ndarray
+    optspec_in : Xarray DataArray
         The optimally extracted spectrum.
-    optmask : ndarray (1D), optional
+    optmask : Xarray DataArray, optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     '''
-    optspec = np.ma.masked_invalid(optspec)
-    optspec = np.ma.masked_where(optmask, optspec)
+    optspec = np.ma.masked_invalid(optspec_in.values)
+    optspec = np.ma.masked_where(optmask.values, optspec)
 
     wmin = meta.wave_min
     wmax = meta.wave_max
-    iwmin = np.nanargmin(np.abs(wave_1d-wmin).values)
-    iwmax = np.nanargmin(np.abs(wave_1d-wmax).values)
+    iwmin = np.nanargmin(np.abs(wave_1d-wmin))
+    iwmax = np.nanargmin(np.abs(wave_1d-wmax))
 
     # Normalize the light curve
     norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax])
