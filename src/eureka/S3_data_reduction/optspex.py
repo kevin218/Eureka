@@ -533,10 +533,13 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     data['optmask'] = (['time', 'x'], np.ones(data.stdspec.shape))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
     data['opterr'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['opterr'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['opterr'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
     data['optmask'].attrs['flux_units'] = 'None'
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
 
     # Compute median frame
     data_ma = np.ma.masked_where(apmask == 0, apdata)
