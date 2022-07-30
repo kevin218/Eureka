@@ -272,6 +272,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                    log, name='V0')
 
                 # Start masking pixels based on DQ flags
+                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html
+                # Odd numbers in DQ array are bad pixels. Do not use.
                 if hasattr(meta, 'dqmask') and meta.dqmask:
                     # dqmask = np.where(data['dq'] > 0)
                     dqmask = np.where(data.dq % 2 == 1)

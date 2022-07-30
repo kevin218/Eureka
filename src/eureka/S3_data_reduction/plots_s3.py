@@ -95,12 +95,16 @@ def image_and_background(data, meta, log, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
-    iterfn = range(meta.int_end-meta.int_start)
     # FINDME: Max calculation is broken and I can't figure out how to fix it
-    # max = np.nanmax(~data.mask.values*subdata)
-    max = 10000
+    # vmax = np.nanmax(~data.mask.values*subdata)/10
+    vmin = -200
+    vmax = 1000
     median = np.ma.median(subbg)
     std = np.ma.std(subbg)
+    # Set bad pixels to plot as black
+    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap.set_bad('k', 1.)
+    iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
         iterfn = tqdm(iterfn)
     for n in iterfn:
@@ -109,14 +113,15 @@ def image_and_background(data, meta, log, m):
         plt.suptitle(f'Integration {intstart + n}')
         plt.subplot(211)
         plt.title('Background-Subtracted Frame')
-        plt.imshow(subdata[n], origin='lower', aspect='auto',
-                   vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
+        plt.imshow(subdata[n], origin='lower', aspect='auto', cmap=cmap,
+                   vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.subplot(212)
         plt.title('Subtracted Background')
-        plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
-                   vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
+        plt.imshow(subbg[n], origin='lower', aspect='auto', cmap=cmap,
+                   vmin=median-3*std, vmax=median+3*std,
+                   extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.xlabel('Detector Pixel Position')
@@ -475,6 +480,8 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     cmap = mpl.cm.get_cmap("plasma").copy()
     cmap.set_bad('k', 1.)
 
+    plt.figure(3304)
+    plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
