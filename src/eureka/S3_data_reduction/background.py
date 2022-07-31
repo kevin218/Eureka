@@ -116,7 +116,7 @@ def BGsubtraction(data, meta, log, isplots):
                                      args=(data.flux[n].values,
                                            data.mask[n].values,
                                            data.v0[n].values,
-                                           data.variance[n].values, 
+                                           data.variance[n].values,
                                            data.guess[n].values,
                                            n, meta, isplots,),
                                      callback=writeBG_WFC3)
@@ -246,7 +246,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     # stdres = np.std(residuals)
                     # Median Absolute Deviation (slower but more robust)
                     # stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    # Mean Absolute Deviation (good comprimise)
+                    # Mean Absolute Deviation (good compromise)
                     stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     if stdres == 0:
                         stdres = np.inf
@@ -269,7 +269,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    fname = 'figs'+os.sep+'Fig6_BG_'+str(j)+figure_filetype
+                    fname = 'figs'+os.sep+'Fig3601_BG_'+str(j)+figure_filetype
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 

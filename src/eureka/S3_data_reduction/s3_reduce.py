@@ -258,8 +258,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data['mask'] = (['time', 'y', 'x'],
                                 np.ones(data.flux.shape, dtype=bool))
 
-                # Check if arrays have NaNs
-                log.writelog('  Masking NaNs in data arrays...',
+                # Check if arrays have NaNs/infs
+                log.writelog('  Masking NaNs/infs in data arrays...',
                              mute=(not meta.verbose))
                 data.mask.values = util.check_nans(data.flux.values,
                                                    data.mask.values,
@@ -270,6 +270,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data.mask.values = util.check_nans(data.v0.values,
                                                    data.mask.values,
                                                    log, name='V0')
+
+                # Start masking pixels based on DQ flags
+                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html
+                # Odd numbers in DQ array are bad pixels. Do not use.
+                if hasattr(meta, 'dqmask') and meta.dqmask:
+                    # dqmask = np.where(data['dq'] > 0)
+                    dqmask = np.where(data.dq % 2 == 1)
+                    data['mask'].values[dqmask] = 0
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
@@ -340,6 +348,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     for n in iterfn:
                         # make optimal spectrum plot
                         plots_s3.optimal_spectrum(data, meta, n, m)
+                    if meta.inst != 'wfc3':
+                        plots_s3.residualBackground(data, meta, m)
 
                 if meta.save_output:
                     # Save flux data from current segment
