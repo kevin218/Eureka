@@ -1,8 +1,11 @@
 import numpy as np
+import scipy.interpolate as spi
+from ..lib import smooth
+from . import plots_s3
 
 
-def find_column_median_shifts(data):
-    '''Takes the median frame (in time) and finds the 
+def find_column_median_shifts(data, meta):
+    '''Takes the median frame (in time) and finds the
     center of mass (COM) in pixels for each column. It then returns the needed
     shift to apply to each column to bring the COM to the center
 
@@ -10,6 +13,8 @@ def find_column_median_shifts(data):
     ----------
     data : ndarray (2D)
         The median of all data frames
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
 
     Returns
     -------
@@ -24,18 +29,26 @@ def find_column_median_shifts(data):
     # define an array of pixel positions (in their centers)
     pix_centers = np.arange(nb_rows) + 0.5
 
-    # Compute the center of mass of each column and convert to integer (pixels)
+    # Compute the center of mass of each column
     column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
                    np.sum(data, axis=0))
-    column_coms = np.around(column_coms).astype(int)
 
-    # define the new center (where we will align the trace) in the 
+    # Smooth CoM values to get rid of outliers
+    smooth_coms = smooth.medfilt(column_coms, 30)
+
+    # Convert to interget pixels
+    int_coms = np.around(smooth_coms).astype(int)
+
+    if meta.isplots_S3 >= 1:
+        plots_s3.curvature(meta, column_coms, smooth_coms, int_coms)
+
+    # define the new center (where we will align the trace) in the
     # middle of the detector
     new_center = int(nb_rows/2)
 
     # define an array containing the needed shift to bring the COMs to the
     # new center for each column of each integration
-    shifts = new_center - column_coms
+    shifts = new_center - int_coms
 
     # ensure columns of zeros or nans are not moved and dont induce bugs
     shifts[column_coms < 0] = 0
@@ -45,8 +58,8 @@ def find_column_median_shifts(data):
 
 
 def roll_columns(data, shifts):
-    '''For each column of each integration, rolls the columns by the 
-    values specified in shifts 
+    '''For each column of each integration, rolls the columns by the
+    values specified in shifts
 
     Parameters
     ----------
@@ -66,7 +79,7 @@ def roll_columns(data, shifts):
     for i in range(len(data)):
         # do the equivalent of 'np.roll' but with a different shift
         # in each column
-        
+
         arr = np.swapaxes(data[i], 0, -1)
         all_idcs = np.ogrid[[slice(0, n) for n in arr.shape]]
 
@@ -83,10 +96,10 @@ def roll_columns(data, shifts):
         rolled_data[i] = arr
 
     return rolled_data
-    
+
 
 def straighten_trace(data, meta, log):
-    '''Takes a set of integrations with a curved trace and shifts the 
+    '''Takes a set of integrations with a curved trace and shifts the
     columns to bring the center of mass to the middle of the detector
     (and straighten the trace)
 
@@ -119,11 +132,18 @@ def straighten_trace(data, meta, log):
     # Find the median shift needed to bring the trace centered on the detector
     # obtain the median frame
     data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
-    median_frame = np.ma.median(data_ma, axis=0).data
+    medflux = np.ma.median(data_ma, axis=0)  # .data
+    ny, nx = medflux.shape
+    xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
+    x1 = xx[~medflux.mask].ravel()
+    y1 = yy[~medflux.mask].ravel()
+    goodmed = medflux[~medflux.mask].ravel()
+    interpmed = spi.griddata((x1, y1), goodmed, (xx, yy),
+                             method='cubic', fill_value=0)
     # compute the correction needed from this median frame
-    shifts, new_center = find_column_median_shifts(median_frame)
+    shifts, new_center = find_column_median_shifts(interpmed, meta)
 
-    # Correct wavelength (only one frame) 
+    # Correct wavelength (only one frame)
     log.writelog('  Correcting the wavelength solution...',
                  mute=(not meta.verbose))
     # broadcast to (1, detector.shape) which is the expected shape of
@@ -145,7 +165,7 @@ def straighten_trace(data, meta, log):
     data.err.values = roll_columns(data.err.values, shifts)
     data.dq.values = roll_columns(data.dq.values, shifts)
     data.v0.values = roll_columns(data.v0.values, shifts)
-    
+
     # update the new src_ypos
     log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
                  mute=(not meta.verbose))

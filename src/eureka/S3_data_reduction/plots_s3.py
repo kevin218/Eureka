@@ -465,14 +465,17 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     - 2022-07-29 KBS
         First version
     '''
+    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+
     # Median flux of segment
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     flux = np.ma.median(subdata, axis=0)
     # Compute vertical slice of with 10 columns
     slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
     # Interpolate to 0.01-pixel resolution
-    f = spi.interp1d(np.arange(meta.subny), slice, 'cubic')
-    ny_hr = np.arange(0, meta.subny-1, 0.01)
+    f = spi.interp1d(np.arange(ymin, ymax+1), slice, 'cubic')
+    ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
     # Set bad pixels to plot as black
     cmap = mpl.cm.get_cmap("plasma").copy()
@@ -483,16 +486,15 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
-              cmap=cmap)
-    a0.hlines([meta.bg_y1, meta.bg_y2], 0, meta.subnx, color='orange')
-    a0.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], 0,
-              meta.subnx, color='mediumseagreen', linestyle='dashed')
-    a0.axes.set_xlim(0, meta.subnx)
-    a0.axes.set_ylabel("Pixel Position")
-    a0.axes.set_xlabel("Pixel Position")
+              cmap=cmap, extent=[xmin, xmax, ymin, ymax])
+    a0.hlines([meta.bg_y1, meta.bg_y2], xmin, xmax, color='orange')
+    a0.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], xmin,
+              xmax, color='mediumseagreen', linestyle='dashed')
+    a0.axes.set_ylabel("Detector Pixel Position")
+    a0.axes.set_xlabel("Detector Pixel Position")
     a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap='plasma',
                norm=plt.Normalize(vmin, vmax))
-    a1.vlines([0], 0, meta.subny, color='0.5', linestyle='dotted')
+    a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
     a1.hlines([meta.bg_y1, meta.bg_y2], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
     a1.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], vmin,
@@ -501,7 +503,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     a1.legend(loc='upper right', fontsize=8)
     a1.axes.set_xlabel("Flux [e-]")
     a1.axes.set_xlim(vmin, vmax)
-    a1.axes.set_ylim(0, meta.subny)
+    a1.axes.set_ylim(ymin, ymax)
     a1.axes.set_yticklabels([])
     # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
@@ -516,6 +518,45 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3304_file{file_number}' +
              '_ResidualBG'+figure_filetype)
+    plt.savefig(meta.outputdir+fname, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)
+
+
+def curvature(meta, column_coms, smooth_coms, int_coms):
+    '''Plot the measured, smoothed, and integer correction from the measured
+    curvature. (Fig 3106)
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    History:
+
+    - 2022-07-31 KBS
+        Initial version
+    '''
+    colors = mpl.cm.viridis
+
+    plt.figure(3106)
+    plt.clf()
+    plt.suptitle("Trace Curvature")
+    plt.plot(column_coms, '.', label='Measured', color=colors(0.25))
+    plt.plot(smooth_coms, '-', label='Smoothed', color=colors(0.98))
+    plt.plot(int_coms, 's', label='Integer', color=colors(0.7), ms=2)
+    plt.legend()
+    plt.ylabel('Relative Pixel Postion')
+    plt.xlabel('Relative Pixel Position')
+    plt.tight_layout()
+
+    fname = (f'figs{os.sep}fig3106_Curvature'+figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
