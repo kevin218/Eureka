@@ -95,8 +95,8 @@ def image_and_background(data, meta, log, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
-    # FINDME: Max calculation is broken and I can't figure out how to fix it
-    # vmax = np.nanmax(~data.mask.values*subdata)/10
+    # Commented out vmax calculation is sensitive to unflagged hot pixels
+    # vmax = np.ma.max(np.ma.masked_invalid(subdata))/40
     vmin = -200
     vmax = 1000
     median = np.ma.median(subbg)
