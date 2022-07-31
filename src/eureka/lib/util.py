@@ -115,15 +115,18 @@ def check_nans(data, mask, log, name=''):
     """
     data = np.ma.masked_where(mask == 0, np.copy(data))
     num_nans = np.sum(np.ma.masked_invalid(data).mask)
+    num_pixels = np.size(data)
+    perc_nans = 100*num_nans/num_pixels
     if num_nans > 0:
-        log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. If this "
-                     "number is large, your subregion may be off the edge of "
-                     "the detector subarray.  Masking NaN/inf regions and "
+        log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
+                     f"{perc_nans:.2f}% of all pixels.")
+        inan = np.where(np.ma.masked_invalid(data).mask)
+        mask[inan] = 0
+    if perc_nans > 10:
+        log.writelog("  WARNING: Your region of interest may be off the edge "
+                     "of the detector subarray.  Masking NaN/inf regions and "
                      "continuing, but you should really stop and reconsider "
                      "your choices.")
-        inan = np.where(np.ma.masked_invalid(data).mask)
-        # subdata[inan]  = 0
-        mask[inan] = 0
     return mask
 
 
