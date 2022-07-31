@@ -545,10 +545,10 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     # Replace masked pixels through interpolation
     ny, nx = medflux.shape
     xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
-    x1 = xx[~medflux.mask]
-    y1 = yy[~medflux.mask]
-    goodmed = medflux[~medflux.mask]
-    interpmed = spi.griddata((x1, y1), goodmed.ravel(), (xx, yy),
+    x1 = xx[~medflux.mask].ravel()
+    y1 = yy[~medflux.mask].ravel()
+    goodmed = medflux[~medflux.mask].ravel()
+    interpmed = spi.griddata((x1, y1), goodmed, (xx, yy),
                              method='cubic', fill_value=0)
 
     # Perform optimal extraction on each of the frames
