@@ -449,10 +449,10 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
         The metadata object.
     m : int
         The file number.
-    vmin : int
-        Minimum value of colormap
-    vmax : int
-        Maximum value of colormap
+    vmin : int; optional
+        Minimum value of colormap. Default is -200.
+    vmax : int; optional
+        Maximum value of colormap. Default is 1000.
 
     Returns
     -------
@@ -466,10 +466,8 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
         First version
     '''
     # Median flux of segment
-    # Don't use masked arrays so that we can see flux in masked areas
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     flux = np.ma.median(subdata, axis=0)
-    # flux = np.median(data.flux, axis=0)
     # Compute vertical slice of with 10 columns
     slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
     # Interpolate to 0.01-pixel resolution
