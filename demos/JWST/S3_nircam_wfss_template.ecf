@@ -29,9 +29,15 @@ p5thresh        10          # X-sigma threshold for outlier rejection while cons
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
 
 # Photometric extraction parameters
-photap          82          # Size of photometry aperture in pixels
-skyin           135         # Inner sky annulus edge, in pixels
-skyout          175         # Outer sky annulus edge, in pixels
+use_dq          True        # Masks odd DQ entries
+flag_bg         True        # Do outlier rejection along time axis for each individual pixel?
+interp_method   linear       # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+ctr_cutout_size 7           # Cutoff size all around the centroid after the coarse centroid calculation
+photap          80          # Size of photometry aperture in pixels
+skyin           90          # Inner sky annulus edge, in pixels
+skyout          120         # Outer sky annulus edge, in pixels
+oof_corr        median      # Options: meanerr, median
+oof_bg_dist     300         # How many pixels away from the centroid should be considered as background? (used for oof correction)
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
