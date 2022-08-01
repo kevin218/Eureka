@@ -467,29 +467,32 @@ def phot_centroid(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
-    plt.figure(3104)
     plt.clf()
+    fig, ax = plt.subplots(4,1, sharex=True)
     plt.suptitle('Centroid positions over time')
 
-    cx = data.centroid_x
-    cx_rms = np.sqrt(np.mean(((cx - np.mean(cx)) / cx) ** 2))
-    cy = data.centroid_y
-    cy_rms = np.sqrt(np.mean(((cy - np.mean(cy)) / cy) ** 2))
+    cx = data.centroid_x.values
+    cx_rms = np.sqrt(np.mean((cx - np.median(cx)) ** 2))
+    cy = data.centroid_y.values
+    cy_rms = np.sqrt(np.mean((cy - np.median(cy)) ** 2))
 
-    ax = plt.subplot(411)
-    plt.plot(data.time, data.centroid_x-np.mean(data.centroid_x), label='scatter in x = {0} pixels'.format(cx_rms))
-    plt.ylabel('Delta x')
-    plt.subplot(412, sharex=ax)
-    plt.plot(data.time, data.centroid_y-np.mean(data.centroid_y), label='scatter in y = {0} pixels'.format(cy_rms))
-    plt.ylabel('Delta y')
-    plt.subplot(413, sharex=ax)
-    plt.plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
-    plt.ylabel('Delta sx')
-    plt.subplot(414, sharex=ax)
-    plt.plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
-    plt.ylabel('Delta sy')
-    plt.xlabel('Time')
-    plt.legend()
+    ax[0].plot(data.time, data.centroid_x-np.mean(data.centroid_x), label='$\sigma$x = {0:.4f} pxls'.format(cx_rms))
+    ax[0].set_ylabel('Delta x')
+    ax[0].legend()
+
+    ax[1].plot(data.time, data.centroid_y-np.mean(data.centroid_y), label='$\sigma$y = {0:.4f} pxls'.format(cy_rms))
+    ax[1].set_ylabel('Delta y')
+    ax[1].legend()
+
+    ax[2].plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
+    ax[2].set_ylabel('Delta sx')
+
+    ax[3].plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
+    ax[3].set_ylabel('Delta sy')
+    ax[3].set_xlabel('Time')
+
+    fig.subplots_adjust(hspace=0.02)
+
     plt.tight_layout()
     fname = (f'figs{os.sep}fig3104-Centroid' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -516,7 +519,6 @@ def phot_npix(meta, data):
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
-
 
 
 def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
