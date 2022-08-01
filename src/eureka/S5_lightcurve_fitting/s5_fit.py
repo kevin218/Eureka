@@ -135,7 +135,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
             if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
                 # Remove requested data points
-                util.manual_clip(lc, meta, log)
+                meta, lc, log = util.manual_clip(lc, meta, log)
 
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
