@@ -29,7 +29,9 @@ The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin21
 Citing ``Eureka!``
 ~~~~~~~~~~~~~~~~~~
 
-If you wish to cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://arxiv.org/abs/2207.03585>`_.
+To make citing ``Eureka!`` and its dependencies easier, you can simply print the ``citations`` and ``bibliography`` attributes of the Meta object returned at each stage of analysis. 
+``meta.citations`` will return a list of named python packages (and the JWST instrument being analyzed, if applicable), while ``meta.bibliography`` will return a list of formatted BibTeX 
+entries for each citation. If you wish to cite just the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://arxiv.org/abs/2207.03585>`_.
 
 .. code-block::
 
