@@ -32,7 +32,7 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
     name : str; optional
         The name of the limb darkening profile function to use,
         including 'uniform', 'linear', 'quadratic', 'kipping2013',
-        'square-root', 'logarithmic', 'exponential', '3-parameter',
+        'squareroot', 'logarithmic', 'exponential', '3-parameter',
         and '4-parameter'. Defaults to 'quadratic'.
     latex : bool; optional
         Return the function as a LaTeX formatted string. Defaults to False.
@@ -176,7 +176,7 @@ def kipping2013(m, c1, c2):
 
 
 def square_root(m, c1, c2):
-    """Square-root limb darkening.
+    """Squareroot limb darkening.
 
     Parameters
     ----------
@@ -329,7 +329,7 @@ class LDC:
 
         self.ld_color = {'quadratic': 'blue', '4-parameter': 'red',
                          'exponential': 'green', 'linear': 'orange',
-                         'square-root': 'cyan', '3-parameter': 'magenta',
+                         'squareroot': 'cyan', '3-parameter': 'magenta',
                          'logarithmic': 'pink', 'uniform': 'purple',
                          'kipping2013': 'brown'}
 
@@ -389,7 +389,7 @@ class LDC:
             The logarithm of the metallicity.
         profile : str
             The name of the limb darkening profile function to use,
-            including 'uniform', 'linear', 'quadratic', 'square-root',
+            including 'uniform', 'linear', 'quadratic', 'squareroot',
             'logarithmic', 'exponential', and '4-parameter'.
         mu_min : float; optional
             The minimum mu value to consider. Defaults to 0.05.
