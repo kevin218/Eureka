@@ -396,68 +396,65 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             # make y position and width plots
                             plots_s3.driftypos(data, meta)
                             plots_s3.driftywidth(data, meta)
-                else:
-                    # Do outlier reduction along time axis
-                    data = inst.flag_bg_phot(data, meta, log)
+                else: # Do Photometry reduction
+                    # Flag bad pixels using the DQ array
+                    if meta.use_dq:
+                        data = util.flag_bad_dq(data)
+                    # Do outlier reduction along time axis for each individual pixel
+                    if meta.flag_bg:
+                        data = inst.flag_bg_phot(data, meta, log)
 
                     # Setting up arrays for photometry reduction
-                    data['centroid_x'] = (['time'], np.zeros_like(data.time))
-                    data['centroid_y'] = (['time'], np.zeros_like(data.time))
-                    data['centroid_sx'] = (['time'], np.zeros_like(data.time))
-                    data['centroid_sy'] = (['time'], np.zeros_like(data.time))
-                    # Arrays for aperture extraction
-                    data['aplev'], data['aperr'], data['nappix'], data['skylev'], data['skyerr'], \
-                    data['nskypix'], data['nskyideal'], data['status'], data['betaper'] =  \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-                        (['time'], np.zeros_like(data.time))
-
-                    data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                    data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']
-                    data['aperr'].attrs['flux_units'] = data.flux.attrs['flux_units']
-                    data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
+                    data = util.phot_arrays(data)
 
                     for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
+                        if meta.isplots_S3 >= 3:
+                            # save current flux into an array for plotting 1/f correction comparison
+                            flux_w_oof = np.copy(data.flux.values[i])
+
                         # Determine centroid position
+                        # We do this twice. First a coarse estimation, then a more precise one.
                         # Use the center of the frame as an initial guess
-                        centroid_guess=[data.flux.shape[1]//2, data.flux.shape[2]//2]
+                        centroid_guess = [data.flux.shape[1]//2, data.flux.shape[2]//2]
                         # Do a 2D gaussian fit to the whole frame
-                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
-                                                                    centroid_guess, 0, 0, 0, mask=None, uncd=None,
-                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
-                                                                    psfctr=None, i=i, m=m, meta=meta)
-                        # Use the determined centroid, cutout a 7x7 area round the centroid and perform another 2D gaussian fit
-                        position, extra = centerdriver.centerdriver('fgc', data.flux[i].values,
-                                                                    position, 7, 0, 0, mask=data.mask[i].values, uncd=None,
+                        position, extra = centerdriver.centerdriver('fgc', data.flux.values[i],
+                                                                    centroid_guess, 0, 0, 0,
+                                                                    mask=None, uncd=None,
                                                                     fitbg=1, maskstar=True, expand=1.0, psf=None,
                                                                     psfctr=None, i=i, m=m, meta=meta)
 
-                        #log.writelog("Center position of Centroid for Frame {0}-{1}:\n".format(m, i)
-                        #             + str(np.transpose(position)), mute=(not meta.verbose))
+                        # Correct for 1/f
+                        data = inst.corr_oof(data, meta, i, position[1])
+                        if meta.isplots_S3 >= 3:
+                            plots_s3.phot_2d_frame_oof(meta, m, i, data, flux_w_oof)
 
+                        # Use the determined centroid and cut out ctr_cutout_size pixels around it
+                        # Then perform another 2D gaussian fit
+                        position, extra = centerdriver.centerdriver('fgc', data.flux.values[i],
+                                                                    position, meta.ctr_cutout_size, 0, 0,
+                                                                    mask=data.mask.values[i], uncd=None,
+                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
+                                                                    psfctr=None, i=i, m=m, meta=meta)
+                        # Store centroid positions and the Gaussian 1-sigma half-widths
                         data['centroid_y'][i], data['centroid_x'][i] = position
-                        data['centroid_sy'][i] = extra[0]
-                        data['centroid_sx'][i] = extra[1]
-
+                        data['centroid_sy'][i], data['centroid_sx'][i] = extra
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3:
-                            plots_s3.phot_2D_frame(meta, m, i, data)
+                            plots_s3.phot_2d_frame(meta, m, i, data)
+                        if meta.isplots_S3 >= 5:
+                            plots_s3.phot_2d_frame_zoom(meta, m, i, data)
+
+                        # Interpolate masked pixels before we perform aperture photometry
+                        if meta.interp_method is not None:
+                            util.interp_masked(data, meta, i)
 
                         # Calculate flux in aperture and subtract background flux
-                        aphot = apphot.apphot(image=data.flux[i].values,
-                        ctr = (data['centroid_y'][i], data['centroid_x'][i]),
-                        photap = meta.photap, skyin = meta.skyin, skyout = meta.skyout,
-                        betahw = 1, targpos = position,
-                        mask = data.mask[i].values,
-                        imerr = data.err[i].values,
-                        skyfrac = 0.1, med = False,
-                        expand = 1, isbeta = False,
-                        nochecks = False, aperr = True, nappix = True,
-                        skylev = True, skyerr = True, nskypix = True,
-                        nskyideal = True, status = True, betaper = True)
-
+                        aphot = apphot.apphot(image=data.flux[i].values, ctr = position,
+                        photap = meta.photap, skyin = meta.skyin, skyout = meta.skyout, betahw = 1,
+                        targpos = position, mask = data.mask[i].values, imerr = data.err[i].values, skyfrac = 0.1,
+                        med = True, expand = 1, isbeta = False, nochecks = False, aperr = True, nappix = True,
+                        skylev = True, skyerr = True, nskypix = True, nskyideal = True, status = True, betaper = True)
+                        # Save results into arrays
                         data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], data['skyerr'][i], \
                         data['nskypix'][i], data['nskyideal'][i], data['status'][i], data['betaper'][i] = aphot
 
@@ -476,11 +473,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                append=False)
 
                 # Remove large 3D arrays from Dataset
-                del(data['flux'], data['err'], data['dq'], data['v0'],
+                del(data['err'], data['dq'], data['v0'],
                     data['mask'],
                     data.attrs['intstart'], data.attrs['intend'])
                 if not meta.photometry:
-                    del (data['bg'], data['wave_2d'])
+                    del (data['flux'], data['bg'], data['wave_2d'])
                 elif meta.inst == 'wfc3':
                     del(data['flatmask'], data['variance'])
 
@@ -493,12 +490,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Plot light curve and centroids over time
             if meta.isplots_S3 >= 1 and meta.photometry:
                 plots_s3.phot_lc(meta, spec)
-                plots_s3.phot_bg(meta, spec)
                 plots_s3.phot_centroid(meta, spec)
+            if meta.isplots_S3 >= 3 and meta.photometry:
+                plots_s3.phot_bg(meta, spec)
+            if meta.isplots_S3 >= 5 and meta.photometry:
                 plots_s3.phot_npix(meta, spec)
-
+                plots_s3.phot_2d_frame_diff(meta, spec)
             if meta.photometry:
                 util.apphot_status(spec)
+            if not meta.photometry:
+                del (spec['flux'])
 
             # Plot fitted 2D drift
             # Note: This needs to happen before calling conclusion_step()
@@ -538,6 +539,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
+            #tmp=spec.aplev.values[10:100]
+            #rms_tmp = 1.0e6*np.sqrt(np.mean(((tmp-np.mean(tmp))/tmp)**2))
+            #log.writelog('\nscatter: ' + str(rms_tmp))
+            #print(rms_tmp)
             log.closelog()
 
     return spec, meta
