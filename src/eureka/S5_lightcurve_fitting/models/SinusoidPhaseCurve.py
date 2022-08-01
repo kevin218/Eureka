@@ -70,24 +70,22 @@ class SinusoidPhaseCurveModel(Model):
         if self.eclipse_model is not None:
             self.eclipse_model.time = time_array
 
-    def update(self, newparams, names, **kwargs):
+    def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
 
         Parameters
         ----------
         newparams : ndarray
             New parameter values.
-        names : list
-            Parameter names.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.update().
         """
-        super().update(newparams, names, **kwargs)
+        super().update(newparams, **kwargs)
         if self.transit_model is not None:
-            self.transit_model.update(newparams, names, **kwargs)
+            self.transit_model.update(newparams, **kwargs)
         if self.eclipse_model is not None:
-            self.eclipse_model.update(newparams, names, **kwargs)
+            self.eclipse_model.update(newparams, **kwargs)
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.

@@ -43,6 +43,10 @@ class StepModel(Model):
         self.paramtitles = kwargs.get('paramtitles')
 
         # Update coefficients
+        self.steps = np.zeros((self.nchan, 10))
+        self.steptimes = np.zeros((self.nchan, 10))
+        self.keys = list(self.parameters.dict.keys())
+        self.keys = [key for key in self.keys if key.startswith('step')]
         self._parse_coeffs()
 
     def _parse_coeffs(self):
@@ -64,38 +68,21 @@ class StepModel(Model):
 
         - 2022 July 14, Taylor J Bell
             Initial version.
-        """
-        self.steps = np.zeros((self.nchan, 10))
-        self.steptimes = np.zeros((self.nchan, 10))
-        for k, v in self.parameters.dict.items():
-            remvisnum = k.split('_')
-
-            # Setup keys to look for
-            key1 = 'step'
-            key1_len = len(key1)
-            key2 = 'steptime'
-            key2_len = len(key2)
-
-            # Parse 'step#' keyword arguments
-            if (len(k) > key1_len and k.lower().startswith(key1) 
-                    and k[key1_len:].isdigit()):
-                self.steps[0, int(k[key1_len:])] = v[0]
-            elif (len(remvisnum) > 1 and self.nchan > 1 and
-                  remvisnum[0].lower().startswith(key1) and
-                  remvisnum[0][key1_len:].isdigit() and
-                  remvisnum[1].isdigit()):
-                self.steps[int(remvisnum[1]),
-                           int(remvisnum[0][key1_len:])] = v[0]
-            # Parse 'steptime#' keyword arguments
-            elif (len(k) > key1_len and k.lower().startswith(key2)
-                  and k[key2_len:].isdigit()):
-                self.steptimes[0, int(k[key2_len:])] = v[0]
-            elif (len(remvisnum) > 1 and self.nchan > 1 and
-                  remvisnum[0].lower().startswith(key2) and
-                  remvisnum[0][key2_len:].isdigit() and
-                  remvisnum[1].isdigit()):
-                self.steptimes[int(remvisnum[1]),
-                               int(remvisnum[0][key2_len:])] = v[0]
+        """    
+        for key in self.keys:
+            split_key = key.split('_')
+            if len(split_key) == 1:
+                chan = 0
+            else:
+                chan = int(split_key[1])
+            if len(split_key[0]) < 9:
+                # Get the step number and update self.steps
+                self.steps[chan, int(split_key[0][4:])] = \
+                    self.parameters.dict[key][0]
+            else:
+                # Get the steptime number and update self.steptimes
+                self.steptimes[chan, int(split_key[0][8:])] = \
+                    self.parameters.dict[key][0]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.

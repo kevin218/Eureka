@@ -54,17 +54,17 @@ def test_medstddev(capsys):
     # eureka.lib.util.medstddev.medstddev test
     a = np.array([1, 3, 4, 5, 6, 7, 7])
     std, med = medstddev(a, medi=True)
-    np.testing.assert_allclose((std, med), (2.2360679775, 5.0))
+    np.testing.assert_allclose((std, med), (2.2146697055682827, 5.0))
 
     # use masks
     mask = np.array([1, 1, 1, 0, 0, 0, 0])
     std, med = medstddev(a, mask, medi=True)
-    np.testing.assert_allclose((std, med), (1.58113883008, 3.0))
+    np.testing.assert_allclose((std, med), (1.5275252316519468, 3.0))
 
     # automatically mask invalid values
     a = np.array([np.nan, 1, 4, np.inf, 6])
     std, med = medstddev(a, medi=True)
-    np.testing.assert_allclose((std, med), (2.5495097567963922, 4.0))
+    np.testing.assert_allclose((std, med), (2.5166114784235836, 4.0))
 
     # critical cases:
     # only one value, return std = 0.0
