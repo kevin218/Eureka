@@ -1,7 +1,9 @@
 import numpy as np
 import os
 from tqdm import tqdm
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import scipy.interpolate as spi
 from .source_pos import gauss
 from ..lib import util
 from ..lib.plots import figure_filetype
@@ -93,6 +95,15 @@ def image_and_background(data, meta, log, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
+    # Commented out vmax calculation is sensitive to unflagged hot pixels
+    # vmax = np.ma.max(np.ma.masked_invalid(subdata))/40
+    vmin = -200
+    vmax = 1000
+    median = np.ma.median(subbg)
+    std = np.ma.std(subbg)
+    # Set bad pixels to plot as black
+    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap.set_bad('k', 1.)
     iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
         iterfn = tqdm(iterfn)
@@ -101,18 +112,16 @@ def image_and_background(data, meta, log, m):
         plt.clf()
         plt.suptitle(f'Integration {intstart + n}')
         plt.subplot(211)
-        plt.title('Background-Subtracted Flux')
-        max = np.ma.max(subdata[n])
-        plt.imshow(subdata[n], origin='lower', aspect='auto',
-                   vmin=0, vmax=max/10, extent=[xmin, xmax, ymin, ymax])
+        plt.title('Background-Subtracted Frame')
+        plt.imshow(subdata[n], origin='lower', aspect='auto', cmap=cmap,
+                   vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.subplot(212)
         plt.title('Subtracted Background')
-        median = np.ma.median(subbg[n])
-        std = np.ma.std(subbg[n])
-        plt.imshow(subbg[n], origin='lower', aspect='auto', vmin=median-3*std,
-                   vmax=median+3*std, extent=[xmin, xmax, ymin, ymax])
+        plt.imshow(subbg[n], origin='lower', aspect='auto', cmap=cmap,
+                   vmin=median-3*std, vmax=median+3*std,
+                   extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.xlabel('Detector Pixel Position')
@@ -426,3 +435,87 @@ def driftywidth(data, meta):
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
+
+
+def residualBackground(data, meta, m, vmin=-200, vmax=1000):
+    '''Plot the median, BG-subtracted frame to study the residual BG region and
+    aperture/BG sizes. (Fig 3304)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    vmin : int; optional
+        Minimum value of colormap. Default is -200.
+    vmax : int; optional
+        Maximum value of colormap. Default is 1000.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    History:
+
+    - 2022-07-29 KBS
+        First version
+    '''
+    # Median flux of segment
+    subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
+    flux = np.ma.median(subdata, axis=0)
+    # Compute vertical slice of with 10 columns
+    slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
+    # Interpolate to 0.01-pixel resolution
+    f = spi.interp1d(np.arange(meta.subny), slice, 'cubic')
+    ny_hr = np.arange(0, meta.subny-1, 0.01)
+    flux_hr = f(ny_hr)
+    # Set bad pixels to plot as black
+    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap.set_bad('k', 1.)
+
+    plt.figure(3304, figsize=(8, 3.5))
+    plt.clf()
+    fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
+                                 num=3304, figsize=(8, 3.5))
+    a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
+              cmap=cmap)
+    a0.hlines([meta.bg_y1, meta.bg_y2], 0, meta.subnx, color='orange')
+    a0.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], 0,
+              meta.subnx, color='mediumseagreen', linestyle='dashed')
+    a0.axes.set_xlim(0, meta.subnx)
+    a0.axes.set_ylabel("Pixel Position")
+    a0.axes.set_xlabel("Pixel Position")
+    a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap='plasma',
+               norm=plt.Normalize(vmin, vmax))
+    a1.vlines([0], 0, meta.subny, color='0.5', linestyle='dotted')
+    a1.hlines([meta.bg_y1, meta.bg_y2], vmin, vmax, color='orange',
+              linestyle='solid', label='bg'+str(meta.bg_hw))
+    a1.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], vmin,
+              vmax, color='mediumseagreen', linestyle='dashed',
+              label='ap'+str(meta.spec_hw))
+    a1.legend(loc='upper right', fontsize=8)
+    a1.axes.set_xlabel("Flux [e-]")
+    a1.axes.set_xlim(vmin, vmax)
+    a1.axes.set_ylim(0, meta.subny)
+    a1.axes.set_yticklabels([])
+    # a1.yaxis.set_visible(False)
+    a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
+    fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(vmin, vmax),
+                 cmap='plasma'), ax=a1)
+    fig.subplots_adjust(top=0.97,
+                        bottom=0.155,
+                        left=0.08,
+                        right=0.925,
+                        hspace=0.2,
+                        wspace=0.08)
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3304_file{file_number}' +
+             '_ResidualBG'+figure_filetype)
+    plt.savefig(meta.outputdir+fname, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)

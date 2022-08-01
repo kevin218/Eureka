@@ -39,6 +39,7 @@ class ExpRampModel(Model):
         self.paramtitles = kwargs.get('paramtitles')
 
         # Update coefficients
+        self.coeffs = np.zeros((self.nchan, 6))
         self._parse_coeffs()
 
     def _parse_coeffs(self):
@@ -51,17 +52,15 @@ class ExpRampModel(Model):
             The sequence of coefficient values.
         """
         # Parse 'r#' keyword arguments as coefficients
-        self.coeffs = np.zeros((self.nchan, 6))
-        for k, v in self.parameters.dict.items():
-            remvisnum = k.split('_')
-            if k.lower().startswith('r') and k[1:].isdigit():
-                self.coeffs[0, int(k[1:])] = v[0]
-            elif (len(remvisnum) > 1 and self.nchan > 1 and
-                  remvisnum[0].lower().startswith('r') and
-                  remvisnum[0][1:].isdigit() and
-                  remvisnum[1].isdigit()):
-                self.coeffs[int(remvisnum[1]),
-                            int(remvisnum[0][1:])] = v[0]
+        for j in range(self.nchan):
+            for i in range(6):
+                try:
+                    if j == 0:
+                        self.coeffs[j, i] = self.parameters.dict[f'r{i}'][0]
+                    else:
+                        self.coeffs[j, i] = self.parameters.dict[f'r{i}_j'][0]
+                except KeyError:
+                    pass
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.
