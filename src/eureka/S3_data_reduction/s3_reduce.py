@@ -366,7 +366,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data = util.phot_arrays(data)
 
                     for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
-                        if meta.isplots_S3 >= 3:
+                        if (meta.isplots_S3 >= 3) and (meta.oof_corr is not None):
                             # save current flux into an array for plotting 1/f correction comparison
                             flux_w_oof = np.copy(data.flux.values[i])
 
@@ -381,10 +381,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                                     fitbg=1, maskstar=True, expand=1.0, psf=None,
                                                                     psfctr=None, i=i, m=m, meta=meta)
 
-                        # Correct for 1/f
-                        data = inst.corr_oof(data, meta, i, position[1])
-                        if meta.isplots_S3 >= 3:
-                            plots_s3.phot_2d_frame_oof(meta, m, i, data, flux_w_oof)
+                        if meta.oof_corr is not None:
+                            # Correct for 1/f
+                            data = inst.corr_oof(data, meta, i, position[1])
+                            if meta.isplots_S3 >= 3 :
+                                plots_s3.phot_2d_frame_oof(meta, m, i, data, flux_w_oof)
 
                         # Use the determined centroid and cut out ctr_cutout_size pixels around it
                         # Then perform another 2D gaussian fit
