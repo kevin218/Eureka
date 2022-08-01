@@ -497,10 +497,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             total = (time_pkg.time() - t0) / 60.
             log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-            #tmp=spec.aplev.values[10:100]
-            #rms_tmp = 1.0e6*np.sqrt(np.mean(((tmp-np.mean(tmp))/tmp)**2))
-            #log.writelog('\nscatter: ' + str(rms_tmp))
-            #print(rms_tmp)
             log.closelog()
 
     return spec, meta

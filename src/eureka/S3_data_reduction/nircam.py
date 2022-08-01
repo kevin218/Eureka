@@ -58,8 +58,8 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-
     int_times = hdulist['INT_TIMES', 1].data
+
     if hdulist[0].header['CHANNEL'] == 'LONG':  # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
         wave_2d = hdulist['WAVELENGTH', 1].data
@@ -68,13 +68,12 @@ def read(filename, data, meta, log):
         # The DISPAXIS argument does not exist in the header of the photometry data.
         # Added it here so that code in other sections doesn't have to be changed
         data.attrs['shdr']['DISPAXIS'] = 1
-        if hdulist[0].header['FILTER'] == 'F210M': #TODO make this better for all filters
+        if hdulist[0].header['FILTER'] == 'F210M':  # TODO make this better for all filters
             wave_1d = np.ones_like(sci[0,0]) * 2.1
+            meta.phot_wave = 2.1 # Is used in S4 for plotting. wave_1d will be deleted at the end of S3
         elif hdulist[0].header['FILTER'] == 'F187N':
             wave_1d = np.ones_like(sci[0,0]) * 1.87
-
-    int_times = hdulist['INT_TIMES', 1].data
-
+            meta.phot_wave = 1.87
 
     # Record integration mid-times in BJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
