@@ -14,13 +14,13 @@ Stage 1
 .. include:: ../media/S1_template.ecf
    :literal:
 
-suffix 
+suffix
 ''''''
 Data file suffix (e.g. uncal).
 
 ramp_fit_algorithm
 ''''''''''''''''''
-Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently. 
+Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
 ramp_fit_max_cores
@@ -30,7 +30,7 @@ Fraction of processor cores to use to compute the ramp fits, options are ``none`
 
 skip_*
 ''''''
-If True, skip the named step. 
+If True, skip the named step.
 
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
@@ -54,16 +54,16 @@ Define the method by which individual frame pixels will be weighted during the d
 
 ``default``: Slope estimation using a least-squares algorithm with an "optimal" weighting, see the `ramp_fitting docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/ramp_fitting/description.html#optimal-weighting-algorithm>`__.
 
-In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above). 
+In short this weights each pixel, :math:`i`, within a slope following :math:`w_i = (i - i_{midpoint})^P`, where the exponent :math:`P` is selected depending on the estimated signal-to-noise ratio of each pixel (see link above).
 
 
 ``fixed``: As with default, except the weighting exponent :math:`P` is fixed to a precise value through the ``default_ramp_fit_fixed_exponent`` entry
 
 
-``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation. 
+``interpolated``: As with default, except the SNR to :math:`P` lookup table is converted to a smooth interpolation.
 
 
-``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally. 
+``flat``: As with default, except the weighting equation is no longer used, and all pixels are weighted equally.
 
 
 ``custom``: As with default, except a custom SNR to :math:`P` lookup table can be defined through the ``default_ramp_fit_custom_snr_bounds`` and ``default_ramp_fit_custom_exponents`` (see example .ecf file).
@@ -203,6 +203,10 @@ src_pos_type
 ''''''''''''
 Determine the source position on the detector. Options: header, gaussian, weighted, max, or hst. The value 'header' uses the value of SRCYPOS in the FITS header.
 
+record_ypos
+'''''''''''
+Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
+
 centroidtrim
 ''''''''''''
 Only used for HST analyses. The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
@@ -222,10 +226,6 @@ Only used for HST analyses. Used to sigma clip bad values from the flatfield ima
 diffthresh
 ''''''''''
 Only used for HST analyses. Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs).
-
-record_ypos
-'''''''''''
-Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
 
 bg_hw & spec_hw
 '''''''''''''''
@@ -310,11 +310,15 @@ Only used for HST analyses. The file indices to use as reference frames for 2D d
 
 curvature
 '''''''''
-Used only for G395H observations which display curvature in the trace. Current options: 'None', 'correct'. Using 'None' will turn off any curvature correction and is included for users with custom routines that will handle the curvature of the trace. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. This option should be used with fittype = 'meddata'.
+Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
+
+nplots
+''''''
+Sets how many integrations will be used for per-integration figures (Figs 3301, 3302, 3303, 3501). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
@@ -377,7 +381,7 @@ Stage 4
 
 nspecchan
 '''''''''
-Number of spectroscopic channels spread evenly over given wavelength range
+Number of spectroscopic channels spread evenly over given wavelength range. Set to None to leave the spectrum unbinned.
 
 
 compute_white
@@ -434,7 +438,7 @@ sub_mean
 ''''''''
 If True, subtract spectrum mean during cross correlation (can help with cross-correlation step).
 
-sub_continuum 
+sub_continuum
 '''''''''''''
 Set True to subtract the continuum from the spectra using a highpass filter
 
@@ -442,9 +446,14 @@ highpassWidth
 '''''''''''''
 The integer width of the highpass filter when subtracting the continuum
 
-sigma_clip
-''''''''''
-Whether or not sigma clipping should be performed on the 1D time series
+clip_unbinned
+'''''''''''''
+Whether or not sigma clipping should be performed on the unbinned 1D time series
+
+clip_binned
+'''''''''''
+Whether or not sigma clipping should be performed on the binned 1D time series
+
 
 sigma
 '''''
@@ -492,15 +501,23 @@ Used by exotic-ld if compute_ld=True. The surface gravity in log g.
 
 exotic_ld_direc
 '''''''''''''''
-Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld.
+Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, download at https://zenodo.org/record/6344946.
 
 exotic_ld_grid
 ''''''''''''''
 Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
 
+exotic_ld_file
+''''''''''''''
+Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
 isplots_S4
 ''''''''''
 Sets how many plots should be saved when running Stage 4. A full description of these outputs is available here: :ref:`Stage 4 Output <s4-out>`
+
+nplots
+''''''
+Sets how many integrations will be used for per-integration figures (Figs 4301 and 4302). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
@@ -567,6 +584,10 @@ run_myfuncs
 '''''''''''
 Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step]
 
+manual_clip
+'''''''''''
+Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
+
 use_generate_ld
 '''''''''''''''
 If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
@@ -586,7 +607,7 @@ Float to determine the tolerance of the scipy.optimize.minimize method.
 
 Emcee Fitting Parameters
 ''''''''''''''''''''''''
-The following set the parameters for running emcee. 
+The following set the parameters for running emcee.
 
 old_chain
 '''''''''
@@ -676,7 +697,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
    - Phase Curve Parameters - the phase curve model allows for the addition of up to four sinusoids into a single phase curve
-      - ``AmpCos1`` - Amplitude of the first cosine 
+      - ``AmpCos1`` - Amplitude of the first cosine
       - ``AmpSin1`` - Amplitude of the first sine
       - ``AmpCos2`` - Amplitude of the second cosine
       - ``AmpSin2`` - Amplitude of the second sine

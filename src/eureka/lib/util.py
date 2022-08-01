@@ -93,17 +93,61 @@ def trim(data, meta):
     return subdata, meta
 
 
+def manual_clip(lc, meta, log):
+    """Manually clip integrations along time axis.
+
+    Parameters
+    ----------
+    lc : Xarray Dataset
+        The Dataset object containing light curve and time data.
+    meta : eureka.lib.readECF.MetaClass
+        The current metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    lc : Xarray Dataset
+        The updated Dataset object containing light curve and time data
+        with the requested integrations removed.
+    meta : eureka.lib.readECF.MetaClass
+        The updated metadata object.
+    log : logedit.Logedit
+        The updated log.
+    """
+    log.writelog('Manually removing data points from meta.manual_clip...',
+                 mute=(not meta.verbose))
+
+    meta.manual_clip = np.array(meta.manual_clip)
+    if len(meta.manual_clip.shape) == 1:
+        # The user didn't quite enter things right, so reshape
+        meta.manual_clip = meta.manual_clip[np.newaxis]
+    
+    # Figure out which indices are being clipped
+    time_bool = np.ones(len(lc.data.time), dtype=bool)
+    for inds in meta.manual_clip:
+        time_bool[inds[0]:inds[1]] = False
+    time_inds = np.arange(len(lc.data.time))[time_bool]
+    
+    # Remove the requested integrations
+    lc = lc.isel(time=time_inds)
+    if hasattr(meta, 'scandir'):
+        meta.scandir = meta.scandir[time_bool[::meta.nreads]]
+    
+    return meta, lc, log
+
+
 def check_nans(data, mask, log, name=''):
-    """Checks where a data array has NaNs or infs.
+    """Checks where a data-like array is invalid (contains NaNs or infs).
 
     Parameters
     ----------
     data : ndarray
-        a data array (e.g. data, err, dq, ...).
+        a data-like array (e.g. data, err, dq, ...).
     mask : ndarray
         Input mask.
     log : logedit.Logedit
-        The open log in which NaNs will be mentioned if existent.
+        The open log in which NaNs/Infs will be mentioned, if existent.
     name : str; optional
         The name of the data array passed in (e.g. SUBDATA, SUBERR, SUBV0).
         Defaults to ''.
@@ -116,15 +160,18 @@ def check_nans(data, mask, log, name=''):
     """
     data = np.ma.masked_where(mask == 0, np.copy(data))
     num_nans = np.sum(np.ma.masked_invalid(data).mask)
+    num_pixels = np.size(data)
+    perc_nans = 100*num_nans/num_pixels
     if num_nans > 0:
-        log.writelog(f"  WARNING: {name} has {num_nans} NaNs/infs. Your "
-                     "subregion may be off the edge of the detector "
-                     "subarray.\n    Masking NaN region and continuing, "
-                     "but you should really stop and reconsider your"
-                     "choices.")
+        log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
+                     f"{perc_nans:.2f}% of all pixels.")
         inan = np.where(np.ma.masked_invalid(data).mask)
-        # subdata[inan]  = 0
         mask[inan] = 0
+    if perc_nans > 10:
+        log.writelog("  WARNING: Your region of interest may be off the edge "
+                     "of the detector subarray.  Masking NaN/inf regions and "
+                     "continuing, but you should really stop and reconsider "
+                     "your choices.")
     return mask
 
 
@@ -343,7 +390,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     # Normalize the spectrum
     if meta.inst == 'wfc3':
         scandir = np.repeat(meta.scandir, meta.nreads)
-        
+
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
@@ -425,7 +472,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
             if len(iscans) > 0:
                 mad = np.ma.mean(ediff[iscans])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
-                setattr(meta, f'mad_scandir{p}', mad)   
+                setattr(meta, f'mad_scandir{p}', mad)
 
     return np.ma.mean(ediff)
 

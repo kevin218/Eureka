@@ -121,7 +121,7 @@ def spec1D(spectra, meta, log, mask=None):
         try:
             vals = sps.correlate(ref_spec, fit_spec, mode='valid',
                                  method='fft')
-            if meta.isplots_S4 >= 5:
+            if meta.isplots_S4 >= 5 and n < meta.nplots:
                 plots_s4.cc_spec(meta, ref_spec, fit_spec, n)
                 plots_s4.cc_vals(meta, vals, n)
             argmax = np.ma.argmax(vals)

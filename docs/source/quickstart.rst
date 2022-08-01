@@ -96,7 +96,17 @@ However, for the later stages you can use something simpler, e.g. for the ``S3_w
 	inputdir	/Stage2
 	outputdir	/Stage3
 
-The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, it is important to notice a few settings in the ``S5_wasp39b.ecf``. Specifically, you need to assign the correct ``.epf`` file, and modify the number of processors you want to use during the light curve fitting.
+The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, there are a few important settings we must adjust.
+
+First, you must decide if you want to freely fit for your limb-darkening parameters in Stage 5 or if you want to fix them to model predictions made using the ``exotic-ld`` package. If you want to fit
+for limb-darkening, you can simply use the template files as they currently are. However, if you want to use ``exotic-ld``, you must download the ``exotic-ld`` `ancillary files <https://zenodo.org/record/6344946>_`
+and change the ``exotic_ld_direc`` in the ``S4_wasp39b.ecf`` file to point to the location you saved those ancillary files. You also need to set ``compute_ld`` to True. In general, you must also
+update the stellar parameters for your target, but these have already been set for WASP-39. You will also need to adjust your ``S5_fit_par_template.epf`` limb-darkening parameters to use the
+limb-darkening law you want to use (note that not all laws are supported by exotic-ld), and you will also need to change your limb-darkening parameters to be fixed instead of free if you don't
+want to fit them. Finally, you will also need to set the ``use_generate_ld`` parameter to ``exotic-ld`` in your ``S5_wasp39b.ecf`` file.
+
+
+Also, it is important to notice a few settings in the ``S5_wasp39b.ecf``. Specifically, you need to assign the correct ``.epf`` file, and modify the number of processors you want to use during the light curve fitting.
 
 .. code-block:: bash
 	
@@ -110,7 +120,7 @@ To speed up the Stage 5 dynesty fit, you can also reduce the number of live poin
 	ndim * (ndim + 1) / 2
 
 and our fit presently has ndim=10 free values in the EPF, so that means a bare minimum of 55 live points. As a compromise, let's use 256 live points instead to
-get a fairly nice corner plot but also speed up the fit, so set the following in ``S5_fit_par_wasp39b.epf``:
+get a fairly nice corner plot but also speed up the fit, so set the following in ``S5_wasp39b.ecf``:
 
 .. code-block:: bash
 	
