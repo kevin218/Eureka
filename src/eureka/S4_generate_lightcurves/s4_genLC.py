@@ -20,6 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
+from tqdm import tqdm
 from . import plots_s4, drift, generate_LD, wfc3
 from ..lib import logedit
 from ..lib import readECF
@@ -284,7 +285,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     log.writelog('Applying drift/jitter correction')
 
                     # Correct for drift/jitter
-                    for n in range(meta.n_int):
+                    iterfn = range(meta.n_int)
+                    if meta.verbose:
+                        iterfn = tqdm(iterfn)
+                    for n in iterfn:
                         # Need to zero-out the weights of masked data
                         weights = (~spec.optmask[n]).astype(int)
                         spline = spi.UnivariateSpline(np.arange(meta.subnx),
