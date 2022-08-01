@@ -529,14 +529,14 @@ def phot_lc(meta, data):
     """
     Plots the flux as a function of time.
     """
-    plt.figure(3103)
+    plt.figure(3106)
     plt.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3103-1D_LC' + figure_filetype)
+    fname = (f'figs{os.sep}fig3106-1D_LC' + figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -590,7 +590,7 @@ def phot_centroid(meta, data):
     fig.subplots_adjust(hspace=0.02)
 
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3104-Centroid' + figure_filetype)
+    fname = (f'figs{os.sep}fig3107-Centroid' + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
