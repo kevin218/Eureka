@@ -100,6 +100,10 @@ bibliography: paper.bib
 - Stage 5: Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
 - Stage 6: Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
 
+# Differences From the `jwst` Pipeline
+
+Eureka's Stage 1 offers a few alternative, experimental ramp fitting methods compared to the `jwst` pipeline, but mostly acts as a wrapper to allow you to call the `jwst` pipeline in the same format as `Eureka!`. Similarly, `Eureka!`'s Stage 2 acts solely as a wrapper for the `jwst` pipeline. Meanwhile, `Eureka!`'s Stages 3 through 6 completely depart from the `jwst` pipeline and offer specialized background subtraction, source extraction, wavelength binning, sigma clipping, fitting, and plotting routines with heritage from past space-based exoplanet science.
+
 ![An overview flowchart showing the processing done at each stage in `Eureka!`. The outputs of each stage are used as the inputs to the subsequent stage along with the relevant settings file(s). \label{fig:overview}](figures/stages_flowchart.png){width=100%}
 
 # Statement of Need
