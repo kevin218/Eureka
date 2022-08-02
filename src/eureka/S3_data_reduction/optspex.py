@@ -542,6 +542,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     # Compute median frame
     data_ma = np.ma.masked_where(apmask == 0, apdata)
     medflux = np.ma.median(data_ma, axis=0)
+
     # Replace masked pixels through interpolation
     ny, nx = medflux.shape
     xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
@@ -549,7 +550,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     y1 = yy[~medflux.mask].ravel()
     goodmed = medflux[~medflux.mask].ravel()
     interpmed = spi.griddata((x1, y1), goodmed, (xx, yy),
-                             method='cubic', fill_value=0)
+                             method='linear', fill_value=0)
 
     # Perform optimal extraction on each of the frames
     iterfn = range(meta.int_start, meta.n_int)

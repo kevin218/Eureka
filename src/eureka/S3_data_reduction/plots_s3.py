@@ -487,17 +487,19 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, extent=[xmin, xmax, ymin, ymax])
-    a0.hlines([meta.bg_y1, meta.bg_y2], xmin, xmax, color='orange')
-    a0.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], xmin,
+    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
+    a0.hlines([ymin+meta.src_ypos+meta.spec_hw,
+              ymin+meta.src_ypos-meta.spec_hw], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
     a0.axes.set_xlabel("Detector Pixel Position")
     a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap='plasma',
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
-    a1.hlines([meta.bg_y1, meta.bg_y2], vmin, vmax, color='orange',
+    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
-    a1.hlines([meta.src_ypos+meta.spec_hw, meta.src_ypos-meta.spec_hw], vmin,
+    a1.hlines([ymin+meta.src_ypos+meta.spec_hw,
+              ymin+meta.src_ypos-meta.spec_hw], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
     a1.legend(loc='upper right', fontsize=8)

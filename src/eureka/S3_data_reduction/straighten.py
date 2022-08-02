@@ -132,7 +132,9 @@ def straighten_trace(data, meta, log):
     # Find the median shift needed to bring the trace centered on the detector
     # obtain the median frame
     data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
-    medflux = np.ma.median(data_ma, axis=0)  # .data
+    medflux = np.ma.median(data_ma, axis=0)
+
+    # Interpolate over permanently bad pixels
     ny, nx = medflux.shape
     xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
     x1 = xx[~medflux.mask].ravel()
@@ -140,6 +142,7 @@ def straighten_trace(data, meta, log):
     goodmed = medflux[~medflux.mask].ravel()
     interpmed = spi.griddata((x1, y1), goodmed, (xx, yy),
                              method='cubic', fill_value=0)
+
     # compute the correction needed from this median frame
     shifts, new_center = find_column_median_shifts(interpmed, meta)
 
