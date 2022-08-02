@@ -58,6 +58,9 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
+
+    meta.photometry = False # Photometry for MIRI not implemented yet.
+    
     # If wavelengths are all zero --> use hardcoded wavelengths
     # Otherwise use the wavelength array from the header
     if np.all(hdulist['WAVELENGTH', 1].data == 0):
