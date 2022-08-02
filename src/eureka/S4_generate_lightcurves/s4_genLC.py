@@ -376,10 +376,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     # then divide by number of good points to get
                     # proper uncertainties
                     lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
-                                np.ma.MaskedArray.count(opterr_ma, axis=1))
+                                    np.ma.MaskedArray.count(opterr_ma, axis=1))
                 elif meta.photometry:
                     lc['data'][i] = spec.aplev
-                    lc['err'][i]  = spec.aperr
+                    lc['err'][i] = spec.aperr
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.clip_binned:

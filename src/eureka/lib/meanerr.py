@@ -6,12 +6,13 @@
 
 import numpy as np
 
+
 def meanerr(data, derr, mask=None, err=False, status=False):
-  """
+    """
     Calculate the error-weighted mean and the error in the
     error-weighted mean of the input data, omitting masked data, NaN
     data or errors, and data whose errors are zero.
-  
+
     Parameters:
     -----------
     data:   ndarray
@@ -34,14 +35,14 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     This function returns the error-weighted mean of the unmasked
     elements of Data. If err or status were set to True, return a
     tuple.
-  
+
     Notes:
     ------
     Follows maximum likelihood method (see, e.g., Bevington and
     Robinson 2003, Data Reduction and Error Analysis for the
     Physical Sciences, 3rd ed, McGraw Hill, Ch. 4.).
-  
-  
+
+
     EXAMPLE:
     --------
     >>> import meanerr as men
@@ -72,43 +73,42 @@ def meanerr(data, derr, mask=None, err=False, status=False):
                          jh@oobleck.astro.cornell.edu
     2010-11-18 patricio  Wrote in python, docstring added.
                          pcubillos@fulbrightmail.org
-  """
-  retstatus = status
+    """
+    retstatus = status
 
-  if mask is None:
-    mask = np.ones(np.shape(data), dtype=bool)
+    if mask is None:
+        mask = np.ones(np.shape(data), dtype=bool)
 
-  # Status is good
-  status = 0
+    # Status is good
+    status = 0
 
-  # Mask off NaNs
-  fin = np.isfinite(data) * np.isfinite(derr)
+    # Mask off NaNs
+    fin = np.isfinite(data) * np.isfinite(derr)
 
-  # Mask off errors = zero
-  nonzero = derr != 0
+    # Mask off errors = zero
+    nonzero = derr != 0
 
-  # Final Mask
-  loc = np.where(fin * nonzero * mask)
-  weights = (1.0/derr[loc]**2.0)
+    # Final Mask
+    loc = np.where(fin * nonzero * mask)
+    weights = (1.0 / derr[loc] ** 2.0)
 
-  # The returns (a tuple if err or status set to True).
-  ret = (np.average(data[loc], weights=weights),)
+    # The returns (a tuple if err or status set to True).
+    ret = (np.average(data[loc], weights=weights),)
 
-  if err:
-    ret = ret + (np.sqrt(1.0 /np.sum(weights)),)
+    if err:
+        ret = ret + (np.sqrt(1.0 / np.sum(weights)),)
 
-  if retstatus:
-    if not np.all(fin):      # NaNs
-      status |= 1
-    if not np.all(nonzero):  # errors = zero
-      status |= 2
-    if not np.all(mask):     # bad data
-      status |= 4
+    if retstatus:
+        if not np.all(fin):  # NaNs
+            status |= 1
+        if not np.all(nonzero):  # errors = zero
+            status |= 2
+        if not np.all(mask):  # bad data
+            status |= 4
 
-    ret = ret + (status,)   
+        ret = ret + (status,)
 
-  # return statement
-  if len(ret) == 1:
-      return ret[0]
-  return ret
-
+        # return statement
+    if len(ret) == 1:
+        return ret[0]
+    return ret
