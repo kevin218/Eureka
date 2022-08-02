@@ -8,7 +8,7 @@ from . import plots_s3
 
 
 def source_pos_wrapper(data, meta, log, m, integ=0):
-    '''Make image+background plot.
+    '''Determine the source position for many frames.
 
     Parameters
     ----------
@@ -106,7 +106,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
 
 
 def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
-    '''Make image+background plot.
+    '''Determine the source position for one frames.
 
     Parameters
     ----------
