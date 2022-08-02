@@ -312,6 +312,10 @@ curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
+smooth_trace
+'''''''''
+Forces the trace found to be smoother, so the central location in one column cannot be too far off from the central location in an adjacent column.
+
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
