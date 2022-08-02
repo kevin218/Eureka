@@ -15,17 +15,10 @@ Eureka's Stages
 
 .. _overview_flowchart:
 
-.. image:: ../media/stages_flowchart.png
-  :width: 512
-  :align: center
-  :alt: An overview flowchart of the 6 stages of Eureka!.
-
-  Figure 1: An overview flowchart of the 6 stages of ``Eureka!``.
-
 .. figure:: ../media/stages_flowchart.png
   :alt: An overview flowchart of the 6 stages of Eureka!.
 
-  Figure 2: An overview flowchart of the 6 stages of ``Eureka!``.
+  Figure 1: An overview flowchart of the 6 stages of ``Eureka!``.
 
 
 A more detailed discussion of the steps taken in stages 3--6 are summarized below. Stages 1 and 2 are left out as they basically just offer a wrapper for the ``jwst`` pipeline which has already documented their `Stage 1 <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`_, `Stage 2 (spectroscopy) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`_, amd `Stage 2 (photometry) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_image2.html>`_.
