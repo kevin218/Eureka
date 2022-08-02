@@ -3,6 +3,8 @@
 Eureka's Stages
 ===============
 
+Overview
+--------
 
 `Eureka!` is broken down into six "stages" which each consist of many "steps". The six stages are as follows (a visual overview is also provided in :ref:`Figure 1 <overview_flowchart>`):
 
@@ -33,7 +35,7 @@ Stage 3: Data Reduction
 .. figure:: ../media/stage3_flowchart.png
   :alt: An overview flowchart of Eureka!'s Stage 3.
 
-  Figure 1: An overview flowchart of ``Eureka!``'s Stage 3.
+  Figure 2: An overview flowchart of ``Eureka!``'s Stage 3.
 
 
 
@@ -45,7 +47,7 @@ Stage 4: Generating Lightcurves
 .. figure:: ../media/stage4_flowchart.png
   :alt: An overview flowchart of Eureka!'s Stage 4.
 
-  Figure 1: An overview flowchart of ``Eureka!``'s Stage 4.
+  Figure 3: An overview flowchart of ``Eureka!``'s Stage 4.
 
 
 
