@@ -163,77 +163,78 @@ def make_psf_interp(spsf, shape, scale, params, psfctr, *args):
 
 def make_psf_binning(spsf, shape, scale, params, psfctr, subpsf=None):
     """
-      Makes a PSF image by binning down a super sampled PSF. Sets then
-      the stellar and sky fluxes.
+    Makes a PSF image by binning down a super sampled PSF. Sets then
+    the stellar and sky fluxes.
 
-      Parameters:
-      -----------
-      spsf: 2D ndarray
-            The supersampled PSF image.
+    Parameters:
+    -----------
+    spsf: 2D ndarray
+        The supersampled PSF image.
 
-      shape:  2-element tuple
-              The shape of the output image.
+    shape:  2-element tuple
+          The shape of the output image.
 
-      scale:  Scalar
-              Ratio of the PSF and data pixel-scales.
+    scale:  Scalar
+          Ratio of the PSF and data pixel-scales.
 
-      params: 4-elements tuple [y, x, flux, sky]
-              y, x: Subpixel position where to put the sPSF center. As this
-                    is a pixel position, y,x must be integers (see Example).
-              flux: The total flux from the star.
-              sky:  The sky flux level.
+    params: 4-elements tuple [y, x, flux, sky]
+          y, x: Subpixel position where to put the sPSF center. As this
+                is a pixel position, y,x must be integers (see Example).
+          flux: The total flux from the star.
+          sky:  The sky flux level.
 
-      psfctr: 2-element tuple  [y, x]
-              y, x-position of the center of the PSF.
+    psfctr: 2-element tuple  [y, x]
+          y, x-position of the center of the PSF.
 
-      subpsf: 2D ndarray
-              An array where to write the subsection of the supersampled
-              PSF. It should have shape: shape*scale. It will be
-              overrited.
+    subpsf: 2D ndarray
+          An array where to write the subsection of the supersampled
+          PSF. It should have shape: shape*scale. It will be
+          overrited.
 
-      Return:
-      -------
-      binpsf : 2D ndarray
-               Rebinned PSF image.
-      pos : 2-elements tuple
-            The position of the center of the PSF in binpsf.
+    Return:
+    -------
+    binpsf : 2D ndarray
+           Rebinned PSF image.
+    pos : 2-elements tuple
+        The position of the center of the PSF in binpsf.
 
-      Example:
-      --------
-      >>> import psf_fit as pf
-      >>> import pyfits  as pyf
-      >>> import matplotlib.pyplot as plt
+    Example:
+    --------
+    >>> import psf_fit as pf
+    >>> import pyfits  as pyf
+    >>> import matplotlib.pyplot as plt
 
-      >>> ttpsf = pyf.getdata('/home/esp01/events/wa008b-patricio/Tiny_tim/irac4_5600K_100x.fits')
-      >>> psfctr = np.asarray(np.shape(ttpsf))/2
-      >>> scale = 100
+    >>> ttpsf = pyf.getdata('/home/esp01/events/wa008b-patricio/Tiny_tim/irac4_5600K_100x.fits')
+    >>> psfctr = np.asarray(np.shape(ttpsf))/2
+    >>> scale = 100
 
-      >>> shape = 21,21
-      >>> # To put the center at the image center, calculate the corresponding
-      >>> # subpixel: center = shape * scale / 2
-      >>> params = 1050, 1050, 1.0, 0.0
-      >>> psf,pos = pf.make_psf_binning(ttpsf, shape, scale, params, psfctr)
+    >>> shape = 21,21
+    >>> # To put the center at the image center, calculate the corresponding
+    >>> # subpixel: center = shape * scale / 2
+    >>> params = 1050, 1050, 1.0, 0.0
+    >>> psf,pos = pf.make_psf_binning(ttpsf, shape, scale, params, psfctr)
 
-      >>> plt.figure(10)
-      >>> plt.clf()
-      >>> plt.imshow(psf, origin='lower left', interpolation='nearest')
-      >>> plt.colorbar()
-      >>> print(pos)
+    >>> plt.figure(10)
+    >>> plt.clf()
+    >>> plt.imshow(psf, origin='lower left', interpolation='nearest')
+    >>> plt.colorbar()
+    >>> print(pos)
 
-      Notes:
-      ------
-      make_psf_binning works under the premise that the supersampled PSF
-      is sampled fine enough that differences less than a supersampled
-      pixel is undistinguishable. Then the sPSF can be shifted
-      in units of subpixels only.
+    Notes:
+    ------
+    make_psf_binning works under the premise that the supersampled PSF
+    is sampled fine enough that differences less than a supersampled
+    pixel is undistinguishable. Then the sPSF can be shifted
+    in units of subpixels only.
 
-      Note also the input parameter 'param' is different than in
-      make_psf_interp.
+    Note also the input parameter 'param' is different than in
+    make_psf_interp.
 
-      Modification History:
-      ---------------------
-      2011-07-20  patricio  Added subpsf parameter (makes it faster).
-      2011-05-19  patricio  Initial version.  pcubillos@fulbrightmail.org
+    Modification History:
+    ---------------------
+    2011-07-20  patricio  Added subpsf parameter (makes it faster).
+    2011-05-19  patricio  Initial version.  pcubillos@fulbrightmail.org
+    02-08-2022  szieba   Changed format to be consistent with flake8
     """
     # Pixel of the center of the PSF:
     yctr, xctr = (np.around(psfctr)).astype(int)
@@ -271,163 +272,164 @@ def make_psf_binning(spsf, shape, scale, params, psfctr, subpsf=None):
 def psf_fit(data, fluxguess, spsf, psfctr, scale, shift, make="bpf",
             mask=None, weights=None, step=None, pos=None):
     """
-      Fits a supersampled PSF to a data image. The position is fitted at
-      discrete postions while the stellar and sky fluxes are fitted with
-      scipy's leastsq function.
+    Fits a supersampled PSF to a data image. The position is fitted at
+    discrete postions while the stellar and sky fluxes are fitted with
+    scipy's leastsq function.
 
-      Parameters:
-      -----------
-      data:  2D ndarray
-             The science image we are trying to fit.
+    Parameters:
+    -----------
+    data:  2D ndarray
+         The science image we are trying to fit.
 
-      fluxguess: 2-element tuple  [flux, sky]
-             Tuple giving the starting point to fit the total star flux
-             and sky flux level.
+    fluxguess: 2-element tuple  [flux, sky]
+         Tuple giving the starting point to fit the total star flux
+         and sky flux level.
 
-      spsf: 2D ndarray
-            The supersampled PSF image.
+    spsf: 2D ndarray
+        The supersampled PSF image.
 
-      psfctr: 2-element tuple  [y, x]
-              y, x-position of the center of the PSF.
+    psfctr: 2-element tuple  [y, x]
+          y, x-position of the center of the PSF.
 
-      scale:  scalar
-              Ratio of the PSF and data pixel-scales.
+    scale:  scalar
+          Ratio of the PSF and data pixel-scales.
 
-      shift: 2-element tuple  [yshift, xshift]
-             Each element is a 1D array containing the shifts of the
-             center of the PSF to the center of the image at which the
-             fit will be evaluated.
+    shift: 2-element tuple  [yshift, xshift]
+         Each element is a 1D array containing the shifts of the
+         center of the PSF to the center of the image at which the
+         fit will be evaluated.
 
-      mask : ndarray
-             Mask of bad pixel values, same shape as data. Good pixels
-             have value 1; bad pixels have value 0, and will not be
-             considered in the fit.
+    mask : ndarray
+         Mask of bad pixel values, same shape as data. Good pixels
+         have value 1; bad pixels have value 0, and will not be
+         considered in the fit.
 
-      weights: ndarray
-               Weights for the minimization, for scientific data the
-               weights should be 1/sqrt(variance). Same shape as data.
+    weights: ndarray
+           Weights for the minimization, for scientific data the
+           weights should be 1/sqrt(variance). Same shape as data.
 
-      step : scalar
-             The initial step of the number of elements to jump when
-             evaluating shift.
+    step : scalar
+         The initial step of the number of elements to jump when
+         evaluating shift.
 
-      pos : 2-element list
-            The index of the elements in shift where to start the
-            evaluation.
+    pos : 2-element list
+        The index of the elements in shift where to start the
+        evaluation.
 
-      Example:
-      --------
+    Example:
+    --------
 
-      >>> import psf_fit as pf
-      >>> import sys, os, time
-      >>> import numpy as np
-      >>> sys.path.append('/home/esp01/events/wa008b-patricio/wa008bs41/lib/')
-      >>> sys.path.append('/home/patricio/ast/esp01/convert/lib/python/gaussian/')
-      >>> import manageevent as me
-      >>> import pyfits      as pyf
+    >>> import psf_fit as pf
+    >>> import sys, os, time
+    >>> import numpy as np
+    >>> sys.path.append('/home/esp01/events/wa008b-patricio/wa008bs41/lib/')
+    >>> sys.path.append('/home/patricio/ast/esp01/convert/lib/python/gaussian/')
+    >>> import manageevent as me
+    >>> import pyfits      as pyf
 
-      >>> # Example #1:
-      >>> # Using a Spitzer supplied PSF and make_psf_interp:
+    >>> # Example #1:
+    >>> # Using a Spitzer supplied PSF and make_psf_interp:
 
-      >>> # Get a PSF and its center:
-      >>> e = me.loadevent('/home/esp01/events/wa008b-patricio/wa008bs41/run/fgc/wa008bs41_ctr',
-      >>>                  load=['data','uncd','mask'])
-      >>> sst_psf = np.copy(e.psfim)
-      >>> psfctr = np.copy(e.psfctr)
+    >>> # Get a PSF and its center:
+    >>> e = me.loadevent('/home/esp01/events/wa008b-patricio/wa008bs41/run/fgc/wa008bs41_ctr',
+    >>>                  load=['data','uncd','mask'])
+    >>> sst_psf = np.copy(e.psfim)
+    >>> psfctr = np.copy(e.psfctr)
 
-      >>> # The scale factor:
-      >>> scale = 5.0
+    >>> # The scale factor:
+    >>> scale = 5.0
 
-      >>> # Let's create an image to fit:
-      >>> # The image size will be 21 by 21:
-      >>> shape = np.array([21,21])
+    >>> # Let's create an image to fit:
+    >>> # The image size will be 21 by 21:
+    >>> shape = np.array([21,21])
 
-      >>> # Define the position of the center of the PSF, and fluxes:
-      >>> params = [1.75, 0.5, 5e4, 2e2]
-      >>> # Make the image:
-      >>> image, center = pf.make_psf_interp(sst_psf, shape, scale, params, psfctr)
-      >>> # Add some noise:
-      >>> noise = np.sqrt(image) * np.random.randn(21,21)
-      >>> # The image to fit:
-      >>> y = image + noise
-      >>> var = np.abs(image)
+    >>> # Define the position of the center of the PSF, and fluxes:
+    >>> params = [1.75, 0.5, 5e4, 2e2]
+    >>> # Make the image:
+    >>> image, center = pf.make_psf_interp(sst_psf, shape, scale, params, psfctr)
+    >>> # Add some noise:
+    >>> noise = np.sqrt(image) * np.random.randn(21,21)
+    >>> # The image to fit:
+    >>> y = image + noise
+    >>> var = np.abs(image)
 
-      >>> # Let's say our prior guess lies whitin 1 pixel from the given position:
-      >>> yguess = params[0] + 2*(np.random.rand()-0.5)
-      >>> xguess = params[1] + 2*(np.random.rand()-0.5)
+    >>> # Let's say our prior guess lies whitin 1 pixel from the given position:
+    >>> yguess = params[0] + 2*(np.random.rand()-0.5)
+    >>> xguess = params[1] + 2*(np.random.rand()-0.5)
 
-      >>> # Array of Y,X shifs around our guess where to search:
-      >>> noffset = 201
-      >>> offsetrad = 1.0  # search within a 1 pixel radius:
-      >>> offset = offsetrad * np.linspace(-1.0, 1.0, noffset)
+    >>> # Array of Y,X shifs around our guess where to search:
+    >>> noffset = 201
+    >>> offsetrad = 1.0  # search within a 1 pixel radius:
+    >>> offset = offsetrad * np.linspace(-1.0, 1.0, noffset)
 
-      >>> # The shifts are relative to the center of the image:
-      >>> yshift = yguess + offset
-      >>> xshift = xguess + offset
-      >>> shift = (yshift, xshift)
+    >>> # The shifts are relative to the center of the image:
+    >>> yshift = yguess + offset
+    >>> xshift = xguess + offset
+    >>> shift = (yshift, xshift)
 
-      >>> # Starting point, guess for the fluxes:
-      >>> fluxguess = (0.1e5, 80)
+    >>> # Starting point, guess for the fluxes:
+    >>> fluxguess = (0.1e5, 80)
 
-      >>> # Find the best fit:
-      >>> pos, bestp, chisq = pf.psf_fit(y, fluxguess, sst_psf, psfctr, scale,
-      >>>                                shift, mask=None, weights=1/var, make='ipf')
-      >>> # Best position:
-      >>> print(pos)
-      >>> # Best flux fit:
-      >>> print(bestp)
+    >>> # Find the best fit:
+    >>> pos, bestp, chisq = pf.psf_fit(y, fluxguess, sst_psf, psfctr, scale,
+    >>>                                shift, mask=None, weights=1/var, make='ipf')
+    >>> # Best position:
+    >>> print(pos)
+    >>> # Best flux fit:
+    >>> print(bestp)
 
-      >>> # Example #2:
-      >>> # Using a Tiny Tim supplied PSF and make_psf_binning:
+    >>> # Example #2:
+    >>> # Using a Tiny Tim supplied PSF and make_psf_binning:
 
-      >>> # Get a PSF and its center:
-      >>> ttpsf = pyf.getdata('/home/esp01/events/wa008b-patricio/Tiny_tim/irac4_5600K_100x.fits')
-      >>> psfctr = np.asarray(np.shape(ttpsf))/2
-      >>> # The scale factor:
-      >>> scale = 100
+    >>> # Get a PSF and its center:
+    >>> ttpsf = pyf.getdata('/home/esp01/events/wa008b-patricio/Tiny_tim/irac4_5600K_100x.fits')
+    >>> psfctr = np.asarray(np.shape(ttpsf))/2
+    >>> # The scale factor:
+    >>> scale = 100
 
-      >>> # Create an image to fit:
-      >>> shape = np.array([21,21])
-      >>> params = [1043, 915, 5e5, 200]
-      >>> image, center = pf.make_psf_binning(ttpsf, shape, scale, params, psfctr)
-      >>> # Add some noise:
-      >>> noise = np.sqrt(image) * np.random.randn(21,21)
-      >>> # The image to fit:
-      >>> y = image + noise
-      >>> var = np.abs(image)
+    >>> # Create an image to fit:
+    >>> shape = np.array([21,21])
+    >>> params = [1043, 915, 5e5, 200]
+    >>> image, center = pf.make_psf_binning(ttpsf, shape, scale, params, psfctr)
+    >>> # Add some noise:
+    >>> noise = np.sqrt(image) * np.random.randn(21,21)
+    >>> # The image to fit:
+    >>> y = image + noise
+    >>> var = np.abs(image)
 
-      >>> # Let's say our guess is whitin 1 pixel from the given position:
-      >>> yguess = params[0] + np.random.randint(-scale,scale)
-      >>> xguess = params[1] + np.random.randint(-scale,scale)
+    >>> # Let's say our guess is whitin 1 pixel from the given position:
+    >>> yguess = params[0] + np.random.randint(-scale,scale)
+    >>> xguess = params[1] + np.random.randint(-scale,scale)
 
-      >>> # Array of Y,X shifs around our guess where to search:
-      >>> offsetrad = 1.0  # search within a 1 pixel radius:
-      >>> noffset = int(2*scale*offsetrad + 1)
-      >>> offset = np.arange(noffset) - noffset/2
+    >>> # Array of Y,X shifs around our guess where to search:
+    >>> offsetrad = 1.0  # search within a 1 pixel radius:
+    >>> noffset = int(2*scale*offsetrad + 1)
+    >>> offset = np.arange(noffset) - noffset/2
 
-      >>> # The shifts are relative to the position of the PSF:
-      >>> yshift = yguess + offset
-      >>> xshift = xguess + offset
-      >>> shift = (yshift, xshift)
+    >>> # The shifts are relative to the position of the PSF:
+    >>> yshift = yguess + offset
+    >>> xshift = xguess + offset
+    >>> shift = (yshift, xshift)
 
-      >>> # Starting point, guess for the fluxes:
-      >>> fluxguess = (1e4, 80)
+    >>> # Starting point, guess for the fluxes:
+    >>> fluxguess = (1e4, 80)
 
-      >>> # Find the best fit:
-      >>> tini = time.time()
-      >>> pos, bestp, chisq = pf.psf_fit(y, fluxguess, ttpsf, psfctr, scale,
-      >>>                                shift, mask=None, weights=1/var, make='bpf')
-      >>> print(time.time()-tini)
-      >>> # Best position:
-      >>> print(pos)
-      >>> # Best flux fit:
-      >>> print(bestp)
+    >>> # Find the best fit:
+    >>> tini = time.time()
+    >>> pos, bestp, chisq = pf.psf_fit(y, fluxguess, ttpsf, psfctr, scale,
+    >>>                                shift, mask=None, weights=1/var, make='bpf')
+    >>> print(time.time()-tini)
+    >>> # Best position:
+    >>> print(pos)
+    >>> # Best flux fit:
+    >>> print(bestp)
 
-      Modification History:
-      ---------------------
-      2011-05-21  patricio  Initial version.  pcubillos@fulbrightmail.org
-      2011-05-27  patricio  Include gradient parameter in leastsq.
-      2011-07-26  patricio  Unified both make_psf.
+    Modification History:
+    ---------------------
+    2011-05-21  patricio  Initial version.  pcubillos@fulbrightmail.org
+    2011-05-27  patricio  Include gradient parameter in leastsq.
+    2011-07-26  patricio  Unified both make_psf.
+    02-08-2022 szieba   Changed format to be consistent with flake8
     """
     shape = np.shape(data)
 
@@ -540,44 +542,45 @@ def psf_fit(data, fluxguess, spsf, psfctr, scale, shift, make="bpf",
 def spitzer_fit(data, mask, weights, psf, psfctr, scale, make,
                 offsetrad=1.0, noffset=201):
     """
-      Routine wrapper for easy plug-in into POET pipeline.
-      Fits a PSF in a data frame from Spitzer.
+    Routine wrapper for easy plug-in into POET pipeline.
+    Fits a PSF in a data frame from Spitzer.
 
-      Parameters:
-      -----------
-      data:    2D ndarray
-               Data image to fit the PSF.
+    Parameters:
+    -----------
+    data:    2D ndarray
+           Data image to fit the PSF.
 
-      mask:    2D ndarray
-               Mask of bad pixel values, same shape as data. Good pixels
-               have value 1; bad pixels have value 0, and will not be
-               considered in the fit.
+    mask:    2D ndarray
+           Mask of bad pixel values, same shape as data. Good pixels
+           have value 1; bad pixels have value 0, and will not be
+           considered in the fit.
 
-      weights: 2D ndarray
-               Weights for the minimization, for scientific data the
-               weights should be 1/sqrt(variance). Same shape as data.
+    weights: 2D ndarray
+           Weights for the minimization, for scientific data the
+           weights should be 1/sqrt(variance). Same shape as data.
 
-      psf:     2D ndimage
-               The supersampled PSF image.
+    psf:     2D ndimage
+           The supersampled PSF image.
 
-      psfctr:  2-elements tuple [y, x]
-               y, x-position of the center of the PSF.
+    psfctr:  2-elements tuple [y, x]
+           y, x-position of the center of the PSF.
 
-      scale:   Scalar
-               Ratio of the PSF and data pixel-scales.
+    scale:   Scalar
+           Ratio of the PSF and data pixel-scales.
 
-      noffset: Scalar
-               Radii around the guess position where to look for best fit.
+    noffset: Scalar
+           Radii around the guess position where to look for best fit.
 
-      Returns:
-      --------
-      bestfit: 4-elements tuple [y, x, starflux, skyflux]
-               position and fluxes of the PSF that best fit the data.
+    Returns:
+    --------
+    bestfit: 4-elements tuple [y, x, starflux, skyflux]
+           position and fluxes of the PSF that best fit the data.
 
-      Modification History:
-      ---------------------
-      2011-07-26  patricio  First documented version.
-                            pcubillos@fulbrightmail.org
+    Modification History:
+    ---------------------
+    2011-07-26  patricio  First documented version.
+                        pcubillos@fulbrightmail.org
+    02-08-2022 szieba   Changed format to be consistent with flake8
     """
     # Initial flux guess:
     skyguess = np.median(data)
@@ -622,38 +625,39 @@ def spitzer_fit(data, mask, weights, psf, psfctr, scale, make,
 
 def binarray(image, binsize):
     """
-      Resamples a 2D image by stacking and adding every bin of pixels
-      along each dimension.
+    Resamples a 2D image by stacking and adding every bin of pixels
+    along each dimension.
 
-      Parameters:
-      -----------
-      image : 2D ndarray
-      scale : integer scalar
+    Parameters:
+    -----------
+    image : 2D ndarray
+    scale : integer scalar
 
-      Return:
-      -------
-      rimage : 2D ndarray
-               Resampled image.
-      Example:
-      --------
-      >>>import stack_psf as s
-      >>>a = np.array([[1,0,1,0,1,2],
-                       [1,1,1,1,1,1],
-                       [0,0,0,1,1,1],
-                       [1,0,0,1,0,0]])
-      >>>b = s.binarray(a,2)
-      Y dimension is incommensurable, ignoring last incomplete stack.
-      >>>print(b)
-      [[ 3.,  3.,  3.],
-       [ 1.,  2.,  2.]]
-      >>>b = s.binarray(a,2)
-      >>>print(b)
-      [[ 5.  9.]]
+    Return:
+    -------
+    rimage : 2D ndarray
+           Resampled image.
+    Example:
+    --------
+    >>>import stack_psf as s
+    >>>a = np.array([[1,0,1,0,1,2],
+                   [1,1,1,1,1,1],
+                   [0,0,0,1,1,1],
+                   [1,0,0,1,0,0]])
+    >>>b = s.binarray(a,2)
+    Y dimension is incommensurable, ignoring last incomplete stack.
+    >>>print(b)
+    [[ 3.,  3.,  3.],
+    [ 1.,  2.,  2.]]
+    >>>b = s.binarray(a,2)
+    >>>print(b)
+    [[ 5.  9.]]
 
-      Modfication History:
-      --------------------
-      2011-06-04  patricio  Very first version.
-                            pcubillos@fulbrightmail.org
+    Modfication History:
+    --------------------
+    2011-06-04  patricio  Very first version.
+                        pcubillos@fulbrightmail.org
+    02-08-2022 szieba   Changed format to be consistent with flake8
     """
     ny, nx = np.shape(image)
     # Shout if stack is incommensurable:
@@ -680,63 +684,65 @@ def binarray(image, binsize):
 
 def residuals(params, data, model, weights):
     """
-      Calculates the residuals of a weighted, stellar flux + sky
-      background fit of a model to data.
+    Calculates the residuals of a weighted, stellar flux + sky
+    background fit of a model to data.
 
-      Parameters:
-      -----------
-      params : 2-element tuple  [flux, sky]
-               The model parameters to fit. Flux is the scaling factor,
-               while sky is a constant background.
-      data : 1D ndarray
-             An array with the data values.
-      model : 1D ndarray
-              Same shape as data, this array contains the stellar model.
-      weights : ndarray
-                Same shape as data, this array contains weighting
-                factors to ponderate the fit. Usually corresponds to:
-                weights = 1/standard deviation.
+    Parameters:
+    -----------
+    params : 2-element tuple  [flux, sky]
+           The model parameters to fit. Flux is the scaling factor,
+           while sky is a constant background.
+    data : 1D ndarray
+         An array with the data values.
+    model : 1D ndarray
+          Same shape as data, this array contains the stellar model.
+    weights : ndarray
+            Same shape as data, this array contains weighting
+            factors to ponderate the fit. Usually corresponds to:
+            weights = 1/standard deviation.
 
-      Result:
-      -------
-      This routine return a 1D ndarray with the weighted differences
-      between the model and the data.
+    Result:
+    -------
+    This routine return a 1D ndarray with the weighted differences
+    between the model and the data.
 
-      Modification History:
-      ---------------------
-      2011-05-27  patricio  Initial Version.
-                            pcubillos@fulbrightmail.org
+    Modification History:
+    ---------------------
+    2011-05-27  patricio  Initial Version.
+                        pcubillos@fulbrightmail.org
+    02-08-2022 szieba   Changed format to be consistent with flake8
     """
     return (model * params[0] + params[1] - data) * weights
 
 
 def gradient(params, data, model, weights):
     """
-      Calculates the gradient of the parameters in residuals.
+    Calculates the gradient of the parameters in residuals.
 
-      Parameters:
-      -----------
-      params : 2-element tuple  [flux, sky]
-               The model parameters to fit. Flux is the scaling factor,
-               while sky is a constant background.
-      data : 1D ndarray
-             An array with the data values.
-      model : 1D ndarray
-              Same shape as data, this array contains the stellar model.
-      weights : ndarray
-                Same shape as data, this array contains weighting
-                factors to ponderate the fit. Usually corresponds to:
-                weights = 1/standard deviation.
+    Parameters:
+    -----------
+    params : 2-element tuple  [flux, sky]
+           The model parameters to fit. Flux is the scaling factor,
+           while sky is a constant background.
+    data : 1D ndarray
+         An array with the data values.
+    model : 1D ndarray
+          Same shape as data, this array contains the stellar model.
+    weights : ndarray
+            Same shape as data, this array contains weighting
+            factors to ponderate the fit. Usually corresponds to:
+            weights = 1/standard deviation.
 
-      Result:
-      -------
-      This routine return a tuple of 1D ndarrays. Each element in the
-      tuple corresponds to the derivative of residuals with respect to
-      each element in params.
+    Result:
+    -------
+    This routine return a tuple of 1D ndarrays. Each element in the
+    tuple corresponds to the derivative of residuals with respect to
+    each element in params.
 
-      Modification History:
-      ---------------------
-      2011-05-27  patricio  Initial Version.
-                            pcubillos@fulbrightmail.org
+    Modification History:
+    ---------------------
+    2011-05-27  patricio  Initial Version.
+                        pcubillos@fulbrightmail.org
+    02-08-2022 szieba   Changed format to be consistent with flake8
     """
     return [model * weights, weights]
