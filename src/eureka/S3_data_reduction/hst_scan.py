@@ -1,15 +1,11 @@
 import numpy as np
 from astropy.io import fits
-import scipy.interpolate as spi
-import scipy.signal as sps
-import sys
 try:
     import image_registration as imr
     imported_image_registration = True
 except ModuleNotFoundError:
     imported_image_registration = False
-from ..lib import gaussian as g
-from ..lib import centroid, smoothing
+from ..lib import centroid
 
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
