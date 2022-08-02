@@ -21,11 +21,12 @@ Overview
 - **Stage 5:** Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
 - **Stage 6:** Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
 
-A more detailed look at each of the steps taken in stages 3--5 are summarized below.
+A more detailed look at the steps taken in stages 3 and 4 are summarized below.
 Stages 1 and 2 are not covered in depth as they basically just offer a wrapper for the ``jwst`` pipeline which has already documented their
 `Stage 1 <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`_,
 `Stage 2 (spectroscopy) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`_, and
 `Stage 2 (photometry) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_image2.html>`_.
+Stage 5 is not covered as it is a fairly standard fitting routine without a great deal of complexity.
 Stage 6 is not covered in depth as it is mostly just a convenience plotting tool.
 
 .. _overview_flowchart:
@@ -58,10 +59,3 @@ Stage 4: Generating Lightcurves
   :alt: An overview flowchart of Eureka!'s Stage 4.
 
   **Figure 3:** An overview flowchart of ``Eureka!``'s Stage 4.
-
-
-
-Stage 5: Lightcurve Fitting
----------------------------
-
-
