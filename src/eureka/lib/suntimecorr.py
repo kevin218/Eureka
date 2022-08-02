@@ -10,7 +10,7 @@ def getcoords(file):
 
     Parameters
     ----------
-    file : Strings list
+    file : strs list
         A list containing the lines of a horizons file.
 
     Returns
@@ -84,7 +84,7 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
         Declination of target object in radians.
     obst : float or numpy float array
         Time of observation in Julian Date (may be a vector)
-    coordtable : string
+    coordtable : str
         Filename of output table from JPL HORIZONS specifying
         the position of the observatory relative to the
         standard position.

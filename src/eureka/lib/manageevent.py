@@ -59,13 +59,13 @@ def saveevent(event, filename, save=[], delete=[], protocol=3):
     ----------
     event : eureka.lib.readECF.MetaClass
         The meta data object to save.
-    filename : String
+    filename : str
         The string contains the name of the event file.
-    save : string tuple
+    save : str tuple
         The elements of this tuple contain the parameters to save.
         We usually use the values: 'data', 'uncd', 'head', 'bdmskd',
         'brmksd' or 'mask'.
-    delete : string tuple
+    delete : str tuple
         Parameters to be deleted.
 
     Notes
