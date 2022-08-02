@@ -183,7 +183,8 @@ def calcTrace(x, centroid, grism):
     -----
     History:
 
-    - Initial version by LK
+    - LK
+        Initial version
     - November 2021, Kevin Stevenson
         Modified
     '''
@@ -245,7 +246,8 @@ def calibrateLambda(x, centroid, grism):
     -----
     History:
 
-    - Initial version by LK
+    - LK
+        Initial version
     - November 2021, Kevin Stevenson
         Modified
     '''
