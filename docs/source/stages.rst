@@ -4,7 +4,7 @@ Eureka's Stages
 ===============
 
 
-`Eureka!` is broken down into six parts or "Stages", which are as follows (see also :ref:`Figure 1 <overview_flowchart>`):
+`Eureka!` is broken down into six "stages" which each consist of many "steps". The six stages are as follows (a visual overview is also provided in :ref:`Figure 1 <overview_flowchart>`):
 
 - Stage 1: An optional step that calibrates raw data (converts ramps to slopes for JWST observations). This step can be skipped within ``Eureka!`` if you would rather use the Stage 1 outputs from the ``jwst`` pipeline.
 - Stage 2: An optional step that further calibrates Stage 1 data (performs flat-fielding, unit conversion, etc. for JWST observations). This step can be skipped within ``Eureka!`` if you would rather use the Stage 2 outputs from the ``jwst`` pipeline.
@@ -14,14 +14,33 @@ Eureka's Stages
 - Stage 6: Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
 
 .. _overview_flowchart:
+
 .. image:: ../media/stages_flowchart.png
   :width: 512
   :align: center
   :alt: An overview flowchart of the 6 stages of Eureka!.
 
-  An overview flowchart of the 6 stages of ``Eureka!``.
+  Figure 1: An overview flowchart of the 6 stages of ``Eureka!``.
 
 .. figure:: ../media/stages_flowchart.png
   :alt: An overview flowchart of the 6 stages of Eureka!.
 
-  An overview flowchart of the 6 stages of ``Eureka!``.
+  Figure 2: An overview flowchart of the 6 stages of ``Eureka!``.
+
+
+A more detailed discussion of the steps taken in stages 3--6 are summarized below. Stages 1 and 2 are left out as they basically just offer a wrapper for the ``jwst`` pipeline which has already documented their `Stage 1 <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`_, `Stage 2 (spectroscopy) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`_, amd `Stage 2 (photometry) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_image2.html>`_.
+
+Stage 3: Data Reduction
+-----------------------
+
+
+Stage 4: Generating Lightcurves
+-------------------------------
+
+
+Stage 5: Lightcurve Fitting
+---------------------------
+
+
+Stage 6: Plotting Plantary Spectra
+----------------------------------
