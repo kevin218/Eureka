@@ -24,9 +24,25 @@ def find_column_median_shifts(data):
     # define an array of pixel positions (in their centers)
     pix_centers = np.arange(nb_rows) + 0.5
 
-    # Compute the center of mass of each column and convert to integer (pixels)
+    # Compute the center of mass of each column
     column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
                    np.sum(data, axis=0))
+    
+    #check if column_coms is smooth
+    coms=column_coms.flatten()
+    grad=np.gradient(coms)
+    badpix_f=np.where(np.abs(grad)>np.std(grad))
+    badpix_f=badpix_f[0]
+    for bp_l in badpix_f:
+        if (bp_l+2) in badpix_f:           
+            bp=bp_l+1
+            if (bp_l+3) not in badpix_f and (bp_l-1) not in badpix_f:
+                column_coms[bp,]=(coms[bp_l]+coms[bp_l+2])/2.
+            else:
+                column_coms[bp,]=(coms[bp_l-1]+coms[bp_l+3])/2.    
+
+    
+    #convert com to integers (pixels)
     column_coms = np.around(column_coms).astype(int)
 
     # define the new center (where we will align the trace) in the 

@@ -346,10 +346,20 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
 
     # Data cutout around the maximum row
     pos_max = source_pos_max(flux, meta, m, n=n, plot=False)
-    y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    sum_row = np.ma.sum(flux, axis=1)[pos_max-meta.spec_hw:
-                                      pos_max+meta.spec_hw]
-
+        
+    source_min=pos_max-meta.spec_hw
+    source_max=pos_max+meta.spec_hw
+    
+    #check and ensure that the source range is within the ywindow
+    if source_min<meta.ywindow[0]:
+        source_min=meta.ywindow[0]
+    elif source_min<0:
+        source_min=0
+    if source_max>meta.ywindow[1]:
+        source_max=meta.ywindow[1]
+    y_pixels = np.arange(0, x_dim)[source_min:source_max]
+    sum_row = np.ma.sum(flux, axis=1)[source_min:source_max]
+    
     # Initial Guesses
     sigma0 = np.ma.sqrt(np.ma.sum(sum_row*(y_pixels-pos_max)**2) /
                         np.ma.sum(sum_row))
