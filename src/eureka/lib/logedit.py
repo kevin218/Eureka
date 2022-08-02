@@ -94,8 +94,8 @@ class Logedit:
         mute : bool; optional
             If True, only log and do not pring. Defaults to False.
         end : str; optional
-            Can be set to '\r' to have the printed line overwritten which
-            is useful for progress bars. Defaults to '\n'.
+            Can be set to '\\r' to have the printed line overwritten which
+            is useful for progress bars. Defaults to '\\n'.
         """
         # print to screen:
         if not mute:
@@ -117,8 +117,8 @@ class Logedit:
         mute : bool; optional
             If True, only log and do not pring. Defaults to False.
         end : str; optional
-            Can be set to '\r' to have the printed line overwritten which
-            is useful for progress bars. Defaults to '\n'.
+            Can be set to '\\r' to have the printed line overwritten which
+            is useful for progress bars. Defaults to '\\n'.
         """
         self.writelog(message, mute, end)
         self.closelog()
