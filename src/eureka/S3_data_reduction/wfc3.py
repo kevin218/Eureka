@@ -53,6 +53,8 @@ def preparation_step(meta, log):
 
     meta, log = get_reference_frames(meta, log)
 
+    meta.photometry = False  # Set to False so that Eureka! knows not to do photometry
+
     return meta, log
 
 

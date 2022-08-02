@@ -466,7 +466,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 plots_s3.phot_2d_frame_diff(meta, spec)
             if meta.photometry:
                 apphot.apphot_status(spec)
-            if not meta.photometry:
+            if meta.photometry:
                 del (spec['flux'])
 
             # Plot fitted 2D drift
