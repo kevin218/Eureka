@@ -38,6 +38,7 @@ from ..lib import manageevent as me
 from ..lib import util
 from ..lib import centerdriver, apphot
 
+
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
@@ -354,7 +355,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         if meta.inst != 'wfc3':
                             plots_s3.residualBackground(data, meta, m)
 
-                else: # Do Photometry reduction
+                else:  # Do Photometry reduction
                     # Flag bad pixels using the DQ array
                     if meta.use_dq:
                         data = util.flag_bad_dq(data)
@@ -378,22 +379,26 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         position, extra = centerdriver.centerdriver('fgc', data.flux.values[i],
                                                                     centroid_guess, 0, 0, 0,
                                                                     mask=None, uncd=None,
-                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
-                                                                    psfctr=None, i=i, m=m, meta=meta)
+                                                                    fitbg=1, maskstar=True,
+                                                                    expand=1.0, psf=None,
+                                                                    psfctr=None, i=i, m=m,
+                                                                    meta=meta)
 
                         if meta.oof_corr is not None:
                             # Correct for 1/f
                             data = inst.corr_oof(data, meta, i, position[1])
-                            if meta.isplots_S3 >= 3 :
+                            if meta.isplots_S3 >= 3:
                                 plots_s3.phot_2d_frame_oof(meta, m, i, data, flux_w_oof)
 
                         # Use the determined centroid and cut out ctr_cutout_size pixels around it
                         # Then perform another 2D gaussian fit
                         position, extra = centerdriver.centerdriver('fgc', data.flux.values[i],
-                                                                    position, meta.ctr_cutout_size, 0, 0,
-                                                                    mask=data.mask.values[i], uncd=None,
-                                                                    fitbg=1, maskstar=True, expand=1.0, psf=None,
-                                                                    psfctr=None, i=i, m=m, meta=meta)
+                                                                    position, meta.ctr_cutout_size,
+                                                                    0, 0, mask=data.mask.values[i],
+                                                                    uncd=None, fitbg=1,
+                                                                    maskstar=True, expand=1.0,
+                                                                    psf=None, psfctr=None,
+                                                                    i=i, m=m, meta=meta)
                         # Store centroid positions and the Gaussian 1-sigma half-widths
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
@@ -408,14 +413,18 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             util.interp_masked(data, meta, i)
 
                         # Calculate flux in aperture and subtract background flux
-                        aphot = apphot.apphot(image=data.flux[i].values, ctr = position,
-                        photap = meta.photap, skyin = meta.skyin, skyout = meta.skyout, betahw = 1,
-                        targpos = position, mask = data.mask[i].values, imerr = data.err[i].values, skyfrac = 0.1,
-                        med = True, expand = 1, isbeta = False, nochecks = False, aperr = True, nappix = True,
-                        skylev = True, skyerr = True, nskypix = True, nskyideal = True, status = True, betaper = True)
+                        aphot = apphot.apphot(image=data.flux[i].values, ctr=position,
+                                              photap=meta.photap, skyin=meta.skyin,
+                                              skyout=meta.skyout, betahw=1, targpos=position,
+                                              mask=data.mask[i].values, imerr=data.err[i].values,
+                                              skyfrac=0.1, med=True, expand=1, isbeta=False,
+                                              nochecks=False, aperr=True, nappix=True, skylev=True,
+                                              skyerr=True, nskypix=True, nskyideal=True,
+                                              status=True, betaper=True)
                         # Save results into arrays
-                        data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], data['skyerr'][i], \
-                        data['nskypix'][i], data['nskyideal'][i], data['status'][i], data['betaper'][i] = aphot
+                        data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], \
+                            data['skyerr'][i], data['nskypix'][i], data['nskyideal'][i], \
+                            data['status'][i], data['betaper'][i] = aphot
 
                 if meta.save_output:
                     # Save flux data from current segment
@@ -424,21 +433,21 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     success = xrio.writeXR(filename_xr, data, verbose=False,
                                            append=False)
                     if success == 0:
-                        del(data.attrs['filename'])
-                        del(data.attrs['mhdr'])
-                        del(data.attrs['shdr'])
+                        del (data.attrs['filename'])
+                        del (data.attrs['mhdr'])
+                        del (data.attrs['shdr'])
                         success = xrio.writeXR(filename_xr, data,
                                                verbose=meta.verbose,
                                                append=False)
 
                 # Remove large 3D arrays from Dataset
-                del(data['err'], data['dq'], data['v0'],
-                    data['mask'],
-                    data.attrs['intstart'], data.attrs['intend'])
+                del (data['err'], data['dq'], data['v0'],
+                     data['mask'],
+                     data.attrs['intstart'], data.attrs['intend'])
                 if not meta.photometry:
                     del (data['flux'], data['bg'], data['wave_2d'])
                 elif meta.inst == 'wfc3':
-                    del(data['flatmask'], data['variance'])
+                    del (data['flatmask'], data['variance'])
 
                 # Append results for future concatenation
                 datasets.append(data)
