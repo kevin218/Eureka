@@ -51,57 +51,59 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
 
     Examples
     --------
+    .. highlight:: python
+    .. code-block:: python
 
-    >>> import matplotlib.pyplot as plt
-    >>> import gaussian as g
+        >>> import matplotlib.pyplot as plt
+        >>> import gaussian as g
 
-    >>> x = np.arange(-10., 10.005, 0.01)
-    >>> plt.plot(x, g.gaussian(x))
-    >>> plt.title('Gaussian')
-    >>> plt.xlabel('Abcissa')
-    >>> plt.ylabel('Ordinate')
+        >>> x = np.arange(-10., 10.005, 0.01)
+        >>> plt.plot(x, g.gaussian(x))
+        >>> plt.title('Gaussian')
+        >>> plt.xlabel('Abcissa')
+        >>> plt.ylabel('Ordinate')
 
-    >>> # use an array [3] as a single parameter vector
-    >>> z = np.array([2., 2, 3])
-    >>> plt.plot(x, g.gaussian(x, *z))
+        >>> # use an array [3] as a single parameter vector
+        >>> z = np.array([2., 2, 3])
+        >>> plt.plot(x, g.gaussian(x, *z))
 
-    >>> # Test that it integrates to 1.
-    >>> a = np.indices([100, 100]) - 50
-    >>> print(np.sum(g.gaussian(a, 3, 3)))
-    0.999999999999997
-    >>> print(np.sum(g.gaussian(a, np.array([1,2]), np.array([2,3]))))
-    1.0000000107
+        >>> # Test that it integrates to 1.
+        >>> a = np.indices([100, 100]) - 50
+        >>> print(np.sum(g.gaussian(a, 3, 3)))
+        0.999999999999997
+        >>> print(np.sum(g.gaussian(a, np.array([1,2]), np.array([2,3]))))
+        1.0000000107
 
-    >>> plt.clf()
-    >>> plt.imshow(g.gaussian(a, [3,5], [7,3]))
-    >>> plt.title('2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
+        >>> plt.clf()
+        >>> plt.imshow(g.gaussian(a, [3,5], [7,3]))
+        >>> plt.title('2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
 
-    >>> A gaussian + a linear background level:
-    >>> g2 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75), height=4.3,
-    >>>                 bgpars=[0.05, 0.01, 1.0])
-    >>> plt.figure(1)
-    >>> plt.clf()
-    >>> plt.imshow(g2, origin='lower_left', interpolation='nearest')
-    >>> plt.colorbar()
-    >>> plt.title('2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
+        >>> A gaussian + a linear background level:
+        >>> g2 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75),
+        >>>                 height=4.3, bgpars=[0.05, 0.01, 1.0])
+        >>> plt.figure(1)
+        >>> plt.clf()
+        >>> plt.imshow(g2, origin='lower_left', interpolation='nearest')
+        >>> plt.colorbar()
+        >>> plt.title('2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
 
-    >>> plt.figure(2)
-    >>> plt.clf()
-    >>> plt.plot(g2[13,:])
-    >>> plt.title('X slice of 2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Z')
+        >>> plt.figure(2)
+        >>> plt.clf()
+        >>> plt.plot(g2[13,:])
+        >>> plt.title('X slice of 2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Z')
 
-    >>> plt.figure(3)
-    >>> plt.clf()
-    >>> plt.plot(g2[:,16])
-    >>> plt.title('Y slice of 2D Gaussian')
-    >>> plt.xlabel('Y')
-    >>> plt.ylabel('Z')
+        >>> plt.figure(3)
+        >>> plt.clf()
+        >>> plt.plot(g2[:,16])
+        >>> plt.title('Y slice of 2D Gaussian')
+        >>> plt.xlabel('Y')
+        >>> plt.ylabel('Z')
 
     Notes
     -----
@@ -345,127 +347,129 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
 
     Examples
     --------
+    .. highlight:: python
+    .. code-block:: python
 
-    >>> import matplotlib.pyplot as plt
-    >>> import gaussian as g
+        >>> import matplotlib.pyplot as plt
+        >>> import gaussian as g
 
-    >>> # parameters for X
-    >>> lx = -3.  # low end of range
-    >>> hx = 5.   # high end of range
-    >>> dx = 0.05 # step
+        >>> # parameters for X
+        >>> lx = -3.  # low end of range
+        >>> hx = 5.   # high end of range
+        >>> dx = 0.05 # step
 
-    >>> # parameters of the noise
-    >>> nc = 0.0  # noice center
-    >>> ns = 1.0  # noise width
-    >>> na = 0.2  # noise amplitude
+        >>> # parameters of the noise
+        >>> nc = 0.0  # noice center
+        >>> ns = 1.0  # noise width
+        >>> na = 0.2  # noise amplitude
 
-    >>> # 1D Example
+        >>> # 1D Example
 
-    >>> # parameters of the underlying Gaussian
-    >>> wd = 1.1  # width
-    >>> ct = 1.2  # center
-    >>> ht = 2.2  # height
+        >>> # parameters of the underlying Gaussian
+        >>> wd = 1.1  # width
+        >>> ct = 1.2  # center
+        >>> ht = 2.2  # height
 
-    >>> # x and y data to fit
-    >>> x  = np.arange(lx, hx + dx / 2., dx)
-    >>> x +=                             na * np.random.normal(nc, ns, x.size)
-    >>> y  = g.gaussian(x, wd, ct, ht) + na * np.random.normal(nc, ns, x.size)
-    >>> s  = x.argsort()    # sort, in case noise violated order
-    >>> xs = x[s]
-    >>> ys = y[s]
+        >>> # x and y data to fit
+        >>> x  = np.arange(lx, hx + dx / 2., dx)
+        >>> x += na * np.random.normal(nc, ns, x.size)
+        >>> y  = g.gaussian(x, wd, ct, ht)+na*np.random.normal(nc, ns, x.size)
+        >>> s  = x.argsort()   # sort, in case noise violated order
+        >>> xs = x[s]
+        >>> ys = y[s]
 
-    >>> # calculate guess and fit
-    >>> (width, center, height)     = g.gaussianguess(ys, xs)
-    >>> (fw,    fc,     fh,    err) = g.fitgaussian(ys, xs)
+        >>> # calculate guess and fit
+        >>> (width, center, height)     = g.gaussianguess(ys, xs)
+        >>> (fw,    fc,     fh,    err) = g.fitgaussian(ys, xs)
 
-    >>> # plot results
-    >>> plt.clf()
-    >>> plt.plot(xs, ys)
-    >>> plt.plot(xs,      g.gaussian(xs, wd,    ct,     ht))
-    >>> plt.plot(xs,      g.gaussian(xs, width, center, height))
-    >>> plt.plot(xs,      g.gaussian(xs, fw,    fc,     fh))
-    >>> plt.title('Gaussian Data, Guess, and Fit')
-    >>> plt.xlabel('Abcissa')
-    >>> plt.ylabel('Ordinate')
-    >>> # plot residuals
-    >>> plt.clf()
-    >>> plt.plot(xs, ys - g.gaussian(xs, fw,    fc,     fh))
-    >>> plt.title('Gaussian Fit Residuals')
-    >>> plt.xlabel('Abcissa')
-    >>> plt.ylabel('Ordinate')
+        >>> # plot results
+        >>> plt.clf()
+        >>> plt.plot(xs, ys)
+        >>> plt.plot(xs, g.gaussian(xs, wd, ct, ht))
+        >>> plt.plot(xs, g.gaussian(xs, width, center, height))
+        >>> plt.plot(xs, g.gaussian(xs, fw, fc, fh))
+        >>> plt.title('Gaussian Data, Guess, and Fit')
+        >>> plt.xlabel('Abcissa')
+        >>> plt.ylabel('Ordinate')
+        >>> # plot residuals
+        >>> plt.clf()
+        >>> plt.plot(xs, ys - g.gaussian(xs, fw, fc, fh))
+        >>> plt.title('Gaussian Fit Residuals')
+        >>> plt.xlabel('Abcissa')
+        >>> plt.ylabel('Ordinate')
 
-    >>> # 2D Example
+        >>> # 2D Example
 
-    >>> # parameters of the underlying Gaussian
-    >>> wd = (1.1, 3.2)  # width
-    >>> ct = (1.2, 3.1)  # center
-    >>> ht = 2.2         # height
+        >>> # parameters of the underlying Gaussian
+        >>> wd = (1.1, 3.2)  # width
+        >>> ct = (1.2, 3.1)  # center
+        >>> ht = 2.2         # height
 
-    >>> # x and y data to fit
-    >>> nx = (hx - lx) / dx + 1
-    >>> x  = np.indices((nx, nx)) * dx + lx
-    >>> y  = g.gaussian(x, wd, ct, ht) + na * np.random.normal(nc, ns,
-                                                               x.shape[1:])
+        >>> # x and y data to fit
+        >>> nx = (hx - lx) / dx + 1
+        >>> x  = np.indices((nx, nx)) * dx + lx
+        >>> y  = g.gaussian(x, wd, ct, ht) + na * np.random.normal(nc, ns,
+                                                                x.shape[1:])
 
-    >>> # calculate guess and fit
-    >>> #(width, center, height) = g.gaussianguess(y, x) # not in 2D yet...
-    >>> (fw, fc, fh, err) = g.fitgaussian(y, x, (wd, ct, ht))
+        >>> # calculate guess and fit
+        >>> #(width, center, height) = g.gaussianguess(y, x) # not in 2D yet...
+        >>> (fw, fc, fh, err) = g.fitgaussian(y, x, (wd, ct, ht))
 
-    >>> # plot results
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian Given')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(    g.gaussian(x, wd, ct, ht))
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian With Noise')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(y)
-    >>> #plt.imshow(g.gaussian(x, width, center, height))  # not in 2D yet...
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian Fit')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(    g.gaussian(x, fw,    fc,     fh))
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian Fit Residuals')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(y - g.gaussian(x, fw,    fc,     fh))
+        >>> # plot results
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian Given')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(    g.gaussian(x, wd, ct, ht))
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian With Noise')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(y)
+        >>> #plt.imshow(g.gaussian(x, width, center, height))  # not in 2D yet
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian Fit')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(    g.gaussian(x, fw, fc, fh))
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian Fit Residuals')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(y - g.gaussian(x, fw, fc, fh))
 
-    >>> # All cases benefit from...
+        >>> # All cases benefit from...
 
-    >>> # show difference between fit and underlying Gaussian
-    >>> # Random data, your answers WILL VARY.
-    >>> np.array(fw) - np.array(wd)
-    array([ 0.00210398, -0.00937687])
-    >>> np.array(fc) - np.array(ct)
-    array([-0.00260803,  0.00555011])
-    >>> np.array(fh) - np.array(ht)
-    0.0030143371034774269
+        >>> # show difference between fit and underlying Gaussian
+        >>> # Random data, your answers WILL VARY.
+        >>> np.array(fw) - np.array(wd)
+        array([ 0.00210398, -0.00937687])
+        >>> np.array(fc) - np.array(ct)
+        array([-0.00260803,  0.00555011])
+        >>> np.array(fh) - np.array(ht)
+        0.0030143371034774269
 
-    >>> # Last Example:
-    >>> x = np.indices((30,30))
-    >>> g1 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75), height=1e4,
-    >>>                 bgpars=[0.0, 0.0, 100.0])
-    >>> error = np.sqrt(g1) * np.random.randn(30,30)
-    >>> y = g1 + error
-    >>> var = g1
+        >>> # Last Example:
+        >>> x = np.indices((30,30))
+        >>> g1 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75),
+        >>>                 height=1e4, bgpars=[0.0, 0.0, 100.0])
+        >>> error = np.sqrt(g1) * np.random.randn(30,30)
+        >>> y = g1 + error
+        >>> var = g1
 
-    >>> plt.figure(1)
-    >>> plt.clf()
-    >>> plt.imshow(y, origin='lower_left', interpolation='nearest')
-    >>> plt.colorbar()
-    >>> plt.title('2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>>
-    >>> guess = ((1.2,1.2),(13,16.),1e4)
-    >>> reload(g)
-    >>> fit = g.fitgaussian(y, x, bgpars=[0.0, 0.0, 110.], fitbg=1,
-                            guess=guess, mask=None, weights=1/np.sqrt(var))
-    >>> print(fit[0])
+        >>> plt.figure(1)
+        >>> plt.clf()
+        >>> plt.imshow(y, origin='lower_left', interpolation='nearest')
+        >>> plt.colorbar()
+        >>> plt.title('2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+
+        >>> guess = ((1.2,1.2),(13,16.),1e4)
+        >>> reload(g)
+        >>> fit = g.fitgaussian(y, x, bgpars=[0.0, 0.0, 110.], fitbg=1,
+                                guess=guess, mask=None, weights=1/np.sqrt(var))
+        >>> print(fit[0])
 
 
     Notes
