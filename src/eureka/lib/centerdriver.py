@@ -5,9 +5,7 @@
 # $Id: centerdriver.py 304 2010-07-13 15:36:20Z patricio $
 
 import numpy as np
-from . import err_fasym_c as ctr
 from . import imageedit as ie
-from . import psf_fit as pf
 from . import gaussian as g
 from ..S3_data_reduction import plots_s3
 
@@ -91,18 +89,18 @@ def centerdriver(method, data, guess, trim, radius, size,
         if meta.isplots_S3 >= 5 and len(img) == (2 * meta.ctr_cutout_size + 1):
             plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
-    elif method == 'col':
-        y, x = ctr.col(img)
-    elif method == 'lag':
-        y, x = ctr.actr(img, loc, asym_rad=radius,
-                        asym_size=size, method='gaus')
-    elif method == 'lac':
-        y, x = ctr.actr(img, loc, asym_rad=radius,
-                        asym_size=size, method='col')
-    elif method == 'bpf' or method == 'ipf':
-        y, x, flux, sky = pf.spitzer_fit(img, msk, weights, psf, psfctr, expand,
-                                         method)
-        extra = flux, sky
+    # elif method == 'col':
+    #     y, x = ctr.col(img)
+    # elif method == 'lag':
+    #     y, x = ctr.actr(img, loc, asym_rad=radius,
+    #                     asym_size=size, method='gaus')
+    # elif method == 'lac':
+    #     y, x = ctr.actr(img, loc, asym_rad=radius,
+    #                     asym_size=size, method='col')
+    # elif method == 'bpf' or method == 'ipf':
+    #     y, x, flux, sky = pf.spitzer_fit(img, msk, weights, psf, psfctr, expand,
+    #                                      method)
+    #     extra = flux, sky
 
     # Make trimming correction and return
     return ((y, x) + cen - trim), extra
