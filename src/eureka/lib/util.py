@@ -415,6 +415,11 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
+    The computed MAD is the average MAD along the wavelength direction. In
+    otherwords, the MAD is computed in the spectral direction for each
+    integration, and then the returned value is the average of those MAD
+    values.
+
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
