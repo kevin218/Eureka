@@ -17,363 +17,363 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
            aperr=False, nappix=False, skylev=False, skyerr=False,
            nskypix=False, nskyideal=False, status=False, isbeta=False, betaper=False):
     """
-      Perform aperture photometry on the input image.
+    Perform aperture photometry on the input image.
 
-      Parameters
-      ----------
-      image    : 2D ndimage
-                 Float array containing object to measure.
-      ctr      : 2 elements tuple
-                 x,y location of object's center.
-      photap   : Scalar
-                 Size of photometry apperture in pixels.
-      skyin    : Scalar
-                 Inner sky annulus edge, in pixels.
-      skyout   : Scalar
-                 Outer sky annulus edge, in pixels.
+    Parameters
+    ----------
+    image    : 2D ndimage
+             Float array containing object to measure.
+    ctr      : 2 elements tuple
+             x,y location of object's center.
+    photap   : Scalar
+             Size of photometry apperture in pixels.
+    skyin    : Scalar
+             Inner sky annulus edge, in pixels.
+    skyout   : Scalar
+             Outer sky annulus edge, in pixels.
 
-      betahw   : Scalar
-                 Half-width of box size around centroid for beta calculation.
+    betahw   : Scalar
+             Half-width of box size around centroid for beta calculation.
 
-      targpos  : 2 elements tuple
-                 x,y location of object's center calculated from mean image.
+    targpos  : 2 elements tuple
+             x,y location of object's center calculated from mean image.
 
-      mask     : 2D ndimage
-                 Byte array giving status of corresponding pixel in
-                 Image: bad pixel=0, good pixel=1.  Default: all pixels
-                 are good. Same shape as image.
+    mask     : 2D ndimage
+             Byte array giving status of corresponding pixel in
+             Image: bad pixel=0, good pixel=1.  Default: all pixels
+             are good. Same shape as image.
 
-      imerr    : 2D ndimage
-                 Error estimate for each pixel in the image.  Suggest
-                 sqrt(image/flat/gain+rdnoise^2), with proper adjustment
-                 if a sky, dark, or bias frame has been removed. Same
-                 shape as image.
+    imerr    : 2D ndimage
+             Error estimate for each pixel in the image.  Suggest
+             sqrt(image/flat/gain+rdnoise^2), with proper adjustment
+             if a sky, dark, or bias frame has been removed. Same
+             shape as image.
 
-      skyfrac  : Scalar
-                 Minimum fraction of sky pixels required to be good.
-                 Must be in range 0 < skyfrac < 1.
+    skyfrac  : Scalar
+             Minimum fraction of sky pixels required to be good.
+             Must be in range 0 < skyfrac < 1.
 
-      med      : Boolean
-                 If True use median rather than mean in sky level estimation.
-      nochecks : Boolean
-                 Set to True to skip checks of input sanity.
-      expand   : Integer scalar
-                 Positive integer factor by which to blow up image, for
-                 more accurate aperture arithmetic.  If expand=5, each
-                 pixel becomes a 5x5 block of pixels.  If the pixel is
-                 on the edge of an aperture or annulus radius, some of
-                 the 5x5 block will be counted and some will not.
-      order    : Integer scalar
-                 Set order to 0 to do nearest-neighbor interpolation if expand.
-                 Default: 1, bilinear interpolation.
+    med      : Boolean
+             If True use median rather than mean in sky level estimation.
+    nochecks : Boolean
+             Set to True to skip checks of input sanity.
+    expand   : Integer scalar
+             Positive integer factor by which to blow up image, for
+             more accurate aperture arithmetic.  If expand=5, each
+             pixel becomes a 5x5 block of pixels.  If the pixel is
+             on the edge of an aperture or annulus radius, some of
+             the 5x5 block will be counted and some will not.
+    order    : Integer scalar
+             Set order to 0 to do nearest-neighbor interpolation if expand.
+             Default: 1, bilinear interpolation.
 
-      aperr    : Boolean
-                 Set to True to return flux error.
+    aperr    : Boolean
+             Set to True to return flux error.
 
-      nappix   : Boolean
-                 Set to True to return number of total pixels in aperture.
+    nappix   : Boolean
+             Set to True to return number of total pixels in aperture.
 
-      skylev   : Boolean
-                 Set to True to return the sky level.
+    skylev   : Boolean
+             Set to True to return the sky level.
 
-      skyerr   : Boolean
-                 Set to True to return the error in the sky level.
+    skyerr   : Boolean
+             Set to True to return the error in the sky level.
 
-      nskypix  : boolean
-                 Set to True to return the number of good pixels in sky annulus.
+    nskypix  : boolean
+             Set to True to return the number of good pixels in sky annulus.
 
-      nskyideal: Boolean
-                 Set to True to return the number of pixels that should
-                 be in sky annulus.
+    nskyideal: Boolean
+             Set to True to return the number of pixels that should
+             be in sky annulus.
 
-      status   : Boolean
-                 Set to True to return a status flag.
-                 If status = 0, result is good.  Bits:
-                 0 = there are NaN(s) in the photometry aperture
-                 1 = there are masked pixel(s) in the photometry aperture
-                 2 = the aperture is off the edge of the image
-                 3 = a fraction less than skyfrac of the sky annulus pixels
-               is in the image and not masked
+    status   : Boolean
+             Set to True to return a status flag.
+             If status = 0, result is good.  Bits:
+             0 = there are NaN(s) in the photometry aperture
+             1 = there are masked pixel(s) in the photometry aperture
+             2 = the aperture is off the edge of the image
+             3 = a fraction less than skyfrac of the sky annulus pixels
+           is in the image and not masked
 
-      isbeta  :  boolean
-                 If True photometric extraction aperture scales with noise pixel
-                 parameter (beta).
+    isbeta  :  boolean
+             If True photometric extraction aperture scales with noise pixel
+             parameter (beta).
 
-      betaper  : Scalar
-                 Returns aperture size used for beta.
+    betaper  : Scalar
+             Returns aperture size used for beta.
 
-      Returns
-      -------
-        This function returns the flux within Photap pixels of
-        [Cx,Cy], after subtracting the average per-pixel flux in the
-        sky annulus.  See POCEDURE for details of the calculation.
+    Returns
+    -------
+    This function returns the flux within Photap pixels of
+    [Cx,Cy], after subtracting the average per-pixel flux in the
+    sky annulus.  See POCEDURE for details of the calculation.
 
-      Notes
-      -----
-        The sky level is the mean, error-weighted mean (if errors are
-        present), or median (if /med is set) of the non-masked Image
-        pixels in the sky annulus.  NaN values and values whose errors
-        are zero (for the error-weighted mean) are not included in the
-        average.  No flagging is done if these values are found in the
-        sky annulus.  SKYERR is the error in the mean, even for the
-        median calculation.  Errors in the median can only be estimated
-        using the compute-intensive bootstrap Monte-Carlo method.
+    Notes
+    -----
+    The sky level is the mean, error-weighted mean (if errors are
+    present), or median (if /med is set) of the non-masked Image
+    pixels in the sky annulus.  NaN values and values whose errors
+    are zero (for the error-weighted mean) are not included in the
+    average.  No flagging is done if these values are found in the
+    sky annulus.  SKYERR is the error in the mean, even for the
+    median calculation.  Errors in the median can only be estimated
+    using the compute-intensive bootstrap Monte-Carlo method.
 
-        The sky value is subtracted from the Image.  The photometric
-        flux is then the total of Image pixels in the aperture, whether
-        in the Mask or not.  NaN values are not included in the
-        calculation, and set the STATUS flag.  It would be much better
-        for the user to pass an interpolated image instead.
+    The sky value is subtracted from the Image.  The photometric
+    flux is then the total of Image pixels in the aperture, whether
+    in the Mask or not.  NaN values are not included in the
+    calculation, and set the STATUS flag.  It would be much better
+    for the user to pass an interpolated image instead.
 
-        For expansion, it is recommended to use bilinear
-        interpolation, which is flux-conserving:
+    For expansion, it is recommended to use bilinear
+    interpolation, which is flux-conserving:
 
-        sz = [50, 50]
-        expand = 4
-        a = dblarr(sz)
-        a[25, 25] = 1
-        b = rebin(a, expand * sz) / expand^2
-        print, total(b)
-        1.0000000
-        a[25, 26] = 1
-        b = rebin(a, expand * sz) / expand^2
-        print, total(b)
-        2.0000000
-        a[26, 26] = 3
-        b = rebin(a, expand * sz) / expand^2
-        print, total(b)
-        5.0000000
+    sz = [50, 50]
+    expand = 4
+    a = dblarr(sz)
+    a[25, 25] = 1
+    b = rebin(a, expand * sz) / expand^2
+    print, total(b)
+    1.0000000
+    a[25, 26] = 1
+    b = rebin(a, expand * sz) / expand^2
+    print, total(b)
+    2.0000000
+    a[26, 26] = 3
+    b = rebin(a, expand * sz) / expand^2
+    print, total(b)
+    5.0000000
 
-        Of course, pixels on the high-indexed edge will not follow that.
-        Neither will integer-arithmetic images, particularly at low
-        integer values (such as masks).
+    Of course, pixels on the high-indexed edge will not follow that.
+    Neither will integer-arithmetic images, particularly at low
+    integer values (such as masks).
 
-        If either the entire sky annulus or the entire aperture is bad
-        or filled with NaNs, the function sets a flag and returns NaN
-        for all incalculable values.
+    If either the entire sky annulus or the entire aperture is bad
+    or filled with NaNs, the function sets a flag and returns NaN
+    for all incalculable values.
 
-      Examples
-      --------
-        This being one of my most important routines, and being also
-        complex, the following examples are also its test suite.  Any
-        changes should produce exactly the same numerical results.
-        These tests should also be available in the accompanying file
-        apphottest.pro.
-
-
-       import sys
-       sys.path.append('/home/esp01/code/python/photpipe/lib/')
-       import apphot as ap
-       import myasym as asy
-
-       test      = 0
-       ntest     = 11
-       testout   = np.zeros((5, ntest))
-       testright = np.zeros((5, ntest))
-       sz        = [50, 50]
-       sig       = 3.0, 3.0
-       ctr       = 25.8, 25.2
-       photap    = 12
-       skyin     = 12
-       skyout    = 15
-       ampl      = 1000.0
-       sky       = 100.0
-
-       h = ampl/(2*np.pi*sig[0]*sig[1])  # height that make integral equal to ampl
-
-       f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
-       r,l = np.indices(sz)
-       image = f(r,l) + sky
-
-       plt.figure(1,(9,7))
-       plt.clf()
-       plt.title('Gaussian')
-       plt.xlabel('X coordinate')
-       plt.ylabel('Y coordinate')
-       plt.pcolor(r, l, image, cmap=plt.cm.gray)
-       plt.axis([0, sz[1]-1, 0, sz[0]-1])
-       plt.colorbar()
-       plt.show()
-
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image, ctr, photap, skyin, skyout,
-                            aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # A little of the Gaussian leaks from aperture to sky, rest is right.
-
-       mask = np.ones(sz, byte)
-       mask[24,24] = 0
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
-                            aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, 0, skylev, 0, status]
-       test += 1
-       # We use the bad value since it's in the aperture, but we flag it.
-
-       image[25,24] = np.nan
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
-                            aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, 0, skylev, 0, status]
-       test += 1
-       # We can't use a NaN! Flagged, and value changes.  Bad value still flagged.
-
-       ctr2 = [48.8, 48.2]
-       f = asy.gaussian(h, ctr2[0], ctr2[1], sig[0], sig[1])
-       image2 = f(r,l) + sky
-
-       plt.figure(2,(9,7))
-       plt.clf()
-       plt.title('Gaussian')
-       plt.xlabel('X coordinate')
-       plt.ylabel('Y coordinate')
-       plt.pcolor(r, l, image2, cmap=plt.cm.gray)
-       plt.axis([0, sz[1]-1, 0, sz[0]-1])
-       plt.colorbar()
-       plt.show()
-
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image2, ctr2, photap, skyin, skyout, mask = mask,
-                            aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, 0, skylev, 0, status]
-       test += 1
-       # Flagged that we're off the image.
-
-       skyfrac = 0.5
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image2, ctr2, photap, skyin, skyout,
-                            mask=mask, skyfrac=skyfrac,
-                            aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, 0, skylev, 0, status]
-       test += 1
-       # Flagged that we are off the image and have insufficient sky.
-       # Same numbers.
-
-       f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
-       image = f(r,l) + sky
-       imerr = np.sqrt(image)
-       mask = np.ones(sz, byte)
-
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-                   imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # Estimates for errors above.  Basic numbers don't change.
-
-       imerr[25, 38] = 0
-       aplev, aperr, skylev, skyerr, \
-        status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-                   imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # The zero-error pixel is ignored in the sky average. Small changes result.
-
-       imerr[25, 38] = np.nan
-       aplev, aperr, skylev, skyerr, \
-       status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-                   imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # The NaN in the sky error is ignored, with the same result.
-
-       image[25, 38] = np.nan
-       imerr = sqrt(image)
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-                   imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # The NaN in the sky data is ignored, with the same result.
-       # FINDME: my aplev is changing
+    Examples
+    --------
+    This being one of my most important routines, and being also
+    complex, the following examples are also its test suite.  Any
+    changes should produce exactly the same numerical results.
+    These tests should also be available in the accompanying file
+    apphottest.pro.
 
 
-       ##
-       f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
-       image = f(r,l) + sky
+    import sys
+    sys.path.append('/home/esp01/code/python/photpipe/lib/')
+    import apphot as ap
+    import myasym as asy
+
+    test      = 0
+    ntest     = 11
+    testout   = np.zeros((5, ntest))
+    testright = np.zeros((5, ntest))
+    sz        = [50, 50]
+    sig       = 3.0, 3.0
+    ctr       = 25.8, 25.2
+    photap    = 12
+    skyin     = 12
+    skyout    = 15
+    ampl      = 1000.0
+    sky       = 100.0
+
+    h = ampl/(2*np.pi*sig[0]*sig[1])  # height that make integral equal to ampl
+
+    f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
+    r,l = np.indices(sz)
+    image = f(r,l) + sky
+
+    plt.figure(1,(9,7))
+    plt.clf()
+    plt.title('Gaussian')
+    plt.xlabel('X coordinate')
+    plt.ylabel('Y coordinate')
+    plt.pcolor(r, l, image, cmap=plt.cm.gray)
+    plt.axis([0, sz[1]-1, 0, sz[0]-1])
+    plt.colorbar()
+    plt.show()
+
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image, ctr, photap, skyin, skyout,
+                        aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # A little of the Gaussian leaks from aperture to sky, rest is right.
+
+    mask = np.ones(sz, byte)
+    mask[24,24] = 0
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
+                        aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, 0, skylev, 0, status]
+    test += 1
+    # We use the bad value since it's in the aperture, but we flag it.
+
+    image[25,24] = np.nan
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
+                        aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, 0, skylev, 0, status]
+    test += 1
+    # We can't use a NaN! Flagged, and value changes.  Bad value still flagged.
+
+    ctr2 = [48.8, 48.2]
+    f = asy.gaussian(h, ctr2[0], ctr2[1], sig[0], sig[1])
+    image2 = f(r,l) + sky
+
+    plt.figure(2,(9,7))
+    plt.clf()
+    plt.title('Gaussian')
+    plt.xlabel('X coordinate')
+    plt.ylabel('Y coordinate')
+    plt.pcolor(r, l, image2, cmap=plt.cm.gray)
+    plt.axis([0, sz[1]-1, 0, sz[0]-1])
+    plt.colorbar()
+    plt.show()
+
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image2, ctr2, photap, skyin, skyout, mask = mask,
+                        aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, 0, skylev, 0, status]
+    test += 1
+    # Flagged that we're off the image.
+
+    skyfrac = 0.5
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image2, ctr2, photap, skyin, skyout,
+                        mask=mask, skyfrac=skyfrac,
+                        aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, 0, skylev, 0, status]
+    test += 1
+    # Flagged that we are off the image and have insufficient sky.
+    # Same numbers.
+
+    f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
+    image = f(r,l) + sky
+    imerr = np.sqrt(image)
+    mask = np.ones(sz, byte)
+
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
+               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # Estimates for errors above.  Basic numbers don't change.
+
+    imerr[25, 38] = 0
+    aplev, aperr, skylev, skyerr, \
+    status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
+               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # The zero-error pixel is ignored in the sky average. Small changes result.
+
+    imerr[25, 38] = np.nan
+    aplev, aperr, skylev, skyerr, \
+    status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
+               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # The NaN in the sky error is ignored, with the same result.
+
+    image[25, 38] = np.nan
+    imerr = sqrt(image)
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
+               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # The NaN in the sky data is ignored, with the same result.
+    # FINDME: my aplev is changing
 
 
-       imerr  = sqrt(image)
-       expand = 5
-       order  = 0 # sample = 1
-
-       aplev, aperr, skylev, skyerr, \
-       status = ap.apphot(image, ctr, photap, skyin, skyout, expand = expand,
-                          mask = mask, imerr = imerr, order=order,
-                          aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # Slight changes.
-
-       expand = 5
-       order  = 1  # IDL sample = 0
-       aplev, aperr, skylev, skyerr, \
-         status = ap.apphot(image, ctr, photap, skyin, skyout, expand = expand,
-                            mask = mask, imerr = imerr, order=order,
-                            aperr=True, skylev=True, skyerr=True, status=True)
-
-       print(aplev, aperr, skylev, skyerr, status)
-       testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
-       test += 1
-       # Slight changes.  Why the flag?
-
-       skyerrest = np.sqrt(sky/(np.pi * (skyout**2 - skyin**2))) # skyerr estimate
-       #      0.62687732
-       print( 'Correct:' )
-       print( [ampl,
-       np.sqrt(ampl + np.pi * photap**2 * (sky+skyerrest**2)), # aperr estim.
-       # Note that background flux of 100 contributes a lot!
-       #       215.44538
-       sky,
-       skyerrest,
-       0] )
-       print( 'Test results:')
-       print( testout)
-       print( 'Correct results:')
-       print( testright)
-       print( 'Differences:')
-       print( testout - testright)
+    ##
+    f = asy.gaussian(h, ctr[0], ctr[1], sig[0], sig[1])
+    image = f(r,l) + sky
 
 
-     Revisions:
-     ---------
-     Written by: Joseph Harrington, Cornell. 27-02-2004
-                 jh@oobleck.astro.cornell.edu
-     18-03-2004 jh	Added nochecks keyword.
-     19-03-2004 jh	Added error calculation.
-     13-01-2005 jh	Fixed header comment.  Added NAN keyword.
-     14-10-2005 jh	Found and fixed major bug in sky mask
-               calculation (needed parens around
-               subtraction next to mask multiplication).
-               Added skyfrac.
-     07-11-2005 shl35	Added STATUS keyword, error-weighted sky mean.
-     16-11-2005 jh	Rewrote, using meanerr.  Fixed major bug in
-               error calc.  Added scaling and test cases.
-     24-11-2005 jh	Return NAPPIX, NSKYPIX, NSKYIDEAL (all renamed).
-     30-11-2005 jh	Changed NAPPIX, NSKYPIX, NSKYIDEAL to give
-               fractional, unexpanded pixels.
-     21-07-2010 patricio  Converted to python.
+    imerr  = sqrt(image)
+    expand = 5
+    order  = 0 # sample = 1
+
+    aplev, aperr, skylev, skyerr, \
+    status = ap.apphot(image, ctr, photap, skyin, skyout, expand = expand,
+                      mask = mask, imerr = imerr, order=order,
+                      aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # Slight changes.
+
+    expand = 5
+    order  = 1  # IDL sample = 0
+    aplev, aperr, skylev, skyerr, \
+     status = ap.apphot(image, ctr, photap, skyin, skyout, expand = expand,
+                        mask = mask, imerr = imerr, order=order,
+                        aperr=True, skylev=True, skyerr=True, status=True)
+
+    print(aplev, aperr, skylev, skyerr, status)
+    testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
+    test += 1
+    # Slight changes.  Why the flag?
+
+    skyerrest = np.sqrt(sky/(np.pi * (skyout**2 - skyin**2))) # skyerr estimate
+    #      0.62687732
+    print( 'Correct:' )
+    print( [ampl,
+    np.sqrt(ampl + np.pi * photap**2 * (sky+skyerrest**2)), # aperr estim.
+    # Note that background flux of 100 contributes a lot!
+    #       215.44538
+    sky,
+    skyerrest,
+    0] )
+    print( 'Test results:')
+    print( testout)
+    print( 'Correct results:')
+    print( testright)
+    print( 'Differences:')
+    print( testout - testright)
+
+
+    Revisions:
+    ---------
+    Written by: Joseph Harrington, Cornell. 27-02-2004
+             jh@oobleck.astro.cornell.edu
+    18-03-2004 jh	Added nochecks keyword.
+    19-03-2004 jh	Added error calculation.
+    13-01-2005 jh	Fixed header comment.  Added NAN keyword.
+    14-10-2005 jh	Found and fixed major bug in sky mask
+           calculation (needed parens around
+           subtraction next to mask multiplication).
+           Added skyfrac.
+    07-11-2005 shl35	Added STATUS keyword, error-weighted sky mean.
+    16-11-2005 jh	Rewrote, using meanerr.  Fixed major bug in
+           error calc.  Added scaling and test cases.
+    24-11-2005 jh	Return NAPPIX, NSKYPIX, NSKYIDEAL (all renamed).
+    30-11-2005 jh	Changed NAPPIX, NSKYPIX, NSKYIDEAL to give
+           fractional, unexpanded pixels.
+    21-07-2010 patricio  Converted to python.
     """
 
     # tini = time.time()

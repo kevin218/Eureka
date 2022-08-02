@@ -81,7 +81,6 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
     13-04-2008 ks       Changed message to print (line 134)
     13-04-2008 ks       Converted long to string in print (line 134)
     20-07-2010 patricio Converted to python.
-    02-08-2022 szieba   Changed format to be consistent with flake8
     """
 
     # Sizes

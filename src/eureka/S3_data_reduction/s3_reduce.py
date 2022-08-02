@@ -465,7 +465,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 plots_s3.phot_npix(meta, spec)
                 plots_s3.phot_2d_frame_diff(meta, spec)
             if meta.photometry:
-                util.apphot_status(spec)
+                apphot.apphot_status(spec)
             if not meta.photometry:
                 del (spec['flux'])
 
