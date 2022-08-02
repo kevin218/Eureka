@@ -23,16 +23,37 @@ Eureka's Stages
 
 A more detailed discussion of the steps taken in stages 3--6 are summarized below. Stages 1 and 2 are left out as they basically just offer a wrapper for the ``jwst`` pipeline which has already documented their `Stage 1 <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`_, `Stage 2 (spectroscopy) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`_, amd `Stage 2 (photometry) <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_image2.html>`_.
 
+
+
 Stage 3: Data Reduction
 -----------------------
+
+.. _stage3_flowchart:
+
+.. figure:: ../media/stage3_flowchart.png
+  :alt: An overview flowchart of Eureka!'s Stage 3.
+
+  Figure 1: An overview flowchart of ``Eureka!``'s Stage 3.
+
 
 
 Stage 4: Generating Lightcurves
 -------------------------------
 
+.. _stage4_flowchart:
+
+.. figure:: ../media/stage4_flowchart.png
+  :alt: An overview flowchart of Eureka!'s Stage 4.
+
+  Figure 1: An overview flowchart of ``Eureka!``'s Stage 4.
+
+
 
 Stage 5: Lightcurve Fitting
 ---------------------------
+
+
+
 
 
 Stage 6: Plotting Plantary Spectra
