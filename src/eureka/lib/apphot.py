@@ -585,3 +585,17 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
     # ttotal =  time.time() - tini
 
     return ret[np.where(retidx)]
+
+
+def apphot_status(data):
+    """
+    Prints a warning if aperture step had errors.
+    """
+    if sum(data.status != 0) > 0:
+        print('A warning by the aperture photometry routine:')
+        if 1 in np.unique(data.status):
+            print('there are masked pixel(s) in the photometry aperture')
+        elif 2 in np.unique(data.status):
+            print('the aperture is off the edge of the image')
+        elif 3 in np.unique(data.status):
+            print('a fraction less than skyfrac of the sky annulus pixels is in the image and not masked')
