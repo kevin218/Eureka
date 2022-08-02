@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy import interpolate
 
 def find_column_median_shifts(data, meta, log):
     '''Takes the median frame (in time) and finds the 
@@ -30,22 +30,14 @@ def find_column_median_shifts(data, meta, log):
     
     if meta.smooth_trace:
         log.writelog('  Smoothing the trace... ',
-                     mute=(not meta.verbose))        
+                     mute=(not meta.verbose)) 
         #check if column_coms is smooth
-        coms=column_coms.flatten()
-        grad=np.gradient(coms)
-        grad=grad-np.mean(grad)
-        badpix_f=np.where(np.abs(grad)>(2*np.std(grad)))
-        badpix_f=badpix_f[0]
-        for bp_l in badpix_f:
-            if (bp_l+2) in badpix_f:           
-                bp=bp_l+1
-                if (bp_l+3) not in badpix_f and (bp_l-1) not in badpix_f:
-                    column_coms[bp,]=(coms[bp_l]+coms[bp_l+2])/2.
-                else:
-                    column_coms[bp,]=(coms[bp_l-1]+coms[bp_l+3])/2.    
+        l=column_coms.shape[0]
+        xs=np.arange(l)
+        spline_func=interpolate.splrep(xs,column_coms,s=10000)
+        column_coms0=interpolate.splev(xs,spline_func)
+        column_coms=np.array(column_coms0).reshape((l,))
 
-    
     #convert com to integers (pixels)
     column_coms = np.around(column_coms).astype(int)
 
