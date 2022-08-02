@@ -207,6 +207,83 @@ def gaussianguess(data, mask=None, yxguess=None):
     return (gwidth, gcenter, gheight)
 
 
+def residuals(params, x, data, mask, weights, bgpars, fitbg):
+    """
+    Calculates the residuals between data and a gaussian model
+    determined by the rest of the parameters. Used in fitgaussian.
+
+    Parameters
+    ----------
+    params : 1D ndarray
+        This array contains the parameters desired to fit with
+        fitgaussian, depending on fitbg, the number of elements
+        varies.
+    x : ndarray
+        Array (any shape) giving the abcissas of data.
+    data : ndarray
+        Array giving the values of the function.
+    mask : ndarray
+        Same shape as data. Values where its corresponding mask value is
+        0 are disregarded for the minimization. Only values where the
+        mask value is 1 are considered.
+    weights : ndarray
+        Same shape as data. This array defines weights for the
+        minimization, for scientific data the weights should be
+        1/sqrt(variance).
+    bgpars : ndarray or tuple, 3-elements
+        Background parameters, the elements determine a X- and Y-linearly
+        dependant level, of the form:
+        background = Y*bgparam[0] + X*bgparam[1] + bgparam[2]
+    fitbg : Integer
+        This flag indicates the level of background fitting:
+        fitbg=0: No fitting, estimate the bg as median(data).
+        fitbg=1: Fit a constant to the bg (bg = c).
+        fitbg=2: Fit a plane as bg (bg = a*x + b*y + c).
+
+    Returns
+    -------
+    residuals : 1D ndarray
+        An array of the (unmasked) weighted residuals between data and
+        a gaussian model determined by params (and bgpars when
+        necessary).
+
+    Notes
+    -----
+    History:
+
+    - 2011-05-03  patricio pcubillos@fulbrightmail.org
+        Initial version.                 
+    """
+    # Use bgpars as default for background parameters, if those values
+    # are being fitted update them:
+    bgparams = bgpars
+    if fitbg == 1:
+        bgparams[2] = params[-1]   # update
+        params = params[0:-1]  # remove last parameters from params
+    elif fitbg == 2:
+        bgparams = params[-3:]   # update
+        params = params[0:-3]  # remove last parameters
+
+    # Extract width, center, and height from params:
+    data_dims = np.ndim(data)
+    params_len = len(params)
+
+    width = params[0:data_dims]
+    center = params[data_dims:2*data_dims]
+    if params_len - 2*data_dims == 1:
+        height = params[2*data_dims]
+    else:
+        # when height is None, queda la cagada, avoid this case.
+        height = None
+
+    # Produce the model:
+    model = gaussian(x, width, center, height, bgparams).squeeze()
+    # Calculate residuals:
+    res = (model - data) * weights
+    # Return only unmasked values:
+    return res[np.where(mask)]
+
+
 def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
                 mask=None, weights=None, maskg=False, yxguess=None):
     """Fits an N-dimensional Gaussian to (value, coordinate) data.
@@ -484,83 +561,6 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     return p, err
 
 
-def residuals(params, x, data, mask, weights, bgpars, fitbg):
-    """
-    Calculates the residuals between data and a gaussian model
-    determined by the rest of the parameters. Used in fitgaussian.
-
-    Parameters
-    ----------
-    params : 1D ndarray
-        This array contains the parameters desired to fit with
-        fitgaussian, depending on fitbg, the number of elements
-        varies.
-    x : ndarray
-        Array (any shape) giving the abcissas of data.
-    data : ndarray
-        Array giving the values of the function.
-    mask : ndarray
-        Same shape as data. Values where its corresponding mask value is
-        0 are disregarded for the minimization. Only values where the
-        mask value is 1 are considered.
-    weights : ndarray
-        Same shape as data. This array defines weights for the
-        minimization, for scientific data the weights should be
-        1/sqrt(variance).
-    bgpars : ndarray or tuple, 3-elements
-        Background parameters, the elements determine a X- and Y-linearly
-        dependant level, of the form:
-        background = Y*bgparam[0] + X*bgparam[1] + bgparam[2]
-    fitbg : Integer
-        This flag indicates the level of background fitting:
-        fitbg=0: No fitting, estimate the bg as median(data).
-        fitbg=1: Fit a constant to the bg (bg = c).
-        fitbg=2: Fit a plane as bg (bg = a*x + b*y + c).
-
-    Returns
-    -------
-    residuals : 1D ndarray
-        An array of the (unmasked) weighted residuals between data and
-        a gaussian model determined by params (and bgpars when
-        necessary).
-
-    Notes
-    -----
-    History:
-
-    2011-05-03  patricio Initial version.
-                         pcubillos@fulbrightmail.org
-    """
-    # Use bgpars as default for background parameters, if those values
-    # are being fitted update them:
-    bgparams = bgpars
-    if fitbg == 1:
-        bgparams[2] = params[-1]   # update
-        params = params[0:-1]  # remove last parameters from params
-    elif fitbg == 2:
-        bgparams = params[-3:]   # update
-        params = params[0:-3]  # remove last parameters
-
-    # Extract width, center, and height from params:
-    data_dims = np.ndim(data)
-    params_len = len(params)
-
-    width = params[0:data_dims]
-    center = params[data_dims:2*data_dims]
-    if params_len - 2*data_dims == 1:
-        height = params[2*data_dims]
-    else:
-        # when height is None, queda la cagada, avoid this case.
-        height = None
-
-    # Produce the model:
-    model = gaussian(x, width, center, height, bgparams).squeeze()
-    # Calculate residuals:
-    res = (model - data) * weights
-    # Return only unmasked values:
-    return res[np.where(mask)]
-
-
 def gaussians(x, param):
     """Evaluate more than 1 gaussian.
     """
@@ -603,9 +603,39 @@ def gaussians(x, param):
     return result
 
 
+def resids(param, x, ngauss, y):
+    """Get the residuals of a Gaussian compared to data for fitting.
+
+    Parameters
+    ----------
+    param : ndarray (1D)
+        The fitted parameters raveled into a 1D array.
+    x : ndarray (1D)
+        The x-positions of the values y.
+    ngauss : int
+        The number of Gaussians being fitted.
+    y : ndarray (1D)
+        The values to which a Gaussian should be fitted.
+
+    Returns
+    -------
+    ndarray (1D)
+        The difference between y and the Gaussian.
+    """
+    sigma = param[-1]
+    param = np.reshape(param[0:-1], (ngauss, len(param[0:-1])/ngauss))
+
+    gss = []
+    for k in np.arange(ngauss):
+        gauss = np.append(sigma, np.append(sigma, param[k]))
+        gss = np.append(gss, gauss)
+    p = np.reshape(gss, (ngauss, len(gss)/ngauss))
+    return np.ravel(gaussians(x, param=p)-y)
+
+
 def fitgaussians(y, x=None, guess=None, sigma=1.0):
     """Fit position and flux of a data image with gaussians, same sigma
-    is applied to all dispersions.
+    is applied to all directions.
 
     Parameters
     ----------
@@ -648,15 +678,3 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
     extra = (p, sigma, iscov, cov, info, mesg)
 
     return np.array(p[0, 0:2]), extra
-
-
-def resids(param, x, ngauss, y):
-    sigma = param[-1]
-    param = np.reshape(param[0:-1], (ngauss, len(param[0:-1])/ngauss))
-
-    gss = []
-    for k in np.arange(ngauss):
-        gauss = np.append(sigma, np.append(sigma, param[k]))
-        gss = np.append(gss, gauss)
-    p = np.reshape(gss, (ngauss, len(gss)/ngauss))
-    return np.ravel(gaussians(x, param=p)-y)
