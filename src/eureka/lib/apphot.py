@@ -598,4 +598,5 @@ def apphot_status(data):
         elif 2 in np.unique(data.status):
             print('the aperture is off the edge of the image')
         elif 3 in np.unique(data.status):
-            print('a fraction less than skyfrac of the sky annulus pixels is in the image and not masked')
+            print('a fraction less than skyfrac of the sky annulus '
+                  'pixels is in the image and not masked')
