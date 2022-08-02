@@ -124,10 +124,6 @@ def driftxwidth(meta, lc):
     lc : Xarray Dataset
         The light curve object containing drift arrays.
 
-    Returns
-    -------
-    None
-
     Notes
     -----
     History:
