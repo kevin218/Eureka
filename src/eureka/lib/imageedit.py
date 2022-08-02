@@ -5,43 +5,43 @@
 # $Id: imageedit.py 301 2010-07-10 07:33:44Z patricio $
 
 import numpy as np
+
 """
-    Name
-    ----
-    Image Edit
+Name
+----
+Image Edit
 
-    File
-    ----
-    imageedit.py
+File
+----
+imageedit.py
 
-    Description
-    -----------
-    Routines for editting 2D array images, allows to cut and paste one
-    array into other.
+Description
+-----------
+Routines for editting 2D array images, allows to cut and paste one
+array into other.
 
-    Package Contents
-    ----------------
-    trimimage(data, (yc,xc), (yr,xr), mask=None, uncd=None, oob=0):
-        Extracts a rectangular area of an image masking out of bound pixels.
+Package Contents
+----------------
+trimimage(data, (yc,xc), (yr,xr), mask=None, uncd=None, oob=0):
+    Extracts a rectangular area of an image masking out of bound pixels.
 
-    pasteimage(data, subim, (dyc,dxc), (syc,sxc)=(None,None)):
-        Inserts subim array into data, matching the specified coordinates.
+pasteimage(data, subim, (dyc,dxc), (syc,sxc)=(None,None)):
+    Inserts subim array into data, matching the specified coordinates.
 
-    Examples:
-    ---------
+Examples:
+---------
 
-    Revisions
-    ---------
-    2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
+Revisions
+---------
+2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
 """
+
 
 def trimimage(data, c, r, mask=None, uncd=None, oob=0):
+    (yc, xc) = c
+    (yr, xr) = r
 
-  (yc,xc) = c
-  (yr,xr) = r
-
-
-  """
+    """
     Extracts a rectangular area of an image masking out of bound pixels.
 
     Parameters:
@@ -106,52 +106,48 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
     Revisions
     ---------
     2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
-  """
+    """
 
-  # Shape of original data
-  ny, nx = np.shape(data)
+    # Shape of original data
+    ny, nx = np.shape(data)
 
-  # The extracted image and mask
-  im = np.zeros((2*int(yr)+1, 2*int(xr)+1))
+    # The extracted image and mask
+    im = np.zeros((2 * int(yr) + 1, 2 * int(xr) + 1))
 
-  # coordinates of the limits of the extracted image
-  uplim = int(yc + yr + 1)  # upper limit
-  lolim = int(yc - yr)      # lower limit
-  rilim = int(xc + xr + 1)  # right limit
-  lelim = int(xc - xr)      # left  limit
+    # coordinates of the limits of the extracted image
+    uplim = int(yc + yr + 1)  # upper limit
+    lolim = int(yc - yr)  # lower limit
+    rilim = int(xc + xr + 1)  # right limit
+    lelim = int(xc - xr)  # left  limit
 
-  # Ranges (in the original image):
-  bot = np.amax((0,  lolim)) # bottom
-  top = np.amin((ny, uplim)) # top
-  lft = np.amax((0,  lelim)) # left
-  rgt = np.amin((nx, rilim)) # right
+    # Ranges (in the original image):
+    bot = np.amax((0, lolim))  # bottom
+    top = np.amin((ny, uplim))  # top
+    lft = np.amax((0, lelim))  # left
+    rgt = np.amin((nx, rilim))  # right
 
-  im[bot-lolim:top-lolim, lft-lelim:rgt-lelim] = data[bot:top, lft:rgt]
-  ret = im
+    im[bot - lolim:top - lolim, lft - lelim:rgt - lelim] = data[bot:top, lft:rgt]
+    ret = im
 
-  if mask is not None:
-    ma = np.zeros((2*int(yr)+1, 2*int(xr)+1)) + oob   # The mask is initialized to oob
-    ma[bot-lolim:top-lolim, lft-lelim:rgt-lelim] = mask[bot:top, lft:rgt]
-    ret = (ret, ma)
+    if mask is not None:
+        ma = np.zeros((2 * int(yr) + 1, 2 * int(xr) + 1)) + oob  # The mask is initialized to oob
+        ma[bot - lolim:top - lolim, lft - lelim:rgt - lelim] = mask[bot:top, lft:rgt]
+        ret = (ret, ma)
 
-  if uncd is not None:
-    un = np.zeros((2*int(yr)+1, 2*int(xr)+1)) + np.amax(uncd[bot:top, lft:rgt])
-    un[bot-lolim:top-lolim, lft-lelim:rgt-lelim] = uncd[bot:top, lft:rgt]
-    ret = (ret, un) if mask is None else ret + (un,)
+    if uncd is not None:
+        un = np.zeros((2 * int(yr) + 1, 2 * int(xr) + 1)) + np.amax(uncd[bot:top, lft:rgt])
+        un[bot - lolim:top - lolim, lft - lelim:rgt - lelim] = uncd[bot:top, lft:rgt]
+        ret = (ret, un) if mask is None else ret + (un,)
 
-  return ret
-
-
+    return ret
 
 
-def pasteimage(data, subim, dy_, syx=(None,None)):
+def pasteimage(data, subim, dy_, syx=(None, None)):
+    (dyc, dxc) = dy_
+    (syc, sxc) = syx
+    # (None,None) = Nne
 
-  (dyc,dxc) = dy_
-  (syc,sxc) = syx
-  #(None,None) = Nne
-
-
-  """
+    """
     Inserts the subim array into data, the data coordinates (dyc,dxc)
     will match the subim coordinates (syc,sxc). The arrays can have not
     overlapping pixels.
@@ -218,51 +214,47 @@ def pasteimage(data, subim, dy_, syx=(None,None)):
     Revisions
     ---------
     2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
-  """
+    """
 
-  # Shape of the arrays
-  dny, dnx = np.shape(data)
-  sny, snx = np.shape(subim)
+    # Shape of the arrays
+    dny, dnx = np.shape(data)
+    sny, snx = np.shape(subim)
 
-  if (syc,sxc) is (None,None):
-    syc, sxc = sny/2, snx/2
+    if (syc, sxc) == (None, None):
+        syc, sxc = sny / 2, snx / 2
 
-  # left limits:
-  led = dxc - sxc
-  if led > dnx:  # the entire subimage is out of bounds
+    # left limits:
+    led = dxc - sxc
+    if led > dnx:  # the entire subimage is out of bounds
+        return data
+
+    les = np.amax([0, -led])  # left lim of subimage
+    led = np.amax([0, led])  # left lim of data
+
+    # right limits:
+    rid = dxc + snx - sxc
+    if rid < 0:  # the entire subimage is out of bounds
+        return data
+
+    ris = np.amin([snx, dnx - dxc + sxc])  # right lim of subimage
+    rid = np.amin([dnx, rid])  # right lim of data
+
+    # lower limits:
+    lod = dyc - syc
+    if lod > dny:  # the entire subimage is out of bounds
+        return data
+
+    los = np.amax([0, -lod])  # lower lim of subimage
+    lod = np.amax([0, lod])  # lower lim of data
+
+    # right limits:
+    upd = dyc + sny - syc
+    if upd < 0:  # the entire subimage is out of bounds
+        return data
+
+    ups = np.amin([sny, dny - dyc + syc])  # right lim of subimage
+    upd = np.amin([dny, upd])  # right lim of data
+
+    data[lod:upd, led:rid] = subim[los:ups, les:ris]
+
     return data
-
-  les = np.amax([0,-led])  # left lim of subimage
-  led = np.amax([0, led])  # left lim of data
-
-
-  # right limits:
-  rid = dxc + snx - sxc
-  if rid < 0:    # the entire subimage is out of bounds
-    return data
-
-  ris = np.amin([snx, dnx - dxc + sxc])  # right lim of subimage
-  rid = np.amin([dnx, rid])              # right lim of data
-
-
-  # lower limits:
-  lod = dyc - syc
-  if lod > dny:  # the entire subimage is out of bounds
-    return data
-
-  los = np.amax([0,-lod])  # lower lim of subimage
-  lod = np.amax([0, lod])  # lower lim of data
-
-
-  # right limits:
-  upd = dyc + sny - syc
-  if upd < 0:    # the entire subimage is out of bounds
-    return data
-
-  ups = np.amin([sny, dny - dyc + syc])  # right lim of subimage
-  upd = np.amin([dny, upd])              # right lim of data
-
-
-  data[lod:upd, led:rid] = subim[los:ups, les:ris]
-
-  return data
