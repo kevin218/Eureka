@@ -524,7 +524,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
         plt.pause(0.1)
 
 
-#Photometry
+# Photometry
 def phot_lc(meta, data):
     """
     Plots the flux as a function of time.
@@ -564,7 +564,7 @@ def phot_centroid(meta, data):
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     """
     plt.clf()
-    fig, ax = plt.subplots(4,1, sharex=True)
+    fig, ax = plt.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
@@ -572,11 +572,13 @@ def phot_centroid(meta, data):
     cy = data.centroid_y.values
     cy_rms = np.sqrt(np.mean((cy - np.median(cy)) ** 2))
 
-    ax[0].plot(data.time, data.centroid_x-np.mean(data.centroid_x), label='$\sigma$x = {0:.4f} pxls'.format(cx_rms))
+    ax[0].plot(data.time, data.centroid_x-np.mean(data.centroid_x),
+               label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms))
     ax[0].set_ylabel('Delta x')
     ax[0].legend()
 
-    ax[1].plot(data.time, data.centroid_y-np.mean(data.centroid_y), label='$\sigma$y = {0:.4f} pxls'.format(cy_rms))
+    ax[1].plot(data.time, data.centroid_y-np.mean(data.centroid_y),
+               label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms))
     ax[1].set_ylabel('Delta y')
     ax[1].legend()
 
@@ -621,27 +623,32 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     plt.figure(3503)
     plt.clf()
 
-    fig, ax = plt.subplots(2,2, figsize=(8,8))
+    fig, ax = plt.subplots(2, 2, figsize=(8, 8))
     plt.suptitle('Centroid gaussian fit')
-    fig.delaxes(ax[1,1])
+    fig.delaxes(ax[1, 1])
     ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
 
     ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
     x_plot = np.linspace(0, len(np.sum(img, axis=0)))
-    ax[1, 0].plot(x_plot, stats.norm.pdf(x_plot, x, sx)/np.max(stats.norm.pdf(x_plot, x, sx))*np.max(np.sum(img, axis=0)))
+    norm_distr_x = stats.norm.pdf(x_plot, x, sx)
+    norm_distr_x_scaled = norm_distr_x/np.max(norm_distr_x)*np.max(np.sum(img, axis=0))
+    ax[1, 0].plot(x_plot, norm_distr_x_scaled)
     ax[1, 0].set_xlabel('x position')
     ax[1, 0].set_ylabel('Flux (electrons)')
 
     ax[0, 1].plot(np.sum(img, axis=1), range(len(np.sum(img, axis=1))))
     y_plot = np.linspace(0, len(np.sum(img, axis=1)))
-    ax[0, 1].plot(stats.norm.pdf(y_plot, y, sy)/np.max(stats.norm.pdf(y_plot, y, sy))*np.max(np.sum(img, axis=1)), y_plot)
+    norm_distr_y = stats.norm.pdf(y_plot, y, sy)
+    norm_distr_y_scaled = norm_distr_y/np.max(norm_distr_y)*np.max(np.sum(img, axis=1))
+    ax[0, 1].plot(norm_distr_y_scaled, y_plot)
     ax[0, 1].set_ylabel('y position')
     ax[0, 1].set_xlabel('Flux (electrons)')
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3503_file{file_number}_int{int_number}_Centroid_Fit' + figure_filetype)
+    fname = (f'figs{os.sep}fig3503_file{file_number}_int{int_number}_Centroid_Fit'
+             + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -650,7 +657,8 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
 def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     """
     Add a vertical color bar to an image plot.
-    Taken from: https://stackoverflow.com/questions/18195758/set-matplotlib-colorbar-size-to-match-graph
+    Taken from:
+    https://stackoverflow.com/questions/18195758/set-matplotlib-colorbar-size-to-match-graph
     """
     divider = axes_grid1.make_axes_locatable(im.axes)
     width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
@@ -674,15 +682,19 @@ def phot_2d_frame(meta, m, i, data):
     xmin, xmax = data.flux.x.min().values-meta.xwindow[0], data.flux.x.max().values-meta.xwindow[0]
     ymin, ymax = data.flux.y.min().values-meta.ywindow[0], data.flux.y.max().values-meta.ywindow[0]
 
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal', extent=[xmin, xmax, ymin, ymax])
+    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
+                    extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
     plt.title('Full Frame')
     plt.ylabel('y pixels')
     plt.xlabel('x pixels')
 
-    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r', fill=False, lw=3, alpha=0.7, label='target aperture')
-    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w', fill=False, lw=4, alpha=0.8, label='sky aperture')
-    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w', fill=False, lw=4, alpha=0.8)
+    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
+                         fill=False, lw=3, alpha=0.7, label='target aperture')
+    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
+                         fill=False, lw=4, alpha=0.8, label='sky aperture')
+    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
+                         fill=False, lw=4, alpha=0.8)
     plt.gca().add_patch(circle1)
     plt.gca().add_patch(circle2)
     plt.gca().add_patch(circle3)
@@ -697,7 +709,8 @@ def phot_2d_frame(meta, m, i, data):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
-    fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame' + figure_filetype)
+    fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
+             + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -715,15 +728,19 @@ def phot_2d_frame_zoom(meta, m, i, data):
     xmin, xmax = data.flux.x.min().values-meta.xwindow[0], data.flux.x.max().values-meta.xwindow[0]
     ymin, ymax = data.flux.y.min().values-meta.ywindow[0], data.flux.y.max().values-meta.ywindow[0]
 
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal', extent=[xmin, xmax, ymin, ymax])
+    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
+                    extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
     plt.title('Full Frame')
     plt.ylabel('y pixels')
     plt.xlabel('x pixels')
 
-    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r', fill=False, lw=3, alpha=0.7, label='target aperture')
-    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w', fill=False, lw=4, alpha=0.8, label='sky aperture')
-    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w', fill=False, lw=4, alpha=0.8)
+    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
+                         fill=False, lw=3, alpha=0.7, label='target aperture')
+    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
+                         fill=False, lw=4, alpha=0.8, label='sky aperture')
+    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
+                         fill=False, lw=4, alpha=0.8)
     plt.gca().add_patch(circle1)
     plt.gca().add_patch(circle2)
     plt.gca().add_patch(circle3)
@@ -744,7 +761,8 @@ def phot_2d_frame_zoom(meta, m, i, data):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
-    fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom' + figure_filetype)
+    fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom'
+             + figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -756,7 +774,7 @@ def phot_2d_frame_oof(meta, m, i, data, flux_w_oof):
     """
     fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
 
-    im0 = ax[0].imshow(flux_w_oof, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
+    ax[0].imshow(flux_w_oof, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
     ax[0].set_title('Before 1/f correction')
     ax[0].set_ylabel('y pixels')
 
@@ -774,7 +792,8 @@ def phot_2d_frame_oof(meta, m, i, data, flux_w_oof):
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fig.suptitle((f'Segment {file_number}, Integration {int_number}'), y=0.99)
 
-    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_Frame_OOF' + figure_filetype)
+    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_Frame_OOF' +
+             figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -795,13 +814,10 @@ def phot_2d_frame_diff(meta, data):
         plt.ylim(0, flux1.shape[0])
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
-
-        plt.colorbar(label = 'Delta Flux (electrons)')
+        plt.colorbar(label='Delta Flux (electrons)')
         plt.tight_layout()
-        #file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files)) + 1))
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int)) + 1))
         plt.suptitle((f'Integration {int_number}'), y=0.99)
-
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff' + figure_filetype)
         plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
         if not meta.hide_plots:
