@@ -7,7 +7,6 @@
 
 import numpy as np
 from ..S3_data_reduction import sigrej as sr
-from . import timer as t
 
 
 def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
@@ -106,7 +105,7 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
         minchunk = 30
 
     # Initialize a Timer to report progress
-    clock = t.Timer(np.sum(nimpos) * 1.0 / szchunk)
+    # clock = t.Timer(np.sum(nimpos) * 1.0 / szchunk)
 
     for pos in np.arange(1):
         totdat = np.zeros((ny, nx))
@@ -171,7 +170,7 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
             totmsk += np.sum(submask, 0)
 
             # Report progress
-            clock.check(np.sum(nimpos[0:pos]) * 1.0 / szchunk + chunk)
+            # clock.check(np.sum(nimpos[0:pos]) * 1.0 / szchunk + chunk)
 
         # calculate mean image with zero background
         totmsk[np.where(totmsk == 0)] = 1.0
