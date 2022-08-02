@@ -69,10 +69,10 @@ def read(filename, data, meta, log):
         # Added it here so that code in other sections doesn't have to be changed
         data.attrs['shdr']['DISPAXIS'] = 1
         if hdulist[0].header['FILTER'] == 'F210M':  # TODO make this better for all filters
-            wave_1d = np.ones_like(sci[0,0]) * 2.1
-            meta.phot_wave = 2.1 # Is used in S4 for plotting. wave_1d will be deleted at the end of S3
+            wave_1d = np.ones_like(sci[0, 0]) * 2.1  # will be deleted at the end of S3
+            meta.phot_wave = 2.1  # Is used in S4 for plotting.
         elif hdulist[0].header['FILTER'] == 'F187N':
-            wave_1d = np.ones_like(sci[0,0]) * 1.87
+            wave_1d = np.ones_like(sci[0, 0]) * 1.87
             meta.phot_wave = 1.87
 
     # Record integration mid-times in BJD_TDB
@@ -129,7 +129,7 @@ def flag_bg(data, meta, log):
 
     meta.bg_y2 = meta.src_ypos + meta.bg_hw
     meta.bg_y1 = meta.src_ypos - meta.bg_hw
-    
+
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
@@ -262,13 +262,14 @@ def flag_bg_phot(data, meta, log):
         estsig = None
 
     nbadpix_total = 0
-    for i in tqdm(range(flux.shape[1]), desc='Looping over Rows for outlier removal'): #Loops over Rows
-        for j in range(flux.shape[2]): # Loops over Columns
-            ngoodpix = np.sum(mask[:,i,j]==True)
-            data['mask'][:,i,j] *= sigrej.sigrej(flux[:,i,j], meta.bg_thresh, mask[:,i,j], estsig)
-            if not all(data['mask'][:,i,j].values):
-                #counting the amount of flagged bad pixels
-                nbadpix = ngoodpix - np.sum(data['mask'][:,i,j].values)
+    for i in tqdm(range(flux.shape[1]), desc='Looping over Rows for outlier removal'):
+        for j in range(flux.shape[2]):  # Loops over Columns
+            ngoodpix = np.sum(mask[:, i, j] is True)
+            data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j], meta.bg_thresh,
+                                                   mask[:, i, j], estsig)
+            if not all(data['mask'][:, i, j].values):
+                # counting the amount of flagged bad pixels
+                nbadpix = ngoodpix - np.sum(data['mask'][:, i, j].values)
                 nbadpix_total += nbadpix
     flag_percent = nbadpix_total/np.product(flux.shape)*100
     log.writelog("  {0:.5f}% of the pixels have been flagged as outliers\n".format(flag_percent),
@@ -285,17 +286,19 @@ def corr_oof(data, meta, i, star_pos_x):
 
     # Let's first determine which amplifier regions are left in the frame.
     # For NIRCam: 4 amplifiers, 512 pixels in x dimension per amplifier
-    pxl_idxs = np.arange(2048) # Every NIRCam subarray has 2048 pixels in the x dimension
+    pxl_idxs = np.arange(2048)  # Every NIRCam subarray has 2048 pixels in the x dimension
     pxl_in_window_bool = np.zeros(2048, dtype=bool)
     # pxl_in_window_bool is True for pixels which weren't trimmed away by meta.xwindow
     for j in range(len(pxl_idxs)):
         if meta.xwindow[0] <= pxl_idxs[j] < meta.xwindow[1]:
             pxl_in_window_bool[j] = True
     ampl_used_bool = np.array(list(map(any, pxl_in_window_bool.reshape((4, 512)))))
-    # Example: if only the middle two amplifier are left after trimming: ampl_used = [False, True, True, False]
+    # Example: if only the middle two amplifier are left after trimming:
+    # ampl_used = [False, True, True, False]
 
     star_pos_x_untrim = int(star_pos_x) + meta.xwindow[0]  # position of star before trimming
-    star_exclusion_area_untrim = np.array([star_pos_x_untrim - meta.oof_bg_dist, star_pos_x_untrim + meta.oof_bg_dist])
+    star_exclusion_area_untrim = \
+        np.array([star_pos_x_untrim - meta.oof_bg_dist, star_pos_x_untrim + meta.oof_bg_dist])
 
     use_cols = np.ones(2048, dtype=bool)
     for k in range(2048):
@@ -306,7 +309,7 @@ def corr_oof(data, meta, i, star_pos_x):
 
     # Let's go through each amplifier region
     if ampl_used_bool[0]:
-        edges0 = np.array([0,512]) - meta.xwindow[0]
+        edges0 = np.array([0, 512]) - meta.xwindow[0]
         edges0[np.where(edges0 < 0)] = 0
         use_cols0 = np.copy(use_cols)
         for kk in range(len(use_cols0)):
@@ -315,22 +318,22 @@ def corr_oof(data, meta, i, star_pos_x):
             else:
                 use_cols0[kk] = False
         flux0 = data.flux.values[i][:, use_cols0]
-        err0 =  data.err.values[i] [:, use_cols0]
+        err0 = data.err.values[i][:, use_cols0]
         mask0 = data.mask.values[i][:, use_cols0]
     if ampl_used_bool[1]:
-        edges1 = np.array([512,1024]) - meta.xwindow[0]
+        edges1 = np.array([512, 1024]) - meta.xwindow[0]
         edges1[np.where(edges1 < 0)] = 0
         use_cols1 = np.copy(use_cols)
         for kk in range(len(use_cols1)):
             if edges1[0] <= kk < edges1[1]:
                 continue
             else:
-                use_cols1[kk] = False # False if columns are out of amplifier region
+                use_cols1[kk] = False  # False if columns are out of amplifier region
         flux1 = data.flux.values[i][:, use_cols1]
-        err1 =  data.err.values[i] [:, use_cols1]
+        err1 = data.err.values[i][:, use_cols1]
         mask1 = data.mask.values[i][:, use_cols1]
     if ampl_used_bool[2]:
-        edges2 = np.array([1024,1536]) - meta.xwindow[0]
+        edges2 = np.array([1024, 1536]) - meta.xwindow[0]
         edges2[np.where(edges2 < 0)] = 0
         use_cols2 = np.copy(use_cols)
         for kk in range(len(use_cols2)):
@@ -339,10 +342,10 @@ def corr_oof(data, meta, i, star_pos_x):
             else:
                 use_cols2[kk] = False
         flux2 = data.flux.values[i][:, use_cols2]
-        err2 =  data.err.values[i] [:, use_cols2]
+        err2 = data.err.values[i][:, use_cols2]
         mask2 = data.mask.values[i][:, use_cols2]
     if ampl_used_bool[3]:
-        edges3 = np.array([1536,2048]) - meta.xwindow[0]
+        edges3 = np.array([1536, 2048]) - meta.xwindow[0]
         edges3[np.where(edges3 < 0)] = 0
         use_cols3 = np.copy(use_cols)
         for kk in range(len(use_cols3)):
@@ -351,29 +354,34 @@ def corr_oof(data, meta, i, star_pos_x):
             else:
                 use_cols3[kk] = False
         flux3 = data.flux.values[i][:, use_cols3]
-        err3 =  data.err.values[i] [:, use_cols3]
+        err3 = data.err.values[i][:, use_cols3]
         mask3 = data.mask.values[i][:, use_cols3]
 
     if meta.oof_corr == 'meanerr':
         for j in range(128):
-           if ampl_used_bool[0]:
-               data.flux.values[i][j, edges0[0]:edges0[1]] -= me.meanerr(flux0[j], err0[j], mask=mask0[j], err=False)
-           if ampl_used_bool[1]:
-               data.flux.values[i][j, edges1[0]:edges1[1]] -= me.meanerr(flux1[j], err1[j], mask=mask1[j], err=False)
-           if ampl_used_bool[2]:
-               data.flux.values[i][j, edges2[0]:edges2[1]] -= me.meanerr(flux2[j], err2[j], mask=mask2[j], err=False)
-           if ampl_used_bool[3]:
-               data.flux.values[i][j, edges3[0]:edges3[1]] -= me.meanerr(flux3[j], err3[j], mask=mask3[j], err=False)
+            if ampl_used_bool[0]:
+                data.flux.values[i][j, edges0[0]:edges0[1]] -= me.meanerr(flux0[j], err0[j],
+                                                                          mask=mask0[j], err=False)
+            if ampl_used_bool[1]:
+                data.flux.values[i][j, edges1[0]:edges1[1]] -= me.meanerr(flux1[j], err1[j],
+                                                                          mask=mask1[j], err=False)
+            if ampl_used_bool[2]:
+                data.flux.values[i][j, edges2[0]:edges2[1]] -= me.meanerr(flux2[j], err2[j],
+                                                                          mask=mask2[j], err=False)
+            if ampl_used_bool[3]:
+                data.flux.values[i][j, edges3[0]:edges3[1]] -= me.meanerr(flux3[j], err3[j],
+                                                                          mask=mask3[j], err=False)
     elif meta.oof_corr == 'median':
         if ampl_used_bool[0]:
-            data.flux.values[i][:, edges0[0]:edges0[1]] -= np.median(flux0, axis=1)[:,None]
+            data.flux.values[i][:, edges0[0]:edges0[1]] -= np.median(flux0, axis=1)[:, None]
         if ampl_used_bool[1]:
-            data.flux.values[i][:, edges1[0]:edges1[1]] -= np.median(flux1, axis=1)[:,None]
+            data.flux.values[i][:, edges1[0]:edges1[1]] -= np.median(flux1, axis=1)[:, None]
         if ampl_used_bool[2]:
-            data.flux.values[i][:, edges2[0]:edges2[1]] -= np.median(flux2, axis=1)[:,None]
+            data.flux.values[i][:, edges2[0]:edges2[1]] -= np.median(flux2, axis=1)[:, None]
         if ampl_used_bool[3]:
-            data.flux.values[i][:, edges3[0]:edges3[1]] -= np.median(flux3, axis=1)[:,None]
+            data.flux.values[i][:, edges3[0]:edges3[1]] -= np.median(flux3, axis=1)[:, None]
     else:
-        print('This oof correction method is not supported. Please choose between meanerr or median.')
+        print('This oof correction method is not supported.'
+              'Please choose between meanerr or median.')
 
     return data
