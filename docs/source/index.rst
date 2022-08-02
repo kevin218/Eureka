@@ -58,6 +58,7 @@ If you wish to cite the use of ``Eureka!`` in published work, please use the fol
 
    installation
    quickstart
+   stages
    ecf
    outputs
    contribute
