@@ -21,7 +21,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         which have been set in the S3 ecf
     optspec : ndarray
         The optimally extracted spectrum.
-    optmask : ndarray (1D), optional
+    optmask : ndarray (1D); optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     '''

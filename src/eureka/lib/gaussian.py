@@ -157,6 +157,30 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
 
 
 def gaussianguess(data, mask=None, yxguess=None):
+    """Used by fitgaussian to get an initial guess at the parameters for a
+    Gaussian fit.
+
+    Parameters
+    ----------
+    data : ndarray (2D)
+        The data to which a Gaussian is being fit.
+    mask : ndarray (2D); optional
+        An integer mask array where 1 is unmasked and 0 is masked. Defaults
+        to None which leaves all data unmasked.
+    yxguess : tuple; optional
+        A guess at the centroid. Defaults to None which uses the data point
+        with the highest value.
+
+    Returns
+    -------
+    gwidth : tuple
+        The guess for the Gaussian width in each direction.
+    gcenter : tuple
+        The guess for the centroid. Returns yxguess if it is not None, else
+        uses the data point with the highest value.
+    gheight : float
+        The guess for the Gaussian amplitude.
+    """
     # Default mask:
     if mask is None:
         mask = np.ones(np.shape(data))
@@ -222,6 +246,11 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
         Same shape as y. This array defines weights for the
         minimization, for scientific data the weights should be
         1/sqrt(variance).
+    maskg : bool; optional
+        If true, mask the gaussian.
+    yxguess : tuple; optional
+        A guess at just the centroid. Defaults to None which uses the data
+        point with the highest value.
 
     Returns
     -------

@@ -18,7 +18,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
         The Dataset object containing light curve and time data.
     i : int
         The current bandpass number.
-    white : bool, optional
+    white : bool; optional
         Is this figure for the additional white-light light curve
     '''
     fig = plt.figure(4102, figsize=(8, 6))
@@ -161,7 +161,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
         which have been set in the S3 ecf.
     optspec_in : Xarray DataArray
         The optimally extracted spectrum.
-    optmask : Xarray DataArray, optional
+    optmask : Xarray DataArray; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     '''

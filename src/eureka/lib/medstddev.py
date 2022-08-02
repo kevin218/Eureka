@@ -24,7 +24,7 @@ def medstddev(data, mask=None, medi=False, axis=0):
     -------
     float
         The stadard deviation.
-    float, optional
+    float; optional
         The median; only returned if medi==True.
 
     Examples
