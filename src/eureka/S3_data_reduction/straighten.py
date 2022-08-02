@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def find_column_median_shifts(data):
+def find_column_median_shifts(data, meta, log):
     '''Takes the median frame (in time) and finds the 
     center of mass (COM) in pixels for each column. It then returns the needed
     shift to apply to each column to bring the COM to the center
@@ -28,18 +28,22 @@ def find_column_median_shifts(data):
     column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
                    np.sum(data, axis=0))
     
-    #check if column_coms is smooth
-    coms=column_coms.flatten()
-    grad=np.gradient(coms)
-    badpix_f=np.where(np.abs(grad)>np.std(grad))
-    badpix_f=badpix_f[0]
-    for bp_l in badpix_f:
-        if (bp_l+2) in badpix_f:           
-            bp=bp_l+1
-            if (bp_l+3) not in badpix_f and (bp_l-1) not in badpix_f:
-                column_coms[bp,]=(coms[bp_l]+coms[bp_l+2])/2.
-            else:
-                column_coms[bp,]=(coms[bp_l-1]+coms[bp_l+3])/2.    
+    if meta.smooth_trace:
+        log.writelog('  Smoothing the trace... ',
+                     mute=(not meta.verbose))        
+        #check if column_coms is smooth
+        coms=column_coms.flatten()
+        grad=np.gradient(coms)
+        grad=grad-np.mean(grad)
+        badpix_f=np.where(np.abs(grad)>(2*np.std(grad)))
+        badpix_f=badpix_f[0]
+        for bp_l in badpix_f:
+            if (bp_l+2) in badpix_f:           
+                bp=bp_l+1
+                if (bp_l+3) not in badpix_f and (bp_l-1) not in badpix_f:
+                    column_coms[bp,]=(coms[bp_l]+coms[bp_l+2])/2.
+                else:
+                    column_coms[bp,]=(coms[bp_l-1]+coms[bp_l+3])/2.    
 
     
     #convert com to integers (pixels)
@@ -137,7 +141,7 @@ def straighten_trace(data, meta, log):
     data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
     median_frame = np.ma.median(data_ma, axis=0).data
     # compute the correction needed from this median frame
-    shifts, new_center = find_column_median_shifts(median_frame)
+    shifts, new_center = find_column_median_shifts(median_frame, meta, log)
 
     # Correct wavelength (only one frame) 
     log.writelog('  Correcting the wavelength solution...',

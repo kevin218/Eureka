@@ -29,6 +29,7 @@ p7thresh        60          # X-sigma threshold for outlier rejection during opt
 
 # G395H curvature treatment
 curvature       None        # How to manage the curved trace on the detector (Options: None, correct). Use correct for NIRSpec/G395.
+smooth_trace    False       # Force a smooth trace
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
