@@ -264,7 +264,7 @@ def flag_bg_phot(data, meta, log):
     nbadpix_total = 0
     for i in tqdm(range(flux.shape[1]), desc='Looping over Rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
-            ngoodpix = np.sum(mask[:, i, j] is True)
+            ngoodpix = np.sum(mask[:, i, j] == 1)
             data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j], meta.bg_thresh,
                                                    mask[:, i, j], estsig)
             if not all(data['mask'][:, i, j].values):
