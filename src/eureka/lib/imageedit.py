@@ -214,6 +214,7 @@ def pasteimage(data, subim, dy_, syx=(None, None)):
     Revisions
     ---------
     2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
+    2022-08-03  szieba    changed (syc, sxc) is (None, None) to (syc, sxc) == (None, None)
     """
 
     # Shape of the arrays

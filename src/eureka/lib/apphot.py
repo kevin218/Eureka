@@ -448,7 +448,7 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
     yi, xi = np.linspace(0, sz[0] - 1, isz[0]), np.linspace(0, sz[1] - 1, isz[1])
     iimage = i2d.interp2d(image, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
     imask = i2d.interp2d(mask, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
-    imask = imask is True
+    imask = imask == 1
     if imerr is not None:
         iimerr = i2d.interp2d(imerr, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
 
@@ -499,7 +499,7 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
 
     # Calculate Beta values. If True photometric extraction aperture scales with
     # noise pixel parameter (beta).
-    if isbeta is True and betahw > 0:
+    if isbeta == 1 and betahw > 0:
         # Using target position from mean image
         ctr_y = int(targpos[1])
         ctr_x = int(targpos[0])
@@ -573,7 +573,7 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
         # replaced pixel is unknown.  In one sense, it's infinite.  In
         # another, it's zero, or should be close.  So, ignore those points.
         # Sky error still contributes.
-        apunc[np.where(apuncloc is False)] = 0
+        apunc[np.where(apuncloc == 0)] = 0
         ret[aperr] = np.sqrt(np.sum(apmsk * apunc ** 2.0) +
                              np.size(aploc) * ret[skyerr] ** 2.0)
 

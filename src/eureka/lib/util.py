@@ -592,7 +592,7 @@ def flag_bad_dq(data):
     https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html
     #data-quality-flags
     """
-    print('Flagging Pixels using the Data Quality array...')
+    print('  Flagging Pixels using the Data Quality array...')
     mask_DQ = np.ones_like(data.dq.values)
     mask_DQ[np.where(data.dq.values % 2 != 0)] = 0  # %2 != 0 looks for odd entries
     data.mask.values = data.mask.values * mask_DQ  # update the already existing mask
