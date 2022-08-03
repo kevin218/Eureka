@@ -7,6 +7,7 @@ from ..lib import gaussian as g
 from ..lib import smooth
 from . import plots_s3
 
+
 def standard_spectrum(data, apdata, aperr):
     """Compute the standard box spectrum.
 

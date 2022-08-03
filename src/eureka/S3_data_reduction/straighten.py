@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.interpolate as spi
 from ..lib import smooth
 from . import plots_s3
 
