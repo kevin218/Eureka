@@ -312,6 +312,42 @@ curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
+use_dq
+''''''''''''''''
+Used only for Photometry analysis. Options are: True, False. Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+
+flag_bg
+''''''''''''''''
+Used only for Photometry analysis. Options are: True, False. Does an outlier rejection along the time axis for each individual pixel in a segment (= in a calints file).
+
+interp_method
+''''''''''''''''
+Used only for Photometry analysis. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+
+ctr_cutout_size
+''''''''''''''''
+Used only for Photometry analysis. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+
+photap
+''''''''''''''''
+Used only for Photometry analysis. Size of photometry aperture in pixels. The shape of the aperture is a circle
+
+skyin
+''''''''''''''''
+Used only for Photometry analysis. Inner sky annulus edge, in pixels.
+
+skyout
+''''''''''''''''
+Used only for Photometry analysis. Outer sky annulus edge, in pixels.
+
+oof_corr
+''''''''''''''''
+Used only for Photometry analysis. Options: None, meanerr, median. meanerr calculates a mean value which is weighted by the error array. "oof_corr" sets which method should be used to determine the average flux value in each row of an amplifier region.
+
+oof_bg_dist
+''''''''''''''''
+Used only for Photometry analysis. Set how many pixels away from the centroid should be considered as background during the oof correction. E.g., Frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. oof_bg_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oof_bg_dist is therefore basically to not subtract starlight during the 1/f correction.
+
 isplots_S3
 ''''''''''
 Sets how many plots should be saved when running Stage 3. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
