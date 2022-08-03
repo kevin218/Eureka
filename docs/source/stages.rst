@@ -1,7 +1,7 @@
 .. _stages:
 
-Eureka's Stages
-===============
+Eureka!'s Stages
+================
 
 Overview
 --------
