@@ -582,7 +582,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
              windowtype='hanning', n=0, m=0, meddata=None):
-    '''Extract optimal spectrum with uncertainties for a single.
+    '''Extract optimal spectrum with uncertainties for a single frame.
 
     Parameters
     ----------
