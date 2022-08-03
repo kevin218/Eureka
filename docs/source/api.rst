@@ -151,9 +151,9 @@ S4_generate_lightcurves.drift
     :undoc-members:
     :show-inheritance:
 
-S4_generate_lightcurves.generate
---------------------------------
-.. automodule:: eureka.S4_generate_lightcurves.generate
+S4_generate_lightcurves.generate_LD
+-----------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.generate_LD
     :members:
     :undoc-members:
     :show-inheritance:
@@ -383,7 +383,7 @@ lib.manageevent
 
 lib.mastDownload
 ----------------
-.. automodule:: eureka.lib.manageevent
+.. automodule:: eureka.lib.mastDownload
     :members:
     :undoc-members:
     :show-inheritance:
