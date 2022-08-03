@@ -34,7 +34,7 @@ def find_column_median_shifts(data, meta):
                    np.sum(data, axis=0))
 
     # Smooth CoM values to get rid of outliers
-    smooth_coms = smooth.medfilt(column_coms, 30)
+    smooth_coms = smooth.medfilt(column_coms, 31)
 
     # Convert to interget pixels
     int_coms = np.around(smooth_coms).astype(int)
@@ -129,22 +129,8 @@ def straighten_trace(data, meta, log):
     log.writelog('  !!! Ensure that you are using meddata for the optimal '
                  'extraction profile !!!', mute=(not meta.verbose))
 
-    # Find the median shift needed to bring the trace centered on the detector
-    # obtain the median frame
-    data_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
-    medflux = np.ma.median(data_ma, axis=0)
-
-    # Interpolate over permanently bad pixels
-    ny, nx = medflux.shape
-    xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
-    x1 = xx[~medflux.mask].ravel()
-    y1 = yy[~medflux.mask].ravel()
-    goodmed = medflux[~medflux.mask].ravel()
-    interpmed = spi.griddata((x1, y1), goodmed, (xx, yy),
-                             method='cubic', fill_value=0)
-
     # compute the correction needed from this median frame
-    shifts, new_center = find_column_median_shifts(interpmed, meta)
+    shifts, new_center = find_column_median_shifts(data.medflux, meta)
 
     # Correct wavelength (only one frame)
     log.writelog('  Correcting the wavelength solution...',
@@ -168,6 +154,8 @@ def straighten_trace(data, meta, log):
     data.err.values = roll_columns(data.err.values, shifts)
     data.dq.values = roll_columns(data.dq.values, shifts)
     data.v0.values = roll_columns(data.v0.values, shifts)
+    data.medflux.values = roll_columns(np.expand_dims(data.medflux.values,
+                                       axis=0), shifts).squeeze()
 
     # update the new src_ypos
     log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
