@@ -6,7 +6,7 @@ Eureka!'s Stages
 Overview
 --------
 
-`Eureka!` is broken down into six "stages" which each consist of many "steps". The six stages are as follows (a visual overview is also provided in :ref:`Figure 1 <overview_flowchart>`):
+``Eureka!`` is broken down into six "stages" which each consist of many "steps". The six stages are as follows (a visual overview is also provided in :ref:`Figure 1 <overview_flowchart>`):
 
 - **Stage 1:** An optional step that calibrates raw data (converts ramps to slopes for JWST observations).
   This step can be skipped within ``Eureka!`` if you would rather use the Stage 1 outputs from the ``jwst`` pipeline.
