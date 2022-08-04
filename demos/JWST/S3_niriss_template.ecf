@@ -33,7 +33,6 @@ filter_size     ((2,1), (1,1))          # Window size to apply the 2D low-resolu
 which_table     centers     # Which method used to find centers of orders
 proftype        median      # What profile shape to use
 opt_sigma       20          # Sigma outlier value
-per_quad        True        # Extracts orders in quadrants or not
 
 # Diagnostics
 isplots_S3      3           # Generate a few (1), some (3), or many (5) diagnostic figures
