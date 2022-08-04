@@ -309,7 +309,7 @@ def profile_niriss_moffat(data, pos1, pos2):
 def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
                                sky_bkg, medframe=None, pos1=None, pos2=None,
                                pos3=None, sigma=20, cr_mask=None, Q=18,
-                               proftype='median', isplots=0, per_quad=False,
+                               proftype='median', isplots=0,
                                test=False):
     """Optimal extraction routine for NIRISS.
 
@@ -353,9 +353,6 @@ def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
     proftype : str, optional
        Sets which type of profile to use when extracting the spectra.
        Default is `gaussian`. Other options include `median` and `moffat`.
-    per_quad : bool, optional
-       Allows the extraction to happen via quadrants of the image.
-       Default is False.
     isplots : int, optional
        A key to decide which diagnostic plots to save. Default is 0
        (no plots are saved).
@@ -368,78 +365,65 @@ def optimal_extraction_routine(data, meta, log, var, spectrum, spectrum_var,
     boxmask = np.array(boxmask, dtype=int)
 
     # Loops over each quadrant
-    if per_quad:
-        # es_all = np.zeros(3, dtype=np.ndarray)
-        # ev_all = np.zeros(3, dtype=np.ndarray)
-        # p_all = np.zeros(3, dtype=np.ndarray)
-        es_all = np.nan*np.ones((3, data.shape[0], data.shape[2]))
-        ev_all = np.nan*np.ones((3, data.shape[0], data.shape[2]))
 
-        for quad in range(1, 4):
-            # Figures out which quadrant location to use
-            if quad == 1:  # Isolated first order (top right)
-                x1, x2 = 1000, data.shape[2]
-                y1, y2 = 0, 90
-                # there's a bit of 2nd order that needs to be masked
-                block_extra[80:y2, x1:x1+250] = 0
-                newdata = (data * block_extra)[:, y1:y2, x1:x2]
+    es_all = np.nan*np.ones((3, data.shape[0], data.shape[2]))
+    ev_all = np.nan*np.ones((3, data.shape[0], data.shape[2]))
 
-                index = 0  # Index for the box extracted spectra
-            elif quad == 2:  # Isolated second order (bottom right)
-                x1, x2 = 1000, 1900
-                y1, y2 = 70, data.shape[1]
-                # Takes the proper data slice
-                newdata = np.copy(data)[:, y1:y2, x1:x2]
+    for quad in range(1, 4):
+        # Figures out which quadrant location to use
+        if quad == 1:  # Isolated first order (top right)
+            x1, x2 = 1000, data.shape[2]
+            y1, y2 = 0, 90
+            # there's a bit of 2nd order that needs to be masked
+            block_extra[80:y2, x1:x1+250] = 0
+            newdata = (data * block_extra)[:, y1:y2, x1:x2]
 
-                index = 1  # Index for the box extracted spectra
-            elif quad == 3:  # Overlap region (left-hand side)
-                x1, x2 = 0, 1000
-                y1, y2 = 0, data.shape[1]
-                # Takes the proper data slice
-                newdata = np.copy(data)[:, y1:y2, x1:x2]
+            index = 0  # Index for the box extracted spectra
+        elif quad == 2:  # Isolated second order (bottom right)
+            x1, x2 = 1000, 1900
+            y1, y2 = 70, data.shape[1]
+            # Takes the proper data slice
+            newdata = np.copy(data)[:, y1:y2, x1:x2]
 
-                index = 0  # Index for the box extracted spectra
+            index = 1  # Index for the box extracted spectra
+        elif quad == 3:  # Overlap region (left-hand side)
+            x1, x2 = 0, 1000
+            y1, y2 = 0, data.shape[1]
+            # Takes the proper data slice
+            newdata = np.copy(data)[:, y1:y2, x1:x2]
 
-            new_sky_bkg = np.copy(sky_bkg[:, y1:y2, x1:x2])
+            index = 0  # Index for the box extracted spectra
 
-            if cr_mask is not None:
-                new_cr_mask = np.copy(cr_mask[:, y1:y2, x1:x2])
-            else:
-                new_cr_mask = None
+        new_sky_bkg = np.copy(sky_bkg[:, y1:y2, x1:x2])
 
-            # Clip 1D arrays to the length of the quadrant
-            new_spectrum = np.copy(np.array(spectrum)[index, :, x1:x2])
-            newvar = np.copy(var[:, y1:y2, x1:x2])
-            new_spectrum_var = np.copy(np.array(spectrum_var)[index, :, x1:x2])
+        if cr_mask is not None:
+            new_cr_mask = np.copy(cr_mask[:, y1:y2, x1:x2])
+        else:
+            new_cr_mask = None
 
-            log.writelog(f'    Extracting quadrant {quad}...')
-            # Run the optimal extraction routine on the quadrant
-            es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2], meta,
-                                           newvar, new_spectrum,
-                                           new_spectrum_var, new_sky_bkg,
-                                           medframe=medframe[y1:y2, x1:x2],
-                                           pos1=pos1[x1:x2], pos2=pos2[x1:x2],
-                                           sigma=sigma,
-                                           cr_mask=new_cr_mask, Q=Q,
-                                           proftype=proftype, isplots=isplots,
-                                           test=test)
-            #                                , pos3=pos3[x1:x2]
-            es_all[quad-1, :, x1:x2] = es
-            ev_all[quad-1, :, x1:x2] = ev
-            # p_all[quad-1, :, x1:x2] = p
+        # Clip 1D arrays to the length of the quadrant
+        new_spectrum = np.copy(np.array(spectrum)[index, :, x1:x2])
+        newvar = np.copy(var[:, y1:y2, x1:x2])
+        new_spectrum_var = np.copy(np.array(spectrum_var)[index, :, x1:x2])
 
-        return es_all, ev_all  # , p_all
+        log.writelog(f'    Extracting quadrant {quad}...')
+        # Run the optimal extraction routine on the quadrant
+        es, ev, p = extraction_routine(newdata*boxmask[y1:y2, x1:x2], meta,
+                                       newvar, new_spectrum,
+                                       new_spectrum_var, new_sky_bkg,
+                                       medframe=medframe[y1:y2, x1:x2],
+                                       pos1=pos1[x1:x2], pos2=pos2[x1:x2],
+                                       sigma=sigma,
+                                       cr_mask=new_cr_mask, Q=Q,
+                                       proftype=proftype, isplots=isplots,
+                                       test=test)
+        #                                , pos3=pos3[x1:x2]
+        es_all[quad-1, :, x1:x2] = es
+        ev_all[quad-1, :, x1:x2] = ev
+        # p_all[quad-1, :, x1:x2] = p
 
-    else:  # Full image
-        es, ev, p = extraction_routine(data, meta, var, spectrum, spectrum_var,
-                                       sky_bkg, medframe=medframe,
-                                       pos1=pos1, pos2=pos2,
-                                       sigma=sigma, cr_mask=cr_mask,
-                                       Q=Q, proftype=proftype,
-                                       isplots=isplots, test=test)
-        #                                , pos3=pos3
+    return es_all, ev_all  # , p_all
 
-        return es, ev  # , p
 
 
 def extraction_routine(data, meta, var, spectrum, spectrum_var, sky_bkg,
