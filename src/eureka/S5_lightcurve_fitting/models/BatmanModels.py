@@ -65,7 +65,7 @@ class BatmanTransitModel(Model):
                         if self.parameters.dict[item][1] == 'fixed':
                             self.parameters.dict[item][0] = \
                                 self.ld_S4_array[c][param-1]
-        elif self.ld_from_file is not None:
+        elif self.ld_from_file:
             self.ld_file_array = kwargs.get('ld_coeffs')
             for c in np.arange(self.nchan):
                 for u in self.coeffs:
