@@ -166,7 +166,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                     ld_coeffs = np.loadtxt(ld_fix_file)
                 except FileNotFoundError:
                     raise Exception("The limb-darkening file " + ld_fix_file + 
-                        " could not be found.")
+                                    " could not be found.")
             else:
                 ld_coeffs = None
 
