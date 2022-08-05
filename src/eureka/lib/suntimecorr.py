@@ -10,7 +10,7 @@ def getcoords(file):
 
     Parameters
     ----------
-    file : Strings list
+    file : strs list
         A list containing the lines of a horizons file.
 
     Returns
@@ -21,28 +21,31 @@ def getcoords(file):
 
     Examples
     --------
-    >>> start_data = '$$SOE'
-    >>> end_data   = '$$EOE'
+    .. highlight:: python
+    .. code-block:: python
 
-    # Read in whole table as an list of strings, one string per line
-    >>> ctable = open('/home/esp01/ancil/horizons/all_spitzer.vec', 'r')
-    >>> wholetable = ctable.readlines()
-    >>> ctable.close()
+        >>> start_data = '$$SOE'
+        >>> end_data   = '$$EOE'
 
-    # Find start and end line
-    >>> i = 0
-    >>> while wholetable[i].find(end_data) == -1:
-    >>>     if wholetable[i].find(start_data) != -1:
-    >>>        start = i + 1
-    >>>     i += 1
+        >>> # Read in whole table as an list of strings, one string per line
+        >>> ctable = open('/home/esp01/ancil/horizons/all_spitzer.vec', 'r')
+        >>> wholetable = ctable.readlines()
+        >>> ctable.close()
 
-    # Chop table
-    >>> data = wholetable[start:i-2]
+        >>> # Find start and end line
+        >>> i = 0
+        >>> while wholetable[i].find(end_data) == -1:
+        >>>     if wholetable[i].find(start_data) != -1:
+        >>>        start = i + 1
+        >>>     i += 1
 
-    # Find values:
-    >>> x, y, z, t = getcoords(data)
+        >>> # Chop table
+        >>> data = wholetable[start:i-2]
 
-    >>> print(x, y, z, t)
+        >>> # Find values:
+        >>> x, y, z, t = getcoords(data)
+
+        >>> print(x, y, z, t)
 
     Notes
     -----
@@ -84,7 +87,7 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
         Declination of target object in radians.
     obst : float or numpy float array
         Time of observation in Julian Date (may be a vector)
-    coordtable : string
+    coordtable : str
         Filename of output table from JPL HORIZONS specifying
         the position of the observatory relative to the
         standard position.
@@ -101,36 +104,40 @@ def suntimecorr(ra, dec, obst, coordtable, verbose=False):
 
     Examples
     --------
-    >>> # Spitzer is in nearly the Earth's orbital plane.  Light coming from
-    >>> # the north ecliptic pole should hit the observatory and the sun at
-    >>> # about the same time.
+    .. highlight:: python
+    .. code-block:: python
+
+        >>> # Spitzer is in nearly the Earth's orbital plane.  Light coming
+        >>> # from the north ecliptic pole should hit the observatory and
+        >>> # the sun at about the same time.
 
 
-    >>> import suntimecorr as sc
-    >>> ra  = 18.0 * np.pi /  12 # ecliptic north pole coordinates in radians
-    >>> dec = 66.5 * np.pi / 180 # "
-    >>> obst = np.array([2453607.078])       # Julian date of 2005-08-24 14:00
-    >>> print( sc.suntimecorr(ra, dec, obst,
-    >>>                       '/home/esp01/ancil/horizons/cs41_spitzer.vec') )
-    1.00810877 # about 1 sec, close to zero
+        >>> import suntimecorr as sc
+        >>> ra  = 18.0 * np.pi /  12 # ecliptic north pole coords in radians
+        >>> dec = 66.5 * np.pi / 180 # "
+        >>> obst = np.array([2453607.078])  # Julian date of 2005-08-24 14:00
+        >>> print(sc.suntimecorr(
+        >>>           ra, dec, obst,
+        >>>           '/home/esp01/ancil/horizons/cs41_spitzer.vec'))
+        1.00810877 # about 1 sec, close to zero
 
-    >>> # If the object has the RA and DEC of Spitzer, light time should be
-    >>> # about 8 minutes to the sun.
-    >>> obs  = np.array([111093592.8346969, -97287023.315796047,
-    >>>                  -42212080.826677799])
-    >>> # vector to the object
-    >>> obst = np.array([2453602.5])
+        >>> # If the object has the RA and DEC of Spitzer, light time should be
+        >>> # about 8 minutes to the sun.
+        >>> obs  = np.array([111093592.8346969, -97287023.315796047,
+        >>>                  -42212080.826677799])
+        >>> # vector to the object
+        >>> obst = np.array([2453602.5])
 
-    >>> print( np.sqrt(np.sum(obs**2.0)) )
-    153585191.481 # about 1 AU, good
-    >>> raobs  = np.arctan(obs[1]/ obs[0])
-    >>> decobs = np.arctan(obs[2]/ np.sqrt(obs[0]**2 + obs[1]**2))
-    >>> print(raobs, decobs)
-    -0.7192383661, -0.2784282118
-    >>> print(sc.suntimecorr(raobs, decobs, obst,
-    >>>                      '/home/esp01/ancil/horizons/cs41_spitzer.vec')
-    >>>       / 60.0)
-    8.5228630 # good, about 8 minutes light time to travel 1 AU
+        >>> print( np.sqrt(np.sum(obs**2.0)) )
+        153585191.481 # about 1 AU, good
+        >>> raobs  = np.arctan(obs[1]/ obs[0])
+        >>> decobs = np.arctan(obs[2]/ np.sqrt(obs[0]**2 + obs[1]**2))
+        >>> print(raobs, decobs)
+        -0.7192383661, -0.2784282118
+        >>> print(sc.suntimecorr(raobs, decobs, obst,
+        >>>                      '/home/esp01/ancil/horizons/cs41_spitzer.vec')
+        >>>       / 60.0)
+        8.5228630 # good, about 8 minutes light time to travel 1 AU
 
     Notes
     -----

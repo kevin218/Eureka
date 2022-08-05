@@ -366,9 +366,9 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
         The new meta object for the current stage processing.
     optspec : ndarray
         The spectrum to normalize.
-    opterr : ndarray, optional
+    opterr : ndarray; optional
         The noise array to normalize using optspec, by default None.
-    optmask : ndarray (1D), optional
+    optmask : ndarray (1D); optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
 
@@ -376,7 +376,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     -------
     normspec
         The normalized spectrum.
-    normerr : ndarray, optional
+    normerr : ndarray; optional
         The normalized error. Only returned if opterr is not none.
     """
     normspec = np.ma.masked_invalid(np.ma.copy(optspec))
@@ -415,6 +415,11 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
+    The computed MAD is the average MAD along the wavelength direction. In
+    otherwords, the MAD is computed in the spectral direction for each
+    integration, and then the returned value is the average of those MAD
+    values.
+
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
@@ -426,7 +431,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         ywindow which have been set in the S3 ecf
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
-    optmask : ndarray (1D), optional
+    optmask : ndarray (1D); optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     wave_min : float; optional

@@ -30,10 +30,6 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         The planetary atmospheric scale height, by default None
     planet_R0 : float; optional
         The reference radius for the scale height, by default None
-
-    Returns
-    -------
-    None
     """
     if scaleHeight is not None:
         fig = plt.figure(6301, figsize=(8, 4))

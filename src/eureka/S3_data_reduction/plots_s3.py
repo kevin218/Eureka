@@ -21,13 +21,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         which have been set in the S3 ecf
     optspec : ndarray
         The optimally extracted spectrum.
-    optmask : ndarray (1D), optional
+    optmask : ndarray (1D); optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
-
-    Returns
-    -------
-    None
     '''
     normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
     wmin = np.ma.min(wave_1d)
@@ -80,10 +76,6 @@ def image_and_background(data, meta, log, m):
         The current log.
     m : int
         The file number.
-
-    Returns
-    -------
-    None
     '''
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
@@ -179,10 +171,6 @@ def optimal_spectrum(data, meta, n, m):
         The integration number.
     m : int
         The file number.
-
-    Returns
-    -------
-    None
     '''
     intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
                                           data.stdspec.values,
@@ -243,10 +231,6 @@ def source_position(meta, x_dim, pos_max, m, n,
     y_pos : float; optional
         The FWM central position of the star.
 
-    Returns
-    -------
-    None
-
     Notes
     -----
     History:
@@ -296,10 +280,6 @@ def profile(meta, profile, submask, n, m):
         The current integration number.
     m : int
         The file number.
-
-    Returns
-    -------
-    None
     '''
     profile = np.ma.masked_invalid(profile)
     submask = np.ma.masked_invalid(submask)
@@ -347,10 +327,6 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
         Expected profile
     loc : ndarray
         Location of worst outliers.
-
-    Returns
-    -------
-    None
     '''
     ny, nx = subdata.shape
     plt.figure(3501)
@@ -381,10 +357,6 @@ def driftypos(data, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
-    Returns
-    -------
-    None
-
     Notes
     -----
     History:
@@ -413,10 +385,6 @@ def driftywidth(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Returns
-    -------
-    None
 
     Notes
     -----
@@ -453,10 +421,6 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
         Minimum value of colormap. Default is -200.
     vmax : int; optional
         Maximum value of colormap. Default is 1000.
-
-    Returns
-    -------
-    None
 
     Notes
     -----
