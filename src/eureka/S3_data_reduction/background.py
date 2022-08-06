@@ -138,7 +138,8 @@ def BGsubtraction(data, meta, log, isplots):
     # 9.  Background subtraction
     # Perform background subtraction
     data['flux'] -= data.bg
-    data['medflux'] -= np.median(data.bg, axis=0)
+    if hasattr(data, 'medflux'):
+        data['medflux'] -= np.median(data.bg, axis=0)
 
     return data
 

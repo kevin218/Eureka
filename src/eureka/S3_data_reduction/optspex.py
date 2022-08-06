@@ -480,7 +480,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log):
+def clean_median_flux(data, meta, log, median_thresh=5):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -491,6 +491,8 @@ def clean_median_flux(data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    median_thresh : int; optional
+        Sigma threshold when flagging outliers in median frame
 
     Returns
     -------
@@ -507,7 +509,6 @@ def clean_median_flux(data, meta, log):
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
     # Create mask using all data quality flags
-    # mask = data['mask'].values
     mask = np.copy(data['mask'].values)
     mask[np.where(data.dq > 0)] = 1
 
@@ -525,7 +526,7 @@ def clean_median_flux(data, meta, log):
     residuals = medflux - smoothflux
 
     # Flag outliers
-    outliers = sigma_clip(residuals, sigma=5, maxiters=5, axis=1,
+    outliers = sigma_clip(residuals, sigma=median_thresh, maxiters=5, axis=1,
                           cenfunc='median')
 
     # Interpolate over bad pixels
