@@ -535,7 +535,7 @@ def clean_median_flux(data, meta, log, median_thresh=5):
     for j in range(ny):
         x1 = xx[~outliers.mask[j]]
         goodmed = medflux[j][~outliers.mask[j]]
-        f = spi.interp1d(x1, goodmed, 'linear', fill_value=0)
+        f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
         # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
         clean_med[j] = f(xx)
 

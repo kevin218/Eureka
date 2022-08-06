@@ -307,8 +307,8 @@ def profile(meta, profile, submask, n, m):
                          np.ma.getmaskarray(submask))
     profile = np.ma.masked_where(mask, profile)
     submask = np.ma.masked_where(mask, submask)
-    vmax = 0.05*np.ma.max(profile*submask)
     vmin = np.ma.min(profile*submask)
+    vmax = vmin + 0.05*np.ma.max(profile*submask)
     plt.figure(3303)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
@@ -585,12 +585,14 @@ def median_frame(data, meta):
     '''
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    vmin = data.medflux.min().values
+    vmax = vmin + 2000
 
     plt.figure(3401)
     plt.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(data.medflux, origin='lower', aspect='auto',
-               vmin=0, vmax=2000, extent=[xmin, xmax, ymin, ymax])
+               vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
     plt.tight_layout()
