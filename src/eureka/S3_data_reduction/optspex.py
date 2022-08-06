@@ -538,18 +538,11 @@ def clean_median_flux(data, meta, log):
         # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
         clean_med[j] = f(xx)
 
-    if meta.isplots_S3 >= 5:
-        plt.figure(3505)
-        plt.clf()
-        plt.title("Cleaned Median Frame")
-        plt.imshow(clean_med, origin='lower', aspect='auto',
-                   vmin=0, vmax=2000)
-        plt.tight_layout()
-        if not meta.hide_plots:
-            plt.pause(0.2)
-
     data['medflux'] = (['y', 'x'], clean_med)
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
+
+    if meta.isplots_S3 >= 4:
+        plots_s3.median_frame(data, meta)
 
     return data
 

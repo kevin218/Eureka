@@ -314,7 +314,7 @@ def profile(meta, profile, submask, n, m):
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin)
-    plt.ylabel('Relative Pixel Postion')
+    plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
@@ -463,7 +463,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     History:
 
     - 2022-07-29 KBS
-        First version
+        Initial version
     '''
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
@@ -533,10 +533,12 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-
-    Returns
-    -------
-    None
+    column_coms : 1D array
+        Measured center of mass (light) for each pixel column
+    smooth_coms : 1D array
+        Smoothed center of mass (light) for each pixel column
+    int_coms : 1D array
+        Integer-rounded center of mass (light) for each pixel column
 
     Notes
     -----
@@ -549,16 +551,51 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
 
     plt.figure(3106)
     plt.clf()
-    plt.suptitle("Trace Curvature")
+    plt.title("Trace Curvature")
     plt.plot(column_coms, '.', label='Measured', color=colors(0.25))
     plt.plot(smooth_coms, '-', label='Smoothed', color=colors(0.98))
     plt.plot(int_coms, 's', label='Integer', color=colors(0.7), ms=2)
     plt.legend()
-    plt.ylabel('Relative Pixel Postion')
+    plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
 
     fname = (f'figs{os.sep}fig3106_Curvature'+figure_filetype)
+    plt.savefig(meta.outputdir+fname, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.1)
+
+
+def median_frame(data, meta):
+    '''Plot the cleaned time-median frame. (Fig 3401)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-06 KBS
+        Initial version
+    '''
+    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+
+    plt.figure(3401)
+    plt.clf()
+    plt.title("Cleaned Median Frame")
+    plt.imshow(data.medflux, origin='lower', aspect='auto',
+               vmin=0, vmax=2000, extent=[xmin, xmax, ymin, ymax])
+    plt.ylabel('Detector Pixel Position')
+    plt.xlabel('Detector Pixel Position')
+    plt.tight_layout()
+
+    fname = (f'figs{os.sep}fig3401_MedianFrame'+figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
