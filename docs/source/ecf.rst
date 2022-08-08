@@ -1,7 +1,7 @@
 .. _ecf:
 
-Eureka! Control File (.ecf)
-===========================
+Eureka! Control Files (.ecf)
+============================
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
 
@@ -628,9 +628,22 @@ manual_clip
 '''''''''''
 Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
 
+Limb Darkening Parameters
+'''''''''''''''''''''''''
+
+The following three parameters control the use of pre-generated limb darkening coefficients.
+
 use_generate_ld
 '''''''''''''''
 If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
+
+fix_ld
+''''''
+If set to True, this will allow you to use your own custom file to input limb-darkening parameters from a model other than exotic-ld. Note: this option only works if use_generate_ld=None.
+
+ld_file
+'''''''
+Path to the file containing limb darkening coefficients to be used when fix_ld=True. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''

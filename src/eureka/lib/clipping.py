@@ -28,7 +28,7 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
         The wavelength currently under consideration.
     wavelength_units : float
         The wavelength units currently under consideration.
-    mask : ndarray (1D), optional
+    mask : ndarray (1D); optional
         A mask array to use if data is not a masked array. Defaults to None
         in which case only the invalid values of data will be masked.
     sigma : float; optional
@@ -158,11 +158,11 @@ def skewed_gaussian(x, eta=0, omega=1, alpha=0, scale=1):
         The values at which to evaluate the skewed Gaussian.
     eta : float; optional
         The Gaussian mean. Defaults to 0.
-    omega : float, optional
+    omega : float; optional
         The skewed normal scale. Defaults to 1.
-    alpha : float, optional
+    alpha : float; optional
         The skewed normal shape. Defaults to 0.
-    scale : float, optional
+    scale : float; optional
         A multiplier for the skewed normal. Defaults to 1.
 
     Returns

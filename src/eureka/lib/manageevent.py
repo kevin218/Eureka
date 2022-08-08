@@ -4,54 +4,6 @@ import os
 import glob
 
 
-# Name
-# ----
-# Manage Event
-
-# File
-# ----
-# manageevnet.py
-
-# Description
-# -----------
-# Routines for handling events.
-
-# Package Contents
-# ----------------
-# saveevent(event, filename, save=['event'], delete=[])
-#     Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
-
-# loadevent(filename, load):
-#     Loads an event stored in .dat and .h5 files.
-
-# updateevent(event, filename, add):
-#     Adds parameters given by add from filename to event.
-
-
-# Examples
-# --------
-# >>> from manageevent import *
-# >>> # Save  hd209bs51_ini.dat and hd209bs51_ini.h5 files.
-
-# >>> saveevent(event, 'd209bs51_ini', save=['data', 'head','uncd',
-#                                         'bdmskd'])
-
-# >>> # Load the event and its data frames
-# >>> event = loadevent('hd209bs51_ini', ['data'])
-
-# >>> # Load uncd and bdmsk into event:
-# >>> updateevent(event, 'hd209bs51_ini', ['uncd', 'bdmskd'])
-
-# Notes
-# -----
-# History:
-#
-# - 2010-07-10  patricio pcubillos@fulbrightmail.org
-#     joined loadevent and saveevent into this package. updateevent added.
-# - 2010-11-12  patricio
-#   reimplemented using exec()
-
-
 def saveevent(event, filename, save=[], delete=[], protocol=3):
     """Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
 
@@ -59,13 +11,13 @@ def saveevent(event, filename, save=[], delete=[], protocol=3):
     ----------
     event : eureka.lib.readECF.MetaClass
         The meta data object to save.
-    filename : String
+    filename : str
         The string contains the name of the event file.
-    save : string tuple
+    save : str tuple
         The elements of this tuple contain the parameters to save.
         We usually use the values: 'data', 'uncd', 'head', 'bdmskd',
         'brmksd' or 'mask'.
-    delete : string tuple
+    delete : str tuple
         Parameters to be deleted.
 
     Notes
@@ -78,6 +30,8 @@ def saveevent(event, filename, save=[], delete=[], protocol=3):
 
     - 2010-07-10  patricio
         Added documentation.
+    - 2010-11-12  patricio
+        reimplemented using exec()
     """
     if save != []:
         with h5.File(filename + '.h5', 'w') as handle:
@@ -130,6 +84,8 @@ def loadevent(filename, load=[], loadfilename=None):
 
     - 2010-07-10  patricio
         Added documentation.
+    - 2010-11-12  patricio
+        reimplemented using exec()
     """
     with open(filename + '.dat', 'rb') as handle:
         event = pickle.load(handle, encoding='latin1')
@@ -178,6 +134,8 @@ def updateevent(event, filename, add):
 
     - 2010-07-10  patricio
         Initial version.
+    - 2010-11-12  patricio
+        reimplemented using exec()
     """
     event2 = loadevent(filename, load=add)
 

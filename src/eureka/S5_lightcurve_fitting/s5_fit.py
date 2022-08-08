@@ -159,6 +159,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                              lc[ld_str + '_quad'].values,
                              lc[ld_str + '_nonlin_3para'].values,
                              lc[ld_str + '_nonlin_4para'].values]
+            # Load limb-darkening coefficients from a custom file
+            elif meta.fix_ld:
+                ld_fix_file = str(meta.ld_file)
+                try:
+                    ld_coeffs = np.loadtxt(ld_fix_file)
+                except FileNotFoundError:
+                    raise Exception("The limb-darkening file " + ld_fix_file + 
+                                    " could not be found.")
             else:
                 ld_coeffs = None
 
@@ -340,6 +348,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
+                                         ld_from_file=meta.fix_ld,
                                          ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
