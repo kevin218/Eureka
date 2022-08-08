@@ -1,20 +1,16 @@
 import numpy as np
 from astropy.io import fits
-import scipy.interpolate as spi
-import scipy.signal as sps
-import sys
 try:
     import image_registration as imr
     imported_image_registration = True
 except ModuleNotFoundError:
     imported_image_registration = False
-from ..lib import gaussian as g
-from ..lib import centroid, smoothing
+from ..lib import centroid
 
 
 def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                   POSTARG2, meta, log):
-    '''Calculate centroid for a list of direct images.
+    '''Calculate centroid for a list of direct images from HST.
 
     Parameters
     ----------
@@ -119,7 +115,7 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
 
 
 def groupFrames(dates):
-    '''Group frames by orbit and batch number
+    '''Group frames by HST orbit and batch number.
 
     Parameters
     ----------
@@ -187,7 +183,8 @@ def calcTrace(x, centroid, grism):
     -----
     History:
 
-    - Initial version by LK
+    - LK
+        Initial version
     - November 2021, Kevin Stevenson
         Modified
     '''
@@ -228,7 +225,7 @@ def calcTrace(x, centroid, grism):
 
 
 def calibrateLambda(x, centroid, grism):
-    '''Calculates coefficients for the dispersion solution
+    '''Calculates the wavelength solution for WFC3 observations.
 
     Parameters
     ----------
@@ -249,7 +246,8 @@ def calibrateLambda(x, centroid, grism):
     -----
     History:
 
-    - Initial version by LK
+    - LK
+        Initial version
     - November 2021, Kevin Stevenson
         Modified
     '''
@@ -536,187 +534,15 @@ def makeBasicFlats(flatfile, xwindow, ywindow, flatoffset, ny, nx, sigma=5,
     return flat_master, mask_master
 
 
-def calc_slitshift2(spectrum, xrng, ywindow, xwindow, width=5, deg=1):
-    '''Calculate slit shifts
-
-    Calcualte horizontal shift to correct tilt in data using spectrum.
-
-    Parameters
-    ----------
-    spectrum : ndarray
-        The 2D image.
-    xrng : type
-        Unused.
-    xwindow : ndarray
-        Array containing image limits in wavelength direction.
-    ywindow : ndarray
-        Array containing image limits in spatial direction.
-    width : int; optional
-        The initial guess for the Gaussian width, defaults to 5.
-    deg : int; optional
-        The degree of the np.polyfit, defaults to 1.
-
-    Returns
-    -------
-    shift_models : ndarray
-        The fitted polynomial model to the drift.
-    shift_values : ndarray
-        The fitted drifts.
-    yfit : range
-        The y values used when calculating drifts.
-
-    Notes
-    -----
-    History:
-
-    - July 2014, Kevin Stevenson
-        Initial version
-    '''
-    ny, nx = spectrum.shape
-    # Determine spectrum boundaries on detector along y
-
-    ind = np.where(spectrum[:, nx//2] > np.mean(spectrum[:, nx//2]))
-    # Select smaller subset for cross correlation to ensure good signal
-    ystart = np.min(ind)+5
-    yend = np.max(ind)-5
-    subspec = spectrum[ystart:yend, xwindow[0]:xwindow[1]]
-    subny, subnx = subspec.shape
-    drift = np.zeros(subny)
-    # Create reference spectrum that is slightly smaller for 'valid'
-    # cross correlation
-    ref_spec = subspec[subny//2-1, 5:-5]
-    ref_spec -= np.mean(ref_spec[np.where(not np.isnan(ref_spec))])
-    # Perform cross correlation for each row
-    for h in range(subny):
-        fit_spec = subspec[h]
-        fit_spec -= np.mean(fit_spec[np.where(not np.isnan(fit_spec))])
-        vals = np.correlate(ref_spec, fit_spec, mode='valid')
-        params, err = g.fitgaussian(vals, guess=[width/5., width*1.,
-                                                 vals.max()-np.median(vals)])
-        drift[h] = len(vals)/2 - params[1]
-    # Fit a polynomial to shifts, evaluate
-    shift_values = drift
-    yfit = range(ystart, yend)
-    shift_coeffs = np.polyfit(yfit, shift_values, deg=deg)
-    shift_models = np.polyval(shift_coeffs,
-                              range(ywindow[0], ywindow[1]))
-
-    return shift_models, shift_values, yfit
-
-
-def calc_slitshift(wavegrid, xrng, refwave=None, width=3, deg=2):
-    """Estimate slit shift
-
-    Calculates horizontal shift to correct tilt in data using wavelength.
-
-    Parameters
-    ----------
-    wavegrid : ndarray
-        The 2D wavelength grid.
-    xrng : ndarray
-        _description_
-    refwave : ndarray; optional
-        The 1D wavelength grid, by default None.
-    width : int; optional
-        The initial guess for the Gaussian width, defaults to 3.
-    deg : int; optional
-        The degree of the np.polyfit, defaults to 2.
-
-    Returns
-    -------
-    shift_models : ndarray
-        The fitted polynomial model to the drift.
-    shift_values : ndarray
-        The fitted drifts.
-
-    Notes
-    -----
-    History:
-
-    - Nov 2013, Kevin Stevenson
-        Initial Version
-    """
-    n_spec = len(wavegrid)
-
-    shift_models = []
-    shift_values = []
-    for i in range(n_spec):
-        ny, nx = wavegrid[i].shape
-        loc = np.zeros(ny)
-        if refwave is None:
-            refwave = np.mean(wavegrid[i])
-        # Interpolate to find location of reference wavelength
-        for h in range(ny):
-            tck = spi.splrep(wavegrid[i][h], xrng[i], s=0, k=3)
-            loc[h] = spi.splev(refwave, tck)
-        # Fit a polynomial to shifts, evaluate
-        shift = loc - loc.mean()
-        shift_coeffs = np.polyfit(range(ny), shift, deg=deg)
-        shift_models.append(np.polyval(shift_coeffs, range(ny)))
-        shift_values.append(shift)
-    return shift_models, shift_values
-
-
-def correct_slitshift2(data, slitshift, mask=None, isreverse=False):
-    """Applies horizontal shift to correct tilt in data.
-
-    Parameters
-    ----------
-    data : ndarray
-        The 2D image.
-    slitshift : ndarray
-        The fitted drifts.
-    mask : ndarray; optional
-        Data that should be masked, by default None.
-    isreverse : bool; optional
-        If true subtract slitshift, else addd slitshift. By default False.
-
-    Returns
-    -------
-    cordata : ndarray
-        The 2D image corrected for slit shifts.
-    cormask.astype(int) : ndarray; optional
-        The corrected mask, only returned if input mask is not None.
-
-    Notes
-    -----
-    History:
-
-    - June 2012, Kevin Stevenson
-        Initial Version
-    """
-    # Create slit-shift-corrected indices
-    ny, nx = np.shape(data)
-    xgrid, ygrid = np.meshgrid(range(nx), range(ny))
-    if isreverse:
-        xgrid = (xgrid.T - slitshift).T
-    else:
-        xgrid = (xgrid.T + slitshift).T
-    # Interpolate reduced data to account for slit shift
-    spline = spi.RectBivariateSpline(range(ny), range(nx), data, kx=3, ky=3)
-    # Evaluate interpolated array within region containing data
-    cordata = spline.ev(ygrid.flatten(), xgrid.flatten()).reshape(ny, nx)
-    # Do the same for the bad pixel mask
-    if mask is not None:
-        spline = spi.RectBivariateSpline(range(ny), range(nx), mask, kx=3,
-                                         ky=3)
-        # cormask = np.round(spline.ev(ygrid.flatten(), xgrid.flatten()
-        #                    ).reshape(ny,nx),2).astype(int)
-        cormask = spline.ev(ygrid.flatten(), xgrid.flatten()).reshape(ny, nx)
-        cormask[np.where(cormask >= 0.9)] = 1
-        return cordata, cormask.astype(int)
-    else:
-        return cordata
-
-
 def calcDrift2D(im1, im2, n):
-    """Calulate drift2D
+    """Calculates 2D drift of im2 with respect to im1 for diagnostic use,
+    to align the images, and/or for decorrelation.
 
     Parameters
     ----------
-    im1 : ndarray
+    im1 : ndarray (2D)
         The reference image.
-    im2 : ndarray
+    im2 : ndarray (2D)
         The current image.
     n : int
         The current integration number.
@@ -742,130 +568,3 @@ def calcDrift2D(im1, im2, n):
     drift2D = imr.chi2_shift(im1, im2, boundary='constant', nthreads=1,
                              zeromean=False, return_error=False)
     return drift2D, n
-
-
-def replacePixels(shiftdata, shiftmask, m, n, i, j, k, ktot, ny, nx, sy, sx):
-    """Replace bad pixels
-
-    Parameters
-    ----------
-    shiftdata : ndarray
-        _description_
-    shiftmask : ndarray
-        _description_
-    m : int
-        _description_
-    n : int
-        _description_
-    i : int
-        _description_
-    j : int
-        _description_
-    k : int
-        _description_
-    ktot : int
-        _description_
-    ny : int
-        _description_
-    nx : int
-        _description_
-    sy : int
-        _description_
-    sx : int
-        _description_
-
-    Returns
-    -------
-    shift : float
-    m : int
-    n : int
-    i : int
-    j : int
-    """
-    try:
-        sys.stdout.write('\r'+str(k+1)+'/'+str(ktot))
-        sys.stdout.flush()
-    except:
-        # FINDME: Need to catch only the expected exception
-        pass
-    # Pad image initially with zeros
-    newim = np.zeros(np.array(shiftdata.shape) + 2*np.array((ny, nx)))
-    newim[ny:-ny, nx:-nx] = shiftdata
-    # Calculate kernel
-    gk = smoothing.gauss_kernel_mask2((ny, nx), (sy, sx), (m, i), shiftmask)
-    shift = np.sum(gk * newim[m:m+2*ny+1, i:i+2*nx+1])
-    return shift, m, n, i, j
-
-
-def drift_fit2D(meta, data, validRange=9):
-    '''Measures the spectrum drift over all frames and all non-destructive reads.
-
-    Parameters
-    ----------
-    meta : eureka.lib.readECF.MetaClass
-        Event object.
-    data : ndarray
-        4D data frames.
-    validRange : int
-        Trim spectra by +/- pixels to compute valid region of
-        cross correlation.
-
-    Returns
-    -------
-    drift : ndarray
-        Array of measured drift values.
-
-    Notes
-    -----
-    History:
-
-    - January 2017, Kevin Stevenson
-        Initial version
-    '''
-    # if postclip is not None:
-    #    postclip = -postclip
-    if meta.nreads > 2:
-        istart = 1
-    else:
-        istart = 0
-    drift = np.zeros((meta.num_data_files, meta.nreads-1))
-    # model = np.zeros((meta.num_data_files, meta.n_reads-1))
-    # goodmask = np.zeros((meta.num_data_files, meta.n_reads-1), dtype=int)
-    for n in range(istart, meta.nreads-1):
-        ref_data = np.copy(data[-1, n])
-        ref_data[np.where(np.isnan(ref_data))] = 0
-        for m in range(meta.num_data_files):
-            # Trim data to achieve accurate cross correlation without
-            # assumptions over interesting region
-            # http://stackoverflow.com/questions/15989384/cross-correlation-of-non-periodic-function-with-numpy
-            fit_data = np.copy(data[m, n, :, validRange:-validRange])
-            fit_data[np.where(np.isnan(fit_data))] = 0
-            # Cross correlate, result should be 1D
-            vals = sps.correlate2d(ref_data, fit_data, mode='valid').squeeze()
-            xx_t = range(len(vals))
-            # Find the B-spline representation
-            spline = spi.splrep(xx_t, vals, k=4)
-            # Compute the spline representation of the derivative
-            deriv = spi.splder(spline)
-            # Find the maximum with a derivative.
-            maximum = spi.sproot(deriv)
-            # Multiple derivatives, take one closest to argmax(vals)
-            if len(maximum) > 1:
-                # print(m, n, maximum, np.argmax(vals))
-                maximum = maximum[np.argmin(np.abs(maximum-np.argmax(vals)))]
-            drift[m, n] = len(vals)/2 - maximum
-            '''
-            try:
-                vals = np.correlate(ref_spec, fit_spec, mode='valid')
-                argmax = np.argmax(vals)
-                subvals = vals[argmax-width:argmax+width+1]
-                params, err = g.fitgaussian(subvals/subvals.max(),
-                                            guess=[width/5., width*1., 1])
-                drift[n, m, i]= len(vals)/2 - params[1] - argmax + width
-                goodmask[n, m, i] = 1
-            except:
-                print('Spectrum '+str(n)+','+str(m)+','+str(i)
-                      ' marked as bad.')
-            '''
-
-    return drift  # , goodmask

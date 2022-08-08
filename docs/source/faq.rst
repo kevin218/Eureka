@@ -64,6 +64,12 @@ install Eureka! using ``pip install .`` instead of ``pip install .[jwst]`` which
 however, that this means that Stages 1 and 2 will not work at all as Eureka's Stages 1 and 2 simply offer ways of editing
 the behaviour of the jwst package's Stages 1 and 2.
 
+CRDS server connection error
+''''''''''''''''''''''''''''
+
+If you correctly set the CRDS environment variables during Eureka! installation, but still get an error that the CRDS server connection and cache load failed, try reloading your shell configuration file with ``source ~/.zshrc`` or ``source ~/.bashrc``.
+
+
 Matplotlib RuntimeError() whenever Eureka is imported and plt.show() is called
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

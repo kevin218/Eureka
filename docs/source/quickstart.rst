@@ -3,7 +3,7 @@
 ⚡️ Eureka! Quickstart ⚡️
 ==========================
 
-Want to get up and running with ``Eureka!``, but not really sure where to begin? Keep reading! 
+Want to get up and running with ``Eureka!``, but not really sure where to begin? Keep reading! And if you want a visual overview of ``Eureka!``, be sure to look at our :ref:`stages` documentation page.
 
 1. Installation 📦
 ------------------
@@ -140,7 +140,7 @@ Now that everything is set up, you should now be able to run the pipeline using:
 
 This will start printing information to your terminal, saving a bunch of output data/figures to the ``outputdir`` file locations you assigned above, and depending on the number of processors you were brave enough to allocate, potentially make your laptop as noisy as the engine of a Boeing 747. 
 
-Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Alternatively, feel free to dig through the output directories and get a gauge of what each stage is doing at your own speed. 
+Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Also, feel free to dig through the output directories and get a gauge of what each stage is doing at your own speed.
 
 Stage 1: Ramp Fitting
 ~~~~~~~~~~~~~~~~~~~~~
@@ -201,6 +201,8 @@ The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcur
 
 You made it! Congratulations, it's time to reward yourself with a break 😊
 
-However, if this quickstart guide wasn't enough to sate your appetite, consider taking a look at the different parameter settings within the ``*.ecf`` files :ref:`here<ecf>` and tweak away! If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_. Or, if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
+If you got a bit lost along the way, you should check out our visual overview of the stages of ``Eureka!`` on our :ref:`stages` documentation page.
+
+If this quickstart guide wasn't enough to sate your appetite, consider taking a look at all the different parameter settings within the ``*.ecf`` files on our :ref:`ecf` documentation page and tweak away! If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_. Or, if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
 
 If any bugs / errors cropped up while you were working through this quickstart, or if they turn up in the future, take a look at our :ref:`FAQ<faq>` or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. Thanks!

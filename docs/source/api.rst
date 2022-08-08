@@ -6,16 +6,16 @@ The Code (API)
 S1_detector_processing
 ''''''''''''''''''''''
 
-S1_detector_processing.s1_process
----------------------------------
-.. automodule:: eureka.S1_detector_processing.s1_process
+S1_detector_processing.ramp_fitting
+-----------------------------------
+.. automodule:: eureka.S1_detector_processing.ramp_fitting
     :members:
     :undoc-members:
     :show-inheritance:
 
-S1_detector_processing.ramp_fitting
------------------------------------
-.. automodule:: eureka.S1_detector_processing.ramp_fitting
+S1_detector_processing.s1_process
+---------------------------------
+.. automodule:: eureka.S1_detector_processing.s1_process
     :members:
     :undoc-members:
     :show-inheritance:
@@ -126,6 +126,13 @@ S3_data_reduction.source_pos
     :undoc-members:
     :show-inheritance:
 
+S3_data_reduction.straighten
+----------------------------
+.. automodule:: eureka.S3_data_reduction.straighten
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 S3_data_reduction.wfc3
 ----------------------
 .. automodule:: eureka.S3_data_reduction.wfc3
@@ -144,6 +151,13 @@ S4_generate_lightcurves.drift
     :undoc-members:
     :show-inheritance:
 
+S4_generate_lightcurves.generate_LD
+-----------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.generate_LD
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 S4_generate_lightcurves.plots_s4
 --------------------------------
 .. automodule:: eureka.S4_generate_lightcurves.plots_s4
@@ -154,6 +168,13 @@ S4_generate_lightcurves.plots_s4
 S4_generate_lightcurves.s4_genLC
 --------------------------------
 .. automodule:: eureka.S4_generate_lightcurves.s4_genLC
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+S4_generate_lightcurves.wfc3
+--------------------------------
+.. automodule:: eureka.S4_generate_lightcurves.wfc3
     :members:
     :undoc-members:
     :show-inheritance:
@@ -211,6 +232,13 @@ S5_lightcurve_fitting.models.SinusoidPhaseCurve
     :undoc-members:
     :show-inheritance:
 
+S5_lightcurve_fitting.models.StepModel
+--------------------------------------
+.. automodule:: eureka.S5_lightcurve_fitting.models.StepModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 S5_lightcurve_fitting.fitters
 -----------------------------
 .. automodule:: eureka.S5_lightcurve_fitting.fitters
@@ -240,7 +268,7 @@ S5_lightcurve_fitting.limb_darkening_fit
     :show-inheritance:
 
 S5_lightcurve_fitting.modelgrid
------------------------------------------
+-------------------------------
 .. automodule:: eureka.S5_lightcurve_fitting.modelgrid
     :members:
     :undoc-members:
@@ -353,6 +381,13 @@ lib.manageevent
     :undoc-members:
     :show-inheritance:
 
+lib.mastDownload
+----------------
+.. automodule:: eureka.lib.mastDownload
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.medstddev
 -------------
 .. automodule:: eureka.lib.medstddev
@@ -384,13 +419,6 @@ lib.readEPF
 lib.smooth
 ----------
 .. automodule:: eureka.lib.smooth
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lib.smoothing
--------------
-.. automodule:: eureka.lib.smoothing
     :members:
     :undoc-members:
     :show-inheritance:

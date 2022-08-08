@@ -109,7 +109,7 @@ def flag_bg(data, meta, log):
 
     meta.bg_y2 = meta.src_ypos + meta.bg_hw
     meta.bg_y1 = meta.src_ypos - meta.bg_hw
-    
+
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
