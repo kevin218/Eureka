@@ -519,8 +519,8 @@ def clean_median_flux(data, meta, log, median_thresh=5):
     # Apply smoothing filter
     ny, nx = medflux.shape
     smoothflux = np.zeros((ny, nx))
-    for j in tqdm(range(ny)):
-        smoothflux[j] = smooth.medfilt(medflux.data[j], 31)
+    for j in range(ny):
+        smoothflux[j] = smooth.medfilt(medflux.data[j], meta.window_len)
 
     # Compute residuals
     residuals = medflux - smoothflux
