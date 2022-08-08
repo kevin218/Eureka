@@ -33,7 +33,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
         i = 0
         fname_tag = 'white'
     elif meta.photometry:
-        fig.suptitle('Photometric Lightcurve at {}'.format(meta.phot_wave))
+        fig.suptitle('Photometric Lightcurve at {0} microns'.format(meta.phot_wave))
         # Normalize the light curve
         norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
                                                           lc['err'][i])
