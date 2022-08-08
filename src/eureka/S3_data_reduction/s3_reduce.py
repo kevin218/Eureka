@@ -357,9 +357,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             plots_s3.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
-                    # Flag bad pixels using the DQ array
-                    if meta.use_dq:
-                        data = util.flag_bad_dq(data)
                     # Do outlier reduction along time axis for each individual pixel
                     if meta.flag_bg:
                         data = inst.flag_bg_phot(data, meta, log)

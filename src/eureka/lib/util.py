@@ -589,21 +589,6 @@ def interp_masked(data, meta, i):
     return data
 
 
-def flag_bad_dq(data):
-    """
-    Masks pixels with a bad quality flag.
-    I.e., they are odd, thus including the "DO_NOT_USE" bit value.
-    See all flags used by the jwst package here:
-    https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html
-    #data-quality-flags
-    """
-    print('  Flagging Pixels using the Data Quality array...')
-    mask_DQ = np.ones_like(data.dq.values)
-    mask_DQ[np.where(data.dq.values % 2 != 0)] = 0  # %2 != 0 looks for odd entries
-    data.mask.values = data.mask.values * mask_DQ  # update the already existing mask
-    return data
-
-
 def phot_arrays(data):
     """
     Setting up arrays for the photometry routine.

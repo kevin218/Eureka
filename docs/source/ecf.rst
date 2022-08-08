@@ -207,6 +207,10 @@ record_ypos
 '''''''''''
 Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
 
+use_dq
+''''''''''''''''
+Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+
 centroidtrim
 ''''''''''''
 Only used for HST analyses. The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
@@ -311,10 +315,6 @@ Only used for HST analyses. The file indices to use as reference frames for 2D d
 curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
-
-use_dq
-''''''''''''''''
-Used only for Photometry analysis. Options are: True, False. Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
 
 flag_bg
 ''''''''''''''''
