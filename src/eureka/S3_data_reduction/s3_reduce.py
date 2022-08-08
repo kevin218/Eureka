@@ -253,8 +253,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = util.trim(data, meta)
 
                 # Create bad pixel mask (1 = good, 0 = bad)
-                # FINDME: Will want to use DQ array in the future
-                # to flag certain pixels
                 data['mask'] = (['time', 'y', 'x'],
                                 np.ones(data.flux.shape, dtype=bool))
 
@@ -297,6 +295,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
+
+                # Compute clean median frame
+                data = optspex.clean_median_flux(data, meta, log)
 
                 # correct spectral curvature
                 if hasattr(meta, 'curvature') and meta.curvature == 'correct':
