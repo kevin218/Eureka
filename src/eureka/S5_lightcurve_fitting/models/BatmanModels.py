@@ -50,6 +50,8 @@ class BatmanTransitModel(Model):
                              use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
+
+        self.ld_from_file = kwargs.get('ld_from_file')
         
         # Replace fixed u parameters with generated limb-darkening values
         if self.ld_from_S4 is not None:
@@ -63,6 +65,17 @@ class BatmanTransitModel(Model):
                         if self.parameters.dict[item][1] == 'fixed':
                             self.parameters.dict[item][0] = \
                                 self.ld_S4_array[c][param-1]
+        elif self.ld_from_file:
+            self.ld_file_array = kwargs.get('ld_coeffs')
+            for c in np.arange(self.nchan):
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[c][index[0]]
+                        param = int(item[-1])
+                        if self.parameters.dict[item][1] == 'fixed':
+                            self.parameters.dict[item][0] = \
+                                self.ld_file_array[c][param-1]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.
