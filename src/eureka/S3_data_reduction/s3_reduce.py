@@ -413,7 +413,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             util.interp_masked(data, meta, i)
 
                         # Calculate flux in aperture and subtract background flux
-                        aphot = apphot.apphot(image=data.flux[i].values, ctr=position,
+                        aphot = apphot.apphot(meta, image=data.flux[i].values, ctr=position,
                                               photap=meta.photap, skyin=meta.skyin,
                                               skyout=meta.skyout, betahw=1, targpos=position,
                                               mask=data.mask[i].values, imerr=data.err[i].values,

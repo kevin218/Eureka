@@ -546,17 +546,18 @@ def phot_bg(meta, data):
     """
     Plots the background flux as a function of time.
     """
-    plt.figure(3305)
-    plt.clf()
-    plt.suptitle('Photometric background light curve')
-    plt.errorbar(data.time, data['skylev'], yerr=data['skyerr'], c='k', fmt='.')
-    plt.ylabel('Flux')
-    plt.xlabel('Time')
-    plt.tight_layout()
-    fname = (f'figs{os.sep}fig3305-1D_LC_BG' + figure_filetype)
-    plt.savefig(meta.outputdir+fname, dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
+    if not meta.skip_apphot_bg:
+        plt.figure(3305)
+        plt.clf()
+        plt.suptitle('Photometric background light curve')
+        plt.errorbar(data.time, data['skylev'], yerr=data['skyerr'], c='k', fmt='.')
+        plt.ylabel('Flux')
+        plt.xlabel('Time')
+        plt.tight_layout()
+        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + figure_filetype)
+        plt.savefig(meta.outputdir+fname, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
 
 
 def phot_centroid(meta, data):
@@ -620,6 +621,9 @@ def phot_npix(meta, data):
 
 
 def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
+    """
+    Plot the gaussian fit to the centroid cutout.
+    """
     plt.figure(3503)
     plt.clf()
 

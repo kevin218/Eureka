@@ -10,7 +10,7 @@ from . import meanerr as me
 from . import interp2d as i2d
 
 
-def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
+def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
            mask=None, imerr=None, skyfrac=0.0,
            med=False, nochecks=False,
            expand=1, order=1,
@@ -497,6 +497,9 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
         else:
             ret[skylev] = np.mean(iimage[np.where(skymask)])
 
+    if meta.skip_apphot_bg:
+        ret[skylev] = np.zeros_like(ret[skylev])
+
     # Calculate Beta values. If True photometric extraction aperture scales with
     # noise pixel parameter (beta).
     if isbeta == 1 and betahw > 0:
@@ -590,13 +593,29 @@ def apphot(image, ctr, photap, skyin, skyout, betahw, targpos,
 def apphot_status(data):
     """
     Prints a warning if aperture step had errors.
+    bit flag definitions from the apphot function:
+    statnan = 2 ** 0
+    statbad = 2 ** 1
+    statap = 2 ** 2
+    statsky = 2 ** 3
+    E.g., If the flag is 6 then is was created by a flag in
+    statap and statbad = as 2 ** 2 + 2 ** 1 = 6.
+    This function is converting the flags back to binary and checking which flags were triggered.
     """
     if sum(data.status != 0) > 0:
-        print('A warning by the aperture photometry routine:')
-        if 1 in np.unique(data.status):
-            print('there are masked pixel(s) in the photometry aperture')
-        elif 2 in np.unique(data.status):
-            print('the aperture is off the edge of the image')
-        elif 3 in np.unique(data.status):
-            print('a fraction less than skyfrac of the sky annulus '
-                  'pixels is in the image and not masked')
+        unique_flags = np.unique(data.status)
+        print(unique_flags)
+        unique_flags_binary = ['{:08b}'.format(int(i)) for i in unique_flags]
+        print(unique_flags_binary)
+        for binary_flag in unique_flags_binary:
+            print(binary_flag)
+            print('A warning by the aperture photometry routine:')
+            if binary_flag[-1] == '1':
+                print('There are NaN(s) in the photometry aperture')
+            if binary_flag[-2] == '1':
+                print('There are masked pixel(s) in the photometry aperture')
+            if binary_flag[-3] == '1':
+                print('The aperture is off the edge of the image')
+            if binary_flag[-4] == '1':
+                print('A fraction less than skyfrac of the sky annulus '
+                      'pixels is in the image and not masked')

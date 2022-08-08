@@ -32,6 +32,7 @@ use_dq          True        # Masks odd DQ entries
 flag_bg         True        # Do outlier rejection along time axis for each individual pixel?
 interp_method   linear       # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 ctr_cutout_size 7           # Cutoff size all around the centroid after the coarse centroid calculation
+skip_apphot_bg  True        # Skips the second bg subtraction
 photap          80          # Size of photometry aperture in pixels
 skyin           90          # Inner sky annulus edge, in pixels
 skyout          120         # Outer sky annulus edge, in pixels
