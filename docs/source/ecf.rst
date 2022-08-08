@@ -328,6 +328,10 @@ ctr_cutout_size
 ''''''''''''''''
 Used only for Photometry analysis. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
+skip_apphot_bg
+''''''''''''''''
+Used only for Photometry analysis. Skips the background subtraction in the aperture photometry routine. As the 1/f subtraction already basically subtracts the background in each amplifier region, the skip_apphot_bg flag basically skips this second background subtraction.
+
 photap
 ''''''''''''''''
 Used only for Photometry analysis. Size of photometry aperture in pixels. The shape of the aperture is a circle
