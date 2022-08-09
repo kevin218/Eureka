@@ -16,18 +16,19 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    wave_1d : ndarray
+    wave_1d : Xarray Dataset
         Wavelength array with trimmed edges depending on xwindow and ywindow
         which have been set in the S3 ecf
-    optspec : ndarray
+    optspec : Xarray Dataset
         The optimally extracted spectrum.
-    optmask : ndarray (1D); optional
+    optmask : Xarray Dataset; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     '''
-    normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
-    wmin = np.ma.min(wave_1d)
-    wmax = np.ma.max(wave_1d)
+    normspec = util.normalize_spectrum(meta, optspec.values,
+                                       optmask=optmask.values)
+    wmin = np.nanmin(wave_1d)
+    wmax = np.nanmax(wave_1d)
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -42,18 +43,23 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
-        plt.imshow(normspec, origin='lower', aspect='auto',
-                   extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
-                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.pcolormesh(wave_1d, np.arange(meta.n_int),
+                       normspec, vmin=meta.vmin, vmax=meta.vmax,
+                       cmap=plt.cm.RdYlBu_r)
+        plt.xlim(wmin, wmax)
+        plt.ylim(0, meta.n_int)
         plt.ylabel('Integration Number')
         plt.xlabel(r'Wavelength ($\mu m$)')
     else:
-        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
-                   extent=[0, meta.n_int, wmin, wmax], vmin=meta.vmin,
-                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.pcolormesh(np.arange(meta.n_int), wave_1d,
+                       normspec.swapaxes(0, 1), vmin=meta.vmin,
+                       vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+        plt.ylim(wmin, wmax)
+        plt.xlim(0, meta.n_int)
         plt.ylabel(r'Wavelength ($\mu m$)')
         plt.xlabel('Integration Number')
 
+    plt.minorticks_on()
     plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     plt.colorbar(label='Normalized Flux')
     plt.tight_layout()
@@ -94,7 +100,7 @@ def image_and_background(data, meta, log, m):
     median = np.ma.median(subbg)
     std = np.ma.std(subbg)
     # Set bad pixels to plot as black
-    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap = plt.cm.RdYlBu_r
     cmap.set_bad('k', 1.)
     iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
@@ -106,13 +112,15 @@ def image_and_background(data, meta, log, m):
         plt.subplot(211)
         plt.title('Background-Subtracted Frame')
         plt.imshow(subdata[n], origin='lower', aspect='auto', cmap=cmap,
-                   vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
+                   vmin=vmin, vmax=vmax, interpolation='nearest',
+                   extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.subplot(212)
         plt.title('Subtracted Background')
         plt.imshow(subbg[n], origin='lower', aspect='auto', cmap=cmap,
                    vmin=median-3*std, vmax=median+3*std,
+                   interpolation='nearest',
                    extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
@@ -293,7 +301,7 @@ def profile(meta, profile, submask, n, m):
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
-               vmax=vmax, vmin=vmin)
+               vmax=vmax, vmin=vmin, interpolation='nearest')
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
@@ -450,7 +458,8 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
-              cmap=cmap, extent=[xmin, xmax, ymin, ymax])
+              cmap=cmap, interpolation='nearest',
+              extent=[xmin, xmax, ymin, ymax])
     a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
     a0.hlines([ymin+meta.src_ypos+meta.spec_hw,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
@@ -556,7 +565,9 @@ def median_frame(data, meta):
     plt.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(data.medflux, origin='lower', aspect='auto',
-               vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
+               vmin=vmin, vmax=vmax, interpolation='nearest',
+               extent=[xmin, xmax, ymin, ymax])
+    plt.colorbar()
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
     plt.tight_layout()
