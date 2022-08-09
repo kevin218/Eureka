@@ -270,12 +270,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                    log, name='V0')
 
                 # Start masking pixels based on DQ flags
-                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html
+                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if hasattr(meta, 'dqmask') and meta.dqmask:
                     # dqmask = np.where(data['dq'] > 0)
                     dqmask = np.where(data.dq % 2 == 1)
-                    data['mask'].values[dqmask] = 0
+                    data.mask.values[dqmask] = 0
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
@@ -396,8 +396,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
-                                       optmask=spec.optmask)
+            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
+                                       spec.optspec.values,
+                                       optmask=spec.optmask.values)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1:

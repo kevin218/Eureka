@@ -323,7 +323,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
             # Compute MAD value
             meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
-                                       spec.optspec, spec.optmask,
+                                       spec.optspec.values,
+                                       spec.optmask.values,
                                        meta.wave_min, meta.wave_max)
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
 
@@ -342,10 +343,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
                                  (spec.wave_1d < lc.wave_hi.values[i]))[0]
                 # Make masked arrays for easy summing
-                optspec_ma = np.ma.masked_where(spec.optmask[:, index],
-                                                spec.optspec[:, index])
-                opterr_ma = np.ma.masked_where(spec.optmask[:, index],
-                                               spec.opterr[:, index])
+                optspec_ma = np.ma.masked_where(spec.optmask.values[:, index],
+                                                spec.optspec.values[:, index])
+                opterr_ma = np.ma.masked_where(spec.optmask.values[:, index],
+                                               spec.opterr.values[:, index])
                 # Compute mean flux for each spectroscopic channel
                 # Sumation leads to outliers when there are masked points
                 lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
