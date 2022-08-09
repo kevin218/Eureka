@@ -297,11 +297,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 data, meta = b2f.convert_to_e(data, meta, log)
 
                 # Compute clean median frame
-                data = optspex.clean_median_flux(data, meta, log)
+                data = optspex.clean_median_flux(data, meta, log, m)
 
                 # correct spectral curvature
                 if hasattr(meta, 'curvature') and meta.curvature == 'correct':
-                    data, meta = straighten.straighten_trace(data, meta, log)
+                    data, meta = straighten.straighten_trace(data, meta, log,
+                                                             m)
 
                 # Perform outlier rejection of sky background along time axis
                 data = inst.flag_bg(data, meta, log)

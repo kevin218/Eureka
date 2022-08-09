@@ -480,7 +480,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log, median_thresh=5):
+def clean_median_flux(data, meta, log, m, median_thresh=5):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -491,6 +491,8 @@ def clean_median_flux(data, meta, log, median_thresh=5):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    m : int
+        The file number.
     median_thresh : int; optional
         Sigma threshold when flagging outliers in median frame
 
@@ -543,7 +545,7 @@ def clean_median_flux(data, meta, log, median_thresh=5):
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
     if meta.isplots_S3 >= 4:
-        plots_s3.median_frame(data, meta)
+        plots_s3.median_frame(data, meta, m)
 
     return data
 

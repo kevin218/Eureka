@@ -3,7 +3,7 @@ from ..lib import smooth
 from . import plots_s3
 
 
-def find_column_median_shifts(data, meta):
+def find_column_median_shifts(data, meta, m):
     '''Takes the median frame (in time) and finds the
     center of mass (COM) in pixels for each column. It then returns the needed
     shift to apply to each column to bring the COM to the center
@@ -14,6 +14,8 @@ def find_column_median_shifts(data, meta):
         The median of all data frames
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    m : int
+        The file number.
 
     Returns
     -------
@@ -39,7 +41,7 @@ def find_column_median_shifts(data, meta):
     int_coms = np.around(smooth_coms).astype(int)
 
     if meta.isplots_S3 >= 1:
-        plots_s3.curvature(meta, column_coms, smooth_coms, int_coms)
+        plots_s3.curvature(meta, column_coms, smooth_coms, int_coms, m)
 
     # define the new center (where we will align the trace) in the
     # middle of the detector
@@ -97,7 +99,7 @@ def roll_columns(data, shifts):
     return rolled_data
 
 
-def straighten_trace(data, meta, log):
+def straighten_trace(data, meta, log, m):
     '''Takes a set of integrations with a curved trace and shifts the
     columns to bring the center of mass to the middle of the detector
     (and straighten the trace)
@@ -114,6 +116,8 @@ def straighten_trace(data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
+    m : int
+        The file number.
 
     Returns
     -------
@@ -129,7 +133,7 @@ def straighten_trace(data, meta, log):
                  'extraction profile !!!', mute=(not meta.verbose))
 
     # compute the correction needed from this median frame
-    shifts, new_center = find_column_median_shifts(data.medflux, meta)
+    shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
     # Correct wavelength (only one frame)
     log.writelog('  Correcting the wavelength solution...',

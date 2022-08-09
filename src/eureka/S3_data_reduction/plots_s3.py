@@ -525,7 +525,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
         plt.pause(0.1)
 
 
-def curvature(meta, column_coms, smooth_coms, int_coms):
+def curvature(meta, column_coms, smooth_coms, int_coms, m):
     '''Plot the measured, smoothed, and integer correction from the measured
     curvature. (Fig 3106)
 
@@ -539,6 +539,8 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
         Smoothed center of mass (light) for each pixel column
     int_coms : 1D array
         Integer-rounded center of mass (light) for each pixel column
+    m : int
+        The file number.
 
     Notes
     -----
@@ -560,13 +562,15 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
 
-    fname = (f'figs{os.sep}fig3106_Curvature'+figure_filetype)
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3106_file{file_number}_Curvature' +
+             figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
-def median_frame(data, meta):
+def median_frame(data, meta, m):
     '''Plot the cleaned time-median frame. (Fig 3401)
 
     Parameters
@@ -575,6 +579,8 @@ def median_frame(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    m : int
+        The file number.
 
     Notes
     -----
@@ -597,7 +603,9 @@ def median_frame(data, meta):
     plt.xlabel('Detector Pixel Position')
     plt.tight_layout()
 
-    fname = (f'figs{os.sep}fig3401_MedianFrame'+figure_filetype)
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3401_file{file_number}_MedianFrame' +
+             figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
