@@ -509,7 +509,6 @@ def clean_median_flux(data, meta, log):
 
     # Create mask using all data quality flags
     mask = np.copy(data.mask.values)
-    mask[data.dq.values > 0] = 0
 
     # Compute median flux using masked arrays
     flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
