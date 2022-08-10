@@ -274,7 +274,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if hasattr(meta, 'dqmask') and meta.dqmask:
                     # dqmask = np.where(data['dq'] > 0)
-                    dqmask = np.where(data.dq % 2 == 1)
+                    dqmask = np.where(data.dq.values % 2 == 1)
                     data.mask.values[dqmask] = 0
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
