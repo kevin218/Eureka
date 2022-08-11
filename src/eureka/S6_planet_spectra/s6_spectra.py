@@ -287,12 +287,14 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
 
 
 def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
-    """Load in the S5 save file.
+    """Load in an S5 save file.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     fit_methods : list
         The fitting methods used in S5.
     channel_key : str; optional
@@ -372,17 +374,16 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
 
 def parse_unshared_saves(meta, log, fit_methods):
-    """Load in the S5 save files for an unshared fit.
+    """Load in the many S5 save files for an unshared fit.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     fit_methods : list
         The fitting methods used in S5.
-    channel_key : str; optional
-        A string describing the current channel (e.g. ch0),
-        by default 'shared'.
 
     Returns
     -------
@@ -410,6 +411,18 @@ def parse_unshared_saves(meta, log, fit_methods):
 
 
 def compute_transit_depth(meta):
+    """Convert the fitted rp values to transit depth.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    """
     if not np.all(np.isnan(meta.spectrum_err)):
         lower = np.abs((meta.spectrum_median-meta.spectrum_err[0, :])**2 -
                        meta.spectrum_median**2)
@@ -423,6 +436,18 @@ def compute_transit_depth(meta):
 
 
 def compute_timescale(meta):
+    """Convert the fitted r1 or r4 value to a timescale.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    """
     median = meta.spectrum_median
     if not np.all(np.isnan(meta.spectrum_err)):
         lower = meta.spectrum_err[0, :]
@@ -437,6 +462,20 @@ def compute_timescale(meta):
 
 
 def compute_scale_height(meta, log):
+    """Compute the atmospheric scale height for a planet.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+    """
     if meta.planet_Rad is None:
         meta.planet_Rad = meta.spectrum_median
         if meta.y_param == 'rp^2':
@@ -495,6 +534,27 @@ def load_specific_s5_meta_info(meta):
 
 
 def load_model(meta, log, x_unit):
+    """Load in a model to plot above/below the fitted data.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    x_unit : str
+        The astropy.units unit that will be used in the plot.
+
+    Returns
+    -------
+    meta : eureka.lib.readECF.MetaClass
+        The updated meta data object.
+
+    Raises
+    ------
+    AssertionError
+        Unknown conversion between y_param and model_y_param.
+    """
     if meta.model_y_param != meta.y_param:
         # Need to make sure this model is relevant for this current plot
         model_y_param = copy(meta.model_y_param)
@@ -541,6 +601,13 @@ def load_model(meta, log, x_unit):
 
 
 def save_table(meta):
+    """Clean y_param for filenames and save the table of values.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    """
     event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
                    str(meta.bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
