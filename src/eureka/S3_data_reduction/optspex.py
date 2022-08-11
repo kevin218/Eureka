@@ -513,14 +513,15 @@ def clean_median_flux(data, meta, log):
     # Compute median flux using masked arrays
     flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
+    medflux_mask = np.ma.getmaskarray(medflux)
     ny, nx = medflux.shape
 
     # Interpolate over masked pixels
     clean_med = np.zeros((ny, nx))
     xx = np.arange(nx)
     for j in range(ny):
-        x1 = xx[~medflux.mask[j]]
-        goodmed = medflux[j][~medflux.mask[j]]
+        x1 = xx[~medflux_mask[j]]
+        goodmed = medflux[j][~medflux_mask[j]]
         f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
         # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
         clean_med[j] = f(xx)
@@ -540,7 +541,8 @@ def clean_median_flux(data, meta, log):
             meta.median_thresh = 5
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
                               axis=1, cenfunc=np.ma.median, 
-                              stdfunc=np.ma.std).mask
+                              stdfunc=np.ma.std)
+        outliers = np.ma.getmaskarray(outliers)
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
