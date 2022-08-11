@@ -187,12 +187,13 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
               " Using 'y' by default.")
         meta.time_axis = 'y'
 
+    cmap = plt.cm.RdYlBu_r
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
         plt.pcolormesh(wave_1d[iwmin:iwmax], np.arange(meta.n_int),
                        norm_lcdata, vmin=meta.vmin, vmax=meta.vmax,
-                       cmap=plt.cm.RdYlBu_r)
+                       cmap=cmap)
         plt.xlim(meta.wave_min, meta.wave_max)
         plt.ylim(0, meta.n_int)
         plt.ylabel('Integration Number')
@@ -210,7 +211,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
     else:
         plt.pcolormesh(np.arange(meta.n_int), wave_1d[iwmin:iwmax],
                        norm_lcdata.swapaxes(0, 1), vmin=meta.vmin,
-                       vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+                       vmax=meta.vmax, cmap=cmap)
         plt.ylim(meta.wave_min, meta.wave_max)
         plt.xlim(0, meta.n_int)
         plt.ylabel(r'Wavelength ($\mu m$)')

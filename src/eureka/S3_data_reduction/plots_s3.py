@@ -40,12 +40,13 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
               " Using 'y' by default.")
         meta.time_axis = 'y'
 
+    cmap = plt.cm.RdYlBu_r
     plt.figure(3101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
         plt.pcolormesh(wave_1d, np.arange(meta.n_int),
                        normspec, vmin=meta.vmin, vmax=meta.vmax,
-                       cmap=plt.cm.RdYlBu_r)
+                       cmap=cmap)
         plt.xlim(wmin, wmax)
         plt.ylim(0, meta.n_int)
         plt.ylabel('Integration Number')
@@ -53,7 +54,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     else:
         plt.pcolormesh(np.arange(meta.n_int), wave_1d,
                        normspec.swapaxes(0, 1), vmin=meta.vmin,
-                       vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
+                       vmax=meta.vmax, cmap=cmap)
         plt.ylim(wmin, wmax)
         plt.xlim(0, meta.n_int)
         plt.ylabel(r'Wavelength ($\mu m$)')
@@ -297,11 +298,12 @@ def profile(meta, profile, submask, n, m):
     submask = np.ma.masked_where(mask, submask)
     vmin = np.ma.min(profile*submask)
     vmax = vmin + 0.05*np.ma.max(profile*submask)
+    cmap = plt.cm.RdYlBu_r
     plt.figure(3303)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
-               vmax=vmax, vmin=vmin, interpolation='nearest')
+               vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
@@ -450,7 +452,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
     # Set bad pixels to plot as black
-    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap = plt.cm.RdYlBu_r
     cmap.set_bad('k', 1.)
 
     plt.figure(3304, figsize=(8, 3.5))
@@ -466,7 +468,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
     a0.axes.set_xlabel("Detector Pixel Position")
-    a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap='plasma',
+    a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap=cmap,
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
     a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
@@ -483,7 +485,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
     fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(vmin, vmax),
-                 cmap='plasma'), ax=a1)
+                 cmap=cmap), ax=a1)
     fig.subplots_adjust(top=0.97,
                         bottom=0.155,
                         left=0.08,
@@ -560,13 +562,14 @@ def median_frame(data, meta):
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
     vmin = data.medflux.min().values
     vmax = vmin + 2000
+    cmap = plt.cm.RdYlBu_r
 
     plt.figure(3401)
     plt.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(data.medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, interpolation='nearest',
-               extent=[xmin, xmax, ymin, ymax])
+               extent=[xmin, xmax, ymin, ymax], cmap=cmap)
     plt.colorbar()
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
