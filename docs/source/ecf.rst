@@ -754,19 +754,36 @@ allapers
 Boolean to determine whether Stage 6 is run on all the apertures considered in Stage 5. If
 False, will just use the most recent output in the input directory.
 
-y_unit
-''''''
-The unit to use when plotting and saving the output table. For transit observations
-(or to plot the transmission spectrum from a phase curve observation), values can be
-"Rp/Rs" or "(Rp/Rs)^2". For eclipse observations (or to plot the dayside emission
-spectrum from a phase curve observation), the value must be "Fp/Fs".
-
-y_scalar
+y_params
 ''''''''
+The parameter to use when plotting and saving the output table. To plot the transmission spectrum,
+the value can be 'rp' or 'rp^2'. To plot the dayside emission spectrum, the value must be fp. To plot
+the spectral dependence of any other parameters, simply enter their name as formatted in your EPF.
+For convenience, it is also possible to plot '1/r1' and '1/r4' to visualize the exonential ramp
+timescales. y_params can also be formatted as a list to make many different plots. A "cleaned" version
+of y_params will be used in the filenames of the figures and save files relevant for that y_param
+(e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
+
+y_labels
+''''''''
+The formatted string you want on the label of the y-axis. Set to None to use the default formatting
+which has been nicely formatted in LaTeX for most y_params. If y_params is a list, then y_labels must
+also be a list unless you want the same value applied to all y_params.
+
+y_label_units
+'''''''''''''
+The formatted string for the units you want on the label of the y-axis. For example '(ppm)', '(seconds)',
+or '(days$^{-1})$'. Set to None to automatically add any implied units from y_scalars
+(e.g. ppm if y_scalars=1e6), or set to '' to force no units. If y_params is a list, then y_label_units
+must also be a list unless you want the same value applied to all y_params.
+
+y_scalars
+'''''''''
 This parameter can be used to rescale the y-axis. If set to 100, the y-axis will be in units of
 percent. If set to 1e6, the y-axis will be in units of ppm. If set to any other value other than
 1, 100, 1e6, then the y-axis will simply be multiplied by that value and the scalar will be noted
-in the y-axis label.
+in the y-axis label. If y_params is a list, then y_scalars must also be a list unless you want the
+same value applied to all y_params.
 
 x_unit
 ''''''
@@ -834,14 +851,18 @@ model_x_unit
 The x-unit of the model. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
 
-model_y_unit
-''''''''''''
-The y-unit of the model. Options include "Rp/Rs", "(Rp/Rs)^2", and "Fp/Fs".
+model_y_param
+'''''''''''''
+The y-unit of the model. Follow the same format as y_params. If desired, can be
+rp if y_params is rp^2, or vice-versa. Only one model model_y_param can be provided,
+but if y_params is a list then the code will only use model_y_param on the relevant
+plots (e.g. if model_y_param=rp, then the model would only be shown where y_params
+is rp or rp^2).
 
 model_y_scalar
 ''''''''''''''
 Indicate whether model y-values have already been scaled (e.g. write 1e6 if
-model_spectrum is in ppm).
+model_spectrum is already in ppm).
 
 model_zorder
 ''''''''''''
