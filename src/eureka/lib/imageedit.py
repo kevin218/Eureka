@@ -1,40 +1,4 @@
-# $Author: patricio $
-# $Revision: 301 $
-# $Date: 2010-07-10 03:33:44 -0400 (Sat, 10 Jul 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/imageedit.py $
-# $Id: imageedit.py 301 2010-07-10 07:33:44Z patricio $
-
 import numpy as np
-
-"""
-Name
-----
-Image Edit
-
-File
-----
-imageedit.py
-
-Description
------------
-Routines for editting 2D array images, allows to cut and paste one
-array into other.
-
-Package Contents
-----------------
-trimimage(data, (yc,xc), (yr,xr), mask=None, uncd=None, oob=0):
-    Extracts a rectangular area of an image masking out of bound pixels.
-
-pasteimage(data, subim, (dyc,dxc), (syc,sxc)=(None,None)):
-    Inserts subim array into data, matching the specified coordinates.
-
-Examples:
----------
-
-Revisions
----------
-2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
-"""
 
 
 def trimimage(data, c, r, mask=None, uncd=None, oob=0):

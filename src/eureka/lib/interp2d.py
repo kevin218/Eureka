@@ -1,15 +1,3 @@
-# $Author: patricio $
-# $Revision: 304 $
-# $Date: 2010-07-13 11:36:20 -0400 (Tue, 13 Jul 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/interp2d.py $
-# $Id: interp2d.py 304 2010-07-13 15:36:20Z patricio $
-
-# 2d interpolation using 1D interp twice
-
-# must include or all or none of y,x,yi,xi
-
-# iexpand*(np.array(sz)-1)+1 = np.array(sz)+(np.array(sz)-1)*(iexpand-1)
-
 import numpy as np
 
 

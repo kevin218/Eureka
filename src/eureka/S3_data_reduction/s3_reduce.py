@@ -384,7 +384,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f
-                            data = inst.corr_oneoverf(data, meta, i, position[1])
+                            data = inst.corr_oneoverf(data, meta, i, position[1], log)
                             if meta.isplots_S3 >= 3:
                                 plots_s3.phot_2d_frame_oneoverf(meta, m, i, data, flux_w_oneoverf)
 
@@ -454,17 +454,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             spec = xrio.concat(datasets)
 
             # Plot light curve and centroids over time
-            if meta.isplots_S3 >= 1 and meta.photometry:
-                plots_s3.phot_lc(meta, spec)
-                plots_s3.phot_centroid(meta, spec)
-            if meta.isplots_S3 >= 3 and meta.photometry:
-                plots_s3.phot_bg(meta, spec)
-            if meta.isplots_S3 >= 5 and meta.photometry:
-                plots_s3.phot_npix(meta, spec)
-                plots_s3.phot_2d_frame_diff(meta, spec)
             if meta.photometry:
+                if meta.isplots_S3 >= 1:
+                    plots_s3.phot_lc(meta, spec)
+                    plots_s3.phot_centroid(meta, spec)
+                if meta.isplots_S3 >= 3:
+                    plots_s3.phot_bg(meta, spec)
+                if meta.isplots_S3 >= 5:
+                    plots_s3.phot_npix(meta, spec)
+                    plots_s3.phot_2d_frame_diff(meta, spec)
                 apphot.apphot_status(spec)
-            if meta.photometry:
                 del (spec['flux'])
 
             # Plot fitted 2D drift

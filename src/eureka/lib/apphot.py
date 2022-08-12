@@ -1,9 +1,3 @@
-# $Author$
-# $Revision$
-# $Date$
-# $HeadURL$
-# $Id$
-
 import numpy as np
 from . import disk as di
 from . import meanerr as me

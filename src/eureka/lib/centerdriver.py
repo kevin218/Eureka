@@ -1,9 +1,3 @@
-# $Author: patricio $
-# $Revision: 304 $
-# $Date: 2010-07-13 11:36:20 -0400 (Tue, 13 Jul 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/centerdriver.py $
-# $Id: centerdriver.py 304 2010-07-13 15:36:20Z patricio $
-
 import numpy as np
 from . import imageedit as ie
 from . import gaussian as g

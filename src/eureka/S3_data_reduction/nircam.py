@@ -278,7 +278,7 @@ def flag_bg_phot(data, meta, log):
     return data
 
 
-def corr_oneoverf(data, meta, i, star_pos_x):
+def corr_oneoverf(data, meta, i, star_pos_x, log):
     """
     Correcting for 1/f noise in each amplifier region by doing a row-by-row subtraction
     while avoiding pixels close to the star.
@@ -293,6 +293,8 @@ def corr_oneoverf(data, meta, i, star_pos_x):
         The current integration.
     star_pos_x : int
         The star position in columns (x dimension).
+    log : logedit.Logedit
+        The current log.
 
     Returns
     -------
@@ -398,7 +400,7 @@ def corr_oneoverf(data, meta, i, star_pos_x):
         if ampl_used_bool[3]:
             data.flux.values[i][:, edges3[0]:edges3[1]] -= np.median(flux3, axis=1)[:, None]
     else:
-        print('This 1/f correction method is not supported.'
-              'Please choose between meanerr or median.')
+        log.writelog('This 1/f correction method is not supported.'
+                     'Please choose between meanerr or median.', mute=(not meta.verbose))
 
     return data

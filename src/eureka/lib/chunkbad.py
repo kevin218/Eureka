@@ -1,10 +1,3 @@
-# $Author: patricio $
-# $Revision: 288 $
-# $Date: 2010-06-24 03:33:44 -0400 (Thu, 24 Jun 2010) $
-# $HeadURL: file:///home/esp01/svn/code/python/branches/patricio/photpipe/lib/poet_chunkbad.py $
-# $Id: poet_chunkbad.py 288 2010-06-24 07:33:44Z patricio $
-
-
 import numpy as np
 from ..S3_data_reduction import sigrej as sr
 
