@@ -65,7 +65,7 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
     History:
 
     Written by:	Joseph Harrington, Cornell. 24-11-2005
-                     jh@oobleck.astro.cornell.edu
+    jh@oobleck.astro.cornell.edu
     29-11-2005 jh       Filled in header.
     29-05-2007 jh       Handle data with non-N*64 size.
     29-05-2007 khorning Handle data with only 3 dimensions

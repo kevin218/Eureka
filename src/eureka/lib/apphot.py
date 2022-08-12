@@ -87,7 +87,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
              1 = there are masked pixel(s) in the photometry aperture
              2 = the aperture is off the edge of the image
              3 = a fraction less than skyfrac of the sky annulus pixels
-           is in the image and not masked
+             is in the image and not masked
 
     isbeta  :  boolean
              If True photometric extraction aperture scales with noise pixel
@@ -150,20 +150,20 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     History:
 
     Written by: Joseph Harrington, Cornell. 27-02-2004
-             jh@oobleck.astro.cornell.edu
+    jh@oobleck.astro.cornell.edu
     18-03-2004 jh	Added nochecks keyword.
     19-03-2004 jh	Added error calculation.
     13-01-2005 jh	Fixed header comment.  Added NAN keyword.
     14-10-2005 jh	Found and fixed major bug in sky mask
-           calculation (needed parens around
-           subtraction next to mask multiplication).
-           Added skyfrac.
+    calculation (needed parens around
+    subtraction next to mask multiplication).
+    Added skyfrac.
     07-11-2005 shl35	Added STATUS keyword, error-weighted sky mean.
     16-11-2005 jh	Rewrote, using meanerr.  Fixed major bug in
-           error calc.  Added scaling and test cases.
+    error calc.  Added scaling and test cases.
     24-11-2005 jh	Return NAPPIX, NSKYPIX, NSKYIDEAL (all renamed).
     30-11-2005 jh	Changed NAPPIX, NSKYPIX, NSKYIDEAL to give
-           fractional, unexpanded pixels.
+    fractional, unexpanded pixels.
     21-07-2010 patricio  Converted to python.
 
 
@@ -222,8 +222,8 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     mask = np.ones(sz, byte)
     mask[24,24] = 0
     aplev, aperr, skylev, skyerr, \
-     status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
-                        aperr=True, skylev=True, skyerr=True, status=True)
+    status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
+    aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, 0, skylev, 0, status]
@@ -232,8 +232,8 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
     image[25,24] = np.nan
     aplev, aperr, skylev, skyerr, \
-     status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
-                        aperr=True, skylev=True, skyerr=True, status=True)
+    status = ap.apphot(image, ctr, photap, skyin, skyout, mask = mask,
+    aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, 0, skylev, 0, status]
@@ -255,8 +255,8 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     plt.show()
 
     aplev, aperr, skylev, skyerr, \
-     status = ap.apphot(image2, ctr2, photap, skyin, skyout, mask = mask,
-                        aperr=True, skylev=True, skyerr=True, status=True)
+    status = ap.apphot(image2, ctr2, photap, skyin, skyout, mask = mask,
+    aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, 0, skylev, 0, status]
@@ -265,9 +265,9 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
     skyfrac = 0.5
     aplev, aperr, skylev, skyerr, \
-     status = ap.apphot(image2, ctr2, photap, skyin, skyout,
-                        mask=mask, skyfrac=skyfrac,
-                        aperr=True, skylev=True, skyerr=True, status=True)
+    status = ap.apphot(image2, ctr2, photap, skyin, skyout,
+    mask=mask, skyfrac=skyfrac,
+    aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, 0, skylev, 0, status]
@@ -292,7 +292,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     imerr[25, 38] = 0
     aplev, aperr, skylev, skyerr, \
     status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+    imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
@@ -302,7 +302,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     imerr[25, 38] = np.nan
     aplev, aperr, skylev, skyerr, \
     status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+    imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
@@ -312,8 +312,8 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     image[25, 38] = np.nan
     imerr = sqrt(image)
     aplev, aperr, skylev, skyerr, \
-     status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
-               imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
+    status = ap.apphot(image, ctr, photap, skyin, skyout, mask=mask,
+    imerr=imerr, aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, aperr, skylev, skyerr, status]
@@ -344,9 +344,9 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     expand = 5
     order  = 1  # IDL sample = 0
     aplev, aperr, skylev, skyerr, \
-     status = ap.apphot(image, ctr, photap, skyin, skyout, expand = expand,
-                        mask = mask, imerr = imerr, order=order,
-                        aperr=True, skylev=True, skyerr=True, status=True)
+    status = ap.apphot(image, ctr, photap, skyin, skyout, expand = expand,
+    mask = mask, imerr = imerr, order=order,
+    aperr=True, skylev=True, skyerr=True, status=True)
 
     print(aplev, aperr, skylev, skyerr, status)
     testout  [:, test] = [aplev, aperr, skylev, skyerr, status]

@@ -21,8 +21,8 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     status: boolean
             Set to True to return a bit flag.  If value=0, result is good.
             Bits: 0 = NaN(s) in data.
-                  1 = some errors equal zero.
-                  2 = masked pixel(s) in data.
+            1 = some errors equal zero.
+            2 = masked pixel(s) in data.
 
     Return
     ------
@@ -39,9 +39,9 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     History:
 
     2005-11-15 jh        Written by: Joseph Harrington, Cornell.
-                         jh@oobleck.astro.cornell.edu
+    jh@oobleck.astro.cornell.edu
     2010-11-18 patricio  Wrote in python, docstring added.
-                         pcubillos@fulbrightmail.org
+    pcubillos@fulbrightmail.org
 
     Example
     -------
