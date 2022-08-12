@@ -280,7 +280,24 @@ def flag_bg_phot(data, meta, log):
 
 def corr_oneoverf(data, meta, i, star_pos_x):
     """
-    Correcting for 1/f noise.
+    Correcting for 1/f noise in each amplifier region by doing a row-by-row subtraction
+    while avoiding pixels close to the star.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The current integration.
+    star_pos_x : int
+        The star position in columns (x dimension).
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object after the 1/f correction has been completed.
     """
     print('Correcting for 1/f noise...')
 
