@@ -11,8 +11,8 @@ def centerdriver(method, data, guess, trim, radius, size,
     Use the center method to find the center of a star in data, starting
     from position guess.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     method: string
             Name of the centering method to use.
     data:   2D ndarray
@@ -31,17 +31,15 @@ def centerdriver(method, data, guess, trim, radius, size,
             An array containing the uncertainty values of data. Same
             shape of data.
 
-    Returns:
-    --------
+    Returns
+    -------
     A y,x tuple (scalars) with the coordinates of center of the target
     in data.
 
-    Example:
-    --------
-    nica
+    Notes
+    -----
+    History:
 
-    Modification History:
-    ---------------------
     23-11-2010 patricio   Written by Patricio Cubillos
                           pcubillos@fulbrightmail.org
     """

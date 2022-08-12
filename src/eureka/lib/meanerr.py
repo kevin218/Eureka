@@ -7,8 +7,8 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     error-weighted mean of the input data, omitting masked data, NaN
     data or errors, and data whose errors are zero.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data:   ndarray
             The data to average.
     derr:   ndarray
@@ -24,21 +24,20 @@ def meanerr(data, derr, mask=None, err=False, status=False):
                   1 = some errors equal zero.
                   2 = masked pixel(s) in data.
 
-    Return:
-    -------
+    Return
+    ------
     This function returns the error-weighted mean of the unmasked
     elements of Data. If err or status were set to True, return a
     tuple.
 
-    Notes:
-    ------
+    Notes
+    -----
     Follows maximum likelihood method (see, e.g., Bevington and
     Robinson 2003, Data Reduction and Error Analysis for the
     Physical Sciences, 3rd ed, McGraw Hill, Ch. 4.).
 
-
-    EXAMPLE:
-    --------
+    Example
+    -------
     >>> import meanerr as men
     >>> nd = 5
     >>> data = np.arange(nd) + 5.0
@@ -60,9 +59,10 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
     (5.4545454545454541, 1.6514456476895409, 7)
 
+    Notes
+    -----
+    History:
 
-    MODIFICATION HISTORY:
-    ---------------------
     2005-11-15 jh        Written by: Joseph Harrington, Cornell.
                          jh@oobleck.astro.cornell.edu
     2010-11-18 patricio  Wrote in python, docstring added.

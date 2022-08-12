@@ -5,7 +5,7 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
     """
     Extracts a rectangular area of an image masking out of bound pixels.
 
-    Parameters:
+    Parameters
     ----------
     data  : 2D ndarray
             Image from where extract a sub image.
@@ -29,7 +29,7 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
     its mask (if specified) and a uncd array (if specified). The shape
     of each array is (2*yr+1, 2*xr+1).
 
-    Example:
+    Example
     -------
     >>> from imageedit import *
     >>> import numpy as np
@@ -108,16 +108,12 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
 
 
 def pasteimage(data, subim, dy_, syx=(None, None)):
-    (dyc, dxc) = dy_
-    (syc, sxc) = syx
-    # (None,None) = Nne
-
     """
     Inserts the subim array into data, the data coordinates (dyc,dxc)
     will match the subim coordinates (syc,sxc). The arrays can have not
     overlapping pixels.
 
-    Parameters:
+    Parameters
     ----------
     data    : 2D ndarray
               Image where subim will be inserted.
@@ -135,7 +131,7 @@ def pasteimage(data, subim, dy_, syx=(None, None)):
     The data array with the subim array inserted, according to the
     given coordinates.
 
-    Example:
+    Example
     -------
 
     >>> from imageedit import *
@@ -183,6 +179,9 @@ def pasteimage(data, subim, dy_, syx=(None, None)):
     2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
     2022-08-03  szieba    changed (syc, sxc) is (None, None) to (syc, sxc) == (None, None)
     """
+    (dyc, dxc) = dy_
+    (syc, sxc) = syx
+    # (None,None) = Nne
 
     # Shape of the arrays
     dny, dnx = np.shape(data)
