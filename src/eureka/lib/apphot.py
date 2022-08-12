@@ -596,7 +596,8 @@ def apphot_status(data):
         | statsky = 2 ** 3
         | E.g., If the flag is 6 then is was created by a flag in
         | statap and statbad as 2 ** 2 + 2 ** 1 = 6.
-        | This function is converting the flags back to binary and checking which flags were triggered.
+        | This function is converting the flags back to binary
+        | and checking which flags were triggered.
     """
     if sum(data.status != 0) > 0:
         unique_flags = np.unique(data.status)
