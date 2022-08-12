@@ -146,6 +146,27 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     or filled with NaNs, the function sets a flag and returns NaN
     for all incalculable values.
 
+
+    History:
+
+    Written by: Joseph Harrington, Cornell. 27-02-2004
+             jh@oobleck.astro.cornell.edu
+    18-03-2004 jh	Added nochecks keyword.
+    19-03-2004 jh	Added error calculation.
+    13-01-2005 jh	Fixed header comment.  Added NAN keyword.
+    14-10-2005 jh	Found and fixed major bug in sky mask
+           calculation (needed parens around
+           subtraction next to mask multiplication).
+           Added skyfrac.
+    07-11-2005 shl35	Added STATUS keyword, error-weighted sky mean.
+    16-11-2005 jh	Rewrote, using meanerr.  Fixed major bug in
+           error calc.  Added scaling and test cases.
+    24-11-2005 jh	Return NAPPIX, NSKYPIX, NSKYIDEAL (all renamed).
+    30-11-2005 jh	Changed NAPPIX, NSKYPIX, NSKYIDEAL to give
+           fractional, unexpanded pixels.
+    21-07-2010 patricio  Converted to python.
+
+
     Examples
     --------
     This being one of my most important routines, and being also
@@ -348,27 +369,6 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     print( testright)
     print( 'Differences:')
     print( testout - testright)
-
-    Notes
-    -----
-    History:
-
-    Written by: Joseph Harrington, Cornell. 27-02-2004
-             jh@oobleck.astro.cornell.edu
-    18-03-2004 jh	Added nochecks keyword.
-    19-03-2004 jh	Added error calculation.
-    13-01-2005 jh	Fixed header comment.  Added NAN keyword.
-    14-10-2005 jh	Found and fixed major bug in sky mask
-           calculation (needed parens around
-           subtraction next to mask multiplication).
-           Added skyfrac.
-    07-11-2005 shl35	Added STATUS keyword, error-weighted sky mean.
-    16-11-2005 jh	Rewrote, using meanerr.  Fixed major bug in
-           error calc.  Added scaling and test cases.
-    24-11-2005 jh	Return NAPPIX, NSKYPIX, NSKYIDEAL (all renamed).
-    30-11-2005 jh	Changed NAPPIX, NSKYPIX, NSKYIDEAL to give
-           fractional, unexpanded pixels.
-    21-07-2010 patricio  Converted to python.
     """
 
     # tini = time.time()

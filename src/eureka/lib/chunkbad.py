@@ -62,8 +62,6 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
     Mean images: For each pixel position in Data (i.e., Data[i,j,*,pos])
     it calculates the mean of pixels that are not flagged as bad.
 
-    Notes
-    -----
     History:
 
     Written by:	Joseph Harrington, Cornell. 24-11-2005

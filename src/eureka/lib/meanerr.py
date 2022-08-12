@@ -36,6 +36,13 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     Robinson 2003, Data Reduction and Error Analysis for the
     Physical Sciences, 3rd ed, McGraw Hill, Ch. 4.).
 
+    History:
+
+    2005-11-15 jh        Written by: Joseph Harrington, Cornell.
+                         jh@oobleck.astro.cornell.edu
+    2010-11-18 patricio  Wrote in python, docstring added.
+                         pcubillos@fulbrightmail.org
+
     Example
     -------
     >>> import meanerr as men
@@ -58,15 +65,6 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     >>> derr[4] = 0.0
     >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
     (5.4545454545454541, 1.6514456476895409, 7)
-
-    Notes
-    -----
-    History:
-
-    2005-11-15 jh        Written by: Joseph Harrington, Cornell.
-                         jh@oobleck.astro.cornell.edu
-    2010-11-18 patricio  Wrote in python, docstring added.
-                         pcubillos@fulbrightmail.org
     """
     retstatus = status
 
