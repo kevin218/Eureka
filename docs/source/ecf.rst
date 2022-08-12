@@ -208,7 +208,7 @@ record_ypos
 Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
 
 use_dq
-''''''''''''''''
+''''''
 Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
 
 centroidtrim
@@ -317,40 +317,40 @@ curvature
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
 
 flag_bg
-''''''''''''''''
+'''''''
 Used only for Photometry analysis. Options are: True, False. Does an outlier rejection along the time axis for each individual pixel in a segment (= in a calints file).
 
 interp_method
-''''''''''''''''
+'''''''''''''
 Used only for Photometry analysis. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
 ctr_cutout_size
-''''''''''''''''
+'''''''''''''''
 Used only for Photometry analysis. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
+1overf_corr
+'''''''''''
+Used only for Photometry analysis. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristica. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see 1overf_dist). "oof_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets 1overf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+
+1overf_dist
+'''''''''''
+Used only for Photometry analysis. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, 1overf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of 1overf_dist is therefore basically to not subtract starlight during the 1/f correction.
+
 skip_apphot_bg
-''''''''''''''''
-Used only for Photometry analysis. Skips the background subtraction in the aperture photometry routine. As the 1/f subtraction already basically subtracts the background in each amplifier region, the skip_apphot_bg flag basically skips this second background subtraction.
+''''''''''''''
+Used only for Photometry analysis. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip this background subtraction by setting an background annulus, skip_apphot_bg has to be set to True.
 
 photap
-''''''''''''''''
-Used only for Photometry analysis. Size of photometry aperture in pixels. The shape of the aperture is a circle
+''''''
+Used only for Photometry analysis. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered.
 
 skyin
-''''''''''''''''
+'''''
 Used only for Photometry analysis. Inner sky annulus edge, in pixels.
 
 skyout
-''''''''''''''''
+''''''
 Used only for Photometry analysis. Outer sky annulus edge, in pixels.
-
-oof_corr
-''''''''''''''''
-Used only for Photometry analysis. Options: None, meanerr, median. meanerr calculates a mean value which is weighted by the error array. "oof_corr" sets which method should be used to determine the average flux value in each row of an amplifier region.
-
-oof_bg_dist
-''''''''''''''''
-Used only for Photometry analysis. Set how many pixels away from the centroid should be considered as background during the oof correction. E.g., Frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. oof_bg_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oof_bg_dist is therefore basically to not subtract starlight during the 1/f correction.
 
 isplots_S3
 ''''''''''
