@@ -588,14 +588,15 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 def apphot_status(data):
     """
     Prints a warning if aperture step had errors.
-    bit flag definitions from the apphot function:
-    statnan = 2 ** 0
-    statbad = 2 ** 1
-    statap = 2 ** 2
-    statsky = 2 ** 3
-    E.g., If the flag is 6 then is was created by a flag in
-    statap and statbad = as 2 ** 2 + 2 ** 1 = 6.
-    This function is converting the flags back to binary and checking which flags were triggered.
+    Bit flag definitions from the apphot function:
+
+        | statnan = 2 ** 0
+        | statbad = 2 ** 1
+        | statap = 2 ** 2
+        | statsky = 2 ** 3
+        | E.g., If the flag is 6 then is was created by a flag in
+        | statap and statbad as 2 ** 2 + 2 ** 1 = 6.
+        | This function is converting the flags back to binary and checking which flags were triggered.
     """
     if sum(data.status != 0) > 0:
         unique_flags = np.unique(data.status)

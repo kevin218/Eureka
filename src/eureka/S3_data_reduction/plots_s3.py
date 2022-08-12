@@ -573,7 +573,21 @@ def median_frame(data, meta):
 # Photometry
 def phot_lc(meta, data):
     """
-    Plots the flux as a function of time.
+    Plots the flux as determined by the photometry routine as a function of time. (Fig 3107)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     plt.figure(3107)
     plt.clf()
@@ -590,7 +604,22 @@ def phot_lc(meta, data):
 
 def phot_bg(meta, data):
     """
-    Plots the background flux as a function of time.
+    Plots the background flux as determined by the photometry routine as a function of time.
+    (Fig 3305)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     if not meta.skip_apphot_bg:
         plt.figure(3305)
@@ -609,6 +638,21 @@ def phot_bg(meta, data):
 def phot_centroid(meta, data):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
+    (Fig 3108)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     plt.clf()
     fig, ax = plt.subplots(4, 1, sharex=True)
@@ -647,7 +691,22 @@ def phot_centroid(meta, data):
 
 def phot_npix(meta, data):
     """
-    Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
+    Plots the number of pixels within the target aperture and within the background annulus
+    as a function of time. (Fig 3502)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     plt.figure(3502)
     plt.clf()
@@ -668,7 +727,33 @@ def phot_npix(meta, data):
 
 def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     """
-    Plot the gaussian fit to the centroid cutout.
+    Plot of the gaussian fit to the centroid cutout. (Fig 3503)
+
+    Parameters
+    ----------
+    img : 2D numpy array
+        Cutout of the center of the target which is used to determine the centroid position.
+    x : float
+        Centroid position in x direction.
+    y : float
+        Centroid position in y direction.
+    sx : float
+        Gaussian Sigma of Centroid position in x direction.
+    sy : float
+        Gaussian Sigma of Centroid position in y direction.
+    i : int
+        The integration number.
+    m : int
+        The file number.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     plt.figure(3503)
     plt.clf()
@@ -721,7 +806,26 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
 
 def phot_2d_frame(meta, m, i, data):
     """
-    Plots the 2D frame together with the centroid position and apertures.
+    Plots the 2D frame together with the centroid position and apertures. (Fig 3306)
+
+    Parameters
+    ----------
+    i : int
+        The integration number.
+    m : int
+        The file number.
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
+
     """
     plt.figure(3306, figsize=(8, 3))
     plt.clf()
