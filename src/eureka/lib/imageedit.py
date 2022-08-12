@@ -2,9 +2,6 @@ import numpy as np
 
 
 def trimimage(data, c, r, mask=None, uncd=None, oob=0):
-    (yc, xc) = c
-    (yr, xr) = r
-
     """
     Extracts a rectangular area of an image masking out of bound pixels.
 
@@ -67,10 +64,14 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
      [-1.  1.  1.  0.  1.]
      [-1.  1.  1.  1.  1.]]
 
-    Revisions
-    ---------
+    Notes
+    -----
+    History:
+
     2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
     """
+    (yc, xc) = c
+    (yr, xr) = r
 
     # Shape of original data
     ny, nx = np.shape(data)
@@ -175,8 +176,10 @@ def pasteimage(data, subim, dy_, syx=(None, None)):
      [0, 0, 0, 0, 1],
      [0, 0, 0, 0, 0]]
 
-    Revisions
-    ---------
+    Notes
+    -----
+    History:
+
     2010-07-11  patricio  Added documentation.      pcubillos@fulbrightmail.org
     2022-08-03  szieba    changed (syc, sxc) is (None, None) to (syc, sxc) == (None, None)
     """

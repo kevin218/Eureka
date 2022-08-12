@@ -349,9 +349,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     print( 'Differences:')
     print( testout - testright)
 
+    Notes
+    -----
+    History:
 
-    Revisions:
-    ---------
     Written by: Joseph Harrington, Cornell. 27-02-2004
              jh@oobleck.astro.cornell.edu
     18-03-2004 jh	Added nochecks keyword.
