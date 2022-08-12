@@ -408,7 +408,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                         # Interpolate masked pixels before we perform aperture photometry
                         if meta.interp_method is not None:
-                            util.interp_masked(data, meta, i)
+                            util.interp_masked(data, meta, i, log)
 
                         # Calculate flux in aperture and subtract background flux
                         aphot = apphot.apphot(meta, image=data.flux[i].values, ctr=position,

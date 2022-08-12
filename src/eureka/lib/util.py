@@ -557,13 +557,29 @@ def manmask(data, meta, log):
 
 
 # PHOTOMETRY
-def interp_masked(data, meta, i):
+def interp_masked(data, meta, i, log):
     """
     Interpolates masked pixels.
     Based on the example here:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The current integration.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with requested pixels masked.
     """
-    print('Interpolating masked values...')
+    log.writelog('Interpolating masked values...', mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]
@@ -581,8 +597,9 @@ def interp_masked(data, meta, i):
     elif meta.interp_method == 'cubic':
         grid_z = griddata(points_t, values, (grid_x, grid_y), method='cubic')
     else:
-        print('Your method for interpolation is not supported!'
-              'Please choose between None, nearest, linear or cubic.')
+        log.writelog('Your method for interpolation is not supported!'
+                     'Please choose between None, nearest, linear or cubic.',
+                     mute=(not meta.verbose))
 
     data.flux.values[i] = grid_z
 
@@ -593,6 +610,17 @@ def phot_arrays(data):
     """
     Setting up arrays for the photometry routine.
     These arrays will be populated by the returns coming from centerdriver.py and apphot.py
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with new arrays where the
+        outputs from the photometry routine will be saved in.
     """
     data['centroid_x'] = (['time'], np.zeros_like(data.time))
     data['centroid_y'] = (['time'], np.zeros_like(data.time))
