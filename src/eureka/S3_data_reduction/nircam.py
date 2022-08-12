@@ -278,7 +278,7 @@ def flag_bg_phot(data, meta, log):
     return data
 
 
-def corr_oof(data, meta, i, star_pos_x):
+def corr_oneoverf(data, meta, i, star_pos_x):
     """
     Correcting for 1/f noise.
     """
@@ -298,7 +298,7 @@ def corr_oof(data, meta, i, star_pos_x):
 
     star_pos_x_untrim = int(star_pos_x) + meta.xwindow[0]  # position of star before trimming
     star_exclusion_area_untrim = \
-        np.array([star_pos_x_untrim - meta.oof_bg_dist, star_pos_x_untrim + meta.oof_bg_dist])
+        np.array([star_pos_x_untrim - meta.oneoverf_dist, star_pos_x_untrim + meta.oneoverf_dist])
 
     use_cols = np.ones(2048, dtype=bool)
     for k in range(2048):
@@ -357,7 +357,7 @@ def corr_oof(data, meta, i, star_pos_x):
         err3 = data.err.values[i][:, use_cols3]
         mask3 = data.mask.values[i][:, use_cols3]
 
-    if meta.oof_corr == 'meanerr':
+    if meta.oneoverf_corr == 'meanerr':
         for j in range(128):
             if ampl_used_bool[0]:
                 data.flux.values[i][j, edges0[0]:edges0[1]] -= me.meanerr(flux0[j], err0[j],
@@ -371,7 +371,7 @@ def corr_oof(data, meta, i, star_pos_x):
             if ampl_used_bool[3]:
                 data.flux.values[i][j, edges3[0]:edges3[1]] -= me.meanerr(flux3[j], err3[j],
                                                                           mask=mask3[j], err=False)
-    elif meta.oof_corr == 'median':
+    elif meta.oneoverf_corr == 'median':
         if ampl_used_bool[0]:
             data.flux.values[i][:, edges0[0]:edges0[1]] -= np.median(flux0, axis=1)[:, None]
         if ampl_used_bool[1]:
@@ -381,7 +381,7 @@ def corr_oof(data, meta, i, star_pos_x):
         if ampl_used_bool[3]:
             data.flux.values[i][:, edges3[0]:edges3[1]] -= np.median(flux3, axis=1)[:, None]
     else:
-        print('This oof correction method is not supported.'
+        print('This 1/f correction method is not supported.'
               'Please choose between meanerr or median.')
 
     return data

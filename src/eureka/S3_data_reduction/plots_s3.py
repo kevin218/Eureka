@@ -818,13 +818,13 @@ def phot_2d_frame_zoom(meta, m, i, data):
         plt.pause(0.2)
 
 
-def phot_2d_frame_oof(meta, m, i, data, flux_w_oof):
+def phot_2d_frame_oneoverf(meta, m, i, data, flux_w_oneoverf):
     """
     Plots the 2D frame together with the centroid position and apertures.
     """
     fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
 
-    ax[0].imshow(flux_w_oof, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
+    ax[0].imshow(flux_w_oneoverf, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
     ax[0].set_title('Before 1/f correction')
     ax[0].set_ylabel('y pixels')
 
@@ -842,7 +842,7 @@ def phot_2d_frame_oof(meta, m, i, data, flux_w_oof):
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fig.suptitle((f'Segment {file_number}, Integration {int_number}'), y=0.99)
 
-    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_Frame_OOF' +
+    fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_Frame_OneOverF' +
              figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
     if not meta.hide_plots:

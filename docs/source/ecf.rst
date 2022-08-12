@@ -328,13 +328,13 @@ ctr_cutout_size
 '''''''''''''''
 Used only for Photometry analysis. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
-1overf_corr
-'''''''''''
-Used only for Photometry analysis. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristica. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see 1overf_dist). "oof_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets 1overf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+oneoverf_corr
+'''''''''''''
+Used only for Photometry analysis. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristica. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
 
-1overf_dist
-'''''''''''
-Used only for Photometry analysis. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, 1overf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of 1overf_dist is therefore basically to not subtract starlight during the 1/f correction.
+oneoverf_dist
+'''''''''''''
+Used only for Photometry analysis. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, oneoverf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oneoverf_dist is therefore basically to not subtract starlight during the 1/f correction.
 
 skip_apphot_bg
 ''''''''''''''

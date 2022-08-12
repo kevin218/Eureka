@@ -19,8 +19,8 @@ bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rej
 # Photometric extraction parameters
 interp_method   linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 ctr_cutout_size 7           # Cutoff size all around the centroid after the coarse centroid calculation
-1overf_corr     median      # Options: None, meanerr, median
-1overf_dist     300         # How many pixels away from the centroid should be considered as background? (used for oof correction)
+oneoverf_corr   median      # Options: None, meanerr, median
+oneoverf_dist   300         # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
 skip_apphot_bg  True        # Skips the background subtraction during the aperture photometry step
 photap          80          # Size of photometry aperture in pixels
 skyin           90          # Inner sky annulus edge, in pixels
