@@ -282,7 +282,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if hasattr(meta, 'record_ypos') and meta.record_ypos:
+            if hasattr(meta, 'record_ypos') and meta.record_ypos and not meta.photometry:
                 lc['driftypos'] = (['time'], spec.driftypos.data)
                 lc['driftywidth'] = (['time'], spec.driftywidth.data)
 

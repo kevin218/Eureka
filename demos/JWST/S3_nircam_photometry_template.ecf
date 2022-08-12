@@ -10,22 +10,21 @@ suffix          calints     # Data file suffix
 # Subarray region of interest
 ywindow         [5,64]      # Vertical axis as seen in DS9
 xwindow         [100,1700]  # Horizontal axis as seen in DS9
-src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
-record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+dqmask          True        # Mask pixels with an odd entry in the DQ array
 
 # Background parameters
-bg_hw           8           # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
-bg_deg          1           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
-p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
 
-# Spectral extraction parameters
-spec_hw         8           # Half-width of aperture region for spectral extraction (relative to source position)
-fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
-window_len      31          # Smoothing window length, when fittype = smooth
-prof_deg        3           # Polynomial degree, when fittype = poly
-p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
-p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
+# Photometric extraction parameters
+flag_bg         True        # Do outlier rejection along time axis for each individual pixel?
+interp_method   linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+ctr_cutout_size 7           # Cutoff size all around the centroid after the coarse centroid calculation
+skip_apphot_bg  True        # Skips the background subtraction during the aperture photometry step
+photap          80          # Size of photometry aperture in pixels
+skyin           90          # Inner sky annulus edge, in pixels
+skyout          120         # Outer sky annulus edge, in pixels
+oof_corr        median      # Options: None, meanerr, median
+oof_bg_dist     300         # How many pixels away from the centroid should be considered as background? (used for oof correction)
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
