@@ -311,7 +311,6 @@ def corr_oneoverf(data, meta, i, star_pos_x, log):
     for j in range(len(pxl_idxs)):
         if meta.xwindow[0] <= pxl_idxs[j] < meta.xwindow[1]:
             pxl_in_window_bool[j] = True
-    # ampl_used_bool = np.array(list(map(any, pxl_in_window_bool.reshape((4, 512)))))
     ampl_used_bool = np.any(pxl_in_window_bool.reshape((4, 512)), axis=0)
     # Example: if only the middle two amplifier are left after trimming:
     # ampl_used = [False, True, True, False]

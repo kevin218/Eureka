@@ -606,11 +606,8 @@ def apphot_status(data):
     """
     if sum(data.status != 0) > 0:
         unique_flags = np.unique(data.status)
-        print(unique_flags)
         unique_flags_binary = ['{:08b}'.format(int(i)) for i in unique_flags]
-        print(unique_flags_binary)
         for binary_flag in unique_flags_binary:
-            print(binary_flag)
             print('A warning by the aperture photometry routine:')
             if binary_flag[-1] == '1':
                 print('There are NaN(s) in the photometry aperture')
