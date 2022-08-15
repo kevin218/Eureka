@@ -486,7 +486,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             if not meta.photometry:
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
                                            optmask=spec.optmask)
-                log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
+            else:
+                meta.mad_s3 = util.get_mad_1d(data.aplev.values)
+            log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figure')
