@@ -571,7 +571,7 @@ def median_frame(data, meta):
 
 
 # Photometry
-def phot_lc(meta, data):
+def phot_lc(data, meta):
     """
     Plots the flux as determined by the photometry routine as a function of time. (Fig 3107)
 
@@ -602,7 +602,7 @@ def phot_lc(meta, data):
         plt.pause(0.2)
 
 
-def phot_bg(meta, data):
+def phot_bg(data, meta):
     """
     Plots the background flux as determined by the photometry routine as a function of time.
     (Fig 3305)
@@ -635,7 +635,7 @@ def phot_bg(meta, data):
             plt.pause(0.2)
 
 
-def phot_centroid(meta, data):
+def phot_centroid(data, meta):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths as a function of time.
     (Fig 3108)
@@ -654,6 +654,7 @@ def phot_centroid(meta, data):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
+    plt.figure(3108)
     plt.clf()
     fig, ax = plt.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
@@ -689,7 +690,7 @@ def phot_centroid(meta, data):
         plt.pause(0.2)
 
 
-def phot_npix(meta, data):
+def phot_npix(data, meta):
     """
     Plots the number of pixels within the target aperture and within the background annulus
     as a function of time. (Fig 3502)
@@ -804,20 +805,21 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
-def phot_2d_frame(meta, m, i, data):
+def phot_2d_frame(data, meta, m, i):
     """
-    Plots the 2D frame together with the centroid position and apertures. (Fig 3306)
+    Plots the 2D frame together with the centroid position, the target aperture
+    and the background annulus. (Fig 3306)
 
     Parameters
     ----------
-    i : int
-        The integration number.
-    m : int
-        The file number.
     data : Xarray Dataset
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    i : int
+        The integration number.
+    m : int
+        The file number.
 
     Notes
     -----
@@ -825,7 +827,6 @@ def phot_2d_frame(meta, m, i, data):
 
     - 2022-08-02 Sebastian Zieba
         Initial version
-
     """
     plt.figure(3306, figsize=(8, 3))
     plt.clf()
@@ -870,9 +871,27 @@ def phot_2d_frame(meta, m, i, data):
         plt.pause(0.2)
 
 
-def phot_2d_frame_zoom(meta, m, i, data):
+def phot_2d_frame_zoom(data, meta, m, i):
     """
-    Plots the 2D frame together with the centroid position and apertures.
+    Same as Fig 3306 but only including the target area. (Fig 3504)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The integration number.
+    m : int
+        The file number.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     plt.figure(3504, figsize=(6, 5))
     plt.clf()
@@ -922,10 +941,35 @@ def phot_2d_frame_zoom(meta, m, i, data):
         plt.pause(0.2)
 
 
-def phot_2d_frame_oneoverf(meta, m, i, data, flux_w_oneoverf):
+def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     """
-    Plots the 2D frame together with the centroid position and apertures.
+    Plots the 2D frame with a low vmax so that the background is well visible. The top panel
+    is before the 1/f correction, the lower panel shows the 2D frame after the 1/f correction.
+    The typical "stripy" structure for each row should have been mitigated after the 1/f correction
+    in Stage 3. (Fig 3307)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The integration number.
+    m : int
+        The file number.
+    flux_w_oneoverf : 2D numpy array
+        The 2D frame before the 1/f correction
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
+    plt.figure(3307)
+    plt.clf()
     fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
 
     ax[0].imshow(flux_w_oneoverf, origin='lower', norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
@@ -953,9 +997,25 @@ def phot_2d_frame_oneoverf(meta, m, i, data, flux_w_oneoverf):
         plt.pause(0.2)
 
 
-def phot_2d_frame_diff(meta, data):
+def phot_2d_frame_diff(data, meta):
     """
-    Plots the 2D frame together with the centroid position and apertures.
+    Plots the difference between to consecutive 2D frames. This might be helpful in order
+    to investigate flux changes due to mirror tilts which have been observed during commissioning.
+    (Fig 3505)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-02 Sebastian Zieba
+        Initial version
     """
     for i in range(len(data.aplev.values)-1):
         plt.figure(3505)

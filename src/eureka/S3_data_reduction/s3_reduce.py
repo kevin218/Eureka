@@ -386,7 +386,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             # Correct for 1/f
                             data = inst.corr_oneoverf(data, meta, i, position[1], log)
                             if meta.isplots_S3 >= 3:
-                                plots_s3.phot_2d_frame_oneoverf(meta, m, i, data, flux_w_oneoverf)
+                                plots_s3.phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf)
 
                         # Use the determined centroid and cut out ctr_cutout_size pixels around it
                         # Then perform another 2D gaussian fit
@@ -402,9 +402,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3:
-                            plots_s3.phot_2d_frame(meta, m, i, data)
+                            plots_s3.phot_2d_frame(data, meta, m, i)
                         if meta.isplots_S3 >= 5:
-                            plots_s3.phot_2d_frame_zoom(meta, m, i, data)
+                            plots_s3.phot_2d_frame_zoom(data, meta, m, i)
 
                         # Interpolate masked pixels before we perform aperture photometry
                         if meta.interp_method is not None:
@@ -456,13 +456,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Plot light curve and centroids over time
             if meta.photometry:
                 if meta.isplots_S3 >= 1:
-                    plots_s3.phot_lc(meta, spec)
-                    plots_s3.phot_centroid(meta, spec)
+                    plots_s3.phot_lc(spec, meta)
+                    plots_s3.phot_centroid(spec, meta)
                 if meta.isplots_S3 >= 3:
-                    plots_s3.phot_bg(meta, spec)
+                    plots_s3.phot_bg(spec, meta)
                 if meta.isplots_S3 >= 5:
-                    plots_s3.phot_npix(meta, spec)
-                    plots_s3.phot_2d_frame_diff(meta, spec)
+                    plots_s3.phot_npix(spec, meta)
+                    plots_s3.phot_2d_frame_diff(spec, meta)
                 apphot.apphot_status(spec)
                 del (spec['flux'])
 
