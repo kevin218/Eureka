@@ -12,7 +12,8 @@ def interp2d(image, expand=5, y=None, x=None, yi=None, xi=None):
     image : 2D numpy array
         Contains the 2D frame which will be oversampled in pixels
     expand : int
-        The factor by which a pixel should be oversampled. If set to 5, a pixel will turn into 25 subpixels.
+        The factor by which a pixel should be oversampled.
+        E.g., if set to 5, a pixel will turn into 25 subpixels.
     y : 1D numpy array
         np.arange(ny), with ny being the number of pixels in the y direction
     x : 1D numpy array
