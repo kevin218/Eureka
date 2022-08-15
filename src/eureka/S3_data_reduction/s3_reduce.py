@@ -97,20 +97,24 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         meta = me.mergeevents(meta, s2_meta)
 
     # check for range of spectral apertures
-    if isinstance(meta.spec_hw, list):
+    if hasattr(meta, 'spec_hw') and isinstance(meta.spec_hw, list):
         meta.spec_hw_range = range(meta.spec_hw[0],
                                    meta.spec_hw[1]+meta.spec_hw[2],
                                    meta.spec_hw[2])
-    else:
+    elif hasattr(meta, 'spec_hw') and not meta.photometry:
         meta.spec_hw_range = [meta.spec_hw]
+    elif meta.photometry: # Photometry currently does not support lists of apertures
+        meta.spec_hw_range = [meta.photap]
 
     # check for range of background apertures
-    if isinstance(meta.bg_hw, list):
+    if hasattr(meta, 'bg_hw') and isinstance(meta.bg_hw, list):
         meta.bg_hw_range = range(meta.bg_hw[0],
                                  meta.bg_hw[1]+meta.bg_hw[2],
                                  meta.bg_hw[2])
-    else:
+    elif hasattr(meta, 'bg_hw') and not meta.photometry:
         meta.bg_hw_range = [meta.bg_hw]
+    elif meta.photometry:
+        meta.bg_hw_range = [meta.skyin]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -487,7 +491,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
                                            optmask=spec.optmask)
             else:
-                meta.mad_s3 = util.get_mad_1d(data.aplev.values)
+                meta.mad_s3 = util.get_mad_1d(meta, data.aplev.values)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
