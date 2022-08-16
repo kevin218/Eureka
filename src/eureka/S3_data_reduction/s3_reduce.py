@@ -103,7 +103,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    meta.spec_hw[2])
     elif hasattr(meta, 'spec_hw'):
         meta.spec_hw_range = [meta.spec_hw]
-    elif hasattr(meta, 'photometry') and meta.photometry: # Photometry currently does not support lists of apertures
+    elif hasattr(meta, 'photometry') and meta.photometry:
+        # Photometry currently does not support lists of apertures
         meta.spec_hw_range = [meta.photap]
 
     # check for range of background apertures
