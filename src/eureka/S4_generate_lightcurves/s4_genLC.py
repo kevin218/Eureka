@@ -368,8 +368,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
                                     np.ma.MaskedArray.count(opterr_ma, axis=1))
                 elif meta.photometry:
-                    lc['data'][i] = spec.aplev.vales
-                    lc['err'][i] = spec.aperr.vales
+                    lc['data'][i] = spec.aplev.values
+                    lc['err'][i] = spec.aperr.values
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.clip_binned:
