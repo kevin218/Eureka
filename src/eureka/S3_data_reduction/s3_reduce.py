@@ -114,7 +114,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     elif hasattr(meta, 'bg_hw') and not meta.photometry:
         meta.bg_hw_range = [meta.bg_hw]
     elif meta.photometry:
-        meta.bg_hw_range = [meta.skyin]
+        # E.g., if skyin = 90 and skyout = 150, then the directory will use "bg90150"
+        meta.bg_hw_range = [int(str(meta.skyin) + str(meta.skyout))]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -491,7 +492,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
                                            optmask=spec.optmask)
             else:
-                meta.mad_s3 = util.get_mad_1d(meta, data.aplev.values)
+                normspec, _ = util.normalize_spectrum(meta, data.aplev.values,
+                                                      opterr=data.aperr.values, optmask=None)
+                meta.mad_s3 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
