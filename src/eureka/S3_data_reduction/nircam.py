@@ -311,7 +311,7 @@ def corr_oneoverf(data, meta, i, star_pos_x, log):
     for j in range(len(pxl_idxs)):
         if meta.xwindow[0] <= pxl_idxs[j] < meta.xwindow[1]:
             pxl_in_window_bool[j] = True
-    ampl_used_bool = np.any(pxl_in_window_bool.reshape((4, 512)), axis=0)
+    ampl_used_bool = np.any(pxl_in_window_bool.reshape((4, 512)), axis=1)
     # Example: if only the middle two amplifier are left after trimming:
     # ampl_used = [False, True, True, False]
 
@@ -326,79 +326,42 @@ def corr_oneoverf(data, meta, i, star_pos_x, log):
     use_cols = use_cols[meta.xwindow[0]:meta.xwindow[1]]
     # Array with bools checking if column should be used for background subtraction
 
+    edges_all = []
+    flux_all = []
+    err_all = []
+    mask_all = []
+    edges = np.array([[0, 512], [512, 1024], [1024, 1536], [1536, 2048]])
+
     # Let's go through each amplifier region
-    if ampl_used_bool[0]:
-        edges0 = np.array([0, 512]) - meta.xwindow[0]
-        edges0[np.where(edges0 < 0)] = 0
-        use_cols0 = np.copy(use_cols)
-        for kk in range(len(use_cols0)):
-            if edges0[0] <= kk < edges0[1]:
-                continue
-            else:
-                use_cols0[kk] = False
-        flux0 = data.flux.values[i][:, use_cols0]
-        err0 = data.err.values[i][:, use_cols0]
-        mask0 = data.mask.values[i][:, use_cols0]
-    if ampl_used_bool[1]:
-        edges1 = np.array([512, 1024]) - meta.xwindow[0]
-        edges1[np.where(edges1 < 0)] = 0
-        use_cols1 = np.copy(use_cols)
-        for kk in range(len(use_cols1)):
-            if edges1[0] <= kk < edges1[1]:
-                continue
-            else:
-                use_cols1[kk] = False  # False if columns are out of amplifier region
-        flux1 = data.flux.values[i][:, use_cols1]
-        err1 = data.err.values[i][:, use_cols1]
-        mask1 = data.mask.values[i][:, use_cols1]
-    if ampl_used_bool[2]:
-        edges2 = np.array([1024, 1536]) - meta.xwindow[0]
-        edges2[np.where(edges2 < 0)] = 0
-        use_cols2 = np.copy(use_cols)
-        for kk in range(len(use_cols2)):
-            if edges2[0] <= kk < edges2[1]:
-                continue
-            else:
-                use_cols2[kk] = False
-        flux2 = data.flux.values[i][:, use_cols2]
-        err2 = data.err.values[i][:, use_cols2]
-        mask2 = data.mask.values[i][:, use_cols2]
-    if ampl_used_bool[3]:
-        edges3 = np.array([1536, 2048]) - meta.xwindow[0]
-        edges3[np.where(edges3 < 0)] = 0
-        use_cols3 = np.copy(use_cols)
-        for kk in range(len(use_cols3)):
-            if edges3[0] <= kk < edges3[1]:
-                continue
-            else:
-                use_cols3[kk] = False
-        flux3 = data.flux.values[i][:, use_cols3]
-        err3 = data.err.values[i][:, use_cols3]
-        mask3 = data.mask.values[i][:, use_cols3]
+    for j in range(4):
+        if not ampl_used_bool[j]:
+            edges_all.append(np.zeros(2))
+            flux_all.append(np.zeros(2))
+            err_all.append(np.zeros(2))
+            mask_all.append(np.zeros(2))
+            continue
+        edge = edges[j] - meta.xwindow[0]
+        edge[np.where(edge < 0)] = 0
+        use_cols_temp = np.copy(use_cols)
+        inds = np.arange(len(use_cols_temp))
+        # Set False if columns are out of amplifier region
+        use_cols_temp[np.logical_or(inds < edge[0], inds >= edge[1])] = False
+        edges_all.append(edge)
+        flux_all.append(data.flux.values[i][:, use_cols_temp])
+        err_all.append(data.err.values[i][:, use_cols_temp])
+        mask_all.append(data.mask.values[i][:, use_cols_temp])
 
     if meta.oneoverf_corr == 'meanerr':
         for j in range(128):
-            if ampl_used_bool[0]:
-                data.flux.values[i][j, edges0[0]:edges0[1]] -= me.meanerr(flux0[j], err0[j],
-                                                                          mask=mask0[j], err=False)
-            if ampl_used_bool[1]:
-                data.flux.values[i][j, edges1[0]:edges1[1]] -= me.meanerr(flux1[j], err1[j],
-                                                                          mask=mask1[j], err=False)
-            if ampl_used_bool[2]:
-                data.flux.values[i][j, edges2[0]:edges2[1]] -= me.meanerr(flux2[j], err2[j],
-                                                                          mask=mask2[j], err=False)
-            if ampl_used_bool[3]:
-                data.flux.values[i][j, edges3[0]:edges3[1]] -= me.meanerr(flux3[j], err3[j],
-                                                                          mask=mask3[j], err=False)
+            for k in range(4):
+                if ampl_used_bool[k]:
+                    data.flux.values[i][j, edges_all[k][0]:edges_all[k][1]] -= \
+                        me.meanerr(flux_all[k][j], err_all[k][j], mask=mask_all[k][j], err=False)
     elif meta.oneoverf_corr == 'median':
-        if ampl_used_bool[0]:
-            data.flux.values[i][:, edges0[0]:edges0[1]] -= np.median(flux0, axis=1)[:, None]
-        if ampl_used_bool[1]:
-            data.flux.values[i][:, edges1[0]:edges1[1]] -= np.median(flux1, axis=1)[:, None]
-        if ampl_used_bool[2]:
-            data.flux.values[i][:, edges2[0]:edges2[1]] -= np.median(flux2, axis=1)[:, None]
-        if ampl_used_bool[3]:
-            data.flux.values[i][:, edges3[0]:edges3[1]] -= np.median(flux3, axis=1)[:, None]
+        for k in range(4):
+            if ampl_used_bool[0]:
+                data.flux.values[i][:, edges_all[k][0]:edges_all[k][1]] -= \
+                    np.median(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
                      'Please choose between meanerr or median.', mute=(not meta.verbose))
