@@ -466,7 +466,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     n_int = normspec.shape[0]
     ediff = np.ma.zeros(n_int)
     for m in range(n_int):
-        ediff[m] = get_mad_1d(meta, normspec[m])
+        ediff[m] = get_mad_1d(normspec[m])
 
     if meta.inst == 'wfc3':
         scandir = np.repeat(meta.scandir, meta.nreads)
