@@ -58,7 +58,6 @@ def test_NIRCam(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
-
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage4")
