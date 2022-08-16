@@ -101,9 +101,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         meta.spec_hw_range = range(meta.spec_hw[0],
                                    meta.spec_hw[1]+meta.spec_hw[2],
                                    meta.spec_hw[2])
-    elif hasattr(meta, 'spec_hw') and not meta.photometry:
+    elif hasattr(meta, 'spec_hw'):
         meta.spec_hw_range = [meta.spec_hw]
-    elif meta.photometry: # Photometry currently does not support lists of apertures
+    elif hasattr(meta, 'photometry') and meta.photometry: # Photometry currently does not support lists of apertures
         meta.spec_hw_range = [meta.photap]
 
     # check for range of background apertures
@@ -111,9 +111,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         meta.bg_hw_range = range(meta.bg_hw[0],
                                  meta.bg_hw[1]+meta.bg_hw[2],
                                  meta.bg_hw[2])
-    elif hasattr(meta, 'bg_hw') and not meta.photometry:
+    elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
-    elif meta.photometry:
+    elif hasattr(meta, 'photometry') and meta.photometry:
         # E.g., if skyin = 90 and skyout = 150, then the directory will use "bg90150"
         meta.bg_hw_range = [int(str(meta.skyin) + str(meta.skyout))]
 

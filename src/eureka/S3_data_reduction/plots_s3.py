@@ -866,7 +866,7 @@ def phot_2d_frame(data, meta, m, i):
 
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
              + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -936,7 +936,7 @@ def phot_2d_frame_zoom(data, meta, m, i):
 
     fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom'
              + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -992,7 +992,7 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
 
     fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}_2D_Frame_OneOverF' +
              figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+    plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -1033,6 +1033,6 @@ def phot_2d_frame_diff(data, meta):
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int)) + 1))
         plt.suptitle((f'Integration {int_number}'), y=0.99)
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff' + figure_filetype)
-        plt.savefig(meta.outputdir + fname, dpi=250, tight_layout=True)
+        plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
