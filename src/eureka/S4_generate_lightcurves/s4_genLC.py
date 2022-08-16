@@ -201,43 +201,27 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
             # Define light curve DataArray
             if meta.photometry:
-                lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
-                                       meta.wave, spec.time.values,
-                                       spec.aplev.attrs['flux_units'],
-                                       spec.wave_1d.attrs['wave_units'],
-                                       spec.aplev.attrs['time_units'],
-                                       name='data')
-                lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
-                                      meta.wave, spec.time.values,
-                                      spec.aplev.attrs['flux_units'],
-                                      spec.wave_1d.attrs['wave_units'],
-                                      spec.aplev.attrs['time_units'],
-                                      name='err')
-                lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
-                                                dtype=bool),
-                                       meta.wave, spec.time.values, 'None',
-                                       spec.wave_1d.attrs['wave_units'],
-                                       spec.aplev.attrs['time_units'],
-                                       name='mask')
+                flux_units = spec.aplev.attrs['flux_units']
+                time_units = spec.aplev.attrs['time_units']
             else:
-                lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
-                                       meta.wave, spec.time.values,
-                                       spec.optspec.attrs['flux_units'],
-                                       spec.wave_1d.attrs['wave_units'],
-                                       spec.optspec.attrs['time_units'],
-                                       name='data')
-                lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
-                                      meta.wave, spec.time.values,
-                                      spec.optspec.attrs['flux_units'],
-                                      spec.wave_1d.attrs['wave_units'],
-                                      spec.optspec.attrs['time_units'],
-                                      name='err')
-                lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
-                                                dtype=bool),
-                                       meta.wave, spec.time.values, 'None',
-                                       spec.wave_1d.attrs['wave_units'],
-                                       spec.optspec.attrs['time_units'],
-                                       name='mask')
+                flux_units = spec.optspec.attrs['flux_units']
+                time_units = spec.optspec.attrs['time_units']
+
+            lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                   meta.wave, spec.time.values,
+                                   flux_units,
+                                   spec.wave_1d.attrs['wave_units'],
+                                   time_units, name='data')
+            lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
+                                  meta.wave, spec.time.values,
+                                  flux_units,
+                                  spec.wave_1d.attrs['wave_units'],
+                                  time_units, name='err')
+            lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
+                                            dtype=bool),
+                                   meta.wave, spec.time.values, 'None',
+                                   spec.wave_1d.attrs['wave_units'],
+                                   time_units, name='mask')
             lc = xrio.makeDataset({'data': lcdata, 'err': lcerr,
                                    'mask': lcmask})
             if hasattr(spec, 'scandir'):
@@ -347,11 +331,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
                                            spec.optspec, spec.optmask,
                                            meta.wave_min, meta.wave_max)
-                log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
-
+            else:
+                # Compute MAD value for Photometry
+                normspec, _ = util.normalize_spectrum(meta, spec.aplev.values,
+                                                      opterr=spec.aperr.values, optmask=None)
+                meta.mad_s4 = util.get_mad_1d(normspec)
+            log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
+            if not meta.photometry:
                 if meta.isplots_S4 >= 1:
                     plots_s4.lc_driftcorr(meta, wave_1d_trimmed, spec.optspec,
                                           optmask=spec.optmask)
+
 
             log.writelog("Generating light curves")
 
@@ -378,8 +368,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
                                     np.ma.MaskedArray.count(opterr_ma, axis=1))
                 elif meta.photometry:
-                    lc['data'][i] = spec.aplev
-                    lc['err'][i] = spec.aperr
+                    lc['data'][i] = spec.aplev.vales
+                    lc['err'][i] = spec.aperr.vales
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
                 if meta.clip_binned:

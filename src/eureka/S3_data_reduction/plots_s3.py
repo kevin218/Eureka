@@ -861,7 +861,7 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylabel('y pixels')
 
     plt.legend()
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
@@ -905,7 +905,6 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylabel('y pixels')
 
         plt.legend()
-        plt.tight_layout()
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom'
                  + figure_filetype)
