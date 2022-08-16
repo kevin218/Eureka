@@ -342,7 +342,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     plots_s4.lc_driftcorr(meta, wave_1d_trimmed, spec.optspec,
                                           optmask=spec.optmask)
 
-
             log.writelog("Generating light curves")
 
             # Loop over spectroscopic channels
