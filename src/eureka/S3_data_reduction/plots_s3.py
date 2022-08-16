@@ -808,7 +808,8 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
 def phot_2d_frame(data, meta, m, i):
     """
     Plots the 2D frame together with the centroid position, the target aperture
-    and the background annulus. (Fig 3306)
+    and the background annulus. (Fig 3306) If meta.isplots_S3 >= 5, this function will additionally
+    create another figure - Fig 3504 - but it only includes the target area. (Fig 3306 and 3504)
 
     Parameters
     ----------
@@ -840,7 +841,7 @@ def phot_2d_frame(data, meta, m, i):
     im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
                     extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
-    plt.title('Full Frame')
+    plt.title('Full 2D frame')
     plt.ylabel('y pixels')
     plt.xlabel('x pixels')
 
@@ -870,75 +871,47 @@ def phot_2d_frame(data, meta, m, i):
     if not meta.hide_plots:
         plt.pause(0.2)
 
+    if meta.isplots_S3 >= 5:
+        plt.figure(3504, figsize=(6, 5))
+        plt.clf()
+        plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
 
-def phot_2d_frame_zoom(data, meta, m, i):
-    """
-    Same as Fig 3306 but only including the target area. (Fig 3504)
+        im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
+                        extent=[xmin, xmax, ymin, ymax])
+        plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
+        plt.title('Zoom into 2D frame')
+        plt.ylabel('y pixels')
+        plt.xlabel('x pixels')
 
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-    i : int
-        The integration number.
-    m : int
-        The file number.
+        circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
+                             fill=False, lw=3, alpha=0.7, label='target aperture')
+        circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
+                             fill=False, lw=4, alpha=0.8, label='sky aperture')
+        circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
+                             fill=False, lw=4, alpha=0.8)
+        plt.gca().add_patch(circle1)
+        plt.gca().add_patch(circle2)
+        plt.gca().add_patch(circle3)
 
-    Notes
-    -----
-    History:
+        add_colorbar(im, label='Flux (electrons)')
+        xlim_min = max(0, centroid_x - meta.skyout - 10)
+        xlim_max = min(centroid_x + meta.skyout + 10, flux.shape[1])
+        ylim_min = max(0, centroid_y - meta.skyout - 10)
+        ylim_max = min(centroid_y + meta.skyout + 10, flux.shape[0])
 
-    - 2022-08-02 Sebastian Zieba
-        Initial version
-    """
-    plt.figure(3504, figsize=(6, 5))
-    plt.clf()
-    plt.suptitle('2D frame with centroid and apertures (zoom-in)')
-    flux, centroid_x, centroid_y = data.flux[i], data.centroid_x[i], data.centroid_y[i]
+        plt.xlim(xlim_min, xlim_max)
+        plt.ylim(ylim_min, ylim_max)
+        plt.xlabel('x pixels')
+        plt.ylabel('y pixels')
 
-    xmin, xmax = data.flux.x.min().values-meta.xwindow[0], data.flux.x.max().values-meta.xwindow[0]
-    ymin, ymax = data.flux.y.min().values-meta.ywindow[0], data.flux.y.max().values-meta.ywindow[0]
+        plt.legend()
+        plt.tight_layout()
 
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
-                    extent=[xmin, xmax, ymin, ymax])
-    plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r', label='centroid')
-    plt.title('Full Frame')
-    plt.ylabel('y pixels')
-    plt.xlabel('x pixels')
-
-    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                         fill=False, lw=3, alpha=0.7, label='target aperture')
-    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
-                         fill=False, lw=4, alpha=0.8, label='sky aperture')
-    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
-                         fill=False, lw=4, alpha=0.8)
-    plt.gca().add_patch(circle1)
-    plt.gca().add_patch(circle2)
-    plt.gca().add_patch(circle3)
-
-    add_colorbar(im, label='Flux (electrons)')
-    xlim_min = max(0, centroid_x - meta.skyout - 10)
-    xlim_max = min(centroid_x + meta.skyout + 10, flux.shape[1])
-    ylim_min = max(0, centroid_y - meta.skyout - 10)
-    ylim_max = min(centroid_y + meta.skyout + 10, flux.shape[0])
-
-    plt.xlim(xlim_min, xlim_max)
-    plt.ylim(ylim_min, ylim_max)
-    plt.xlabel('x pixels')
-    plt.ylabel('y pixels')
-
-    plt.legend()
-    plt.tight_layout()
-    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-
-    fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom'
-             + figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
-    if not meta.hide_plots:
-        plt.pause(0.2)
+        fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}_2D_Frame_Zoom'
+                 + figure_filetype)
+        plt.savefig(meta.outputdir + fname, dpi=250)
+        if not meta.hide_plots:
+            plt.pause(0.2)
 
 
 def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
