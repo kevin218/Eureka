@@ -408,8 +408,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3:
                             plots_s3.phot_2d_frame(data, meta, m, i)
-                        if meta.isplots_S3 >= 5:
-                            plots_s3.phot_2d_frame_zoom(data, meta, m, i)
 
                         # Interpolate masked pixels before we perform aperture photometry
                         if meta.interp_method is not None:
