@@ -482,7 +482,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     return np.ma.mean(ediff)
 
 
-def get_mad_1d(meta, data, ind_min=0, ind_max=None):
+def get_mad_1d(data, ind_min=0, ind_max=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 1D data.
 
@@ -500,8 +500,6 @@ def get_mad_1d(meta, data, ind_min=0, ind_max=None):
     mad : float
         Single MAD value in ppm
     """
-    if meta.photometry:
-        data = normalize_spectrum(meta, data)
     return 1e6 * np.ma.median(np.ma.abs(np.ma.ediff1d(data[ind_min:ind_max])))
 
 
