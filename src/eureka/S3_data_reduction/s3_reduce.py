@@ -491,8 +491,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
                                            optmask=spec.optmask)
             else:
-                normspec, _ = util.normalize_spectrum(meta, data.aplev.values,
-                                                      opterr=data.aperr.values, optmask=None)
+                normspec = util.normalize_spectrum(meta, data.aplev.values)
                 meta.mad_s3 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 

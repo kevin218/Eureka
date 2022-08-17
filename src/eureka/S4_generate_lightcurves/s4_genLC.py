@@ -333,8 +333,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                            meta.wave_min, meta.wave_max)
             else:
                 # Compute MAD value for Photometry
-                normspec, _ = util.normalize_spectrum(meta, spec.aplev.values,
-                                                      opterr=spec.aperr.values, optmask=None)
+                normspec = util.normalize_spectrum(meta, spec.aplev.values)
                 meta.mad_s4 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
             if not meta.photometry:
@@ -366,7 +365,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     # proper uncertainties
                     lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
                                     np.ma.MaskedArray.count(opterr_ma, axis=1))
-                elif meta.photometry:
+                else:
                     lc['data'][i] = spec.aplev.values
                     lc['err'][i] = spec.aperr.values
 
