@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
+import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
 from ..lib import gaussian as g
@@ -516,30 +517,33 @@ def clean_median_flux(data, meta, log, m):
     flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
 
-    # Apply smoothing filter
-    ny, nx = medflux.shape
-    smoothflux = np.zeros((ny, nx))
-    for j in range(ny):
-        smoothflux[j] = smooth.medfilt(medflux.data[j], meta.window_len)
+    if meta.window_len > 1:
+        # Apply smoothing filter along dispersion direction
+        ny, nx = medflux.shape
+        smoothflux = spn.median_filter(medflux, size=(meta.window_len, 1))
 
-    # Compute residuals
-    residuals = medflux - smoothflux
+        # Compute residuals
+        residuals = medflux - smoothflux
 
-    # Flag outliers
-    outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
-                          axis=1, cenfunc='median')
+        # Flag outliers
+        outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
+                              axis=1, cenfunc='median')
 
-    # Interpolate over bad pixels
-    clean_med = np.zeros((ny, nx))
-    xx = np.arange(nx)
-    for j in range(ny):
-        x1 = xx[~outliers.mask[j]]
-        goodmed = medflux[j][~outliers.mask[j]]
-        f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
-        # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-        clean_med[j] = f(xx)
+        # Interpolate over bad pixels
+        clean_med = np.zeros((ny, nx))
+        xx = np.arange(nx)
+        for j in range(ny):
+            x1 = xx[~outliers.mask[j]]
+            goodmed = medflux[j][~outliers.mask[j]]
+            f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
+            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+            clean_med[j] = f(xx)
 
-    data['medflux'] = (['y', 'x'], clean_med)
+        # Assign cleaned median frame to data object
+        data['medflux'] = (['y', 'x'], clean_med)
+    else:
+        # Assign uncleaned median frame to data object
+        data['medflux'] = (['y', 'x'], medflux)
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
     if meta.isplots_S3 >= 4:

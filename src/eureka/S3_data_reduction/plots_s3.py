@@ -594,13 +594,14 @@ def median_frame(data, meta, m):
     vmin = data.medflux.min().values
     vmax = vmin + 2000
 
-    plt.figure(3401)
+    plt.figure(3401, figsize=(8, 4))
     plt.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(data.medflux, origin='lower', aspect='auto',
                vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
+    plt.colorbar()
     plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
