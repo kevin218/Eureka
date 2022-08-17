@@ -13,33 +13,30 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
 
     Parameters
     ----------
-    data    : 4D ndarray
-            This array contains the data to be analyzed. Of shape
-            [nim,nx,ny,npos], nx and ny are the image dimensions,
-            nim is the maximum number of images in the largest set,
-            and npos is the number of sets (or 'positions').
-
-    uncd    : float ndarray
-            uncertainties of corresponding points in data, same
-            shape as data.
-
-    mask    : byte ndarray
-            mask where 1 indicates the corresponding pixel in data
-            is good and 0 indicates it is bad. same shape as data.
-
-    nimpos  : [npos] array giving the number of good images at each
-            photometry position.
-
-    sigma   : Passed to sigrej (see sigrej documentation).
-
-    szchunk : The number of images in a processing chunk,
-            usually equal to the number in a subarray-mode readout
-            set.
-
-    fp      : frame parameters variable.
-
-    minchunk: Minimum number of images to allow in the last
-            chunk.  Default is 30.
+    data : 4D ndarray
+        This array contains the data to be analyzed. Of shape
+        [nim,nx,ny,npos], nx and ny are the image dimensions,
+        nim is the maximum number of images in the largest set,
+        and npos is the number of sets (or 'positions').
+    uncd : float ndarray
+        uncertainties of corresponding points in data, same
+        shape as data.
+    mask : byte ndarray
+        mask where 1 indicates the corresponding pixel in data
+        is good and 0 indicates it is bad. same shape as data.
+    nimpos : [npos] array
+        Gives the number of good images at each photometry position.
+    sigma : ndarray (1D)
+        1D array of sigma values for each iteration of sigma rejection.
+        Number of elements determines number of iterations.
+    szchunk : int
+        The number of images in a processing chunk,
+        usually equal to the number in a subarray-mode readout
+        set.
+    fp : frame parameters variable.
+    minchunk: int
+        Minimum number of images to allow in the last
+        chunk.  Default is 30.
 
     Returns
     -------
@@ -64,18 +61,25 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
 
     History:
 
-    Written by:	Joseph Harrington, Cornell. 24-11-2005
-    jh@oobleck.astro.cornell.edu
-    29-11-2005 jh       Filled in header.
-    29-05-2007 jh       Handle data with non-N*64 size.
-    29-05-2007 khorning Handle data with only 3 dimensions
-    14-06-2007 khorning Moved chuck size to within the loop
-    16-07-2007 jh       Ensured all loop variables are longs, not ints.
-    13-04-2008 ks       Changed message to print (line 134)
-    13-04-2008 ks       Converted long to string in print (line 134)
-    20-07-2010 patricio Converted to python.
+    - 24-11-2005: Joseph Harrington, Cornell. jh@oobleck.astro.cornell.edu
+        Original version
+    - 29-11-2005: jh
+        Filled in header.
+    - 29-05-2007: jh
+        Handle data with non-N*64 size.
+    - 29-05-2007: khorning
+        Handle data with only 3 dimensions
+    - 14-06-2007: khorning
+        Moved chuck size to within the loop
+    - 16-07-2007: jh
+        Ensured all loop variables are longs, not ints.
+    - 13-04-2008: ks
+        Changed message to print (line 134)
+    - 13-04-2008: ks
+        Converted long to string in print (line 134)
+    - 20-07-2010: patricio
+        Converted to python.
     """
-
     # Sizes
     n_int, ny, nx = meta.n_int, meta.ny, meta.nx
     # szchunk = n_int
@@ -107,26 +111,32 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
         nchunk = np.int(np.ceil(np.double(nimpos[pos]) / iszchunk))
 
         for chunk in np.arange(nchunk):
-            #      print('chunk: ' + str(chunk) + time.strftime(' %a %b %d %H:%M:%S %Z %Y'))
+            #  print('chunk: '+str(chunk) +
+            #        time.strftime(' %a %b %d %H:%M:%S %Z %Y'))
             start = chunk * szchunk
 
             # If its the last chunk size, truncate it
             if (nimpos[pos] - start) < iszchunk:
                 iszchunk = nimpos[pos] - start
                 if iszchunk <= np.amax(minchunk):
-                    print('poet_chunkbad: Final chunk is too small: %i' % iszchunk)
+                    print('poet_chunkbad: Final chunk is too small: '
+                          f'{iszchunk}')
 
             # Subtract approximate sky for every image in chunk
             for k in np.arange(iszchunk):
                 fp.medsky[start + k, pos] = np.median(
-                    (data[start + k, :, :, pos])[np.where(mask[start + k, :, :, pos])])
+                    (data[start + k, :, :, pos])[np.where(mask[start + k, :,
+                                                               :, pos])])
                 if np.isfinite(fp.medsky[start + k, pos]):
-                    skysub[k, :, :] = data[start + k, :, :, pos] - fp.medsky[start + k, pos]
+                    skysub[k, :, :] = (data[start+k, :, :, pos]
+                                       - fp.medsky[start+k, pos])
 
-            # Do sigma rejection within the chunk, replace that and pre-masked stuff
-            # it's ok if there are pre-flagged data in the sigma rejection input
+            # Do sigma rejection within the chunk, replace that and pre-masked
+            # stuff. It's ok if there are pre-flagged data in the sigma
+            # rejection input
             keepmsk, fmean = sr.sigrej(skysub[0:iszchunk, :, :], sigma,
-                                       mask=mask[start:start + iszchunk, :, :, pos],
+                                       mask=mask[start:start+iszchunk,
+                                                 :, :, pos],
                                        fmean=True)
             keepmsk = keepmsk & mask[start:start + iszchunk, :, :, pos]
 
@@ -145,15 +155,18 @@ def chunkbad(meta, data, uncd, mask, nimpos, sigma, szchunk, fp,
             rejec = (start + rejloc[0], rejloc[1], rejloc[2])  # loc. in data
 
             # broadcasts fmean(ny, nx) with fp.medsky(izchunk,1,1) at the bad
-            # pixel positions(rejloc), and assigns that values to the data in rejec
-            (data[:, :, :, pos])[rejec] = (fmean +
-                                           fp.medsky[start:start + iszchunk,
-                                                     pos].reshape(iszchunk, 1, 1))[rejloc]
-            (uncd[:, :, :, pos])[rejec] = highval
-            (mask[:, :, :, pos])[rejec] = 0
+            # pixel positions(rejloc), and assigns that values to the data
+            # in rejec
+            data[:, :, :, pos][rejec] = \
+                (fmean + fp.medsky[start:start+iszchunk, pos].reshape(iszchunk,
+                                                                      1, 1)
+                 )[rejloc]
+            uncd[:, :, :, pos][rejec] = highval
+            mask[:, :, :, pos][rejec] = 0
 
             # Accumulate data for mean image for this position.
-            # Based on stackmaskmean.pro, but done this way to get median subtraction.
+            # Based on stackmaskmean.pro, but done this way to get median
+            # subtraction.
             subdata = np.copy(data[start:start + iszchunk, :, :, pos])
             subdata[np.where(np.isfinite(subdata) == 0)] = 0
             submask = mask[start:start + iszchunk, :, :, pos]
