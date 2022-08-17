@@ -74,10 +74,12 @@ def centerdriver(method, data, guess, trim, radius, size,
 
     # Get the center with one of the methods:
     if method == 'fgc':
-        sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk, weights=weights,
+        sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk,
+                                     weights=weights,
                                      fitbg=fitbg, maskg=maskstar)[0][0:4]
         extra = sy, sx  # Gaussian 1-sigma half-widths
-        # only plot when we do the second fit --> so we fit the dot in the middle of the target.
+        # only plot when we do the second fit --> so we fit the dot in
+        # the middle of the target.
         if meta.isplots_S3 >= 5 and len(img) == (2 * meta.ctr_cutout_size + 1):
             plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
@@ -90,8 +92,8 @@ def centerdriver(method, data, guess, trim, radius, size,
     #     y, x = ctr.actr(img, loc, asym_rad=radius,
     #                     asym_size=size, method='col')
     # elif method == 'bpf' or method == 'ipf':
-    #     y, x, flux, sky = pf.spitzer_fit(img, msk, weights, psf, psfctr, expand,
-    #                                      method)
+    #     y, x, flux, sky = pf.spitzer_fit(img, msk, weights, psf, psfctr,
+    #                                      expand, method)
     #     extra = flux, sky
 
     # Make trimming correction and return

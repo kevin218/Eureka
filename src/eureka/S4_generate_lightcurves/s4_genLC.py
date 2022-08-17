@@ -266,7 +266,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if hasattr(meta, 'record_ypos') and meta.record_ypos and not meta.photometry:
+            if (hasattr(meta, 'record_ypos') and meta.record_ypos
+                    and not meta.photometry):
                 lc['driftypos'] = (['time'], spec.driftypos.data)
                 lc['driftywidth'] = (['time'], spec.driftywidth.data)
 
@@ -347,7 +348,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.mad_s4_binned = []
             for i in range(meta.nspecchan):
                 if not meta.photometry:
-                    log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
+                    log.writelog(f"  Bandpass {i} = "
+                                 f"{lc.wave_low.values[i]:.3f} - "
                                  f"{lc.wave_hi.values[i]:.3f}")
                     # Compute valid indeces within wavelength range
                     index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
@@ -386,7 +388,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
 
             # If requested, also generate white-light light curve
-            if hasattr(meta, 'compute_white') and meta.compute_white and not meta.photometry:
+            if (hasattr(meta, 'compute_white') and meta.compute_white
+                    and not meta.photometry):
                 log.writelog("Generating white-light light curve")
 
                 # Compute valid indeces within wavelength range
