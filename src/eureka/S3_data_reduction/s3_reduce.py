@@ -293,7 +293,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 if not meta.photometry:
                     # Locate source postion
-                    data, meta, log = source_pos.source_pos_wrapper(data, meta, log, m)
+                    data, meta, log = \
+                        source_pos.source_pos_wrapper(data, meta, log, m)
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
@@ -311,10 +312,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data = optspex.clean_median_flux(data, meta, log)
 
                     # correct spectral curvature
-                    if hasattr(meta, 'curvature') and meta.curvature == 'correct':
-                        data, meta = straighten.straighten_trace(data, meta, log)
+                    if hasattr(meta, 'curvature') and \
+                            meta.curvature == 'correct':
+                        data, meta = \
+                            straighten.straighten_trace(data, meta, log)
 
-                    # Perform outlier rejection of sky background along time axis
+                    # Perform outlier rejection of
+                    # sky background along time axis
                     data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction
@@ -326,12 +330,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):
-                        data, meta, log = inst.correct_drift2D(data, meta, log, m)
+                        data, meta, log = \
+                            inst.correct_drift2D(data, meta, log, m)
                     elif meta.record_ypos:
                         # Record y position and width for all integrations
-                        data, meta, log = source_pos.source_pos_wrapper(data, meta,
-                                                                        log, m,
-                                                                        integ=None)
+                        data, meta, log = \
+                            source_pos.source_pos_wrapper(data, meta, log,
+                                                          m, integ=None)
                         if meta.isplots_S3 >= 1:
                             # make y position and width plots
                             plots_s3.driftypos(data, meta)
@@ -364,47 +369,65 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             plots_s3.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
-                    # Do outlier reduction along time axis for each individual pixel
+                    # Do outlier reduction along time axis for
+                    # each individual pixel
                     if meta.flag_bg:
                         data = inst.flag_bg_phot(data, meta, log)
 
                     # Setting up arrays for photometry reduction
                     data = util.phot_arrays(data)
 
-                    for i in tqdm(range(len(data.time)), desc='Looping over Integrations'):
-                        if (meta.isplots_S3 >= 3) and (meta.oneoverf_corr is not None):
-                            # save current flux into an array for plotting 1/f correction comparison
+                    for i in tqdm(range(len(data.time)),
+                                  desc='Looping over Integrations'):
+                        if (meta.isplots_S3 >= 3) and \
+                                (meta.oneoverf_corr is not None):
+                            # save current flux into an array for
+                            # plotting 1/f correction comparison
                             flux_w_oneoverf = np.copy(data.flux.values[i])
 
                         # Determine centroid position
-                        # We do this twice. First a coarse estimation, then a more precise one.
+                        # We do this twice. First a coarse estimation,
+                        # then a more precise one.
                         # Use the center of the frame as an initial guess
-                        centroid_guess = [data.flux.shape[1]//2, data.flux.shape[2]//2]
+                        centroid_guess = \
+                            [data.flux.shape[1]//2, data.flux.shape[2]//2]
                         # Do a 2D gaussian fit to the whole frame
-                        position, extra = centerdriver.centerdriver('fgc', data.flux.values[i],
-                                                                    centroid_guess, 0, 0, 0,
-                                                                    mask=None, uncd=None,
-                                                                    fitbg=1, maskstar=True,
-                                                                    expand=1.0, psf=None,
-                                                                    psfctr=None, i=i, m=m,
-                                                                    meta=meta)
+                        position, extra = \
+                            centerdriver.centerdriver('fgc',
+                                                      data.flux.values[i],
+                                                      centroid_guess, 0, 0, 0,
+                                                      mask=None, uncd=None,
+                                                      fitbg=1, maskstar=True,
+                                                      expand=1.0, psf=None,
+                                                      psfctr=None, i=i, m=m,
+                                                      meta=meta)
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f
-                            data = inst.do_oneoverf_corr(data, meta, i, position[1], log)
+                            data = \
+                                inst.do_oneoverf_corr(data, meta, i,
+                                                      position[1], log)
                             if meta.isplots_S3 >= 3:
-                                plots_s3.phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf)
+                                plots_s3.phot_2d_frame_oneoverf(data, meta,
+                                                                m, i,
+                                                                flux_w_oneoverf)
 
-                        # Use the determined centroid and cut out ctr_cutout_size pixels around it
+                        # Use the determined centroid and
+                        # cut out ctr_cutout_size pixels around it
                         # Then perform another 2D gaussian fit
-                        position, extra = centerdriver.centerdriver('fgc', data.flux.values[i],
-                                                                    position, meta.ctr_cutout_size,
-                                                                    0, 0, mask=data.mask.values[i],
-                                                                    uncd=None, fitbg=1,
-                                                                    maskstar=True, expand=1.0,
-                                                                    psf=None, psfctr=None,
-                                                                    i=i, m=m, meta=meta)
-                        # Store centroid positions and the Gaussian 1-sigma half-widths
+                        position, extra = \
+                            centerdriver.centerdriver('fgc',
+                                                      data.flux.values[i],
+                                                      position,
+                                                      meta.ctr_cutout_size,
+                                                      0, 0,
+                                                      mask=data.mask.values[i],
+                                                      uncd=None, fitbg=1,
+                                                      maskstar=True, expand=1,
+                                                      psf=None, psfctr=None,
+                                                      i=i, m=m, meta=meta)
+                        # Store centroid positions and
+                        # the Gaussian 1-sigma half-widths
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
                         # Plot 2D frame, the centroid and the centroid position
@@ -418,18 +441,25 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                         # Calculate flux in aperture and subtract
                         # background flux
-                        aphot = apphot.apphot(meta, image=data.flux[i].values, ctr=position,
-                                              photap=meta.photap, skyin=meta.skyin,
-                                              skyout=meta.skyout, betahw=1, targpos=position,
-                                              mask=data.mask[i].values, imerr=data.err[i].values,
-                                              skyfrac=0.1, med=True, expand=1, isbeta=False,
-                                              nochecks=False, aperr=True, nappix=True, skylev=True,
-                                              skyerr=True, nskypix=True, nskyideal=True,
-                                              status=True, betaper=True)
+                        aphot = \
+                            apphot.apphot(meta, image=data.flux[i].values,
+                                          ctr=position, photap=meta.photap,
+                                          skyin=meta.skyin, skyout=meta.skyout,
+                                          betahw=1, targpos=position,
+                                          mask=data.mask[i].values,
+                                          imerr=data.err[i].values,
+                                          skyfrac=0.1, med=True, expand=1,
+                                          isbeta=False, nochecks=False,
+                                          aperr=True, nappix=True, skylev=True,
+                                          skyerr=True, nskypix=True,
+                                          nskyideal=True, status=True,
+                                          betaper=True)
                         # Save results into arrays
-                        data['aplev'][i], data['aperr'][i], data['nappix'][i], data['skylev'][i], \
-                            data['skyerr'][i], data['nskypix'][i], data['nskyideal'][i], \
-                            data['status'][i], data['betaper'][i] = aphot
+                        data['aplev'][i], data['aperr'][i], \
+                            data['nappix'][i], data['skylev'][i], \
+                            data['skyerr'][i], data['nskypix'][i], \
+                            data['nskyideal'][i], data['status'][i], \
+                            data['betaper'][i] = aphot
 
                 if meta.save_output:
                     # Save flux data from current segment
