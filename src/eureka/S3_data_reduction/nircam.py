@@ -278,7 +278,7 @@ def flag_bg_phot(data, meta, log):
     return data
 
 
-def corr_oneoverf(data, meta, i, star_pos_x, log):
+def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     """
     Correcting for 1/f noise in each amplifier region by doing a row-by-row subtraction
     while avoiding pixels close to the star.
@@ -359,7 +359,7 @@ def corr_oneoverf(data, meta, i, star_pos_x, log):
                         me.meanerr(flux_all[k][j], err_all[k][j], mask=mask_all[k][j], err=False)
     elif meta.oneoverf_corr == 'median':
         for k in range(4):
-            if ampl_used_bool[0]:
+            if ampl_used_bool[k]:
                 data.flux.values[i][:, edges_all[k][0]:edges_all[k][1]] -= \
                     np.median(flux_all[k], axis=1)[:, None]
     else:
