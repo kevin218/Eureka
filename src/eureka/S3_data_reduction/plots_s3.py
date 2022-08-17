@@ -10,7 +10,10 @@ from ..lib.plots import figure_filetype
 
 
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
-    '''Plot a 2D light curve without drift correction. (Fig 3101)
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
 
     Parameters
     ----------
@@ -29,6 +32,9 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
                                        optmask=optmask.values)
     wmin = np.nanmin(wave_1d)
     wmax = np.nanmax(wave_1d)
+    # Don't do min and max because MIRI is backwards
+    pmin = int(optspec.x[0].values)
+    pmax = int(optspec.x[-1].values)
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -41,31 +47,55 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         meta.time_axis = 'y'
 
     cmap = plt.cm.RdYlBu_r
-    plt.figure(3101, figsize=(8, 8))
-    plt.clf()
+    fig1 = plt.figure(3101, figsize=(8, 8))
+    fig2 = plt.figure(3102, figsize=(8, 8))
+    fig1.clf()
+    fig2.clf()
+    ax1 = fig1.gca()
+    ax2 = fig2.gca()
     if meta.time_axis == 'y':
-        plt.pcolormesh(wave_1d, np.arange(meta.n_int),
-                       normspec, vmin=meta.vmin, vmax=meta.vmax,
-                       cmap=cmap)
-        plt.xlim(wmin, wmax)
-        plt.ylim(0, meta.n_int)
-        plt.ylabel('Integration Number')
-        plt.xlabel(r'Wavelength ($\mu m$)')
+        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int),
+                             normspec, vmin=meta.vmin, vmax=meta.vmax,
+                             cmap=cmap)
+        im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
+                         extent=[pmin, pmax, 0, meta.n_int], vmin=meta.vmin,
+                         vmax=meta.vmax, cmap=cmap)
+        ax1.set_xlim(wmin, wmax)
+        ax2.set_xlim(pmin, pmax)
+        ax1.set_ylim(0, meta.n_int)
+        ax2.set_ylim(0, meta.n_int)
+        ax1.set_ylabel('Integration Number')
+        ax2.set_ylabel('Integration Number')
+        ax1.set_xlabel(r'Wavelength ($\mu m$)')
+        ax2.set_xlabel('Detector Pixel Position')
     else:
-        plt.pcolormesh(np.arange(meta.n_int), wave_1d,
-                       normspec.swapaxes(0, 1), vmin=meta.vmin,
-                       vmax=meta.vmax, cmap=cmap)
-        plt.ylim(wmin, wmax)
-        plt.xlim(0, meta.n_int)
-        plt.ylabel(r'Wavelength ($\mu m$)')
-        plt.xlabel('Integration Number')
+        im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
+                             normspec.swapaxes(0, 1), vmin=meta.vmin,
+                             vmax=meta.vmax, cmap=cmap)
+        im2 = ax2.imshow(normspec.swapaxes(0, 1), origin='lower',
+                         aspect='auto', extent=[0, meta.n_int, pmin, pmax],
+                         vmin=meta.vmin, vmax=meta.vmax, cmap=cmap)
+        ax1.set_ylim(wmin, wmax)
+        ax2.set_ylim(pmin, pmax)
+        ax1.set_xlim(0, meta.n_int)
+        ax2.set_xlim(0, meta.n_int)
+        ax1.set_ylabel(r'Wavelength ($\mu m$)')
+        ax2.set_ylabel('Detector Pixel Position')
+        ax1.set_xlabel('Integration Number')
+        ax2.set_xlabel('Integration Number')
 
-    plt.minorticks_on()
-    plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
-    plt.colorbar(label='Normalized Flux')
-    plt.tight_layout()
-    fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
-    plt.savefig(meta.outputdir+fname, dpi=300)
+    ax1.minorticks_on()
+    ax2.minorticks_on()
+    ax1.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+    ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+    fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
+    fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
+    fig1.set_tight_layout(True)
+    fig2.set_tight_layout(True)
+    fname1 = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
+    fname2 = f'figs{os.sep}fig3102-2D_LC'+figure_filetype
+    fig1.savefig(meta.outputdir+fname1, dpi=300)
+    fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -138,7 +168,7 @@ def image_and_background(data, meta, log, m):
 
 
 def drift_2D(data, meta):
-    '''Plot the fitted 2D drift. (Fig 3105)
+    '''Plot the fitted 2D drift. (Fig 3106)
 
     Parameters
     ----------
@@ -147,7 +177,7 @@ def drift_2D(data, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    plt.figure(3105, figsize=(8, 6))
+    plt.figure(3106, figsize=(8, 6))
     plt.clf()
     plt.subplot(211)
     for p in range(2):
@@ -161,7 +191,7 @@ def drift_2D(data, meta):
     plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = f'figs{os.sep}fig3105_Drift2D{figure_filetype}'
+    fname = f'figs{os.sep}fig3106_Drift2D{figure_filetype}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -209,7 +239,7 @@ def optimal_spectrum(data, meta, n, m):
 def source_position(meta, x_dim, pos_max, m, n,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
-    '''Plot source position for MIRI data. (Figs 3102)
+    '''Plot source position for MIRI data. (Figs 3103)
 
     Parameters
     ----------
@@ -249,7 +279,7 @@ def source_position(meta, x_dim, pos_max, m, n,
     - Oct 15, 2021: Taylor Bell
         Tidied up the code a bit to reduce repeated code.
     '''
-    plt.figure(3102)
+    plt.figure(3103)
     plt.clf()
     plt.plot(y_pixels, sum_row, 'o', label='Data')
     if isgauss:
@@ -267,7 +297,7 @@ def source_position(meta, x_dim, pos_max, m, n,
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3102_file{file_number}_int{int_number}' +
+    fname = (f'figs{os.sep}fig3103_file{file_number}_int{int_number}' +
              '_source_pos'+figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
@@ -358,36 +388,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
 
 
 def driftypos(data, meta):
-    '''Plot the spatial jitter. (Fig 3103)
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        First version of this function
-    '''
-    plt.figure(3103, figsize=(8, 4))
-    plt.clf()
-    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
-    plt.ylabel('Spectrum spatial profile center')
-    plt.xlabel('Integration Number')
-    plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3103_DriftYPos'+figure_filetype
-    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
-
-
-def driftywidth(data, meta):
-    '''Plot the spatial profile's fitted Gaussian width. (Fig 3104)
+    '''Plot the spatial jitter. (Fig 3104)
 
     Parameters
     ----------
@@ -405,11 +406,40 @@ def driftywidth(data, meta):
     '''
     plt.figure(3104, figsize=(8, 4))
     plt.clf()
+    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
+    plt.ylabel('Spectrum spatial profile center')
+    plt.xlabel('Integration Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3104_DriftYPos'+figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def driftywidth(data, meta):
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3105, figsize=(8, 4))
+    plt.clf()
     plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3104_DriftYWidth'+figure_filetype
+    fname = 'figs'+os.sep+'fig3105_DriftYWidth'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -502,7 +532,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
 
 def curvature(meta, column_coms, smooth_coms, int_coms):
     '''Plot the measured, smoothed, and integer correction from the measured
-    curvature. (Fig 3106)
+    curvature. (Fig 3107)
 
     Parameters
     ----------
@@ -524,7 +554,7 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
     '''
     colors = mpl.cm.viridis
 
-    plt.figure(3106)
+    plt.figure(3107)
     plt.clf()
     plt.title("Trace Curvature")
     plt.plot(column_coms, '.', label='Measured', color=colors(0.25))
@@ -535,7 +565,7 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
 
-    fname = (f'figs{os.sep}fig3106_Curvature'+figure_filetype)
+    fname = (f'figs{os.sep}fig3107_Curvature'+figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
