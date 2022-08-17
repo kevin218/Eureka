@@ -9,23 +9,23 @@ def meanerr(data, derr, mask=None, err=False, status=False):
 
     Parameters
     ----------
-    data:   ndarray
-            The data to average.
-    derr:   ndarray
-            The 1-sigma uncertainties in data, same shape as data.
-    mask:   ndarray
-            A 1 indicates the corresponding element of Data is good, a
-            0 indicates it is bad, same shape as data.
-    err:    boolean
-            Set to True to return error in the mean.
+    data: ndarray
+        The data to average.
+    derr: ndarray
+        The 1-sigma uncertainties in data, same shape as data.
+    mask: ndarray
+        A 1 indicates the corresponding element of Data is good, a
+        0 indicates it is bad, same shape as data.
+    err: boolean
+        Set to True to return error in the mean.
     status: boolean
-            Set to True to return a bit flag.  If value=0, result is good.
-            Bits: 0 = NaN(s) in data.
-            1 = some errors equal zero.
-            2 = masked pixel(s) in data.
+        Set to True to return a bit flag.  If value=0, result is good.
+        Bits: 0 = NaN(s) in data.
+        1 = some errors equal zero.
+        2 = masked pixel(s) in data.
 
-    Return
-    ------
+    Returns
+    -------
     This function returns the error-weighted mean of the unmasked
     elements of Data. If err or status were set to True, return a
     tuple.
@@ -38,33 +38,35 @@ def meanerr(data, derr, mask=None, err=False, status=False):
 
     History:
 
-    2005-11-15 jh        Written by: Joseph Harrington, Cornell.
-    jh@oobleck.astro.cornell.edu
-    2010-11-18 patricio  Wrote in python, docstring added.
-    pcubillos@fulbrightmail.org
+    - 2005-11-15: jh. Joseph Harrington, Cornell. jh@oobleck.astro.cornell.edu
+        Initial version
+    - 2010-11-18 patricio. pcubillos@fulbrightmail.org
+        Wrote in python, docstring added.
 
-    Example
-    -------
-    >>> import meanerr as men
-    >>> nd = 5
-    >>> data = np.arange(nd) + 5.0
-    >>> derr = np.sqrt(data)
-    >>> mask = np.ones(nd)
+    Examples
+    --------
+    .. highlight:: python
+    .. code-block:: python
+        >>> import meanerr as men
+        >>> nd = 5
+        >>> data = np.arange(nd) + 5.0
+        >>> derr = np.sqrt(data)
+        >>> mask = np.ones(nd)
 
-    >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
-    (6.7056945183608301, 1.1580755172579058, 0)
+        >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
+        (6.7056945183608301, 1.1580755172579058, 0)
 
-    >>> mask[2] = 0
-    >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
-    (6.6359447004608301, 1.2880163722232756, 4)
+        >>> mask[2] = 0
+        >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
+        (6.6359447004608301, 1.2880163722232756, 4)
 
-    >>> data[3] = np.nan
-    >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
-    (6.279069767441861, 1.4467284665112363, 5)
+        >>> data[3] = np.nan
+        >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
+        (6.279069767441861, 1.4467284665112363, 5)
 
-    >>> derr[4] = 0.0
-    >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
-    (5.4545454545454541, 1.6514456476895409, 7)
+        >>> derr[4] = 0.0
+        >>> print(men.meanerr(data, derr,mask=mask, err=True, status=True))
+        (5.4545454545454541, 1.6514456476895409, 7)
     """
     retstatus = status
 
