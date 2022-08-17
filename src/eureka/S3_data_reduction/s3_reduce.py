@@ -116,8 +116,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         meta.bg_hw_range = [meta.bg_hw]
     elif hasattr(meta, 'photometry') and meta.photometry:
         # E.g., if skyin = 90 and skyout = 150, then the
-        # directory will use "bg90150"
-        meta.bg_hw_range = [int(str(meta.skyin) + str(meta.skyout))]
+        # directory will use "bg90_150"
+        meta.bg_hw_range = [str(meta.skyin) + '_' + str(meta.skyout)]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
