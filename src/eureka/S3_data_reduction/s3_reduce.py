@@ -115,7 +115,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
     elif hasattr(meta, 'photometry') and meta.photometry:
-        # E.g., if skyin = 90 and skyout = 150, then the directory will use "bg90150"
+        # E.g., if skyin = 90 and skyout = 150, then the
+        # directory will use "bg90150"
         meta.bg_hw_range = [int(str(meta.skyin) + str(meta.skyout))]
 
     # create directories to store data
@@ -410,11 +411,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         if meta.isplots_S3 >= 3:
                             plots_s3.phot_2d_frame(data, meta, m, i)
 
-                        # Interpolate masked pixels before we perform aperture photometry
+                        # Interpolate masked pixels before we perform
+                        # aperture photometry
                         if meta.interp_method is not None:
                             util.interp_masked(data, meta, i, log)
 
-                        # Calculate flux in aperture and subtract background flux
+                        # Calculate flux in aperture and subtract
+                        # background flux
                         aphot = apphot.apphot(meta, image=data.flux[i].values, ctr=position,
                                               photap=meta.photap, skyin=meta.skyin,
                                               skyout=meta.skyout, betahw=1, targpos=position,
@@ -488,11 +491,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Compute MAD value
             if not meta.photometry:
-                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d, spec.optspec,
+                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d,
+                                           spec.optspec,
                                            optmask=spec.optmask)
             else:
-                normspec, _ = util.normalize_spectrum(meta, data.aplev.values,
-                                                      opterr=data.aperr.values, optmask=None)
+                normspec = util.normalize_spectrum(meta, data.aplev.values)
                 meta.mad_s3 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 

@@ -60,17 +60,24 @@ def read(filename, data, meta, log):
     v0 = hdulist['VAR_RNOISE', 1].data
     int_times = hdulist['INT_TIMES', 1].data
 
-    if hdulist[0].header['CHANNEL'] == 'LONG':  # Spectroscopy will have "LONG" as CHANNEL
+    if hdulist[0].header['CHANNEL'] == 'LONG':
+        # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
         wave_2d = hdulist['WAVELENGTH', 1].data
-    elif hdulist[0].header['CHANNEL'] == 'SHORT':  # Photometry will have "SHORT" as CHANNEL
+    elif hdulist[0].header['CHANNEL'] == 'SHORT':
+        # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
-        # The DISPAXIS argument does not exist in the header of the photometry data.
-        # Added it here so that code in other sections doesn't have to be changed
+        # The DISPAXIS argument does not exist in the header of the photometry
+        # data. Added it here so that code in other sections doesn't have to
+        # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
-        if hdulist[0].header['FILTER'] == 'F210M':  # TODO make this better for all filters
-            wave_1d = np.ones_like(sci[0, 0]) * 2.1  # will be deleted at the end of S3
-            meta.phot_wave = 2.1  # Is used in S4 for plotting.
+        
+        # FINDME: make this better for all filters
+        if hdulist[0].header['FILTER'] == 'F210M':
+            # will be deleted at the end of S3
+            wave_1d = np.ones_like(sci[0, 0]) * 2.1
+            # Is used in S4 for plotting.
+            meta.phot_wave = 2.1
         elif hdulist[0].header['FILTER'] == 'F187N':
             wave_1d = np.ones_like(sci[0, 0]) * 1.87
             meta.phot_wave = 1.87
@@ -232,7 +239,8 @@ def cut_aperture(data, meta, log):
 
 
 def flag_bg_phot(data, meta, log):
-    '''Outlier rejection of segment along time axis adjusted for the photometry reduction routine.
+    '''Outlier rejection of segment along time axis adjusted for the
+    photometry reduction routine.
 
     Parameters
     ----------
@@ -262,26 +270,28 @@ def flag_bg_phot(data, meta, log):
         estsig = None
 
     nbadpix_total = 0
-    for i in tqdm(range(flux.shape[1]), desc='Looping over Rows for outlier removal'):
+    for i in tqdm(range(flux.shape[1]),
+                  desc='Looping over Rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
             ngoodpix = np.sum(mask[:, i, j] == 1)
-            data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j], meta.bg_thresh,
+            data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j],
+                                                   meta.bg_thresh,
                                                    mask[:, i, j], estsig)
             if not all(data['mask'][:, i, j].values):
                 # counting the amount of flagged bad pixels
                 nbadpix = ngoodpix - np.sum(data['mask'][:, i, j].values)
                 nbadpix_total += nbadpix
     flag_percent = nbadpix_total/np.product(flux.shape)*100
-    log.writelog("  {0:.5f}% of the pixels have been flagged as outliers\n".format(flag_percent),
-                 mute=(not meta.verbose))
+    log.writelog(f"  {flag_percent:.5f} of the pixels have been flagged as "
+                 "outliers\n", mute=(not meta.verbose))
 
     return data
 
 
 def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     """
-    Correcting for 1/f noise in each amplifier region by doing a row-by-row subtraction
-    while avoiding pixels close to the star.
+    Correcting for 1/f noise in each amplifier region by doing a row-by-row
+    subtraction while avoiding pixels close to the star.
 
     Parameters
     ----------
@@ -305,9 +315,11 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
 
     # Let's first determine which amplifier regions are left in the frame.
     # For NIRCam: 4 amplifiers, 512 pixels in x dimension per amplifier
-    pxl_idxs = np.arange(2048)  # Every NIRCam subarray has 2048 pixels in the x dimension
+    # Every NIRCam subarray has 2048 pixels in the x dimension
+    pxl_idxs = np.arange(2048)
     pxl_in_window_bool = np.zeros(2048, dtype=bool)
-    # pxl_in_window_bool is True for pixels which weren't trimmed away by meta.xwindow
+    # pxl_in_window_bool is True for pixels which weren't trimmed away
+    # by meta.xwindow
     for j in range(len(pxl_idxs)):
         if meta.xwindow[0] <= pxl_idxs[j] < meta.xwindow[1]:
             pxl_in_window_bool[j] = True
@@ -315,16 +327,19 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     # Example: if only the middle two amplifier are left after trimming:
     # ampl_used = [False, True, True, False]
 
-    star_pos_x_untrim = int(star_pos_x) + meta.xwindow[0]  # position of star before trimming
+    # position of star before trimming
+    star_pos_x_untrim = int(star_pos_x) + meta.xwindow[0]
     star_exclusion_area_untrim = \
-        np.array([star_pos_x_untrim - meta.oneoverf_dist, star_pos_x_untrim + meta.oneoverf_dist])
+        np.array([star_pos_x_untrim-meta.oneoverf_dist,
+                  star_pos_x_untrim+meta.oneoverf_dist])
 
     use_cols = np.ones(2048, dtype=bool)
     for k in range(2048):
         if star_exclusion_area_untrim[0] <= k < star_exclusion_area_untrim[1]:
             use_cols[k] = False
     use_cols = use_cols[meta.xwindow[0]:meta.xwindow[1]]
-    # Array with bools checking if column should be used for background subtraction
+    # Array with bools checking if column should be used for
+    # background subtraction
 
     edges_all = []
     flux_all = []
@@ -355,15 +370,19 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         for j in range(128):
             for k in range(4):
                 if ampl_used_bool[k]:
-                    data.flux.values[i][j, edges_all[k][0]:edges_all[k][1]] -= \
-                        me.meanerr(flux_all[k][j], err_all[k][j], mask=mask_all[k][j], err=False)
+                    edges_temp = edges_all[k]
+                    data.flux.values[i][j, edges_temp[0]:edges_temp[1]] -= \
+                        me.meanerr(flux_all[k][j], err_all[k][j],
+                                   mask=mask_all[k][j], err=False)
     elif meta.oneoverf_corr == 'median':
         for k in range(4):
             if ampl_used_bool[k]:
-                data.flux.values[i][:, edges_all[k][0]:edges_all[k][1]] -= \
+                edges_temp = edges_all[k]
+                data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
                     np.median(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
-                     'Please choose between meanerr or median.', mute=(not meta.verbose))
+                     ' Please choose between meanerr or median.',
+                     mute=(not meta.verbose))
 
     return data

@@ -586,7 +586,8 @@ def interp_masked(data, meta, i, log):
     ny = flux.shape[0]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
     points = np.where(mask == 1)
-    points_t = np.array(points).transpose()  # x,y positions of not masked pixels
+    # x,y positions of not masked pixels
+    points_t = np.array(points).transpose()
     values = flux[np.where(mask == 1)]  # flux values of not masked pixels
 
     # Use scipy.interpolate.griddata to interpolate
@@ -607,9 +608,10 @@ def interp_masked(data, meta, i, log):
 
 
 def phot_arrays(data):
-    """
-    Setting up arrays for the photometry routine.
-    These arrays will be populated by the returns coming from centerdriver.py and apphot.py
+    """Setting up arrays for the photometry routine.
+
+    These arrays will be populated by the returns coming from centerdriver.py
+    and apphot.py
 
     Parameters
     ----------
@@ -622,18 +624,12 @@ def phot_arrays(data):
         The updated Dataset object with new arrays where the
         outputs from the photometry routine will be saved in.
     """
-    data['centroid_x'] = (['time'], np.zeros_like(data.time))
-    data['centroid_y'] = (['time'], np.zeros_like(data.time))
-    data['centroid_sx'] = (['time'], np.zeros_like(data.time))
-    data['centroid_sy'] = (['time'], np.zeros_like(data.time))
-    # Arrays for aperture extraction
-    data['aplev'], data['aperr'], data['nappix'], data['skylev'], data['skyerr'], \
-        data['nskypix'], data['nskyideal'], data['status'], data['betaper'] = \
-        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-        (['time'], np.zeros_like(data.time)), (['time'], np.zeros_like(data.time)), \
-        (['time'], np.zeros_like(data.time))
+    keys = ['centroid_x', 'centroid_y', 'centroid_sx', 'centroid_sy',
+            'aplev', 'aperr', 'nappix', 'skylev', 'skyerr', 'nskypix',
+            'nskyideal', 'status', 'betaper']
+    
+    for key in keys:
+        data[key] = (['time'], np.zeros_like(data.time))
 
     data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']

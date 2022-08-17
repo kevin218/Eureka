@@ -266,7 +266,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if hasattr(meta, 'record_ypos') and meta.record_ypos and not meta.photometry:
+            if (hasattr(meta, 'record_ypos') and meta.record_ypos
+                    and not meta.photometry):
                 lc['driftypos'] = (['time'], spec.driftypos.data)
                 lc['driftywidth'] = (['time'], spec.driftywidth.data)
 
@@ -333,8 +334,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                            meta.wave_min, meta.wave_max)
             else:
                 # Compute MAD value for Photometry
-                normspec, _ = util.normalize_spectrum(meta, spec.aplev.values,
-                                                      opterr=spec.aperr.values, optmask=None)
+                normspec = util.normalize_spectrum(meta, spec.aplev.values)
                 meta.mad_s4 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
             if not meta.photometry:
@@ -348,7 +348,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.mad_s4_binned = []
             for i in range(meta.nspecchan):
                 if not meta.photometry:
-                    log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
+                    log.writelog(f"  Bandpass {i} = "
+                                 f"{lc.wave_low.values[i]:.3f} - "
                                  f"{lc.wave_hi.values[i]:.3f}")
                     # Compute valid indeces within wavelength range
                     index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
@@ -366,7 +367,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     # proper uncertainties
                     lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
                                     np.ma.MaskedArray.count(opterr_ma, axis=1))
-                elif meta.photometry:
+                else:
                     lc['data'][i] = spec.aplev.values
                     lc['err'][i] = spec.aperr.values
 
@@ -387,7 +388,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
 
             # If requested, also generate white-light light curve
-            if hasattr(meta, 'compute_white') and meta.compute_white and not meta.photometry:
+            if (hasattr(meta, 'compute_white') and meta.compute_white
+                    and not meta.photometry):
                 log.writelog("Generating white-light light curve")
 
                 # Compute valid indeces within wavelength range

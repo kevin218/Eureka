@@ -149,7 +149,8 @@ def bright2dn(data, meta, mjy=False):
     if meta.inst == 'nircam':
         if meta.photometry:
             ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
-                           (phot['pupil'] == data.attrs['mhdr']['PUPIL']))[0][0]
+                           (phot['pupil'] == data.attrs['mhdr']['PUPIL'])
+                           )[0][0]
         else:
             ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
                            (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *

@@ -3,9 +3,9 @@ import numpy as np
 
 def interp2d(image, expand=5, y=None, x=None, yi=None, xi=None):
     """
-    This function oversamples a 2D frame (image) which can be used if the user decides
-    that the resolution of the image is not enough and they want to split a pixel
-    into more subpixels.
+    This function oversamples a 2D frame (image) which can be used if the user
+    decides that the resolution of the image is not enough and they want to
+    split a pixel into more subpixels.
 
     Parameters
     ----------
@@ -17,14 +17,16 @@ def interp2d(image, expand=5, y=None, x=None, yi=None, xi=None):
     y : 1D numpy array
         np.arange(ny), with ny being the number of pixels in the y direction
     x : 1D numpy array
-        np.arange(nx), with ny being the number of pixels in the x direction
+        np.arange(nx), with nx being the number of pixels in the x direction
     yi : 1D numpy array
         np.linspace(0, ny - 1, isz[0]),
-        with isz = np.array(sz, dtype=int) + (np.array(sz, dtype=int) - 1) * (expand - 1)
+        with isz = np.array(sz, dtype=int) +
+        (np.array(sz, dtype=int)-1)*(expand-1)
         and sz = np.shape(image)
     xi : 1D numpy array
         np.linspace(0, ny - 1, isz[0]),
-        with isz = np.array(sz, dtype=int) + (np.array(sz, dtype=int) - 1) * (expand - 1)
+        with isz = np.array(sz, dtype=int) +
+        (np.array(sz, dtype=int)-1)*(expand-1)
         and sz = np.shape(image)
     """
     sz = np.shape(image)
