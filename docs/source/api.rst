@@ -353,13 +353,6 @@ lib.centroid
     :undoc-members:
     :show-inheritance:
 
-lib.chunkbad
-------------
-.. automodule:: eureka.lib.chunkbad
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lib.clipping
 ------------
 .. automodule:: eureka.lib.clipping
