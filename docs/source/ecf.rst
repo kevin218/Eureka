@@ -168,6 +168,10 @@ As we want to do our own spectral extraction, we set this variable to ``calints`
 .. note::
 	Note that other Instruments might used different suffixes!
 
+photometry
+''''''''''
+Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
+
 hst_cal
 '''''''
 Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
@@ -206,6 +210,10 @@ Determine the source position on the detector. Options: header, gaussian, weight
 record_ypos
 '''''''''''
 Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
+
+use_dq
+''''''
+Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
 
 centroidtrim
 ''''''''''''
@@ -311,6 +319,42 @@ Only used for HST analyses. The file indices to use as reference frames for 2D d
 curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
+
+flag_bg
+'''''''
+Only used for photometry analyses. Options are: True, False. Does an outlier rejection along the time axis for each individual pixel in a segment (= in a calints file).
+
+interp_method
+'''''''''''''
+Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+
+ctr_cutout_size
+'''''''''''''''
+Only used for photometry analyses. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+
+oneoverf_corr
+'''''''''''''
+Only used for photometry analyses. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristics. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+
+oneoverf_dist
+'''''''''''''
+Only used for photometry analyses. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, oneoverf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oneoverf_dist is therefore basically to not subtract starlight during the 1/f correction.
+
+skip_apphot_bg
+''''''''''''''
+Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip this background subtraction by setting an background annulus, skip_apphot_bg has to be set to True.
+
+photap
+''''''
+Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered.
+
+skyin
+'''''
+Only used for photometry analyses. Inner sky annulus edge, in pixels.
+
+skyout
+''''''
+Only used for photometry analyses. Outer sky annulus edge, in pixels.
 
 isplots_S3
 ''''''''''
@@ -715,8 +759,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``AmpCos2`` - Amplitude of the second cosine
       - ``AmpSin2`` - Amplitude of the second sine
    - Limb Darkening Parameters
-      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']``
-      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``square-root``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
+      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential', '4-parameter']``
+      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results.
       - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``. Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters; instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.

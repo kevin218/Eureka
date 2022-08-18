@@ -20,7 +20,7 @@ from svo_filters import svo
 
 # Supported profiles
 PROFILES = ['uniform', 'linear', 'quadratic',
-            'square-root', 'logarithmic', 'exponential',
+            'squareroot', 'logarithmic', 'exponential',
             '3-parameter', '4-parameter']
 
 # Supported filters

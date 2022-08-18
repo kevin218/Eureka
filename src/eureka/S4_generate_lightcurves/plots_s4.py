@@ -32,6 +32,12 @@ def binned_lightcurve(meta, log, lc, i, white=False):
             meta, lc.flux_white, lc.err_white)
         i = 0
         fname_tag = 'white'
+    elif meta.photometry:
+        fig.suptitle(f'Photometric Lightcurve at {meta.phot_wave} microns')
+        # Normalize the light curve
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
+                                                          lc['err'][i])
+        fname_tag = 'phot'
     else:
         fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                      f'{lc.wave_hi.values[i]:.3f}')
