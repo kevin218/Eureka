@@ -229,15 +229,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
-            # Get the average bg value per bin
-            lc['bg'] = (['wavelength', 'time'], np.zeros((meta.nspecchan,
-                                                          meta.n_int)))
-            for i in range(meta.nspecchan):
-                xinds = np.where(np.logical_and(
-                    spec.wave_1d <= meta.wave_hi[i],
-                    spec.wave_1d > meta.wave_low[i]))[0]
-                lc['bg'][i] = np.sum(spec.bg[:, :, xinds], axis=(1, 2))
-
             if not hasattr(meta, 'boundary'):
                 # The default value before this was added as an option
                 meta.boundary = 'extend'
