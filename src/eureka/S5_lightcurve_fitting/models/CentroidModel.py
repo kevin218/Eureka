@@ -70,13 +70,13 @@ class CentroidModel(Model):
         if self.centroid is None:
             self.centroid = kwargs.get('centroid')
 
-        # Convert to local time
+        # Convert to local centroid
         centroid_local = self.centroid - self.centroid.mean()
 
-        # Create the polynomial from the coeffs
+        # Create the centroid model for each wavelength
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
-            coeff = getattr(self.parameters, self.coeff_keys[c])
-            lcpiece = centroid_local*coeff
+            coeff = getattr(self.parameters, self.coeff_keys[c]).value
+            lcpiece = 1 + centroid_local*coeff
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
