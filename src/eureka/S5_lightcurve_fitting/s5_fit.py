@@ -314,9 +314,10 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
     """
     # Load the relevant values into the LightCurve model object
     lc_model = lightcurve.LightCurve(time, flux, chan, chanrng, log,
-                                     longparamlist, unc=flux_err,
-                                     time_units=time_units, name=eventlabel,
-                                     share=meta.sharedp, white=white)
+                                     longparamlist, params,
+                                     unc=flux_err, time_units=time_units,
+                                     name=eventlabel, share=meta.sharedp,
+                                     white=white)
 
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data

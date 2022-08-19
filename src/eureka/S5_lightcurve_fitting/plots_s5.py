@@ -46,10 +46,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.ma.copy(lc.unc_fit)
-        else:
-            unc = np.ma.copy(lc.unc)
+        unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -167,7 +164,6 @@ def plot_rms(lc, model, meta, fitter):
         # Add second x-axis using time instead of N-binned
         time = np.array(lc.time)
         dt = (time[1]-time[0])*24*3600
-        print(dt)
         def t_N(N):
             return N*dt
         def N_t(t):
@@ -374,10 +370,7 @@ def plot_res_distr(lc, model, meta, fitter):
 
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.ma.copy(np.array(lc.unc_fit))
-        else:
-            unc = np.ma.copy(lc.unc)
+        unc = np.ma.copy(np.array(lc.unc_fit))
         model = np.ma.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -443,10 +436,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.ma.copy(lc.unc_fit)
-        else:
-            unc = np.ma.copy(lc.unc)
+        unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_with_GP)
         model_sys = model_sys_full
         model_phys = model_phys_full
