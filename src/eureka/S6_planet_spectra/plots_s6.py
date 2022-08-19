@@ -95,8 +95,18 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         def r(H):
             return ((H+H_0)*scaleHeight)**expFactor*y_scalar
 
+        # Need to enforce non-negative for H(r) to make sense
+        if ax.get_ylim()[0] < 0:
+            ax.set_ylim(0)
+
         ax2 = ax.secondary_yaxis('right', functions=(H, r))
         ax2.set_ylabel('Scale Height')
+        # To avoid overlapping ticks, use the same spacing as the r axis
+        yticks = np.round(H(ax.get_yticks()), 1)
+        # Make sure H=0 is shown
+        offset = yticks[np.argmin(np.abs(yticks))]
+        yticks -= offset
+        ax2.set_yticks(yticks)
 
         fname = 'figs'+os.sep+'fig6301'
     else:
