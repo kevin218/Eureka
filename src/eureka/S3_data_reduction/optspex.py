@@ -511,16 +511,28 @@ def clean_median_flux(data, meta, log, m):
 
     # Create mask using all data quality flags
     mask = np.copy(data['mask'].values)
-    mask[np.where(data.dq > 0)] = 0
+    if meta.dqmask:
+        mask[np.where(data.dq % 2 == 1)] = 0
 
     # Compute median flux using masked arrays
     flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
 
     if meta.window_len > 1:
-        # Apply smoothing filter along dispersion direction
         ny, nx = medflux.shape
-        smoothflux = spn.median_filter(medflux, size=(meta.window_len, 1))
+        # Interpolate over masked regions
+        interp_med = np.zeros((ny, nx))
+        xx = np.arange(nx)
+        for j in range(ny):
+            x1 = xx[~np.ma.getmaskarray(medflux[j])]
+            goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
+            f = spi.interp1d(x1, goodrow, 'linear',
+                             fill_value='extrapolate')
+            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+            interp_med[j] = f(xx)
+
+        # Apply smoothing filter along dispersion direction
+        smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
 
         # Compute residuals
         residuals = medflux - smoothflux
@@ -533,9 +545,11 @@ def clean_median_flux(data, meta, log, m):
         clean_med = np.zeros((ny, nx))
         xx = np.arange(nx)
         for j in range(ny):
-            x1 = xx[~outliers.mask[j]]
-            goodmed = medflux[j][~outliers.mask[j]]
-            f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
+            x1 = xx[~np.ma.getmaskarray(outliers[j]) *
+                    ~np.ma.getmaskarray(medflux[j])]
+            goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
+                                 ~np.ma.getmaskarray(medflux[j])]
+            f = spi.interp1d(x1, goodrow, 'linear', fill_value='extrapolate')
             # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
             clean_med[j] = f(xx)
 
@@ -543,7 +557,7 @@ def clean_median_flux(data, meta, log, m):
         data['medflux'] = (['y', 'x'], clean_med)
     else:
         # Assign uncleaned median frame to data object
-        data['medflux'] = (['y', 'x'], medflux)
+        data['medflux'] = (['y', 'x'], medflux.data)
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
     if meta.isplots_S3 >= 4:
