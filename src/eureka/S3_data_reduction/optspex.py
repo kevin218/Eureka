@@ -131,9 +131,10 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
         spatial profile.
     window_len : int; optional
         The dimension of the smoothing window.
-    windowtype : {'flat','hanning','hamming','bartlett','blackman'}; optional
-        UNUSED. The type of window. A flat window will produce a moving
-        average smoothing.
+    windowtype : str; optional
+        UNUSED. One of {'flat', 'hanning', 'hamming',
+        'bartlett', 'blackman'}. The type of window. A flat window will
+        produce a moving average smoothing. Defaults to 'hanning'.
     isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
@@ -568,7 +569,7 @@ def clean_median_flux(data, meta, log, m):
 
 def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                      windowtype='hanning', m=0):
-    '''Extract optimal spectrum with uncertainties.
+    '''Extract optimal spectrum with uncertainties for many frames.
 
     Parameters
     ----------
@@ -591,9 +592,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
         electrons.
     windowtype : str; optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
-        'bartlett', 'blackman'}.
-        The type of window. A flat window will produce a moving
-        average smoothing. Defaults to 'hanning'.
+        'bartlett', 'blackman'}. The type of window. A flat window will
+        produce a moving average smoothing. Defaults to 'hanning'.
     m : int; optional
         File number. Defaults to 0.
 
@@ -621,10 +621,13 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     data['optmask'] = (['time', 'x'], np.ones(data.stdspec.shape))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
     data['opterr'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['opterr'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['opterr'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
     data['optmask'].attrs['flux_units'] = 'None'
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
 
     # Select median frame over aperture region
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
@@ -659,7 +662,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
              windowtype='hanning', n=0, m=0, meddata=None):
-    '''Extract optimal spectrum with uncertainties.
+    '''Extract optimal spectrum with uncertainties for a single frame.
 
     Parameters
     ----------
@@ -693,9 +696,8 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         Polynomial degree. Defaults to 3.
     windowtype : str; optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
-        'bartlett', 'blackman'}.
-        The type of window. A flat window will produce a moving
-        average smoothing. Defaults to 'hanning'.
+        'bartlett', 'blackman'}. The type of window. A flat window will
+        produce a moving average smoothing. Defaults to 'hanning'.
     n : int; optional
         Integration number. Defaults to 0.
     m : int; optional

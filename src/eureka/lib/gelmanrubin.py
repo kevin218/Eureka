@@ -88,32 +88,35 @@ def convergetest(pars, nchains):
     Consider four MCMC runs that has already been loaded.  The individual fits
     are located in the `fit` list.  These are for channels 1-4.
 
-    >>> import gelmanrubin
-    >>> import numpy as np
-    >>> # channels 1/3 free parameters
-    >>> ch13pars = np.concatenate((fit[0].allparams[fit[0].freepars],
-    >>>                            fit[2].allparams[fit[2].freepars]))
+    .. highlight:: python
+    .. code-block:: python
 
-    >>> # channels 2/4 free parameters
-    >>> ch24pars = np.concatenate((fit[1].allparams[fit[1].freepars],
-    >>>                            fit[3].allparams[fit[3].freepars]))
+        >>> import gelmanrubin
+        >>> import numpy as np
+        >>> # channels 1/3 free parameters
+        >>> ch13pars = np.concatenate((fit[0].allparams[fit[0].freepars],
+        >>>                            fit[2].allparams[fit[2].freepars]))
 
-    >>> # number of chains to split into
-    >>> nchains = 4
+        >>> # channels 2/4 free parameters
+        >>> ch24pars = np.concatenate((fit[1].allparams[fit[1].freepars],
+        >>>                            fit[3].allparams[fit[3].freepars]))
 
-    >>> # test for convergence
-    >>> ch13conv  = gelmanrubin.convergetest(ch13pars, nchains)
-    >>> ch24conv  = gelmanrubin.convergetest(ch24pars, nchains)
+        >>> # number of chains to split into
+        >>> nchains = 4
 
-    >>> # show results
-    >>> print(ch13conv)
-    (array([ 1.02254252,  1.00974035,  1.04838778,  1.0017869 ,  1.7869707 ,
-             2.15683239,  1.00506215,  1.00235165,  1.06784124,  1.04075207,
-             1.01452032]), 1.1960716427734874)
-    >>> print(ch24conv)
-    (array([ 1.01392515,  1.00578357,  1.03285576,  1.13138702,  1.0001787 ,
-             3.52118005,  1.10592542,  1.05514509,  1.00101459]),
-             1.3185994837687156)
+        >>> # test for convergence
+        >>> ch13conv  = gelmanrubin.convergetest(ch13pars, nchains)
+        >>> ch24conv  = gelmanrubin.convergetest(ch24pars, nchains)
+
+        >>> # show results
+        >>> print(ch13conv)
+        (array([1.02254252, 1.00974035, 1.04838778, 1.0017869 , 1.7869707,
+                2.15683239, 1.00506215, 1.00235165, 1.06784124, 1.04075207,
+                1.01452032]), 1.1960716427734874)
+        >>> print(ch24conv)
+        (array([1.01392515, 1.00578357, 1.03285576, 1.13138702, 1.0001787,
+                3.52118005, 1.10592542, 1.05514509, 1.00101459]),
+                1.3185994837687156)
 
     Notes
     -----

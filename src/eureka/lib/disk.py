@@ -2,7 +2,8 @@ import numpy as np
 
 
 def disk(r, ctr, size, status=False):
-    """This function returns a byte array containing a disk.
+    """
+    This function returns a byte array containing a disk.
 
     The disk is centered at (ctr[0], ctr[1]), and has radius r. The array is
     (size[0], size[1]) in size and has byte type. Pixel values of 1 indicate

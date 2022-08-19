@@ -52,7 +52,7 @@ def spec1D(spectra, meta, log, mask=None):
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
-    mask : ndarray (1D), optional
+    mask : ndarray (1D); optional
         A mask array to use if spectra is not a masked array. Defaults to None
         in which case only the invalid values of spectra will be masked.
 
