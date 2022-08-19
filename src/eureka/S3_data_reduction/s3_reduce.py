@@ -309,7 +309,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                 if not meta.photometry:
                     # Compute clean median frame
-                    data = optspex.clean_median_flux(data, meta, log)
+                    data = optspex.clean_median_flux(data, meta, log, m)
 
                     # correct spectral curvature
                     if hasattr(meta, 'curvature') and \
