@@ -112,6 +112,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 x_unit = getattr(units, meta.x_unit)
             else:
                 log.writelog('Assuming a wavelength unit of microns')
+                meta.x_unit = 'um'
                 x_unit = units.um
             # FINDME: For now this is assuming that the data is in units of
             # microns We should add something to S3 that notes what the units
@@ -269,8 +270,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                                         meta.y_label, meta.xlabel,
                                         scale_height, meta.planet_R0)
 
-                log.writelog('Saving results as astropy table')
-                save_table(meta)
+                save_table(meta, log)
 
             # Save results
             log.writelog('Saving results')
@@ -326,10 +326,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
             keys = [key for key in full_keys if y_param in key]
             if len(keys) == 0:
-                log.writelog(f'Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n['
+                log.writelog(f'  Parameter {y_param} was not in the list of '
+                             'fitted parameters which includes:\n  ['
                              + ', '.join(full_keys)+']')
-                log.writelog(f'Skipping {y_param}')
+                log.writelog(f'  Skipping {y_param}')
                 return None, None
 
             lowers = []
@@ -600,14 +600,20 @@ def load_model(meta, log, x_unit):
     return model_x, model_y
 
 
-def save_table(meta):
+def save_table(meta, log):
     """Clean y_param for filenames and save the table of values.
+
+    Also calls transit_latex_table if meta.y_param in ['rp', 'rp^2', 'fp'].
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     """
+    log.writelog('  Saving results as an astropy table')
+
     event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
                    str(meta.bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
@@ -620,4 +626,108 @@ def save_table(meta):
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
                               wave_errs, meta.spectrum_median,
                               meta.spectrum_err)
+
+    if meta.y_param in ['rp', 'rp^2', 'fp']:
+        transit_latex_table(meta, log)
+    
+    return
+
+def transit_latex_table(meta, log):
+    """Write a nicely formatted LaTeX table for transmission/emission spectra.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    """
+    log.writelog('  Saving results as a LaTeX table')
+
+    data = pd.read_csv(meta.tab_filename_s6, comment='#', delim_whitespace=True)
+
+    # Figure out the number of rows and columns in the table
+    nvals = data.shape[0]
+    if not hasattr(meta, 'ncols'):
+        meta.ncols = 4
+    rows = int(np.ceil(nvals/meta.ncols))
+
+    # Figure out the labels for the columns
+    if meta.y_param == 'rp^2':
+        colhead = "\colhead{Transit Depth}"
+    elif meta.y_param == 'rp':
+        colhead = "\colhead{Planetary Radius}"
+    elif meta.y_param == 'fp':
+        colhead = "\colhead{Eclipse Depth}"
+
+    # Begin the table
+    out = "\\begin{deluxetable}{"
+    # Center each column
+    for i in range(meta.ncols):
+        out += "CC|"
+    out = out[:-1]+"}\n"
+    # Give the table a caption based on the tabulated data
+    if meta.y_param in ['rp', 'rp^2']:
+        out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy Results \\label{tab:eureka_transit_spectra}}\n"
+    elif meta.y_param == 'fp':
+        out += "\\tablecaption{\\texttt{Eureka!}'s Eclipse Spectroscopy Results \\label{tab:eureka_eclipse_spectra}}\n"
+    # Label each column
+    out += "\\tablehead{\n"
+    for i in range(meta.ncols):
+        out += "\\colhead{Wavelength} & "+colhead+" &"
+    out = out[:-1]+" \\\\\n"
+    # Provide each column's unit
+    for i in range(meta.ncols):
+        if meta.x_unit == 'um':
+            xunit = '$\\mu$m'
+        else:
+            xunit = meta.xunit
+        if meta.y_label_unit == '':
+            y_unit = ''
+        else:
+            # Trim off the leading space
+            y_unit = meta.y_label_unit[1:]
+            y_unit = y_unit.replace('%', '\\%')
+        out += "\\colhead{("+xunit+")} & \\colhead{"+y_unit+"} &"
+    out = out[:-1]+" \\\\\n}\n"
+    # Begin tabulating the data
+    out += "\\startdata\n"
+    for i in range(rows):
+        # Run up until the last column which needs to be formatted differently
+        for j in range(meta.ncols-1):
+            if i+rows*j >= nvals:
+                out += "& & "
+                continue
+            line = data.iloc[i+rows*j]
+            # Wavelength
+            out += f"{np.round(line['wavelength'], 2):.2f} & "
+            # Value
+            out += f"{np.round(line[meta.y_param+'_value']*meta.y_scalar):g}"
+            # Upper limit
+            out += f"$^{{+{np.round(line[meta.y_param+'_errorpos']*meta.y_scalar):g}}}"
+            # Lower limit (put an ampersand at the end)
+            out += f"_{{-{np.round(line[meta.y_param+'_errorneg']*meta.y_scalar):g}}}$ & "
+        # End the table if out of values 
+        if i+rows*(meta.ncols-1) >= nvals:
+            out += "& \\\\\n"
+            continue
+        # Format the last column differently
+        line = data.iloc[i+rows*(meta.ncols-1)]
+        # Wavelength
+        out += f"{np.round(line['wavelength'], 2):.2f} & "
+        # Value
+        out += f"{np.round(line[meta.y_param+'_value']*meta.y_scalar):g}"
+        # Upper limit
+        out += f"$^{{+{np.round(line[meta.y_param+'_errorpos']*meta.y_scalar):g}}}"
+        # Lower limit (put a table line break at the end)
+        out += f"_{{-{np.round(line[meta.y_param+'_errorneg']*meta.y_scalar):g}}}$\\\\\n"
+    # End the table
+    out += "\\enddata\n"
+    out += "\\end{deluxetable}"
+    
+    # Save the table as a txt file
+    meta.tab_filename_s6_latex = meta.tab_filename_s6[:-4]+'_LaTeX.txt'
+    with open(meta.tab_filename_s6_latex, 'w') as file:
+        file.write(out)
+
     return
