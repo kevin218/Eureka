@@ -18,7 +18,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
         The Dataset object containing light curve and time data.
     i : int
         The current bandpass number.
-    white : bool, optional
+    white : bool; optional
         Is this figure for the additional white-light light curve
     '''
     fig = plt.figure(4102, figsize=(8, 6))
@@ -32,6 +32,12 @@ def binned_lightcurve(meta, log, lc, i, white=False):
             meta, lc.flux_white, lc.err_white)
         i = 0
         fname_tag = 'white'
+    elif meta.photometry:
+        fig.suptitle(f'Photometric Lightcurve at {meta.phot_wave} microns')
+        # Normalize the light curve
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
+                                                          lc['err'][i])
+        fname_tag = 'phot'
     else:
         fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                      f'{lc.wave_hi.values[i]:.3f}')
@@ -40,9 +46,9 @@ def binned_lightcurve(meta, log, lc, i, white=False):
                                                           lc['err'][i])
         ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
         fname_tag = f'ch{ch_number}'
-        
+
     time_modifier = np.floor(np.ma.min(lc.time.values))
-    
+
     # Plot the normalized light curve
     if meta.inst == 'wfc3':
         for p in range(2):
@@ -71,9 +77,9 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
-    fig.subplots_adjust(left=0.10, right=0.95, bottom=0.10, top=0.90,
+    fig.subplots_adjust(left=0.12, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
-    fname = f'figs{os.sep}Fig4102_{fname_tag}_1D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -88,7 +94,7 @@ def driftxpos(meta, lc):
         The metadata object.
     lc : Xarray Dataset
         The light curve object containing drift arrays.
-    
+
     Notes
     -----
     History:
@@ -124,10 +130,6 @@ def driftxwidth(meta, lc):
     lc : Xarray Dataset
         The light curve object containing drift arrays.
 
-    Returns
-    -------
-    None
-    
     Notes
     -----
     History:
@@ -153,7 +155,7 @@ def driftxwidth(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
+def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
@@ -163,19 +165,19 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
     wave_1d : ndarray
         Wavelength array with trimmed edges depending on xwindow and ywindow
         which have been set in the S3 ecf.
-    optspec : ndarray
+    optspec_in : Xarray DataArray
         The optimally extracted spectrum.
-    optmask : ndarray (1D), optional
+    optmask : Xarray DataArray; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     '''
-    optspec = np.ma.masked_invalid(optspec)
-    optspec = np.ma.masked_where(optmask, optspec)
-    
+    optspec = np.ma.masked_invalid(optspec_in.values)
+    optspec = np.ma.masked_where(optmask.values, optspec)
+
     wmin = meta.wave_min
     wmax = meta.wave_max
-    iwmin = np.nanargmin(np.abs(wave_1d-wmin).values)
-    iwmax = np.nanargmin(np.abs(wave_1d-wmax).values)
+    iwmin = np.nanargmin(np.abs(wave_1d-wmin))
+    iwmax = np.nanargmin(np.abs(wave_1d-wmax))
 
     # Normalize the light curve
     norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax])
@@ -190,7 +192,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
               " Using 'y' by default.")
         meta.time_axis = 'y'
-    
+
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
@@ -201,7 +203,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel(r'Wavelength ($\mu m$)')
         plt.colorbar(label='Normalized Flux')
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_xaxis('top')
             xticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))
@@ -217,7 +219,7 @@ def lc_driftcorr(meta, wave_1d, optspec, optmask=None):
         plt.xlabel('Integration Number')
         plt.colorbar(label='Normalized Flux', pad=0.075)
 
-        if len(meta.wave_low) > 1:
+        if len(meta.wave_low) > 1 and len(wave_1d) != meta.nspecchan:
             # Insert vertical dashed lines at spectroscopic channel edges
             secax = plt.gca().secondary_yaxis('right')
             yticks = np.unique(np.concatenate([meta.wave_low, meta.wave_hi]))

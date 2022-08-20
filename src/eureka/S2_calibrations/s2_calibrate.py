@@ -72,7 +72,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
         # Locate the old MetaClass savefile, and load new ECF into
         # that old MetaClass
         s1_meta, meta.inputdir, meta.inputdir_raw = \
-            me.findevent(meta, 'S2', allowFail=True)
+            me.findevent(meta, 'S1', allowFail=True)
     else:
         # Running these stages sequentially, so can safely assume
         # that the path hasn't changed

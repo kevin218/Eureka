@@ -135,6 +135,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
+            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+                # Remove requested data points
+                meta, lc, log = util.manual_clip(lc, meta, log)
+
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
             offset = params.time_offset.value
@@ -149,14 +153,22 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             if meta.use_generate_ld:
                 ld_str = meta.use_generate_ld
                 if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been" +
+                    raise Exception("Exotic-ld coefficients have not been " +
                                     "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients" +
+                log.writelog("\nUsing generated limb-darkening coefficients " +
                              f"with {ld_str} \n")
                 ld_coeffs = [lc[ld_str + '_lin'].values,
                              lc[ld_str + '_quad'].values,
                              lc[ld_str + '_nonlin_3para'].values,
                              lc[ld_str + '_nonlin_4para'].values]
+            # Load limb-darkening coefficients from a custom file
+            elif meta.fix_ld:
+                ld_fix_file = str(meta.ld_file)
+                try:
+                    ld_coeffs = np.loadtxt(ld_fix_file)
+                except FileNotFoundError:
+                    raise Exception("The limb-darkening file " + ld_fix_file + 
+                                    " could not be found.")
             else:
                 ld_coeffs = None
 
@@ -194,11 +206,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 mask = lc.mask_white.values
                 flux = np.ma.masked_where(mask, lc.flux_white.values)
                 flux_err = np.ma.masked_where(mask, lc.err_white.values)
-                
+
                 # Normalize flux and uncertainties to avoid large
                 # flux values
-                flux_err = flux_err/np.ma.mean(flux)
-                flux = flux/np.ma.mean(flux)
+                flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -226,10 +237,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                                                    lc.data.values[channel, :])
                     err_temp = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
-                    flux = np.ma.append(flux,
-                                        flux_temp/np.ma.mean(flux_temp))
-                    flux_err = np.ma.append(flux_err,
-                                            err_temp/np.ma.mean(flux_temp))
+                    flux_temp, err_temp = util.normalize_spectrum(meta,
+                                                                  flux_temp,
+                                                                  err_temp)
+                    flux = np.ma.append(flux, flux_temp)
+                    flux_err = np.ma.append(flux_err, err_temp)
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -255,8 +267,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux_err = flux_err/np.ma.mean(flux)
-                    flux = flux/np.ma.mean(flux)
+                    flux, flux_err = util.normalize_spectrum(meta, flux,
+                                                             flux_err)
 
                     meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
@@ -340,20 +352,30 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
+    freenames = []
+    for key in params.dict:
+        if params.dict[key][1] in ['free', 'shared', 'white_free',
+                                   'white_fixed']:
+            freenames.append(key)
+    freenames = np.array(freenames)
+
     # Make the astrophysical and detector models
     modellist = []
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = m.BatmanTransitModel(parameters=params, name='transit',
                                          fmt='r--', log=log,
+                                         freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
-                                         paramtitles=paramtitles, 
+                                         paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
+                                         ld_from_file=meta.fix_ld,
                                          ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
                                          fmt='r--', log=log,
+                                         freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles)
@@ -373,6 +395,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log,
+                                      freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
                                       paramtitles=paramtitles,
@@ -382,6 +405,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom',
                                       fmt='r--', log=log,
+                                      freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
                                       paramtitles=paramtitles)
@@ -389,6 +413,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'step' in meta.run_myfuncs:
         t_step = m.StepModel(parameters=params, name='step', fmt='r--',
                              log=log,
+                             freenames=freenames,
                              longparamlist=lc_model.longparamlist,
                              nchan=lc_model.nchannel_fitted,
                              paramtitles=paramtitles)
@@ -396,6 +421,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
                                 log=log,
+                                freenames=freenames,
                                 longparamlist=lc_model.longparamlist,
                                 nchan=lc_model.nchannel_fitted,
                                 paramtitles=paramtitles)
@@ -404,6 +430,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                          parameters=params, name='GP', fmt='r--', log=log,
                          gp_code=meta.GP_package,
+                         freenames=freenames,
                          longparamlist=lc_model.longparamlist,
                          nchan=lc_model.nchannel_fitted,
                          paramtitles=paramtitles)

@@ -10,15 +10,16 @@ ywindow     [5,64]      # Vertical axis as seen in DS9
 xwindow     [100,1700]  # Horizontal axis as seen in DS9
 src_pos_type gaussian   # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 record_ypos True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+dqmask      True        # Mask pixels with an odd entry in the DQ array
 
 # Background parameters
-bg_hw       20          # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_hw       12          # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_thresh   [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg      1           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh    5           # X-sigma threshold for outlier rejection during background subtraction
 
 # Spectral extraction parameters
-spec_hw     20			# Half-width of aperture region for spectral extraction (relative to source position)
+spec_hw     8			# Half-width of aperture region for spectral extraction (relative to source position)
 fittype     meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 window_len  31          # Smoothing window length, when fittype = smooth
 prof_deg    3           # Polynomial degree, when fittype = poly

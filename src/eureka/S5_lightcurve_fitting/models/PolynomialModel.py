@@ -51,20 +51,21 @@ class PolynomialModel(Model):
             The sequence of coefficient values
         """
         # Parse 'c#' keyword arguments as coefficients
-        coeffs = np.zeros((self.nchan, 10))
-        for k, v in self.parameters.dict.items():
-            remvisnum = k.split('_')
-            if k.lower().startswith('c') and k[1:].isdigit():
-                coeffs[0, int(k[1:])] = v[0]
-            elif (len(remvisnum) > 1 and self.nchan > 1 and
-                  remvisnum[0].lower().startswith('c') and
-                  remvisnum[0][1:].isdigit() and remvisnum[1].isdigit()):
-                coeffs[int(remvisnum[1]), int(remvisnum[0][1:])] = v[0]
+        self.coeffs = np.zeros((self.nchan, 10))
+        for j in range(self.nchan):
+            for i in range(9, -1, -1):
+                try:
+                    if j == 0:
+                        self.coeffs[j, 9-i] = \
+                            self.parameters.dict[f'c{i}'][0]
+                    else:
+                        self.coeffs[j, 9-i] = \
+                            self.parameters.dict[f'c{i}_j'][0]
+                except KeyError:
+                    pass
 
-        # Trim zeros and reverse
-        coeffs = coeffs[:, ~np.all(coeffs == 0, axis=0)]
-        coeffs = np.flip(coeffs, axis=1)
-        self.coeffs = coeffs
+        # Trim zeros
+        self.coeffs = self.coeffs[:, ~np.all(self.coeffs == 0, axis=0)]
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.
