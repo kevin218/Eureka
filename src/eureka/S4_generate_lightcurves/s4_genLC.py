@@ -360,10 +360,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
                                      (spec.wave_1d < lc.wave_hi.values[i]))[0]
                     # Make masked arrays for easy summing
-                    optspec_ma = np.ma.masked_where(spec.optmask.values[:, index],
-                                                    spec.optspec.values[:, index])
-                    opterr_ma = np.ma.masked_where(spec.optmask.values[:, index],
-                                                   spec.opterr.values[:, index])
+                    optspec_ma = np.ma.masked_where(
+                        spec.optmask.values[:, index],
+                        spec.optspec.values[:, index])
+                    opterr_ma = np.ma.masked_where(
+                        spec.optmask.values[:, index],
+                        spec.opterr.values[:, index])
                     # Compute mean flux for each spectroscopic channel
                     # Sumation leads to outliers when there are masked points
                     lc['data'][i] = np.ma.mean(optspec_ma, axis=1)

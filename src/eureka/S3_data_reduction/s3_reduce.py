@@ -408,9 +408,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                 inst.do_oneoverf_corr(data, meta, i,
                                                       position[1], log)
                             if meta.isplots_S3 >= 3:
-                                plots_s3.phot_2d_frame_oneoverf(data, meta,
-                                                                m, i,
-                                                                flux_w_oneoverf)
+                                plots_s3.phot_2d_frame_oneoverf(
+                                    data, meta, m, i, flux_w_oneoverf)
 
                         # Use the determined centroid and
                         # cut out ctr_cutout_size pixels around it
