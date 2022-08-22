@@ -6,6 +6,7 @@ import time as time_pkg
 from copy import copy
 from glob import glob
 import re
+from matplotlib.pyplot import rcParams
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -233,7 +234,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                     if meta.y_scalar == 1e6:
                         meta.y_label_unit = ' (ppm)'
                     elif meta.y_scalar == 100:
-                        meta.y_label_unit = ' (%)'
+                        meta.y_label_unit = r' (%)'
                     elif meta.y_scalar != 1:
                         meta.y_label_unit = f' * {meta.y_scalar}'
                     else:
@@ -241,6 +242,12 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 elif meta.y_label_unit[0] != ' ':
                     # Make sure there's a leading space for proper formatting
                     meta.y_label_unit = ' '+meta.y_label_unit
+
+                if (rcParams['text.usetex'] and
+                        (meta.y_label_unit.count(r'\%') != 
+                         meta.y_label_unit.count('%'))):
+                    # Need to escape % with \ for LaTeX
+                    meta.y_label_unit = meta.y_label_unit.replace('%', r'\%')
 
                 # Add any units to the y label
                 meta.y_label += meta.y_label_unit
@@ -759,7 +766,10 @@ def transit_latex_table(meta, log):
         else:
             # Trim off the leading space
             y_unit = meta.y_label_unit[1:]
-            y_unit = y_unit.replace('%', '\\%')
+            # Need to make sure to escape % with \ for LaTeX
+            if (meta.y_label_unit.count(r'\%') != 
+                    meta.y_label_unit.count('%')):
+                y_unit = y_unit.replace('%', r'\%')
         out += "\\colhead{("+xunit+")} & \\colhead{"+y_unit+"} &"
     out = out[:-1]+"\n}\n"
     # Begin tabulating the data
