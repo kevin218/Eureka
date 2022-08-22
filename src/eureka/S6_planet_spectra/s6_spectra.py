@@ -10,7 +10,6 @@ from . import plots_s6 as plots
 from ..lib import astropytable
 
 import sys
-from citations import CITATIONS
 
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''Gathers together different wavelength fits and makes
@@ -309,22 +308,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                                       ecl_depth, ecl_depth_err)
 
             # Store citations to relevant dependencies in the meta file
-            # get currently imported modules (top level only)
+            # pass in list of currently imported modules to search for citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-                        
-            # get modules for which we have citations
-            citemods = np.intersect1d(mods, list(CITATIONS))
-
-            # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
-            if hasattr(meta, 'citations'):
-                citemods = np.union1d(citemods, meta.citations)
-            
-            # save list of imports and the bibliography to the meta object
-            if meta.inst in citemods:
-                meta.citations = citemods
-            else:
-                meta.citations = np.append(citemods, meta.inst)
-            meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
+            util.make_citations(meta, mods)
 
             # Save results
             log.writelog('Saving results')

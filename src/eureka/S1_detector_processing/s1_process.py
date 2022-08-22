@@ -8,7 +8,6 @@ from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 
 import sys
-from citations import CITATIONS
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
@@ -106,16 +105,12 @@ def rampfitJWST(eventlabel, ecf_path=None):
     total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-    # Store citations to relevant dependencies in the meta file
-    # get currently imported modules (top level only)
-    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-    
-    # get modules for which we have citations
-    citemods = np.intersect1d(mods, list(CITATIONS))
 
-    # concatenate the bibitems into a bibliography
-    meta.citations = np.append(citemods, meta.inst)
-    meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
+    # Store citations to relevant dependencies in the meta file
+    # pass in list of currently imported modules to search for citations
+    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
+    util.make_citations(meta, mods)
+    
 
     # Save results
     if not meta.testing_S1:

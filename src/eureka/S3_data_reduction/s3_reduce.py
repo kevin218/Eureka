@@ -39,7 +39,6 @@ from ..lib import util
 from ..lib import centerdriver, apphot
 
 import sys
-from citations import CITATIONS
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
@@ -538,23 +537,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                         optmask=spec.optmask)
 
             # Store citations to relevant dependencies in the meta file
-            # get currently imported modules (top level only)
+            # pass in list of currently imported modules to search for citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-                        
-            # get modules for which we have citations
-            citemods = np.intersect1d(mods, list(CITATIONS))
-
-            # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
-            if hasattr(meta, 'citations'):
-                citemods = np.union1d(citemods, meta.citations)
-                            
-                    
-            # save list of imports and the bibliography to the meta object
-            if meta.inst in citemods:
-                meta.citations = citemods
-            else:
-                meta.citations = np.append(citemods, meta.inst)
-            meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
+            util.make_citations(meta, mods)
 
             # Save results
             if meta.save_output:

@@ -5,6 +5,8 @@ from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
 
+from citations import CITATIONS
+
 
 def readfiles(meta, log):
     """Reads in the files saved in topdir + inputdir and saves them into a list.
@@ -637,3 +639,52 @@ def phot_arrays(data):
     data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
 
     return data
+
+
+def make_citations(meta, mods):
+    """Store relevant citation information in the current meta file.
+
+        Searches through imported libraries and current ECF parameters for terms that match BibTeX entries in citations.py. 
+        Every entry that matches gets added to a bibliography field in the meta file.
+    
+        Parameters
+        ----------
+        meta : eureka.lib.readECF.MetaClass
+            The current metadata object.
+
+        mods : array-like
+            Array of strings containing the currently installed modules.
+    """
+
+    # get modules for which we have citations
+    module_cites = np.intersect1d(mods, list(CITATIONS))
+
+    # extract fitting methods/myfuncs to grab citations
+    other_cites = []
+    if hasattr(meta, 'fit_method'):
+        fit_methods = np.intersect1d(["emcee", "dynesty"], meta.fit_method).tolist() # check if either citable fit method is present
+        other_cites = other_cites + fit_methods
+    
+    if hasattr(meta, "run_myfuncs"):
+        if "batman_tr" or "batman_ecl" in meta.run_myfuncs: # check if batman is being used for transit/eclipse modeling
+            other_cites.append("batman")
+    
+    if hasattr(meta, "GP_package"): # check if a GP is being used
+        other_cites.append(meta.GP_package) 
+
+    # check if instrument is set
+    if hasattr(meta, inst): # if we already have the instrument, don't bother doing anything
+        pass
+    else: # an unfortunate occurrence, ideally this shouldn't happen. just pass again while I think of a better way to handle this
+        pass
+
+    # get all new citations together
+    all_cites = np.concatenate([module_cites, other_cites])
+
+    # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
+    if hasattr(meta, 'citations'):
+        all_cites = np.union1d(all_cites, meta.citations).tolist()
+    
+    # store everything in the meta object
+    meta.citations = all_cites
+    meta.bibliography = np.concatenate([CITATIONS[entry] for entry in all_cites]).tolist()

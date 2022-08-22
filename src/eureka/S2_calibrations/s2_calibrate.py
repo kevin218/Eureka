@@ -28,7 +28,6 @@ import jwst.assign_wcs.nirspec
 from functools import partial
 
 import sys
-from citations import CITATIONS
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
@@ -115,6 +114,13 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     with fits.open(meta.segment_list[0]) as hdulist:
         # Figure out which observatory and observation mode we are using
         telescope = hdulist[0].header['TELESCOP']
+
+        # record instrument information in meta object for citations
+        if hasattr(meta, 'inst'):
+            pass
+        else:
+            meta.inst = hdulist[0].header["INSTRUME"].lower()
+
     if telescope == 'JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
         if 'image' in exp_type.lower():
@@ -159,31 +165,11 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
                 hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
-
-    # Store citations to relevant dependencies in the meta file
-    # get currently imported modules (top level only)
-    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
     
-    # get modules for which we have citations
-    citemods = np.intersect1d(mods, list(CITATIONS))
-
-    # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
-    if hasattr(meta, 'citations'):
-        citemods = np.union1d(citemods, meta.citations)
-
-    # record instrument information in meta object for citations
-    if hasattr(meta, 'inst'):
-        pass
-    else:
-        meta.inst = hdulist[0].header["INSTRUME"].lower()
-
-    # save list of imports and the bibliography to the meta object
-    if meta.inst in citemods:
-        meta.citations = citemods
-    else:
-        meta.citations = np.append(citemods, meta.inst)
-
-    meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
+    # Store citations to relevant dependencies in the meta file
+    # pass in list of currently imported modules to search for citations
+    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
+    util.make_citations(meta, mods)
 
     # Save results
     if not meta.testing_S2:

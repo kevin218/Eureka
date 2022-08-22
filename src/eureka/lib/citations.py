@@ -294,4 +294,7 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..646W},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",],
+    "batman": [],
+    "celerite": [],
+    "george": [],
 }

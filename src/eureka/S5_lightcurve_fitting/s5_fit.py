@@ -10,7 +10,6 @@ from . import lightcurve as lc
 from . import models as m
 
 import sys
-from citations import CITATIONS
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
@@ -173,23 +172,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 ld_coeffs = None
 
             # Store citations to relevant dependencies in the meta file
-            # get currently imported modules (top level only)
+            # pass in list of currently imported modules to search for citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-                        
-            # get modules for which we have citations
-            citemods = np.intersect1d(mods, list(CITATIONS))
-
-            # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
-            if hasattr(meta, 'citations'):
-                citemods = np.union1d(citemods, meta.citations)
-                            
-                    
-            # save list of imports and the bibliography to the meta object
-            if meta.inst in citemods:
-                meta.citations = citemods
-            else:
-                meta.citations = np.append(citemods, meta.inst)
-            meta.bibliography = np.concatenate([CITATIONS[entry] for entry in citemods])
+            util.make_citations(meta, mods)
 
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
