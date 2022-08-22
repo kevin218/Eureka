@@ -1,7 +1,6 @@
 import numpy as np
 import os
 from tqdm import tqdm
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
 from .source_pos import gauss
@@ -46,7 +45,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
               " Using 'y' by default.")
         meta.time_axis = 'y'
 
-    cmap = plt.cm.RdYlBu_r
+    cmap = plt.cm.RdYlBu_r.copy()
     fig1 = plt.figure(3101, figsize=(8, 8))
     fig2 = plt.figure(3102, figsize=(8, 8))
     fig1.clf()
@@ -131,7 +130,7 @@ def image_and_background(data, meta, log, m):
     median = np.ma.median(subbg)
     std = np.ma.std(subbg)
     # Set bad pixels to plot as black
-    cmap = plt.cm.RdYlBu_r
+    cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
     iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
@@ -328,7 +327,7 @@ def profile(meta, profile, submask, n, m):
     submask = np.ma.masked_where(mask, submask)
     vmin = np.ma.min(profile*submask)
     vmax = vmin + 0.05*np.ma.max(profile*submask)
-    cmap = plt.cm.RdYlBu_r
+    cmap = plt.cm.viridis.copy()
     plt.figure(3303)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
@@ -482,7 +481,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
     # Set bad pixels to plot as black
-    cmap = plt.cm.RdYlBu_r
+    cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
     plt.figure(3304, figsize=(8, 3.5))
@@ -552,14 +551,14 @@ def curvature(meta, column_coms, smooth_coms, int_coms):
     - 2022-07-31 KBS
         Initial version
     '''
-    colors = mpl.cm.viridis
+    cmap = plt.cm.viridis.copy()
 
     plt.figure(3107)
     plt.clf()
     plt.title("Trace Curvature")
-    plt.plot(column_coms, '.', label='Measured', color=colors(0.25))
-    plt.plot(smooth_coms, '-', label='Smoothed', color=colors(0.98))
-    plt.plot(int_coms, 's', label='Integer', color=colors(0.7), ms=2)
+    plt.plot(column_coms, '.', label='Measured', color=cmap(0.25))
+    plt.plot(smooth_coms, '-', label='Smoothed', color=cmap(0.98))
+    plt.plot(int_coms, 's', label='Integer', color=cmap(0.7), ms=2)
     plt.legend()
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
@@ -592,7 +591,7 @@ def median_frame(data, meta):
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
     vmin = data.medflux.min().values
     vmax = vmin + 2000
-    cmap = plt.cm.RdYlBu_r
+    cmap = plt.cm.plasma.copy()
 
     plt.figure(3401)
     plt.clf()
