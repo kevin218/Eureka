@@ -839,6 +839,10 @@ x_unit
 The x-unit to use in the plot. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
 
+ncol
+''''
+The number of columns you want in your LaTeX formatted tables. Defaults to 4.
+
 star_Rad
 ''''''''
 The stellar radius. Used to compute the scale height if y_unit is transmission type and
