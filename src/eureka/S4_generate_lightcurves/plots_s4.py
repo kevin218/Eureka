@@ -105,10 +105,10 @@ def driftxpos(meta, lc):
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.driftxpos[np.where(~lc.driftmask)], '.',
+             lc.centroid_x[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
     plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.driftxpos[np.where(lc.driftmask)], '.',
+             lc.centroid_x[np.where(lc.driftmask)], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
@@ -140,10 +140,10 @@ def driftxwidth(meta, lc):
     plt.figure(4104, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.driftxwidth[np.where(~lc.driftmask)], '.',
+             lc.centroid_sx[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
     plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.driftxwidth[np.where(lc.driftmask)], '.',
+             lc.centroid_sx[np.where(lc.driftmask)], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift CC Width Along x')
     plt.xlabel('Frame Number')

@@ -7,7 +7,6 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-import xarray as xr
 from . import sigrej, source_pos, background
 from . import hst_scan as hst
 from . import bright2flux as b2f
@@ -833,13 +832,11 @@ def correct_drift2D(data, meta, log, m):
         pool.join()
         res.wait()
 
-    data['drift2D'] = xr.DataArray(drift2D, name='drift2D',
-                                   coords={"time": data.time,
-                                           "axis": ["x", "y"]},
-                                   dims=["time", "axis"],
-                                   attrs={"time_units": data.time.time_units,
-                                          "drift_units": 'pixels'})
-    data.drift2D["time"].attrs["time_units"] = data.time.time_units
+    # Save the fitted drifts in the data object
+    data['centroid_x'] = (['time'], drift2D[:, 0])
+    data.centroid_x.attrs['units'] = 'pixels'
+    data['centroid_y'] = (['time'], drift2D[:, 1])
+    data.centroid_y.attrs['units'] = 'pixels'
 
     log.writelog("  Performing rough, pixel-scale drift correction...",
                  mute=(not meta.verbose))

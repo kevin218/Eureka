@@ -184,13 +184,13 @@ def drift_2D(data, meta):
     plt.subplot(211)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
-        plt.plot(iscans, data.drift2D[iscans, 1], '.')
-    plt.ylabel(f'Drift Along y ({data.drift2D.drift_units})')
+        plt.plot(iscans, data.centroid_y, '.')
+    plt.ylabel(f'Drift Along y ({data.centroid_y.units})')
     plt.subplot(212)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
-        plt.plot(iscans, data.drift2D[iscans, 0], '.')
-    plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
+        plt.plot(iscans, data.centroid_x, '.')
+    plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
     plt.tight_layout()
     fname = f'figs{os.sep}fig3106_Drift2D{figure_filetype}'
@@ -409,7 +409,7 @@ def driftypos(data, meta):
     '''
     plt.figure(3104, figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
+    plt.plot(np.arange(meta.n_int), data["centroid_y"].values, '.')
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
     plt.tight_layout()
@@ -438,7 +438,7 @@ def driftywidth(data, meta):
     '''
     plt.figure(3105, figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
+    plt.plot(np.arange(meta.n_int), data["centroid_sy"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
     plt.tight_layout()

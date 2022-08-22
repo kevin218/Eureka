@@ -227,8 +227,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                    'mask': lcmask})
             if hasattr(spec, 'scandir'):
                 lc['scandir'] = spec.scandir
-            if hasattr(spec, 'drift2D'):
-                lc['drift2D'] = spec.drift2D
+            if hasattr(spec, 'centroid_y'):
+                lc['centroid_y'] = spec.centroid_y
+            if hasattr(spec, 'centroid_sy'):
+                lc['centroid_sy'] = spec.centroid_sy
+            if hasattr(spec, 'centroid_x'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_x'] = spec.centroid_x
+            elif meta.recordDrift or meta.correctDrift:
+                # Setup the centroid_x array
+                lc['centroid_x'] = (['time'], np.zeros(meta.n_int))
             lc['wave_low'] = (['wavelength'], meta.wave_low)
             lc['wave_hi'] = (['wavelength'], meta.wave_hi)
             lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
@@ -267,11 +275,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if (hasattr(meta, 'record_ypos') and meta.record_ypos
-                    and not meta.photometry):
-                lc['driftypos'] = spec.driftypos
-                lc['driftywidth'] = spec.driftywidth
-
             # Record and correct for 1D drift/jitter
             if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
@@ -286,12 +289,18 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     drift1d, driftmask, Box1DKernel(meta.box_width))
                 driftwidth = clipping.replace_moving_mean(
                     driftwidth, driftmask, Box1DKernel(meta.box_width))
-                lc['driftxpos'] = (['time'], drift1d)
-                lc['driftxwidth'] = (['time'], driftwidth)
+                # Add in case centroid_x already measured in 2D in S3
+                lc['centroid_x'] = lc.centroid_x+drift1d
+                lc['centroid_sx'] = (['time'], driftwidth)
                 lc['driftmask'] = (['time'], driftmask)
 
-                spec['driftxpos'] = (['time'], drift1d)
-                spec['driftxwidth'] = (['time'], driftwidth)
+                if hasattr(spec, 'centroid_x'):
+                    # Add if centroid_x already measured in 2D in S3
+                    spec['centroid_x'] = spec.centroid_x+drift1d
+                else:
+                    spec['centroid_x'] = (['time'], drift1d)
+                    spec.centroid_x.attrs['units'] = 'pixels'
+                spec['centroid_sx'] = (['time'], driftwidth)
                 spec['driftmask'] = (['time'], driftmask)
 
                 if meta.correctDrift:
@@ -315,12 +324,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                        optmask, k=3, s=0,
                                                        w=weights)
                         spec.optspec[n] = spline(np.arange(meta.subnx) +
-                                                 lc.driftxpos[n].values)
+                                                 lc.centroid_x[n].values)
                         spec.opterr[n] = spline2(np.arange(meta.subnx) +
-                                                 lc.driftxpos[n].values)
+                                                 lc.centroid_x[n].values)
                         # Also shift mask if moving by >= 0.5 pixels
                         optmask = spline3(np.arange(meta.subnx) +
-                                          lc.driftxpos[n].values)
+                                          lc.centroid_x[n].values)
                         spec.optmask[n] = optmask >= 0.5
                 # Plot Drift
                 if meta.isplots_S4 >= 1:

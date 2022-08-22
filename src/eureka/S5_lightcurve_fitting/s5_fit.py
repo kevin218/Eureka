@@ -412,7 +412,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
-                                 axis='xpos', centroid=lc.driftxpos)
+                                 axis='xpos', centroid=lc.centroid_x)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='xwidth', fmt='r--',
@@ -420,7 +420,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
-                                 axis='xwidth', centroid=lc.driftxwidth)
+                                 axis='xwidth', centroid=lc.centroid_sx)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='ypos', fmt='r--',
@@ -428,7 +428,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
-                                 axis='ypos', centroid=lc.driftypos)
+                                 axis='ypos', centroid=lc.centroid_y)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='ywidth', fmt='r--',
@@ -436,7 +436,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
-                                 axis='ywidth', centroid=lc.driftywidth)
+                                 axis='ywidth', centroid=lc.centroid_sy)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
