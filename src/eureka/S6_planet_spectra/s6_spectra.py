@@ -603,7 +603,7 @@ def load_model(meta, log, x_unit):
 def save_table(meta, log):
     """Clean y_param for filenames and save the table of values.
 
-    Also calls transit_latex_table if meta.y_param in ['rp', 'rp^2', 'fp'].
+    Also calls transit_latex_table().
 
     Parameters
     ----------
@@ -627,13 +627,80 @@ def save_table(meta, log):
                               wave_errs, meta.spectrum_median,
                               meta.spectrum_err)
 
-    if meta.y_param in ['rp', 'rp^2', 'fp']:
-        transit_latex_table(meta, log)
+    transit_latex_table(meta, log)
     
     return
 
+
+def roundToSigFigs(x, sigFigs=2):
+    """Round a value to a requested number of significant figures.
+
+    Parameters
+    ----------
+    x : numerical type
+        A float or int to be rounded.
+    sigFigs : int; optional
+        The number of significant figures desired, by default 2.
+
+    Returns
+    -------
+    nDec : int
+        The number of decimals corresponding to sigFigs where nDec = -1 for
+        a value rounded to the ten's place (e.g. 101 -> 100 if nDec = -1).
+    output : str
+        x formatted as a string with the requested number of significant
+        figures.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-22, Taylor J Bell
+        Imported code written for SPCA, and optimized for Python3.
+    """
+    nDec = -int(np.floor(np.log10(np.abs(x))))+sigFigs-1
+    rounded = np.round(x, nDec)
+    if nDec <= 0:
+        # format this as an integer
+        return nDec, f"{rounded:g}"
+    else:
+        # format this as a float
+        return nDec, f"{rounded:.{nDec}f}"
+
+
+def roundToDec(x, nDec=2):
+    """Round a value to a requested number of decimals.
+
+    Parameters
+    ----------
+    x : numerical type
+        A float or int to be rounded.
+    nDec : int
+        The number of decimals desired, by default 2.
+
+    Returns
+    -------
+    output : str
+        x formatted as a string with the requested number of decimals.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-22, Taylor J Bell
+        Imported code written for SPCA, and optimized for Python3.
+    """
+    rounded = np.round(x, nDec)
+    if nDec <= 0:
+        # format this as an integer
+        return f"{rounded:g}"
+    else:
+        # format this as a float
+        return f"{rounded:.{nDec}f}"
+
+
 def transit_latex_table(meta, log):
-    """Write a nicely formatted LaTeX table for transmission/emission spectra.
+    """Write a nicely formatted LaTeX table for each plotted value.
 
     Parameters
     ----------
@@ -644,7 +711,8 @@ def transit_latex_table(meta, log):
     """
     log.writelog('  Saving results as a LaTeX table')
 
-    data = pd.read_csv(meta.tab_filename_s6, comment='#', delim_whitespace=True)
+    data = pd.read_csv(meta.tab_filename_s6, comment='#',
+                       delim_whitespace=True)
 
     # Figure out the number of rows and columns in the table
     nvals = data.shape[0]
@@ -654,11 +722,13 @@ def transit_latex_table(meta, log):
 
     # Figure out the labels for the columns
     if meta.y_param == 'rp^2':
-        colhead = "\colhead{Transit Depth}"
+        colhead = "\\colhead{Transit Depth}"
     elif meta.y_param == 'rp':
-        colhead = "\colhead{Planetary Radius}"
+        colhead = "\\colhead{$R_{\\rm p}/R_{\\rm *}$}"
     elif meta.y_param == 'fp':
-        colhead = "\colhead{Eclipse Depth}"
+        colhead = "\\colhead{Eclipse Depth}"
+    else:
+        colhead = f"\\colhead{{{meta.y_label}}}"
 
     # Begin the table
     out = "\\begin{deluxetable}{"
@@ -668,9 +738,11 @@ def transit_latex_table(meta, log):
     out = out[:-1]+"}\n"
     # Give the table a caption based on the tabulated data
     if meta.y_param in ['rp', 'rp^2']:
-        out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy Results \\label{tab:eureka_transit_spectra}}\n"
+        out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy "
+        out += "Results \\label{tab:eureka_transit_spectra}}\n"
     elif meta.y_param == 'fp':
-        out += "\\tablecaption{\\texttt{Eureka!}'s Eclipse Spectroscopy Results \\label{tab:eureka_eclipse_spectra}}\n"
+        out += "\\tablecaption{\\texttt{Eureka!}'s Eclipse Spectroscopy "
+        out += "Results \\label{tab:eureka_eclipse_spectra}}\n"
     # Label each column
     out += "\\tablehead{\n"
     for i in range(meta.ncols):
@@ -689,38 +761,41 @@ def transit_latex_table(meta, log):
             y_unit = meta.y_label_unit[1:]
             y_unit = y_unit.replace('%', '\\%')
         out += "\\colhead{("+xunit+")} & \\colhead{"+y_unit+"} &"
-    out = out[:-1]+" \\\\\n}\n"
+    out = out[:-1]+"\n}\n"
     # Begin tabulating the data
     out += "\\startdata\n"
     for i in range(rows):
-        # Run up until the last column which needs to be formatted differently
-        for j in range(meta.ncols-1):
+        for j in range(meta.ncols):
+            if j == meta.ncols-1:
+                # Last column, add a newline
+                end = '\\\\\n'
+            else:
+                # Not the last column, add an ampersand
+                end = ' & '
+
             if i+rows*j >= nvals:
-                out += "& & "
+                # Ran out of values - put blanks
+                out += "&"+end
                 continue
             line = data.iloc[i+rows*j]
+
+            # Round values to the correct number of significant figures
+            val = line[meta.y_param+'_value']*meta.y_scalar
+            upper = line[meta.y_param+'_errorpos']*meta.y_scalar
+            lower = line[meta.y_param+'_errorneg']*meta.y_scalar
+            nDec1, _ = roundToSigFigs(upper)
+            nDec2, _ = roundToSigFigs(lower)
+            nDec = np.max([nDec1, nDec2])
+            val = roundToDec(val, nDec)
+            upper = roundToDec(upper, nDec)
+            lower = roundToDec(lower, nDec)
+
             # Wavelength
             out += f"{np.round(line['wavelength'], 2):.2f} & "
-            # Value
-            out += f"{np.round(line[meta.y_param+'_value']*meta.y_scalar):g}"
-            # Upper limit
-            out += f"$^{{+{np.round(line[meta.y_param+'_errorpos']*meta.y_scalar):g}}}"
-            # Lower limit (put an ampersand at the end)
-            out += f"_{{-{np.round(line[meta.y_param+'_errorneg']*meta.y_scalar):g}}}$ & "
-        # End the table if out of values 
-        if i+rows*(meta.ncols-1) >= nvals:
-            out += "& \\\\\n"
-            continue
-        # Format the last column differently
-        line = data.iloc[i+rows*(meta.ncols-1)]
-        # Wavelength
-        out += f"{np.round(line['wavelength'], 2):.2f} & "
-        # Value
-        out += f"{np.round(line[meta.y_param+'_value']*meta.y_scalar):g}"
-        # Upper limit
-        out += f"$^{{+{np.round(line[meta.y_param+'_errorpos']*meta.y_scalar):g}}}"
-        # Lower limit (put a table line break at the end)
-        out += f"_{{-{np.round(line[meta.y_param+'_errorneg']*meta.y_scalar):g}}}$\\\\\n"
+            # val^{+upper}_{-lower}
+            out += f"{val}^{{+{upper}}}_{{-{lower}}}$"
+            out += end
+
     # End the table
     out += "\\enddata\n"
     out += "\\end{deluxetable}"
