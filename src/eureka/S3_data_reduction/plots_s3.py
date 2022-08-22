@@ -184,12 +184,14 @@ def drift_2D(data, meta):
     plt.subplot(211)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
-        plt.plot(iscans, data.centroid_y, '.')
+        if len(iscans) > 0:
+            plt.plot(iscans, data.centroid_y, '.')
     plt.ylabel(f'Drift Along y ({data.centroid_y.units})')
     plt.subplot(212)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
-        plt.plot(iscans, data.centroid_x, '.')
+        if len(iscans) > 0:
+            plt.plot(iscans, data.centroid_x, '.')
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
     plt.tight_layout()
