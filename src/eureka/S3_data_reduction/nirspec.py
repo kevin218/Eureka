@@ -62,6 +62,8 @@ def read(filename, data, meta, log):
     wave_2d = hdulist['WAVELENGTH', 1].data
     int_times = hdulist['INT_TIMES', 1].data
 
+    meta.photometry = False  # Photometry for NIRSpec not implemented yet.
+
     # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
         time = read_time(meta, data, log)

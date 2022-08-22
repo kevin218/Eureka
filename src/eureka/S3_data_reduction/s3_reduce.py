@@ -36,6 +36,7 @@ from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
+from ..lib import centerdriver, apphot
 
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
@@ -68,6 +69,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     - July 2022 Caroline Piaulet
         Now computing the y pos and width for each integration
         + stored in Spec and add diagnostics plots
+    - July 2022 Sebastian Zieba
+        Added photometry S3
     '''
 
     # Load Eureka! control file and store values in Event object
@@ -94,20 +97,27 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         meta = me.mergeevents(meta, s2_meta)
 
     # check for range of spectral apertures
-    if isinstance(meta.spec_hw, list):
+    if hasattr(meta, 'spec_hw') and isinstance(meta.spec_hw, list):
         meta.spec_hw_range = range(meta.spec_hw[0],
                                    meta.spec_hw[1]+meta.spec_hw[2],
                                    meta.spec_hw[2])
-    else:
+    elif hasattr(meta, 'spec_hw'):
         meta.spec_hw_range = [meta.spec_hw]
+    elif hasattr(meta, 'photometry') and meta.photometry:
+        # Photometry currently does not support lists of apertures
+        meta.spec_hw_range = [meta.photap]
 
     # check for range of background apertures
-    if isinstance(meta.bg_hw, list):
+    if hasattr(meta, 'bg_hw') and isinstance(meta.bg_hw, list):
         meta.bg_hw_range = range(meta.bg_hw[0],
                                  meta.bg_hw[1]+meta.bg_hw[2],
                                  meta.bg_hw[2])
-    else:
+    elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
+    elif hasattr(meta, 'photometry') and meta.photometry:
+        # E.g., if skyin = 90 and skyout = 150, then the
+        # directory will use "bg90_150"
+        meta.bg_hw_range = [str(meta.skyin) + '_' + str(meta.skyout)]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -281,9 +291,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
 
-                # Locate source postion
-                data, meta, log = source_pos.source_pos_wrapper(data, meta,
-                                                                log, m)
+                if not meta.photometry:
+                    # Locate source postion
+                    data, meta, log = \
+                        source_pos.source_pos_wrapper(data, meta, log, m)
 
                 # Compute 1D wavelength solution
                 if 'wave_2d' in data:
@@ -296,61 +307,159 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # (eg. MJy/sr -> DN -> Electrons)
                 data, meta = b2f.convert_to_e(data, meta, log)
 
-                # Compute clean median frame
-                data = optspex.clean_median_flux(data, meta, log)
+                if not meta.photometry:
+                    # Compute clean median frame
+                    data = optspex.clean_median_flux(data, meta, log)
 
-                # correct spectral curvature
-                if hasattr(meta, 'curvature') and meta.curvature == 'correct':
-                    data, meta = straighten.straighten_trace(data, meta, log)
+                    # correct spectral curvature
+                    if hasattr(meta, 'curvature') and \
+                            meta.curvature == 'correct':
+                        data, meta = \
+                            straighten.straighten_trace(data, meta, log)
 
-                # Perform outlier rejection of sky background along time axis
-                data = inst.flag_bg(data, meta, log)
+                    # Perform outlier rejection of
+                    # sky background along time axis
+                    data = inst.flag_bg(data, meta, log)
 
-                # Do the background subtraction
-                data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
+                    # Do the background subtraction
+                    data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
 
-                # Make image+background plots
-                if meta.isplots_S3 >= 3:
-                    plots_s3.image_and_background(data, meta, log, m)
+                    # Make image+background plots
+                    if meta.isplots_S3 >= 3:
+                        plots_s3.image_and_background(data, meta, log, m)
 
-                # Calulate and correct for 2D drift
-                if hasattr(inst, 'correct_drift2D'):
-                    data, meta, log = inst.correct_drift2D(data, meta, log, m)
-                elif meta.record_ypos:
-                    # Record y position and width for all integrations
-                    data, meta, log = source_pos.source_pos_wrapper(data, meta,
-                                                                    log, m,
-                                                                    integ=None)
-                    if meta.isplots_S3 >= 1:
-                        # make y position and width plots
-                        plots_s3.driftypos(data, meta)
-                        plots_s3.driftywidth(data, meta)
+                    # Calulate and correct for 2D drift
+                    if hasattr(inst, 'correct_drift2D'):
+                        data, meta, log = \
+                            inst.correct_drift2D(data, meta, log, m)
+                    elif meta.record_ypos:
+                        # Record y position and width for all integrations
+                        data, meta, log = \
+                            source_pos.source_pos_wrapper(data, meta, log,
+                                                          m, integ=None)
+                        if meta.isplots_S3 >= 1:
+                            # make y position and width plots
+                            plots_s3.driftypos(data, meta)
+                            plots_s3.driftywidth(data, meta)
 
-                # Select only aperture region
-                apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
-                                                                      meta,
-                                                                      log)
+                    # Select only aperture region
+                    apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
+                                                                          meta,
+                                                                          log)
 
-                # Extract standard spectrum and its variance
-                data = optspex.standard_spectrum(data, apdata, aperr)
+                    # Extract standard spectrum and its variance
+                    data = optspex.standard_spectrum(data, apdata, aperr)
 
-                # Perform optimal extraction
-                data, meta, log = optspex.optimize_wrapper(data, meta, log,
-                                                           apdata, apmask,
-                                                           apbg, apv0, m=m)
+                    # Perform optimal extraction
+                    data, meta, log = optspex.optimize_wrapper(data, meta, log,
+                                                               apdata, apmask,
+                                                               apbg, apv0, m=m)
 
-                # Plot results
-                if meta.isplots_S3 >= 3:
-                    log.writelog('  Creating figures for optimal spectral '
-                                 'extraction', mute=(not meta.verbose))
-                    iterfn = range(meta.int_start, meta.int_end)
-                    if meta.verbose:
-                        iterfn = tqdm(iterfn)
-                    for n in iterfn:
-                        # make optimal spectrum plot
-                        plots_s3.optimal_spectrum(data, meta, n, m)
-                    if meta.inst != 'wfc3':
-                        plots_s3.residualBackground(data, meta, m)
+                    # Plot results
+                    if meta.isplots_S3 >= 3:
+                        log.writelog('  Creating figures for optimal spectral '
+                                     'extraction', mute=(not meta.verbose))
+                        iterfn = range(meta.int_start, meta.int_end)
+                        if meta.verbose:
+                            iterfn = tqdm(iterfn)
+                        for n in iterfn:
+                            # make optimal spectrum plot
+                            plots_s3.optimal_spectrum(data, meta, n, m)
+                        if meta.inst != 'wfc3':
+                            plots_s3.residualBackground(data, meta, m)
+
+                else:  # Do Photometry reduction
+                    # Do outlier reduction along time axis for
+                    # each individual pixel
+                    if meta.flag_bg:
+                        data = inst.flag_bg_phot(data, meta, log)
+
+                    # Setting up arrays for photometry reduction
+                    data = util.phot_arrays(data)
+
+                    for i in tqdm(range(len(data.time)),
+                                  desc='Looping over Integrations'):
+                        if (meta.isplots_S3 >= 3) and \
+                                (meta.oneoverf_corr is not None):
+                            # save current flux into an array for
+                            # plotting 1/f correction comparison
+                            flux_w_oneoverf = np.copy(data.flux.values[i])
+
+                        # Determine centroid position
+                        # We do this twice. First a coarse estimation,
+                        # then a more precise one.
+                        # Use the center of the frame as an initial guess
+                        centroid_guess = \
+                            [data.flux.shape[1]//2, data.flux.shape[2]//2]
+                        # Do a 2D gaussian fit to the whole frame
+                        position, extra = \
+                            centerdriver.centerdriver('fgc',
+                                                      data.flux.values[i],
+                                                      centroid_guess, 0, 0, 0,
+                                                      mask=None, uncd=None,
+                                                      fitbg=1, maskstar=True,
+                                                      expand=1.0, psf=None,
+                                                      psfctr=None, i=i, m=m,
+                                                      meta=meta)
+
+                        if meta.oneoverf_corr is not None:
+                            # Correct for 1/f
+                            data = \
+                                inst.do_oneoverf_corr(data, meta, i,
+                                                      position[1], log)
+                            if meta.isplots_S3 >= 3:
+                                plots_s3.phot_2d_frame_oneoverf(data, meta,
+                                                                m, i,
+                                                                flux_w_oneoverf)
+
+                        # Use the determined centroid and
+                        # cut out ctr_cutout_size pixels around it
+                        # Then perform another 2D gaussian fit
+                        position, extra = \
+                            centerdriver.centerdriver('fgc',
+                                                      data.flux.values[i],
+                                                      position,
+                                                      meta.ctr_cutout_size,
+                                                      0, 0,
+                                                      mask=data.mask.values[i],
+                                                      uncd=None, fitbg=1,
+                                                      maskstar=True, expand=1,
+                                                      psf=None, psfctr=None,
+                                                      i=i, m=m, meta=meta)
+                        # Store centroid positions and
+                        # the Gaussian 1-sigma half-widths
+                        data['centroid_y'][i], data['centroid_x'][i] = position
+                        data['centroid_sy'][i], data['centroid_sx'][i] = extra
+                        # Plot 2D frame, the centroid and the centroid position
+                        if meta.isplots_S3 >= 3:
+                            plots_s3.phot_2d_frame(data, meta, m, i)
+
+                        # Interpolate masked pixels before we perform
+                        # aperture photometry
+                        if meta.interp_method is not None:
+                            util.interp_masked(data, meta, i, log)
+
+                        # Calculate flux in aperture and subtract
+                        # background flux
+                        aphot = \
+                            apphot.apphot(meta, image=data.flux[i].values,
+                                          ctr=position, photap=meta.photap,
+                                          skyin=meta.skyin, skyout=meta.skyout,
+                                          betahw=1, targpos=position,
+                                          mask=data.mask[i].values,
+                                          imerr=data.err[i].values,
+                                          skyfrac=0.1, med=True, expand=1,
+                                          isbeta=False, nochecks=False,
+                                          aperr=True, nappix=True, skylev=True,
+                                          skyerr=True, nskypix=True,
+                                          nskyideal=True, status=True,
+                                          betaper=True)
+                        # Save results into arrays
+                        data['aplev'][i], data['aperr'][i], \
+                            data['nappix'][i], data['skylev'][i], \
+                            data['skyerr'][i], data['nskypix'][i], \
+                            data['nskyideal'][i], data['status'][i], \
+                            data['betaper'][i] = aphot
 
                 if meta.save_output:
                     # Save flux data from current segment
@@ -359,25 +468,40 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     success = xrio.writeXR(filename_xr, data, verbose=False,
                                            append=False)
                     if success == 0:
-                        del(data.attrs['filename'])
-                        del(data.attrs['mhdr'])
-                        del(data.attrs['shdr'])
+                        del (data.attrs['filename'])
+                        del (data.attrs['mhdr'])
+                        del (data.attrs['shdr'])
                         success = xrio.writeXR(filename_xr, data,
                                                verbose=meta.verbose,
                                                append=False)
 
                 # Remove large 3D arrays from Dataset
-                del(data['flux'], data['err'], data['dq'], data['v0'],
-                    data['bg'], data['mask'], data['wave_2d'],
-                    data.attrs['intstart'], data.attrs['intend'])
-                if meta.inst == 'wfc3':
-                    del(data['flatmask'], data['variance'])
+                del (data['err'], data['dq'], data['v0'],
+                     data['mask'],
+                     data.attrs['intstart'], data.attrs['intend'])
+                if not meta.photometry:
+                    del (data['flux'], data['bg'], data['wave_2d'])
+                elif meta.inst == 'wfc3':
+                    del (data['flatmask'], data['variance'])
 
                 # Append results for future concatenation
                 datasets.append(data)
 
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
+
+            # Plot light curve and centroids over time
+            if meta.photometry:
+                if meta.isplots_S3 >= 1:
+                    plots_s3.phot_lc(spec, meta)
+                    plots_s3.phot_centroid(spec, meta)
+                if meta.isplots_S3 >= 3:
+                    plots_s3.phot_bg(spec, meta)
+                if meta.isplots_S3 >= 5:
+                    plots_s3.phot_npix(spec, meta)
+                    plots_s3.phot_2d_frame_diff(spec, meta)
+                apphot.apphot_status(spec)
+                del (spec['flux'])
 
             # Plot fitted 2D drift
             # Note: This needs to happen before calling conclusion_step()
@@ -396,12 +520,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    verbose=True)
 
             # Compute MAD value
-            meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
-                                       spec.optspec.values,
-                                       optmask=spec.optmask.values)
+            if not meta.photometry:
+                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
+                                      
+                                           spec.optspec.values,
+                                           optmask=spec.optmask.values)
+            else:
+                normspec = util.normalize_spectrum(meta, data.aplev.values)
+                meta.mad_s3 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
 
-            if meta.isplots_S3 >= 1:
+            if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figure')
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,

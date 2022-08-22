@@ -70,6 +70,8 @@ def read(filename, f277_filename, data, meta):
                               int(data.intend))
     meta.time_units = 'BJD_TDB'
 
+    meta.photometry = False  # Photometry for NIRISS not implemented yet.
+
     # loads all the data into the data object
     data.data = hdu['SCI',1].data + 0.0
     data.err  = hdu['ERR',1].data + 0.0
