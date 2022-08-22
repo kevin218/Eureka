@@ -10,7 +10,7 @@ from photutils import MMMBackground, MedianBackground, Background2D
 import os
 
 from ..lib import clipping
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
@@ -271,7 +271,8 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    fname = 'figs'+os.sep+'Fig3601_BG_'+str(j)+figure_filetype
+                    fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
+                             plots.plots.figure_filetype)
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 
@@ -388,7 +389,8 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
                         plt.title(str(j))
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
-                        fname = 'figs'+os.sep+'Fig6_BG_'+str(j)+figure_filetype
+                        fname = ('figs'+os.sep+'Fig6_BG_'+str(j) +
+                                 plots.figure_filetype)
                         plt.savefig(meta.outputdir + fname, dpi=300)
                         plt.pause(0.01)
 

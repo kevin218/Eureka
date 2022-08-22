@@ -6,7 +6,7 @@ import corner
 from scipy import stats
 
 from .likelihood import computeRMS
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -95,7 +95,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5101_{fname_tag}_lc_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -184,7 +184,7 @@ def plot_rms(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5301_{fname_tag}_allanplot_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -236,7 +236,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         fname_tag = f'ch{ch_number}'
     fname = (f'figs{os.sep}fig5501_{fname_tag}_corner_{fitter}'
-             + figure_filetype)
+             + plots.figure_filetype)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05,
                 dpi=300)
     if not meta.hide_plots:
@@ -337,7 +337,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
         fname += '_'+fitter
         if nplots > 1:
             fname += f'_plot{plot_number+1}of{nplots}'
-        fname += figure_filetype
+        fname += plots.figure_filetype
         fig.savefig(meta.outputdir+fname, bbox_inches='tight',
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
@@ -399,7 +399,7 @@ def plot_res_distr(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -487,7 +487,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)

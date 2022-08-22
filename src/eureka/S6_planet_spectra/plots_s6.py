@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import re
 
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 
 def plot_spectrum(meta, model_x=None, model_y=None,
@@ -101,12 +101,13 @@ def plot_spectrum(meta, model_x=None, model_y=None,
 
         ax2 = ax.secondary_yaxis('right', functions=(H, r))
         ax2.set_ylabel('Scale Height')
-        # To avoid overlapping ticks, use the same spacing as the r axis
-        yticks = np.round(H(ax.get_yticks()), 1)
-        # Make sure H=0 is shown
-        offset = yticks[np.argmin(np.abs(yticks))]
-        yticks -= offset
-        ax2.set_yticks(yticks)
+        if r'^2' in ylabel:
+            # To avoid overlapping ticks, use the same spacing as the r axis
+            yticks = np.round(H(ax.get_yticks()), 1)
+            # Make sure H=0 is shown
+            offset = yticks[np.argmin(np.abs(yticks))]
+            yticks -= offset
+            ax2.set_yticks(yticks)
 
         fname = 'figs'+os.sep+'fig6301'
     else:
@@ -116,8 +117,8 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     fname += '_'+clean_y_param
 
     fig.tight_layout()
-    fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight',
-                dpi=300)
+    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+                bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
