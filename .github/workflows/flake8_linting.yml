@@ -21,6 +21,6 @@ jobs:
       with:
         select: E1,E2,E3,E4,E5,E7,W6,F
         ignore: W504,W503,E704,E226,E722
-        maxlinelength: 100
+        maxlinelength: 80
         repotoken: ${{ secrets.GITHUB_TOKEN }}
         

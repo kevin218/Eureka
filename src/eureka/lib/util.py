@@ -3,6 +3,7 @@ import os
 import glob
 from astropy.io import fits
 from . import sort_nicely as sn
+from scipy.interpolate import griddata
 
 
 def readfiles(meta, log):
@@ -121,18 +122,18 @@ def manual_clip(lc, meta, log):
     if len(meta.manual_clip.shape) == 1:
         # The user didn't quite enter things right, so reshape
         meta.manual_clip = meta.manual_clip[np.newaxis]
-    
+
     # Figure out which indices are being clipped
     time_bool = np.ones(len(lc.data.time), dtype=bool)
     for inds in meta.manual_clip:
         time_bool[inds[0]:inds[1]] = False
     time_inds = np.arange(len(lc.data.time))[time_bool]
-    
+
     # Remove the requested integrations
     lc = lc.isel(time=time_inds)
     if hasattr(meta, 'scandir'):
         meta.scandir = meta.scandir[time_bool[::meta.nreads]]
-    
+
     return meta, lc, log
 
 
@@ -481,7 +482,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     return np.ma.mean(ediff)
 
 
-def get_mad_1d(data, ind_min=0, ind_max=-1):
+def get_mad_1d(data, ind_min=0, ind_max=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 1D data.
 
@@ -551,5 +552,88 @@ def manmask(data, meta, log):
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]
         data['mask'][rowstart:rowend, colstart:colend] = 0
+
+    return data
+
+
+# PHOTOMETRY
+def interp_masked(data, meta, i, log):
+    """
+    Interpolates masked pixels.
+    Based on the example here:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    i : int
+        The current integration.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with requested pixels masked.
+    """
+    log.writelog('Interpolating masked values...', mute=(not meta.verbose))
+    flux = data.flux.values[i]
+    mask = data.mask.values[i]
+    nx = flux.shape[1]
+    ny = flux.shape[0]
+    grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
+    points = np.where(mask == 1)
+    # x,y positions of not masked pixels
+    points_t = np.array(points).transpose()
+    values = flux[np.where(mask == 1)]  # flux values of not masked pixels
+
+    # Use scipy.interpolate.griddata to interpolate
+    if meta.interp_method == 'nearest':
+        grid_z = griddata(points_t, values, (grid_x, grid_y), method='nearest')
+    elif meta.interp_method == 'linear':
+        grid_z = griddata(points_t, values, (grid_x, grid_y), method='linear')
+    elif meta.interp_method == 'cubic':
+        grid_z = griddata(points_t, values, (grid_x, grid_y), method='cubic')
+    else:
+        log.writelog('Your method for interpolation is not supported!'
+                     'Please choose between None, nearest, linear or cubic.',
+                     mute=(not meta.verbose))
+
+    data.flux.values[i] = grid_z
+
+    return data
+
+
+def phot_arrays(data):
+    """Setting up arrays for the photometry routine.
+
+    These arrays will be populated by the returns coming from centerdriver.py
+    and apphot.py
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with new arrays where the
+        outputs from the photometry routine will be saved in.
+    """
+    keys = ['centroid_x', 'centroid_y', 'centroid_sx', 'centroid_sy',
+            'aplev', 'aperr', 'nappix', 'skylev', 'skyerr', 'nskypix',
+            'nskyideal', 'status', 'betaper']
+    
+    for key in keys:
+        data[key] = (['time'], np.zeros_like(data.time))
+
+    data['aplev'].attrs['flux_units'] = data.flux.attrs['flux_units']
+    data['aplev'].attrs['time_units'] = data.flux.attrs['time_units']
+    data['aperr'].attrs['flux_units'] = data.flux.attrs['flux_units']
+    data['aperr'].attrs['time_units'] = data.flux.attrs['time_units']
 
     return data

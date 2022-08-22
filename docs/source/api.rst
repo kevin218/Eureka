@@ -325,9 +325,23 @@ S6_planet_spectra.s6_spectra
 lib
 '''
 
+lib.apphot
+----------
+.. automodule:: eureka.lib.apphot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.astropytable
 ----------------
 .. automodule:: eureka.lib.astropytable
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.centerdriver
+----------------
+.. automodule:: eureka.lib.centerdriver
     :members:
     :undoc-members:
     :show-inheritance:
@@ -367,6 +381,20 @@ lib.gelmanrubin
     :undoc-members:
     :show-inheritance:
 
+lib.imageedit
+-------------
+.. automodule:: eureka.lib.imageedit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.interp2d
+------------
+.. automodule:: eureka.lib.interp2d
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lib.logedit
 -----------
 .. automodule:: eureka.lib.logedit
@@ -384,6 +412,13 @@ lib.manageevent
 lib.mastDownload
 ----------------
 .. automodule:: eureka.lib.mastDownload
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lib.meanerr
+-----------
+.. automodule:: eureka.lib.meanerr
     :members:
     :undoc-members:
     :show-inheritance:
