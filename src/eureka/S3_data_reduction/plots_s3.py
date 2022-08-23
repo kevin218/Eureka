@@ -629,7 +629,7 @@ def median_frame(data, meta, m):
 def phot_lc(data, meta):
     """
     Plots the flux as determined by the photometry routine as a function of
-    time. (Fig 3107)
+    time. (Fig 3108)
 
     Parameters
     ----------
@@ -645,14 +645,14 @@ def phot_lc(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3107)
+    plt.figure(3108)
     plt.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3107-1D_LC' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3108-1D_LC' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -695,7 +695,7 @@ def phot_bg(data, meta):
 def phot_centroid(data, meta):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths
-    as a function of time. (Fig 3108)
+    as a function of time. (Fig 3109)
 
     Parameters
     ----------
@@ -711,7 +711,7 @@ def phot_centroid(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3108)
+    plt.figure(3109)
     plt.clf()
     fig, ax = plt.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
@@ -741,7 +741,7 @@ def phot_centroid(data, meta):
     fig.subplots_adjust(hspace=0.02)
 
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3108-Centroid' + plots.figure_filetype)
+    fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
