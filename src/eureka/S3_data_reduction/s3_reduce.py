@@ -529,7 +529,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Compute MAD value
             if not meta.photometry:
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
-                                      
                                            spec.optspec.values,
                                            optmask=spec.optmask.values)
             else:
