@@ -32,24 +32,29 @@ In Stage 3:
    .. figure:: ../media/S3_out/fig3101-2D_LC.png
       :alt: Stage 3 2-dimensional spectrum plot
 
-      Fig 3101: 2-Dimensional Spectrum Plot
+      Fig 3101: 2-Dimensional Spectrum Plot with a linear wavelength x-axis
 
-   .. figure:: ../media/S3_out/fig3102_file0_int000_source_pos.png
+   .. figure:: ../media/S3_out/fig3102-2D_LC.png
+      :alt: Stage 3 2-dimensional spectrum plot
+
+      Fig 3101: 2-Dimensional Spectrum Plot with a linear detector pixel x-axis
+
+   .. figure:: ../media/S3_out/fig3103_file0_int00_source_pos.png
       :alt: Stage 3 source position fit
 
       Fig 3102: Source Position Fit Plot
 
-   .. figure:: ../media/S3_out/fig3103_DriftYPos.png
+   .. figure:: ../media/S3_out/fig3104_DriftYPos.png
       :alt: Stage 3 y drift
 
       Fig 3013: Variations in the spatial-axis position
 
-   .. figure:: ../media/S3_out/fig3104_DriftYWidth.png
+   .. figure:: ../media/S3_out/fig3105_DriftYWidth.png
       :alt: Stage 3 y PSF width changes
 
       Fig 3104: Variations in the spatial-axis PSF width
 
-   .. figure:: ../media/S3_out/fig3105_Drift2D.png
+   .. figure:: ../media/S3_out/fig3106_Drift2D.png
       :alt: Stage 3 2D drift fit
 
       Fig 3105: 2D drift fit (currently only produced for WFC3)
@@ -106,7 +111,7 @@ In Stage 4:
    .. figure:: ../media/S4_out/fig4101_2D_LC.png
       :alt: Stage 4 2-dimensional spectrum
 
-      Fig 4101: 2-Dimensional Spectrum
+      Fig 4101: 2-Dimensional Spectrum with a linear wavelength x-axis.
 
    .. figure:: ../media/S4_out/fig4102_ch0_1D_LC.png
       :alt: Stage 4 1-dimensional binned spectrum

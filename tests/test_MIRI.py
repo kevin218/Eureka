@@ -87,28 +87,28 @@ def test_MIRI(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=2, bg=4)
+    name = pathdirectory(meta, 'S3', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', 1, ap=2, bg=4)
+    name = pathdirectory(meta, 'S4', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=2, bg=4)
+    name = pathdirectory(meta, 'S5', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', 1, ap=2, bg=4)
+    name = pathdirectory(meta, 'S6', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 

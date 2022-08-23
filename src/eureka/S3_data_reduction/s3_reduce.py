@@ -280,12 +280,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                                    log, name='V0')
 
                 # Start masking pixels based on DQ flags
-                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html
+                # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if hasattr(meta, 'dqmask') and meta.dqmask:
                     # dqmask = np.where(data['dq'] > 0)
-                    dqmask = np.where(data.dq % 2 == 1)
-                    data['mask'].values[dqmask] = 0
+                    dqmask = np.where(data.dq.values % 2 == 1)
+                    data.mask.values[dqmask] = 0
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
@@ -408,9 +408,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                 inst.do_oneoverf_corr(data, meta, i,
                                                       position[1], log)
                             if meta.isplots_S3 >= 3:
-                                plots_s3.phot_2d_frame_oneoverf(data, meta,
-                                                                m, i,
-                                                                flux_w_oneoverf)
+                                plots_s3.phot_2d_frame_oneoverf(
+                                    data, meta, m, i, flux_w_oneoverf)
 
                         # Use the determined centroid and
                         # cut out ctr_cutout_size pixels around it
@@ -521,9 +520,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Compute MAD value
             if not meta.photometry:
-                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d,
-                                           spec.optspec,
-                                           optmask=spec.optmask)
+                meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
+                                           spec.optspec.values,
+                                           optmask=spec.optmask.values)
             else:
                 normspec = util.normalize_spectrum(meta, data.aplev.values)
                 meta.mad_s3 = util.get_mad_1d(normspec)

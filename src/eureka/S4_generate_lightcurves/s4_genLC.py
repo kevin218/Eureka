@@ -20,6 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
+from tqdm import tqdm
 from . import plots_s4, drift, generate_LD, wfc3
 from ..lib import logedit
 from ..lib import readECF
@@ -248,10 +249,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 outliers = 0
                 for w in range(meta.subnx):
                     spec.optspec[:, w], spec.optmask[:, w], nout = \
-                        clipping.clip_outliers(spec.optspec[:, w], log,
+                        clipping.clip_outliers(spec.optspec[:, w].values, log,
                                                spec.wave_1d[w].values,
                                                spec.wave_1d.wave_units,
-                                               mask=spec.optmask[:, w],
+                                               mask=spec.optmask[:, w].values,
                                                sigma=meta.sigma,
                                                box_width=meta.box_width,
                                                maxiters=meta.maxiters,
@@ -277,8 +278,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # This can take a long time, so always print this message
                 log.writelog('Computing drift/jitter')
                 # Compute drift/jitter
-                drift_results = drift.spec1D(spec.optspec, meta, log,
-                                             mask=spec.optmask)
+                drift_results = drift.spec1D(spec.optspec.values, meta, log,
+                                             mask=spec.optmask.values)
                 drift1d, driftwidth, driftmask = drift_results
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
@@ -297,16 +298,19 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     log.writelog('Applying drift/jitter correction')
 
                     # Correct for drift/jitter
-                    for n in range(meta.n_int):
+                    iterfn = range(meta.n_int)
+                    if meta.verbose:
+                        iterfn = tqdm(iterfn)
+                    for n in iterfn:
                         # Need to zero-out the weights of masked data
-                        weights = (~spec.optmask[n]).astype(int)
+                        weights = (~spec.optmask[n].values).astype(int)
                         spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                      spec.optspec[n], k=3,
-                                                      s=0, w=weights)
+                                                      spec.optspec[n].values,
+                                                      k=3, s=0, w=weights)
                         spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                       spec.opterr[n], k=3,
-                                                       s=0, w=weights)
-                        optmask = spec.optmask[n].astype(float)
+                                                       spec.opterr[n].values,
+                                                       k=3, s=0, w=weights)
+                        optmask = spec.optmask[n].values.astype(float)
                         spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
                                                        optmask, k=3, s=0,
                                                        w=weights)
@@ -330,7 +334,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             if not meta.photometry:
                 # Compute MAD value
                 meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
-                                           spec.optspec, spec.optmask,
+                                           spec.optspec.values,
+                                           spec.optmask.values,
                                            meta.wave_min, meta.wave_max)
             else:
                 # Compute MAD value for Photometry
@@ -355,10 +360,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
                                      (spec.wave_1d < lc.wave_hi.values[i]))[0]
                     # Make masked arrays for easy summing
-                    optspec_ma = np.ma.masked_where(spec.optmask[:, index],
-                                                    spec.optspec[:, index])
-                    opterr_ma = np.ma.masked_where(spec.optmask[:, index],
-                                                   spec.opterr[:, index])
+                    optspec_ma = np.ma.masked_where(
+                        spec.optmask.values[:, index],
+                        spec.optspec.values[:, index])
+                    opterr_ma = np.ma.masked_where(
+                        spec.optmask.values[:, index],
+                        spec.opterr.values[:, index])
                     # Compute mean flux for each spectroscopic channel
                     # Sumation leads to outliers when there are masked points
                     lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
@@ -375,11 +382,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 if meta.clip_binned:
                     lc['data'][i], lc['mask'][i], nout = \
                         clipping.clip_outliers(
-                            lc.data[i], log, lc.data.wavelength[i].values,
-                            lc.data.wave_units, mask=lc.mask[i],
-                            sigma=meta.sigma, box_width=meta.box_width,
-                            maxiters=meta.maxiters, boundary=meta.boundary,
-                            fill_value=meta.fill_value, verbose=False)
+                            lc.data[i].values, log,
+                            lc.data.wavelength[i].values, lc.data.wave_units,
+                            mask=lc.mask[i].values, sigma=meta.sigma,
+                            box_width=meta.box_width, maxiters=meta.maxiters,
+                            boundary=meta.boundary, fill_value=meta.fill_value,
+                            verbose=False)
                     log.writelog(f'  Sigma clipped {nout} outliers in time'
                                  f' series', mute=(not meta.verbose))
 

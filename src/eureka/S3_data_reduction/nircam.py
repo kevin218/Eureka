@@ -82,7 +82,7 @@ def read(filename, data, meta, log):
             wave_1d = np.ones_like(sci[0, 0]) * 1.87
             meta.phot_wave = 1.87
 
-    # Record integration mid-times in BJD_TDB
+    # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
         time = read_time(meta, data, log)
     else:
@@ -94,7 +94,7 @@ def read(filename, data, meta, log):
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
-    time_units = 'BJD_TDB'
+    time_units = 'BMJD_TDB'
     wave_units = 'microns'
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,

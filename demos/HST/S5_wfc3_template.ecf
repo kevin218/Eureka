@@ -1,5 +1,7 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
+# Stage 5 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5
+
 ncpu            1                      # The number of CPU threads to use when running emcee or dynesty in parallel
 
 allapers        False                  # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
@@ -16,8 +18,8 @@ manual_clip     None    # A list of lists specifying the start and end integrati
 use_generate_ld  exotic-ld #use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None
 #important: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted! The limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
 #(not yet implemented)
-#fix_ld          True #use limb darkening file?
-#ld_file         /path/to/limbdarkening/ld_outputfile.txt  #location of limb darkening file
+fix_ld          False #use limb darkening file?
+ld_file         /path/to/limb/darkening.txt  #location of limb darkening file
 
 # General fitter
 old_fitparams   None          # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
