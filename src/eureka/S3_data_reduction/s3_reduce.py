@@ -103,8 +103,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    meta.spec_hw[2])
     elif hasattr(meta, 'spec_hw'):
         meta.spec_hw_range = [meta.spec_hw]
-    elif hasattr(meta, 'photometry') and meta.photometry:
-        # Photometry currently does not support lists of apertures
+    elif hasattr(meta, 'photap') and isinstance(meta.photap, list):
+        meta.spec_hw_range = range(meta.photap[0],
+                                   meta.photap[1]+meta.photap[2],
+                                   meta.photap[2])
+    elif hasattr(meta, 'photap'):
         meta.spec_hw_range = [meta.photap]
 
     # check for range of background apertures
@@ -114,10 +117,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                  meta.bg_hw[2])
     elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
-    elif hasattr(meta, 'photometry') and meta.photometry:
+    elif hasattr(meta, 'skyin') and hasattr(meta, 'skyout'):
         # E.g., if skyin = 90 and skyout = 150, then the
         # directory will use "bg90_150"
-        meta.bg_hw_range = [str(meta.skyin) + '_' + str(meta.skyout)]
+        if not isinstance(meta.skyin, list):
+            meta.skyin = [meta.skyin]
+        if not isinstance(meta.skyout, list):
+            meta.skyout = [meta.skyout]
+        meta.bg_hw_range = [f'{s_in}_{s_out}' for s_in in meta.skyin
+                            for s_out in meta.skyout]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -365,6 +373,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             plots_s3.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
+                    meta.photap = meta.spec_hw
+                    meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
+                                                       ).astype(int)
+
                     # Do outlier reduction along time axis for
                     # each individual pixel
                     if meta.flag_bg:
