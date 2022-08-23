@@ -214,7 +214,7 @@ def wave_MIRI_jwst(filename, meta, log):
                      'themselves')
 
     # Using the code from https://github.com/spacetelescope/jwst/pull/6964
-    # as of August 8th
+    # as of August 8th, 2022
     with datamodels.open(filename) as model:
         data_shape = model.data.shape
         if len(data_shape) > 2:
