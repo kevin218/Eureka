@@ -535,7 +535,7 @@ def clean_median_flux(data, meta, log, m):
 
         # Flag outliers
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
-                              axis=1, cenfunc='median')
+                              axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
