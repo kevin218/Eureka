@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
+import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
 from ..lib import gaussian as g
@@ -481,7 +482,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log):
+def clean_median_flux(data, meta, log, m):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -492,6 +493,8 @@ def clean_median_flux(data, meta, log):
         The metadata object.
     log : logedit.Logedit
         The current log.
+    m : int
+        The file number.
 
     Returns
     -------
@@ -507,58 +510,54 @@ def clean_median_flux(data, meta, log):
     """
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
-    # Create mask using all data quality flags
-    mask = np.copy(data.mask.values)
-
     # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
+    flux_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
-    medflux_mask = np.ma.getmaskarray(medflux)
     ny, nx = medflux.shape
 
-    # Interpolate over masked pixels
-    clean_med = np.zeros((ny, nx))
+    # Interpolate over masked regions
+    interp_med = np.zeros((ny, nx))
     xx = np.arange(nx)
     for j in range(ny):
-        x1 = xx[~medflux_mask[j]]
-        goodmed = medflux[j][~medflux_mask[j]]
-        f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
+        x1 = xx[~np.ma.getmaskarray(medflux[j])]
+        goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
+        f = spi.interp1d(x1, goodrow, 'linear',
+                         fill_value='extrapolate')
         # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-        clean_med[j] = f(xx)
-    medflux = np.ma.masked_array(clean_med)
+        interp_med[j] = f(xx)
 
-    # Apply smoothing filter
     if meta.window_len > 1:
-        smoothflux = np.zeros((ny, nx))
-        for j in range(ny):
-            smoothflux[j] = smooth.medfilt(medflux.data[j], meta.window_len)
+        # Apply smoothing filter along dispersion direction
+        smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
 
         # Compute residuals
         residuals = medflux - smoothflux
 
         # Flag outliers
-        if not hasattr(meta, 'median_thresh'):
-            meta.median_thresh = 5
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
-                              axis=1, cenfunc=np.ma.median, 
-                              stdfunc=np.ma.std)
-        outliers = np.ma.getmaskarray(outliers)
+                              axis=1, cenfunc='median')
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
         xx = np.arange(nx)
         for j in range(ny):
-            x1 = xx[~outliers[j]]
-            goodmed = medflux[j][~outliers[j]]
-            f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
+            x1 = xx[~np.ma.getmaskarray(outliers[j]) *
+                    ~np.ma.getmaskarray(medflux[j])]
+            goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
+                                 ~np.ma.getmaskarray(medflux[j])]
+            f = spi.interp1d(x1, goodrow, 'linear', fill_value='extrapolate')
             # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
             clean_med[j] = f(xx)
 
-    data['medflux'] = (['y', 'x'], clean_med)
+        # Assign cleaned median frame to data object
+        data['medflux'] = (['y', 'x'], clean_med)
+    else:
+        # Assign uncleaned median frame to data object
+        data['medflux'] = (['y', 'x'], medflux.data)
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
     if meta.isplots_S3 >= 4:
-        plots_s3.median_frame(data, meta)
+        plots_s3.median_frame(data, meta, m)
 
     return data
 
@@ -614,7 +613,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                  mute=(not meta.verbose))
     data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
     data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    data['optmask'] = (['time', 'x'], np.zeros(data.stdspec.shape, dtype=bool))
+    data['optmask'] = (['time', 'x'], np.ones(data.stdspec.shape))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
@@ -649,7 +648,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
     opterr_ma = np.ma.masked_invalid(data.opterr.values)
     optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
-                            np.ma.getmaskarray(opterr_ma))
+                            np.ma.getmaskarray(opterr_ma)).astype(int)
     data.optmask.values = optmask
 
     return data, meta, log
