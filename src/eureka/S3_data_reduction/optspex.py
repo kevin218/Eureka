@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
+import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
 from ..lib import gaussian as g
@@ -481,7 +482,7 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
-def clean_median_flux(data, meta, log, median_thresh=5):
+def clean_median_flux(data, meta, log, m):
     """Computes a median flux frame that is free of bad pixels.
 
     Parameters
@@ -492,8 +493,8 @@ def clean_median_flux(data, meta, log, median_thresh=5):
         The metadata object.
     log : logedit.Logedit
         The current log.
-    median_thresh : int; optional
-        Sigma threshold when flagging outliers in median frame
+    m : int
+        The file number.
 
     Returns
     -------
@@ -509,42 +510,54 @@ def clean_median_flux(data, meta, log, median_thresh=5):
     """
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
-    # Create mask using all data quality flags
-    mask = np.copy(data['mask'].values)
-    mask[np.where(data.dq > 0)] = 1
-
     # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
+    flux_ma = np.ma.masked_where(data['mask'].values == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
-
-    # Apply smoothing filter
     ny, nx = medflux.shape
-    smoothflux = np.zeros((ny, nx))
-    for j in tqdm(range(ny)):
-        smoothflux[j] = smooth.medfilt(medflux.data[j], 31)
 
-    # Compute residuals
-    residuals = medflux - smoothflux
-
-    # Flag outliers
-    outliers = sigma_clip(residuals, sigma=median_thresh, maxiters=5, axis=1,
-                          cenfunc='median')
-
-    # Interpolate over bad pixels
-    clean_med = np.zeros((ny, nx))
+    # Interpolate over masked regions
+    interp_med = np.zeros((ny, nx))
     xx = np.arange(nx)
     for j in range(ny):
-        x1 = xx[~outliers.mask[j]]
-        goodmed = medflux[j][~outliers.mask[j]]
-        f = spi.interp1d(x1, goodmed, 'linear', fill_value='extrapolate')
+        x1 = xx[~np.ma.getmaskarray(medflux[j])]
+        goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
+        f = spi.interp1d(x1, goodrow, 'linear',
+                         fill_value='extrapolate')
         # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-        clean_med[j] = f(xx)
+        interp_med[j] = f(xx)
 
-    data['medflux'] = (['y', 'x'], clean_med)
+    if meta.window_len > 1:
+        # Apply smoothing filter along dispersion direction
+        smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
+
+        # Compute residuals
+        residuals = medflux - smoothflux
+
+        # Flag outliers
+        outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
+                              axis=1, cenfunc='median')
+
+        # Interpolate over bad pixels
+        clean_med = np.zeros((ny, nx))
+        xx = np.arange(nx)
+        for j in range(ny):
+            x1 = xx[~np.ma.getmaskarray(outliers[j]) *
+                    ~np.ma.getmaskarray(medflux[j])]
+            goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
+                                 ~np.ma.getmaskarray(medflux[j])]
+            f = spi.interp1d(x1, goodrow, 'linear', fill_value='extrapolate')
+            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+            clean_med[j] = f(xx)
+
+        # Assign cleaned median frame to data object
+        data['medflux'] = (['y', 'x'], clean_med)
+    else:
+        # Assign uncleaned median frame to data object
+        data['medflux'] = (['y', 'x'], medflux.data)
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
     if meta.isplots_S3 >= 4:
-        plots_s3.median_frame(data, meta)
+        plots_s3.median_frame(data, meta, m)
 
     return data
 
