@@ -5,7 +5,7 @@ from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
 
-from citations import CITATIONS
+from .citations import CITATIONS
 
 
 def readfiles(meta, log):
@@ -657,6 +657,7 @@ def make_citations(meta, mods):
     """
 
     # get modules for which we have citations
+    
     module_cites = np.intersect1d(mods, list(CITATIONS))
 
     # extract fitting methods/myfuncs to grab citations
@@ -668,22 +669,22 @@ def make_citations(meta, mods):
     if hasattr(meta, "run_myfuncs"):
         if "batman_tr" or "batman_ecl" in meta.run_myfuncs: # check if batman is being used for transit/eclipse modeling
             other_cites.append("batman")
-    
-    if hasattr(meta, "GP_package"): # check if a GP is being used
-        other_cites.append(meta.GP_package) 
+        if "GP" in meta.run_myfuncs:
+            if hasattr(meta, "GP_package"): # check if a GP is being used
+                other_cites.append(meta.GP_package) 
 
     # check if instrument is set
-    if hasattr(meta, inst): # if we already have the instrument, don't bother doing anything
+    if hasattr(meta, 'inst'): # if we already have the instrument, don't bother doing anything
         pass
     else: # an unfortunate occurrence, ideally this shouldn't happen. just pass again while I think of a better way to handle this
         pass
 
     # get all new citations together
-    all_cites = np.concatenate([module_cites, other_cites])
+    all_cites = np.union1d(module_cites, other_cites)
 
     # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
     if hasattr(meta, 'citations'):
-        all_cites = np.union1d(all_cites, meta.citations).tolist()
+        all_cites = np.intersect1d(all_cites, meta.citations).tolist()
     
     # store everything in the meta object
     meta.citations = all_cites
