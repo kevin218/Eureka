@@ -315,7 +315,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     if hasattr(meta, 'curvature') and \
                             meta.curvature == 'correct':
                         data, meta = \
-                            straighten.straighten_trace(data, meta, log)
+                            straighten.straighten_trace(data, meta, log, m)
 
                     # Perform outlier rejection of
                     # sky background along time axis

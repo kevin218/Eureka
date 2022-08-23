@@ -510,28 +510,23 @@ def clean_median_flux(data, meta, log, m):
     """
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
-    # Create mask using all data quality flags
-    mask = np.copy(data['mask'].values)
-    if meta.dqmask:
-        mask[np.where(data.dq % 2 == 1)] = 0
-
     # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(mask == 0, data.flux.values)
+    flux_ma = np.ma.masked_where(data['mask'].values == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
+    ny, nx = medflux.shape
+
+    # Interpolate over masked regions
+    interp_med = np.zeros((ny, nx))
+    xx = np.arange(nx)
+    for j in range(ny):
+        x1 = xx[~np.ma.getmaskarray(medflux[j])]
+        goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
+        f = spi.interp1d(x1, goodrow, 'linear',
+                         fill_value='extrapolate')
+        # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+        interp_med[j] = f(xx)
 
     if meta.window_len > 1:
-        ny, nx = medflux.shape
-        # Interpolate over masked regions
-        interp_med = np.zeros((ny, nx))
-        xx = np.arange(nx)
-        for j in range(ny):
-            x1 = xx[~np.ma.getmaskarray(medflux[j])]
-            goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
-            f = spi.interp1d(x1, goodrow, 'linear',
-                             fill_value='extrapolate')
-            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-            interp_med[j] = f(xx)
-
         # Apply smoothing filter along dispersion direction
         smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
 
