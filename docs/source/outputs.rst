@@ -3,7 +3,7 @@
 Eureka! Outputs
 ===============
 
-Stage 2 through Stage 6 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages. 
+Stage 2 through Stage 6 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages.
 
 
 .. _s2-out:
@@ -59,30 +59,47 @@ In Stage 3:
 
       Fig 3105: 2D drift fit (currently only produced for WFC3)
 
+   .. figure:: ../media/S3_out/fig3106_Curvature.png
+      :alt: Stage 3 trace curvature
+
+      Fig 3106: Measured, smoothed, and integer-rounded position of trace
+
    - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation.
 
-   .. figure:: ../media/S3_out/fig3301_file0_int00_ImageAndBackground.png
+   .. figure:: ../media/S3_out/fig3301_file0_int001_ImageAndBackground.png
       :alt: Stage 3 background subtracted flux plot
 
       Fig 3301: Background Subtracted Flux Plot
 
-   .. figure:: ../media/S3_out/fig3302_file0_int00_Spectrum.png
+   .. figure:: ../media/S3_out/fig3302_file0_int001_Spectrum.png
       :alt: Stage 3 1-dimensional spectrum plot
 
       Fig 3302: 1-Dimensional Spectrum Plot
 
-   .. figure:: ../media/S3_out/fig3303_file0_int00_Profile.png
+   .. figure:: ../media/S3_out/fig3303_file0_int001_Profile.png
       :alt: Stage 3 weighting profile
 
       Fig 3303: Weighting Profile Plot
 
+   .. figure:: ../media/S3_out/fig3304_file0_ResidualBG.png
+      :alt: Stage 3 residual background
+
+      Fig 3304: Residual Background Plot
+
+   - If ``isplots_S3`` = 4: ``Eureka!`` will plot the cleaned median frame.
+
+     .. figure:: ../media/S3_out/fig3401_file0_MedianFrame.png
+        :alt: Stage 3 clean median frame plot
+
+        Fig 3401: Clean Median Frame Plot
+
    - If ``isplots_S3`` = 5: ``Eureka!`` will plot the Subdata plots from the optimal spectral extraction step.
 
-   .. figure:: ../media/S3_out/fig3501_file0_int00_col259_subdata.png
+   .. figure:: ../media/S3_out/fig3501_file0_int001_col0117_subdata.png
       :alt: Stage 3 subdata plot
 
       Fig 3501: Spectral Extraction Subdata Plot
-   
+
 .. _s4-out:
 
 Stage 4 Outputs
@@ -126,7 +143,7 @@ Stage 5 Outputs
 
 In Stage 5:
    - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel. If fitting with a GP, an additional figure will be made showing the GP component. Finally, an additional plot compares the fits from different fitters.
-   
+
    .. figure:: ../media/S5_out/fig5101_ch0_lc_emcee.png
       :alt: Stage 5 fit data and lightcurve
 
@@ -136,7 +153,7 @@ In Stage 5:
       :alt: Stage 5 GP plot
 
       Fig 5102: Fitted Lightcurve, GP Model, and Residual Plot
-   
+
    .. figure:: ../media/S5_out/fig5103_ch0_all_fits.png
       :alt: Stage 5 All fits comparison
 
@@ -148,15 +165,15 @@ In Stage 5:
       :alt: Stage 5 RMS deviation plot
 
       Fig 5301: RMS Deviation Plot
-   
+
    .. figure:: ../media/S5_out/fig5302_ch0_res_distri_emcee.png
       :alt: Stage 5 residual distribution
 
       Fig 5302: Residual Distribution
-   
+
    .. figure:: ../media/S5_out/fig5303_ch0_burninchain.png
       :alt: Stage 5 fitting chains
-   
+
    .. figure:: ../media/S5_out/fig5303_ch0_chain.png
       :alt: Stage 5 fitting chains
 

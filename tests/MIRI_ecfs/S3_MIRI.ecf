@@ -19,10 +19,10 @@ bg_deg          0           # Polynomial order for column-by-column background s
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
 
 # Spectral extraction parameters
-spec_hw         4           # Half-width of aperture region for spectral extraction (relative to source position)
+spec_hw         2           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
-window_len      1           # Smoothing window length, when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
-median_thresh   5           # Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
+median_thresh   5           # X-sigma threshold when flagging outliers in median frame
+window_len      1           # Smoothing window length, for median frame or when fittype = smooth
 prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
