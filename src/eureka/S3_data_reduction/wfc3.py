@@ -77,11 +77,14 @@ def get_reference_frames(meta, log):
     meta.verbose = False
     ncpu = meta.ncpu
     meta.ncpu = 1
+    isplots_S3 = meta.isplots_S3
+    meta.isplots_S3 = 0
 
     # Set some default values
     meta.firstFile = False
     meta.firstInBatch = False
     meta.int_start = 0
+    meta.int_end = 0
     meta.files_per_batch = 1
 
     # Use the first two files by default
@@ -118,7 +121,7 @@ def get_reference_frames(meta, log):
         data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
         data, meta = b2f.convert_to_e(data, meta, log)
         data = flag_bg(data, meta, log)
-        data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
+        data = background.BGsubtraction(data, meta, log, i)
         cut_aperture(data, meta, log)
         
         # Save the reference values
@@ -128,6 +131,7 @@ def get_reference_frames(meta, log):
     # Restore input values
     meta.verbose = verbose
     meta.ncpu = ncpu
+    meta.isplots_S3 = isplots_S3
 
     return meta, log
 
