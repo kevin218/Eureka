@@ -647,13 +647,13 @@ use_generate_ld
 '''''''''''''''
 If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
 
-fix_ld
-''''''
-If set to True, this will allow you to use your own custom file to input limb-darkening parameters from a model other than exotic-ld. Note: this option only works if use_generate_ld=None.
-
 ld_file
 '''''''
-Path to the file containing limb darkening coefficients to be used when fix_ld=True. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
+If you want to use custom calculated limb-darkening coefficients, set to the fully qualified path to a file containing limb darkening coefficients that you want to use. Otherwise, set to None. Note: this option only works if use_generate_ld=None. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
+
+ld_file_white
+'''''''''''''
+The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''

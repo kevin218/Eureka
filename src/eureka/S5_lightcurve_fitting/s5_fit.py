@@ -147,33 +147,33 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
 
-            # Load limb-darkening coefficients if used from Stage 4
-            if meta.use_generate_ld:
-                ld_str = meta.use_generate_ld
-                if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been " +
-                                    "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients " +
-                             f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values,
-                             lc[ld_str + '_quad'].values,
-                             lc[ld_str + '_nonlin_3para'].values,
-                             lc[ld_str + '_nonlin_4para'].values]
-            # Load limb-darkening coefficients from a custom file
-            elif meta.fix_ld:
-                ld_fix_file = str(meta.ld_file)
-                try:
-                    ld_coeffs = np.loadtxt(ld_fix_file)
-                except FileNotFoundError:
-                    raise Exception("The limb-darkening file " + ld_fix_file + 
-                                    " could not be found.")
-            else:
-                ld_coeffs = None
-
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
             # are 'white_fixed' freeze them to the white-light curve best fit
             if meta.whitep:
+                if meta.use_generate_ld:
+                    # Load limb-darkening coefficients made in Stage 4
+                    ld_str = meta.use_generate_ld
+                    if not hasattr(lc, ld_str + '_lin'):
+                        raise Exception("Exotic-ld coefficients have not "
+                                        "been calculated in Stage 4")
+                    log.writelog("\nUsing generated limb-darkening "
+                                 f"coefficients with {ld_str} \n")
+                    ld_coeffs = [lc[ld_str + '_lin_white'].values,
+                                 lc[ld_str + '_quad_white'].values,
+                                 lc[ld_str + '_nonlin_3para_white'].values,
+                                 lc[ld_str + '_nonlin_4para_white'].values]
+                elif meta.ld_file:
+                    # Load limb-darkening coefficients from a custom file
+                    ld_fix_file = str(meta.ld_file_white)
+                    try:
+                        ld_coeffs = np.loadtxt(ld_fix_file)
+                    except FileNotFoundError:
+                        raise Exception("The limb-darkening file "
+                                        f"{ld_fix_file} could not be found.")
+                else:
+                    ld_coeffs = None
+
                 # Make a long list of parameters for each channel
                 longparamlist, paramtitles = make_longparamlist(meta, params,
                                                                 1)
@@ -199,6 +199,29 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 log.writelog('Saving results', mute=(not meta.verbose))
                 me.saveevent(meta, meta.outputdir+'S5_'+meta.eventlabel +
                              "_white_Meta_Save", save=[])
+
+            if meta.use_generate_ld:
+                # Load limb-darkening coefficients made in Stage 4
+                ld_str = meta.use_generate_ld
+                if not hasattr(lc, ld_str + '_lin'):
+                    raise Exception("Exotic-ld coefficients have not been " +
+                                    "calculated in Stage 4")
+                log.writelog("\nUsing generated limb-darkening coefficients " +
+                             f"with {ld_str} \n")
+                ld_coeffs = [lc[ld_str + '_lin'].values,
+                             lc[ld_str + '_quad'].values,
+                             lc[ld_str + '_nonlin_3para'].values,
+                             lc[ld_str + '_nonlin_4para'].values]
+            elif meta.ld_file:
+                # Load limb-darkening coefficients from a custom file
+                ld_fix_file = str(meta.ld_file)
+                try:
+                    ld_coeffs = np.loadtxt(ld_fix_file)
+                except FileNotFoundError:
+                    raise Exception("The limb-darkening file " + ld_fix_file + 
+                                    " could not be found.")
+            else:
+                ld_coeffs = None
 
             # Make a long list of parameters for each channel
             longparamlist, paramtitles = make_longparamlist(meta, params,
@@ -351,7 +374,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
-                                         ld_from_file=meta.fix_ld,
+                                         ld_from_file=meta.ld_file,
                                          ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:

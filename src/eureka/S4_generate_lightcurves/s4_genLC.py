@@ -483,6 +483,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                 ld_3para)
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
+                
+                if meta.compute_white:
+                    ld_lin_w, ld_quad_w, ld_3para_w, ld_4para_w = \
+                        generate_LD.exotic_ld(meta, spec, log, white=True)
+                    lc['exotic-ld_lin_white'] = (['wavelength', 'exotic-ld_1'],
+                                                 ld_lin_w)
+                    lc['exotic-ld_quad_white'] = (['wavelength',
+                                                   'exotic-ld_2'],
+                                                  ld_quad_w)
+                    lc['exotic-ld_nonlin_3para_white'] = (['wavelength',
+                                                           'exotic-ld_3'],
+                                                          ld_3para_w)
+                    lc['exotic-ld_nonlin_4para_white'] = (['wavelength',
+                                                           'exotic-ld_4'],
+                                                          ld_4para_w)
 
             log.writelog('Saving results...')
 
