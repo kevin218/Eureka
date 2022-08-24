@@ -105,13 +105,11 @@ def rampfitJWST(eventlabel, ecf_path=None):
     total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
-
     # Store citations to relevant dependencies in the meta file
     # pass in list of currently imported modules to search for citations
     mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
     util.make_citations(meta, mods)
     
-
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')
@@ -122,7 +120,7 @@ def rampfitJWST(eventlabel, ecf_path=None):
 
 
 class EurekaS1Pipeline(Detector1Pipeline):
-    '''A wrapper class for the jwst.pipeline.calwebb_detector1.Detector1Pipeline
+    '''Wrapper class for the jwst.pipeline.calwebb_detector1.Detector1Pipeline
 
     This wrapper class allows non-standard changes to Stage 1 for Eureka!.
 
