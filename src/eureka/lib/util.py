@@ -656,24 +656,29 @@ def make_citations(meta, mods):
             Array of strings containing the currently installed modules.
     """
 
-    # get modules for which we have citations
-    
-    module_cites = np.intersect1d(mods, list(CITATIONS))
+    # get modules for which we have citations, accessed in each Stage before the call to make_citations
+    module_cites = np.intersect1d(mods, list(CITATIONS)).tolist()
 
-    # extract fitting methods/myfuncs to grab citations
+    # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
     if hasattr(meta, 'fit_method'):
-        fit_methods = np.intersect1d(["emcee", "dynesty"], meta.fit_method).tolist() # check if either citable fit method is present
-        other_cites = other_cites + fit_methods
-    
-    if hasattr(meta, "run_myfuncs"):
-        if "batman_tr" or "batman_ecl" in meta.run_myfuncs: # check if batman is being used for transit/eclipse modeling
-            other_cites.append("batman")
-        if "GP" in meta.run_myfuncs:
-            if hasattr(meta, "GP_package"): # check if a GP is being used
-                other_cites.append(meta.GP_package) 
+        # need to remove citations to emcee/dynesty/batman/celerite/george if they got picked up by the installed modules
+        for m in ['emcee', 'dynesty', 'george', 'celerite', 'batman']:
+            module_cites.remove(m)
 
-    # check if instrument is set
+        if "emcee" in meta.fit_method:
+            other_cites.append("emcee")
+        if "dynesty" in meta.fit_method:
+            other_cites.append("dynesty")
+    
+        if hasattr(meta, "run_myfuncs"):
+            if "batman_tr" or "batman_ecl" in meta.run_myfuncs: # check if batman is being used for transit/eclipse modeling
+                other_cites.append("batman")
+            if "GP" in meta.run_myfuncs:
+                if hasattr(meta, "GP_package"): # check if a GP is being used
+                    other_cites.append(meta.GP_package) 
+
+    # I set the instrument in the relevant bits of S1/2, so I don't think this should really be necessary. boilerplate for later
     if hasattr(meta, 'inst'): # if we already have the instrument, don't bother doing anything
         pass
     else: # an unfortunate occurrence, ideally this shouldn't happen. just pass again while I think of a better way to handle this
@@ -684,8 +689,8 @@ def make_citations(meta, mods):
 
     # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
     if hasattr(meta, 'citations'):
-        all_cites = np.intersect1d(all_cites, meta.citations).tolist()
+        all_cites = np.union1d(all_cites, meta.citations).tolist()
     
     # store everything in the meta object
     meta.citations = all_cites
-    meta.bibliography = np.concatenate([CITATIONS[entry] for entry in all_cites]).tolist()
+    meta.bibliography = [CITATIONS[entry] for entry in meta.citations]
