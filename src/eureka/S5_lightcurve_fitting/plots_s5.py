@@ -8,6 +8,9 @@ from scipy import stats
 from .likelihood import computeRMS
 from ..lib.plots import figure_filetype
 
+import gc
+from dynesty import plotting as dyplot
+
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5101)
@@ -102,6 +105,129 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+
+def plot_fit2(lc, model, meta, fitter, isTitle=True):
+    """Plot the fitted model over the data. (Figs 5101)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    isTitle : bool; optional
+        Should figure have a title. Defaults to True.
+
+    Notes
+    -----
+    History:
+
+    - December 29, 2021 Taylor Bell
+        Moved plotting code to a separate function.
+    - January 7-22, 2022 Megan Mansfield
+        Adding ability to do a single shared fit across all channels
+    - February 28-March 1, 2022 Caroline Piaulet
+        Adding scatter_ppm parameter
+    """
+    if type(fitter) != str:
+        raise ValueError(f'Expected type str for fitter, instead received a '
+                         f'{type(fitter)}')
+
+    model_sys_full = model.syseval()
+    model_phys_full, new_time = model.physeval(interp=meta.interp)
+    model_lc = model.eval()
+
+    for i, channel in enumerate(lc.fitted_channels):
+        flux = np.ma.copy(lc.flux)
+        if "unc_fit" in lc.__dict__.keys():
+            unc = np.ma.copy(lc.unc_fit)
+        else:
+            unc = np.ma.copy(lc.unc)
+        model = np.ma.copy(model_lc)
+        model_sys = model_sys_full
+        model_phys = model_phys_full
+        color = lc.colors[i]
+
+        if lc.share:
+            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
+            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model_sys = model_sys[channel*len(lc.time):
+                                  (channel+1)*len(lc.time)]
+            model_phys = model_phys[channel*len(new_time):
+                                    (channel+1)*len(new_time)]
+
+        residuals = flux - model
+        fig = plt.figure(5110, figsize=(8, 6))
+        plt.clf()
+        #ax = fig.subplots(3, 1)
+        ax = fig.subplots(2, 1)
+        """ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w',
+                       ecolor=color, mec=color)
+        ax[0].plot(lc.time, model, '.', ls='', ms=2, color='0.3', zorder=10)
+        if isTitle:
+            ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
+                            f'{fitter}')
+        ax[0].set_ylabel('Normalized Flux', size=14)
+        ax[0].set_xticks([])
+        ax[0].set_ylim(0.9995,1.0015)"""
+
+        #ax[1].errorbar(lc.time, flux/model_sys, yerr=unc, fmt='.', color='w',  #LK
+        ax[0].plot(lc.time, (flux/model_sys - 1)*1e6, marker = '.', mfc=color, mew = 0, linestyle = 'None', alpha = 0.2)
+
+        nbins = 100
+        bintime = np.linspace(lc.time.min(), lc.time.max(), nbins)
+        bindata = np.zeros_like(bintime)
+        binerr = np.zeros_like(bintime)
+        for i in range(1,nbins):
+            ind = (lc.time>bintime[i-1])&(lc.time<=bintime[i])
+            n = sum(ind)
+            bindata[i] = np.average(flux[ind]/model_sys[ind])
+            binerr[i] = np.std(flux[ind]/model_sys[ind])/np.sqrt(n)
+        ax[0].errorbar(bintime, (bindata -1)*1e6, binerr*1e6, fmt = 'o', markersize = 3, color='w', ecolor='k', mec='k', zorder = 100)
+
+        ax[0].plot(new_time, (model_phys - 1)*1e6, color='0.3', zorder=10)
+        ax[0].set_ylabel('Calibrated Flux (ppm)', size=14)
+        ax[0].set_xticks([])
+        ax[0].set_ylim(-100,700)
+
+        #ax[1].plot(lc.time, residuals*1e6, yerr=unc*1e6, ='.',
+        ax[1].plot(lc.time, residuals*1e6, marker ='.', mfc = color, mew = 0, linestyle = 'None', alpha = 0.2)
+
+        binresid = np.zeros_like(bintime)
+        binresiderr = np.zeros_like(bintime)
+        for i in range(1,nbins):
+            ind = (lc.time>bintime[i-1])&(lc.time<=bintime[i])
+            n = sum(ind)
+            binresid[i] = np.average(1e6*residuals[ind])
+            binresiderr[i] = np.std(1e6*residuals[ind])/np.sqrt(n)
+
+        ax[1].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
+        ax[1].errorbar(bintime, binresid, binresiderr, fmt = 'o', markersize = 3, color='w', ecolor='k', mec='k', zorder = 100)
+        ax[1].set_ylabel('Residuals (ppm)', size=14)
+        ax[1].set_xlabel(str(lc.time_units), size=14)
+        ax[1].set_ylim(-200, 200)
+
+        fig.subplots_adjust(hspace=0)
+        fig.align_ylabels(ax)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5110_{fname_tag}_lc_{fitter}'
+                 + figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
 
 
 def plot_rms(lc, model, meta, fitter):
@@ -481,3 +607,21 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def dyplot_runplot(results, meta):
+    # Plot a summary of the run.
+    rfig, raxes = dyplot.runplot(results)
+    plt.savefig(meta.outputdir+ "/dyplot_runplot.png")
+    plt.close('all')
+    plt.clf()
+    gc.collect()
+
+
+def dyplot_traceplot(results, labels, meta):
+    # Plot traces and 1-D marginalized posteriors.
+    tfig, taxes = dyplot.traceplot(results, labels=labels)
+    plt.savefig(meta.outputdir+ "/dyplot_traceplot.png")
+    plt.close('all')
+    plt.clf()
+    gc.collect()

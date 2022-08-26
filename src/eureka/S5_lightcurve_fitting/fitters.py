@@ -12,6 +12,7 @@ import lmfit
 import emcee
 
 from dynesty import NestedSampler
+from dynesty import DynamicNestedSampler
 from dynesty.utils import resample_equal
 
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
@@ -801,11 +802,20 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         meta.ncpu = 1
         pool = None
         queue_size = None
-    sampler = NestedSampler(ln_like, ptform, ndims, pool=pool,
-                            queue_size=queue_size, bound=bound, sample=sample,
-                            nlive=nlive, logl_args=l_args,
-                            ptform_args=[prior1, prior2, priortype])
-    sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
+
+    if True:
+        dsampler = DynamicNestedSampler(ln_like, ptform, ndims, pool=pool,
+                                queue_size=queue_size, bound=bound, sample=sample,
+                                logl_args=l_args,
+                                ptform_args=[prior1, prior2, priortype])
+        dsampler.run_nested(dlogz_init=0.1, nlive_init=40, nlive_batch=60, use_stop=True, maxbatch=10)
+        sampler = dsampler
+    else:
+        sampler = NestedSampler(ln_like, ptform, ndims, pool=pool,
+                                queue_size=queue_size, bound=bound, sample=sample,
+                                nlive=nlive, logl_args=l_args,
+                                ptform_args=[prior1, prior2, priortype])
+        sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
     if meta.ncpu > 1:
         pool.close()
@@ -899,6 +909,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit2(lc, model, meta, fitter='dynesty')
+        #plots.dyplot_runplot(res, meta)
+        plots.dyplot_traceplot(res, freenames, meta)
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
