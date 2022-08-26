@@ -390,7 +390,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
         plt.pause(0.1)
 
 
-def driftypos(data, meta):
+def driftypos(data, m, meta):
     '''Plot the spatial jitter. (Fig 3104)
 
     Parameters
@@ -413,13 +413,14 @@ def driftypos(data, meta):
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3104_DriftYPos'+figure_filetype
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = f'figs{os.sep}fig3104_DriftYPos_file{file_number}'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def driftywidth(data, meta):
+def driftywidth(data, m, meta):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
 
     Parameters
@@ -442,7 +443,8 @@ def driftywidth(data, meta):
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3105_DriftYWidth'+figure_filetype
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = f'figs{os.sep}fig3105_DriftYWidth_file{file_number}'+figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
