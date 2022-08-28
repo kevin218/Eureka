@@ -2,6 +2,7 @@ from copy import deepcopy
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import re
 
 from ..lib.plots import figure_filetype
 
@@ -101,10 +102,8 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     else:
         fname = 'figs'+os.sep+'fig6101'
 
-    if 'R_' in ylabel:
-        fname += '_transmission'
-    elif 'F_' in ylabel:
-        fname += '_emission'
+    clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
+    fname += '_'+clean_y_param
 
     fig.tight_layout()
     fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight',

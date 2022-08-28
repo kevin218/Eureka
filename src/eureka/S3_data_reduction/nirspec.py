@@ -64,7 +64,7 @@ def read(filename, data, meta, log):
 
     meta.photometry = False  # Photometry for NIRSpec not implemented yet.
 
-    # Record integration mid-times in BJD_TDB
+    # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
@@ -80,7 +80,7 @@ def read(filename, data, meta, log):
 
     # Record units
     flux_units = data.attrs['shdr']['BUNIT']
-    time_units = 'BJD_TDB'
+    time_units = 'BMJD_TDB'
     wave_units = 'microns'
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
