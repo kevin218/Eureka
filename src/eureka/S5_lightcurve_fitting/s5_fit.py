@@ -11,6 +11,7 @@ from . import models as m
 
 import sys
 
+
 def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
@@ -172,7 +173,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 ld_coeffs = None
 
             # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for citations
+            # pass in list of currently imported modules to search for 
+            # citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
             util.make_citations(meta, mods)
 
@@ -374,7 +376,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         if 'transit' in model_names:
             t_model = modellist.pop(np.where(model_names == 'transit')[0][0])
             model_names = np.array([model.name for model in modellist])
-        if'eclipse' in model_names:
+        if 'eclipse' in model_names:
             e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
         t_phase = \

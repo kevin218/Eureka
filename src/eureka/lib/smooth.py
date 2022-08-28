@@ -91,7 +91,7 @@ def medfilt(x, window_len):
     ndarray
         A smoothed copy of x.
     """
-    assert(x.ndim == 1), "Input must be one-dimensional."
+    assert (x.ndim == 1), "Input must be one-dimensional."
     if window_len % 2 == 0:
         print("Median filter length ("+str(window_len)+") must be odd." +
               "Adding 1.")

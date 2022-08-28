@@ -390,7 +390,8 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
 
 
 def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
-    '''Construct normalized spatial profile using a Gaussian smoothing function.
+    '''Construct normalized spatial profile using a Gaussian smoothing 
+    function.
 
     Parameters
     ----------

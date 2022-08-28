@@ -40,6 +40,7 @@ from ..lib import centerdriver, apphot
 
 import sys
 
+
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
@@ -411,7 +412,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             if meta.isplots_S3 >= 3:
                                 plots_s3.phot_2d_frame_oneoverf(data, meta,
                                                                 m, i,
-                                                                flux_w_oneoverf)
+                                                                flux_w_oneoverf
+                                                                )
 
                         # Use the determined centroid and
                         # cut out ctr_cutout_size pixels around it
@@ -537,7 +539,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                         optmask=spec.optmask)
 
             # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for citations
+            # pass in list of currently imported modules to search for 
+            # citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
             util.make_citations(meta, mods)
 

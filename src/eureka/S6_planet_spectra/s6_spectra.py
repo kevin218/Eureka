@@ -11,6 +11,7 @@ from ..lib import astropytable
 
 import sys
 
+
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''Gathers together different wavelength fits and makes
     transmission/emission spectra.
@@ -308,7 +309,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                                       ecl_depth, ecl_depth_err)
 
             # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for citations
+            # pass in list of currently imported modules to search for 
+            # citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
             util.make_citations(meta, mods)
 

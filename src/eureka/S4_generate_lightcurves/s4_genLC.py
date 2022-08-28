@@ -29,6 +29,7 @@ from ..lib import clipping
 
 import sys
 
+
 def genlc(eventlabel, ecf_path=None, s3_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
@@ -483,7 +484,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             xrio.writeXR(meta.filename_S4_LCData, lc, verbose=True)
 
             # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for citations
+            # pass in list of currently imported modules to search for 
+            # citations
             mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
             util.make_citations(meta, mods)
 

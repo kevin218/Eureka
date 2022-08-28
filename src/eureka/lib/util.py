@@ -9,7 +9,8 @@ from .citations import CITATIONS
 
 
 def readfiles(meta, log):
-    """Reads in the files saved in topdir + inputdir and saves them into a list.
+    """Reads in the files saved in topdir + inputdir 
+    and saves them into a list.
 
     Parameters
     ----------
@@ -644,8 +645,9 @@ def phot_arrays(data):
 def make_citations(meta, mods):
     """Store relevant citation information in the current meta file.
 
-        Searches through imported libraries and current ECF parameters for terms that match BibTeX entries in citations.py. 
-        Every entry that matches gets added to a bibliography field in the meta file.
+        Searches through imported libraries and current ECF parameters for 
+        terms that match BibTeX entries in citations.py. Every entry that 
+        matches gets added to a bibliography field in the meta file.
     
         Parameters
         ----------
@@ -656,13 +658,15 @@ def make_citations(meta, mods):
             Array of strings containing the currently installed modules.
     """
 
-    # get modules for which we have citations, accessed in each Stage before the call to make_citations
+    # get modules for which we have citations, accessed in each Stage before 
+    # the call to make_citations
     module_cites = np.intersect1d(mods, list(CITATIONS)).tolist()
 
     # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
     if hasattr(meta, 'fit_method'):
-        # need to remove citations to emcee/dynesty/batman/celerite/george if they got picked up by the installed modules
+        # need to remove citations to emcee/dynesty/batman/celerite/george if 
+        # they got picked up by the installed modules
         for m in ['emcee', 'dynesty', 'george', 'celerite', 'batman']:
             module_cites.remove(m)
 
@@ -670,24 +674,30 @@ def make_citations(meta, mods):
             other_cites.append("emcee")
         if "dynesty" in meta.fit_method:
             other_cites.append("dynesty")
-    
+
+        # check if batman or GP is being used for transit/eclipse modeling
         if hasattr(meta, "run_myfuncs"):
-            if "batman_tr" or "batman_ecl" in meta.run_myfuncs: # check if batman is being used for transit/eclipse modeling
+            if "batman_tr" or "batman_ecl" in meta.run_myfuncs:
                 other_cites.append("batman")
             if "GP" in meta.run_myfuncs:
-                if hasattr(meta, "GP_package"): # check if a GP is being used
+                if hasattr(meta, "GP_package"):
                     other_cites.append(meta.GP_package) 
 
-    # I set the instrument in the relevant bits of S1/2, so I don't think this should really be necessary. boilerplate for later
-    if hasattr(meta, 'inst'): # if we already have the instrument, don't bother doing anything
+    # I set the instrument in the relevant bits of S1/2, so I don't think this 
+    # should really be necessary. boilerplate for later
+    # if we already have the instrument, don't bother doing anything
+    if hasattr(meta, 'inst'):
         pass
-    else: # an unfortunate occurrence, ideally this shouldn't happen. just pass again while I think of a better way to handle this
+    else: 
+        # an unfortunate occurrence, ideally this shouldn't happen. 
+        # just pass again while I think of a better way to handle this    
         pass
 
     # get all new citations together
     all_cites = np.union1d(module_cites, other_cites)
 
-    # check if meta has existing list of citations/bibitems, if it does, make sure we include imports from previous stages in our citations
+    # check if meta has existing list of citations/bibitems, if it does, make 
+    # sure we include imports from previous stages in our citations
     if hasattr(meta, 'citations'):
         all_cites = np.union1d(all_cites, meta.citations).tolist()
     
