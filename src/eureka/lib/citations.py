@@ -188,7 +188,7 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }"""],
     "nirspec": 
-        ["""@ARTICLE{birkmann2022,
+        [r"""@ARTICLE{birkmann2022,
             author = {{Birkmann}, S.~M. and {Ferruit}, P. and {Giardino}, G. 
             and {Nielsen}, L.~D. and {Garc{\'\i}a Mu{\~n}oz}, A. and {Kendrew}, 
             S. and {Rauscher}, B.~J. and {Beck}, T.~L. and {Keyes}, C. and 
@@ -222,7 +222,7 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2022A&A...661A..83B},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
-            """@ARTICLE{jakobsen2022,
+            r"""@ARTICLE{jakobsen2022,
             author = {{Jakobsen}, P. and {Ferruit}, P. and {Alves de Oliveira}, 
             C. and {Arribas}, S. and {Bagnasco}, G. and {Barho}, R. and {Beck}, 
             T.~L. and {Birkmann}, S. and {B{\"o}ker}, T. and {Bunker}, A.~J. 
@@ -265,7 +265,7 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""", ],
     "nircam": 
-        ["""@ARTICLE{greene2017,
+        [r"""@ARTICLE{greene2017,
             author = {{Greene}, Thomas P. and {Kelly}, Douglas M. and 
             {Stansberry}, John and {Leisenring}, Jarron and {Egami}, Eiichi 
             and {Schlawin}, Everett and {Chu}, Laurie and {Hodapp}, Klaus W. 
@@ -285,7 +285,7 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }"""],
     "niriss": 
-        ["""@ARTICLE{willott2022,
+        [r"""@ARTICLE{willott2022,
             author = {{Willott}, Chris J. and {Doyon}, Ren{\'e} and {Albert}, 
             Loic and {Brammer}, Gabriel B. and {Dixon}, William V. and {Muzic}, 
             Koraljka and {Ravindranath}, Swara and {Scholz}, Aleks and 
@@ -317,7 +317,7 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2022PASP..134b5002W},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
-            """@INPROCEEDINGS{doyon2012,
+            r"""@INPROCEEDINGS{doyon2012,
             author = {{Doyon}, Ren{\'e} and {Hutchings}, John B. and 
                     {Beaulieu}, Mathilde and {Albert}, Loic and 
                     {Lafreni{\`e}re}, David and {Willott}, Chris and {Touahri}, 
@@ -345,7 +345,7 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""", ],
     "miri": 
-        ["""@ARTICLE{rieke2015,
+        [r"""@ARTICLE{rieke2015,
             author = {{Rieke}, G.~H. and {Wright}, G.~S. and {B{\"o}ker}, T. 
             and {Bouwman}, J. and {Colina}, L. and {Glasse}, Alistair and 
             {Gordon}, K.~D. and {Greene}, T.~P. and {G{\"u}del}, Manuel and 
@@ -370,7 +370,7 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..584R},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
-            """@ARTICLE{kendrew2015,
+            r"""@ARTICLE{kendrew2015,
             author = {{Kendrew}, Sarah and {Scheithauer}, Silvia and {Bouchet}, 
             Patrice and {Amiaux}, Jerome and {Azzollini}, Ruym{\'a}n and 
             {Bouwman}, Jeroen and {Chen}, C.~H. and {Dubreuil}, D. and 
@@ -394,7 +394,7 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..623K},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
-            """@ARTICLE{wells2015,
+            r"""@ARTICLE{wells2015,
             author = {{Wells}, Martyn and {Pel}, J. -W. and {Glasse}, Alistair 
             and {Wright}, G.~S. and {Aitink-Kroes}, Gabby and {Azzollini}, 
             Ruym{\'a}n and {Beard}, Steven and {Brandl}, B.~R. and {Gallie}, 
@@ -427,7 +427,7 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""", ],
     "emcee": 
-        ["""@ARTICLE{Foreman-Mackey2013,
+        [r"""@ARTICLE{Foreman-Mackey2013,
                 author = {{Foreman-Mackey}, Daniel and {Hogg}, David W. and 
                 {Lang}, Dustin and {Goodman}, Jonathan},
                     title = "{emcee: The MCMC Hammer}",
@@ -448,7 +448,7 @@ CITATIONS = {
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
     "dynesty": 
-        ["""@ARTICLE{Speagle2020,
+        [r"""@ARTICLE{Speagle2020,
                 author = {{Speagle}, Joshua S.},
                     title = "{DYNESTY: a dynamic nested sampling package for 
                     estimating Bayesian posteriors and evidences}",
@@ -469,7 +469,7 @@ CITATIONS = {
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
     "batman": 
-        ["""@ARTICLE{Kreidberg2015,
+        [r"""@ARTICLE{Kreidberg2015,
                 author = {{Kreidberg}, Laura},
                     title = "{batman: BAsic Transit Model cAlculatioN in 
                     Python}",
@@ -488,7 +488,7 @@ CITATIONS = {
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
     "celerite": 
-        ["""@ARTICLE{Foreman-Mackey2018,
+        [r"""@ARTICLE{Foreman-Mackey2018,
                 author = {{Foreman-Mackey}, Daniel},
                 title = "{Scalable Backpropagation for Gaussian Processes 
                     using Celerite}",
@@ -510,7 +510,7 @@ CITATIONS = {
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
     "george": 
-        ["""@MISC{Foreman-Mackey2015,
+        [r"""@MISC{Foreman-Mackey2015,
             author = {{Foreman-Mackey}, Daniel},
             title = "{George: Gaussian Process regression}",
             keywords = {Software},
