@@ -159,13 +159,19 @@ def check_nans(data, mask, log, name=''):
         or infs.
     """
     data = np.ma.masked_where(mask == 0, np.copy(data))
-    num_nans = np.sum(np.ma.masked_invalid(data).mask)
+    masked = np.ma.masked_invalid(data).mask
+    inan = np.where(masked)
+    num_nans = np.sum(masked)
     num_pixels = np.size(data)
     perc_nans = 100*num_nans/num_pixels
-    if num_nans > 0:
+    if num_nans > 0 and name == 'wavelength':
+        log.writelog(f"  WARNING: Your {name} array has {num_nans} NaNs, which"
+                     f" are outside of the wavelength solution. You should "
+                     f"consider removing indices {inan} as their data quality "
+                     f"may be poor.")
+    elif num_nans > 0:
         log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
                      f"{perc_nans:.2f}% of all pixels.")
-        inan = np.where(np.ma.masked_invalid(data).mask)
         mask[inan] = 0
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "

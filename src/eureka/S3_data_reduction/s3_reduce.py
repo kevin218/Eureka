@@ -262,6 +262,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
+                # Check for bad wavelength pixels (beyond wavelength solution)
+                util.check_nans(data.wave_1d.values, np.ones(meta.nx), log,
+                                name='wavelength')
+
                 # Create bad pixel mask (1 = good, 0 = bad)
                 data['mask'] = (['time', 'y', 'x'],
                                 np.ones(data.flux.shape, dtype=bool))
