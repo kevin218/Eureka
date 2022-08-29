@@ -38,6 +38,11 @@ class PolynomialModel(Model):
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
 
+        self.time = kwargs.get('time')
+        if self.time is not None:
+            # Convert to local time
+            self.time_local = self.time - self.time.mean()
+
         # Update coefficients
         self._parse_coeffs()
 
@@ -83,14 +88,13 @@ class PolynomialModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
-        # Convert to local time
-        time_local = self.time - self.time.mean()
+            # Convert to local time
+            self.time_local = self.time - self.time.mean()
 
         # Create the polynomial from the coeffs
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
             poly = np.poly1d(self.coeffs[c])
-            lcpiece = np.polyval(poly, time_local)
+            lcpiece = np.polyval(poly, self.time_local)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

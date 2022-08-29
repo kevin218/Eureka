@@ -38,6 +38,11 @@ class ExpRampModel(Model):
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
 
+        self.time = kwargs.get('time')
+        if self.time is not None:
+            # Convert to local time
+            self.time_local = self.time - self.time[0]
+
         # Update coefficients
         self.coeffs = np.zeros((self.nchan, 6))
         self._parse_coeffs()
@@ -78,15 +83,14 @@ class ExpRampModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
-        # Convert to local time
-        time_local = self.time - self.time[0]
+            # Convert to local time
+            self.time_local = self.time - self.time[0]
 
         # Create the ramp from the coeffs
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
             r0, r1, r2, r3, r4, r5 = self.coeffs[c]
-            lcpiece = (1+r0*np.exp(-r1*time_local + r2)
-                       + r3*np.exp(-r4*time_local + r5))
+            lcpiece = (1+r0*np.exp(-r1*self.time_local + r2)
+                       + r3*np.exp(-r4*self.time_local + r5))
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
