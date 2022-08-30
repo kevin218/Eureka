@@ -3,12 +3,14 @@ import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
+import scipy.stats as stats
+from scipy.interpolate import interp1d
+from matplotlib.colors import LogNorm
+from mpl_toolkits import axes_grid1
+
 from .source_pos import gauss
 from ..lib import util
 from ..lib.plots import figure_filetype
-import scipy.stats as stats
-from matplotlib.colors import LogNorm
-from mpl_toolkits import axes_grid1
 
 
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
@@ -32,6 +34,23 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     '''
     normspec = util.normalize_spectrum(meta, optspec.values,
                                        optmask=optmask.values)
+
+    # Save the wavelength units as the copy below will erase them
+    wave_units = wave_1d.wave_units
+
+    # For plotting purposes, extrapolate NaN wavelengths
+    wave_1d = np.ma.masked_invalid(np.copy(wave_1d))
+    if np.any(wave_1d.mask):
+        masked = np.where(wave_1d.mask)[0]
+        inds = np.arange(len(wave_1d))
+        wave_1d_valid = np.delete(wave_1d, masked)
+        inds_valid = np.delete(inds, masked)
+        # Do a spline extrapolation of third order
+        interp_fn = interp1d(inds_valid, wave_1d_valid, kind='cubic',
+                             fill_value="extrapolate", assume_sorted=True)
+        wave_1d[masked] = interp_fn(masked)
+    wave_1d = wave_1d.data
+
     wmin = np.nanmin(wave_1d)
     wmax = np.nanmax(wave_1d)
     # Don't do min and max because MIRI is backwards
@@ -68,7 +87,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         ax2.set_ylim(0, meta.n_int)
         ax1.set_ylabel('Integration Number')
         ax2.set_ylabel('Integration Number')
-        ax1.set_xlabel(r'Wavelength ($\mu m$)')
+        ax1.set_xlabel(f'Wavelength ({wave_units})')
         ax2.set_xlabel('Detector Pixel Position')
     else:
         im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
@@ -81,7 +100,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
         ax2.set_ylim(pmin, pmax)
         ax1.set_xlim(0, meta.n_int)
         ax2.set_xlim(0, meta.n_int)
-        ax1.set_ylabel(r'Wavelength ($\mu m$)')
+        ax1.set_ylabel(f'Wavelength ({wave_units})')
         ax2.set_ylabel('Detector Pixel Position')
         ax1.set_xlabel('Integration Number')
         ax2.set_xlabel('Integration Number')
