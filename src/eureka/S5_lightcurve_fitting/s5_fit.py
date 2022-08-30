@@ -348,7 +348,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('***Adding exponential ramp systematic to light curve***')
         fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                  log=log,
+                                  log=log, time=time,
                                   longparamlist=lc_model.longparamlist,
                                   nchan=lc_model.nchannel_fitted,
                                   paramtitles=paramtitles)
@@ -368,7 +368,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
     modellist = []
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = m.BatmanTransitModel(parameters=params, name='transit',
-                                         fmt='r--', log=log,
+                                         fmt='r--', log=log, time=time,
+                                         time_units=time_units,
                                          freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
@@ -379,7 +380,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
-                                         fmt='r--', log=log,
+                                         fmt='r--', log=log, time=time,
+                                         time_units=time_units,
                                          freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
@@ -394,12 +396,13 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         if 'transit' in model_names:
             t_model = modellist.pop(np.where(model_names == 'transit')[0][0])
             model_names = np.array([model.name for model in modellist])
-        if'eclipse' in model_names:
+        if 'eclipse' in model_names:
             e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
-                                      fmt='r--', log=log,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
@@ -409,7 +412,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom',
-                                      fmt='r--', log=log,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
@@ -417,21 +421,24 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         t_step = m.StepModel(parameters=params, name='step', fmt='r--',
-                             log=log, freenames=freenames,
+                             log=log, time=time, time_units=time_units,
+                             freenames=freenames,
                              longparamlist=lc_model.longparamlist,
                              nchan=lc_model.nchannel_fitted,
                              paramtitles=paramtitles)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                log=log, freenames=freenames,
+                                log=log, time=time, time_units=time_units,
+                                freenames=freenames,
                                 longparamlist=lc_model.longparamlist,
                                 nchan=lc_model.nchannel_fitted,
                                 paramtitles=paramtitles)
         modellist.append(t_ramp)
     if 'xpos' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='xpos', fmt='r--',
-                                 log=log, freenames=freenames,
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
@@ -439,7 +446,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='xwidth', fmt='r--',
-                                 log=log, freenames=freenames,
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
@@ -447,7 +455,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='ypos', fmt='r--',
-                                 log=log, freenames=freenames,
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
@@ -455,7 +464,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         t_cent = m.CentroidModel(parameters=params, name='ywidth', fmt='r--',
-                                 log=log, freenames=freenames,
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
                                  nchan=lc_model.nchannel_fitted,
                                  paramtitles=paramtitles,
@@ -464,13 +474,15 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                          parameters=params, name='GP', fmt='r--', log=log,
+                         time=time, time_units=time_units,
                          gp_code=meta.GP_package,
                          freenames=freenames,
                          longparamlist=lc_model.longparamlist,
                          nchan=lc_model.nchannel_fitted,
                          paramtitles=paramtitles)
         modellist.append(t_GP)
-    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
+    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted,
+                             time=time)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -525,7 +537,6 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
                     par = [value, ptype, priorpar1, priorpar2, prior]
-                    print(getattr(params, key).values, par)
                     setattr(params, key, par)
         elif 'emcee' in meta.fit_method:
             # Update the params to the values and uncertainties from
@@ -546,7 +557,6 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
                     par = [value, ptype, priorpar1, priorpar2, prior]
-                    print(getattr(params, key).values, par)
                     setattr(params, key, par)
         elif 'lsq' in meta.fit_method:
             best_model = None
@@ -567,7 +577,6 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                     priorpar2 = None
                     prior = None
                     par = [value, ptype, priorpar1, priorpar2, prior]
-                    print(getattr(params, key).values, par)
                     setattr(params, key, par)
 
     return meta, params

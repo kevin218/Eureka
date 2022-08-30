@@ -38,14 +38,22 @@ class ExpRampModel(Model):
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
 
-        self.time = kwargs.get('time')
-        if self.time is not None:
-            # Convert to local time
-            self.time_local = self.time - self.time[0]
-
         # Update coefficients
         self.coeffs = np.zeros((self.nchan, 6))
         self._parse_coeffs()
+
+    @property
+    def time(self):
+        """A getter for the time."""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time."""
+        self._time = time_array
+        if self.time is not None:
+            # Convert to local time
+            self.time_local = self.time - self.time[0]
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list
@@ -83,8 +91,6 @@ class ExpRampModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-            # Convert to local time
-            self.time_local = self.time - self.time[0]
 
         # Create the ramp from the coeffs
         lcfinal = np.array([])

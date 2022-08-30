@@ -44,9 +44,6 @@ class CentroidModel(Model):
         # Figure out if using xpos, ypos, xwidth, ywidth
         self.axis = kwargs.get('axis')
         self.centroid = kwargs.get('centroid')
-        if self.centroid is not None:
-            # Convert to local centroid
-            self.centroid_local = self.centroid - self.centroid.mean()
 
         if self.nchan == 1:
             self.coeff_keys = [self.axis]
@@ -55,6 +52,19 @@ class CentroidModel(Model):
 
         # Update coefficients
         self._parse_coeffs()
+
+    @property
+    def centroid(self):
+        """A getter for the centroid."""
+        return self._centroid
+
+    @centroid.setter
+    def centroid(self, centroid_array):
+        """A setter for the time."""
+        self._centroid = centroid_array
+        if self.centroid is not None:
+            # Convert to local centroid
+            self.centroid_local = self.centroid - self.centroid.mean()
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.
@@ -72,8 +82,6 @@ class CentroidModel(Model):
         # Get the centroids
         if self.centroid is None:
             self.centroid = kwargs.get('centroid')
-            # Convert to local centroid
-            self.centroid_local = self.centroid - self.centroid.mean()
 
         # Create the centroid model for each wavelength
         lcfinal = np.array([])

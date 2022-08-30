@@ -27,6 +27,17 @@ class SinusoidPhaseCurveModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
+        self.components = None
+        self.transit_model = transit_model
+        self.eclipse_model = eclipse_model
+        if transit_model is not None:
+            self.components = [self.transit_model, ]
+        if eclipse_model is not None:
+            if self.components is None:
+                self.components = [self.eclipse_model, ]
+            else:
+                self.components.append(self.eclipse_model)
+
         # Inherit from Model calss
         super().__init__(**kwargs)
 
@@ -44,17 +55,6 @@ class SinusoidPhaseCurveModel(Model):
         self.longparamlist = kwargs.get('longparamlist')
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
-
-        self.components = None
-        self.transit_model = transit_model
-        self.eclipse_model = eclipse_model
-        if transit_model is not None:
-            self.components = [self.transit_model, ]
-        if eclipse_model is not None:
-            if self.components is None:
-                self.components = [self.eclipse_model, ]
-            else:
-                self.components.append(self.eclipse_model)
 
     @property
     def time(self):
