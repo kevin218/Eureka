@@ -306,7 +306,7 @@ Used during Optimal Extraction. fittype defines how to construct the normalized 
 
 window_len
 ''''''''''
-Used during Optimal Extraction. window_len is only used when fittype = 'smooth' or 'meddata' (when computing median frame). It sets the length scale over which the data are smoothed. Default is 31. You can set this to 1 for no smoothing when computing median frame for fittype=meddata.
+Used during Optimal Extraction. window_len is only used when fittype = 'smooth' or 'meddata' (when computing median frame). It sets the length scale over which the data are smoothed. You can set this to 1 for no smoothing when computing median frame for fittype=meddata.
 For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 median_thresh
