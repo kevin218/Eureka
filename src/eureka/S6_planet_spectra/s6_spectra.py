@@ -6,6 +6,7 @@ import time as time_pkg
 from copy import copy
 from glob import glob
 import re
+from matplotlib.pyplot import rcParams
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -112,6 +113,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 x_unit = getattr(units, meta.x_unit)
             else:
                 log.writelog('Assuming a wavelength unit of microns')
+                meta.x_unit = 'um'
                 x_unit = units.um
             # FINDME: For now this is assuming that the data is in units of
             # microns We should add something to S3 that notes what the units
@@ -232,7 +234,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                     if meta.y_scalar == 1e6:
                         meta.y_label_unit = ' (ppm)'
                     elif meta.y_scalar == 100:
-                        meta.y_label_unit = ' (%)'
+                        meta.y_label_unit = r' (%)'
                     elif meta.y_scalar != 1:
                         meta.y_label_unit = f' * {meta.y_scalar}'
                     else:
@@ -240,6 +242,12 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 elif meta.y_label_unit[0] != ' ':
                     # Make sure there's a leading space for proper formatting
                     meta.y_label_unit = ' '+meta.y_label_unit
+
+                if (rcParams['text.usetex'] and
+                        (meta.y_label_unit.count(r'\%') != 
+                         meta.y_label_unit.count('%'))):
+                    # Need to escape % with \ for LaTeX
+                    meta.y_label_unit = meta.y_label_unit.replace('%', r'\%')
 
                 # Add any units to the y label
                 meta.y_label += meta.y_label_unit
@@ -269,8 +277,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                                         meta.y_label, meta.xlabel,
                                         scale_height, meta.planet_R0)
 
-                log.writelog('Saving results as astropy table')
-                save_table(meta)
+                save_table(meta, log)
 
             # Save results
             log.writelog('Saving results')
@@ -326,10 +333,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
             keys = [key for key in full_keys if y_param in key]
             if len(keys) == 0:
-                log.writelog(f'Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n['
+                log.writelog(f'  Parameter {y_param} was not in the list of '
+                             'fitted parameters which includes:\n  ['
                              + ', '.join(full_keys)+']')
-                log.writelog(f'Skipping {y_param}')
+                log.writelog(f'  Skipping {y_param}')
                 return None, None
 
             lowers = []
@@ -600,14 +607,20 @@ def load_model(meta, log, x_unit):
     return model_x, model_y
 
 
-def save_table(meta):
+def save_table(meta, log):
     """Clean y_param for filenames and save the table of values.
+
+    Also calls transit_latex_table().
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     """
+    log.writelog('  Saving results as an astropy table')
+
     event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
                    str(meta.bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
@@ -620,4 +633,186 @@ def save_table(meta):
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
                               wave_errs, meta.spectrum_median,
                               meta.spectrum_err)
+
+    transit_latex_table(meta, log)
+    
+    return
+
+
+def roundToSigFigs(x, sigFigs=2):
+    """Round a value to a requested number of significant figures.
+
+    Parameters
+    ----------
+    x : numerical type
+        A float or int to be rounded.
+    sigFigs : int; optional
+        The number of significant figures desired, by default 2.
+
+    Returns
+    -------
+    nDec : int
+        The number of decimals corresponding to sigFigs where nDec = -1 for
+        a value rounded to the ten's place (e.g. 101 -> 100 if nDec = -1).
+    output : str
+        x formatted as a string with the requested number of significant
+        figures.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-22, Taylor J Bell
+        Imported code written for SPCA, and optimized for Python3.
+    """
+    nDec = -int(np.floor(np.log10(np.abs(x))))+sigFigs-1
+    rounded = np.round(x, nDec)
+    if nDec <= 0:
+        # format this as an integer
+        return nDec, f"{rounded:g}"
+    else:
+        # format this as a float
+        return nDec, f"{rounded:.{nDec}f}"
+
+
+def roundToDec(x, nDec=2):
+    """Round a value to a requested number of decimals.
+
+    Parameters
+    ----------
+    x : numerical type
+        A float or int to be rounded.
+    nDec : int
+        The number of decimals desired, by default 2.
+
+    Returns
+    -------
+    output : str
+        x formatted as a string with the requested number of decimals.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-22, Taylor J Bell
+        Imported code written for SPCA, and optimized for Python3.
+    """
+    rounded = np.round(x, nDec)
+    if nDec <= 0:
+        # format this as an integer
+        return f"{rounded:g}"
+    else:
+        # format this as a float
+        return f"{rounded:.{nDec}f}"
+
+
+def transit_latex_table(meta, log):
+    """Write a nicely formatted LaTeX table for each plotted value.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    """
+    log.writelog('  Saving results as a LaTeX table')
+
+    data = pd.read_csv(meta.tab_filename_s6, comment='#',
+                       delim_whitespace=True)
+
+    # Figure out the number of rows and columns in the table
+    nvals = data.shape[0]
+    if not hasattr(meta, 'ncols'):
+        meta.ncols = 4
+    rows = int(np.ceil(nvals/meta.ncols))
+
+    # Figure out the labels for the columns
+    if meta.y_param == 'rp^2':
+        colhead = "\\colhead{Transit Depth}"
+    elif meta.y_param == 'rp':
+        colhead = "\\colhead{$R_{\\rm p}/R_{\\rm *}$}"
+    elif meta.y_param == 'fp':
+        colhead = "\\colhead{Eclipse Depth}"
+    else:
+        colhead = f"\\colhead{{{meta.y_label}}}"
+
+    # Begin the table
+    out = "\\begin{deluxetable}{"
+    # Center each column
+    for i in range(meta.ncols):
+        out += "CC|"
+    out = out[:-1]+"}\n"
+    # Give the table a caption based on the tabulated data
+    if meta.y_param in ['rp', 'rp^2']:
+        out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy "
+        out += "Results \\label{tab:eureka_transit_spectra}}\n"
+    elif meta.y_param == 'fp':
+        out += "\\tablecaption{\\texttt{Eureka!}'s Eclipse Spectroscopy "
+        out += "Results \\label{tab:eureka_eclipse_spectra}}\n"
+    # Label each column
+    out += "\\tablehead{\n"
+    for i in range(meta.ncols):
+        out += "\\colhead{Wavelength} & "+colhead+" &"
+    out = out[:-1]+" \\\\\n"
+    # Provide each column's unit
+    for i in range(meta.ncols):
+        if meta.x_unit == 'um':
+            xunit = '$\\mu$m'
+        else:
+            xunit = meta.xunit
+        if meta.y_label_unit == '':
+            y_unit = ''
+        else:
+            # Trim off the leading space
+            y_unit = meta.y_label_unit[1:]
+            # Need to make sure to escape % with \ for LaTeX
+            if (meta.y_label_unit.count(r'\%') != 
+                    meta.y_label_unit.count('%')):
+                y_unit = y_unit.replace('%', r'\%')
+        out += "\\colhead{("+xunit+")} & \\colhead{"+y_unit+"} &"
+    out = out[:-1]+"\n}\n"
+    # Begin tabulating the data
+    out += "\\startdata\n"
+    for i in range(rows):
+        for j in range(meta.ncols):
+            if j == meta.ncols-1:
+                # Last column, add a newline
+                end = '\\\\\n'
+            else:
+                # Not the last column, add an ampersand
+                end = ' & '
+
+            if i+rows*j >= nvals:
+                # Ran out of values - put blanks
+                out += "&"+end
+                continue
+            line = data.iloc[i+rows*j]
+
+            # Round values to the correct number of significant figures
+            val = line[meta.y_param+'_value']*meta.y_scalar
+            upper = line[meta.y_param+'_errorpos']*meta.y_scalar
+            lower = line[meta.y_param+'_errorneg']*meta.y_scalar
+            nDec1, _ = roundToSigFigs(upper)
+            nDec2, _ = roundToSigFigs(lower)
+            nDec = np.max([nDec1, nDec2])
+            val = roundToDec(val, nDec)
+            upper = roundToDec(upper, nDec)
+            lower = roundToDec(lower, nDec)
+
+            # Wavelength
+            out += f"{np.round(line['wavelength'], 2):.2f} & "
+            # val^{+upper}_{-lower}
+            out += f"{val}^{{+{upper}}}_{{-{lower}}}$"
+            out += end
+
+    # End the table
+    out += "\\enddata\n"
+    out += "\\end{deluxetable}"
+    
+    # Save the table as a txt file
+    meta.tab_filename_s6_latex = meta.tab_filename_s6[:-4]+'_LaTeX.txt'
+    with open(meta.tab_filename_s6_latex, 'w') as file:
+        file.write(out)
+
     return

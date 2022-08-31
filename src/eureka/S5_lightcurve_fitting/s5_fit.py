@@ -6,7 +6,7 @@ from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
-from . import lightcurve as lc
+from . import lightcurve
 from . import models as m
 
 
@@ -147,33 +147,33 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
 
-            # Load limb-darkening coefficients if used from Stage 4
-            if meta.use_generate_ld:
-                ld_str = meta.use_generate_ld
-                if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been " +
-                                    "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients " +
-                             f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values,
-                             lc[ld_str + '_quad'].values,
-                             lc[ld_str + '_nonlin_3para'].values,
-                             lc[ld_str + '_nonlin_4para'].values]
-            # Load limb-darkening coefficients from a custom file
-            elif meta.fix_ld:
-                ld_fix_file = str(meta.ld_file)
-                try:
-                    ld_coeffs = np.loadtxt(ld_fix_file)
-                except FileNotFoundError:
-                    raise Exception("The limb-darkening file " + ld_fix_file + 
-                                    " could not be found.")
-            else:
-                ld_coeffs = None
-
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
             # are 'white_fixed' freeze them to the white-light curve best fit
             if meta.whitep:
+                if meta.use_generate_ld:
+                    # Load limb-darkening coefficients made in Stage 4
+                    ld_str = meta.use_generate_ld
+                    if not hasattr(lc, ld_str + '_lin'):
+                        raise Exception("Exotic-ld coefficients have not "
+                                        "been calculated in Stage 4")
+                    log.writelog("\nUsing generated limb-darkening "
+                                 f"coefficients with {ld_str} \n")
+                    ld_coeffs = [lc[ld_str + '_lin_white'].values,
+                                 lc[ld_str + '_quad_white'].values,
+                                 lc[ld_str + '_nonlin_3para_white'].values,
+                                 lc[ld_str + '_nonlin_4para_white'].values]
+                elif meta.ld_file:
+                    # Load limb-darkening coefficients from a custom file
+                    ld_fix_file = str(meta.ld_file_white)
+                    try:
+                        ld_coeffs = np.loadtxt(ld_fix_file)
+                    except FileNotFoundError:
+                        raise Exception("The limb-darkening file "
+                                        f"{ld_fix_file} could not be found.")
+                else:
+                    ld_coeffs = None
+
                 # Make a long list of parameters for each channel
                 longparamlist, paramtitles = make_longparamlist(meta, params,
                                                                 1)
@@ -190,7 +190,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 # flux values
                 flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
 
-                meta, params = fit_channel(meta, time, flux, 0, flux_err,
+                meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
                                            paramtitles, 1, ld_coeffs, True)
@@ -199,6 +199,29 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 log.writelog('Saving results', mute=(not meta.verbose))
                 me.saveevent(meta, meta.outputdir+'S5_'+meta.eventlabel +
                              "_white_Meta_Save", save=[])
+
+            if meta.use_generate_ld:
+                # Load limb-darkening coefficients made in Stage 4
+                ld_str = meta.use_generate_ld
+                if not hasattr(lc, ld_str + '_lin'):
+                    raise Exception("Exotic-ld coefficients have not been " +
+                                    "calculated in Stage 4")
+                log.writelog("\nUsing generated limb-darkening coefficients " +
+                             f"with {ld_str} \n")
+                ld_coeffs = [lc[ld_str + '_lin'].values,
+                             lc[ld_str + '_quad'].values,
+                             lc[ld_str + '_nonlin_3para'].values,
+                             lc[ld_str + '_nonlin_4para'].values]
+            elif meta.ld_file:
+                # Load limb-darkening coefficients from a custom file
+                ld_fix_file = str(meta.ld_file)
+                try:
+                    ld_coeffs = np.loadtxt(ld_fix_file)
+                except FileNotFoundError:
+                    raise Exception("The limb-darkening file " + ld_fix_file + 
+                                    " could not be found.")
+            else:
+                ld_coeffs = None
 
             # Make a long list of parameters for each channel
             longparamlist, paramtitles = make_longparamlist(meta, params,
@@ -222,7 +245,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
 
-                meta, params = fit_channel(meta, time, flux, 0, flux_err,
+                meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
                                            paramtitles, chanrng, ld_coeffs)
@@ -249,7 +272,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                     flux, flux_err = util.normalize_spectrum(meta, flux,
                                                              flux_err)
 
-                    meta, params = fit_channel(meta, time, flux, channel,
+                    meta, params = fit_channel(meta, lc, time, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
                                                paramtitles, chanrng, ld_coeffs)
@@ -268,7 +291,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     return meta
 
 
-def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
+def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                 log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
                 white=False):
     """Run a fit for one channel or perform a shared fit.
@@ -277,6 +300,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    lc : Xarray Dataset
+        The light curve object.
     time : ndarray
         The time array.
     flux : ndarray
@@ -311,10 +336,11 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         The updated metadata object.
     """
     # Load the relevant values into the LightCurve model object
-    lc_model = lc.LightCurve(time, flux, chan, chanrng, log, longparamlist,
-                             unc=flux_err, time_units=time_units,
-                             name=eventlabel, share=meta.sharedp,
-                             white=white)
+    lc_model = lightcurve.LightCurve(time, flux, chan, chanrng, log,
+                                     longparamlist, params,
+                                     unc=flux_err, time_units=time_units,
+                                     name=eventlabel, share=meta.sharedp,
+                                     white=white)
 
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
@@ -322,7 +348,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         # introducing an exponential ramp to test m.ExpRampModel().
         log.writelog('***Adding exponential ramp systematic to light curve***')
         fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                  log=log,
+                                  log=log, time=time,
                                   longparamlist=lc_model.longparamlist,
                                   nchan=lc_model.nchannel_fitted,
                                   paramtitles=paramtitles)
@@ -342,18 +368,20 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     modellist = []
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = m.BatmanTransitModel(parameters=params, name='transit',
-                                         fmt='r--', log=log,
+                                         fmt='r--', log=log, time=time,
+                                         time_units=time_units,
                                          freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
-                                         ld_from_file=meta.fix_ld,
+                                         ld_from_file=meta.ld_file,
                                          ld_coeffs=ldcoeffs)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
-                                         fmt='r--', log=log,
+                                         fmt='r--', log=log, time=time,
+                                         time_units=time_units,
                                          freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
@@ -368,12 +396,13 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         if 'transit' in model_names:
             t_model = modellist.pop(np.where(model_names == 'transit')[0][0])
             model_names = np.array([model.name for model in modellist])
-        if'eclipse' in model_names:
+        if 'eclipse' in model_names:
             e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
-                                      fmt='r--', log=log,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
@@ -383,7 +412,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = m.PolynomialModel(parameters=params, name='polynom',
-                                      fmt='r--', log=log,
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
@@ -391,7 +421,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         t_step = m.StepModel(parameters=params, name='step', fmt='r--',
-                             log=log,
+                             log=log, time=time, time_units=time_units,
                              freenames=freenames,
                              longparamlist=lc_model.longparamlist,
                              nchan=lc_model.nchannel_fitted,
@@ -399,22 +429,60 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         t_ramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                log=log,
+                                log=log, time=time, time_units=time_units,
                                 freenames=freenames,
                                 longparamlist=lc_model.longparamlist,
                                 nchan=lc_model.nchannel_fitted,
                                 paramtitles=paramtitles)
         modellist.append(t_ramp)
+    if 'xpos' in meta.run_myfuncs:
+        t_cent = m.CentroidModel(parameters=params, name='xpos', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchan=lc_model.nchannel_fitted,
+                                 paramtitles=paramtitles,
+                                 axis='xpos', centroid=lc.centroid_x)
+        modellist.append(t_cent)
+    if 'xwidth' in meta.run_myfuncs:
+        t_cent = m.CentroidModel(parameters=params, name='xwidth', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchan=lc_model.nchannel_fitted,
+                                 paramtitles=paramtitles,
+                                 axis='xwidth', centroid=lc.centroid_sx)
+        modellist.append(t_cent)
+    if 'ypos' in meta.run_myfuncs:
+        t_cent = m.CentroidModel(parameters=params, name='ypos', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchan=lc_model.nchannel_fitted,
+                                 paramtitles=paramtitles,
+                                 axis='ypos', centroid=lc.centroid_y)
+        modellist.append(t_cent)
+    if 'ywidth' in meta.run_myfuncs:
+        t_cent = m.CentroidModel(parameters=params, name='ywidth', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchan=lc_model.nchannel_fitted,
+                                 paramtitles=paramtitles,
+                                 axis='ywidth', centroid=lc.centroid_sy)
+        modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                          parameters=params, name='GP', fmt='r--', log=log,
+                         time=time, time_units=time_units,
                          gp_code=meta.GP_package,
                          freenames=freenames,
                          longparamlist=lc_model.longparamlist,
                          nchan=lc_model.nchannel_fitted,
                          paramtitles=paramtitles)
         modellist.append(t_GP)
-    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted)
+    model = m.CompositeModel(modellist, nchan=lc_model.nchannel_fitted,
+                             time=time)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
@@ -469,7 +537,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
                     par = [value, ptype, priorpar1, priorpar2, prior]
-                    print(getattr(params, key).values, par)
                     setattr(params, key, par)
         elif 'emcee' in meta.fit_method:
             # Update the params to the values and uncertainties from
@@ -490,7 +557,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                     priorpar2 = best_model.errs[key]
                     prior = 'N'
                     par = [value, ptype, priorpar1, priorpar2, prior]
-                    print(getattr(params, key).values, par)
                     setattr(params, key, par)
         elif 'lsq' in meta.fit_method:
             best_model = None
@@ -511,7 +577,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                     priorpar2 = None
                     prior = None
                     par = [value, ptype, priorpar1, priorpar2, prior]
-                    print(getattr(params, key).values, par)
                     setattr(params, key, par)
 
     return meta, params

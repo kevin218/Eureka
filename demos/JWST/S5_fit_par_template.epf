@@ -40,10 +40,11 @@ u1           0.59           'free'         0            1            U
 u2           0.84           'free'         0            1            U
 # --------------------
 # ** Systematic variables **
-# polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
-# expramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
+# Exponential ramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
 # GP model parameters (A, WN, m1, m2) in log scale
-# step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
+# Step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
+# Drift model variables (xpos, ypos, xwidth, ywidth)
 # --------------------
 c0           1.015          'free'         1            0.05         N
 c1           0              'free'         0            0.01          N

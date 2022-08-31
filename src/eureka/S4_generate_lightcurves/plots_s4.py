@@ -2,7 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from ..lib import util
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 
 def binned_lightcurve(meta, log, lc, i, white=False):
@@ -79,7 +79,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
 
     fig.subplots_adjust(left=0.12, right=0.95, bottom=0.10, top=0.90,
                         hspace=0.20, wspace=0.3)
-    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+figure_filetype
+    fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+plots.figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -105,16 +105,16 @@ def driftxpos(meta, lc):
     plt.figure(4103, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.driftxpos[np.where(~lc.driftmask)], '.',
+             lc.centroid_x[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
     plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.driftxpos[np.where(lc.driftmask)], '.',
+             lc.centroid_x[np.where(lc.driftmask)], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig4103_DriftXPos'+figure_filetype
+    fname = 'figs'+os.sep+'fig4103_DriftXPos'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -140,16 +140,16 @@ def driftxwidth(meta, lc):
     plt.figure(4104, figsize=(8, 4))
     plt.clf()
     plt.plot(np.arange(meta.n_int)[np.where(~lc.driftmask)],
-             lc.driftxwidth[np.where(~lc.driftmask)], '.',
+             lc.centroid_sx[np.where(~lc.driftmask)], '.',
              label='Good Drift Points')
     plt.plot(np.arange(meta.n_int)[np.where(lc.driftmask)],
-             lc.driftxwidth[np.where(lc.driftmask)], '.',
+             lc.centroid_sx[np.where(lc.driftmask)], '.',
              label='Interpolated Drift Points')
     plt.ylabel('Spectrum Drift CC Width Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig4104_DriftXWidth'+figure_filetype
+    fname = 'figs'+os.sep+'fig4104_DriftXWidth'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -237,7 +237,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
 
     plt.title(f"MAD = {np.round(meta.mad_s4).astype(int)} ppm")
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig4101_2D_LC'+figure_filetype
+    fname = 'figs'+os.sep+'fig4101_2D_LC'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if meta.hide_plots:
         plt.close()
@@ -272,7 +272,8 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.legend(loc='best')
     plt.tight_layout()
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = 'figs'+os.sep+f'fig4301_int{int_number}_CC_Spec'+figure_filetype
+    fname = ('figs'+os.sep+f'fig4301_int{int_number}_CC_Spec' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -296,7 +297,8 @@ def cc_vals(meta, vals, n):
     plt.plot(np.arange(-meta.drift_range, meta.drift_range+1), vals, '.')
     plt.tight_layout()
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = 'figs'+os.sep+f'fig4302_int{int_number}_CC_Vals'+figure_filetype
+    fname = ('figs'+os.sep+f'fig4302_int{int_number}_CC_Vals' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)

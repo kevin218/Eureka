@@ -6,7 +6,7 @@ import corner
 from scipy import stats
 
 from .likelihood import computeRMS
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -46,10 +46,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.ma.copy(lc.unc_fit)
-        else:
-            unc = np.ma.copy(lc.unc)
+        unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_lc)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -98,7 +95,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5101_{fname_tag}_lc_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -146,21 +143,40 @@ def plot_rms(lc, model, meta, fitter):
 
         rms, stderr, binsz = computeRMS(residuals, binstep=1)
         normfactor = 1e-6
-        plt.figure(int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))),
-                   figsize=(8, 6))
-        plt.clf()
-        plt.suptitle(' Correlated Noise', size=16)
-        plt.loglog(binsz, rms / normfactor, color='black', lw=1.5,
-                   label='Fit RMS', zorder=3)  # our noise
-        plt.loglog(binsz, stderr / normfactor, color='red', ls='-', lw=2,
-                   label='Std. Err.', zorder=1)  # expected noise
-        plt.xlim(0.95, binsz[-1] * 2)
-        plt.ylim(stderr[-1] / normfactor / 2., stderr[0] / normfactor * 2.)
-        plt.xlabel("Bin Size", fontsize=14)
-        plt.ylabel("RMS (ppm)", fontsize=14)
-        plt.xticks(size=12)
-        plt.yticks(size=12)
-        plt.legend()
+        fig = plt.figure(
+            int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))),
+            figsize=(8, 6))
+        fig.clf()
+        ax = fig.gca()
+        ax.set_title(' Correlated Noise', size=16, pad=20)
+        # our noise
+        ax.loglog(binsz, rms / normfactor, color='black', lw=1.5,
+                  label='Fit RMS', zorder=3)
+        # expected noise
+        ax.loglog(binsz, stderr / normfactor, color='red', ls='-', lw=2,
+                  label=r'Std. Err. ($1/\sqrt{N}$)', zorder=1)
+
+        # Format the main axes
+        ax.set_xlim(0.95, binsz[-1] * 2)
+        ax.set_ylim(stderr[-1] / normfactor / 2., stderr[0] / normfactor * 2.)
+        ax.set_xlabel("Bin Size (N frames)", fontsize=14)
+        ax.set_ylabel("RMS (ppm)", fontsize=14)
+        ax.tick_params(axis='both', labelsize=12)
+        ax.legend(loc=1)
+
+        # Add second x-axis using time instead of N-binned
+        time = np.array(lc.time)
+        dt = (time[1]-time[0])*24*3600
+
+        def t_N(N):
+            return N*dt
+
+        def N_t(t):
+            return t/dt
+
+        ax2 = ax.secondary_xaxis('top', functions=(t_N, N_t))
+        ax2.set_xlabel('Bin Size (seconds)', fontsize=14)
+        ax2.tick_params(axis='both', labelsize=12)
 
         if lc.white:
             fname_tag = 'white'
@@ -168,7 +184,7 @@ def plot_rms(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5301_{fname_tag}_allanplot_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -220,7 +236,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
         fname_tag = f'ch{ch_number}'
     fname = (f'figs{os.sep}fig5501_{fname_tag}_corner_{fitter}'
-             + figure_filetype)
+             + plots.figure_filetype)
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', pad_inches=0.05,
                 dpi=300)
     if not meta.hide_plots:
@@ -321,7 +337,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
         fname += '_'+fitter
         if nplots > 1:
             fname += f'_plot{plot_number+1}of{nplots}'
-        fname += figure_filetype
+        fname += plots.figure_filetype
         fig.savefig(meta.outputdir+fname, bbox_inches='tight',
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
@@ -360,10 +376,7 @@ def plot_res_distr(lc, model, meta, fitter):
 
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.ma.copy(np.array(lc.unc_fit))
-        else:
-            unc = np.ma.copy(lc.unc)
+        unc = np.ma.copy(np.array(lc.unc_fit))
         model = np.ma.copy(model_lc)
         if lc.share:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -386,7 +399,7 @@ def plot_res_distr(lc, model, meta, fitter):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5302_{fname_tag}_res_distri_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -429,10 +442,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
-        if "unc_fit" in lc.__dict__.keys():
-            unc = np.ma.copy(lc.unc_fit)
-        else:
-            unc = np.ma.copy(lc.unc)
+        unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_with_GP)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -477,7 +487,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)

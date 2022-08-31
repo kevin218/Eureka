@@ -21,7 +21,7 @@ from eureka.S5_lightcurve_fitting import s5_fit as s5
 def test_NIRSpec(capsys):
     # Set up some parameters to make plots look nicer.
     # You can set usetex=True if you have LaTeX installed
-    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.pdf')
+    eureka.lib.plots.set_rc(style='eureka', usetex=False, filetype='.png')
 
     s2_installed = 'eureka.S2_calibrations.s2_calibrate' in sys.modules
     if not s2_installed:

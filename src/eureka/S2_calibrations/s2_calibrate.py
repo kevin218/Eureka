@@ -22,7 +22,7 @@ from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 import jwst.assign_wcs.nirspec
 from functools import partial
@@ -271,7 +271,8 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.title('Time Series Observation: Extracted spectra')
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs'+os.sep+fname+figure_filetype,
+                plt.savefig(meta.outputdir+'figs'+os.sep+fname +
+                            plots.figure_filetype,
                             bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()

@@ -23,7 +23,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
     integ : int or None; optional
         The integration number. Default is 0 (first integration).
         If set to None, the source position and width for each frame will be
-        calculated and stored in data.driftypos and data.driftywidth.
+        calculated and stored in data.centroid_y and data.centroid_sy.
 
     Returns
     -------
@@ -88,8 +88,10 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
             for job in iterfn:
                 job.get()
 
-        data['driftypos'] = (['time'], src_ypos_exact)
-        data['driftywidth'] = (['time'], src_ypos_width)
+        data['centroid_y'] = (['time'], src_ypos_exact)
+        data.centroid_y.attrs['units'] = 'pixels'
+        data['centroid_sy'] = (['time'], src_ypos_width)
+        data.centroid_sy.attrs['units'] = 'pixels'
 
         return data, meta, log
     else:

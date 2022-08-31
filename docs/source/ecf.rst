@@ -306,7 +306,7 @@ Used during Optimal Extraction. fittype defines how to construct the normalized 
 
 window_len
 ''''''''''
-Used during Optimal Extraction. window_len is only used when fittype = 'smooth' or 'meddata' (when computing median frame). It sets the length scale over which the data are smoothed. Default is 31. You can set this to 1 for no smoothing when computing median frame for fittype=meddata.
+Used during Optimal Extraction. window_len is only used when fittype = 'smooth' or 'meddata' (when computing median frame). It sets the length scale over which the data are smoothed. You can set this to 1 for no smoothing when computing median frame for fittype=meddata.
 For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
 
 median_thresh
@@ -631,7 +631,8 @@ Fitting routines to run for Stage 5 lightcurve fitting. Can be one or more of th
 
 run_myfuncs
 '''''''''''
-Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step]
+Determines the astrophysical and systematics models used in the Stage 5 fitting. Can be one or more (separated by commas) of the following:
+[batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP]
 
 manual_clip
 '''''''''''
@@ -646,13 +647,13 @@ use_generate_ld
 '''''''''''''''
 If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
 
-fix_ld
-''''''
-If set to True, this will allow you to use your own custom file to input limb-darkening parameters from a model other than exotic-ld. Note: this option only works if use_generate_ld=None.
-
 ld_file
 '''''''
-Path to the file containing limb darkening coefficients to be used when fix_ld=True. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
+If you want to use custom calculated limb-darkening coefficients, set to the fully qualified path to a file containing limb darkening coefficients that you want to use. Otherwise, set to None. Note: this option only works if use_generate_ld=None. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
+
+ld_file_white
+'''''''''''''
+The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''
@@ -770,6 +771,11 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results.
       - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``. Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters; instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.
       - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events). For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
+      - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
+      - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
+      - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
+      - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
+
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 
 
@@ -838,6 +844,10 @@ x_unit
 ''''''
 The x-unit to use in the plot. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
+
+ncol
+''''
+The number of columns you want in your LaTeX formatted tables. Defaults to 4.
 
 star_Rad
 ''''''''
