@@ -790,7 +790,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     log.writelog('Running dynesty...')
 
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
-    if nlive < min_nlive:
+    if nlive == 'min':
+        nlive = min_nlive
+    elif nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least '
                      f'{min_nlive} ****')
 
