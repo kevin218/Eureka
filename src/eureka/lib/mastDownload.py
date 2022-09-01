@@ -247,22 +247,28 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
     sci_table2 = Observations.query_criteria(proposal_id=proposal_id,
                                              obs_id=obsid2)
 
-    # Get product list
-    data_products_by_id = Observations.get_product_list(sci_table)
-    data_products_by_id2 = Observations.get_product_list(sci_table2)
+    if len(sci_table) > 0:
+        # Get product list
+        data_products_by_id = Observations.get_product_list(sci_table)
+        # Filter for desired files
+        table = Observations.filter_products(
+            data_products_by_id, productSubGroupDescription=subgroup,
+            calib_level=calib_level)
+    if len(sci_table2) > 0:
+        # Get product list
+        data_products_by_id2 = Observations.get_product_list(sci_table2)
+        # Filter for desired files
+        table2 = Observations.filter_products(
+            data_products_by_id2, productSubGroupDescription=subgroup,
+            calib_level=calib_level)
 
-    # Filter for desired files
-    table = Observations.filter_products(data_products_by_id,
-                                         productSubGroupDescription=subgroup,
-                                         calib_level=calib_level)
-    table2 = Observations.filter_products(data_products_by_id2,
-                                          productSubGroupDescription=subgroup,
-                                          calib_level=calib_level)
-
-    # Concatenate tables one row at a time, checking for uniqueness
-    for row in range(len(table2)):
-        if (~(table['obsID'] == table2['obsID'][row])).all():
-            table.add_row(table2[row])
+    if len(sci_table) > 0 and len(sci_table2) > 0:
+        # Concatenate tables one row at a time, checking for uniqueness
+        for row in range(len(table2)):
+            if (~(table['obsID'] == table2['obsID'][row])).all():
+                table.add_row(table2[row])
+    elif len(sci_table2) > 0:
+        table = table2
 
     print("Total number of data products:", len(table))
     print("Number of data products with exclusive access:",
