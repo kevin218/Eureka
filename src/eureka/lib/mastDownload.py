@@ -247,7 +247,6 @@ def filterJWST(proposal_id, observation, visit, calib_level, subgroup):
     sci_table2 = Observations.query_criteria(proposal_id=proposal_id,
                                              obs_id=obsid2)
 
-    
     if len(sci_table) > 0:
         # Get product list
         data_products_by_id = Observations.get_product_list(sci_table)
