@@ -349,60 +349,69 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     else:
         y_param = meta.y_param
 
-    for fitter in fit_methods:
-        if fitter in ['dynesty', 'emcee']:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
-                                        skipinitialspace=True)
-            full_keys = list(fitted_values["Parameter"])
+    if 'dynesty' in fit_methods:
+        fitter = 'dynesty'
+    elif 'emcee' in fit_methods:
+        fitter = 'emcee'
+    elif 'lsq' in fit_methods:
+        fitter = 'lsq'
+    else:
+        raise ValueError('No recognized fitters in fit_methods = '
+                         f'{fit_methods}')
 
-            fname = f'S5_{fitter}_samples_{channel_key}'
+    lowers = []
+    uppers = []
+    medians = []
+    errs = []
 
-            keys = [key for key in full_keys if y_param in key]
-            if len(keys) == 0:
-                log.writelog(f'  Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n  ['
-                             + ', '.join(full_keys)+']')
-                log.writelog(f'  Skipping {y_param}')
-                return None, None
+    if fitter in ['dynesty', 'emcee']:
+        fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+        fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                    skipinitialspace=True)
+        full_keys = list(fitted_values["Parameter"])
 
-            lowers = []
-            uppers = []
-            medians = []
+        fname = f'S5_{fitter}_samples_{channel_key}'
 
-            for i, key in enumerate(keys):
-                ind = np.where(fitted_values["Parameter"] == key)[0][0]
-                lowers.append(np.abs(fitted_values["-1sigma"][ind]))
-                uppers.append(fitted_values["+1sigma"][ind])
+        keys = [key for key in full_keys if y_param in key]
+        if len(keys) == 0:
+            log.writelog(f'  Parameter {y_param} was not in the list of '
+                         'fitted parameters which includes:\n  ['
+                         + ', '.join(full_keys)+']')
+            log.writelog(f'  Skipping {y_param}')
+            return None, None
+
+        for i, key in enumerate(keys):
+            ind = np.where(fitted_values["Parameter"] == key)[0][0]
+            lowers.append(np.abs(fitted_values["-1sigma"][ind]))
+            uppers.append(fitted_values["+1sigma"][ind])
+            medians.append(fitted_values["50th"][ind])
+
+        errs = np.array([lowers, uppers])
+        medians = np.array(medians)
+    else:
+        fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+        fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                    skipinitialspace=True)
+        full_keys = list(fitted_values["Parameter"])
+        keys = [key for key in full_keys if y_param in key]
+        if len(keys) == 0:
+            log.writelog(f'Parameter {y_param} was not in the list of '
+                         'fitted parameters which includes:\n['
+                         + ', '.join(full_keys)+']')
+            log.writelog(f'Skipping {y_param}')
+            return None, None
+
+        medians = []
+        for i, key in enumerate(keys):
+            ind = np.where(fitted_values["Parameter"] == key)[0][0]
+            if "50th" in fitted_values.keys():
                 medians.append(fitted_values["50th"][ind])
+            else:
+                medians.append(fitted_values["Mean"][ind])
+        medians = np.array(medians)
 
-            errs = np.array([lowers, uppers])
-            medians = np.array(medians)
-
-        else:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
-                                        skipinitialspace=True)
-            full_keys = list(fitted_values["Parameter"])
-            keys = [key for key in full_keys if y_param in key]
-            if len(keys) == 0:
-                log.writelog(f'Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n['
-                             + ', '.join(full_keys)+']')
-                log.writelog(f'Skipping {y_param}')
-                return None, None
-
-            medians = []
-            for i, key in enumerate(keys):
-                ind = np.where(fitted_values["Parameter"] == key)[0][0]
-                if "50th" in fitted_values.keys():
-                    medians.append(fitted_values["50th"][ind])
-                else:
-                    medians.append(fitted_values["Mean"][ind])
-            medians = np.array(medians)
-
-            # if lsq, no uncertainties
-            errs = np.ones((2, len(medians)))*np.nan
+        # if lsq, no uncertainties
+        errs = np.ones((2, len(medians)))*np.nan
 
     meta.spectrum_median, meta.spectrum_err = medians, errs
 
