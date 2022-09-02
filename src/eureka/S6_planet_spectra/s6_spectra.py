@@ -526,6 +526,8 @@ def load_s5_saves(meta, log, fit_methods):
     else:
         raise ValueError('No recognized fitters in fit_methods = '
                          f'{fit_methods}')
+    fitter = 'lsq'
+    meta.fitter = fitter
 
     if fitter in ['dynesty', 'emcee']:
         if meta.sharedp:
@@ -567,10 +569,11 @@ def load_s5_saves(meta, log, fit_methods):
             meta = parse_s5_saves(meta, log, fit_methods, 'shared')
         else:
             meta = parse_unshared_saves(meta, log, fit_methods)
-
-        samples = meta.spectrum_median
+        samples = np.array(meta.spectrum_median)
+        if all(x is None for x in samples):
+            samples = np.zeros((meta.nspecchan, 0))
     
-    return np.array(samples)
+    return samples
 
 
 def compute_offset(meta, log, fit_methods, nsamp=1e4):
@@ -619,9 +622,12 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
         meta.spectrum_median.append(offset[0])
         meta.spectrum_err.append(offset[1:])
     
-    # Convert the list to an array
+    # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
-    meta.spectrum_err = np.array(meta.spectrum_err).T
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
     
     return meta
 
@@ -681,9 +687,12 @@ def compute_amp(meta, log, fit_methods, nsamp=1e4):
         meta.spectrum_median.append(amp[0])
         meta.spectrum_err.append(amp[1:])
     
-    # Convert the list to an array
+    # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
-    meta.spectrum_err = np.array(meta.spectrum_err).T
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
     
     return meta
 
@@ -726,9 +735,12 @@ def compute_fn(meta, log, fit_methods, nsamp=1e4):
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
     
-    # Convert the list to an array
+    # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
-    meta.spectrum_err = np.array(meta.spectrum_err).T
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
     
     return meta
 
@@ -1056,11 +1068,14 @@ def transit_latex_table(meta, log):
 
             # Round values to the correct number of significant figures
             val = line[meta.y_param+'_value']*meta.y_scalar
-            upper = line[meta.y_param+'_errorpos']*meta.y_scalar
-            lower = line[meta.y_param+'_errorneg']*meta.y_scalar
-            nDec1, _ = roundToSigFigs(upper)
-            nDec2, _ = roundToSigFigs(lower)
-            nDec = np.max([nDec1, nDec2])
+            upper = line[meta.y_param+'_errorpos']
+            lower = line[meta.y_param+'_errorneg']
+            if np.isnan(upper) or np.isnan(lower):
+                nDec = 10
+            else:
+                nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
+                nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
+                nDec = np.max([nDec1, nDec2])
             val = roundToDec(val, nDec)
             upper = roundToDec(upper, nDec)
             lower = roundToDec(lower, nDec)

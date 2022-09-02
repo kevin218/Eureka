@@ -46,6 +46,9 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     model_x = deepcopy(model_x)
     model_y = deepcopy(model_y)
 
+    if np.all(np.isnan(err)):
+        err = None
+
     spectrum *= y_scalar
     if err is not None:
         err *= y_scalar
