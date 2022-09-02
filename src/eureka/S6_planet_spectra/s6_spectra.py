@@ -526,7 +526,6 @@ def load_s5_saves(meta, log, fit_methods):
     else:
         raise ValueError('No recognized fitters in fit_methods = '
                          f'{fit_methods}')
-    fitter = 'lsq'
     meta.fitter = fitter
 
     if fitter in ['dynesty', 'emcee']:
