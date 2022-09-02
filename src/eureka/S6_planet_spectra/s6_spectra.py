@@ -572,7 +572,7 @@ def load_s5_saves(meta, log, fit_methods):
         if all(x is None for x in samples):
             samples = np.zeros((meta.nspecchan, 0))
     
-    return samples
+    return np.array(samples)
 
 
 def compute_offset(meta, log, fit_methods, nsamp=1e4):
