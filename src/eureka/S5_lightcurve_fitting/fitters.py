@@ -5,6 +5,8 @@ from io import StringIO
 import os
 import sys
 import h5py
+import xarray as xr
+from astraeus import xarrayIO as xrio
 import time as time_pkg
 
 from scipy.optimize import minimize
@@ -527,8 +529,13 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
     fname = f'S5_emcee_samples_{channel_key}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
-    with h5py.File(full_fname, 'r') as hf:
-        samples = hf['samples'][:]
+    ds = xrio.readXR(full_fname, verbose=False)
+    if ds is None:
+        # Working with an old save file
+        with h5py.File(full_fname, 'r') as hf:
+            samples = hf['samples'][:]
+    else:
+        samples = ds.to_array().T
     log.writelog(f'Old chain path: {full_fname}')
 
     # Initialize the walkers using samples from the old chain
@@ -1265,11 +1272,14 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
     results_table.write(meta.outputdir+fname+'.csv', format='csv',
                         overwrite=False)
 
-    # Save the chain from the sampler (if a chain was provided)
+    # Save the chain from the sampler using Astraeus (if a chain was provided)
     if len(samples) != 0:
-        fname = f'S5_{fitter}_samples{channel_tag}'
-        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
-            hf.create_dataset("samples", data=samples)
+        fname = meta.outputdir+f'S5_{fitter}_samples{channel_tag}.h5'
+        ds = dict([(freenames[i], xr.DataArray(samples[:, i], dims=['sample'],
+                                               name=freenames[i]))
+                   for i in range(len(freenames))])
+        ds = xrio.makeDataset(ds)
+        xrio.writeXR(fname, ds)
 
     # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
