@@ -158,21 +158,22 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 log.writelog(f'Plotting {meta.y_param}...')
 
                 # Read in S5 fitted values
-                if meta.sharedp:
-                    meta.spectrum_median, meta.spectrum_err = \
-                        parse_s5_saves(meta, log, fit_methods, 'shared')
+                if meta.y_param == 'fn':
+                    # Compute nightside flux
+                    meta = compute_fn(meta, log, fit_methods)
+                elif 'pc_offset' in meta.y_param:
+                    # Compute phase curve offset
+                    meta = compute_offset(meta, log, fit_methods)
+                elif 'pc_amp' in meta.y_param:
+                    # Compute phase curve amplitude
+                    meta = compute_amp(meta, log, fit_methods)
                 else:
-                    meta = parse_unshared_saves(meta, log, fit_methods)
-                
+                    # Just load the parameter
+                    meta = load_s5_saves(meta, log, fit_methods)
+
                 if all(x is None for x in meta.spectrum_median):
                     # The parameter could not be found - skip it
                     continue
-
-                # Manipulate fitted values if needed
-                if meta.y_param == 'rp^2':
-                    meta = compute_transit_depth(meta)
-                elif meta.y_param in ['1/r1', '1/r4']:
-                    meta = compute_timescale(meta)
 
                 if meta.y_label is None:
                     # Provide some default formatting
@@ -184,7 +185,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                         meta.y_label = r'$R_{\rm p}/R_{\rm *}$'
                     elif meta.y_param == 'fp':
                         # Eclipse depth
-                        meta.y_label = r'$F_{\rm p}/F_{\rm *}$'
+                        meta.y_label = r'$F_{\rm p,day}/F_{\rm *}$'
+                    elif meta.y_param == 'fn':
+                        # Nightside emission
+                        meta.y_label = r'$F_{\rm p,night}/F_{\rm *}$'
                     elif meta.y_param in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         meta.y_label = r'$u_{\rm '+meta.y_param[-1]+'}$'
@@ -204,16 +208,32 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                         meta.y_label = r'$t_{\rm 0}$'
                     elif meta.y_param == 'AmpSin1':
                         # Sine amplitude
-                        meta.y_label = (r'Amplitude of $\sin(\phi)$')
+                        meta.y_label = r'Amplitude of $\sin(\phi)$'
                     elif meta.y_param == 'AmpSin2':
                         # Sine2 amplitude
-                        meta.y_label = (r'Amplitude of $\sin(2\phi)$')
+                        meta.y_label = r'Amplitude of $\sin(2\phi)$'
                     elif meta.y_param == 'AmpCos1':
                         # Cosine amplitude
-                        meta.y_label = (r'Amplitude of $\cos(\phi)$')
+                        meta.y_label = r'Amplitude of $\cos(\phi)$'
                     elif meta.y_param == 'AmpCos2':
                         # Cosine2 amplitude
-                        meta.y_label = (r'Amplitude of $\cos(2\phi)$')
+                        meta.y_label = r'Amplitude of $\cos(2\phi)$'
+                    elif meta.y_param == 'pc_offset':
+                        # Phase Curve Offset, first order
+                        meta.y_label = 'Phase Curve Offset'
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = r'($^{\circ}$E)'
+                    elif meta.y_param == 'pc_amp':
+                        # Phase Curve Amplitude, first order
+                        meta.y_label = 'Phase Curve Amplitude'
+                    elif meta.y_param == 'pc_offset2':
+                        # Phase Curve Offset, second order
+                        meta.y_label = ('Second Order Phase Curve Offset')
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = r'($^{\circ}$E)'
+                    elif meta.y_param == 'pc_amp2':
+                        # Phase Curve Amplitude, second order
+                        meta.y_label = ('Second Order Phase Curve Amplitude')
                     elif meta.y_param in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient
                         meta.y_label = r'$c_{\rm '+meta.y_param[1:]+'}$'
@@ -293,6 +313,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     return meta
 
 
+def load_s5_saves(meta, log, fit_methods):
+    if meta.sharedp:
+        return parse_s5_saves(meta, log, fit_methods, 'shared')
+    else:
+        return parse_unshared_saves(meta, log, fit_methods)
+
+
 def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     """Load in an S5 save file.
 
@@ -346,8 +373,8 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
             for i, key in enumerate(keys):
                 ind = np.where(fitted_values["Parameter"] == key)[0][0]
                 lowers.append(np.abs(fitted_values["-1sigma"][ind]))
-                uppers.append(np.abs(fitted_values["+1sigma"][ind]))
-                medians.append(np.abs(fitted_values["50th"][ind]))
+                uppers.append(fitted_values["+1sigma"][ind])
+                medians.append(fitted_values["50th"][ind])
 
             errs = np.array([lowers, uppers])
             medians = np.array(medians)
@@ -377,6 +404,14 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
             # if lsq, no uncertainties
             errs = np.ones((2, len(medians)))*np.nan
 
+    meta.spectrum_median, meta.spectrum_err = medians, errs
+
+    # Manipulate fitted values if needed
+    if meta.y_param == 'rp^2':
+        meta = compute_transit_depth(meta)
+    elif meta.y_param in ['1/r1', '1/r4']:
+        meta = compute_timescale(meta)
+
     return medians, errs
 
 
@@ -397,22 +432,23 @@ def parse_unshared_saves(meta, log, fit_methods):
     meta : eureka.lib.readECF.MetaClass
         The updated meta data object.
     """
-    meta.spectrum_median = []
-    meta.spectrum_err = []
+    spectrum_median = []
+    spectrum_err = []
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
         median, err = parse_s5_saves(meta, log, fit_methods, channel_key)
         if median is None:
             # Parameter was found, so don't keep looking for it
-            meta.spectrum_median = [None for _ in range(meta.nspecchan)]
-            meta.spectrum_err = [None for _ in range(meta.nspecchan)]
+            meta.spectrum_median = np.array([None for _ in
+                                             range(meta.nspecchan)])
+            meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
             return meta
-        meta.spectrum_median.extend(median)
-        meta.spectrum_err.extend(err.T)
+        spectrum_median.extend(median)
+        spectrum_err.extend(err.T)
     
-    meta.spectrum_median = np.array(meta.spectrum_median)
-    meta.spectrum_err = np.array(meta.spectrum_err).T
+    meta.spectrum_median = np.array(spectrum_median)
+    meta.spectrum_err = np.array(spectrum_err).T
 
     return meta
 
@@ -459,12 +495,166 @@ def compute_timescale(meta):
     if not np.all(np.isnan(meta.spectrum_err)):
         lower = meta.spectrum_err[0, :]
         upper = meta.spectrum_err[1, :]
-        lower = np.abs(1/(median-lower) - 1/median)
-        upper = np.abs(1/(median+upper) - 1/median)
+        lower = 1/(median-lower) - 1/median
+        upper = 1/median - 1/(median+upper)
         meta.spectrum_err = np.append(lower.reshape(1, -1),
                                       upper.reshape(1, -1), axis=0)
     meta.spectrum_median = 1/median
 
+    return meta
+
+
+def compute_offset(meta, log, fit_methods, nsamp=1e4):
+    y_param = meta.y_param
+    second = (meta.y_param[-1] == '2')
+    if second:
+        suffix = '2'
+    else:
+        suffix = '1'
+    # Load sine amplitude
+    meta.y_param = 'AmpSin'+suffix
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    ampsin = meta.spectrum_median
+    ampsin_err = meta.spectrum_err
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos'+suffix
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    ampcos = meta.spectrum_median
+    ampcos_err = meta.spectrum_err
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    for i in range(meta.nspecchan):
+        As = np.random.normal(ampcos[i], np.mean(ampcos_err[:, i]), int(nsamp))
+        Bs = np.random.normal(ampsin[i], np.mean(ampsin_err[:, i]), int(nsamp))
+        offsets = -np.arctan2(Bs, As)*180/np.pi
+        if second:
+            offsets /= 2
+        offset = np.percentile(np.array(offsets), [16, 50, 84])[[1, 2, 0]]
+        offset[1] -= offset[0]
+        offset[2] = offset[0]-offset[2]
+        meta.spectrum_median.append(offset[0])
+        meta.spectrum_err.append(offset[1:])
+    
+    # Convert the list to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    meta.spectrum_err = np.array(meta.spectrum_err).T
+    
+    return meta
+
+
+def compute_amp(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Figure out the desired order
+    second = (meta.y_param[-1] == '2')
+    if second:
+        suffix = '2'
+    else:
+        suffix = '1'
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    fp = meta.spectrum_median
+    fp_err = meta.spectrum_err
+
+    # Load sine amplitude
+    meta.y_param = 'AmpSin'+suffix
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    ampsin = meta.spectrum_median
+    ampsin_err = meta.spectrum_err
+
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos'+suffix
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    ampcos = meta.spectrum_median
+    ampcos_err = meta.spectrum_err
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    
+    for i in range(meta.nspecchan):
+        As = np.random.normal(ampcos[i], np.mean(ampcos_err[:, i]), int(nsamp))
+        Bs = np.random.normal(ampsin[i], np.mean(ampsin_err[:, i]), int(nsamp))
+        fps = np.random.normal(fp[i], np.mean(fp_err[:, i]), int(nsamp))
+        amps = fps*np.sqrt(As**2+Bs**2)*2
+        amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
+        amp[1] -= amp[0]
+        amp[2] = amp[0]-amp[2]
+        meta.spectrum_median.append(amp[0])
+        meta.spectrum_err.append(amp[1:])
+    
+    # Convert the list to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    meta.spectrum_err = np.array(meta.spectrum_err).T
+    
+    return meta
+
+
+def compute_fn(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    fp = meta.spectrum_median
+    fp_err = meta.spectrum_err
+
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos1'
+    meta = load_s5_saves(meta, log, fit_methods)
+    if all(x is None for x in meta.spectrum_median):
+        # The parameter could not be found - skip it
+        return meta
+    ampcos = meta.spectrum_median
+    ampcos_err = meta.spectrum_err
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    
+    for i in range(meta.nspecchan):
+        As = np.random.normal(ampcos[i], np.mean(ampcos_err[:, i]), int(nsamp))
+        fps = np.random.normal(fp[i], np.mean(fp_err[:, i]), int(nsamp))
+        fluxes = fps*(1-2*As)
+        flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+    
+    # Convert the list to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    meta.spectrum_err = np.array(meta.spectrum_err).T
+    
     return meta
 
 
