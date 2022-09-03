@@ -560,7 +560,10 @@ def load_s5_saves(meta, log, fit_methods):
                 ind = np.where(full_keys == meta.y_param)[0]
                 sample = sample[:, ind].flatten()
             else:
-                sample = ds[meta.y_param].values
+                if meta.y_param in list(ds._variables):
+                    sample = ds[meta.y_param].values
+                else:
+                    sample = np.zeros(0)
             samples.append(sample)
     else:
         # No samples for lsq, so just shape it as a single value
