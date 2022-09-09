@@ -620,7 +620,7 @@ def median_frame(data, meta, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
     vmin = data.medflux.min().values
-    vmax = np.max(2000, vmin + 2000)
+    vmax = np.max([2000, vmin+2000])
     cmap = plt.cm.plasma.copy()
 
     plt.figure(3308, figsize=(8, 4))
