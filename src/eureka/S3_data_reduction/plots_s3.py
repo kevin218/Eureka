@@ -599,7 +599,7 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
 
 
 def median_frame(data, meta, m):
-    '''Plot the cleaned time-median frame. (Fig 3401)
+    '''Plot the cleaned time-median frame. (Fig 3308)
 
     Parameters
     ----------
@@ -620,10 +620,10 @@ def median_frame(data, meta, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
     vmin = data.medflux.min().values
-    vmax = vmin + 2000
+    vmax = np.max([2000, vmin+2000])
     cmap = plt.cm.plasma.copy()
 
-    plt.figure(3401, figsize=(8, 4))
+    plt.figure(3308, figsize=(8, 4))
     plt.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(data.medflux, origin='lower', aspect='auto',
@@ -632,11 +632,10 @@ def median_frame(data, meta, m):
     plt.colorbar()
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
-    plt.colorbar()
     plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3401_file{file_number}_MedianFrame' +
+    fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
              plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
