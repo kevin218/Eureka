@@ -364,6 +364,18 @@ def find_fits(meta):
     return meta
 
 
+def binData(data, nbin=60, err=False):
+    # Make a copy for good measure
+    data = np.copy(data)
+    # Make sure there's a whole number of bins
+    data = data[:len(data)*int(len(data)/nbin)]
+    # Bin data
+    binned = np.nanmean(data.reshape(nbin, -1), axis=1)
+    if err:
+        binned /= np.sqrt(int(len(data)/nbin))
+    return binned
+
+
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     """Normalize a spectrum by its temporal mean.
 
