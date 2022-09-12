@@ -59,12 +59,12 @@ In Stage 3:
 
       Fig 3106: 2D drift fit (currently only produced for WFC3)
 
-   .. figure:: ../media/S3_out/fig3107_Curvature.png
+   .. figure:: ../media/S3_out/fig3107_file0_Curvature.png
       :alt: Stage 3 trace curvature
 
       Fig 3107: Measured, smoothed, and integer-rounded position of trace
 
-   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation.
+   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation as well as the cleaned median frame.
 
    .. figure:: ../media/S3_out/fig3301_file0_int001_ImageAndBackground.png
       :alt: Stage 3 background subtracted flux plot
@@ -86,12 +86,10 @@ In Stage 3:
 
       Fig 3304: Residual Background Plot
 
-   - If ``isplots_S3`` = 4: ``Eureka!`` will plot the cleaned median frame.
+   .. figure:: ../media/S3_out/fig3308_file0_MedianFrame.png
+      :alt: Stage 3 clean median frame plot
 
-     .. figure:: ../media/S3_out/fig3401_file0_MedianFrame.png
-        :alt: Stage 3 clean median frame plot
-
-        Fig 3401: Clean Median Frame Plot
+      Fig 3308: Clean Median Frame Plot
 
    - If ``isplots_S3`` = 5: ``Eureka!`` will plot the Subdata plots from the optimal spectral extraction step.
 
