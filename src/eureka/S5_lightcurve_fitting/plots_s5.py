@@ -102,7 +102,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
-    """Plot the fitted model over the data. (Figs 5103 and Figs 5304)
+    """Plot the fitted model over the data. (Figs 5104 and Figs 5304)
 
     Parameters
     ----------
@@ -160,7 +160,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         binned_unc = util.binData(unc, err=True)
 
         # Setup the figure
-        fig = plt.figure(5103, figsize=(8, 6))
+        fig = plt.figure(5104, figsize=(8, 6))
         plt.clf()
         ax = fig.gca()
         if isTitle:
@@ -178,7 +178,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
         # Set nice axis limits
         sigma = np.nanmean(binned_unc)
-        max_astro = np.nanmax((model_phys-1))*1e6
+        max_astro = np.nanmax((model_phys-1))
         ax.set_ylim(-3*sigma, max_astro+10*sigma)
         ax.set_xlim(np.min(lc.time), np.max(lc.time))
 
@@ -188,7 +188,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5103_{fname_tag}_phaseVariations_{fitter}'
+        fname = (f'figs{os.sep}fig5104_{fname_tag}_phaseVariations_{fitter}'
                  + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
@@ -196,7 +196,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         
         if meta.isplots_S5 >= 3:
             # Setup the figure
-            fig = plt.figure(5103, figsize=(8, 6))
+            fig = plt.figure(5104, figsize=(8, 6))
             plt.clf()
             ax = fig.gca()
             if isTitle:
@@ -216,7 +216,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                     zorder=10)
 
             # Set nice axis limits
-            sigma = np.nanstd(flux-model_phys)*1e6
+            sigma = np.nanstd(flux-model_phys)
             max_astro = np.nanmax(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
             ax.set_xlim(np.min(lc.time), np.max(lc.time))
