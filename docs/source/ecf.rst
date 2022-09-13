@@ -699,7 +699,7 @@ The following set the parameters for running dynesty. These options are describe
 
 run_nlive
 '''''''''
-Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
 
 run_bound
 '''''''''
@@ -721,6 +721,10 @@ Boolean to determine whether the astrophysical model is interpolated when plotte
 isplots_S5
 ''''''''''
 Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
+
+nbin_plot
+'''''''''
+The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
 hide_plots
 ''''''''''
