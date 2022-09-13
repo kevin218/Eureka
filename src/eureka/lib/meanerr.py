@@ -47,6 +47,7 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     --------
     .. highlight:: python
     .. code-block:: python
+
         >>> import meanerr as men
         >>> nd = 5
         >>> data = np.arange(nd) + 5.0

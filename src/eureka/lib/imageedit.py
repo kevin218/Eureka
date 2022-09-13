@@ -33,6 +33,7 @@ def trimimage(data, c, r, mask=None, uncd=None, oob=0):
     --------
     .. highlight:: python
     .. code-block:: python
+
         >>> from imageedit import *
         >>> import numpy as np
 
@@ -143,6 +144,7 @@ def pasteimage(data, subim, dy_, syx=(None, None)):
     --------
     .. highlight:: python
     .. code-block:: python
+
         >>> from imageedit import *
         >>> import numpy as np
         >>> # Create an array and a subimage array to past in.

@@ -171,6 +171,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
     .. highlight:: python
     .. code-block:: python
+
         >>> import sys
         >>> sys.path.append('/home/esp01/code/python/photpipe/lib/')
         >>> import apphot as ap
