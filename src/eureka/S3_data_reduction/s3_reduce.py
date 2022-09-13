@@ -501,6 +501,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
 
+            # Update n_int after merging batches
+            meta.n_int = len(spec.time)
+
             # Plot light curve and centroids over time
             if meta.photometry:
                 if meta.isplots_S3 >= 1:
