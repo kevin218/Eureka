@@ -365,6 +365,23 @@ def find_fits(meta):
 
 
 def binData(data, nbin=60, err=False):
+    """Temporally bin data for easier visualization.
+
+    Parameters
+    ----------
+    data : ndarray (1D)
+        The data to temporally bin.
+    nbin : int, optional
+        The number of bins there should be. By default 60.
+    err : bool, optional
+        If True, divide the binned data by sqrt(N) to get the error on the
+        mean. By default False.
+
+    Returns
+    -------
+    binned : ndarray
+        The binned data.
+    """
     # Make a copy for good measure
     data = np.copy(data)
     # Make sure there's a whole number of bins
