@@ -156,10 +156,14 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
-            meta.nbin_plot = 100
-        binned_time = util.binData(lc.time, meta.nbin_plot)
-        binned_flux = util.binData(flux, meta.nbin_plot)
-        binned_unc = util.binData(unc, meta.nbin_plot, err=True)
+            nbin_plot = 100
+        elif meta.nbin_plot < len(lc.time):
+            nbin_plot = len(lc.time)
+        else:
+            nbin_plot = meta.nbin_plot
+        binned_time = util.binData(lc.time, nbin_plot)
+        binned_flux = util.binData(flux, nbin_plot)
+        binned_unc = util.binData(unc, nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
@@ -179,8 +183,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         ax.plot(lc.time, model_phys, '.', ls='', ms=2, color='0.3', zorder=10)
 
         # Set nice axis limits
-        sigma = np.nanmean(binned_unc)
-        max_astro = np.nanmax((model_phys-1))
+        sigma = np.ma.mean(binned_unc)
+        max_astro = np.ma.max((model_phys-1))
         ax.set_ylim(-4*sigma, max_astro+6*sigma)
         ax.set_xlim(np.min(lc.time), np.max(lc.time))
 
@@ -218,8 +222,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                     zorder=10)
 
             # Set nice axis limits
-            sigma = np.nanstd(flux-model_phys)
-            max_astro = np.nanmax(model_phys)
+            sigma = np.ma.std(flux-model_phys)
+            max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
             ax.set_xlim(np.min(lc.time), np.max(lc.time))
             

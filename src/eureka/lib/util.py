@@ -383,11 +383,12 @@ def binData(data, nbin=100, err=False):
         The binned data.
     """
     # Make a copy for good measure
-    data = np.copy(data)
+    data = np.ma.copy(data)
+    data = np.ma.masked_invalid(data)
     # Make sure there's a whole number of bins
     data = data[:nbin*int(len(data)/nbin)]
     # Bin data
-    binned = np.nanmean(data.reshape(nbin, -1), axis=1)
+    binned = np.ma.mean(data.reshape(nbin, -1), axis=1)
     if err:
         binned /= np.sqrt(int(len(data)/nbin))
     return binned
