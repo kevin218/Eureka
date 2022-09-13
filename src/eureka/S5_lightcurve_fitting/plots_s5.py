@@ -155,9 +155,11 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         unc *= 1e6
 
         # Get binned data and times
-        binned_time = util.binData(lc.time)
-        binned_flux = util.binData(flux)
-        binned_unc = util.binData(unc, err=True)
+        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
+            meta.nbin_plot = 100
+        binned_time = util.binData(lc.time, meta.nbin_plot)
+        binned_flux = util.binData(flux, meta.nbin_plot)
+        binned_unc = util.binData(unc, meta.nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
@@ -179,7 +181,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         # Set nice axis limits
         sigma = np.nanmean(binned_unc)
         max_astro = np.nanmax((model_phys-1))
-        ax.set_ylim(-3*sigma, max_astro+10*sigma)
+        ax.set_ylim(-4*sigma, max_astro+6*sigma)
         ax.set_xlim(np.min(lc.time), np.max(lc.time))
 
         # Save/show the figure
@@ -210,7 +212,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             ax.plot(lc.time, flux, '.', c='k', zorder=0, alpha=0.01)
             # Plot the binned data with errorbars
             ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
-                        color='b', zorder=1)
+                        color=color, zorder=1)
             # Plot the physical model
             ax.plot(lc.time, model_phys, '.', ls='', ms=2, color='0.3',
                     zorder=10)

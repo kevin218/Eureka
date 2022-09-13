@@ -364,7 +364,7 @@ def find_fits(meta):
     return meta
 
 
-def binData(data, nbin=60, err=False):
+def binData(data, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
@@ -372,7 +372,7 @@ def binData(data, nbin=60, err=False):
     data : ndarray (1D)
         The data to temporally bin.
     nbin : int, optional
-        The number of bins there should be. By default 60.
+        The number of bins there should be. By default 100.
     err : bool, optional
         If True, divide the binned data by sqrt(N) to get the error on the
         mean. By default False.
