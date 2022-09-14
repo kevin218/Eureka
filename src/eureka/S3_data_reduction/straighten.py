@@ -154,6 +154,7 @@ def straighten_trace(data, meta, log, m):
 
     # apply the shifts to the data
     data.flux.values = roll_columns(data.flux.values, shifts)
+    data.mask.values = roll_columns(data.mask.values, shifts)
     data.err.values = roll_columns(data.err.values, shifts)
     data.dq.values = roll_columns(data.dq.values, shifts)
     data.v0.values = roll_columns(data.v0.values, shifts)
