@@ -2,6 +2,7 @@ import numpy as np
 import os
 import time as time_pkg
 import astraeus.xarrayIO as xrio
+import astropy.units
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -387,6 +388,23 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                          nchan=lc_model.nchannel_fitted,
                                          paramtitles=paramtitles)
         modellist.append(t_eclipse)
+    if 'spiderman' in meta.run_myfuncs:
+        wave_low = lc.wave_low.data
+        wave_hi = lc.wave_hi.data
+        unit = lc.wave_low.wave_units
+        if unit == 'microns':
+            unit = 'micron'
+        wave_low *= getattr(astropy.units, unit).to('m')
+        wave_hi *= getattr(astropy.units, unit).to('m')
+        t_spiderman = m.SpidermanModel(parameters=params, name='eclipse',
+                                       fmt='r--', log=log, time=time,
+                                       time_units=time_units,
+                                       freenames=freenames,
+                                       longparamlist=lc_model.longparamlist,
+                                       nchan=lc_model.nchannel_fitted,
+                                       paramtitles=paramtitles, l1=wave_low,
+                                       l2=wave_hi)
+        modellist.append(t_spiderman)
     if 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
         t_model = None
