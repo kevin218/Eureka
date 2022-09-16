@@ -528,10 +528,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 spec, meta, log = inst.conclusion_step(spec, meta, log)
 
             # Save Dataset object containing time-series of 1D spectra
-            meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                         "_SpecData.h5")
-            success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                   verbose=True)
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
 
             # Compute MAD value
             if not meta.photometry:
