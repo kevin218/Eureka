@@ -389,6 +389,10 @@ save_output
 '''''''''''
 If set to ``True`` output will be saved as files for use in S4. Setting this to ``False`` is useful for quick testing
 
+save_fluxdata
+'''''''''''''
+If set to ``True`` (the default if save_fluxdata is not in your ECF), then save FluxData outputs for debugging or use with other tools. Note that these can be quite large files and may fill your drive if you are trying many spec_hw,bg_hw pairs.
+
 hide_plots
 ''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.

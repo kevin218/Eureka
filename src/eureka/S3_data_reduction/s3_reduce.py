@@ -472,16 +472,28 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data['nskyideal'][i], data['status'][i],
                             data['betaper'][i]) = aphot
 
-                # Delete unsaveable FITS data
-                del (data.attrs['filename'], data.attrs['mhdr'],
-                     data.attrs['shdr'])
+                if not hasattr(meta, 'save_fluxdata'):
+                    meta.save_fluxdata = True
 
-                if meta.save_output:
+                if meta.save_fluxdata:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
                                    "_FluxData_seg"+str(m).zfill(4)+".h5")
-                    xrio.writeXR(filename_xr, data, verbose=meta.verbose,
-                                 append=False)
+                    success = xrio.writeXR(filename_xr, data, verbose=False,
+                                           append=False)
+                    if success == 0:
+                        del (data.attrs['filename'])
+                        del (data.attrs['mhdr'])
+                        del (data.attrs['shdr'])
+                        success = xrio.writeXR(filename_xr, data,
+                                               verbose=meta.verbose,
+                                               append=False)
+                    else:
+                        print(f"Finished writing to {filename_xr}")
+                else:
+                    del (data.attrs['filename'])
+                    del (data.attrs['mhdr'])
+                    del (data.attrs['shdr'])
 
                 # Remove large 3D arrays from Dataset
                 del (data['err'], data['dq'], data['v0'],
@@ -528,7 +540,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             if meta.save_output:
                 meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                              "_SpecData.h5")
-                xrio.writeXR(meta.filename_S3_SpecData, spec, verbose=True)
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
 
             # Compute MAD value
             if not meta.photometry:
