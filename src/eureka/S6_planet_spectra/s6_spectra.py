@@ -944,6 +944,8 @@ def roundToSigFigs(x, sigFigs=2):
     - 2022-08-22, Taylor J Bell
         Imported code written for SPCA, and optimized for Python3.
     """
+    if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
+        return np.nan, ""
     nDec = -int(np.floor(np.log10(np.abs(x))))+sigFigs-1
     rounded = np.round(x, nDec)
     if nDec <= 0:
@@ -976,6 +978,8 @@ def roundToDec(x, nDec=2):
     - 2022-08-22, Taylor J Bell
         Imported code written for SPCA, and optimized for Python3.
     """
+    if not np.isfinite(nDec):
+        return str(x)
     rounded = np.round(x, nDec)
     if nDec <= 0:
         # format this as an integer
@@ -1077,7 +1081,7 @@ def transit_latex_table(meta, log):
             else:
                 nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
                 nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
-                nDec = np.max([nDec1, nDec2])
+                nDec = np.nanmax([nDec1, nDec2])
             val = roundToDec(val, nDec)
             upper = roundToDec(upper, nDec)
             lower = roundToDec(lower, nDec)
