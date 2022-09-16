@@ -472,19 +472,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data['nskyideal'][i], data['status'][i],
                             data['betaper'][i]) = aphot
 
+                # Delete unsaveable FITS data
+                del (data.attrs['filename'], data.attrs['mhdr'],
+                     data.attrs['shdr'])
+
                 if meta.save_output:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
                                    "_FluxData_seg"+str(m).zfill(4)+".h5")
-                    success = xrio.writeXR(filename_xr, data, verbose=False,
-                                           append=False)
-                    if success == 0:
-                        del (data.attrs['filename'])
-                        del (data.attrs['mhdr'])
-                        del (data.attrs['shdr'])
-                        success = xrio.writeXR(filename_xr, data,
-                                               verbose=meta.verbose,
-                                               append=False)
+                    xrio.writeXR(filename_xr, data, verbose=meta.verbose,
+                                 append=False)
 
                 # Remove large 3D arrays from Dataset
                 del (data['err'], data['dq'], data['v0'],
@@ -531,8 +528,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
             if meta.save_output:
                 meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                              "_SpecData.h5")
-                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                       verbose=True)
+                xrio.writeXR(meta.filename_S3_SpecData, spec, verbose=True)
 
             # Compute MAD value
             if not meta.photometry:
