@@ -6,7 +6,7 @@ import corner
 from scipy import stats
 
 from .likelihood import computeRMS
-from ..lib import plots
+from ..lib import plots, util
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -99,6 +99,145 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
+    """Plot the fitted model over the data. (Figs 5104 and Figs 5304)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    isTitle : bool; optional
+        Should figure have a title. Defaults to True.
+
+    Notes
+    -----
+    History:
+
+    - September 12, 2022 Taylor Bell
+        Initial version.
+    """
+    if type(fitter) != str:
+        raise ValueError(f'Expected type str for fitter, instead received a '
+                         f'{type(fitter)}')
+
+    model_sys_full = model.syseval()
+    model_phys_full, new_time = model.physeval(interp=meta.interp)
+
+    for i, channel in enumerate(lc.fitted_channels):
+        flux = np.ma.copy(lc.flux)
+        unc = np.ma.copy(lc.unc_fit)
+        model_sys = model_sys_full
+        model_phys = model_phys_full
+        flux /= model_sys
+        color = lc.colors[i]
+
+        if lc.share:
+            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
+            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model_phys = model_phys[channel*len(new_time):
+                                    (channel+1)*len(new_time)]
+
+        # Normalize to zero flux at eclipse
+        flux -= 1
+        model_phys -= 1
+
+        # Convert to ppm
+        model_phys *= 1e6
+        flux *= 1e6
+        unc *= 1e6
+
+        # Get binned data and times
+        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
+            nbin_plot = 100
+        elif meta.nbin_plot < len(lc.time):
+            nbin_plot = len(lc.time)
+        else:
+            nbin_plot = meta.nbin_plot
+        binned_time = util.binData(lc.time, nbin_plot)
+        binned_flux = util.binData(flux, nbin_plot)
+        binned_unc = util.binData(unc, nbin_plot, err=True)
+
+        # Setup the figure
+        fig = plt.figure(5104, figsize=(8, 6))
+        plt.clf()
+        ax = fig.gca()
+        if isTitle:
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
+                         f'{fitter}')
+        ax.set_ylabel('Normalized Flux - 1 (ppm)', size=14)
+        ax.set_xlabel(str(lc.time_units), size=14)
+        fig.patch.set_facecolor('white')
+
+        # Plot the binned observations
+        ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
+                    color='w', ecolor=color, mec=color)
+        # Plot the model
+        ax.plot(lc.time, model_phys, '.', ls='', ms=2, color='0.3', zorder=10)
+
+        # Set nice axis limits
+        sigma = np.ma.mean(binned_unc)
+        max_astro = np.ma.max((model_phys-1))
+        ax.set_ylim(-4*sigma, max_astro+6*sigma)
+        ax.set_xlim(np.min(lc.time), np.max(lc.time))
+
+        # Save/show the figure
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5104_{fname_tag}_phaseVariations_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+        
+        if meta.isplots_S5 >= 3:
+            # Setup the figure
+            fig = plt.figure(5104, figsize=(8, 6))
+            plt.clf()
+            ax = fig.gca()
+            if isTitle:
+                ax.set_title(f'{meta.eventlabel} - Channel {channel} - '
+                             f'{fitter}')
+            ax.set_ylabel('Normalized Flux - 1 (ppm)', size=14)
+            ax.set_xlabel(str(lc.time_units), size=14)
+            fig.patch.set_facecolor('white')
+
+            # Plot the unbinned data without errorbars
+            ax.plot(lc.time, flux, '.', c='k', zorder=0, alpha=0.01)
+            # Plot the binned data with errorbars
+            ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
+                        color=color, zorder=1)
+            # Plot the physical model
+            ax.plot(lc.time, model_phys, '.', ls='', ms=2, color='0.3',
+                    zorder=10)
+
+            # Set nice axis limits
+            sigma = np.ma.std(flux-model_phys)
+            max_astro = np.ma.max(model_phys)
+            ax.set_ylim(-3*sigma, max_astro+3*sigma)
+            ax.set_xlim(np.min(lc.time), np.max(lc.time))
+            
+            # Save/show the figure
+            if lc.white:
+                fname_tag = 'white'
+            else:
+                ch_number = str(channel).zfill(len(str(lc.nchannel)))
+                fname_tag = f'ch{ch_number}'
+            fname = (f'figs{os.sep}fig5304_{fname_tag}_phaseVariations'
+                     f'_{fitter}' + plots.figure_filetype)
+            fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+            if not meta.hide_plots:
+                plt.pause(0.2)
 
 
 def plot_rms(lc, model, meta, fitter):

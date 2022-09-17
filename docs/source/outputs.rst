@@ -140,7 +140,7 @@ Stage 5 Outputs
 ---------------
 
 In Stage 5:
-   - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel. If fitting with a GP, an additional figure will be made showing the GP component. Finally, an additional plot compares the fits from different fitters.
+   - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel. If fitting with a GP, an additional figure will be made showing the GP component. If fitting a sinusoid_pc model, another zoomed-in figure with binned data will be made to emphasize the phase variations. Finally, an additional plot compares the fits from different fitters.
 
    .. figure:: ../media/S5_out/fig5101_ch0_lc_emcee.png
       :alt: Stage 5 fit data and lightcurve
@@ -155,9 +155,11 @@ In Stage 5:
    .. figure:: ../media/S5_out/fig5103_ch0_all_fits.png
       :alt: Stage 5 All fits comparison
 
-      Fig 5102: Comparison of Different Fitters
+      Fig 5103: Comparison of Different Fitters
+   
+   Fig 5104: *(Demo figure to come)* Zoomed-in Figure Emphasizing Phase Variations Using Temporally Binned Data.
 
-   - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
+   - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel. If fitting a sinusoid_pc model, another zoomed-in figure with binned data in front of the unbinned data will be made to emphasize the phase variations.
 
    .. figure:: ../media/S5_out/fig5301_ch0_allanplot_emcee.png
       :alt: Stage 5 RMS deviation plot
@@ -176,6 +178,8 @@ In Stage 5:
       :alt: Stage 5 fitting chains
 
       Figs 5303: Fitting Chains. Only made for ``emcee`` runs. Two version of the plot will be saved, one including the burn in steps and one without the burn in steps.
+
+   Fig 5304: *(Demo figure to come)* Zoomed-in Figure Emphasizing Phase Variations Using Temporally Binned Data Over Unbinned Data.
 
    - If ``isplots_S5`` = 5, and if ``emcee`` or ``dynesty`` were used as the fitter: ``Eureka!`` will plot a corner plot for each channel.
 

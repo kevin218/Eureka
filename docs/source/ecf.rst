@@ -389,6 +389,10 @@ save_output
 '''''''''''
 If set to ``True`` output will be saved as files for use in S4. Setting this to ``False`` is useful for quick testing
 
+save_fluxdata
+'''''''''''''
+If set to ``True`` (the default if save_fluxdata is not in your ECF), then save FluxData outputs for debugging or use with other tools. Note that these can be quite large files and may fill your drive if you are trying many spec_hw,bg_hw pairs.
+
 hide_plots
 ''''''''''
 If True, plots will automatically be closed rather than popping up on the screen.
@@ -699,7 +703,7 @@ The following set the parameters for running dynesty. These options are describe
 
 run_nlive
 '''''''''
-Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
 
 run_bound
 '''''''''
@@ -721,6 +725,10 @@ Boolean to determine whether the astrophysical model is interpolated when plotte
 isplots_S5
 ''''''''''
 Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
+
+nbin_plot
+'''''''''
+The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
 hide_plots
 ''''''''''
@@ -815,7 +823,13 @@ The parameter to use when plotting and saving the output table. To plot the tran
 the value can be 'rp' or 'rp^2'. To plot the dayside emission spectrum, the value must be fp. To plot
 the spectral dependence of any other parameters, simply enter their name as formatted in your EPF.
 For convenience, it is also possible to plot '1/r1' and '1/r4' to visualize the exonential ramp
-timescales. y_params can also be formatted as a list to make many different plots. A "cleaned" version
+timescales. It is also possible to plot
+'fn' (the nightside flux from a sinusoidal phase curve),
+'pc_offset' (the sinusoidal offset of the phase curve),
+'pc_amp' (the sinusoidal amplitude of the phase curve),
+'pc_offset2' (the second order sinusoidal offset of the phase curve), and
+'pc_amp2' (the second order sinusoidal amplitude of the phase curve).
+y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
 

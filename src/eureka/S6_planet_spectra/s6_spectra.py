@@ -7,6 +7,9 @@ from copy import copy
 from glob import glob
 import re
 from matplotlib.pyplot import rcParams
+import h5py
+from astraeus import xarrayIO as xrio
+
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -157,14 +160,28 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
 
                 log.writelog(f'Plotting {meta.y_param}...')
 
+                meta.spectrum_median = []
+                meta.spectrum_err = []
+
                 # Read in S5 fitted values
-                if meta.sharedp:
-                    meta.spectrum_median, meta.spectrum_err = \
-                        parse_s5_saves(meta, log, fit_methods, 'shared')
+                if meta.y_param == 'fn':
+                    # Compute nightside flux
+                    meta = compute_fn(meta, log, fit_methods)
+                elif 'pc_offset' in meta.y_param:
+                    # Compute phase curve offset
+                    meta = compute_offset(meta, log, fit_methods)
+                elif 'pc_amp' in meta.y_param:
+                    # Compute phase curve amplitude
+                    meta = compute_amp(meta, log, fit_methods)
                 else:
-                    meta = parse_unshared_saves(meta, log, fit_methods)
-                
-                if all(x is None for x in meta.spectrum_median):
+                    # Just load the parameter
+                    if meta.sharedp:
+                        meta = parse_s5_saves(meta, log, fit_methods, 'shared')
+                    else:
+                        meta = parse_unshared_saves(meta, log, fit_methods)
+
+                if (len(meta.spectrum_median) == 0
+                        or all(x is None for x in meta.spectrum_median)):
                     # The parameter could not be found - skip it
                     continue
 
@@ -184,7 +201,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                         meta.y_label = r'$R_{\rm p}/R_{\rm *}$'
                     elif meta.y_param == 'fp':
                         # Eclipse depth
-                        meta.y_label = r'$F_{\rm p}/F_{\rm *}$'
+                        meta.y_label = r'$F_{\rm p,day}/F_{\rm *}$'
+                    elif meta.y_param == 'fn':
+                        # Nightside emission
+                        meta.y_label = r'$F_{\rm p,night}/F_{\rm *}$'
                     elif meta.y_param in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         meta.y_label = r'$u_{\rm '+meta.y_param[-1]+'}$'
@@ -204,16 +224,32 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                         meta.y_label = r'$t_{\rm 0}$'
                     elif meta.y_param == 'AmpSin1':
                         # Sine amplitude
-                        meta.y_label = (r'Amplitude of $\sin(\phi)$')
+                        meta.y_label = r'Amplitude of $\sin(\phi)$'
                     elif meta.y_param == 'AmpSin2':
                         # Sine2 amplitude
-                        meta.y_label = (r'Amplitude of $\sin(2\phi)$')
+                        meta.y_label = r'Amplitude of $\sin(2\phi)$'
                     elif meta.y_param == 'AmpCos1':
                         # Cosine amplitude
-                        meta.y_label = (r'Amplitude of $\cos(\phi)$')
+                        meta.y_label = r'Amplitude of $\cos(\phi)$'
                     elif meta.y_param == 'AmpCos2':
                         # Cosine2 amplitude
-                        meta.y_label = (r'Amplitude of $\cos(2\phi)$')
+                        meta.y_label = r'Amplitude of $\cos(2\phi)$'
+                    elif meta.y_param == 'pc_offset':
+                        # Phase Curve Offset, first order
+                        meta.y_label = 'Phase Curve Offset'
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = r'($^{\circ}$E)'
+                    elif meta.y_param == 'pc_amp':
+                        # Phase Curve Amplitude, first order
+                        meta.y_label = 'Phase Curve Amplitude'
+                    elif meta.y_param == 'pc_offset2':
+                        # Phase Curve Offset, second order
+                        meta.y_label = ('Second Order Phase Curve Offset')
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = r'($^{\circ}$E)'
+                    elif meta.y_param == 'pc_amp2':
+                        # Phase Curve Amplitude, second order
+                        meta.y_label = ('Second Order Phase Curve Amplitude')
                     elif meta.y_param in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient
                         meta.y_label = r'$c_{\rm '+meta.y_param[1:]+'}$'
@@ -322,60 +358,71 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     else:
         y_param = meta.y_param
 
-    for fitter in fit_methods:
-        if fitter in ['dynesty', 'emcee']:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
-                                        skipinitialspace=True)
-            full_keys = list(fitted_values["Parameter"])
+    if 'dynesty' in fit_methods:
+        fitter = 'dynesty'
+    elif 'emcee' in fit_methods:
+        fitter = 'emcee'
+    elif 'lsq' in fit_methods:
+        fitter = 'lsq'
+    else:
+        raise ValueError('No recognized fitters in fit_methods = '
+                         f'{fit_methods}')
 
-            fname = f'S5_{fitter}_samples_{channel_key}'
+    lowers = []
+    uppers = []
+    medians = []
+    errs = []
 
-            keys = [key for key in full_keys if y_param in key]
-            if len(keys) == 0:
-                log.writelog(f'  Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n  ['
-                             + ', '.join(full_keys)+']')
-                log.writelog(f'  Skipping {y_param}')
-                return None, None
+    if fitter in ['dynesty', 'emcee']:
+        fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+        fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                    skipinitialspace=True)
+        full_keys = list(fitted_values["Parameter"])
 
-            lowers = []
-            uppers = []
-            medians = []
+        fname = f'S5_{fitter}_samples_{channel_key}'
 
-            for i, key in enumerate(keys):
-                ind = np.where(fitted_values["Parameter"] == key)[0][0]
-                lowers.append(np.abs(fitted_values["-1sigma"][ind]))
-                uppers.append(np.abs(fitted_values["+1sigma"][ind]))
-                medians.append(np.abs(fitted_values["50th"][ind]))
+        keys = [key for key in full_keys if y_param in key]
+        if len(keys) == 0:
+            log.writelog(f'  Parameter {y_param} was not in the list of '
+                         'fitted parameters which includes:\n  ['
+                         + ', '.join(full_keys)+']')
+            log.writelog(f'  Skipping {y_param}')
+            return None, None
 
-            errs = np.array([lowers, uppers])
-            medians = np.array(medians)
+        for i, key in enumerate(keys):
+            ind = np.where(fitted_values["Parameter"] == key)[0][0]
+            lowers.append(np.abs(fitted_values["-1sigma"][ind]))
+            uppers.append(fitted_values["+1sigma"][ind])
+            medians.append(fitted_values["50th"][ind])
 
-        else:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
-                                        skipinitialspace=True)
-            full_keys = list(fitted_values["Parameter"])
-            keys = [key for key in full_keys if y_param in key]
-            if len(keys) == 0:
-                log.writelog(f'Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n['
-                             + ', '.join(full_keys)+']')
-                log.writelog(f'Skipping {y_param}')
-                return None, None
+        errs = np.array([lowers, uppers])
+        medians = np.array(medians)
+    else:
+        fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+        fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                    skipinitialspace=True)
+        full_keys = list(fitted_values["Parameter"])
+        keys = [key for key in full_keys if y_param in key]
+        if len(keys) == 0:
+            log.writelog(f'Parameter {y_param} was not in the list of '
+                         'fitted parameters which includes:\n['
+                         + ', '.join(full_keys)+']')
+            log.writelog(f'Skipping {y_param}')
+            return None, None
 
-            medians = []
-            for i, key in enumerate(keys):
-                ind = np.where(fitted_values["Parameter"] == key)[0][0]
-                if "50th" in fitted_values.keys():
-                    medians.append(fitted_values["50th"][ind])
-                else:
-                    medians.append(fitted_values["Mean"][ind])
-            medians = np.array(medians)
+        medians = []
+        for i, key in enumerate(keys):
+            ind = np.where(fitted_values["Parameter"] == key)[0][0]
+            if "50th" in fitted_values.keys():
+                medians.append(fitted_values["50th"][ind])
+            else:
+                medians.append(fitted_values["Mean"][ind])
+        medians = np.array(medians)
 
-            # if lsq, no uncertainties
-            errs = np.ones((2, len(medians)))*np.nan
+        # if lsq, no uncertainties
+        errs = np.ones((2, len(medians)))*np.nan
+
+    meta.spectrum_median, meta.spectrum_err = medians, errs
 
     return medians, errs
 
@@ -397,22 +444,23 @@ def parse_unshared_saves(meta, log, fit_methods):
     meta : eureka.lib.readECF.MetaClass
         The updated meta data object.
     """
-    meta.spectrum_median = []
-    meta.spectrum_err = []
+    spectrum_median = []
+    spectrum_err = []
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
         median, err = parse_s5_saves(meta, log, fit_methods, channel_key)
         if median is None:
             # Parameter was found, so don't keep looking for it
-            meta.spectrum_median = [None for _ in range(meta.nspecchan)]
-            meta.spectrum_err = [None for _ in range(meta.nspecchan)]
+            meta.spectrum_median = np.array([None for _ in
+                                             range(meta.nspecchan)])
+            meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
             return meta
-        meta.spectrum_median.extend(median)
-        meta.spectrum_err.extend(err.T)
+        spectrum_median.extend(median)
+        spectrum_err.extend(err.T)
     
-    meta.spectrum_median = np.array(meta.spectrum_median)
-    meta.spectrum_err = np.array(meta.spectrum_err).T
+    meta.spectrum_median = np.array(spectrum_median)
+    meta.spectrum_err = np.array(spectrum_err).T
 
     return meta
 
@@ -459,12 +507,243 @@ def compute_timescale(meta):
     if not np.all(np.isnan(meta.spectrum_err)):
         lower = meta.spectrum_err[0, :]
         upper = meta.spectrum_err[1, :]
-        lower = np.abs(1/(median-lower) - 1/median)
-        upper = np.abs(1/(median+upper) - 1/median)
+        lower = 1/(median-lower) - 1/median
+        upper = 1/median - 1/(median+upper)
         meta.spectrum_err = np.append(lower.reshape(1, -1),
                                       upper.reshape(1, -1), axis=0)
     meta.spectrum_median = 1/median
 
+    return meta
+
+
+def load_s5_saves(meta, log, fit_methods):
+    if 'dynesty' in fit_methods:
+        fitter = 'dynesty'
+    elif 'emcee' in fit_methods:
+        fitter = 'emcee'
+    elif 'lsq' in fit_methods:
+        fitter = 'lsq'
+    else:
+        raise ValueError('No recognized fitters in fit_methods = '
+                         f'{fit_methods}')
+    meta.fitter = fitter
+
+    if fitter in ['dynesty', 'emcee']:
+        if meta.sharedp:
+            niter = 1
+        else:
+            niter = meta.nspecchan
+        samples = []
+        for ch in range(niter):
+            # Get the channel key
+            if meta.sharedp:
+                channel_key = 'shared'
+            else:
+                nzfill = int(np.floor(np.log10(meta.nspecchan))+1)
+                channel_key = 'ch'+str(ch).zfill(nzfill)
+
+            fname = f'S5_{fitter}_samples_{channel_key}'
+        
+            # Load HDF5 files
+            full_fname = meta.inputdir+fname+'.h5'
+            ds = xrio.readXR(full_fname, verbose=False)
+            if ds is None:
+                # Working with an old save file
+                with h5py.File(full_fname, 'r') as hf:
+                    sample = hf['samples'][:]
+                # Need to figure out which columns are which
+                fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+                fitted_values = pd.read_csv(meta.inputdir+fname, 
+                                            escapechar='#',
+                                            skipinitialspace=True)
+                full_keys = np.array(fitted_values["Parameter"])
+                ind = np.where(full_keys == meta.y_param)[0]
+                sample = sample[:, ind].flatten()
+            else:
+                if meta.y_param in list(ds._variables):
+                    sample = ds[meta.y_param].values
+                else:
+                    sample = np.zeros(0)
+            samples.append(sample)
+    else:
+        # No samples for lsq, so just shape it as a single value
+        if meta.sharedp:
+            meta = parse_s5_saves(meta, log, fit_methods, 'shared')
+        else:
+            meta = parse_unshared_saves(meta, log, fit_methods)
+        samples = np.array(meta.spectrum_median)
+        if all(x is None for x in samples):
+            samples = np.zeros((meta.nspecchan, 0))
+    
+    return np.array(samples)
+
+
+def compute_offset(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    second = (meta.y_param[-1] == '2')
+    if second:
+        suffix = '2'
+    else:
+        suffix = '1'
+    
+    # Load sine amplitude
+    meta.y_param = 'AmpSin'+suffix
+    ampsin = load_s5_saves(meta, log, fit_methods)
+    if ampsin.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos'+suffix
+    ampcos = load_s5_saves(meta, log, fit_methods)
+    if ampcos.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    for i in range(meta.nspecchan):
+        offsets = -np.arctan2(ampsin[i], ampcos[i])*180/np.pi
+        if second:
+            offsets /= 2
+        offset = np.percentile(np.array(offsets), [16, 50, 84])[[1, 2, 0]]
+        offset[1] -= offset[0]
+        offset[2] = offset[0]-offset[2]
+        meta.spectrum_median.append(offset[0])
+        meta.spectrum_err.append(offset[1:])
+    
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+    
+    return meta
+
+
+def compute_amp(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Figure out the desired order
+    second = (meta.y_param[-1] == '2')
+    if second:
+        suffix = '2'
+    else:
+        suffix = '1'
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    fp = load_s5_saves(meta, log, fit_methods)
+    if fp.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Load sine amplitude
+    meta.y_param = 'AmpSin'+suffix
+    ampsin = load_s5_saves(meta, log, fit_methods)
+    if ampsin.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos'+suffix
+    ampcos = load_s5_saves(meta, log, fit_methods)
+    if ampcos.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    
+    for i in range(meta.nspecchan):
+        amps = fp[i]*np.sqrt(ampcos[i]**2+ampsin[i]**2)*2
+        amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
+        amp[1] -= amp[0]
+        amp[2] = amp[0]-amp[2]
+        meta.spectrum_median.append(amp[0])
+        meta.spectrum_err.append(amp[1:])
+    
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+    
+    return meta
+
+
+def compute_fn(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    fp = load_s5_saves(meta, log, fit_methods)
+    if fp.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos1'
+    ampcos = load_s5_saves(meta, log, fit_methods)
+    if ampcos.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    for i in range(meta.nspecchan):
+        fluxes = fp[i]*(1-2*ampcos[i])
+        flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+    
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+    
     return meta
 
 
@@ -665,6 +944,8 @@ def roundToSigFigs(x, sigFigs=2):
     - 2022-08-22, Taylor J Bell
         Imported code written for SPCA, and optimized for Python3.
     """
+    if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
+        return np.nan, ""
     nDec = -int(np.floor(np.log10(np.abs(x))))+sigFigs-1
     rounded = np.round(x, nDec)
     if nDec <= 0:
@@ -697,6 +978,8 @@ def roundToDec(x, nDec=2):
     - 2022-08-22, Taylor J Bell
         Imported code written for SPCA, and optimized for Python3.
     """
+    if not np.isfinite(nDec):
+        return str(x)
     rounded = np.round(x, nDec)
     if nDec <= 0:
         # format this as an integer
@@ -791,11 +1074,14 @@ def transit_latex_table(meta, log):
 
             # Round values to the correct number of significant figures
             val = line[meta.y_param+'_value']*meta.y_scalar
-            upper = line[meta.y_param+'_errorpos']*meta.y_scalar
-            lower = line[meta.y_param+'_errorneg']*meta.y_scalar
-            nDec1, _ = roundToSigFigs(upper)
-            nDec2, _ = roundToSigFigs(lower)
-            nDec = np.max([nDec1, nDec2])
+            upper = line[meta.y_param+'_errorpos']
+            lower = line[meta.y_param+'_errorneg']
+            if np.isnan(upper) or np.isnan(lower):
+                nDec = 10
+            else:
+                nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
+                nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
+                nDec = np.nanmax([nDec1, nDec2])
             val = roundToDec(val, nDec)
             upper = roundToDec(upper, nDec)
             lower = roundToDec(lower, nDec)

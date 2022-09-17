@@ -472,7 +472,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data['nskyideal'][i], data['status'][i],
                             data['betaper'][i]) = aphot
 
-                if meta.save_output:
+                if not hasattr(meta, 'save_fluxdata'):
+                    meta.save_fluxdata = True
+
+                if meta.save_fluxdata:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
                                    "_FluxData_seg"+str(m).zfill(4)+".h5")
@@ -485,6 +488,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         success = xrio.writeXR(filename_xr, data,
                                                verbose=meta.verbose,
                                                append=False)
+                    else:
+                        print(f"Finished writing to {filename_xr}")
+                else:
+                    del (data.attrs['filename'])
+                    del (data.attrs['mhdr'])
+                    del (data.attrs['shdr'])
 
                 # Remove large 3D arrays from Dataset
                 del (data['err'], data['dq'], data['v0'],
@@ -500,6 +509,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
+
+            # Update n_int after merging batches
+            meta.n_int = len(spec.time)
 
             # Plot light curve and centroids over time
             if meta.photometry:
@@ -525,10 +537,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 spec, meta, log = inst.conclusion_step(spec, meta, log)
 
             # Save Dataset object containing time-series of 1D spectra
-            meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                         "_SpecData.h5")
-            success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                   verbose=True)
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
 
             # Compute MAD value
             if not meta.photometry:

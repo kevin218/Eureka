@@ -364,6 +364,36 @@ def find_fits(meta):
     return meta
 
 
+def binData(data, nbin=100, err=False):
+    """Temporally bin data for easier visualization.
+
+    Parameters
+    ----------
+    data : ndarray (1D)
+        The data to temporally bin.
+    nbin : int, optional
+        The number of bins there should be. By default 100.
+    err : bool, optional
+        If True, divide the binned data by sqrt(N) to get the error on the
+        mean. By default False.
+
+    Returns
+    -------
+    binned : ndarray
+        The binned data.
+    """
+    # Make a copy for good measure
+    data = np.ma.copy(data)
+    data = np.ma.masked_invalid(data)
+    # Make sure there's a whole number of bins
+    data = data[:nbin*int(len(data)/nbin)]
+    # Bin data
+    binned = np.ma.mean(data.reshape(nbin, -1), axis=1)
+    if err:
+        binned /= np.sqrt(int(len(data)/nbin))
+    return binned
+
+
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     """Normalize a spectrum by its temporal mean.
 
