@@ -419,7 +419,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data = \
                                 inst.do_oneoverf_corr(data, meta, i,
                                                       position[1], log)
-                            if meta.isplots_S3 >= 3:
+                            if meta.isplots_S3 >= 3 and i < meta.nplots:
                                 plots_s3.phot_2d_frame_oneoverf(
                                     data, meta, m, i, flux_w_oneoverf)
 
@@ -442,7 +442,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
                         # Plot 2D frame, the centroid and the centroid position
-                        if meta.isplots_S3 >= 3:
+                        if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
 
                         # Interpolate masked pixels before we perform
