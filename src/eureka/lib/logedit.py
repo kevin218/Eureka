@@ -81,7 +81,8 @@ class Logedit:
                 pass
 
         # Initiate log
-        self.log = open(logname, 'w')
+        self.logname = logname
+        self.log = open(self.logname, 'w')
 
         # Append content if there is something
         if content != []:
@@ -104,7 +105,15 @@ class Logedit:
         if not mute:
             print(message, end=end, flush=True)
         # print to file:
-        print(message, file=self.log, flush=True)
+        try:
+            print(message, file=self.log, flush=True)
+        except:
+            # The file got closed, try reopening it and logging again
+            try:
+                self.log = open(self.logname, 'a')
+                print(message, file=self.log, flush=True)
+            except:
+                print('ERROR: Unable to write to log file')
 
     def closelog(self):
         """Closes an existing log file."""
