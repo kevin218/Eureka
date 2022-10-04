@@ -7,7 +7,6 @@ from astropy.io import fits
 import scipy.interpolate as spi
 import scipy.ndimage as spni
 import astraeus.xarrayIO as xrio
-import xarray as xr
 from . import sigrej, source_pos, background
 from . import hst_scan as hst
 from . import bright2flux as b2f
@@ -53,6 +52,9 @@ def preparation_step(meta, log):
 
     meta, log = get_reference_frames(meta, log)
 
+    # Set to False so that Eureka! knows not to do photometry
+    meta.photometry = False
+
     return meta, log
 
 
@@ -75,11 +77,14 @@ def get_reference_frames(meta, log):
     meta.verbose = False
     ncpu = meta.ncpu
     meta.ncpu = 1
+    isplots_S3 = meta.isplots_S3
+    meta.isplots_S3 = 0
 
     # Set some default values
     meta.firstFile = False
     meta.firstInBatch = False
     meta.int_start = 0
+    meta.int_end = 0
     meta.files_per_batch = 1
 
     # Use the first two files by default
@@ -113,10 +118,10 @@ def get_reference_frames(meta, log):
             util.manmask(data, meta, log)
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
+        data, meta, log = source_pos.source_pos_wrapper(data, meta, log, i)
         data, meta = b2f.convert_to_e(data, meta, log)
-        meta.src_ypos = source_pos.source_pos(data, meta, i)
         data = flag_bg(data, meta, log)
-        data = background.BGsubtraction(data, meta, log, meta.isplots_S3)
+        data = background.BGsubtraction(data, meta, log, i)
         cut_aperture(data, meta, log)
         
         # Save the reference values
@@ -126,6 +131,7 @@ def get_reference_frames(meta, log):
     # Restore input values
     meta.verbose = verbose
     meta.ncpu = ncpu
+    meta.isplots_S3 = isplots_S3
 
     return meta, log
 
@@ -830,13 +836,11 @@ def correct_drift2D(data, meta, log, m):
         pool.join()
         res.wait()
 
-    data['drift2D'] = xr.DataArray(drift2D, name='drift2D',
-                                   coords={"time": data.time,
-                                           "axis": ["x", "y"]},
-                                   dims=["time", "axis"],
-                                   attrs={"time_units": data.time.time_units,
-                                          "drift_units": 'pixels'})
-    data.drift2D["time"].attrs["time_units"] = data.time.time_units
+    # Save the fitted drifts in the data object
+    data['centroid_x'] = (['time'], drift2D[:, 0])
+    data.centroid_x.attrs['units'] = 'pixels'
+    data['centroid_y'] = (['time'], drift2D[:, 1])
+    data.centroid_y.attrs['units'] = 'pixels'
 
     log.writelog("  Performing rough, pixel-scale drift correction...",
                  mute=(not meta.verbose))

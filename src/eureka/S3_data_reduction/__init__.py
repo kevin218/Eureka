@@ -12,4 +12,5 @@ from . import plots_s3
 from . import s3_reduce
 from . import sigrej
 from . import source_pos
+from . import straighten
 from . import wfc3

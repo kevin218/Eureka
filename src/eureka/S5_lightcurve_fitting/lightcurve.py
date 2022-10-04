@@ -6,12 +6,12 @@ from . import models as m
 from . import fitters
 from . import gradient_fitters
 from .utils import COLORS, color_gen
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
-                 unc=None, parameters=None, time_units='BJD',
+                 parameters, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False):
         """
         A class to store the actual light curve
@@ -30,8 +30,8 @@ class LightCurve(m.Model):
             The open log in which notes from this step can be added.
         unc : sequence
             The uncertainty on the flux
-        parameters : str or object; optional
-            Unused. The orbital parameters of the star/planet system,
+        parameters : str or object
+            The orbital parameters of the star/planet system,
             may be a path to a JSON file or a parameter object.
         time_units : str; optional
             The time units.
@@ -89,6 +89,11 @@ class LightCurve(m.Model):
         else:
             self.unc = np.array([np.nan]*len(self.time))
         self.unc_fit = np.ma.copy(self.unc)
+
+        if hasattr(parameters, 'scatter_mult'):
+            self.unc_fit *= parameters.scatter_mult.value
+        elif hasattr(parameters, 'scatter_ppm'):
+            self.unc_fit[:] = parameters.scatter_ppm.value/1e6
 
         # Place to save the fit results
         self.results = []
@@ -168,10 +173,7 @@ class LightCurve(m.Model):
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
-            if "unc_fit" in self.__dict__.keys():
-                unc = np.ma.copy(self.unc_fit)
-            else:
-                unc = np.ma.copy(self.unc)
+            unc = np.ma.copy(self.unc_fit)
             if self.share:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
@@ -204,7 +206,8 @@ class LightCurve(m.Model):
             else:
                 ch_number = str(channel).zfill(len(str(self.nchannel)))
                 fname_tag = f'ch{ch_number}'
-            fname = f'figs{os.sep}fig5103_{fname_tag}_all_fits'+figure_filetype
+            fname = (f'figs{os.sep}fig5103_{fname_tag}_all_fits' +
+                     plots.figure_filetype)
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)

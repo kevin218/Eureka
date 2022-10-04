@@ -22,6 +22,13 @@ If you are following the installation instructions and still encounter an error,
 `GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ and paste the full error message you are getting along
 with details about which python version and operating system you are using.
 
+Installation issues with M1 processors
+''''''''''''''''''''''''''''''''''''''
+
+Note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
+installation instructions as we have had reports that the pip dependencies fail to build on the M1 processor.
+
+
 Issues installing or importing batman
 '''''''''''''''''''''''''''''''''''''
 
@@ -56,6 +63,12 @@ Finally, if you simply cannot get jwst to install and still want to use later st
 install Eureka! using ``pip install .`` instead of ``pip install .[jwst]`` which will not install the jwst package. Note,
 however, that this means that Stages 1 and 2 will not work at all as Eureka's Stages 1 and 2 simply offer ways of editing
 the behaviour of the jwst package's Stages 1 and 2.
+
+CRDS server connection error
+''''''''''''''''''''''''''''
+
+If you correctly set the CRDS environment variables during Eureka! installation, but still get an error that the CRDS server connection and cache load failed, try reloading your shell configuration file with ``source ~/.zshrc`` or ``source ~/.bashrc``.
+
 
 Matplotlib RuntimeError() whenever Eureka is imported and plt.show() is called
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

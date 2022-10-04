@@ -20,6 +20,7 @@ import numpy as np
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
+from tqdm import tqdm
 from . import plots_s4, drift, generate_LD, wfc3
 from ..lib import logedit
 from ..lib import readECF
@@ -44,9 +45,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
 
     Returns
     -------
-    spec : Astreaus object 
+    spec : Astreaus object
         Data object of wavelength-like arrrays.
-    lc : Astreaus object 
+    lc : Astreaus object
         Data object of time-like arrrays (light curve).
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S4.
@@ -62,8 +63,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     - April 2022 Kevin Stevenson
         Enabled Astraeus
     - July 2022 Caroline Piaulet
-        Recording of x (computed in S4) and y (computed in S3) pos drifts and 
+        Recording of x (computed in S4) and y (computed in S3) pos drifts and
         widths in Spec and LC objects
+    - July 2022 Sebastian Zieba
+         Added photometry S4
     '''
     # Load Eureka! control file and store values in Event object
     ecffile = 'S4_' + eventlabel + '.ecf'
@@ -123,33 +126,62 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
+            specData_savefile = (
+                meta.inputdir + 
+                meta.filename_S3_SpecData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
-            spec = xrio.readXR(meta.filename_S3_SpecData)
+            spec = xrio.readXR(specData_savefile)
 
+            wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
-                meta.wave_min = np.min(spec.wave_1d.values)
+                meta.wave_min = np.min(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_min, so '
                              f'defaulting to {meta.wave_min}.',
                              mute=(not meta.verbose))
-            elif meta.wave_min < np.min(spec.wave_1d.values):
+            elif meta.wave_min < np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min '
                              f'({meta.wave_min}) is smaller than the shortest '
-                             f'wavelength ({np.min(spec.wave_1d.values)})')
+                             f'wavelength ({np.min(wave_1d)})')
             if meta.wave_max is None:
-                meta.wave_max = np.max(spec.wave_1d.values)
+                meta.wave_max = np.max(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
                              f'defaulting to {meta.wave_max}.',
                              mute=(not meta.verbose))
-            elif meta.wave_max > np.max(spec.wave_1d.values):
+            elif meta.wave_max > np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
-                             f'wavelength ({np.max(spec.wave_1d.values)})')
+                             f'wavelength ({np.max(wave_1d)})')
+            indices = np.logical_and(wave_1d >= meta.wave_min,
+                                     wave_1d <= meta.wave_max)
+            wave_1d_trimmed = wave_1d[indices]
 
-            meta.n_int, meta.subnx = spec.optspec.shape
+            if meta.photometry:
+                meta.n_int, meta.subnx = spec.aplev.shape[0], 1
+            else:
+                meta.n_int, meta.subnx = spec.optspec.shape
+
+            # Set the max number of copies of a figure
+            if not hasattr(meta, 'nplots') or meta.nplots is None:
+                meta.nplots = meta.n_int
+            elif meta.int_start+meta.nplots > meta.n_int:
+                # Too many figures requested, so reduce it
+                meta.nplots = meta.n_int
 
             # Determine wavelength bins
-            if not hasattr(meta, 'wave_hi'):
+            if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
+                # User wants unbinned spectra
+                dwav = np.ediff1d(wave_1d)/2
+                # Approximate the first dwav as the same as the second
+                dwav = np.append(dwav[0], dwav)
+                indices = np.logical_and(wave_1d >= meta.wave_min,
+                                         wave_1d <= meta.wave_max)
+                dwav = dwav[indices]/2
+                meta.wave = wave_1d[indices]
+                meta.wave_low = meta.wave-dwav
+                meta.wave_hi = meta.wave+dwav
+                meta.nspecchan = len(meta.wave)
+            elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,
                                                      meta.wave_max-binsize,
@@ -157,42 +189,57 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.wave_hi = np.round(np.linspace(meta.wave_min+binsize,
                                                     meta.wave_max,
                                                     meta.nspecchan), 3)
-            elif (meta.nspecchan is not None
-                  and meta.nspecchan != len(meta.wave_hi)):
-                log.writelog(f'WARNING: Your nspecchan value of '
-                             f'{meta.nspecchan} differs from the size of '
-                             f'wave_hi ({len(meta.wave_hi)}). Using the '
-                             f'latter instead.')
-                meta.nspecchan = len(meta.wave_hi)
-            meta.wave_low = np.array(meta.wave_low)
-            meta.wave_hi = np.array(meta.wave_hi)
-            meta.wave = (meta.wave_low + meta.wave_hi)/2
+                meta.wave = (meta.wave_low + meta.wave_hi)/2
+            else:
+                # wave_low and wave_hi were passed in - make them arrays
+                meta.wave_low = np.array(meta.wave_low)
+                meta.wave_hi = np.array(meta.wave_hi)
+                meta.wave = (meta.wave_low + meta.wave_hi)/2
+                if (meta.nspecchan is not None
+                        and meta.nspecchan != len(meta.wave)):
+                    log.writelog(f'WARNING: Your nspecchan value of '
+                                 f'{meta.nspecchan} differs from the size of '
+                                 f'wave_hi ({len(meta.wave)}). Using the '
+                                 f'latter instead.')
+                    meta.nspecchan = len(meta.wave)
 
             # Define light curve DataArray
+            if meta.photometry:
+                flux_units = spec.aplev.attrs['flux_units']
+                time_units = spec.aplev.attrs['time_units']
+            else:
+                flux_units = spec.optspec.attrs['flux_units']
+                time_units = spec.optspec.attrs['time_units']
+
             lcdata = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
                                    meta.wave, spec.time.values,
-                                   spec.optspec.attrs['flux_units'],
+                                   flux_units,
                                    spec.wave_1d.attrs['wave_units'],
-                                   spec.optspec.attrs['time_units'],
-                                   name='data')
+                                   time_units, name='data')
             lcerr = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int)),
                                   meta.wave, spec.time.values,
-                                  spec.optspec.attrs['flux_units'],
+                                  flux_units,
                                   spec.wave_1d.attrs['wave_units'],
-                                  spec.optspec.attrs['time_units'],
-                                  name='err')
+                                  time_units, name='err')
             lcmask = xrio.makeLCDA(np.zeros((meta.nspecchan, meta.n_int),
                                             dtype=bool),
                                    meta.wave, spec.time.values, 'None',
                                    spec.wave_1d.attrs['wave_units'],
-                                   spec.optspec.attrs['time_units'],
-                                   name='mask')
+                                   time_units, name='mask')
             lc = xrio.makeDataset({'data': lcdata, 'err': lcerr,
                                    'mask': lcmask})
             if hasattr(spec, 'scandir'):
                 lc['scandir'] = spec.scandir
-            if hasattr(spec, 'drift2D'):
-                lc['drift2D'] = spec.drift2D
+            if hasattr(spec, 'centroid_y'):
+                lc['centroid_y'] = spec.centroid_y
+            if hasattr(spec, 'centroid_sy'):
+                lc['centroid_sy'] = spec.centroid_sy
+            if hasattr(spec, 'centroid_x'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_x'] = spec.centroid_x
+            elif meta.recordDrift or meta.correctDrift:
+                # Setup the centroid_x array
+                lc['centroid_x'] = (['time'], np.zeros(meta.n_int))
             lc['wave_low'] = (['wavelength'], meta.wave_low)
             lc['wave_hi'] = (['wavelength'], meta.wave_hi)
             lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
@@ -207,16 +254,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 meta.boundary = 'extend'
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
-            if meta.sigma_clip:
+            if meta.clip_unbinned:
                 log.writelog('Sigma clipping unbinned optimal spectra along '
                              'time axis...')
                 outliers = 0
                 for w in range(meta.subnx):
                     spec.optspec[:, w], spec.optmask[:, w], nout = \
-                        clipping.clip_outliers(spec.optspec[:, w], log,
+                        clipping.clip_outliers(spec.optspec[:, w].values, log,
                                                spec.wave_1d[w].values,
                                                spec.wave_1d.wave_units,
-                                               mask=spec.optmask[:, w],
+                                               mask=spec.optmask[:, w].values,
                                                sigma=meta.sigma,
                                                box_width=meta.box_width,
                                                maxiters=meta.maxiters,
@@ -231,56 +278,61 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if hasattr(meta, 'record_ypos') and meta.record_ypos:
-                lc['driftypos'] = (['time'], spec.driftypos.data)
-                lc['driftywidth'] = (['time'], spec.driftywidth.data)
-            
             # Record and correct for 1D drift/jitter
             if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
                 # This can take a long time, so always print this message
                 log.writelog('Computing drift/jitter')
                 # Compute drift/jitter
-                drift_results = drift.spec1D(spec.optspec, meta, log,
-                                             mask=spec.optmask)
+                drift_results = drift.spec1D(spec.optspec.values, meta, log,
+                                             mask=spec.optmask.values)
                 drift1d, driftwidth, driftmask = drift_results
                 # Replace masked points with moving mean
                 drift1d = clipping.replace_moving_mean(
                     drift1d, driftmask, Box1DKernel(meta.box_width))
                 driftwidth = clipping.replace_moving_mean(
                     driftwidth, driftmask, Box1DKernel(meta.box_width))
-                lc['driftxpos'] = (['time'], drift1d)
-                lc['driftxwidth'] = (['time'], driftwidth)
+                # Add in case centroid_x already measured in 2D in S3
+                lc['centroid_x'] = lc.centroid_x+drift1d
+                lc['centroid_sx'] = (['time'], driftwidth)
                 lc['driftmask'] = (['time'], driftmask)
-                
-                spec['driftxpos'] = (['time'], drift1d)
-                spec['driftxwidth'] = (['time'], driftwidth)
+
+                if hasattr(spec, 'centroid_x'):
+                    # Add if centroid_x already measured in 2D in S3
+                    spec['centroid_x'] = spec.centroid_x+drift1d
+                else:
+                    spec['centroid_x'] = (['time'], drift1d)
+                    spec.centroid_x.attrs['units'] = 'pixels'
+                spec['centroid_sx'] = (['time'], driftwidth)
                 spec['driftmask'] = (['time'], driftmask)
-                
+
                 if meta.correctDrift:
                     log.writelog('Applying drift/jitter correction')
 
                     # Correct for drift/jitter
-                    for n in range(meta.n_int):
+                    iterfn = range(meta.n_int)
+                    if meta.verbose:
+                        iterfn = tqdm(iterfn)
+                    for n in iterfn:
                         # Need to zero-out the weights of masked data
-                        weights = (~spec.optmask[n]).astype(int)
+                        weights = (~spec.optmask[n].values).astype(int)
                         spline = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                      spec.optspec[n], k=3,
-                                                      s=0, w=weights)
+                                                      spec.optspec[n].values,
+                                                      k=3, s=0, w=weights)
                         spline2 = spi.UnivariateSpline(np.arange(meta.subnx),
-                                                       spec.opterr[n], k=3,
-                                                       s=0, w=weights)
-                        optmask = spec.optmask[n].astype(float)
+                                                       spec.opterr[n].values,
+                                                       k=3, s=0, w=weights)
+                        optmask = spec.optmask[n].values.astype(float)
                         spline3 = spi.UnivariateSpline(np.arange(meta.subnx),
                                                        optmask, k=3, s=0,
                                                        w=weights)
                         spec.optspec[n] = spline(np.arange(meta.subnx) +
-                                                 lc.driftxpos[n].values)
+                                                 lc.centroid_x[n].values)
                         spec.opterr[n] = spline2(np.arange(meta.subnx) +
-                                                 lc.driftxpos[n].values)
+                                                 lc.centroid_x[n].values)
                         # Also shift mask if moving by >= 0.5 pixels
                         optmask = spline3(np.arange(meta.subnx) +
-                                          lc.driftxpos[n].values)
+                                          lc.centroid_x[n].values)
                         spec.optmask[n] = optmask >= 0.5
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
@@ -291,49 +343,63 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 # Sum each read from a scan together
                 spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
 
-            # Compute MAD value
-            meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
-                                       spec.optspec, spec.optmask,
-                                       meta.wave_min, meta.wave_max)
+            if not meta.photometry:
+                # Compute MAD value
+                meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
+                                           spec.optspec.values,
+                                           spec.optmask.values,
+                                           meta.wave_min, meta.wave_max)
+            else:
+                # Compute MAD value for Photometry
+                normspec = util.normalize_spectrum(meta, spec.aplev.values)
+                meta.mad_s4 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
-
-            if meta.isplots_S4 >= 1:
-                plots_s4.lc_driftcorr(meta, spec.wave_1d, spec.optspec,
-                                      optmask=spec.optmask)
+            if not meta.photometry:
+                if meta.isplots_S4 >= 1:
+                    plots_s4.lc_driftcorr(meta, wave_1d_trimmed, spec.optspec,
+                                          optmask=spec.optmask)
 
             log.writelog("Generating light curves")
 
             # Loop over spectroscopic channels
             meta.mad_s4_binned = []
             for i in range(meta.nspecchan):
-                log.writelog(f"  Bandpass {i} = {lc.wave_low.values[i]:.3f} - "
-                             f"{lc.wave_hi.values[i]:.3f}")
-                # Compute valid indeces within wavelength range
-                index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
-                                 (spec.wave_1d < lc.wave_hi.values[i]))[0]
-                # Make masked arrays for easy summing
-                optspec_ma = np.ma.masked_where(spec.optmask[:, index],
-                                                spec.optspec[:, index])
-                opterr_ma = np.ma.masked_where(spec.optmask[:, index],
-                                               spec.opterr[:, index])
-                # Compute mean flux for each spectroscopic channel
-                # Sumation leads to outliers when there are masked points
-                lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
-                # Add uncertainties in quadrature
-                # then divide by number of good points to get
-                # proper uncertainties
-                lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
-                                np.ma.MaskedArray.count(opterr_ma, axis=1))
+                if not meta.photometry:
+                    log.writelog(f"  Bandpass {i} = "
+                                 f"{lc.wave_low.values[i]:.3f} - "
+                                 f"{lc.wave_hi.values[i]:.3f}")
+                    # Compute valid indeces within wavelength range
+                    index = np.where((spec.wave_1d >= lc.wave_low.values[i]) *
+                                     (spec.wave_1d < lc.wave_hi.values[i]))[0]
+                    # Make masked arrays for easy summing
+                    optspec_ma = np.ma.masked_where(
+                        spec.optmask.values[:, index],
+                        spec.optspec.values[:, index])
+                    opterr_ma = np.ma.masked_where(
+                        spec.optmask.values[:, index],
+                        spec.opterr.values[:, index])
+                    # Compute mean flux for each spectroscopic channel
+                    # Sumation leads to outliers when there are masked points
+                    lc['data'][i] = np.ma.mean(optspec_ma, axis=1)
+                    # Add uncertainties in quadrature
+                    # then divide by number of good points to get
+                    # proper uncertainties
+                    lc['err'][i] = (np.sqrt(np.ma.sum(opterr_ma**2, axis=1)) /
+                                    np.ma.MaskedArray.count(opterr_ma, axis=1))
+                else:
+                    lc['data'][i] = spec.aplev.values
+                    lc['err'][i] = spec.aperr.values
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
-                if meta.sigma_clip:
+                if meta.clip_binned:
                     lc['data'][i], lc['mask'][i], nout = \
                         clipping.clip_outliers(
-                            lc.data[i], log, lc.data.wavelength[i].values,
-                            lc.data.wave_units, mask=lc.mask[i],
-                            sigma=meta.sigma, box_width=meta.box_width,
-                            maxiters=meta.maxiters, boundary=meta.boundary,
-                            fill_value=meta.fill_value, verbose=False)
+                            lc.data[i].values, log,
+                            lc.data.wavelength[i].values, lc.data.wave_units,
+                            mask=lc.mask[i].values, sigma=meta.sigma,
+                            box_width=meta.box_width, maxiters=meta.maxiters,
+                            boundary=meta.boundary, fill_value=meta.fill_value,
+                            verbose=False)
                     log.writelog(f'  Sigma clipped {nout} outliers in time'
                                  f' series', mute=(not meta.verbose))
 
@@ -342,7 +408,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
 
             # If requested, also generate white-light light curve
-            if hasattr(meta, 'compute_white') and meta.compute_white:
+            if (hasattr(meta, 'compute_white') and meta.compute_white
+                    and not meta.photometry):
                 log.writelog("Generating white-light light curve")
 
                 # Compute valid indeces within wavelength range
@@ -370,7 +437,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 lc.err_white.attrs['wave_units'] = lc.data.wave_units
                 lc.mask_white.attrs['wavelength'] = central_wavelength
                 lc.mask_white.attrs['wave_units'] = lc.data.wave_units
-                
+
                 log.writelog(f"  White-light Bandpass = {meta.wave_min:.3f} - "
                              f"{meta.wave_max:.3f}")
                 # Make masked arrays for easy summing
@@ -392,7 +459,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                                  axis=1))
 
                 # Do 1D sigma clipping (along time axis) on binned spectra
-                if meta.sigma_clip:
+                if meta.clip_binned:
                     lc.flux_white[:], lc.mask_white[:], nout = \
                         clipping.clip_outliers(
                             lc.flux_white, log, lc.flux_white.wavelength,
@@ -412,13 +479,28 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                 log.writelog("Generating limb-darkening coefficients...",
                              mute=(not meta.verbose))
                 ld_lin, ld_quad, ld_3para, ld_4para = \
-                    generate_LD.exotic_ld(meta, spec)
+                    generate_LD.exotic_ld(meta, spec, log)
                 lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
                 lc['exotic-ld_quad'] = (['wavelength', 'exotic-ld_2'], ld_quad)
                 lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'],
                                                 ld_3para)
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
+                
+                if meta.compute_white:
+                    ld_lin_w, ld_quad_w, ld_3para_w, ld_4para_w = \
+                        generate_LD.exotic_ld(meta, spec, log, white=True)
+                    lc['exotic-ld_lin_white'] = (['wavelength', 'exotic-ld_1'],
+                                                 ld_lin_w)
+                    lc['exotic-ld_quad_white'] = (['wavelength',
+                                                   'exotic-ld_2'],
+                                                  ld_quad_w)
+                    lc['exotic-ld_nonlin_3para_white'] = (['wavelength',
+                                                           'exotic-ld_3'],
+                                                          ld_3para_w)
+                    lc['exotic-ld_nonlin_4para_white'] = (['wavelength',
+                                                           'exotic-ld_4'],
+                                                          ld_4para_w)
 
             log.writelog('Saving results...')
 
@@ -428,7 +510,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             meta.filename_S4_SpecData = (meta.outputdir + 'S4_' + event_ap_bg
                                          + "_SpecData.h5")
             xrio.writeXR(meta.filename_S4_SpecData, spec, verbose=True)
-            
+
             # Save Dataset object containing binned light curves
             meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
                                        + "_LCData.h5")

@@ -2,8 +2,9 @@ from copy import deepcopy
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import re
 
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 
 def plot_spectrum(meta, model_x=None, model_y=None,
@@ -30,10 +31,6 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         The planetary atmospheric scale height, by default None
     planet_R0 : float; optional
         The reference radius for the scale height, by default None
-
-    Returns
-    -------
-    None
     """
     if scaleHeight is not None:
         fig = plt.figure(6301, figsize=(8, 4))
@@ -48,6 +45,9 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     err = deepcopy(meta.spectrum_err)
     model_x = deepcopy(model_x)
     model_y = deepcopy(model_y)
+
+    if np.all(np.isnan(err)):
+        err = None
 
     spectrum *= y_scalar
     if err is not None:
@@ -98,20 +98,30 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         def r(H):
             return ((H+H_0)*scaleHeight)**expFactor*y_scalar
 
+        # Need to enforce non-negative for H(r) to make sense
+        if ax.get_ylim()[0] < 0:
+            ax.set_ylim(0)
+
         ax2 = ax.secondary_yaxis('right', functions=(H, r))
         ax2.set_ylabel('Scale Height')
+        if r'^2' in ylabel:
+            # To avoid overlapping ticks, use the same spacing as the r axis
+            yticks = np.round(H(ax.get_yticks()), 1)
+            # Make sure H=0 is shown
+            offset = yticks[np.argmin(np.abs(yticks))]
+            yticks -= offset
+            ax2.set_yticks(yticks)
 
         fname = 'figs'+os.sep+'fig6301'
     else:
         fname = 'figs'+os.sep+'fig6101'
 
-    if 'R_' in ylabel:
-        fname += '_transmission'
-    elif 'F_' in ylabel:
-        fname += '_emission'
+    clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
+    fname += '_'+clean_y_param
 
-    fig.savefig(meta.outputdir+fname+figure_filetype, bbox_inches='tight',
-                dpi=300)
+    fig.tight_layout()
+    fig.savefig(meta.outputdir+fname+plots.figure_filetype,
+                bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 

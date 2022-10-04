@@ -24,49 +24,52 @@ def medstddev(data, mask=None, medi=False, axis=0):
     -------
     float
         The stadard deviation.
-    float, optional
+    float; optional
         The median; only returned if medi==True.
 
     Examples
     --------
-    >>> import medstdev as m
-    >>> a  = np.array([1,3,4,5,6,7,7])
-    >>> std, med = m.medstddev(a, medi=True)
-    >>> print(median(a))
-    5.0
-    >>> print(med)
-    5.0
-    >>> print(std)
-    2.2360679775
+    .. highlight:: python
+    .. code-block:: python
 
-    >>> # use masks
-    >>> a    = np.array([1,3,4,5,6,7,7])
-    >>> mask = np.array([1,1,1,0,0,0,0])
-    >>> std, med = m.medstddev(a, mask, medi=True)
-    >>> print(std)
-    1.58113883008
-    >>> print(med)
-    3.0
+        >>> import medstdev as m
+        >>> a  = np.array([1,3,4,5,6,7,7])
+        >>> std, med = m.medstddev(a, medi=True)
+        >>> print(median(a))
+        5.0
+        >>> print(med)
+        5.0
+        >>> print(std)
+        2.2360679775
 
-    >>> # automatically mask invalid values
-    >>> a = np.array([np.nan, 1, 4, np.inf, 6])
-    >>> std, med = m.medstddev(a, medi=True)
-    >>> print(std, med)
-    (2.5495097567963922, 4.0)
+        >>> # use masks
+        >>> a    = np.array([1,3,4,5,6,7,7])
+        >>> mask = np.array([1,1,1,0,0,0,0])
+        >>> std, med = m.medstddev(a, mask, medi=True)
+        >>> print(std)
+        1.58113883008
+        >>> print(med)
+        3.0
 
-    >>> # critical cases:
-    >>> # only one value, return std = 0.0
-    >>> a    = np.array([1, 4, 6])
-    >>> mask = np.array([0, 0, 1])
-    >>> std, med = m.medstddev(a, mask, medi=True)
-    >>> print(std, med)
-    (0.0, 6.0)
+        >>> # automatically mask invalid values
+        >>> a = np.array([np.nan, 1, 4, np.inf, 6])
+        >>> std, med = m.medstddev(a, medi=True)
+        >>> print(std, med)
+        (2.5495097567963922, 4.0)
 
-    >>> # no good values, return std = nan, med = nan
-    >>> mask[-1] = 0
-    >>> std, med = m.medstddev(a, mask, medi=True)
-    >>> print(std, med)
-    (nan, nan)
+        >>> # critical cases:
+        >>> # only one value, return std = 0.0
+        >>> a    = np.array([1, 4, 6])
+        >>> mask = np.array([0, 0, 1])
+        >>> std, med = m.medstddev(a, mask, medi=True)
+        >>> print(std, med)
+        (0.0, 6.0)
+
+        >>> # no good values, return std = nan, med = nan
+        >>> mask[-1] = 0
+        >>> std, med = m.medstddev(a, mask, medi=True)
+        >>> print(std, med)
+        (nan, nan)
 
     Notes
     -----
@@ -106,7 +109,7 @@ def medstddev(data, mask=None, medi=False, axis=0):
     residuals = data - median
     # calculate standar deviation:
     with np.errstate(divide='ignore', invalid='ignore'):
-        std = np.ma.sqrt(np.ma.sum(residuals**2.0) / (ngood - 1.0))
+        std = np.ma.std(residuals, axis=axis, ddof=1)
 
     # Convert masked arrays to just arrays
     std = np.array(std)
@@ -118,10 +121,10 @@ def medstddev(data, mask=None, medi=False, axis=0):
 
     # critical case fixes:
     if np.any(ngood == 0):
-        std[np.where(ngood == 0)[0]] = np.nan
-        median[np.where(ngood == 0)[0]] = np.nan
+        std[np.where(ngood == 0)] = np.nan
+        median[np.where(ngood == 0)] = np.nan
     if np.any(ngood == 1):
-        std[np.where(ngood == 1)[0]] = 0.
+        std[np.where(ngood == 1)] = 0.
 
     if len(std) == 1:
         std = std[0]

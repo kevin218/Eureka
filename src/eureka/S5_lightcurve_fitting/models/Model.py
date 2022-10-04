@@ -21,12 +21,14 @@ class Model:
             Model object as Logedit objects cannot be pickled
             which is required for multiprocessing.
         """
-        # Set up model attributes
+        # Set up default model attributes
         self.name = 'New Model'
         self.fitter = None
-        self._time = None
+        self.time = None
+        self.time_units = 'BMJD_TDB'
         self._flux = None
         self._units = q.day
+        self.freenames = None
         self._parameters = Parameters()
         self.components = None
         self.modeltype = None
@@ -72,10 +74,6 @@ class Model:
     @flux.setter
     def flux(self, flux_array):
         """A setter for the flux."""
-        # Check the type
-        if not isinstance(flux_array, (np.ndarray, tuple, list)):
-            raise TypeError("flux axis must be a tuple, list, or numpy array.")
-
         # Set the array
         self._flux = np.ma.masked_array(flux_array)
 
@@ -89,10 +87,6 @@ class Model:
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Check the type
-        if not isinstance(new_time, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array")
-
         # Save the current time array
         old_time = copy.deepcopy(self.time)
 
@@ -105,24 +99,21 @@ class Model:
 
         return interp_flux
 
-    def update(self, newparams, names, **kwargs):
+    def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
 
         Parameters
         ----------
         newparams : ndarray
             New parameter values.
-        names : list
-            Parameter names.
         **kwargs : dict
             Unused by the base
             eureka.S5_lightcurve_fitting.models.Model class.
         """
-        for ii, arg in enumerate(names):
-            if hasattr(self.parameters, arg):
-                val = getattr(self.parameters, arg).values[1:]
-                val[0] = newparams[ii]
-                setattr(self.parameters, arg, val)
+        for val, arg in zip(newparams, self.freenames):
+            # For now, the dict and Parameter are separate
+            self.parameters.dict[arg][0] = val
+            getattr(self.parameters, arg).value = val
         self._parse_coeffs()
         return
 
@@ -218,31 +209,25 @@ class Model:
             return
 
     @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
+    def units(self):
+        """A getter for the unit.s"""
+        return self._units
 
-    @time.setter
-    def time(self, time_array, time_units='BJD_TDB'):
-        """A setter for the time.
+    @units.setter
+    def units(self, units):
+        """A setter for the units.
 
         Parameters
         ----------
-        time_array : sequence, astropy.units.quantity.Quantity
-            The time array.
-        time_units : str; optional
-            The units of the input time_array, ['MJD','BJD','BJD_TDB','phase'].
-            Defaults to 'BJD_TDB'.
+        units : str
+            The time units ['BJD', 'BJD_TDB', 'MJD', 'phase'].
         """
         # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+        if units not in ['BJD', 'BJD_TDB', 'MJD', 'phase']:
+            raise TypeError("units axis must be 'BJD', 'BJD_TDB, "
+                            "'MJD', or 'phase'.")
 
-        # Set the units
-        self.time_units = time_units
-
-        # Set the array
-        self._time = time_array
+        self._units = units
 
 
 class CompositeModel(Model):
@@ -389,7 +374,7 @@ class CompositeModel(Model):
         else:
             new_time = self.time
 
-        flux = np.ones(len(self.time)*self.nchan)
+        flux = np.ones(len(new_time)*self.nchan)
 
         # Evaluate flux at each model
         for model in self.components:
@@ -402,20 +387,18 @@ class CompositeModel(Model):
                     flux *= model.eval(**kwargs)
         return flux, new_time
 
-    def update(self, newparams, names, **kwargs):
+    def update(self, newparams, **kwargs):
         """Update parameters in the model components.
 
         Parameters
         ----------
         newparams : ndarray
             New parameter values.
-        names : list
-            Parameter names.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.update().
         """
         # Evaluate flux at each model
         for model in self.components:
-            model.update(newparams, names, **kwargs)
+            model.update(newparams, **kwargs)
         return

@@ -3,7 +3,7 @@
 # Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
 
 ncpu            4           # Number of CPUs
-nfiles          1000        # The max number of data files to analyze simultaneously
+nfiles          1000        # The max number of data files to analyze simultaneously. Strongly recommended to be >>1 for HST data.
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix          ima         # Data file suffix
 
@@ -19,6 +19,7 @@ flatfile        flats/WFC3.IR.G102.flat.2.fits         # The calibration file to
 ywindow         [80,250]    # Vertical axis as seen in DS9
 xwindow         [80,250]    # Horizontal axis as seen in DS9
 src_pos_type    hst         # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
+record_ypos     False       # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 
 # Subarray region for direct images used for wavelength calibration
 centroidtrim    5           # The box width to cut around the centroid guess to perform centroiding on the direct images. This should be an integer.
@@ -40,7 +41,8 @@ p3thresh        5           # X-sigma threshold for outlier rejection during bac
 # Spectral extraction parameters
 spec_hw         5           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         smooth      # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
-window_len      31          # Smoothing window length, when fittype = smooth
+window_len      31          # Smoothing window length, when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
+median_thresh   5           # Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
 prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
@@ -50,6 +52,7 @@ iref            [2, 3]      # The file indices to use as reference frames for ea
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+nplots          5           # How many of each type of figure do you want to make per file?
 vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
 vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
 time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')

@@ -91,12 +91,14 @@ def dn2electrons(data, meta):
     ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero                                                         
     xstart_trim = xstart-xstart_gain + 1
 
-    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny, xstart_trim:xstart_trim+nx]
+    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny,
+                                       xstart_trim:xstart_trim+nx]
 
-    # Like in the case of MIRI data, the gain file data has to be
-    # rotated by 90 degrees
     if data.attrs['shdr']['DISPAXIS'] == 2:
-        gain = np.swapaxes(gain, 0, 1)
+        # In the case of MIRI data, the gain file data has to be
+        # rotated by 90 degrees and mirrored along that new x-axis
+        # so that wavelength increases to the right
+        gain = np.swapaxes(gain, 0, 1)[:, ::-1]
 
     # Gain subarray
     subgain = gain[meta.ywindow[0]:meta.ywindow[1],
@@ -145,9 +147,14 @@ def bright2dn(data, meta, mjy=False):
     # Load response function and wavelength
     phot = fits.getdata(meta.photfile)
     if meta.inst == 'nircam':
-        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
-                       (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
-                       (phot['order'] == 1))[0][0]
+        if meta.photometry:
+            ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+                           (phot['pupil'] == data.attrs['mhdr']['PUPIL'])
+                           )[0][0]
+        else:
+            ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+                           (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
+                           (phot['order'] == 1))[0][0]
     elif meta.inst == 'miri':
         ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
                        (phot['subarray'] == data.attrs['mhdr']['SUBARRAY'])
@@ -166,15 +173,18 @@ def bright2dn(data, meta, mjy=False):
                          f'currently only handle JWST niriss, nirspec, nircam,'
                          f' and miri observations.')
 
-    response_wave = phot['wavelength'][ind]
-    response_vals = phot['relresponse'][ind]
-    igood = np.where(response_wave > 0)[0]
-    response_wave = response_wave[igood]
-    response_vals = response_vals[igood]
-    # Interpolate response at desired wavelengths
-    f = spi.interp1d(response_wave, response_vals, kind='cubic',
-                     bounds_error=False, fill_value='extrapolate')
-    response = f(data.wave_1d)
+    if meta.photometry:
+        response = 1.0
+    else:
+        response_wave = phot['wavelength'][ind]
+        response_vals = phot['relresponse'][ind]
+        igood = np.where(response_wave > 0)[0]
+        response_wave = response_wave[igood]
+        response_vals = response_vals[igood]
+        # Interpolate response at desired wavelengths
+        f = spi.interp1d(response_wave, response_vals, kind='cubic',
+                         bounds_error=False, fill_value='extrapolate')
+        response = f(data.wave_1d)
 
     scalar = data.attrs['shdr']['PHOTMJSR']
     if mjy:

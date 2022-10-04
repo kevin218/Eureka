@@ -13,7 +13,7 @@ waverange_start         None    # Use None to rely on the default parameters
 waverange_end           None    # Use None to rely on the default parameters
 
 # Note: different instruments and modes will use different steps by default
-skip_bkg_subtract       False   # Not run for TSO observations
+skip_bkg_subtract       True   # Not run for TSO observations
 skip_imprint_subtract   True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_msa_flagging       True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_extract_2d         False

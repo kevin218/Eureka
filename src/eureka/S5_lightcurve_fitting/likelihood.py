@@ -32,7 +32,7 @@ def ln_like(theta, lc, model, freenames):
     - February, 2022 Eva-Maria Ahrer
         Adding GP likelihood
     """
-    model.update(theta, freenames)
+    model.update(theta)
     model_lc = model.eval()
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -50,8 +50,6 @@ def ln_like(theta, lc, model, freenames):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
                 theta[ind[chan]] * lc.unc[chan*lc.time.size:
                                           (chan+1)*lc.time.size]
-    else:
-        lc.unc_fit = np.ma.copy(lc.unc)
     if model.GP:
         ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)
     else:

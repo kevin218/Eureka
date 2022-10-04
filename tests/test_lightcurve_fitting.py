@@ -65,8 +65,14 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        freenames = []
+        for key in params.dict:
+            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+                                       'white_fixed']:
+                freenames.append(key)
         self.t_model = models.BatmanTransitModel(parameters=params,
                                                  name='transit', fmt='r--',
+                                                 freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles)
@@ -94,10 +100,16 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        freenames = []
+        for key in params.dict:
+            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+                                       'white_fixed']:
+                freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.e_model = models.BatmanEclipseModel(parameters=params,
                                                  name='transit', fmt='r--',
                                                  log=log,
+                                                 freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles)
@@ -137,15 +149,22 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        freenames = []
+        for key in params.dict:
+            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+                                       'white_fixed']:
+                freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.BatmanTransitModel(parameters=params,
                                                  name='transit', fmt='r--',
+                                                 freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles)
         self.e_model = models.BatmanEclipseModel(parameters=params,
                                                  name='transit', fmt='r--',
                                                  log=log,
+                                                 freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
                                                  paramtitles=paramtitles)
@@ -153,6 +172,7 @@ class TestModels(unittest.TestCase):
             models.SinusoidPhaseCurveModel(parameters=params,
                                            name='phasecurve', fmt='r--',
                                            longparamlist=longparamlist,
+                                           freenames=freenames,
                                            nchan=1, paramtitles=paramtitles,
                                            transit_model=self.t_model,
                                            eclipse_model=self.e_model)
@@ -168,9 +188,11 @@ class TestModels(unittest.TestCase):
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
+        freenames = ['r0', 'r1', 'r2']
         self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
                                                          'r1': [0.05, 'free'],
                                                          'r2': [0.01, 'free']},
+                                             freenames=freenames,
                                              nchan=1)
 
         # Evaluate and test output
@@ -179,12 +201,14 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
         # Create the model
+        freenames = ['r0', 'r1', 'r2', 'r3', 'r4', 'r5']
         self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
                                                          'r1': [0.05, 'free'],
                                                          'r2': [0.01, 'free'],
                                                          'r3': [1., 'free'],
                                                          'r4': [0.05, 'free'],
                                                          'r5': [0.01, 'free']},
+                                             freenames=freenames,
                                              nchan=1)
 
         # Evaluate and test output
