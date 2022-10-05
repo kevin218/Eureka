@@ -13,6 +13,7 @@ from ...lib.readEPF import Parameters
 from ..utils import COLORS
 
 starry.config.quiet = True
+starry.config.lazy = True
 
 
 class fit_class:
@@ -269,8 +270,7 @@ class StarryModel(pm.Model):
                     scatter_ppm_array = tt.concatenate(
                         [scatter_ppm_array,
                          getattr(self, parname_temp)*tt.ones(len(self.time))])
-                self.scatter_ppm_array = pm.Deterministic(
-                    "scatter_ppm_array", scatter_ppm_array*1e6)
+                self.scatter_ppm_array = scatter_ppm_array*1e6
             if hasattr(self, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
                 scatter_ppm_array = (self.scatter_mult *
@@ -281,8 +281,7 @@ class StarryModel(pm.Model):
                         [scatter_ppm_array,
                          (getattr(self, parname_temp) *
                           self.lc_unc[c*len(self.time):(c+1)*len(self.time)])])
-                self.scatter_ppm_array = pm.Deterministic(
-                    "scatter_ppm_array", scatter_ppm_array*1e6)
+                self.scatter_ppm_array = scatter_ppm_array*1e6
             if not hasattr(self, 'scatter_ppm_array'):
                 # Not fitting the noise level
                 self.scatter_ppm_array = self.lc_unc*1e6
