@@ -52,11 +52,10 @@ class StarryModel(pm.Model):
         with self:
             for parname in self.paramtitles:
                 param = getattr(self.parameters, parname)
-                if param.ptype == 'independent':
-                    continue
-                elif param.ptype == 'fixed':
+                if param.ptype in ['independent', 'fixed']:
                     setattr(self, parname, tt.constant(param.value))
-                elif param.ptype not in ['free', 'shared']:
+                elif param.ptype not in ['free', 'shared', 'white_free',
+                                         'white_fixed']:
                     message = (f'ptype {param.ptype} for parameter '
                                f'{param.name} is not recognized.')
                     raise ValueError(message)
@@ -144,25 +143,27 @@ class StarryModel(pm.Model):
                             setattr(temp, key, getattr(self, key))
 
                 # FINDME: non-uniform limb darkening does not currently work
-                if self.parameters.limb_dark.value == 'kipping2013':
-                    # Transform stellar variables to uniform used by starry
-                    star.map[1] = pm.Deterministic('u1_quadratic_'+str(c),
-                                                   2*tt.sqrt(temp.u1)*temp.u2)
-                    star.map[2] = pm.Deterministic('u2_quadratic_'+str(c),
-                                                   tt.sqrt(temp.u1) *
-                                                   (1-2*temp.u2))
-                elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = temp.u1
-                    star.map[2] = temp.u2
-                elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = temp.u1
-                elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: starryModel is not yet able to handle '
-                               f'{self.parameters.limb_dark.value} limb'
-                               f'darkening.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
-                    raise ValueError(message)
+                if hasattr(self.parameters, 'limb_dark'):
+                    if self.parameters.limb_dark.value == 'kipping2013':
+                        # Transform stellar variables to uniform used by starry
+                        star.map[1] = pm.Deterministic('u1_quadratic_'+str(c),
+                                                       (2*tt.sqrt(temp.u1)
+                                                        * temp.u2))
+                        star.map[2] = pm.Deterministic('u2_quadratic_'+str(c),
+                                                       tt.sqrt(temp.u1) *
+                                                       (1-2*temp.u2))
+                    elif self.parameters.limb_dark.value == 'quadratic':
+                        star.map[1] = temp.u1
+                        star.map[2] = temp.u2
+                    elif self.parameters.limb_dark.value == 'linear':
+                        star.map[1] = temp.u1
+                    elif self.parameters.limb_dark.value != 'uniform':
+                        message = (f'ERROR: starryModel is not yet able to '
+                                   f'handle {self.parameters.limb_dark.value} '
+                                   f'limb darkening.\n'
+                                   f'       limb_dark must be one of uniform, '
+                                   f'linear, quadratic, or kipping2013.')
+                        raise ValueError(message)
                 
                 if hasattr(self, 'fp'):
                     amp = temp.fp
@@ -476,21 +477,23 @@ class StarryModel(pm.Model):
                         setattr(temp, key, getattr(fit, key))
 
             # FINDME: non-uniform limb darkening does not currently work
-            if self.parameters.limb_dark.value == 'kipping2013':
-                # Transform stellar variables to uniform used by starry
-                star.map[1] = 2*np.sqrt(temp.u1)*temp.u2
-                star.map[2] = np.sqrt(temp.u1)*(1-2*temp.u2)
-            elif self.parameters.limb_dark.value == 'quadratic':
-                star.map[1] = temp.u1
-                star.map[2] = temp.u2
-            elif self.parameters.limb_dark.value == 'linear':
-                star.map[1] = temp.u1
-            elif self.parameters.limb_dark.value != 'uniform':
-                message = (f'ERROR: starryModel is not yet able to handle '
-                           f'{self.parameters.limb_dark.value} limb_dark.\n'
-                           f'       limb_dark must be one of uniform, linear, '
-                           f'quadratic, or kipping2013.')
-                raise ValueError(message)
+            if hasattr(self.parameters, 'limb_dark'):
+                if self.parameters.limb_dark.value == 'kipping2013':
+                    # Transform stellar variables to uniform used by starry
+                    star.map[1] = 2*np.sqrt(temp.u1)*temp.u2
+                    star.map[2] = np.sqrt(temp.u1)*(1-2*temp.u2)
+                elif self.parameters.limb_dark.value == 'quadratic':
+                    star.map[1] = temp.u1
+                    star.map[2] = temp.u2
+                elif self.parameters.limb_dark.value == 'linear':
+                    star.map[1] = temp.u1
+                elif self.parameters.limb_dark.value != 'uniform':
+                    message = (f'ERROR: starryModel is not yet able to handle '
+                               f'{self.parameters.limb_dark.value} '
+                               f'limb_dark.\n'
+                               f'       limb_dark must be one of uniform, '
+                               f'linear, quadratic, or kipping2013.')
+                    raise ValueError(message)
             
             if hasattr(self, 'fp'):
                 amp = temp.fp

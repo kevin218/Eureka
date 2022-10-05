@@ -2,6 +2,7 @@ import numpy as np
 import copy
 # import pymc3 as pm
 import pymc3_ext as pmx
+from astropy import table
 
 from .likelihood import computeRedChiSq
 from . import plots_s5 as plots
@@ -70,14 +71,17 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.copy(lc.unc)
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
             lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
                 (fit_params[ind[chan]] *
                  lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
 
+    t_results = table.Table([freenames, fit_params],
+                            names=("Parameter", "Mean"))
+
     # Save the fit ASAP
-    save_fit(meta, lc, model, calling_function, fit_params, freenames)
+    save_fit(meta, lc, model, calling_function, t_results, freenames)
 
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
