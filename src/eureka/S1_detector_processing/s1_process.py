@@ -12,7 +12,7 @@ from ..lib import manageevent as me
 from ..lib import readECF
 
 
-def rampfitJWST(eventlabel, ecf_path=None):
+def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     """Process a Stage 0, _uncal.fits file to Stage 1 _rate.fits and
     _rateints.fits files.
 
@@ -26,6 +26,9 @@ def rampfitJWST(eventlabel, ecf_path=None):
     ecf_path : str; optional
         The absolute or relative path to where ecfs are stored. Defaults to
         None which resolves to './'.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -45,11 +48,14 @@ def rampfitJWST(eventlabel, ecf_path=None):
     """
     t0 = time_pkg.time()
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S1_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
-    meta.eventlabel = eventlabel
-    meta.datetime = time_pkg.strftime('%Y-%m-%d')
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S1_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta.eventlabel = eventlabel
+        meta.datetime = time_pkg.strftime('%Y-%m-%d')
+    else:
+        meta = input_meta
 
     # Create directories for Stage 1 processing outputs
     run = util.makedirectory(meta, 'S1')
@@ -107,7 +113,8 @@ def rampfitJWST(eventlabel, ecf_path=None):
 
 
 class EurekaS1Pipeline(Detector1Pipeline):
-    '''A wrapper class for the jwst.pipeline.calwebb_detector1.Detector1Pipeline
+    '''A wrapper class for the
+    jwst.pipeline.calwebb_detector1.Detector1Pipeline
 
     This wrapper class allows non-standard changes to Stage 1 for Eureka!.
 
