@@ -451,13 +451,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
-    # Plot chain evolution
-    if meta.isplots_S5 >= 3:
-        plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
-                         fitter='emcee', burnin=True, nburn=meta.run_nburn)
-        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
-                         freenames, fitter='emcee', burnin=False)
-
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='emcee')
@@ -466,6 +459,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
+    # Plot chain evolution
     if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
                          fitter='emcee', burnin=True, nburn=meta.run_nburn)
