@@ -57,7 +57,7 @@ class Model:
             The combined model.
         """
         # Make sure it is the right type
-        attrs = ['flux', 'time']
+        attrs = ['units', 'flux', 'time']
         if not all([hasattr(other, attr) for attr in attrs]):
             raise TypeError('Only another Model instance may be multiplied.')
 
