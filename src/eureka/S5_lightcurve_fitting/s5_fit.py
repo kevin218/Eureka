@@ -367,6 +367,14 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
+        # Remove any clipped observations
+        unmasked = ~np.logical_or(np.ma.getmaskarray(flux),
+                                  np.ma.getmaskarray(flux_err))
+        lc_model.time = lc_model.time[unmasked]
+        lc_model.flux = lc_model.flux[unmasked]
+        lc_model.unc = lc_model.unc[unmasked]
+        lc_model.unc_fit = lc_model.unc_fit[unmasked]
+
         t_starry = m.StarryModel(parameters=params, name='starry',
                                  fmt='r--', log=log,
                                  longparamlist=lc_model.longparamlist,

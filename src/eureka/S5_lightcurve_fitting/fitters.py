@@ -1310,7 +1310,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                                   for comp in model.components], dtype=object)
     model_lc = model.eval()
     residuals = lc.flux-model_lc
-    astropytable.savetable_S5(meta.tab_filename_s5, meta.time,
+    astropytable.savetable_S5(meta.tab_filename_s5, lc.time,
                               wavelengths[lc.fitted_channels],
                               wave_errs[lc.fitted_channels],
                               lc.flux, lc.unc_fit, individual_models, model_lc,
