@@ -12,6 +12,11 @@ import astropy.constants as const
 from ...lib.readEPF import Parameters
 from ..utils import COLORS
 
+# Avoid tonnes of "Cannot construct a scalar test value" messages
+import logging
+logger = logging.getLogger("theano.tensor.opt")
+logger.setLevel(logging.ERROR)
+
 starry.config.quiet = True
 starry.config.lazy = True
 
