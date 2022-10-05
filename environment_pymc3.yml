@@ -22,7 +22,7 @@ dependencies:
     - matplotlib
     - mkl-service
     - nbsphinx # Needed for documentation
-    - numpy[version='>=1.20.0,<1.22']
+    - numpy[version='>=1.20.0,<=1.22']
     - pandas
     - photutils
     - pip # required for the pip installs below
