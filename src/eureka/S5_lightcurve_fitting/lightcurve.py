@@ -132,7 +132,7 @@ class LightCurve(m.Model):
         fit_model = None
 
         model.time = self.time
-        if fitter not in ['exoplanet', 'pymc3']:
+        if fitter not in ['exoplanet', 'nuts']:
             # Make sure the model is a CompositeModel
             if not isinstance(model, m.CompositeModel):
                 model = m.CompositeModel([model])
@@ -150,6 +150,8 @@ class LightCurve(m.Model):
             self.fitter_func = fitters.dynestyfitter
         elif fitter == 'exoplanet':
             self.fitter_func = gradient_fitters.exoplanetfitter
+        elif fitter == 'nuts':
+            self.fitter_func = gradient_fitters.nutsfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 

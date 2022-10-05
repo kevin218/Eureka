@@ -536,6 +536,12 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         lc_model.fit(model, meta, log, fitter='exoplanet')
         log.writelog("Completed exoplanet fit.")
         log.writelog("-------------------------")
+    if 'nuts' in meta.fit_method:
+        log.writelog("Starting PyMC3 NUTS fit.")
+        model.fitter = 'nuts'
+        lc_model.fit(model, meta, log, fitter='nuts')
+        log.writelog("Completed PyMC3 NUTS fit.")
+        log.writelog("-------------------------")
     log.writelog("=========================")
 
     # Plot the results from the fit(s)
