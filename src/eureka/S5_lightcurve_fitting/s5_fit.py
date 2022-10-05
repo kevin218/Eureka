@@ -549,68 +549,43 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         lc_model.plot(meta)
 
     if white:
-        if 'dynesty' in meta.fit_method:
-            # Update the params to the values and uncertainties from
-            # this white-light light curve fit
-            best_model = None
-            for model in lc_model.results:
-                if model.fitter == 'dynesty':
-                    best_model = model
-            if best_model is None:
-                raise AssertionError('Unable to find the dynesty fitter '
-                                     'results')
-            for key in params.params:
-                ptype = getattr(params, key).ptype
-                if 'white' in ptype:
-                    value = getattr(best_model.components[0].parameters,
-                                    key).value
-                    ptype = ptype[6:]  # Remove 'white_'
-                    priorpar1 = value
-                    priorpar2 = best_model.errs[key]
-                    prior = 'N'
-                    par = [value, ptype, priorpar1, priorpar2, prior]
-                    setattr(params, key, par)
-        elif 'emcee' in meta.fit_method:
-            # Update the params to the values and uncertainties from
-            # this white-light light curve fit
-            best_model = None
-            for model in lc_model.results:
-                if model.fitter == 'emcee':
-                    best_model = model
-            if best_model is None:
-                raise AssertionError('Unable to find the emcee fitter results')
-            for key in params.params:
-                ptype = getattr(params, key).ptype
-                if 'white' in ptype:
-                    value = getattr(best_model.components[0].parameters,
-                                    key).value
-                    ptype = ptype[6:]  # Remove 'white_'
-                    priorpar1 = value
-                    priorpar2 = best_model.errs[key]
-                    prior = 'N'
-                    par = [value, ptype, priorpar1, priorpar2, prior]
-                    setattr(params, key, par)
-        elif 'lsq' in meta.fit_method:
-            best_model = None
-            for model in lc_model.results:
-                if model.fitter == 'lsq':
-                    best_model = model
-            if best_model is None:
-                raise AssertionError('Unable to find the lsq fitter results')
-            # Update the params to the values from this white-light light
-            # curve fit
-            for key in params.params:
-                ptype = getattr(params, key).ptype
-                if 'white' in ptype:
-                    value = getattr(best_model.components[0].parameters,
-                                    key).value
+        # Update the params to the values and uncertainties from
+        # this white-light light curve fit
+        best_model = None
+        for model in lc_model.results:
+            # Non-gradient based models: dynesty > emcee > lsq
+            if model.fitter == 'dynesty':
+                best_model = model
+            elif (model.fitter == 'emcee' and
+                  (best_model is None or best_model.fitter == 'lsq')):
+                best_model = model
+            elif model.fitter == 'lsq' and best_model is None:
+                best_model = model
+            # Gradient based models: nuts > exoplanet
+            elif model.fitter == 'nuts':
+                best_model = model
+            elif model.fitter == 'exoplanet' and best_model is None:
+                best_model = model
+        if best_model is None:
+            raise AssertionError('Unable to find fitter results')
+        for key in params.params:
+            ptype = getattr(params, key).ptype
+            if 'white' in ptype:
+                value = getattr(best_model.components[0].parameters,
+                                key).value
+                if best_model.fitter in ['lsq', 'exoplanet']:
                     ptype = 'fixed'
                     priorpar1 = None
                     priorpar2 = None
                     prior = None
-                    par = [value, ptype, priorpar1, priorpar2, prior]
-                    setattr(params, key, par)
-
+                else:
+                    ptype = ptype[6:]  # Remove 'white_'
+                    priorpar1 = value
+                    priorpar2 = best_model.errs[key]
+                    prior = 'N'
+                par = [value, ptype, priorpar1, priorpar2, prior]
+                setattr(params, key, par)
+        
     return meta, params
 
 
