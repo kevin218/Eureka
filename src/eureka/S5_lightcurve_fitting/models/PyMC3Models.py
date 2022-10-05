@@ -71,7 +71,8 @@ class StarryModel(pm.Model):
                                 setattr(self, parname_temp,
                                         pm.Uniform(parname_temp,
                                                    lower=param.priorpar1,
-                                                   upper=param.priorpar2))
+                                                   upper=param.priorpar2,
+                                                   testval=param.value))
                             elif param.prior == 'N':
                                 if parname in ['rp', 'per', 'ecc',
                                                'scatter_mult', 'scatter_ppm',
@@ -80,24 +81,28 @@ class StarryModel(pm.Model):
                                             BoundedNormal_0(
                                                 parname_temp,
                                                 mu=param.priorpar1,
-                                                sigma=param.priorpar2))
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
                                 elif parname in ['inc']:
                                     setattr(self, parname_temp,
                                             BoundedNormal_90(
                                                 parname_temp,
                                                 mu=param.priorpar1,
-                                                sigma=param.priorpar2))
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
                                 else:
                                     setattr(self, parname_temp,
                                             pm.Normal(parname_temp,
                                                       mu=param.priorpar1,
-                                                      sigma=param.priorpar2))
+                                                      sigma=param.priorpar2,
+                                                      testval=param.value))
                             elif param.prior == 'LU':
                                 setattr(self, parname_temp,
                                         tt.exp(pm.Uniform(
                                             parname_temp, 
                                             lower=param.priorpar1,
-                                            upper=param.priorpar2)))
+                                            upper=param.priorpar2,
+                                            testval=param.value)))
                         else:
                             # If a parameter is shared, make it equal to the
                             # 0th parameter value
