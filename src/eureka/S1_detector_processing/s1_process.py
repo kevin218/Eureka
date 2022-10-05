@@ -52,10 +52,11 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         # Load Eureka! control file and store values in Event object
         ecffile = 'S1_' + eventlabel + '.ecf'
         meta = readECF.MetaClass(ecf_path, ecffile)
-        meta.eventlabel = eventlabel
-        meta.datetime = time_pkg.strftime('%Y-%m-%d')
     else:
         meta = input_meta
+
+    meta.eventlabel = eventlabel
+    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     # Create directories for Stage 1 processing outputs
     run = util.makedirectory(meta, 'S1')
