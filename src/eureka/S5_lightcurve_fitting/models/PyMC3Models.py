@@ -53,7 +53,7 @@ class StarryModel(pm.Model):
             for parname in self.paramtitles:
                 param = getattr(self.parameters, parname)
                 if param.ptype in ['independent', 'fixed']:
-                    setattr(self, parname, tt.constant(param.value))
+                    setattr(self, parname, param.value)
                 elif param.ptype not in ['free', 'shared', 'white_free',
                                          'white_fixed']:
                     message = (f'ptype {param.ptype} for parameter '
@@ -106,9 +106,7 @@ class StarryModel(pm.Model):
                         else:
                             # If a parameter is shared, make it equal to the
                             # 0th parameter value
-                            setattr(self, parname_temp,
-                                    pm.Deterministic(parname_temp,
-                                                     getattr(self, parname)))
+                            setattr(self, parname_temp, getattr(self, parname))
 
             if hasattr(self, 'u2'):
                 self.udeg = 2
@@ -138,7 +136,9 @@ class StarryModel(pm.Model):
                 for key in self.paramtitles:
                     if getattr(self.parameters, key).ptype in ['free',
                                                                'shared',
-                                                               'fixed']:
+                                                               'fixed',
+                                                               'white_free',
+                                                               'white_fixed']:
                         if (getattr(self.parameters, key).ptype != 'fixed'
                                 and c > 0):
                             # Remove the _c part of the parname but leave any
