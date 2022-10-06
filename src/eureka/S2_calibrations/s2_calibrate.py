@@ -28,7 +28,7 @@ import jwst.assign_wcs.nirspec
 from functools import partial
 
 
-def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
+def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
     pipeline into calints and x1dints.
 
@@ -60,9 +60,13 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''
     t0 = time_pkg.time()
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S2_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S2_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
