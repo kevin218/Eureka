@@ -42,7 +42,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     '''
     print("\nStarting Stage 6: Light Curve Fitting\n")
 
-    if input_meta = None:
+    if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S6_' + eventlabel + '.ecf'
         meta = readECF.MetaClass(ecf_path, ecffile)

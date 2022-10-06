@@ -48,7 +48,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
     
-    if input_meta = None:
+    if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S5_' + eventlabel + '.ecf'
         meta = readECF.MetaClass(ecf_path, ecffile)

@@ -68,7 +68,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     - July 2022 Sebastian Zieba
          Added photometry S4
     '''
-    if input_meta = None:
+    if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S4_' + eventlabel + '.ecf'
         meta = readECF.MetaClass(ecf_path, ecffile)
