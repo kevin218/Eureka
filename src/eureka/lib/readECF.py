@@ -241,9 +241,10 @@ class MetaClass:
                 name = line.split()[0]
                 val = ''.join(line.split()[1:])
                 new_val = self.params[name]
-                #check if values have been updated
+                # check if values have been updated
                 if val != new_val:
-                    self.lines[i] = self.lines[i].replace(str(val),str(new_val))
+                    self.lines[i] = self.lines[i].replace(str(val), 
+                                                          str(new_val))
         
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
