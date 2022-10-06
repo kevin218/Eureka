@@ -210,10 +210,10 @@ class MetaClass:
 
     def write(self, folder):
         """A function to write an ECF file based on the current MetaClass settings.
-
-        NOTE: For now this only rewrites the input ECF file to a new ECF file
+        
+        NOTE: For now this rewrites the input_meta data to a new ECF file
         in the requested folder. In the future this function should make a full
-        ECF file based on any adjusted parameters.
+        ECF file based on all parameters in meta.
 
         Parameters
         ----------
@@ -226,7 +226,25 @@ class MetaClass:
 
         - Mar 2022 Taylor J Bell
             Initial Version.
+        - Oct 2022 Eva-Maria Ahrer
+            Update parameters and replace
         """
+        
+        for i in range(len(self.lines)):
+            line = self.lines[i]
+            # Strip off comments:
+            if "#" in line:
+                line = line[0:line.index('#')]
+            line = line.strip()
+
+            if len(line) > 0:
+                name = line.split()[0]
+                val = ''.join(line.split()[1:])
+                new_val = self.params[name]
+                #check if values have been updated
+                if val != new_val:
+                    self.lines[i] = self.lines[i].replace(str(val),str(new_val))
+        
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
 
