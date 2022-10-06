@@ -100,8 +100,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
 
-            lc = xrio.readXR(meta.filename_S4_LCData)
-
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
                                                 ap=spec_hw_val, bg=bg_hw_val)
@@ -115,6 +113,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             # Copy ECF
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
             meta.copy_ecf()
+
+            specData_savefile = (
+                meta.inputdir + 
+                meta.filename_S4_LCData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S4 save file:\n{specData_savefile}",
+                         mute=(not meta.verbose))
+            lc = xrio.readXR(specData_savefile)
 
             # Set the intial fitting parameters
             params = Parameters(meta.folder, meta.fit_par)
