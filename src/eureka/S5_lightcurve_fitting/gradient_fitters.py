@@ -178,6 +178,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         trace = pmx.sample(tune=meta.tune, draws=meta.draws, start=start,
                            target_accept=meta.target_accept,
                            chains=meta.chains, cores=meta.ncpu)
+        print()
 
     samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
 
