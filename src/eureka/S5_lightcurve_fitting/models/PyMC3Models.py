@@ -302,39 +302,48 @@ class StarryModel(pm.Model):
 
         return
 
-    def eval(self, eval=True, **kwargs):
-        sys_eval = self.syseval(eval=eval)
-        phys_eval = self.physeval(eval=eval)[0]
+    def eval(self, eval=True, channel=None, **kwargs):
+        sys_eval = self.syseval(eval=eval, channel=channel)
+        phys_eval = self.physeval(eval=eval, channel=channel)[0]
         if eval:
             return phys_eval*sys_eval
         else:
             return phys_eval*sys_eval
 
-    def syseval(self, eval=True):
+    def syseval(self, eval=True, channel=None):
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         if eval:
             # This is only called for things like plotting, so looping
             # doesn't matter
-            poly_coeffs = np.zeros((self.nchan, 10))
-            ramp_coeffs = np.zeros((self.nchan, 6))
+            poly_coeffs = np.zeros((nchan, 10))
+            ramp_coeffs = np.zeros((nchan, 6))
             
             # Add fitted parameters
-            for j in range(self.nchan):
+            for j in range(nchan):
                 for i in range(6):
                     try:
-                        if j == 0:
+                        if channels[j] == 0:
                             ramp_coeffs[j, i] = self.fit_dict[f'r{i}']
                         else:
-                            ramp_coeffs[j, i] = self.fit_dict[f'r{i}_{j}']
+                            ramp_coeffs[j, i] = \
+                                self.fit_dict[f'r{i}_{channels[j]}']
                     except KeyError:
                         pass
             
-            for j in range(self.nchan):
+            for j in range(nchan):
                 for i in range(9, -1, -1):
                     try:
-                        if j == 0:
+                        if channels[j] == 0:
                             poly_coeffs[j, i] = self.fit_dict[f'c{i}']
                         else:
-                            poly_coeffs[j, i] = self.fit_dict[f'c{i}_{j}']
+                            poly_coeffs[j, i] = \
+                                self.fit_dict[f'c{i}_{channels[j]}']
                     except KeyError:
                         pass
 
@@ -342,14 +351,14 @@ class StarryModel(pm.Model):
             poly_coeffs = np.flip(poly_coeffs, axis=1)
             poly_flux = np.zeros(0)
             time_poly = self.time - self.time.mean()
-            for c in range(self.nchan):
+            for c in range(nchan):
                 poly = np.poly1d(poly_coeffs[c])
                 poly_flux = np.concatenate(
                     [poly_flux, np.polyval(poly, time_poly)])
 
             ramp_flux = np.zeros(0)
             time_ramp = self.time - self.time[0]
-            for c in range(self.nchan):
+            for c in range(nchan):
                 r0, r1, r2, r3, r4, r5 = ramp_coeffs[c]
                 lcpiece = (r0*np.exp(-r1*time_ramp + r2) +
                            r3*np.exp(-r4*time_ramp + r5) +
@@ -359,33 +368,35 @@ class StarryModel(pm.Model):
             return poly_flux*ramp_flux
         else:
             # This gets compiled before fitting, so looping doesn't matter
-            poly_coeffs = np.zeros((self.nchan, 10)).tolist()
-            ramp_coeffs = np.zeros((self.nchan, 6)).tolist()
+            poly_coeffs = np.zeros((nchan, 10)).tolist()
+            ramp_coeffs = np.zeros((nchan, 6)).tolist()
 
             # Parse 'r#' keyword arguments as coefficients
-            for j in range(self.nchan):
+            for j in range(nchan):
                 for i in range(6):
                     try:
-                        if j == 0:
+                        if channels[j] == 0:
                             ramp_coeffs[j][i] = getattr(self, f'r{i}')
                         else:
-                            ramp_coeffs[j][i] = getattr(self, f'r{i}_{j}')
+                            ramp_coeffs[j][i] = getattr(self,
+                                                        f'r{i}_{channels[j]}')
                     except AttributeError:
                         pass
             
-            for j in range(self.nchan):
+            for j in range(nchan):
                 for i in range(10):
                     try:
-                        if j == 0:
+                        if channels[j] == 0:
                             poly_coeffs[j][i] = getattr(self, f'c{i}')
                         else:
-                            poly_coeffs[j][i] = getattr(self, f'c{i}_{j}')
+                            poly_coeffs[j][i] = getattr(self,
+                                                        f'c{i}_{channels[j]}')
                     except AttributeError:
                         pass
 
             poly_flux = tt.zeros(0)
             time_poly = self.time - self.time.mean()
-            for c in range(self.nchan):
+            for c in range(nchan):
                 lcpiece = tt.zeros(len(self.time))
                 for power in range(len(poly_coeffs[c])):
                     lcpiece += poly_coeffs[c][power] * time_poly**power
@@ -393,7 +404,7 @@ class StarryModel(pm.Model):
 
             ramp_flux = tt.zeros(0)
             time_ramp = self.time - self.time[0]
-            for c in range(self.nchan):
+            for c in range(nchan):
                 r0, r1, r2, r3, r4, r5 = ramp_coeffs[c]
                 lcpiece = (r0*tt.exp(-r1*time_ramp + r2) +
                            r3*tt.exp(-r4*time_ramp + r5) +
@@ -402,7 +413,14 @@ class StarryModel(pm.Model):
 
             return poly_flux*ramp_flux
 
-    def physeval(self, interp=False, eval=True):
+    def physeval(self, interp=False, eval=True, channel=None):
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         if interp:
             dt = self.time[1]-self.time[0]
             steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
@@ -413,14 +431,16 @@ class StarryModel(pm.Model):
 
         if eval:
             phys_flux = np.zeros(0)
-            for c in range(self.nchan):
+            for chan in range(nchan):
+                c = channels[chan]
                 lcpiece = self.fit.systems[c].flux(new_time-self.fit.t0).eval()
                 phys_flux = np.concatenate([phys_flux, lcpiece])
 
             return phys_flux, new_time
         else:
             phys_flux = tt.zeros(0)
-            for c in range(self.nchan):
+            for chan in range(nchan):
+                c = channels[chan]
                 lcpiece = self.systems[c].flux(new_time-self.t0)
                 phys_flux = tt.concatenate([phys_flux, lcpiece])
 
@@ -588,11 +608,9 @@ class StarryModel(pm.Model):
         if self.name != 'New Model':
             label += ': '+self.name
         
-        flux = self.eval(**kwargs)
-        if share:
-            flux = flux[chan*len(self.time):(chan+1)*len(self.time)]
+        model = self.eval(channel=chan, **kwargs)
         
-        ax.plot(self.time, flux, '.', ls='', ms=2, label=label,
+        ax.plot(self.time, model, '.', ls='', ms=2, label=label,
                 color=color, zorder=zorder)
 
         if components and self.components is not None:
