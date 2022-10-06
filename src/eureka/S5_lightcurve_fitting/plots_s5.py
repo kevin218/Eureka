@@ -510,10 +510,10 @@ def plot_res_distr(lc, model, meta, fitter):
 
     model_lc = model.eval()
 
-    plt.figure(5302, figsize=(8, 6))
-    plt.clf()
-
     for channel in lc.fitted_channels:
+        plt.figure(5302, figsize=(8, 6))
+        plt.clf()
+        
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(np.array(lc.unc_fit))
         model = np.ma.copy(model_lc)
