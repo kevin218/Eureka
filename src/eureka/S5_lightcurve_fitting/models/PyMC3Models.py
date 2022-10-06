@@ -269,34 +269,36 @@ class StarryModel(pm.Model):
 
         with self:
             if hasattr(self, 'scatter_ppm'):
-                scatter_ppm_array = self.scatter_ppm*tt.ones(len(self.time))
+                self.scatter_array = self.scatter_ppm*tt.ones(len(self.time))
                 for c in range(1, self.nchan):
                     parname_temp = 'scatter_ppm_'+str(c)
-                    scatter_ppm_array = tt.concatenate(
-                        [scatter_ppm_array,
+                    self.scatter_array = tt.concatenate(
+                        [self.scatter_array,
                          getattr(self, parname_temp)*tt.ones(len(self.time))])
-                self.scatter_ppm_array = scatter_ppm_array*1e6
+                self.scatter_array /= 1e6
             if hasattr(self, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
-                scatter_ppm_array = (self.scatter_mult *
-                                     self.lc_unc[:len(self.time)])
+                self.scatter_array = (self.scatter_mult *
+                                      self.lc_unc[:len(self.time)])
                 for c in range(1, self.nchan):
-                    parname_temp = 'scatter_mult_'+str(c)
-                    scatter_ppm_array = tt.concatenate(
-                        [scatter_ppm_array,
+                    if self.parameters.scatter_mult.ptype == 'fixed':
+                        parname_temp = 'scatter_mult'
+                    else:
+                        parname_temp = 'scatter_mult_'+str(c)
+                    self.scatter_array = tt.concatenate(
+                        [self.scatter_array,
                          (getattr(self, parname_temp) *
                           self.lc_unc[c*len(self.time):(c+1)*len(self.time)])])
-                self.scatter_ppm_array = scatter_ppm_array*1e6
-            if not hasattr(self, 'scatter_ppm_array'):
+            if not hasattr(self, 'scatter_array'):
                 # Not fitting the noise level
-                self.scatter_ppm_array = self.lc_unc*1e6
+                self.scatter_array = self.lc_unc
 
             # This is how we tell `pymc3` about our observations;
             # we are assuming they are ampally distributed about
             # the true model. This line effectively defines our
             # likelihood function.
-            pm.Normal("obs", mu=self.eval(eval=False),
-                      sd=self.scatter_ppm_array/1e6, observed=self.flux)
+            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
+                      observed=self.flux)
 
         return
 
@@ -314,28 +316,27 @@ class StarryModel(pm.Model):
             # doesn't matter
             poly_coeffs = np.zeros((self.nchan, 10))
             ramp_coeffs = np.zeros((self.nchan, 6))
+            
             # Add fitted parameters
-            for k, v in self.fit_dict.items():
-                if k.lower().startswith('c'):
-                    k = k[1:]
-                    remvisnum = k.split('_')
-                    if k.isdigit():
-                        poly_coeffs[0, int(k)] = v
-                    elif len(remvisnum) > 1 and self.nchan > 1:
-                        if remvisnum[0].isdigit() and remvisnum[1].isdigit():
-                            ind0 = int(remvisnum[1])
-                            ind1 = int(remvisnum[0])
-                            poly_coeffs[ind0][ind1] = v
-                elif k.lower().startswith('r'):
-                    k = k[1:]
-                    remvisnum = k.split('_')
-                    if k.isdigit():
-                        ramp_coeffs[0, int(k)] = v
-                    elif len(remvisnum) > 1 and self.nchan > 1:
-                        if remvisnum[0].isdigit() and remvisnum[1].isdigit():
-                            ind0 = int(remvisnum[1])
-                            ind1 = int(remvisnum[0])
-                            ramp_coeffs[ind0][ind1] = v
+            for j in range(self.nchan):
+                for i in range(6):
+                    try:
+                        if j == 0:
+                            ramp_coeffs[j, i] = self.fit_dict[f'r{i}']
+                        else:
+                            ramp_coeffs[j, i] = self.fit_dict[f'r{i}_{j}']
+                    except KeyError:
+                        pass
+            
+            for j in range(self.nchan):
+                for i in range(9, -1, -1):
+                    try:
+                        if j == 0:
+                            poly_coeffs[j, i] = self.fit_dict[f'c{i}']
+                        else:
+                            poly_coeffs[j, i] = self.fit_dict[f'c{i}_{j}']
+                    except KeyError:
+                        pass
 
             poly_coeffs = poly_coeffs[:, ~np.all(poly_coeffs == 0, axis=0)]
             poly_coeffs = np.flip(poly_coeffs, axis=1)
@@ -360,28 +361,27 @@ class StarryModel(pm.Model):
             # This gets compiled before fitting, so looping doesn't matter
             poly_coeffs = np.zeros((self.nchan, 10)).tolist()
             ramp_coeffs = np.zeros((self.nchan, 6)).tolist()
-            # Add fitted parameters
-            for k in self.uniqueparams:
-                if k.lower().startswith('c'):
-                    k = k[1:]
-                    remvisnum = k.split('_')
-                    if k.isdigit():
-                        poly_coeffs[0][int(k)] = getattr(self, 'c'+k)
-                    elif len(remvisnum) > 1 and self.nchan > 1:
-                        if remvisnum[0].isdigit() and remvisnum[1].isdigit():
-                            ind0 = int(remvisnum[1])
-                            ind1 = int(remvisnum[0])
-                            poly_coeffs[ind0][ind1] = getattr(self, 'c'+k)
-                elif k.lower().startswith('r'):
-                    k = k[1:]
-                    remvisnum = k.split('_')
-                    if k.isdigit():
-                        ramp_coeffs[0][int(k)] = getattr(self, 'r'+k)
-                    elif len(remvisnum) > 1 and self.nchan > 1:
-                        if remvisnum[0].isdigit() and remvisnum[1].isdigit():
-                            ind0 = int(remvisnum[1])
-                            ind1 = int(remvisnum[0])
-                            ramp_coeffs[ind0][ind1] = getattr(self, 'r'+k)
+
+            # Parse 'r#' keyword arguments as coefficients
+            for j in range(self.nchan):
+                for i in range(6):
+                    try:
+                        if j == 0:
+                            ramp_coeffs[j][i] = getattr(self, f'r{i}')
+                        else:
+                            ramp_coeffs[j][i] = getattr(self, f'r{i}_{j}')
+                    except AttributeError:
+                        pass
+            
+            for j in range(self.nchan):
+                for i in range(10):
+                    try:
+                        if j == 0:
+                            poly_coeffs[j][i] = getattr(self, f'c{i}')
+                        else:
+                            poly_coeffs[j][i] = getattr(self, f'c{i}_{j}')
+                    except AttributeError:
+                        pass
 
             poly_flux = tt.zeros(0)
             time_poly = self.time - self.time.mean()
