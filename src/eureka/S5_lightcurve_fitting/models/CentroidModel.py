@@ -50,9 +50,6 @@ class CentroidModel(Model):
         else:
             self.coeff_keys = [f'{self.axis}_{i}' for i in range(self.nchan)]
 
-        # Update coefficients
-        self._parse_coeffs()
-
     @property
     def centroid(self):
         """A getter for the centroid."""
