@@ -73,7 +73,17 @@ class Model:
 
     @flux.setter
     def flux(self, flux_array):
-        """A setter for the flux."""
+        """A setter for the flux
+
+        Parameters
+        ----------
+        flux_array : sequence
+            The flux array
+        """
+        # Check the type
+        if not isinstance(flux_array, (np.ndarray, tuple, list)):
+            raise TypeError("flux axis must be a tuple, list, or numpy array.")
+
         # Set the array
         self._flux = np.ma.masked_array(flux_array)
 
