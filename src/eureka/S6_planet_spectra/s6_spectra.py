@@ -364,6 +364,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         fitter = 'emcee'
     elif 'lsq' in fit_methods:
         fitter = 'lsq'
+    elif 'nuts' in fit_methods:
+        fitter = 'nuts'
+    elif 'exoplanet' in fit_methods:
+        fitter = 'exoplanet'
     else:
         raise ValueError('No recognized fitters in fit_methods = '
                          f'{fit_methods}')
@@ -373,7 +377,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     medians = []
     errs = []
 
-    if fitter in ['dynesty', 'emcee']:
+    if fitter in ['dynesty', 'emcee', 'nuts']:
         fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
         fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                     skipinitialspace=True)
@@ -419,7 +423,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                 medians.append(fitted_values["Mean"][ind])
         medians = np.array(medians)
 
-        # if lsq, no uncertainties
+        # if lsq or exoplanet, no uncertainties
         errs = np.ones((2, len(medians)))*np.nan
 
     meta.spectrum_median, meta.spectrum_err = medians, errs
