@@ -608,7 +608,11 @@ class StarryModel(pm.Model):
         if self.name != 'New Model':
             label += ': '+self.name
         
-        model = self.eval(channel=chan, **kwargs)
+        if not share:
+            channel = 0
+        else:
+            channel = chan
+        model = self.eval(channel=channel, **kwargs)
         
         ax.plot(self.time, model, '.', ls='', ms=2, label=label,
                 color=color, zorder=zorder)
