@@ -28,6 +28,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
         The metadata object from Eureka!'s S5 step (if running S5
         and S6 sequentially). Defaults to None.
     input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
