@@ -23,6 +23,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     s4_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S4 step (if running S4 and S5
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
 
     Returns
     -------

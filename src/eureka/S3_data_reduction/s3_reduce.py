@@ -52,6 +52,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     s2_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S2 step (if running S2 and S3
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
 
     Returns
     -------

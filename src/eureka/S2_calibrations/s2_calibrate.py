@@ -45,6 +45,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     s1_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S1 step (if running S1 and S2
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
 
     Returns
     -------

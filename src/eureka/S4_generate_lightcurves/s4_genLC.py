@@ -42,6 +42,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
 
     Returns
     -------
