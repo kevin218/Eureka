@@ -53,13 +53,12 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         start[name] = val
 
     log.writelog('Running exoplanet optimizer...')
-    with model:
+    with model.model:
         map_soln = pmx.optimize(start=start)
 
     # Get the best fit params
     fit_params = np.array([map_soln[name] for name in freenames])
-    model.fit_dict = {freenames[i]: fit_params[i]
-                      for i in range(len(freenames))}
+    model.update(fit_params)
 
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
@@ -197,8 +196,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
 
-    model.fit_dict = {freenames[i]: fit_params[i]
-                      for i in range(len(freenames))}
+    model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))

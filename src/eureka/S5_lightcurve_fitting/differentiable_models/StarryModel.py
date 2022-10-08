@@ -1,46 +1,34 @@
 import numpy as np
+import astropy.constants as const
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
-import starry
 import theano.tensor as tt
-import astropy.constants as const
 
 # Avoid tonnes of "Cannot construct a scalar test value" messages
 import logging
 logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
-from . import PyMC3Model
-
+import starry
 starry.config.quiet = True
 starry.config.lazy = True
 
+from . import PyMC3Model
 
-class fit_class:
+
+class temp_class:
     def __init__(self):
         pass
 
 
 class StarryModel(PyMC3Model):
-    def __init__(self, model, **kwargs):
-        # Inherit from Model class
+    def __init__(self, **kwargs):
+        # Inherit from PyMC3Model class
         super().__init__(**kwargs)
-
-        self.model = model
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-        self.uniqueparams = np.unique(self.longparamlist)
-
-        self.components = [self]
 
         required = np.array(['Ms', 'Mp', 'Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
@@ -61,32 +49,28 @@ class StarryModel(PyMC3Model):
             self.ydeg = 1
         else:
             self.ydeg = 0
-        
+
+    def setup(self):
         self.systems = []
         for c in range(self.nchan):
-            # Initialize star object
-            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg,
-                                             amp=1.0),
-                                  m=self.Ms, r=self.Rs, prot=1.0)
-
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
-            # This way we can do `temp.u1` rather than
-            # `getattr(self, 'u1_'+c)`
-            temp = fit_class()
+            # For example, this way we can do `temp.u1` rather than
+            # `getattr(self.model, 'u1_'+c)`.
+            temp = temp_class()
             for key in self.paramtitles:
-                if getattr(self.parameters, key).ptype in ['free',
-                                                           'shared',
-                                                           'fixed',
-                                                           'white_free',
-                                                           'white_fixed']:
-                    if (getattr(self.parameters, key).ptype != 'fixed'
-                            and c > 0):
-                        # Remove the _c part of the parname but leave any
-                        # other underscores intact
-                        setattr(temp, key, getattr(self, key+'_'+str(c)))
-                    else:
-                        setattr(temp, key, getattr(self, key))
+                if (getattr(self.parameters, key).ptype not in ['fixed', 'independent']
+                        and c > 0):
+                    # Remove the _c part of the parname but leave any
+                    # other underscores intact
+                    setattr(temp, key, getattr(self.model, key+'_'+str(c)))
+                else:
+                    setattr(temp, key, getattr(self.model, key))
+            
+            # Initialize star object
+            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg,
+                                            amp=1.0),
+                                m=temp.Ms, r=temp.Rs, prot=1.0)
 
             # FINDME: non-uniform limb darkening does not currently work
             if hasattr(self.parameters, 'limb_dark'):
@@ -101,24 +85,24 @@ class StarryModel(PyMC3Model):
                     star.map[1] = temp.u1
                 elif self.parameters.limb_dark.value != 'uniform':
                     message = (f'ERROR: starryModel is not yet able to '
-                               f'handle {self.parameters.limb_dark.value} '
-                               f'limb darkening.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
+                            f'handle {self.parameters.limb_dark.value} '
+                            f'limb darkening.\n'
+                            f'       limb_dark must be one of uniform, '
+                            f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
             
-            if hasattr(self, 'fp'):
+            if hasattr(temp, 'fp'):
                 amp = temp.fp
             else:
                 amp = 0
             # Initialize planet object
             planet = starry.Secondary(
                 starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0,
-                           obl=0.0),
+                        obl=0.0),
                 # Convert mass to M_sun units
-                m=self.Mp*const.M_jup.value/const.M_sun.value,
+                m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 # Convert radius to R_star units
-                r=temp.rp*self.Rs,
+                r=temp.rp*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
                 # porb = temp.per,
@@ -133,14 +117,14 @@ class StarryModel(PyMC3Model):
             planet.porb = temp.per
             # Setting prot here may not override a
             planet.prot = temp.per
-            if hasattr(self, 'AmpCos1'):
+            if hasattr(temp, 'AmpCos1'):
                 planet.map[1, 0] = temp.AmpCos1
-            if hasattr(self, 'AmpSin1'):
+            if hasattr(temp, 'AmpSin1'):
                 planet.map[1, 1] = temp.AmpSin1
             if self.ydeg == 2:
-                if hasattr(self, 'AmpCos2'):
+                if hasattr(temp, 'AmpCos2'):
                     planet.map[2, 0] = temp.AmpCos2
-                if hasattr(self, 'AmpSin2'):
+                if hasattr(temp, 'AmpSin2'):
                     planet.map[2, 1] = temp.AmpSin2
             # Offset is controlled by AmpSin1
             planet.theta0 = 180.0
@@ -150,7 +134,7 @@ class StarryModel(PyMC3Model):
             sys = starry.System(star, planet)
             self.systems.append(sys)
 
-    def eval(self, interp=False, eval=True, channel=None):
+    def eval(self, eval=True, channel=None, **kwargs):
         if channel is None:
             nchan = self.nchan
             channels = np.arange(nchan)
@@ -158,89 +142,48 @@ class StarryModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        if interp:
-            dt = self.time[1]-self.time[0]
-            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps,
-                                   endpoint=True)
-        else:
-            new_time = self.time
-
         if eval:
-            phys_flux = np.zeros(0)
-            for chan in range(nchan):
-                c = channels[chan]
-                lcpiece = self.fit.systems[c].flux(new_time-self.fit.t0).eval()
-                phys_flux = np.concatenate([phys_flux, lcpiece])
-
-            return phys_flux, new_time
+            lib = np
+            systems = self.fit.systems
+            t0 = self.fit.t0
         else:
-            phys_flux = tt.zeros(0)
-            for chan in range(nchan):
-                c = channels[chan]
-                lcpiece = self.systems[c].flux(new_time-self.t0)
-                phys_flux = tt.concatenate([phys_flux, lcpiece])
+            lib = tt
+            systems = self.systems
+            t0 = self.model.t0
 
-            return phys_flux, new_time
+        phys_flux = lib.zeros(0)
+        for c in channels:
+            lcpiece = systems[c].flux(self.time-t0)
+            if eval:
+                lcpiece = lcpiece.eval()
+        phys_flux = lib.concatenate([phys_flux, lcpiece])
 
-    @property
-    def fit_dict(self):
-        return self._fit_dict
+        return phys_flux
 
-    @fit_dict.setter
-    def fit_dict(self, input_fit_dict):
-        self._fit_dict = input_fit_dict
+    def update(self, newparams):
+        super().update(newparams)
 
-        fit = fit_class()
-        for key in self.fit_dict.keys():
-            setattr(fit, key, self.fit_dict[key])
-
-        for parname in self.uniqueparams:
-            param = getattr(self.parameters, parname)
-            if param.ptype == 'independent':
-                continue
-            elif param.ptype == 'fixed':
-                setattr(fit, parname, param.value)
-            elif param.ptype == 'shared':
-                for c in range(1, self.nchan):
-                    parname_temp = parname+'_'+str(c)
-                    setattr(fit, parname_temp, getattr(fit, parname))
-                    self._fit_dict[parname_temp] = getattr(fit, parname)
-
-        if hasattr(self, 'u2'):
-            fit.udeg = 2
-        elif hasattr(self, 'u1'):
-            fit.udeg = 1
-        else:
-            fit.udeg = 0
-        if hasattr(self, 'AmpCos2') or hasattr(self, 'AmpSin2'):
-            fit.ydeg = 2
-        elif hasattr(self, 'AmpCos1') or hasattr(self, 'AmpSin1'):
-            fit.ydeg = 1
-        else:
-            fit.ydeg = 0
-
-        fit.systems = []
+        self.fit.systems = []
         for c in range(self.nchan):
-            # Initialize star object
-            star = starry.Primary(starry.Map(ydeg=0, udeg=fit.udeg, amp=1.0),
-                                  m=self.Ms, r=self.Rs, prot=1.0)
-
-            # To save ourselves from tonnes of getattr lines, let's make a new
-            # object without the _c parts of the parnames
-            # This way we can do `temp.u1` rather than
-            # `getattr(self, 'u1_'+c)`
-            temp = fit_class()
+            # To save ourselves from tonnes of getattr lines, let's make a
+            # new object without the _c parts of the parnames
+            # For example, this way we can do `temp.u1` rather than
+            # `getattr(self.model, 'u1_'+c)`.
+            temp = temp_class()
             for key in self.paramtitles:
-                if getattr(self.parameters, key).ptype in ['free', 'shared',
-                                                           'fixed']:
-                    if (c > 0 and
-                            getattr(self.parameters, key).ptype != 'fixed'):
-                        # Remove the _c part of the parname but leave any
-                        # other underscores intact
-                        setattr(temp, key, getattr(fit, key+'_'+str(c)))
-                    else:
-                        setattr(temp, key, getattr(fit, key))
+                if (getattr(self.parameters, key).ptype not in ['fixed', 'independent']
+                        and c > 0):
+                    # Remove the _c part of the parname but leave any
+                    # other underscores intact
+                    setattr(temp, key, getattr(self.fit, key+'_'+str(c)))
+                else:
+                    setattr(temp, key, getattr(self.fit, key))
+
+            print(vars(temp))
+
+            # Initialize star object
+            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg, amp=1.0),
+                                  m=temp.Ms, r=temp.Rs, prot=1.0)
 
             # FINDME: non-uniform limb darkening does not currently work
             if hasattr(self.parameters, 'limb_dark'):
@@ -261,17 +204,17 @@ class StarryModel(PyMC3Model):
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
             
-            if hasattr(self, 'fp'):
+            if hasattr(temp, 'fp'):
                 amp = temp.fp
             else:
                 amp = 0
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=fit.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
+                starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
                 # Convert mass to M_sun units
-                m=self.Mp*const.M_jup.value/const.M_sun.value,
+                m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 # Convert radius to R_star units
-                r=temp.rp*self.Rs,
+                r=temp.rp*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
                 # porb = temp.per,
@@ -286,14 +229,14 @@ class StarryModel(PyMC3Model):
             planet.porb = temp.per
             # Setting prot here may not override a
             planet.prot = temp.per
-            if hasattr(self, 'AmpCos1'):
+            if hasattr(temp, 'AmpCos1'):
                 planet.map[1, 0] = temp.AmpCos1
-            if hasattr(self, 'AmpSin1'):
+            if hasattr(temp, 'AmpSin1'):
                 planet.map[1, 1] = temp.AmpSin1
             if self.ydeg == 2:
-                if hasattr(self, 'AmpCos2'):
+                if hasattr(temp, 'AmpCos2'):
                     planet.map[2, 0] = temp.AmpCos2
-                if hasattr(self, 'AmpSin2'):
+                if hasattr(temp, 'AmpSin2'):
                     planet.map[2, 1] = temp.AmpSin2
             # Offset is controlled by AmpSin1
             planet.theta0 = 180.0
@@ -301,9 +244,7 @@ class StarryModel(PyMC3Model):
 
             # Instantiate the system
             sys = starry.System(star, planet)
-            fit.systems.append(sys)
-
-        self.fit = fit
+            self.fit.systems.append(sys)
 
         return
 

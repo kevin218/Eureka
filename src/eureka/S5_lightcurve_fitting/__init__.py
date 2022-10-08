@@ -1,6 +1,7 @@
 """
 Package to fit models to light curve data
 """
+from . import differentiable_models
 from . import fitters
 from . import gradient_fitters
 from . import lightcurve

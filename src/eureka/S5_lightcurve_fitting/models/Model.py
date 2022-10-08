@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 import copy
 import os
 
-import astropy.units as q
-
 from ...lib.readEPF import Parameters
 from ..utils import COLORS
 
@@ -24,19 +22,17 @@ class Model:
         # Set up default model attributes
         self.name = 'New Model'
         self.fitter = None
-        self.time = None
+        self._time = None
         self.time_units = 'BMJD_TDB'
         self._flux = None
-        self._units = q.day
         self.freenames = None
         self._parameters = Parameters()
+        self.longparamlist = None
+        self.paramtitles = None
         self.components = None
         self.modeltype = None
         self.fmt = None
-        if hasattr(kwargs, 'nchan'):
-            self.nchan = kwargs.get('nchan')
-        else:
-            self.nchan = 1
+        self.nchan = 1
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
@@ -57,14 +53,16 @@ class Model:
             The combined model.
         """
         # Make sure it is the right type
-        attrs = ['units', 'flux', 'time']
+        attrs = ['flux', 'time']
         if not all([hasattr(other, attr) for attr in attrs]):
             raise TypeError('Only another Model instance may be multiplied.')
 
         # Combine the model parameters too
-        params = self.parameters + other.parameters
+        parameters = self.parameters + other.parameters
+        paramtitles = self.paramtitles.append(other.paramtitles)
 
-        return CompositeModel([copy.copy(self), other], parameters=params)
+        return CompositeModel([copy.copy(self), other], parameters=parameters,
+                              paramtitles=paramtitles)
 
     @property
     def flux(self):
@@ -86,6 +84,54 @@ class Model:
 
         # Set the array
         self._flux = np.ma.masked_array(flux_array)
+
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array, time_units='BMJD'):
+        """A setter for the time
+
+        Parameters
+        ----------
+        time_array: sequence, astropy.units.quantity.Quantity
+            The time array
+        time_units: str
+            The units of the input time_array, e.g. ['MJD', 'BMJD', 'phase']
+        """
+        # Check the type
+        if not isinstance(time_array, (np.ndarray, tuple, list)):
+            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+
+        # Set the units
+        self.time_units = time_units
+
+        # Set the array
+        # self._time = np.array(time_array)
+        self._time = np.ma.masked_array(time_array)
+
+    @property
+    def parameters(self):
+        """A getter for the parameters."""
+        return self._parameters
+
+    @parameters.setter
+    def parameters(self, params):
+        """A setter for the parameters."""
+        # Process if it is a parameters file
+        if isinstance(params, str) and os.path.isfile(params):
+            params = Parameters(params)
+
+        # Or a Parameters instance
+        if (params is not None) and (type(params).__name__ !=
+                                     Parameters.__name__):
+            raise TypeError("'params' argument must be a JSON file, "
+                            "ascii file, or parameters.Parameters instance.")
+
+        # Set the parameters attribute
+        self._parameters = params
 
     def interp(self, new_time, **kwargs):
         """Evaluate the model over a different time array.
@@ -133,27 +179,6 @@ class Model:
         """
         return
 
-    @property
-    def parameters(self):
-        """A getter for the parameters."""
-        return self._parameters
-
-    @parameters.setter
-    def parameters(self, params):
-        """A setter for the parameters."""
-        # Process if it is a parameters file
-        if isinstance(params, str) and os.path.isfile(params):
-            params = Parameters(params)
-
-        # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ !=
-                                     Parameters.__name__):
-            raise TypeError("'params' argument must be a JSON file, "
-                            "ascii file, or parameters.Parameters instance.")
-
-        # Set the parameters attribute
-        self._parameters = params
-
     def plot(self, time, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model.
@@ -186,7 +211,7 @@ class Model:
         """
         # Make the figure
         if ax is None:
-            fig = plt.figure(figsize=(8, 6))
+            fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
         # Set the time
@@ -197,17 +222,17 @@ class Model:
         if self.name != 'New Model':
             label += ': '+self.name
 
-        flux = self.eval(**kwargs)
+        model = self.eval(**kwargs)
         if share:
-            flux = flux[chan*len(self.time):(chan+1)*len(self.time)]
+            model = model[chan*len(self.time):(chan+1)*len(self.time)]
 
-        ax.plot(self.time, flux, '.', ls='', ms=2, label=label, color=color,
+        ax.plot(self.time, model, '.', ls='', ms=2, label=label, color=color,
                 zorder=zorder)
 
         if components and self.components is not None:
-            for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS),
-                          zorder=zorder, share=share, chan=chan, **kwargs)
+            for component in self.components:
+                component.plot(self.time, ax=ax, draw=False, color=next(COLORS),
+                               zorder=zorder, share=share, chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))
@@ -217,27 +242,6 @@ class Model:
             fig.show()
         else:
             return
-
-    @property
-    def units(self):
-        """A getter for the unit.s"""
-        return self._units
-
-    @units.setter
-    def units(self, units):
-        """A setter for the units.
-
-        Parameters
-        ----------
-        units : str
-            The time units ['BJD', 'BJD_TDB', 'MJD', 'phase'].
-        """
-        # Check the type
-        if units not in ['BJD', 'BJD_TDB', 'MJD', 'phase']:
-            raise TypeError("units axis must be 'BJD', 'BJD_TDB, "
-                            "'MJD', or 'phase'.")
-
-        self._units = units
 
 
 class CompositeModel(Model):
@@ -253,7 +257,7 @@ class CompositeModel(Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
 
         # Store the models
@@ -286,12 +290,12 @@ class CompositeModel(Model):
 
         flux = np.ones(len(self.time)*self.nchan)
 
-        # Evaluate flux at each model
-        for model in self.components:
-            if model.time is None:
-                model.time = self.time
-            if model.modeltype != 'GP':
-                flux *= model.eval(**kwargs)
+        # Evaluate flux of each component
+        for component in self.components:
+            if component.time is None:
+                component.time = self.time
+            if component.modeltype != 'GP':
+                flux *= component.eval(**kwargs)
 
         if incl_GP:
             flux += self.GPeval(flux)
@@ -408,7 +412,5 @@ class CompositeModel(Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.update().
         """
-        # Evaluate flux at each model
-        for model in self.components:
-            model.update(newparams, **kwargs)
-        return
+        for component in self.components:
+            component.update(newparams, **kwargs)

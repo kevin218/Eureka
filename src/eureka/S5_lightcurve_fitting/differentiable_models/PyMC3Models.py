@@ -1,24 +1,23 @@
+import os
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
-import starry
-import pymc3 as pm
 import theano.tensor as tt
-import astropy.constants as const
-
-from ...lib.readEPF import Parameters
-from ..utils import COLORS
 
 # Avoid tonnes of "Cannot construct a scalar test value" messages
 import logging
 logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
-starry.config.quiet = True
-starry.config.lazy = True
+import pymc3 as pm
+BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
+BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
+
+from ...lib.readEPF import Parameters
+from ..utils import COLORS
 
 
 class fit_class:
@@ -26,83 +25,68 @@ class fit_class:
         pass
 
 
-BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
-BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
-
-
-class PyMC3Model(pm.Model):
+class PyMC3Model:
     def __init__(self, **kwargs):
-        # Inherit from Model class
-        super().__init__(**kwargs)
+        """Create a model instance.
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-        self.uniqueparams = np.unique(self.longparamlist)
+        Parameters
+        ----------
+        **kwargs : dict
+            Parameters to set in the PyMC3Model object.
+            Any parameter named log will not be loaded into the
+            PyMC3Model object as Logedit objects cannot be pickled
+            which is required for multiprocessing.
+        """
+        # Set up default model attributes
+        self.name = 'New PyMC3Model'
+        self.fitter = None
+        self._time = None
+        self.time_units = 'BMJD_TDB'
+        self._flux = None
+        self.freenames = None
+        self._parameters = Parameters()
+        self.longparamlist = None
+        self.paramtitles = None
+        self.components = None
+        self.modeltype = None
+        self.fmt = None
+        self.nchan = 1
 
-        self.components = [self]
+        # Store the arguments as attributes
+        for arg, val in kwargs.items():
+            if arg != 'log':
+                setattr(self, arg, val)
+        
+        # Initialize fit with all parameters (including fixed and independent)
+        # which won't get changed throughout the fit
+        self.fit = fit_class()
+        for key in self.parameters.dict.keys():
+            setattr(self.fit, key, getattr(self.parameters, key).value)
+    
+    def __mul__(self, other):
+        """Multiply model components to make a combined model.
 
-        with self:
-            for parname in self.paramtitles:
-                param = getattr(self.parameters, parname)
-                if param.ptype in ['independent', 'fixed']:
-                    setattr(self, parname, param.value)
-                elif param.ptype not in ['free', 'shared', 'white_free',
-                                         'white_fixed']:
-                    message = (f'ptype {param.ptype} for parameter '
-                               f'{param.name} is not recognized.')
-                    raise ValueError(message)
-                else:
-                    for c in range(self.nchan):
-                        if c != 0:
-                            parname_temp = parname+'_'+str(c)
-                        else:
-                            parname_temp = parname
+        Parameters
+        ----------
+        other : eureka.S5_lightcurve_fitting.models.Model
+            The model to multiply.
 
-                        if param.ptype == 'free' or c == 0:
-                            if param.prior == 'U':
-                                setattr(self, parname_temp,
-                                        pm.Uniform(parname_temp,
-                                                   lower=param.priorpar1,
-                                                   upper=param.priorpar2,
-                                                   testval=param.value))
-                            elif param.prior == 'N':
-                                if parname in ['rp', 'per', 'ecc',
-                                               'scatter_mult', 'scatter_ppm',
-                                               'c0']:
-                                    setattr(self, parname_temp,
-                                            BoundedNormal_0(
-                                                parname_temp,
-                                                mu=param.priorpar1,
-                                                sigma=param.priorpar2,
-                                                testval=param.value))
-                                elif parname in ['inc']:
-                                    setattr(self, parname_temp,
-                                            BoundedNormal_90(
-                                                parname_temp,
-                                                mu=param.priorpar1,
-                                                sigma=param.priorpar2,
-                                                testval=param.value))
-                                else:
-                                    setattr(self, parname_temp,
-                                            pm.Normal(parname_temp,
-                                                      mu=param.priorpar1,
-                                                      sigma=param.priorpar2,
-                                                      testval=param.value))
-                            elif param.prior == 'LU':
-                                setattr(self, parname_temp,
-                                        tt.exp(pm.Uniform(
-                                            parname_temp, 
-                                            lower=param.priorpar1,
-                                            upper=param.priorpar2,
-                                            testval=param.value)))
-                        else:
-                            # If a parameter is shared, make it equal to the
-                            # 0th parameter value
-                            setattr(self, parname_temp, getattr(self, parname))
+        Returns
+        -------
+        eureka.S5_lightcurve_fitting.models.CompositeModel
+            The combined model.
+        """
+        # Make sure it is the right type
+        attrs = ['flux', 'time']
+        if not all([hasattr(other, attr) for attr in attrs]):
+            raise TypeError('Only another Model instance may be multiplied.')
+
+        # Combine the model parameters too
+        parameters = self.parameters + other.parameters
+        paramtitles = self.paramtitles.append(other.paramtitles)
+
+        return CompositePyMC3Model([copy.copy(self), other], parameters=parameters,
+                                   paramtitles=paramtitles)
 
     @property
     def flux(self):
@@ -115,7 +99,7 @@ class PyMC3Model(pm.Model):
 
         Parameters
         ----------
-        flux_array: sequence
+        flux_array : sequence
             The flux array
         """
         # Check the type
@@ -123,8 +107,34 @@ class PyMC3Model(pm.Model):
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
-        # self._flux = np.array(flux_array)
         self._flux = np.ma.masked_array(flux_array)
+
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array, time_units='BMJD'):
+        """A setter for the time
+
+        Parameters
+        ----------
+        time_array: sequence, astropy.units.quantity.Quantity
+            The time array
+        time_units: str
+            The units of the input time_array, e.g. ['MJD', 'BMJD', 'phase']
+        """
+        # Check the type
+        if not isinstance(time_array, (np.ndarray, tuple, list)):
+            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+
+        # Set the units
+        self.time_units = time_units
+
+        # Set the array
+        # self._time = np.array(time_array)
+        self._time = np.ma.masked_array(time_array)
 
     @property
     def parameters(self):
@@ -147,321 +157,25 @@ class PyMC3Model(pm.Model):
         # Set the parameters attribute
         self._parameters = params
 
-    def setup(self, time, flux, lc_unc):
-        self.time = time
-        self.flux = flux
-        self.lc_unc = lc_unc
+    def update(self, newparams, **kwargs):
+        """Update the model with new parameter values.
 
-        with self:
-            if hasattr(self, 'scatter_ppm'):
-                self.scatter_array = self.scatter_ppm*tt.ones(len(self.time))
-                for c in range(1, self.nchan):
-                    parname_temp = 'scatter_ppm_'+str(c)
-                    self.scatter_array = tt.concatenate(
-                        [self.scatter_array,
-                         getattr(self, parname_temp)*tt.ones(len(self.time))])
-                self.scatter_array /= 1e6
-            if hasattr(self, 'scatter_mult'):
-                # Fitting the noise level as a multiplier
-                self.scatter_array = (self.scatter_mult *
-                                      self.lc_unc[:len(self.time)])
-                for c in range(1, self.nchan):
-                    if self.parameters.scatter_mult.ptype == 'fixed':
-                        parname_temp = 'scatter_mult'
-                    else:
-                        parname_temp = 'scatter_mult_'+str(c)
-                    self.scatter_array = tt.concatenate(
-                        [self.scatter_array,
-                         (getattr(self, parname_temp) *
-                          self.lc_unc[c*len(self.time):(c+1)*len(self.time)])])
-            if not hasattr(self, 'scatter_array'):
-                # Not fitting the noise level
-                self.scatter_array = self.lc_unc
-
-            # This is how we tell `pymc3` about our observations;
-            # we are assuming they are ampally distributed about
-            # the true model. This line effectively defines our
-            # likelihood function.
-            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
-                      observed=self.flux)
-
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
+        **kwargs : dict
+            Unused by the base
+            eureka.S5_lightcurve_fitting.diferentiable_models.PyMC3Model class.
+        """
+        for val, key in zip(newparams, self.freenames):
+            setattr(self.fit, key, val)
+    
+    def setup(self):
+        """A placeholder function to do any additional setup.
+        """
         return
-
-    def eval(self, eval=True, channel=None, **kwargs):
-        sys_eval = self.syseval(eval=eval, channel=channel)
-        phys_eval = self.physeval(eval=eval, channel=channel)[0]
-        if eval:
-            return phys_eval*sys_eval
-        else:
-            return phys_eval*sys_eval
-
-    def syseval(self, eval=True, channel=None):
-        if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
-        else:
-            nchan = 1
-            channels = [channel, ]
-
-        if eval:
-            # This is only called for things like plotting, so looping
-            # doesn't matter
-            poly_coeffs = np.zeros((nchan, 10))
-            ramp_coeffs = np.zeros((nchan, 6))
-            
-            # Add fitted parameters
-            for j in range(nchan):
-                for i in range(6):
-                    try:
-                        if channels[j] == 0:
-                            ramp_coeffs[j, i] = self.fit_dict[f'r{i}']
-                        else:
-                            ramp_coeffs[j, i] = \
-                                self.fit_dict[f'r{i}_{channels[j]}']
-                    except KeyError:
-                        pass
-            
-            for j in range(nchan):
-                for i in range(9, -1, -1):
-                    try:
-                        if channels[j] == 0:
-                            poly_coeffs[j, i] = self.fit_dict[f'c{i}']
-                        else:
-                            poly_coeffs[j, i] = \
-                                self.fit_dict[f'c{i}_{channels[j]}']
-                    except KeyError:
-                        pass
-
-            poly_coeffs = poly_coeffs[:, ~np.all(poly_coeffs == 0, axis=0)]
-            poly_coeffs = np.flip(poly_coeffs, axis=1)
-            poly_flux = np.zeros(0)
-            time_poly = self.time - self.time.mean()
-            for c in range(nchan):
-                poly = np.poly1d(poly_coeffs[c])
-                poly_flux = np.concatenate(
-                    [poly_flux, np.polyval(poly, time_poly)])
-
-            ramp_flux = np.zeros(0)
-            time_ramp = self.time - self.time[0]
-            for c in range(nchan):
-                r0, r1, r2, r3, r4, r5 = ramp_coeffs[c]
-                lcpiece = (r0*np.exp(-r1*time_ramp + r2) +
-                           r3*np.exp(-r4*time_ramp + r5) +
-                           1)
-                ramp_flux = np.concatenate([ramp_flux, lcpiece])
-
-            return poly_flux*ramp_flux
-        else:
-            # This gets compiled before fitting, so looping doesn't matter
-            poly_coeffs = np.zeros((nchan, 10)).tolist()
-            ramp_coeffs = np.zeros((nchan, 6)).tolist()
-
-            # Parse 'r#' keyword arguments as coefficients
-            for j in range(nchan):
-                for i in range(6):
-                    try:
-                        if channels[j] == 0:
-                            ramp_coeffs[j][i] = getattr(self, f'r{i}')
-                        else:
-                            ramp_coeffs[j][i] = getattr(self,
-                                                        f'r{i}_{channels[j]}')
-                    except AttributeError:
-                        pass
-            
-            for j in range(nchan):
-                for i in range(10):
-                    try:
-                        if channels[j] == 0:
-                            poly_coeffs[j][i] = getattr(self, f'c{i}')
-                        else:
-                            poly_coeffs[j][i] = getattr(self,
-                                                        f'c{i}_{channels[j]}')
-                    except AttributeError:
-                        pass
-
-            poly_flux = tt.zeros(0)
-            time_poly = self.time - self.time.mean()
-            for c in range(nchan):
-                lcpiece = tt.zeros(len(self.time))
-                for power in range(len(poly_coeffs[c])):
-                    lcpiece += poly_coeffs[c][power] * time_poly**power
-                poly_flux = tt.concatenate([poly_flux, lcpiece])
-
-            ramp_flux = tt.zeros(0)
-            time_ramp = self.time - self.time[0]
-            for c in range(nchan):
-                r0, r1, r2, r3, r4, r5 = ramp_coeffs[c]
-                lcpiece = (r0*tt.exp(-r1*time_ramp + r2) +
-                           r3*tt.exp(-r4*time_ramp + r5) +
-                           1)
-                ramp_flux = tt.concatenate([ramp_flux, lcpiece])
-
-            return poly_flux*ramp_flux
-
-    def physeval(self, interp=False, eval=True, channel=None):
-        if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
-        else:
-            nchan = 1
-            channels = [channel, ]
-
-        if interp:
-            dt = self.time[1]-self.time[0]
-            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps,
-                                   endpoint=True)
-        else:
-            new_time = self.time
-
-        if eval:
-            phys_flux = np.zeros(0)
-            for chan in range(nchan):
-                c = channels[chan]
-                lcpiece = self.fit.systems[c].flux(new_time-self.fit.t0).eval()
-                phys_flux = np.concatenate([phys_flux, lcpiece])
-
-            return phys_flux, new_time
-        else:
-            phys_flux = tt.zeros(0)
-            for chan in range(nchan):
-                c = channels[chan]
-                lcpiece = self.systems[c].flux(new_time-self.t0)
-                phys_flux = tt.concatenate([phys_flux, lcpiece])
-
-            return phys_flux, new_time
-
-    @property
-    def fit_dict(self):
-        return self._fit_dict
-
-    @fit_dict.setter
-    def fit_dict(self, input_fit_dict):
-        self._fit_dict = input_fit_dict
-
-        fit = fit_class()
-        for key in self.fit_dict.keys():
-            setattr(fit, key, self.fit_dict[key])
-
-        for parname in self.uniqueparams:
-            param = getattr(self.parameters, parname)
-            if param.ptype == 'independent':
-                continue
-            elif param.ptype == 'fixed':
-                setattr(fit, parname, param.value)
-            elif param.ptype == 'shared':
-                for c in range(1, self.nchan):
-                    parname_temp = parname+'_'+str(c)
-                    setattr(fit, parname_temp, getattr(fit, parname))
-                    self._fit_dict[parname_temp] = getattr(fit, parname)
-
-        if hasattr(self, 'u2'):
-            fit.udeg = 2
-        elif hasattr(self, 'u1'):
-            fit.udeg = 1
-        else:
-            fit.udeg = 0
-        if hasattr(self, 'AmpCos2') or hasattr(self, 'AmpSin2'):
-            fit.ydeg = 2
-        elif hasattr(self, 'AmpCos1') or hasattr(self, 'AmpSin1'):
-            fit.ydeg = 1
-        else:
-            fit.ydeg = 0
-
-        fit.systems = []
-        for c in range(self.nchan):
-            # Initialize star object
-            star = starry.Primary(starry.Map(ydeg=0, udeg=fit.udeg, amp=1.0),
-                                  m=self.Ms, r=self.Rs, prot=1.0)
-
-            # To save ourselves from tonnes of getattr lines, let's make a new
-            # object without the _c parts of the parnames
-            # This way we can do `temp.u1` rather than
-            # `getattr(self, 'u1_'+c)`
-            temp = fit_class()
-            for key in self.paramtitles:
-                if getattr(self.parameters, key).ptype in ['free', 'shared',
-                                                           'fixed']:
-                    if (c > 0 and
-                            getattr(self.parameters, key).ptype != 'fixed'):
-                        # Remove the _c part of the parname but leave any
-                        # other underscores intact
-                        setattr(temp, key, getattr(fit, key+'_'+str(c)))
-                    else:
-                        setattr(temp, key, getattr(fit, key))
-
-            # FINDME: non-uniform limb darkening does not currently work
-            if hasattr(self.parameters, 'limb_dark'):
-                if self.parameters.limb_dark.value == 'kipping2013':
-                    # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*np.sqrt(temp.u1)*temp.u2
-                    star.map[2] = np.sqrt(temp.u1)*(1-2*temp.u2)
-                elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = temp.u1
-                    star.map[2] = temp.u2
-                elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = temp.u1
-                elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: starryModel is not yet able to handle '
-                               f'{self.parameters.limb_dark.value} '
-                               f'limb_dark.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
-                    raise ValueError(message)
-            
-            if hasattr(self, 'fp'):
-                amp = temp.fp
-            else:
-                amp = 0
-            # Initialize planet object
-            planet = starry.Secondary(
-                starry.Map(ydeg=fit.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
-                # Convert mass to M_sun units
-                m=self.Mp*const.M_jup.value/const.M_sun.value,
-                # Convert radius to R_star units
-                r=temp.rp*self.Rs,
-                # Setting porb here overwrites a
-                a=temp.a,
-                # porb = temp.per,
-                # prot = temp.per,
-                # Another option to set inclination using impact parameter
-                # inc=tt.arccos(b/a)*180/np.pi
-                inc=temp.inc,
-                ecc=temp.ecc,
-                w=temp.w
-            )
-            # Setting porb here may not override a
-            planet.porb = temp.per
-            # Setting prot here may not override a
-            planet.prot = temp.per
-            if hasattr(self, 'AmpCos1'):
-                planet.map[1, 0] = temp.AmpCos1
-            if hasattr(self, 'AmpSin1'):
-                planet.map[1, 1] = temp.AmpSin1
-            if self.ydeg == 2:
-                if hasattr(self, 'AmpCos2'):
-                    planet.map[2, 0] = temp.AmpCos2
-                if hasattr(self, 'AmpSin2'):
-                    planet.map[2, 1] = temp.AmpSin2
-            # Offset is controlled by AmpSin1
-            planet.theta0 = 180.0
-            planet.tref = 0
-
-            # Instantiate the system
-            sys = starry.System(star, planet)
-            fit.systems.append(sys)
-
-        if hasattr(fit, 'scatter_mult'):
-            # Fitting the noise level as a multiplier
-            fit.scatter_ppm = fit.scatter_mult*self.lc_unc*1e6
-        if not hasattr(fit, 'scatter_ppm'):
-            # Not fitting the noise level
-            fit.scatter_ppm = self.lc_unc*1e6
-
-        self.fit = fit
-
-        return
-
+    
     def plot(self, time, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model
@@ -482,7 +196,7 @@ class PyMC3Model(pm.Model):
         """
         # Make the figure
         if ax is None:
-            fig = plt.figure(figsize=(8, 6))
+            fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
         # Set the time
@@ -503,9 +217,9 @@ class PyMC3Model(pm.Model):
                 color=color, zorder=zorder)
 
         if components and self.components is not None:
-            for comp in self.components:
-                comp.plot(self.time, ax=ax, draw=False, color=next(COLORS),
-                          zorder=zorder, share=share, chan=chan, **kwargs)
+            for component in self.components:
+                component.plot(self.time, ax=ax, draw=False, color=next(COLORS),
+                               zorder=zorder, share=share, chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))
@@ -516,29 +230,230 @@ class PyMC3Model(pm.Model):
         else:
             return
 
-    @property
-    def time(self):
-        """A getter for the time"""
-        return self._time
 
-    @time.setter
-    def time(self, time_array, time_units='BJD'):
-        """A setter for the time
+class CompositePyMC3Model(PyMC3Model):
+    """A class to create composite models."""
+    def __init__(self, components, **kwargs):
+        """Initialize the composite model.
 
         Parameters
         ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        time_units: str
-            The units of the input time_array, ['MJD', 'BJD', 'phase']
+        models : sequence
+            The list of models.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+        # Inherit from PyMC3Model class
+        super().__init__(**kwargs)
 
-        # Set the units
-        self.time_units = time_units
+        # Setup PyMC3 model
+        self.model = pm.Model()
 
-        # Set the array
-        # self._time = np.array(time_array)
-        self._time = np.ma.masked_array(time_array)
+        # Store the components
+        self.components = components
+        for component in self.components:
+            # Add the PyMC3 model to each component
+            component.model = self.model
+
+        # Setup PyMC3 model parameters
+        with self.model:
+            for parname in self.paramtitles:
+                param = getattr(self.parameters, parname)
+                if param.ptype in ['independent', 'fixed']:
+                    setattr(self.model, parname, param.value)
+                elif param.ptype not in ['free', 'shared', 'white_free',
+                                         'white_fixed']:
+                    message = (f'ptype {param.ptype} for parameter '
+                               f'{param.name} is not recognized.')
+                    raise ValueError(message)
+                else:
+                    for c in range(self.nchan):
+                        if c != 0:
+                            parname_temp = parname+'_'+str(c)
+                        else:
+                            parname_temp = parname
+
+                        if param.ptype == 'free' or c == 0:
+                            if param.prior == 'U':
+                                setattr(self.model, parname_temp,
+                                        pm.Uniform(parname_temp,
+                                                   lower=param.priorpar1,
+                                                   upper=param.priorpar2,
+                                                   testval=param.value))
+                            elif param.prior == 'N':
+                                if parname in ['rp', 'per', 'ecc',
+                                               'scatter_mult', 'scatter_ppm',
+                                               'c0']:
+                                    setattr(self.model, parname_temp,
+                                            BoundedNormal_0(
+                                                parname_temp,
+                                                mu=param.priorpar1,
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
+                                elif parname in ['inc']:
+                                    setattr(self.model, parname_temp,
+                                            BoundedNormal_90(
+                                                parname_temp,
+                                                mu=param.priorpar1,
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
+                                else:
+                                    setattr(self.model, parname_temp,
+                                            pm.Normal(parname_temp,
+                                                      mu=param.priorpar1,
+                                                      sigma=param.priorpar2,
+                                                      testval=param.value))
+                            elif param.prior == 'LU':
+                                setattr(self.model, parname_temp,
+                                        tt.exp(pm.Uniform(
+                                            parname_temp, 
+                                            lower=param.priorpar1,
+                                            upper=param.priorpar2,
+                                            testval=param.value)))
+                        else:
+                            # If a parameter is shared, make it equal to the
+                            # 0th parameter value
+                            setattr(self.model, parname_temp,
+                                    getattr(self.model, parname))
+
+    def setup(self, time, flux, lc_unc):
+        self.time = time
+        self.flux = flux
+        self.lc_unc = lc_unc
+
+        with self.model:
+            if hasattr(self.model, 'scatter_ppm'):
+                self.scatter_array = self.model.scatter_ppm*tt.ones(len(self.time))
+                for c in range(1, self.nchan):
+                    parname_temp = 'scatter_ppm_'+str(c)
+                    self.scatter_array = tt.concatenate(
+                        [self.scatter_array,
+                         getattr(self.model, parname_temp)*tt.ones(len(self.time))])
+                self.scatter_array /= 1e6
+            if hasattr(self, 'scatter_mult'):
+                # Fitting the noise level as a multiplier
+                self.scatter_array = (self.model.scatter_mult *
+                                      self.lc_unc[:len(self.time)])
+                for c in range(1, self.nchan):
+                    if self.parameters.scatter_mult.ptype == 'fixed':
+                        parname_temp = 'scatter_mult'
+                    else:
+                        parname_temp = 'scatter_mult_'+str(c)
+                    self.scatter_array = tt.concatenate(
+                        [self.scatter_array,
+                         (getattr(self.model, parname_temp) *
+                          self.lc_unc[c*len(self.time):(c+1)*len(self.time)])])
+            if not hasattr(self, 'scatter_array'):
+                # Not fitting the noise level
+                self.scatter_array = self.lc_unc
+
+            for component in self.components:
+                # Do any one-time setup needed after model initialization and
+                # before evaluating the model
+                component.setup()
+
+            # This is how we tell pymc3 about our observations;
+            # we are assuming they are normally distributed about
+            # the true model. This line effectively defines our
+            # likelihood function.
+            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
+                      observed=self.flux)
+
+    def eval(self, eval=True, channel=None, **kwargs):
+        """Evaluate the model components.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        flux : ndarray
+            The evaluated model predictions at the times self.time.
+        """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        flux = np.ones(len(self.time)*self.nchan)
+
+        # Evaluate flux of each component
+        for component in self.components:
+            if component.time is None:
+                component.time = self.time
+            if component.modeltype != 'GP':
+                flux *= component.eval(eval=eval, channel=channel, **kwargs)
+
+        return flux
+
+    def syseval(self, eval=True, channel=None, **kwargs):
+        """Evaluate the systematic model components only.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        flux : ndarray
+            The evaluated systematics model predictions at the times self.time.
+        """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        flux = np.ones(len(self.time)*self.nchan)
+
+        # Evaluate flux at each model
+        for component in self.components:
+            if component.modeltype == 'systematic':
+                if component.time is None:
+                    component.time = self.time
+                flux *= component.eval(eval=eval, channel=channel, **kwargs)
+
+        return flux
+
+    def physeval(self, eval=True, channel=None, **kwargs):
+        """Evaluate the physical model components only.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        flux : ndarray
+            The evaluated physical model predictions at the times self.time
+        """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        flux = np.ones(len(self.time)*self.nchan)
+
+        # Evaluate flux at each model
+        for component in self.components:
+            if component.modeltype == 'physical':
+                if component.time is None:
+                    component.time = self.time
+                flux *= component.eval(eval=eval, channel=channel, **kwargs)
+
+        return flux, self.time
+
+    def update(self, newparams, **kwargs):
+        """Update parameters in the model components.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.update().
+        """
+        for component in self.components:
+            component.update(newparams, **kwargs)
