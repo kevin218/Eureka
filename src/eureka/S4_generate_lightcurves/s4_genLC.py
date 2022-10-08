@@ -29,7 +29,7 @@ from ..lib import util
 from ..lib import clipping
 
 
-def genlc(eventlabel, ecf_path=None, s3_meta=None):
+def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
@@ -42,6 +42,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -68,9 +71,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     - July 2022 Sebastian Zieba
          Added photometry S4
     '''
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S4_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S4_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 

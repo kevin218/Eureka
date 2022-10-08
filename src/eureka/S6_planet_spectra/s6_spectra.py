@@ -17,7 +17,7 @@ from . import plots_s6 as plots
 from ..lib import astropytable
 
 
-def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
+def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     '''Gathers together different wavelength fits and makes
     transmission/emission spectra.
 
@@ -31,6 +31,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     s5_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S5 step (if running S5
         and S6 sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -46,9 +49,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''
     print("\nStarting Stage 6: Light Curve Fitting\n")
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S6_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S6_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 

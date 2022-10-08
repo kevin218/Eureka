@@ -10,7 +10,7 @@ from . import lightcurve
 from . import models as m
 
 
-def fitlc(eventlabel, ecf_path=None, s4_meta=None):
+def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -23,6 +23,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     s4_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S4 step (if running S4 and S5
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -47,10 +50,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
         Enabled Astraeus
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
+    
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S5_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S5_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
