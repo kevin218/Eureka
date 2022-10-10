@@ -173,7 +173,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         start[name] = val
 
     log.writelog('Running PyMC3 NUTS sampler...')
-    with model:
+    with model.model:
         trace = pmx.sample(tune=meta.tune, draws=meta.draws, start=start,
                            target_accept=meta.target_accept,
                            chains=meta.chains, cores=meta.ncpu)

@@ -85,7 +85,8 @@ class PyMC3Model:
         parameters = self.parameters + other.parameters
         paramtitles = self.paramtitles.append(other.paramtitles)
 
-        return CompositePyMC3Model([copy.copy(self), other], parameters=parameters,
+        return CompositePyMC3Model([copy.copy(self), other],
+                                   parameters=parameters,
                                    paramtitles=paramtitles)
 
     @property
@@ -218,8 +219,9 @@ class PyMC3Model:
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False, color=next(COLORS),
-                               zorder=zorder, share=share, chan=chan, **kwargs)
+                component.plot(self.time, ax=ax, draw=False,
+                               color=next(COLORS), zorder=zorder, share=share,
+                               chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))
@@ -324,12 +326,14 @@ class CompositePyMC3Model(PyMC3Model):
 
         with self.model:
             if hasattr(self.model, 'scatter_ppm'):
-                self.scatter_array = self.model.scatter_ppm*tt.ones(len(self.time))
+                self.scatter_array = (self.model.scatter_ppm
+                                      * tt.ones(len(self.time)))
                 for c in range(1, self.nchan):
                     parname_temp = 'scatter_ppm_'+str(c)
                     self.scatter_array = tt.concatenate(
                         [self.scatter_array,
-                         getattr(self.model, parname_temp)*tt.ones(len(self.time))])
+                         getattr(self.model, parname_temp)
+                         * tt.ones(len(self.time))])
                 self.scatter_array /= 1e6
             if hasattr(self, 'scatter_mult'):
                 # Fitting the noise level as a multiplier

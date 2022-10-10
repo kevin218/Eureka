@@ -59,7 +59,8 @@ class StarryModel(PyMC3Model):
             # `getattr(self.model, 'u1_'+c)`.
             temp = temp_class()
             for key in self.paramtitles:
-                if (getattr(self.parameters, key).ptype not in ['fixed', 'independent']
+                ptype = getattr(self.parameters, key).ptype
+                if (ptype not in ['fixed', 'independent']
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact
@@ -69,10 +70,9 @@ class StarryModel(PyMC3Model):
             
             # Initialize star object
             star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg,
-                                            amp=1.0),
-                                m=temp.Ms, r=temp.Rs, prot=1.0)
+                                             amp=1.0),
+                                  m=temp.Ms, r=temp.Rs, prot=1.0)
 
-            # FINDME: non-uniform limb darkening does not currently work
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
                     # Transform stellar variables to uniform used by starry
@@ -85,10 +85,10 @@ class StarryModel(PyMC3Model):
                     star.map[1] = temp.u1
                 elif self.parameters.limb_dark.value != 'uniform':
                     message = (f'ERROR: starryModel is not yet able to '
-                            f'handle {self.parameters.limb_dark.value} '
-                            f'limb darkening.\n'
-                            f'       limb_dark must be one of uniform, '
-                            f'linear, quadratic, or kipping2013.')
+                               f'handle {self.parameters.limb_dark.value} '
+                               f'limb darkening.\n'
+                               f'       limb_dark must be one of uniform, '
+                               f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
             
             if hasattr(temp, 'fp'):
@@ -98,7 +98,7 @@ class StarryModel(PyMC3Model):
             # Initialize planet object
             planet = starry.Secondary(
                 starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0,
-                        obl=0.0),
+                           obl=0.0),
                 # Convert mass to M_sun units
                 m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 # Convert radius to R_star units
@@ -171,7 +171,8 @@ class StarryModel(PyMC3Model):
             # `getattr(self.model, 'u1_'+c)`.
             temp = temp_class()
             for key in self.paramtitles:
-                if (getattr(self.parameters, key).ptype not in ['fixed', 'independent']
+                ptype = getattr(self.parameters, key).ptype
+                if (ptype not in ['fixed', 'independent']
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact
@@ -179,13 +180,10 @@ class StarryModel(PyMC3Model):
                 else:
                     setattr(temp, key, getattr(self.fit, key))
 
-            print(vars(temp))
-
             # Initialize star object
             star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg, amp=1.0),
                                   m=temp.Ms, r=temp.Rs, prot=1.0)
 
-            # FINDME: non-uniform limb darkening does not currently work
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
                     # Transform stellar variables to uniform used by starry
