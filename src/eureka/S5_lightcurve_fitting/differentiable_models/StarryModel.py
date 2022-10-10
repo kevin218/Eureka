@@ -69,8 +69,7 @@ class StarryModel(PyMC3Model):
                     setattr(temp, key, getattr(self.model, key))
             
             # Initialize star object
-            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg,
-                                             amp=1.0),
+            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg, amp=1.0),
                                   m=temp.Ms, r=temp.Rs, prot=1.0)
 
             if hasattr(self.parameters, 'limb_dark'):
@@ -97,8 +96,7 @@ class StarryModel(PyMC3Model):
                 amp = 0
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0,
-                           obl=0.0),
+                starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
                 # Convert mass to M_sun units
                 m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 # Convert radius to R_star units

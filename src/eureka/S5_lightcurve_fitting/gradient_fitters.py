@@ -124,11 +124,10 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_res_distr(lc, model, meta, fitter=calling_function)
 
     # Make a new model instance
-    best_model = copy.copy(model)
-    best_model.__setattr__('chi2red', chi2red)
-    best_model.__setattr__('fit_params', fit_params)
+    model.chi2red = chi2red
+    model.fit_params = fit_params
 
-    return best_model
+    return model
 
 
 def nutsfitter(lc, model, meta, log, **kwargs):
