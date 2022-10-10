@@ -429,13 +429,17 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                       eclipse_model=e_model)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
-        t_polynom = dm.PolynomialModel(parameters=params, name='polynom',
-                                       fmt='r--', log=log, time=time,
-                                       time_units=time_units,
-                                       freenames=freenames,
-                                       longparamlist=lc_model.longparamlist,
-                                       nchan=lc_model.nchannel_fitted,
-                                       paramtitles=paramtitles)
+        if 'starry' in meta.run_myfuncs:
+            PolynomialModel = dm.PolynomialModel
+        else:
+            PolynomialModel = m.PolynomialModel
+        t_polynom = PolynomialModel(parameters=params, name='polynom',
+                                    fmt='r--', log=log, time=time,
+                                    time_units=time_units,
+                                    freenames=freenames,
+                                    longparamlist=lc_model.longparamlist,
+                                    nchan=lc_model.nchannel_fitted,
+                                    paramtitles=paramtitles)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         t_step = m.StepModel(parameters=params, name='step', fmt='r--',
@@ -446,48 +450,68 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                              paramtitles=paramtitles)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
-        t_ramp = dm.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                 log=log, time=time, time_units=time_units,
-                                 freenames=freenames,
-                                 longparamlist=lc_model.longparamlist,
-                                 nchan=lc_model.nchannel_fitted,
-                                 paramtitles=paramtitles)
+        if 'starry' in meta.run_myfuncs:
+            ExpRampModel = dm.ExpRampModel
+        else:
+            ExpRampModel = m.ExpRampModel
+        t_ramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
+                              log=log, time=time, time_units=time_units,
+                              freenames=freenames,
+                              longparamlist=lc_model.longparamlist,
+                              nchan=lc_model.nchannel_fitted,
+                              paramtitles=paramtitles)
         modellist.append(t_ramp)
     if 'xpos' in meta.run_myfuncs:
-        t_cent = dm.CentroidModel(parameters=params, name='xpos', fmt='r--',
-                                  log=log, time=time, time_units=time_units,
-                                  freenames=freenames,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchan=lc_model.nchannel_fitted,
-                                  paramtitles=paramtitles,
-                                  axis='xpos', centroid=lc.centroid_x)
+        if 'starry' in meta.run_myfuncs:
+            CentroidModel = dm.CentroidModel
+        else:
+            CentroidModel = m.CentroidModel
+        t_cent = CentroidModel(parameters=params, name='xpos', fmt='r--',
+                               log=log, time=time, time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchan=lc_model.nchannel_fitted,
+                               paramtitles=paramtitles,
+                               axis='xpos', centroid=lc.centroid_x)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
-        t_cent = dm.CentroidModel(parameters=params, name='xwidth', fmt='r--',
-                                  log=log, time=time, time_units=time_units,
-                                  freenames=freenames,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchan=lc_model.nchannel_fitted,
-                                  paramtitles=paramtitles,
-                                  axis='xwidth', centroid=lc.centroid_sx)
+        if 'starry' in meta.run_myfuncs:
+            CentroidModel = dm.CentroidModel
+        else:
+            CentroidModel = m.CentroidModel
+        t_cent = CentroidModel(parameters=params, name='xwidth', fmt='r--',
+                               log=log, time=time, time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchan=lc_model.nchannel_fitted,
+                               paramtitles=paramtitles,
+                               axis='xwidth', centroid=lc.centroid_sx)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
-        t_cent = dm.CentroidModel(parameters=params, name='ypos', fmt='r--',
-                                  log=log, time=time, time_units=time_units,
-                                  freenames=freenames,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchan=lc_model.nchannel_fitted,
-                                  paramtitles=paramtitles,
-                                  axis='ypos', centroid=lc.centroid_y)
+        if 'starry' in meta.run_myfuncs:
+            CentroidModel = dm.CentroidModel
+        else:
+            CentroidModel = m.CentroidModel
+        t_cent = CentroidModel(parameters=params, name='ypos', fmt='r--',
+                               log=log, time=time, time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchan=lc_model.nchannel_fitted,
+                               paramtitles=paramtitles,
+                               axis='ypos', centroid=lc.centroid_y)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
-        t_cent = dm.CentroidModel(parameters=params, name='ywidth', fmt='r--',
-                                  log=log, time=time, time_units=time_units,
-                                  freenames=freenames,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchan=lc_model.nchannel_fitted,
-                                  paramtitles=paramtitles,
-                                  axis='ywidth', centroid=lc.centroid_sy)
+        if 'starry' in meta.run_myfuncs:
+            CentroidModel = dm.CentroidModel
+        else:
+            CentroidModel = m.CentroidModel
+        t_cent = CentroidModel(parameters=params, name='ywidth', fmt='r--',
+                               log=log, time=time, time_units=time_units,
+                               freenames=freenames,
+                               longparamlist=lc_model.longparamlist,
+                               nchan=lc_model.nchannel_fitted,
+                               paramtitles=paramtitles,
+                               axis='ywidth', centroid=lc.centroid_sy)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
