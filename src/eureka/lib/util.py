@@ -7,7 +7,7 @@ from scipy.interpolate import griddata
 
 
 def readfiles(meta, log):
-    """Reads in the files saved in topdir + inputdir and saves them into a list.
+    """Read in the files saved in topdir + inputdir and save them to a list.
 
     Parameters
     ----------

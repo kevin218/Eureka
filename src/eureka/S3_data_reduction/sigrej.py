@@ -140,7 +140,7 @@ def sigrej(data, sigma, mask=None, estsig=None, ival=False, axis=0,
     retfmedstddev = fmedstddev
 
     # Remove axis
-    del(dims[axis])
+    del (dims[axis])
     ival = np.empty((2, nsig) + tuple(dims))
     ival[:] = np.nan
 
