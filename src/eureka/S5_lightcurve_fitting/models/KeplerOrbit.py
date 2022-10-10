@@ -393,7 +393,9 @@ class KeplerOrbit(object):
         return E
 
     def FSSI_Eccentric_Inverse(self, M, xtol=1e-10):
-        """Convert mean anomaly to eccentric anomaly using FSSI (Tommasini+2018).
+        """Convert mean anomaly to eccentric anomaly using FSSI algorithm.
+        
+        Algorithm from Tommasini+2018.
 
         Parameters
         ----------

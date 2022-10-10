@@ -231,8 +231,9 @@ class Model:
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False, color=next(COLORS),
-                               zorder=zorder, share=share, chan=chan, **kwargs)
+                component.plot(self.time, ax=ax, draw=False,
+                               color=next(COLORS), zorder=zorder, share=share,
+                               chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))

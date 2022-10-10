@@ -503,7 +503,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
     if 'starry' in meta.run_myfuncs:
         # Only have that one model for starry
         model = dm.CompositePyMC3Model(modellist, parameters=params,
-                                       log=log, time=time, time_units=time_units,
+                                       log=log, time=time,
+                                       time_units=time_units,
                                        freenames=freenames,
                                        longparamlist=lc_model.longparamlist,
                                        nchan=lc_model.nchannel_fitted,
