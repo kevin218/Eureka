@@ -172,6 +172,10 @@ photometry
 ''''''''''
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
+poly_wavelength
+'''''''''''''''
+If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
+
 hst_cal
 '''''''
 Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
