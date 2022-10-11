@@ -335,7 +335,7 @@ class CompositePyMC3Model(PyMC3Model):
                          getattr(self.model, parname_temp)
                          * tt.ones(len(self.time))])
                 self.scatter_array /= 1e6
-            if hasattr(self, 'scatter_mult'):
+            if hasattr(self.model, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
                 self.scatter_array = (self.model.scatter_mult *
                                       self.lc_unc[:len(self.time)])
