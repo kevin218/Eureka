@@ -24,6 +24,11 @@ The code is broken down into six parts or "Stages", which are as follows (see al
 - **Stage 5:** Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
 - **Stage 6:** Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
 
+In general, it is recommended to interface with Eureka using Eureka! Control Files (ECFs) and running command line scripts.
+This helps to increase the automation of the pipeline and increases the reproducibility of your results as the ECF you used
+will be copied to the output folder and your analysis will follow a pre-defined order. That way if somebody asks you how you
+analyzed your data, you can just send them your copied ECF files and the version number of Eureka! that you used.
+
 The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin218/Eureka>`_.
 
 

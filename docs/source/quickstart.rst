@@ -30,6 +30,12 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 3. Set up your run directory 🗂
 -------------------------------
 
+In general, it is recommended to interface with Eureka using Eureka! Control Files (ECFs) and running command line scripts.
+This helps to increase the automation of the pipeline and increases the reproducibility of your results as the ECF you used
+will be copied to the output folder and your analysis will follow a pre-defined order. That way if somebody asks you how you
+analyzed your data, you can just send them your copied ECF files and the version number of Eureka! that you used. In the
+following section, we will walk you through the process of gathering the relevant ECF templates and editing them as needed for
+your particular analysis.
 
 .. _demos:
 
