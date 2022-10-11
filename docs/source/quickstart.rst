@@ -80,21 +80,21 @@ Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's us
         eventlabel = 'wasp39b'
 
 
-Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. Note that ``inputdir`` and ``outputdir`` are both relative to ``topdir``. For the ``S2_wasp39b.ecf``, you want something like:
+Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. **Note** that ``inputdir`` and ``outputdir`` are both relative to ``topdir``. For the ``S2_wasp39b.ecf``, you can do something like:
 
 .. code-block:: bash
 
-	topdir		/User
-	inputdir	/Data/JWST-Sim/NIRSpec
-	outputdir	/DataAnalysis/JWST/MyFirstEureka/Stage2
+	topdir		/home/User/
+	inputdir	Data/JWST-Sim/NIRSpec
+	outputdir	DataAnalysis/JWST/MyFirstEureka/Stage2
 
-However, for the later stages you can use something simpler, e.g. for the ``S3_wasp39b.ecf``:
+Specifically, you'll want to set ``inputdir`` to the folder where you have put your downloaded FITS files, and ``outputdir`` to the folder where you want the results of your analyses to be stored. This may be useful if you want to store the raw data on an external hard drive while storing the analysis outputs on your internal hard drive. For the later stages you could use something simpler, e.g. for the ``S3_wasp39b.ecf``:
 
 .. code-block:: bash
 
-	topdir		/User/DataAnalysis/JWST/MyFirstEureka
-	inputdir	/Stage2
-	outputdir	/Stage3
+	topdir		/home/User/DataAnalysis/JWST/MyFirstEureka/
+	inputdir	Stage2
+	outputdir	Stage3
 
 The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, there are a few important settings we must adjust.
 

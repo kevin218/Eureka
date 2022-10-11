@@ -27,11 +27,11 @@ skip_gain_scale     False
 jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
 
 # Project directory
-topdir              /home/User
+topdir              /home/User/Data/JWST-Sim/MIRI/
 
 # Directories relative to topdir
-inputdir            /Data/JWST-Sim/MIRI/Uncalibrated
-outputdir           /Data/JWST-Sim/MIRI/Stage1
+inputdir            Uncalibrated
+outputdir           Stage1
 
 # Diagnostics
 testing_S1          False
