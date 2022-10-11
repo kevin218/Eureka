@@ -17,7 +17,7 @@ from . import plots_s6 as plots
 from ..lib import astropytable
 
 
-def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
+def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     '''Gathers together different wavelength fits and makes
     transmission/emission spectra.
 
@@ -31,6 +31,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     s5_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S5 step (if running S5
         and S6 sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -46,9 +49,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''
     print("\nStarting Stage 6: Light Curve Fitting\n")
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S6_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S6_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -984,6 +991,10 @@ def roundToDec(x, nDec=2):
     """
     if not np.isfinite(nDec):
         return str(x)
+
+    if isinstance(nDec, float):
+        nDec = int(np.round(nDec))
+
     rounded = np.round(x, nDec)
     if nDec <= 0:
         # format this as an integer
@@ -1080,12 +1091,12 @@ def transit_latex_table(meta, log):
             val = line[meta.y_param+'_value']*meta.y_scalar
             upper = line[meta.y_param+'_errorpos']
             lower = line[meta.y_param+'_errorneg']
-            if np.isnan(upper) or np.isnan(lower):
+            if np.isnan(upper) and np.isnan(lower):
                 nDec = 10
             else:
                 nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
                 nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
-                nDec = np.nanmax([nDec1, nDec2])
+                nDec = int(np.nanmax([nDec1, nDec2]))
             val = roundToDec(val, nDec)
             upper = roundToDec(upper, nDec)
             lower = roundToDec(lower, nDec)
