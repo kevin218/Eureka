@@ -80,7 +80,7 @@ Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's us
         eventlabel = 'wasp39b'
 
 
-Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. For the ``S2_wasp39b.ecf``, you want something like:
+Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. Note that ``inputdir`` and ``outputdir`` are both relative to ``topdir``. For the ``S2_wasp39b.ecf``, you want something like:
 
 .. code-block:: bash
 
