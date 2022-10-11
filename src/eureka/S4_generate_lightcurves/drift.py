@@ -52,7 +52,7 @@ def spec1D(spectra, meta, log, mask=None):
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
-    mask : ndarray (1D), optional
+    mask : ndarray (1D); optional
         A mask array to use if spectra is not a masked array. Defaults to None
         in which case only the invalid values of spectra will be masked.
 
@@ -103,7 +103,10 @@ def spec1D(spectra, meta, log, mask=None):
         # correlate.py sometimes performs better when the mean is subtracted
         ref_spec -= np.ma.mean(ref_spec[meta.drift_range:-meta.drift_range])
     ref_spec[np.where(np.isnan(ref_spec))] = 0
-    for n in tqdm(range(meta.n_int)):
+    iterfn = range(meta.n_int)
+    if meta.verbose:
+        iterfn = tqdm(iterfn)
+    for n in iterfn:
         fit_spec = np.ma.copy(spectra[n,
                                       meta.drift_preclip:meta.drift_postclip])
         # Trim data to achieve accurate cross correlation without assumptions

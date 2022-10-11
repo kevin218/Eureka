@@ -20,7 +20,7 @@ from svo_filters import svo
 
 # Supported profiles
 PROFILES = ['uniform', 'linear', 'quadratic',
-            'square-root', 'logarithmic', 'exponential',
+            'squareroot', 'logarithmic', 'exponential',
             '3-parameter', '4-parameter']
 
 # Supported filters
@@ -82,7 +82,7 @@ def download_exoctk_data(download_location=os.path.expanduser('~')):
 
     Parameters
     ----------
-    download_location : string; optional
+    download_location : str; optional
         The path to where the ExoCTK data package will be downloaded.
         The default setting is the user's $HOME directory.
     """
@@ -506,12 +506,12 @@ def build_target_url(target_name):
 
     Parameters
     ----------
-    target_name : string
+    target_name : str
         The name of the target transit.
 
     Returns
     -------
-    target_url : string
+    target_url : str
     '''
     # Encode the target name string.
     encode_target_name = urllib.parse.quote(target_name, encoding='utf-8')
@@ -526,12 +526,12 @@ def get_canonical_name(target_name):
 
     Parameters
     ----------
-    target_name : string
+    target_name : str
         The name of the target transit.
 
     Returns
     -------
-    canonical_name : string
+    canonical_name : str
     '''
     target_url = "https://exo.mast.stsci.edu/api/v0.1/exoplanets/identifiers/"
 
@@ -607,7 +607,7 @@ def get_target_data(target_name):
 
     Parameters
     ----------
-    target_name : string
+    target_name : str
         The name of the target transit
 
     Returns

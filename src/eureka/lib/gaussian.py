@@ -51,57 +51,59 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
 
     Examples
     --------
+    .. highlight:: python
+    .. code-block:: python
 
-    >>> import matplotlib.pyplot as plt
-    >>> import gaussian as g
+        >>> import matplotlib.pyplot as plt
+        >>> import gaussian as g
 
-    >>> x = np.arange(-10., 10.005, 0.01)
-    >>> plt.plot(x, g.gaussian(x))
-    >>> plt.title('Gaussian')
-    >>> plt.xlabel('Abcissa')
-    >>> plt.ylabel('Ordinate')
+        >>> x = np.arange(-10., 10.005, 0.01)
+        >>> plt.plot(x, g.gaussian(x))
+        >>> plt.title('Gaussian')
+        >>> plt.xlabel('Abcissa')
+        >>> plt.ylabel('Ordinate')
 
-    >>> # use an array [3] as a single parameter vector
-    >>> z = np.array([2., 2, 3])
-    >>> plt.plot(x, g.gaussian(x, *z))
+        >>> # use an array [3] as a single parameter vector
+        >>> z = np.array([2., 2, 3])
+        >>> plt.plot(x, g.gaussian(x, *z))
 
-    >>> # Test that it integrates to 1.
-    >>> a = np.indices([100, 100]) - 50
-    >>> print(np.sum(g.gaussian(a, 3, 3)))
-    0.999999999999997
-    >>> print(np.sum(g.gaussian(a, np.array([1,2]), np.array([2,3]))))
-    1.0000000107
+        >>> # Test that it integrates to 1.
+        >>> a = np.indices([100, 100]) - 50
+        >>> print(np.sum(g.gaussian(a, 3, 3)))
+        0.999999999999997
+        >>> print(np.sum(g.gaussian(a, np.array([1,2]), np.array([2,3]))))
+        1.0000000107
 
-    >>> plt.clf()
-    >>> plt.imshow(g.gaussian(a, [3,5], [7,3]))
-    >>> plt.title('2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
+        >>> plt.clf()
+        >>> plt.imshow(g.gaussian(a, [3,5], [7,3]))
+        >>> plt.title('2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
 
-    >>> A gaussian + a linear background level:
-    >>> g2 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75), height=4.3,
-    >>>                 bgpars=[0.05, 0.01, 1.0])
-    >>> plt.figure(1)
-    >>> plt.clf()
-    >>> plt.imshow(g2, origin='lower_left', interpolation='nearest')
-    >>> plt.colorbar()
-    >>> plt.title('2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
+        >>> A gaussian + a linear background level:
+        >>> g2 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75),
+        >>>                 height=4.3, bgpars=[0.05, 0.01, 1.0])
+        >>> plt.figure(1)
+        >>> plt.clf()
+        >>> plt.imshow(g2, origin='lower_left', interpolation='nearest')
+        >>> plt.colorbar()
+        >>> plt.title('2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
 
-    >>> plt.figure(2)
-    >>> plt.clf()
-    >>> plt.plot(g2[13,:])
-    >>> plt.title('X slice of 2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Z')
+        >>> plt.figure(2)
+        >>> plt.clf()
+        >>> plt.plot(g2[13,:])
+        >>> plt.title('X slice of 2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Z')
 
-    >>> plt.figure(3)
-    >>> plt.clf()
-    >>> plt.plot(g2[:,16])
-    >>> plt.title('Y slice of 2D Gaussian')
-    >>> plt.xlabel('Y')
-    >>> plt.ylabel('Z')
+        >>> plt.figure(3)
+        >>> plt.clf()
+        >>> plt.plot(g2[:,16])
+        >>> plt.title('Y slice of 2D Gaussian')
+        >>> plt.xlabel('Y')
+        >>> plt.ylabel('Z')
 
     Notes
     -----
@@ -157,6 +159,30 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
 
 
 def gaussianguess(data, mask=None, yxguess=None):
+    """Used by fitgaussian to get an initial guess at the parameters for a
+    Gaussian fit.
+
+    Parameters
+    ----------
+    data : ndarray (2D)
+        The data to which a Gaussian is being fit.
+    mask : ndarray (2D); optional
+        An integer mask array where 1 is unmasked and 0 is masked. Defaults
+        to None which leaves all data unmasked.
+    yxguess : tuple; optional
+        A guess at the centroid. Defaults to None which uses the data point
+        with the highest value.
+
+    Returns
+    -------
+    gwidth : tuple
+        The guess for the Gaussian width in each direction.
+    gcenter : tuple
+        The guess for the centroid. Returns yxguess if it is not None, else
+        uses the data point with the highest value.
+    gheight : float
+        The guess for the Gaussian amplitude.
+    """
     # Default mask:
     if mask is None:
         mask = np.ones(np.shape(data))
@@ -181,6 +207,83 @@ def gaussianguess(data, mask=None, yxguess=None):
               np.sum((data*mask)[gcenter[0], :] > 2*sigma[1])/2.0)
 
     return (gwidth, gcenter, gheight)
+
+
+def residuals(params, x, data, mask, weights, bgpars, fitbg):
+    """
+    Calculates the residuals between data and a gaussian model
+    determined by the rest of the parameters. Used in fitgaussian.
+
+    Parameters
+    ----------
+    params : 1D ndarray
+        This array contains the parameters desired to fit with
+        fitgaussian, depending on fitbg, the number of elements
+        varies.
+    x : ndarray
+        Array (any shape) giving the abcissas of data.
+    data : ndarray
+        Array giving the values of the function.
+    mask : ndarray
+        Same shape as data. Values where its corresponding mask value is
+        0 are disregarded for the minimization. Only values where the
+        mask value is 1 are considered.
+    weights : ndarray
+        Same shape as data. This array defines weights for the
+        minimization, for scientific data the weights should be
+        1/sqrt(variance).
+    bgpars : ndarray or tuple, 3-elements
+        Background parameters, the elements determine a X- and Y-linearly
+        dependant level, of the form:
+        background = Y*bgparam[0] + X*bgparam[1] + bgparam[2]
+    fitbg : Integer
+        This flag indicates the level of background fitting:
+        fitbg=0: No fitting, estimate the bg as median(data).
+        fitbg=1: Fit a constant to the bg (bg = c).
+        fitbg=2: Fit a plane as bg (bg = a*x + b*y + c).
+
+    Returns
+    -------
+    residuals : 1D ndarray
+        An array of the (unmasked) weighted residuals between data and
+        a gaussian model determined by params (and bgpars when
+        necessary).
+
+    Notes
+    -----
+    History:
+
+    - 2011-05-03  patricio pcubillos@fulbrightmail.org
+        Initial version.                 
+    """
+    # Use bgpars as default for background parameters, if those values
+    # are being fitted update them:
+    bgparams = bgpars
+    if fitbg == 1:
+        bgparams[2] = params[-1]   # update
+        params = params[0:-1]  # remove last parameters from params
+    elif fitbg == 2:
+        bgparams = params[-3:]   # update
+        params = params[0:-3]  # remove last parameters
+
+    # Extract width, center, and height from params:
+    data_dims = np.ndim(data)
+    params_len = len(params)
+
+    width = params[0:data_dims]
+    center = params[data_dims:2*data_dims]
+    if params_len - 2*data_dims == 1:
+        height = params[2*data_dims]
+    else:
+        # when height is None, queda la cagada, avoid this case.
+        height = None
+
+    # Produce the model:
+    model = gaussian(x, width, center, height, bgparams).squeeze()
+    # Calculate residuals:
+    res = (model - data) * weights
+    # Return only unmasked values:
+    return res[np.where(mask)]
 
 
 def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
@@ -222,6 +325,11 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
         Same shape as y. This array defines weights for the
         minimization, for scientific data the weights should be
         1/sqrt(variance).
+    maskg : bool; optional
+        If true, mask the gaussian.
+    yxguess : tuple; optional
+        A guess at just the centroid. Defaults to None which uses the data
+        point with the highest value.
 
     Returns
     -------
@@ -239,127 +347,129 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
 
     Examples
     --------
+    .. highlight:: python
+    .. code-block:: python
 
-    >>> import matplotlib.pyplot as plt
-    >>> import gaussian as g
+        >>> import matplotlib.pyplot as plt
+        >>> import gaussian as g
 
-    >>> # parameters for X
-    >>> lx = -3.  # low end of range
-    >>> hx = 5.   # high end of range
-    >>> dx = 0.05 # step
+        >>> # parameters for X
+        >>> lx = -3.  # low end of range
+        >>> hx = 5.   # high end of range
+        >>> dx = 0.05 # step
 
-    >>> # parameters of the noise
-    >>> nc = 0.0  # noice center
-    >>> ns = 1.0  # noise width
-    >>> na = 0.2  # noise amplitude
+        >>> # parameters of the noise
+        >>> nc = 0.0  # noice center
+        >>> ns = 1.0  # noise width
+        >>> na = 0.2  # noise amplitude
 
-    >>> # 1D Example
+        >>> # 1D Example
 
-    >>> # parameters of the underlying Gaussian
-    >>> wd = 1.1  # width
-    >>> ct = 1.2  # center
-    >>> ht = 2.2  # height
+        >>> # parameters of the underlying Gaussian
+        >>> wd = 1.1  # width
+        >>> ct = 1.2  # center
+        >>> ht = 2.2  # height
 
-    >>> # x and y data to fit
-    >>> x  = np.arange(lx, hx + dx / 2., dx)
-    >>> x +=                             na * np.random.normal(nc, ns, x.size)
-    >>> y  = g.gaussian(x, wd, ct, ht) + na * np.random.normal(nc, ns, x.size)
-    >>> s  = x.argsort()    # sort, in case noise violated order
-    >>> xs = x[s]
-    >>> ys = y[s]
+        >>> # x and y data to fit
+        >>> x  = np.arange(lx, hx + dx / 2., dx)
+        >>> x += na * np.random.normal(nc, ns, x.size)
+        >>> y  = g.gaussian(x, wd, ct, ht)+na*np.random.normal(nc, ns, x.size)
+        >>> s  = x.argsort()   # sort, in case noise violated order
+        >>> xs = x[s]
+        >>> ys = y[s]
 
-    >>> # calculate guess and fit
-    >>> (width, center, height)     = g.gaussianguess(ys, xs)
-    >>> (fw,    fc,     fh,    err) = g.fitgaussian(ys, xs)
+        >>> # calculate guess and fit
+        >>> (width, center, height)     = g.gaussianguess(ys, xs)
+        >>> (fw,    fc,     fh,    err) = g.fitgaussian(ys, xs)
 
-    >>> # plot results
-    >>> plt.clf()
-    >>> plt.plot(xs, ys)
-    >>> plt.plot(xs,      g.gaussian(xs, wd,    ct,     ht))
-    >>> plt.plot(xs,      g.gaussian(xs, width, center, height))
-    >>> plt.plot(xs,      g.gaussian(xs, fw,    fc,     fh))
-    >>> plt.title('Gaussian Data, Guess, and Fit')
-    >>> plt.xlabel('Abcissa')
-    >>> plt.ylabel('Ordinate')
-    >>> # plot residuals
-    >>> plt.clf()
-    >>> plt.plot(xs, ys - g.gaussian(xs, fw,    fc,     fh))
-    >>> plt.title('Gaussian Fit Residuals')
-    >>> plt.xlabel('Abcissa')
-    >>> plt.ylabel('Ordinate')
+        >>> # plot results
+        >>> plt.clf()
+        >>> plt.plot(xs, ys)
+        >>> plt.plot(xs, g.gaussian(xs, wd, ct, ht))
+        >>> plt.plot(xs, g.gaussian(xs, width, center, height))
+        >>> plt.plot(xs, g.gaussian(xs, fw, fc, fh))
+        >>> plt.title('Gaussian Data, Guess, and Fit')
+        >>> plt.xlabel('Abcissa')
+        >>> plt.ylabel('Ordinate')
+        >>> # plot residuals
+        >>> plt.clf()
+        >>> plt.plot(xs, ys - g.gaussian(xs, fw, fc, fh))
+        >>> plt.title('Gaussian Fit Residuals')
+        >>> plt.xlabel('Abcissa')
+        >>> plt.ylabel('Ordinate')
 
-    >>> # 2D Example
+        >>> # 2D Example
 
-    >>> # parameters of the underlying Gaussian
-    >>> wd = (1.1, 3.2)  # width
-    >>> ct = (1.2, 3.1)  # center
-    >>> ht = 2.2         # height
+        >>> # parameters of the underlying Gaussian
+        >>> wd = (1.1, 3.2)  # width
+        >>> ct = (1.2, 3.1)  # center
+        >>> ht = 2.2         # height
 
-    >>> # x and y data to fit
-    >>> nx = (hx - lx) / dx + 1
-    >>> x  = np.indices((nx, nx)) * dx + lx
-    >>> y  = g.gaussian(x, wd, ct, ht) + na * np.random.normal(nc, ns,
-                                                               x.shape[1:])
+        >>> # x and y data to fit
+        >>> nx = (hx - lx) / dx + 1
+        >>> x  = np.indices((nx, nx)) * dx + lx
+        >>> y  = g.gaussian(x, wd, ct, ht) + na * np.random.normal(nc, ns,
+                                                                x.shape[1:])
 
-    >>> # calculate guess and fit
-    >>> #(width, center, height) = g.gaussianguess(y, x) # not in 2D yet...
-    >>> (fw, fc, fh, err) = g.fitgaussian(y, x, (wd, ct, ht))
+        >>> # calculate guess and fit
+        >>> #(width, center, height) = g.gaussianguess(y, x) # not in 2D yet...
+        >>> (fw, fc, fh, err) = g.fitgaussian(y, x, (wd, ct, ht))
 
-    >>> # plot results
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian Given')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(    g.gaussian(x, wd, ct, ht))
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian With Noise')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(y)
-    >>> #plt.imshow(g.gaussian(x, width, center, height))  # not in 2D yet...
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian Fit')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(    g.gaussian(x, fw,    fc,     fh))
-    >>> plt.clf()
-    >>> plt.title('2D Gaussian Fit Residuals')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>> plt.imshow(y - g.gaussian(x, fw,    fc,     fh))
+        >>> # plot results
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian Given')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(    g.gaussian(x, wd, ct, ht))
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian With Noise')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(y)
+        >>> #plt.imshow(g.gaussian(x, width, center, height))  # not in 2D yet
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian Fit')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(    g.gaussian(x, fw, fc, fh))
+        >>> plt.clf()
+        >>> plt.title('2D Gaussian Fit Residuals')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+        >>> plt.imshow(y - g.gaussian(x, fw, fc, fh))
 
-    >>> # All cases benefit from...
+        >>> # All cases benefit from...
 
-    >>> # show difference between fit and underlying Gaussian
-    >>> # Random data, your answers WILL VARY.
-    >>> np.array(fw) - np.array(wd)
-    array([ 0.00210398, -0.00937687])
-    >>> np.array(fc) - np.array(ct)
-    array([-0.00260803,  0.00555011])
-    >>> np.array(fh) - np.array(ht)
-    0.0030143371034774269
+        >>> # show difference between fit and underlying Gaussian
+        >>> # Random data, your answers WILL VARY.
+        >>> np.array(fw) - np.array(wd)
+        array([ 0.00210398, -0.00937687])
+        >>> np.array(fc) - np.array(ct)
+        array([-0.00260803,  0.00555011])
+        >>> np.array(fh) - np.array(ht)
+        0.0030143371034774269
 
-    >>> # Last Example:
-    >>> x = np.indices((30,30))
-    >>> g1 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75), height=1e4,
-    >>>                 bgpars=[0.0, 0.0, 100.0])
-    >>> error = np.sqrt(g1) * np.random.randn(30,30)
-    >>> y = g1 + error
-    >>> var = g1
+        >>> # Last Example:
+        >>> x = np.indices((30,30))
+        >>> g1 = g.gaussian(x, width=(1.2, 1.15), center=(13.2,15.75),
+        >>>                 height=1e4, bgpars=[0.0, 0.0, 100.0])
+        >>> error = np.sqrt(g1) * np.random.randn(30,30)
+        >>> y = g1 + error
+        >>> var = g1
 
-    >>> plt.figure(1)
-    >>> plt.clf()
-    >>> plt.imshow(y, origin='lower_left', interpolation='nearest')
-    >>> plt.colorbar()
-    >>> plt.title('2D Gaussian')
-    >>> plt.xlabel('X')
-    >>> plt.ylabel('Y')
-    >>>
-    >>> guess = ((1.2,1.2),(13,16.),1e4)
-    >>> reload(g)
-    >>> fit = g.fitgaussian(y, x, bgpars=[0.0, 0.0, 110.], fitbg=1,
-                            guess=guess, mask=None, weights=1/np.sqrt(var))
-    >>> print(fit[0])
+        >>> plt.figure(1)
+        >>> plt.clf()
+        >>> plt.imshow(y, origin='lower_left', interpolation='nearest')
+        >>> plt.colorbar()
+        >>> plt.title('2D Gaussian')
+        >>> plt.xlabel('X')
+        >>> plt.ylabel('Y')
+
+        >>> guess = ((1.2,1.2),(13,16.),1e4)
+        >>> reload(g)
+        >>> fit = g.fitgaussian(y, x, bgpars=[0.0, 0.0, 110.], fitbg=1,
+                                guess=guess, mask=None, weights=1/np.sqrt(var))
+        >>> print(fit[0])
 
 
     Notes
@@ -455,83 +565,6 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
     return p, err
 
 
-def residuals(params, x, data, mask, weights, bgpars, fitbg):
-    """
-    Calculates the residuals between data and a gaussian model
-    determined by the rest of the parameters. Used in fitgaussian.
-
-    Parameters
-    ----------
-    params : 1D ndarray
-        This array contains the parameters desired to fit with
-        fitgaussian, depending on fitbg, the number of elements
-        varies.
-    x : ndarray
-        Array (any shape) giving the abcissas of data.
-    data : ndarray
-        Array giving the values of the function.
-    mask : ndarray
-        Same shape as data. Values where its corresponding mask value is
-        0 are disregarded for the minimization. Only values where the
-        mask value is 1 are considered.
-    weights : ndarray
-        Same shape as data. This array defines weights for the
-        minimization, for scientific data the weights should be
-        1/sqrt(variance).
-    bgpars : ndarray or tuple, 3-elements
-        Background parameters, the elements determine a X- and Y-linearly
-        dependant level, of the form:
-        background = Y*bgparam[0] + X*bgparam[1] + bgparam[2]
-    fitbg : Integer
-        This flag indicates the level of background fitting:
-        fitbg=0: No fitting, estimate the bg as median(data).
-        fitbg=1: Fit a constant to the bg (bg = c).
-        fitbg=2: Fit a plane as bg (bg = a*x + b*y + c).
-
-    Returns
-    -------
-    residuals : 1D ndarray
-        An array of the (unmasked) weighted residuals between data and
-        a gaussian model determined by params (and bgpars when
-        necessary).
-
-    Notes
-    -----
-    History:
-
-    2011-05-03  patricio Initial version.
-                         pcubillos@fulbrightmail.org
-    """
-    # Use bgpars as default for background parameters, if those values
-    # are being fitted update them:
-    bgparams = bgpars
-    if fitbg == 1:
-        bgparams[2] = params[-1]   # update
-        params = params[0:-1]  # remove last parameters from params
-    elif fitbg == 2:
-        bgparams = params[-3:]   # update
-        params = params[0:-3]  # remove last parameters
-
-    # Extract width, center, and height from params:
-    data_dims = np.ndim(data)
-    params_len = len(params)
-
-    width = params[0:data_dims]
-    center = params[data_dims:2*data_dims]
-    if params_len - 2*data_dims == 1:
-        height = params[2*data_dims]
-    else:
-        # when height is None, queda la cagada, avoid this case.
-        height = None
-
-    # Produce the model:
-    model = gaussian(x, width, center, height, bgparams).squeeze()
-    # Calculate residuals:
-    res = (model - data) * weights
-    # Return only unmasked values:
-    return res[np.where(mask)]
-
-
 def gaussians(x, param):
     """Evaluate more than 1 gaussian.
     """
@@ -574,9 +607,39 @@ def gaussians(x, param):
     return result
 
 
+def resids(param, x, ngauss, y):
+    """Get the residuals of a Gaussian compared to data for fitting.
+
+    Parameters
+    ----------
+    param : ndarray (1D)
+        The fitted parameters raveled into a 1D array.
+    x : ndarray (1D)
+        The x-positions of the values y.
+    ngauss : int
+        The number of Gaussians being fitted.
+    y : ndarray (1D)
+        The values to which a Gaussian should be fitted.
+
+    Returns
+    -------
+    ndarray (1D)
+        The difference between y and the Gaussian.
+    """
+    sigma = param[-1]
+    param = np.reshape(param[0:-1], (ngauss, len(param[0:-1])/ngauss))
+
+    gss = []
+    for k in np.arange(ngauss):
+        gauss = np.append(sigma, np.append(sigma, param[k]))
+        gss = np.append(gss, gauss)
+    p = np.reshape(gss, (ngauss, len(gss)/ngauss))
+    return np.ravel(gaussians(x, param=p)-y)
+
+
 def fitgaussians(y, x=None, guess=None, sigma=1.0):
     """Fit position and flux of a data image with gaussians, same sigma
-    is applied to all dispersions.
+    is applied to all directions.
 
     Parameters
     ----------
@@ -619,15 +682,3 @@ def fitgaussians(y, x=None, guess=None, sigma=1.0):
     extra = (p, sigma, iscov, cov, info, mesg)
 
     return np.array(p[0, 0:2]), extra
-
-
-def resids(param, x, ngauss, y):
-    sigma = param[-1]
-    param = np.reshape(param[0:-1], (ngauss, len(param[0:-1])/ngauss))
-
-    gss = []
-    for k in np.arange(ngauss):
-        gauss = np.append(sigma, np.append(sigma, param[k]))
-        gss = np.append(gss, gauss)
-    p = np.reshape(gss, (ngauss, len(gss)/ngauss))
-    return np.ravel(gaussians(x, param=p)-y)

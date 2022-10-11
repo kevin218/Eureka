@@ -5,6 +5,8 @@ from io import StringIO
 import os
 import sys
 import h5py
+import xarray as xr
+from astraeus import xarrayIO as xrio
 import time as time_pkg
 
 from scipy.optimize import minimize
@@ -166,6 +168,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
+
+    # Zoom in on phase variations
+    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+        plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3 and calling_function == 'lsq':
@@ -441,6 +447,10 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter='emcee')
 
+    # Zoom in on phase variations
+    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+        plots.plot_phase_variations(lc, model, meta, fitter='emcee')
+
     # Plot chain evolution
     if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
@@ -527,8 +537,13 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
     fname = f'S5_emcee_samples_{channel_key}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
-    with h5py.File(full_fname, 'r') as hf:
-        samples = hf['samples'][:]
+    ds = xrio.readXR(full_fname, verbose=False)
+    if ds is None:
+        # Working with an old save file
+        with h5py.File(full_fname, 'r') as hf:
+            samples = hf['samples'][:]
+    else:
+        samples = ds.to_array().T
     log.writelog(f'Old chain path: {full_fname}')
 
     # Initialize the walkers using samples from the old chain
@@ -790,7 +805,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     log.writelog('Running dynesty...')
 
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
-    if nlive < min_nlive:
+    if nlive == 'min':
+        nlive = min_nlive
+    elif nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least '
                      f'{min_nlive} ****')
 
@@ -903,6 +920,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter='dynesty')
+
+    # Zoom in on phase variations
+    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+        plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -1023,6 +1044,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
         plots.plot_GP_components(lc, model, meta, fitter='lmfitter')
+
+    # Zoom in on phase variations
+    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+        plots.plot_phase_variations(lc, model, meta, fitter='lmfitter')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
@@ -1263,11 +1288,14 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
     results_table.write(meta.outputdir+fname+'.csv', format='csv',
                         overwrite=False)
 
-    # Save the chain from the sampler (if a chain was provided)
+    # Save the chain from the sampler using Astraeus (if a chain was provided)
     if len(samples) != 0:
-        fname = f'S5_{fitter}_samples{channel_tag}'
-        with h5py.File(meta.outputdir+fname+'.h5', 'w') as hf:
-            hf.create_dataset("samples", data=samples)
+        fname = meta.outputdir+f'S5_{fitter}_samples{channel_tag}.h5'
+        ds = dict([(freenames[i], xr.DataArray(samples[:, i], dims=['sample'],
+                                               name=freenames[i]))
+                   for i in range(len(freenames))])
+        ds = xrio.makeDataset(ds)
+        xrio.writeXR(fname, ds)
 
     # Save the S5 outputs in a human readable ecsv file
     event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
@@ -1277,12 +1305,15 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                                     meta.wave_hi.reshape(1, -1), axis=0),
                           axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
+    # Evaluate each individual model for easier access outside of Eureka!
+    individual_models = np.array([[comp.name, comp.eval()]
+                                  for comp in model.components], dtype=object)
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta.time,
                               wavelengths[lc.fitted_channels],
                               wave_errs[lc.fitted_channels],
-                              lc.flux, lc.unc_fit, model_lc,
+                              lc.flux, lc.unc_fit, individual_models, model_lc,
                               residuals)
 
     return

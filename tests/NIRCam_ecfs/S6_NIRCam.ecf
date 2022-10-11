@@ -3,9 +3,14 @@
 allapers        True # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
 
 # Plotting parameters
-y_unit			(Rp/Rs)^2 # Options include Rp/Rs, (Rp/Rs)^2, Fp/Fs
-y_scalar		100 # Can be used to convert to percent (100), ppm (1e6), etc.
-x_unit			um # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
+y_params        'rp'  # The parameter name as entered in your EPF file in Stage 5. rp^2, 1/r1, and 1/r4 are also permitted.
+y_labels        None  # The formatted string you want on the y-label. Set to None to use the default formatting.
+y_label_units   None  # The formatted string for the units you want on the y-label - e.g., (ppm), (seconds), '(days$^{-1})$', etc.. Set to None to automatically add any implied units from y_scalars (e.g. ppm), or set to '' to force no units.
+y_scalars       1     # Can be used to convert to percent (100), ppm (1e6), etc.
+x_unit          um    # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
+
+# Tabulating parameters
+ncol            4  # The number of columns you want in your LaTeX formatted tables
 
 # This section is relevant if isplots_S6>=3
 # Scale height parameters (if you want a second copy of the plot with a second y-axis with units of scale height)

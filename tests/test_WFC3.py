@@ -53,9 +53,16 @@ def test_WFC3(capsys):
 
     # run assertions for S3
     meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage3{os.sep}'
-    name = pathdirectory(meta, 'S3', 1, ap=5, bg=5)
+    name = pathdirectory(meta, 'S3', 1, ap=5, bg=8)
+    assert os.path.exists(name)
+    assert os.path.exists(name+os.sep+'figs')
+
+    # run assertions for S4
+    meta.outputdir_raw = f'data{os.sep}WFC3{os.sep}Stage4{os.sep}'
+    name = pathdirectory(meta, 'S4', 1, ap=5, bg=8)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")
+    os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage4")

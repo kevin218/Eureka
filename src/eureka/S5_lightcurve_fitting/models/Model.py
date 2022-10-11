@@ -21,10 +21,11 @@ class Model:
             Model object as Logedit objects cannot be pickled
             which is required for multiprocessing.
         """
-        # Set up model attributes
+        # Set up default model attributes
         self.name = 'New Model'
         self.fitter = None
-        self._time = None
+        self.time = None
+        self.time_units = 'BMJD_TDB'
         self._flux = None
         self._units = q.day
         self.freenames = None
@@ -73,10 +74,6 @@ class Model:
     @flux.setter
     def flux(self, flux_array):
         """A setter for the flux."""
-        # Check the type
-        if not isinstance(flux_array, (np.ndarray, tuple, list)):
-            raise TypeError("flux axis must be a tuple, list, or numpy array.")
-
         # Set the array
         self._flux = np.ma.masked_array(flux_array)
 
@@ -90,10 +87,6 @@ class Model:
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Check the type
-        if not isinstance(new_time, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array")
-
         # Save the current time array
         old_time = copy.deepcopy(self.time)
 
@@ -214,33 +207,6 @@ class Model:
             fig.show()
         else:
             return
-
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array, time_units='BJD_TDB'):
-        """A setter for the time.
-
-        Parameters
-        ----------
-        time_array : sequence, astropy.units.quantity.Quantity
-            The time array.
-        time_units : str; optional
-            The units of the input time_array, ['MJD','BJD','BJD_TDB','phase'].
-            Defaults to 'BJD_TDB'.
-        """
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the units
-        self.time_units = time_units
-
-        # Set the array
-        self._time = time_array
 
     @property
     def units(self):

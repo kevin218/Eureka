@@ -3,7 +3,7 @@
 Eureka! Outputs
 ===============
 
-Stage 2 through Stage 6 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages. 
+Stage 2 through Stage 6 of ``Eureka!`` can be configured to output plots of the pipeline's interim results as well as the data required to run further stages.
 
 
 .. _s2-out:
@@ -32,52 +32,72 @@ In Stage 3:
    .. figure:: ../media/S3_out/fig3101-2D_LC.png
       :alt: Stage 3 2-dimensional spectrum plot
 
-      Fig 3101: 2-Dimensional Spectrum Plot
+      Fig 3101: 2-Dimensional Spectrum Plot with a linear wavelength x-axis
 
-   .. figure:: ../media/S3_out/fig3102_file0_int00_source_pos.png
+   .. figure:: ../media/S3_out/fig3102-2D_LC.png
+      :alt: Stage 3 2-dimensional spectrum plot
+
+      Fig 3102: 2-Dimensional Spectrum Plot with a linear detector pixel x-axis
+
+   .. figure:: ../media/S3_out/fig3103_file0_int00_source_pos.png
       :alt: Stage 3 source position fit
 
-      Fig 3102: Source Position Fit Plot
+      Fig 3103: Source Position Fit Plot
 
-   .. figure:: ../media/S3_out/fig3103_DriftYPos.png
+   .. figure:: ../media/S3_out/fig3104_DriftYPos.png
       :alt: Stage 3 y drift
 
-      Fig 3013: Variations in the spatial-axis position
+      Fig 3104: Variations in the spatial-axis position
 
-   .. figure:: ../media/S3_out/fig3104_DriftYWidth.png
+   .. figure:: ../media/S3_out/fig3105_DriftYWidth.png
       :alt: Stage 3 y PSF width changes
 
-      Fig 3104: Variations in the spatial-axis PSF width
+      Fig 3105: Variations in the spatial-axis PSF width
 
-   .. figure:: ../media/S3_out/fig3105_Drift2D.png
+   .. figure:: ../media/S3_out/fig3106_Drift2D.png
       :alt: Stage 3 2D drift fit
 
-      Fig 3105: 2D drift fit (currently only produced for WFC3)
+      Fig 3106: 2D drift fit (currently only produced for WFC3)
 
-   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation.
+   .. figure:: ../media/S3_out/fig3107_file0_Curvature.png
+      :alt: Stage 3 trace curvature
 
-   .. figure:: ../media/S3_out/fig3301_file0_int00_ImageAndBackground.png
+      Fig 3107: Measured, smoothed, and integer-rounded position of trace
+
+   - If ``isplots_S3`` = 3: ``Eureka!`` will plot the results of the background and optimal spectral extraction steps for each exposure in the observation as well as the cleaned median frame.
+
+   .. figure:: ../media/S3_out/fig3301_file0_int001_ImageAndBackground.png
       :alt: Stage 3 background subtracted flux plot
 
       Fig 3301: Background Subtracted Flux Plot
 
-   .. figure:: ../media/S3_out/fig3302_file0_int00_Spectrum.png
+   .. figure:: ../media/S3_out/fig3302_file0_int001_Spectrum.png
       :alt: Stage 3 1-dimensional spectrum plot
 
       Fig 3302: 1-Dimensional Spectrum Plot
 
-   .. figure:: ../media/S3_out/fig3303_file0_int00_Profile.png
+   .. figure:: ../media/S3_out/fig3303_file0_int001_Profile.png
       :alt: Stage 3 weighting profile
 
       Fig 3303: Weighting Profile Plot
 
+   .. figure:: ../media/S3_out/fig3304_file0_ResidualBG.png
+      :alt: Stage 3 residual background
+
+      Fig 3304: Residual Background Plot
+
+   .. figure:: ../media/S3_out/fig3308_file0_MedianFrame.png
+      :alt: Stage 3 clean median frame plot
+
+      Fig 3308: Clean Median Frame Plot
+
    - If ``isplots_S3`` = 5: ``Eureka!`` will plot the Subdata plots from the optimal spectral extraction step.
 
-   .. figure:: ../media/S3_out/fig3501_file0_int00_col259_subdata.png
+   .. figure:: ../media/S3_out/fig3501_file0_int001_col0117_subdata.png
       :alt: Stage 3 subdata plot
 
       Fig 3501: Spectral Extraction Subdata Plot
-   
+
 .. _s4-out:
 
 Stage 4 Outputs
@@ -89,7 +109,7 @@ In Stage 4:
    .. figure:: ../media/S4_out/fig4101_2D_LC.png
       :alt: Stage 4 2-dimensional spectrum
 
-      Fig 4101: 2-Dimensional Spectrum
+      Fig 4101: 2-Dimensional Spectrum with a linear wavelength x-axis.
 
    .. figure:: ../media/S4_out/fig4102_ch0_1D_LC.png
       :alt: Stage 4 1-dimensional binned spectrum
@@ -120,8 +140,8 @@ Stage 5 Outputs
 ---------------
 
 In Stage 5:
-   - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel. If fitting with a GP, an additional figure will be made showing the GP component. Finally, an additional plot compares the fits from different fitters.
-   
+   - If ``isplots_S5`` = 1: ``Eureka!`` will plot the fitted lightcurve model over the data in each channel. If fitting with a GP, an additional figure will be made showing the GP component. If fitting a sinusoid_pc model, another zoomed-in figure with binned data will be made to emphasize the phase variations. Finally, an additional plot compares the fits from different fitters.
+
    .. figure:: ../media/S5_out/fig5101_ch0_lc_emcee.png
       :alt: Stage 5 fit data and lightcurve
 
@@ -131,31 +151,35 @@ In Stage 5:
       :alt: Stage 5 GP plot
 
       Fig 5102: Fitted Lightcurve, GP Model, and Residual Plot
-   
+
    .. figure:: ../media/S5_out/fig5103_ch0_all_fits.png
       :alt: Stage 5 All fits comparison
 
-      Fig 5102: Comparison of Different Fitters
+      Fig 5103: Comparison of Different Fitters
+   
+   Fig 5104: *(Demo figure to come)* Zoomed-in Figure Emphasizing Phase Variations Using Temporally Binned Data.
 
-   - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel.
+   - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel. If fitting a sinusoid_pc model, another zoomed-in figure with binned data in front of the unbinned data will be made to emphasize the phase variations.
 
    .. figure:: ../media/S5_out/fig5301_ch0_allanplot_emcee.png
       :alt: Stage 5 RMS deviation plot
 
       Fig 5301: RMS Deviation Plot
-   
+
    .. figure:: ../media/S5_out/fig5302_ch0_res_distri_emcee.png
       :alt: Stage 5 residual distribution
 
       Fig 5302: Residual Distribution
-   
+
    .. figure:: ../media/S5_out/fig5303_ch0_burninchain.png
       :alt: Stage 5 fitting chains
-   
+
    .. figure:: ../media/S5_out/fig5303_ch0_chain.png
       :alt: Stage 5 fitting chains
 
       Figs 5303: Fitting Chains. Only made for ``emcee`` runs. Two version of the plot will be saved, one including the burn in steps and one without the burn in steps.
+
+   Fig 5304: *(Demo figure to come)* Zoomed-in Figure Emphasizing Phase Variations Using Temporally Binned Data Over Unbinned Data.
 
    - If ``isplots_S5`` = 5, and if ``emcee`` or ``dynesty`` were used as the fitter: ``Eureka!`` will plot a corner plot for each channel.
 

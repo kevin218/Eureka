@@ -8,20 +8,19 @@
 |
 
 Welcome to Eureka!'s documentation!
-====================================
+===================================
 
 ``Eureka!`` is a data reduction and analysis pipeline for exoplanet time-series observations, with a particular focus on James Webb Space Telescope (JWST) data.
 ``Eureka!`` is capable of of reducing JWST time-series data (starting from raw, uncalibrated FITS files) and turning it into precise exoplanet transmission and emission spectra.
 At the moment the package is under heavy development. The code is not officially associated with JWST or the ERS team.
 
-The code is separated into six parts or "Stages":
 
-- Stage 1: An optional step that calibrates raw data (converts ramps to slopes for JWST observations). This step can be skipped within ``Eureka!`` if you would rather use the Stage 1 outputs from the ``jwst`` pipeline.
-- Stage 2: An optional step that further calibrates Stage 1 data (performs flat-fielding, unit conversion, etc. for JWST observations). This step can be skipped within ``Eureka!`` if you would rather use the Stage 2 outputs from the ``jwst`` pipeline, although at present it is recommended that you skip the photom step in the ``jwst`` pipeline.
-- Stage 3: Using Stage 2 outputs, performs background subtraction and optimal spectral extraction. For spectroscopic observations, this stage generates a time series of 1D spectra. For photometric observations, this stage generates a single light curve of flux versus time.
-- Stage 4: Using Stage 3 outputs, generates spectroscopic light curves by binning the time series of 1D spectra along the wavelength axis. Optionally removes drift/jitter along the dispersion direction and/or sigma clips outliers.
-- Stage 5: Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
-- Stage 6: Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
+- **Stage 1:** An optional step that calibrates raw data (converts ramps to slopes for JWST observations). This step can be skipped within ``Eureka!`` if you would rather use the Stage 1 outputs from the ``jwst`` pipeline.
+- **Stage 2:** An optional step that further calibrates Stage 1 data (performs flat-fielding, unit conversion, etc. for JWST observations). This step can be skipped within ``Eureka!`` if you would rather use the Stage 2 outputs from the ``jwst`` pipeline, although at present it is recommended that you skip the photom step in the ``jwst`` pipeline.
+- **Stage 3:** Using Stage 2 outputs, performs background subtraction and optimal spectral extraction. For spectroscopic observations, this stage generates a time series of 1D spectra. For photometric observations, this stage generates a single light curve of flux versus time.
+- **Stage 4:** Using Stage 3 outputs, generates spectroscopic light curves by binning the time series of 1D spectra along the wavelength axis. Optionally removes drift/jitter along the dispersion direction and/or sigma clips outliers.
+- **Stage 5:** Fits the light curves with noise and astrophysical models using different optimization or sampling algorithms.
+- **Stage 6:** Displays the planet spectrum in figure and table form using results from the Stage 5 fits.
 
 The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin218/Eureka>`_.
 
@@ -57,6 +56,7 @@ If you wish to cite the use of ``Eureka!`` in published work, please use the fol
 
    installation
    quickstart
+   stages
    ecf
    outputs
    contribute

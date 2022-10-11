@@ -22,13 +22,13 @@ from jwst.pipeline.calwebb_image2 import Image2Pipeline
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
-from ..lib.plots import figure_filetype
+from ..lib import plots
 
 import jwst.assign_wcs.nirspec
 from functools import partial
 
 
-def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
+def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
     pipeline into calints and x1dints.
 
@@ -45,6 +45,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     s1_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S1 step (if running S1 and S2
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -60,9 +63,13 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''
     t0 = time_pkg.time()
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S2_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S2_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -271,7 +278,8 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 plt.title('Time Series Observation: Extracted spectra')
                 plt.xlabel('Wavelength (micron)')
                 plt.ylabel('Flux')
-                plt.savefig(meta.outputdir+'figs'+os.sep+fname+figure_filetype,
+                plt.savefig(meta.outputdir+'figs'+os.sep+fname +
+                            plots.figure_filetype,
                             bbox_inches='tight', dpi=300)
                 if meta.hide_plots:
                     plt.close()

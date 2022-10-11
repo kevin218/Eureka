@@ -1,7 +1,7 @@
 .. _ecf:
 
-Eureka! Control File (.ecf)
-===========================
+Eureka! Control Files (.ecf)
+============================
 
 To run the different Stages of ``Eureka!``, the pipeline requires control files (.ecf) where Stage-specific parameters are defined (e.g. aperture size, path of the data, etc.).
 
@@ -168,6 +168,10 @@ As we want to do our own spectral extraction, we set this variable to ``calints`
 .. note::
 	Note that other Instruments might used different suffixes!
 
+photometry
+''''''''''
+Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
+
 hst_cal
 '''''''
 Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
@@ -206,6 +210,10 @@ Determine the source position on the detector. Options: header, gaussian, weight
 record_ypos
 '''''''''''
 Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
+
+use_dq
+''''''
+Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
 
 centroidtrim
 ''''''''''''
@@ -298,7 +306,12 @@ Used during Optimal Extraction. fittype defines how to construct the normalized 
 
 window_len
 ''''''''''
-Used during Optimal Extraction. window_len is only used when fittype = 'smooth'. It sets the length scale over which the data are smoothed. Default is 31. For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+Used during Optimal Extraction. window_len is only used when fittype = 'smooth' or 'meddata' (when computing median frame). It sets the length scale over which the data are smoothed. You can set this to 1 for no smoothing when computing median frame for fittype=meddata.
+For more information, see the source code of :func:`optspex.optimize<eureka.S3_data_reduction.optspex.optimize>`.
+
+median_thresh
+'''''''''''''
+Used during Optimal Extraction. Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1. Default is 5.
 
 prof_deg
 ''''''''
@@ -311,6 +324,42 @@ Only used for HST analyses. The file indices to use as reference frames for 2D d
 curvature
 '''''''''
 Current options: 'None', 'correct'. Using 'None' will not use any curvature correction and is strongly recommended against for instruments with strong curvature like NIRSpec/G395. Using 'correct' will bring the center of mass of each column to the center of the detector and perform the extraction on this straightened trace. If using 'correct', you should also be using fittype = 'meddata'.
+
+flag_bg
+'''''''
+Only used for photometry analyses. Options are: True, False. Does an outlier rejection along the time axis for each individual pixel in a segment (= in a calints file).
+
+interp_method
+'''''''''''''
+Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+
+ctr_cutout_size
+'''''''''''''''
+Only used for photometry analyses. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+
+oneoverf_corr
+'''''''''''''
+Only used for photometry analyses. The NIRCam detector exhibits 1/f noise along the long axis. Furthermore, each amplifier area (each is 512 colomns in length) has its own 1/f characteristics. Correcting for the 1/f effect will improve the quality of the final light curve. So, performing this correction is advised if it has not been done in any of the previous stages. The 1/f correction in Stage 3 treats every amplifier region separately. It does a row by row subtraction while avoiding pixels close to the star (see oneoverf_dist). "oneoverf_corr" sets which method should be used to determine the average flux value in each row of an amplifier region. Options: None, meanerr, median. If the user sets oneoverf_corr = None, no 1/f correction will be performed in S3. meanerr calculates a mean value which is weighted by the error array in a row. median calculated the median flux in a row.
+
+oneoverf_dist
+'''''''''''''
+Only used for photometry analyses. Set how many pixels away from the centroid should be considered as background during the 1/f correction. E.g., Assume the frame has the shape 1000 in x and 200 in y. The centroid is at x,y = 400,100. Assume, oneoverf_dist has been set to 250. Then the area 0-150 and 650-1000 (in x) will be considered as background during the 1/f correction. The goal of oneoverf_dist is therefore basically to not subtract starlight during the 1/f correction.
+
+skip_apphot_bg
+''''''''''''''
+Only used for photometry analyses. Skips the background subtraction in the aperture photometry routine. If the user does the 1/f noise subtraction during S3, the code will subtract the background from each amplifier region. The aperture photometry code will again subtract a background flux from the target flux by calculating the flux in an annulus in the background. If the user wants to skip this background subtraction by setting an background annulus, skip_apphot_bg has to be set to True.
+
+photap
+''''''
+Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered.
+
+skyin
+'''''
+Only used for photometry analyses. Inner sky annulus edge, in pixels.
+
+skyout
+''''''
+Only used for photometry analyses. Outer sky annulus edge, in pixels.
 
 isplots_S3
 ''''''''''
@@ -339,6 +388,10 @@ If set to ``True`` only the last segment (which is usually the smallest) in the 
 save_output
 '''''''''''
 If set to ``True`` output will be saved as files for use in S4. Setting this to ``False`` is useful for quick testing
+
+save_fluxdata
+'''''''''''''
+If set to ``True`` (the default if save_fluxdata is not in your ECF), then save FluxData outputs for debugging or use with other tools. Note that these can be quite large files and may fill your drive if you are trying many spec_hw,bg_hw pairs.
 
 hide_plots
 ''''''''''
@@ -582,15 +635,29 @@ Fitting routines to run for Stage 5 lightcurve fitting. Can be one or more of th
 
 run_myfuncs
 '''''''''''
-Determines the transit and systematics models used in the Stage 5 fitting. Can be one or more of the following: [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step]
+Determines the astrophysical and systematics models used in the Stage 5 fitting. Can be one or more (separated by commas) of the following:
+[batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP]
 
 manual_clip
 '''''''''''
 Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
 
+Limb Darkening Parameters
+'''''''''''''''''''''''''
+
+The following three parameters control the use of pre-generated limb darkening coefficients.
+
 use_generate_ld
 '''''''''''''''
 If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
+
+ld_file
+'''''''
+If you want to use custom calculated limb-darkening coefficients, set to the fully qualified path to a file containing limb darkening coefficients that you want to use. Otherwise, set to None. Note: this option only works if use_generate_ld=None. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
+
+ld_file_white
+'''''''''''''
+The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''
@@ -636,7 +703,7 @@ The following set the parameters for running dynesty. These options are describe
 
 run_nlive
 '''''''''
-Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4.
+Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
 
 run_bound
 '''''''''
@@ -658,6 +725,10 @@ Boolean to determine whether the astrophysical model is interpolated when plotte
 isplots_S5
 ''''''''''
 Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
+
+nbin_plot
+'''''''''
+The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
 hide_plots
 ''''''''''
@@ -702,12 +773,17 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``AmpCos2`` - Amplitude of the second cosine
       - ``AmpSin2`` - Amplitude of the second sine
    - Limb Darkening Parameters
-      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'square-root', 'logarithmic', 'exponential', '4-parameter']``
-      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``square-root``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
+      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential', '4-parameter']``
+      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results.
       - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``. Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters; instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.
       - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events). For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
+      - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
+      - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
+      - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
+      - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
+
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 
 
@@ -741,24 +817,51 @@ allapers
 Boolean to determine whether Stage 6 is run on all the apertures considered in Stage 5. If
 False, will just use the most recent output in the input directory.
 
-y_unit
-''''''
-The unit to use when plotting and saving the output table. For transit observations
-(or to plot the transmission spectrum from a phase curve observation), values can be
-"Rp/Rs" or "(Rp/Rs)^2". For eclipse observations (or to plot the dayside emission
-spectrum from a phase curve observation), the value must be "Fp/Fs".
-
-y_scalar
+y_params
 ''''''''
+The parameter to use when plotting and saving the output table. To plot the transmission spectrum,
+the value can be 'rp' or 'rp^2'. To plot the dayside emission spectrum, the value must be fp. To plot
+the spectral dependence of any other parameters, simply enter their name as formatted in your EPF.
+For convenience, it is also possible to plot '1/r1' and '1/r4' to visualize the exonential ramp
+timescales. It is also possible to plot
+'fn' (the nightside flux from a sinusoidal phase curve),
+'pc_offset' (the sinusoidal offset of the phase curve),
+'pc_amp' (the sinusoidal amplitude of the phase curve),
+'pc_offset2' (the second order sinusoidal offset of the phase curve), and
+'pc_amp2' (the second order sinusoidal amplitude of the phase curve).
+y_params can also be formatted as a list to make many different plots. A "cleaned" version
+of y_params will be used in the filenames of the figures and save files relevant for that y_param
+(e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
+
+y_labels
+''''''''
+The formatted string you want on the label of the y-axis. Set to None to use the default formatting
+which has been nicely formatted in LaTeX for most y_params. If y_params is a list, then y_labels must
+also be a list unless you want the same value applied to all y_params.
+
+y_label_units
+'''''''''''''
+The formatted string for the units you want on the label of the y-axis. For example '(ppm)', '(seconds)',
+or '(days$^{-1})$'. Set to None to automatically add any implied units from y_scalars
+(e.g. ppm if y_scalars=1e6), or set to '' to force no units. If y_params is a list, then y_label_units
+must also be a list unless you want the same value applied to all y_params.
+
+y_scalars
+'''''''''
 This parameter can be used to rescale the y-axis. If set to 100, the y-axis will be in units of
 percent. If set to 1e6, the y-axis will be in units of ppm. If set to any other value other than
 1, 100, 1e6, then the y-axis will simply be multiplied by that value and the scalar will be noted
-in the y-axis label.
+in the y-axis label. If y_params is a list, then y_scalars must also be a list unless you want the
+same value applied to all y_params.
 
 x_unit
 ''''''
 The x-unit to use in the plot. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
+
+ncol
+''''
+The number of columns you want in your LaTeX formatted tables. Defaults to 4.
 
 star_Rad
 ''''''''
@@ -821,14 +924,18 @@ model_x_unit
 The x-unit of the model. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
 
-model_y_unit
-''''''''''''
-The y-unit of the model. Options include "Rp/Rs", "(Rp/Rs)^2", and "Fp/Fs".
+model_y_param
+'''''''''''''
+The y-unit of the model. Follow the same format as y_params. If desired, can be
+rp if y_params is rp^2, or vice-versa. Only one model model_y_param can be provided,
+but if y_params is a list then the code will only use model_y_param on the relevant
+plots (e.g. if model_y_param=rp, then the model would only be shown where y_params
+is rp or rp^2).
 
 model_y_scalar
 ''''''''''''''
 Indicate whether model y-values have already been scaled (e.g. write 1e6 if
-model_spectrum is in ppm).
+model_spectrum is already in ppm).
 
 model_zorder
 ''''''''''''

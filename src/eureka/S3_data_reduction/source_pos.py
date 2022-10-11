@@ -8,7 +8,7 @@ from . import plots_s3
 
 
 def source_pos_wrapper(data, meta, log, m, integ=0):
-    '''Make image+background plot.
+    '''Determine the source position for many frames.
 
     Parameters
     ----------
@@ -23,7 +23,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
     integ : int or None; optional
         The integration number. Default is 0 (first integration).
         If set to None, the source position and width for each frame will be
-        calculated and stored in data.driftypos and data.driftywidth.
+        calculated and stored in data.centroid_y and data.centroid_sy.
 
     Returns
     -------
@@ -88,8 +88,10 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
             for job in iterfn:
                 job.get()
 
-        data['driftypos'] = (['time'], src_ypos_exact)
-        data['driftywidth'] = (['time'], src_ypos_width)
+        data['centroid_y'] = (['time'], src_ypos_exact)
+        data.centroid_y.attrs['units'] = 'pixels'
+        data['centroid_sy'] = (['time'], src_ypos_width)
+        data.centroid_sy.attrs['units'] = 'pixels'
 
         return data, meta, log
     else:
@@ -106,7 +108,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
 
 
 def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
-    '''Make image+background plot.
+    '''Determine the source position for one frames.
 
     Parameters
     ----------
@@ -123,7 +125,7 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
     plot : bool; optional
         If True, plot the source position determination.
         Defaults to True.
-    guess : float, optional
+    guess : float; optional
         The guess at the source position for WFC3 data.
 
     Returns
@@ -181,7 +183,7 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
         The metadata object.
     m : int
         The file number.
-    n : int, optional
+    n : int; optional
         The integration number. Default is 0 (first integration).
     plot : bool; optional
         If True, plot the source position determination.
@@ -229,7 +231,7 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
         The metadata object.
     m : int
         The file number.
-    n : int, optional
+    n : int; optional
         The integration number. Default is 0 (first integration).
     plot : bool; optional
         If True, plot the source position determination.
@@ -316,7 +318,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
         The metadata object.
     m : int
         The file number.
-    n : int, optional
+    n : int; optional
         The integration number.
         Default is 0 (first integration)
     plot : bool; optional

@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
+import scipy.ndimage as spn
+from astropy.stats import sigma_clip
 from tqdm import tqdm
 from ..lib import gaussian as g
 from ..lib import smooth
@@ -129,9 +131,10 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
         spatial profile.
     window_len : int; optional
         The dimension of the smoothing window.
-    windowtype : {'flat','hanning','hamming','bartlett','blackman'}; optional
-        UNUSED. The type of window. A flat window will produce a moving
-        average smoothing.
+    windowtype : str; optional
+        UNUSED. One of {'flat', 'hanning', 'hamming',
+        'bartlett', 'blackman'}. The type of window. A flat window will
+        produce a moving average smoothing. Defaults to 'hanning'.
     isplots : int; optional
         The plotting verbosity. Defaults to 0.
 
@@ -479,9 +482,89 @@ def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
     return profile
 
 
+def clean_median_flux(data, meta, log, m):
+    """Computes a median flux frame that is free of bad pixels.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-03, KBS
+        Inital version
+    """
+    log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
+
+    # Compute median flux using masked arrays
+    flux_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
+    medflux = np.ma.median(flux_ma, axis=0)
+    ny, nx = medflux.shape
+
+    # Interpolate over masked regions
+    interp_med = np.zeros((ny, nx))
+    xx = np.arange(nx)
+    for j in range(ny):
+        x1 = xx[~np.ma.getmaskarray(medflux[j])]
+        goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
+        f = spi.interp1d(x1, goodrow, 'linear',
+                         fill_value='extrapolate')
+        # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+        interp_med[j] = f(xx)
+
+    if meta.window_len > 1:
+        # Apply smoothing filter along dispersion direction
+        smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
+
+        # Compute residuals
+        residuals = medflux - smoothflux
+
+        # Flag outliers
+        outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
+                              axis=1, cenfunc='median')
+
+        # Interpolate over bad pixels
+        clean_med = np.zeros((ny, nx))
+        xx = np.arange(nx)
+        for j in range(ny):
+            x1 = xx[~np.ma.getmaskarray(outliers[j]) *
+                    ~np.ma.getmaskarray(medflux[j])]
+            goodrow = medflux[j][~np.ma.getmaskarray(outliers[j]) *
+                                 ~np.ma.getmaskarray(medflux[j])]
+            f = spi.interp1d(x1, goodrow, 'linear', fill_value='extrapolate')
+            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+            clean_med[j] = f(xx)
+
+        # Assign cleaned median frame to data object
+        data['medflux'] = (['y', 'x'], clean_med)
+    else:
+        # Assign uncleaned median frame to data object
+        data['medflux'] = (['y', 'x'], medflux.data)
+    data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
+
+    if meta.isplots_S3 >= 4:
+        plots_s3.median_frame(data, meta, m)
+
+    return data
+
+
 def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                      windowtype='hanning', m=0):
-    '''Extract optimal spectrum with uncertainties.
+    '''Extract optimal spectrum with uncertainties for many frames.
 
     Parameters
     ----------
@@ -504,9 +587,8 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
         electrons.
     windowtype : str; optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
-        'bartlett', 'blackman'}.
-        The type of window. A flat window will produce a moving
-        average smoothing. Defaults to 'hanning'.
+        'bartlett', 'blackman'}. The type of window. A flat window will
+        produce a moving average smoothing. Defaults to 'hanning'.
     m : int; optional
         File number. Defaults to 0.
 
@@ -531,7 +613,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                  mute=(not meta.verbose))
     data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
     data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    data['optmask'] = (['time', 'x'], np.ones(data.stdspec.shape))
+    data['optmask'] = (['time', 'x'], np.zeros(data.stdspec.shape, dtype=bool))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
@@ -542,17 +624,10 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     data['optmask'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optmask'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
 
-    # Compute median frame
-    data_ma = np.ma.masked_where(apmask == 0, apdata)
-    medflux = np.ma.median(data_ma, axis=0)
-    # Replace masked pixels through interpolation
-    ny, nx = medflux.shape
-    xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))
-    x1 = xx[~medflux.mask].ravel()
-    y1 = yy[~medflux.mask].ravel()
-    goodmed = medflux[~medflux.mask].ravel()
-    interpmed = spi.griddata((x1, y1), goodmed, (xx, yy),
-                             method='cubic', fill_value=0)
+    # Select median frame over aperture region
+    ap_y1 = int(meta.src_ypos-meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    apmedflux = data.medflux[ap_y1:ap_y2].values
 
     # Perform optimal extraction on each of the frames
     iterfn = range(meta.int_start, meta.n_int)
@@ -567,13 +642,13 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                      fittype=meta.fittype,
                      window_len=meta.window_len,
                      deg=meta.prof_deg, windowtype=windowtype,
-                     n=n, m=m, meddata=interpmed)
+                     n=n, m=m, meddata=apmedflux)
 
     # Mask out NaNs and Infs
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
     opterr_ma = np.ma.masked_invalid(data.opterr.values)
     optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
-                            np.ma.getmaskarray(opterr_ma)).astype(int)
+                            np.ma.getmaskarray(opterr_ma))
     data.optmask.values = optmask
 
     return data, meta, log
@@ -582,7 +657,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
              p7thresh=10, fittype='smooth', window_len=21, deg=3,
              windowtype='hanning', n=0, m=0, meddata=None):
-    '''Extract optimal spectrum with uncertainties.
+    '''Extract optimal spectrum with uncertainties for a single frame.
 
     Parameters
     ----------
@@ -616,9 +691,8 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         Polynomial degree. Defaults to 3.
     windowtype : str; optional
         UNUSED. One of {'flat', 'hanning', 'hamming',
-        'bartlett', 'blackman'}.
-        The type of window. A flat window will produce a moving
-        average smoothing. Defaults to 'hanning'.
+        'bartlett', 'blackman'}. The type of window. A flat window will
+        produce a moving average smoothing. Defaults to 'hanning'.
     n : int; optional
         Integration number. Defaults to 0.
     m : int; optional
