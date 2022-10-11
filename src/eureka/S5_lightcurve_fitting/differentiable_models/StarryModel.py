@@ -30,7 +30,7 @@ class StarryModel(PyMC3Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        required = np.array(['Ms', 'Mp', 'Rs'])
+        required = np.array(['Ms', 'Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
             message = (f'Missing required params {required[missing]} in your '
@@ -94,11 +94,20 @@ class StarryModel(PyMC3Model):
                 amp = temp.fp
             else:
                 amp = 0
+            
+            # Solve Keplerian orbital period equation for Mp
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                  - temp.Ms)
+
             # Initialize planet object
             planet = starry.Secondary(
                 starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
                 # Convert mass to M_sun units
-                m=temp.Mp*const.M_jup.value/const.M_sun.value,
+                # m=temp.Mp*const.M_jup.value/const.M_sun.value,
+                m=Mp,
                 # Convert radius to R_star units
                 r=temp.rp*temp.Rs,
                 # Setting porb here overwrites a
@@ -204,11 +213,20 @@ class StarryModel(PyMC3Model):
                 amp = temp.fp
             else:
                 amp = 0
+            
+            # Solve Keplerian orbital period equation for Mp
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                  - temp.Ms)
+
             # Initialize planet object
             planet = starry.Secondary(
                 starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
                 # Convert mass to M_sun units
-                m=temp.Mp*const.M_jup.value/const.M_sun.value,
+                # m=temp.Mp*const.M_jup.value/const.M_sun.value,
+                m=Mp,
                 # Convert radius to R_star units
                 r=temp.rp*temp.Rs,
                 # Setting porb here overwrites a
