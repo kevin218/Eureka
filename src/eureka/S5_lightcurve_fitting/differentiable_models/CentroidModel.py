@@ -50,7 +50,7 @@ class CentroidModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        coeffs = np.zeroes(nchan).to_list()
+        coeffs = np.zeros(nchan).tolist()
 
         if eval:
             lib = np

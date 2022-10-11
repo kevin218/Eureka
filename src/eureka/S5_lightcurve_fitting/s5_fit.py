@@ -472,7 +472,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='xpos', centroid=lc.centroid_x)
+                               axis='xpos', centroid=lc.centroid_x.values)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -485,7 +485,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='xwidth', centroid=lc.centroid_sx)
+                               axis='xwidth', centroid=lc.centroid_sx.values)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -498,7 +498,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='ypos', centroid=lc.centroid_y)
+                               axis='ypos', centroid=lc.centroid_y.values)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -511,7 +511,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='ywidth', centroid=lc.centroid_sy)
+                               axis='ywidth', centroid=lc.centroid_sy.values)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
