@@ -58,10 +58,10 @@ class CentroidModel(Model):
     @centroid.setter
     def centroid(self, centroid_array):
         """A setter for the time."""
-        self._centroid = centroid_array
+        self._centroid = np.ma.masked_invalid(centroid_array)
         if self.centroid is not None:
             # Convert to local centroid
-            self.centroid_local = self.centroid - self.centroid.mean()
+            self.centroid_local = self.centroid - np.ma.mean(self.centroid)
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.

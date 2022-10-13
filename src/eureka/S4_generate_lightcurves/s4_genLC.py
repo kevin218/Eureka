@@ -244,6 +244,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if hasattr(spec, 'centroid_x'):
                 # centroid_x already measured in 2D in S3 - setup to add 1D fit
                 lc['centroid_x'] = spec.centroid_x
+            if hasattr(spec, 'centroid_sx'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_sx'] = spec.centroid_sx
             elif meta.recordDrift or meta.correctDrift:
                 # Setup the centroid_x array
                 lc['centroid_x'] = (['time'], np.zeros(meta.n_int))
