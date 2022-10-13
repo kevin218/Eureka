@@ -37,15 +37,15 @@ class StarryModel(PyMC3Model):
                        f'EPF.')
             raise AssertionError(message)
 
-        if hasattr(self, 'u2'):
+        if 'u2' in self.paramtitles:
             self.udeg = 2
-        elif hasattr(self, 'u1'):
+        elif 'u1' in self.paramtitles:
             self.udeg = 1
         else:
             self.udeg = 0
-        if hasattr(self, 'AmpCos2') or hasattr(self, 'AmpSin2'):
+        if 'AmpCos2' in self.paramtitles or 'AmpSin2' in self.paramtitles:
             self.ydeg = 2
-        elif hasattr(self, 'AmpCos1') or hasattr(self, 'AmpSin1'):
+        elif 'AmpCos1' in self.paramtitles or 'AmpSin1' in self.paramtitles:
             self.ydeg = 1
         else:
             self.ydeg = 0
