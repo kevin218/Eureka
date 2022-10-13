@@ -66,9 +66,18 @@ def read(filename, data, meta, log):
 
     meta.photometry = False  # Photometry for MIRI not implemented yet.
 
-    # If wavelengths are all zero --> use jwst to get wavelengths
+    # If wavelengths are all zero or missing --> use jwst to get wavelengths
     # Otherwise use the wavelength array from the header
-    if np.all(hdulist['WAVELENGTH', 1].data == 0):
+    try:
+        hdulist['WAVELENGTH', 1]
+        wl_missing = False
+    except:
+        if meta.firstFile:
+            log.writelog('  WAVELENGTH extension not found, using '
+                         'miri.wave_MIRI_jwst function instead.')
+        wl_missing = True
+
+    if wl_missing or np.all(hdulist['WAVELENGTH', 1].data == 0):
         wave_2d = wave_MIRI_jwst(filename, meta, log)
     else:
         wave_2d = hdulist['WAVELENGTH', 1].data
