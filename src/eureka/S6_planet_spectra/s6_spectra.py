@@ -595,6 +595,7 @@ def convert_s5_LC(meta, log):
     xrio.writeXR(meta.lc_filename_s6, ds)
     return meta
 
+
 def load_s5_saves(meta, log, fit_methods):
     if 'dynesty' in fit_methods:
         fitter = 'dynesty'
