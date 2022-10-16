@@ -12,8 +12,6 @@ from ..lib import util, logedit
 from . import plots_s6 as plots
 from ..lib import astropytable
 
-import sys
-
 
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''Gathers together different wavelength fits and makes
@@ -274,11 +272,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 log.writelog('Saving results as astropy table')
                 save_table(meta)
 
-            # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for 
-            # citations
-            mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-            util.make_citations(meta, mods)
+            # make citations for current stage
+            util.make_citations(meta, 6)
 
             # Save results
             log.writelog('Saving results')

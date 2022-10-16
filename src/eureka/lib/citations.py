@@ -525,5 +525,109 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2015ascl.soft11015F},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
+    "astraeus":
+        [r"""@misc{astraeus,
+            author = {{Stevenson}, Kevin B.},
+            title = "{{Astraeus}: A tool for standardizing I/O when reducing 
+                    and analyzing exoplanet data}",
+            year = {2022},
+            publisher = {GitHub},
+            journal = {GitHub repository},
+            url = {https://github.com/kevin218/Astraeus}
+            }""", ],
+    "jwst": [r"""@misc{jwst,
+            author = {{JWST calibration pipeline developers}},
+            title = "{{jwst}: Python library for science observations from 
+                    the James Webb Space Telescope}",
+            year = {2022},
+            publisher = {GitHub},
+            journal = {GitHub repository},
+            url = {https://github.com/spacetelescope/jwst}
+            }""", ],
+    "crds": [r"""@misc{crds,
+            author = {{CRDS developers}},
+            title = "{{CRDS}: Calibration Reference Data System 
+                    for HST and JWST}",
+            year = {2022},
+            publisher = {GitHub},
+            journal = {GitHub repository},
+            url = {https://github.com/spacetelescope/crds}
+            }""", ],
+    "pandas": [r"""@software{reback2020pandas,
+                    author      = {The pandas development team},
+                    title       = {pandas-dev/pandas: Pandas},
+                    month       = feb,
+                    year        = 2020,
+                    publisher   = {Zenodo},
+                    version     = {latest},
+                    doi         = {10.5281/zenodo.3509134},
+                    url         = {https://doi.org/10.5281/zenodo.3509134}}""", 
+               r"""@InProceedings{ mckinney-proc-scipy-2010,
+                    author    = { {W}es {M}c{K}inney },
+                    title     = { {D}ata {S}tructures for {S}tatistical 
+                                {C}omputing in {P}ython },
+                    booktitle = { {P}roceedings of the 9th {P}ython in 
+                                    {S}cience {C}onference },
+                    pages     = { 56 - 61 },
+                    year      = { 2010 },
+                    editor    = { {S}t\'efan van der {W}alt and 
+                                {J}arrod {M}illman },
+                    doi       = { 10.25080/Majora-92bf1922-00a }
+                    }"""],
+    "h5py": [r"""@misc{h5py,
+            author = {{Collette}, Andrew},
+            title = "{h5py}",
+            year = {2022},
+            publisher = {GitHub},
+            journal = {GitHub repository},
+            url = {https://github.com/h5py/h5py}
+            }""", ],
+    "xarray": [r"""@article{hoyer2017xarray,
+                    title     = {xarray: {N-D} labeled arrays and datasets in 
+                                {Python}},
+                    author    = {Hoyer, S. and J. Hamman},
+                    journal   = {Journal of Open Research Software},
+                    volume    = {5},
+                    number    = {1},
+                    year      = {2017},
+                    publisher = {Ubiquity Press},
+                    doi       = {10.5334/jors.148},
+                    url       = {https://doi.org/10.5334/jors.148}
+                    }""", 
+               r"""@software{hoyer_stephan_2022_7195919,
+                    author       = {Hoyer, Stephan and
+                                    Roos, Maximilian and
+                                    Joseph, Hamman and
+                                    Magin, Justus and
+                                    Cherian, Deepak and
+                                    Fitzgerald, Clark and
+                                    Hauser, Mathias and
+                                    Fujii, Keisuke and
+                                    Maussion, Fabien and
+                                    Imperiale, Guido and
+                                    Clark, Spencer and
+                                    Kleeman, Alex and
+                                    Nicholas, Thomas and
+                                    Kluyver, Thomas and
+                                    Westling, Jimmy and
+                                    Munroe, James and
+                                    Amici, Alessandro and
+                                    Barghini, Aureliana and
+                                    Banihirwe, Anderson and
+                                    Bell, Ray and
+                                    Hatfield-Dodds, Zac and
+                                    Abernathey, Ryan and
+                                    Bovy, Benoît and
+                                    Omotani, John and
+                                    Mühlbauer, Kai and
+                                    Roszko, Maximilian K. and
+                                    Wolfram, Phillip J.},
+                    title        = {xarray},
+                    month        = oct,
+                    year         = 2022,
+                    publisher    = {Zenodo},
+                    doi          = {10.5281/zenodo.598201},
+                    url          = {https://doi.org/10.5281/zenodo.598201}
+                    }""", ],
 }
 

@@ -642,7 +642,7 @@ def phot_arrays(data):
     return data
 
 
-def make_citations(meta, mods):
+def make_citations(meta, stage=None):
     """Store relevant citation information in the current meta file.
 
         Searches through imported libraries and current ECF parameters for 
@@ -653,54 +653,79 @@ def make_citations(meta, mods):
         ----------
         meta : eureka.lib.readECF.MetaClass
             The current metadata object.
-
         mods : array-like
             Array of strings containing the currently installed modules.
+        stage: integer
+            The integer number of the current stage (1,2,3,4,5,6)
     """
 
-    # get modules for which we have citations, accessed in each Stage before 
-    # the call to make_citations
-    module_cites = np.intersect1d(mods, list(CITATIONS)).tolist()
+    # populate common imports for current stage
+    common_imports = [
+        ["astropy", "eureka", "h5py", "jwst", "numpy", ],
+        ["astropy", "eureka", "h5py", "jwst", "matplotlib", ],
+        ["astraeus", "astropy", "crds", "eureka", "h5py", "jwst",
+         "matplotlib", "numpy", "scipy", "xarray", ],
+        ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
+         "pandas", "scipy", "xarray", ],
+        ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
+         "pandas", "scipy", "xarray", ],
+        ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
+         "pandas", "xarray", ],
+    ]
+
+    # get common modules for the current stage
+    module_cites = common_imports[stage-1]
 
     # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
-    if hasattr(meta, 'fit_method'):
-        # need to remove citations to emcee/dynesty/batman/celerite/george if 
-        # they got picked up by the installed modules
-        for m in ['emcee', 'dynesty', 'george', 'celerite', 'batman']:
-            module_cites.remove(m)
-
-        if "emcee" in meta.fit_method:
-            other_cites.append("emcee")
-        if "dynesty" in meta.fit_method:
-            other_cites.append("dynesty")
-
+    
+    if stage == 5:
+        # concat non-lsq fit methods (emcee/dynesty) to the citation list
+        if "lsq" not in meta.fit_method:
+            other_cites = other_cites + meta.fit_method
+        
         # check if batman or GP is being used for transit/eclipse modeling
-        if hasattr(meta, "run_myfuncs"):
-            if "batman_tr" or "batman_ecl" in meta.run_myfuncs:
-                other_cites.append("batman")
-            if "GP" in meta.run_myfuncs:
-                if hasattr(meta, "GP_package"):
-                    other_cites.append(meta.GP_package) 
+        if "batman_tr" or "batman_ecl" in meta.run_myfuncs:
+            other_cites.append("batman")
+        if "GP" in meta.run_myfuncs:
+            if hasattr(meta, "GP_package"):
+                other_cites.append(meta.GP_package) 
 
     # I set the instrument in the relevant bits of S1/2, so I don't think this 
-    # should really be necessary. boilerplate for later
-    # if we already have the instrument, don't bother doing anything
-    if hasattr(meta, 'inst'):
-        pass
-    else: 
-        # an unfortunate occurrence, ideally this shouldn't happen. 
-        # just pass again while I think of a better way to handle this    
-        pass
+    # should really be necessary. Taylor's boilerplate for later
+    if not hasattr(meta, 'inst'):
+        valid = False
+        insts = ['miri', 'nirspec', 'nircam', 'niriss', 'wfc3']
+        while not valid:
+            inst = input('Which JWST/HST instrument are you using? \
+                        (leave blank for none): ').lower()
+            if inst != '':
+                if inst in insts:
+                    # The entered instrument was valid, so continue
+                    meta.inst = inst
+                    valid = True
+            else:
+                # No instrument, so just continue
+                valid = True
+            if not valid:
+                # The entered instrument was not valid, so explain, ask again
+                print(f'The instrument {inst} is not a valid instrument. \
+                        Please choose from {insts}.')
+
+    # make sure instrument is in citation list
+    module_cites.append(meta.inst)
 
     # get all new citations together
-    all_cites = np.union1d(module_cites, other_cites)
+    current_cites = np.union1d(module_cites, other_cites)
 
     # check if meta has existing list of citations/bibitems, if it does, make 
     # sure we include imports from previous stages in our citations
+    prev_cites = []
     if hasattr(meta, 'citations'):
-        all_cites = np.union1d(all_cites, meta.citations).tolist()
+        prev_cites = meta.citations
     
+    all_cites = np.union1d(current_cites, prev_cites)
+
     # store everything in the meta object
     meta.citations = all_cites
     meta.bibliography = [CITATIONS[entry] for entry in meta.citations]

@@ -38,8 +38,6 @@ from ..lib import manageevent as me
 from ..lib import util
 from ..lib import centerdriver, apphot
 
-import sys
-
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None):
     '''Reduces data images and calculates optimal spectra.
@@ -537,11 +535,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                                         optmask=spec.optmask)
 
-            # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for 
-            # citations
-            mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-            util.make_citations(meta, mods)
+            # make citations for current stage
+            util.make_citations(meta, 3)
 
             # Save results
             if meta.save_output:

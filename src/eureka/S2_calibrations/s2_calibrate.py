@@ -27,8 +27,6 @@ from ..lib.plots import figure_filetype
 import jwst.assign_wcs.nirspec
 from functools import partial
 
-import sys
-
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
     '''Reduces rateints spectrum or image files ouput from Stage 1 of the JWST
@@ -117,9 +115,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
         telescope = hdulist[0].header['TELESCOP']
 
         # record instrument information in meta object for citations
-        if hasattr(meta, 'inst'):
-            pass
-        else:
+        if not hasattr(meta, 'inst'):
             meta.inst = hdulist[0].header["INSTRUME"].lower()
 
     if telescope == 'JWST':
@@ -167,10 +163,8 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None):
 
         pipeline.run_eurekaS2(filename, meta, log)
     
-    # Store citations to relevant dependencies in the meta file
-    # pass in list of currently imported modules to search for citations
-    mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-    util.make_citations(meta, mods)
+    # make citations for current stage
+    util.make_citations(meta, 2)
 
     # Save results
     if not meta.testing_S2:

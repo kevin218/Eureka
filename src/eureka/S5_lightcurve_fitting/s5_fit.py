@@ -9,8 +9,6 @@ from ..lib.readEPF import Parameters
 from . import lightcurve as lc
 from . import models as m
 
-import sys
-
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     '''Fits 1D spectra with various models and fitters.
@@ -172,11 +170,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             else:
                 ld_coeffs = None
 
-            # Store citations to relevant dependencies in the meta file
-            # pass in list of currently imported modules to search for 
-            # citations
-            mods = np.unique([mod.split('.')[0] for mod in sys.modules.keys()])
-            util.make_citations(meta, mods)
+            # make citations for current stage
+            util.make_citations(meta, 5)
 
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
