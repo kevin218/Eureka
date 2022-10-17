@@ -534,12 +534,17 @@ def load_s5_saves(meta, log, fit_methods):
         fitter = 'emcee'
     elif 'lsq' in fit_methods:
         fitter = 'lsq'
+    # Gradient based models: nuts > exoplanet
+    elif 'nuts' in fit_methods:
+        fitter = 'nuts'
+    elif 'exoplanet' in fit_methods:
+        fitter = 'exoplanet'
     else:
         raise ValueError('No recognized fitters in fit_methods = '
                          f'{fit_methods}')
     meta.fitter = fitter
 
-    if fitter in ['dynesty', 'emcee']:
+    if fitter in ['nuts', 'dynesty', 'emcee']:
         if meta.sharedp:
             niter = 1
         else:
