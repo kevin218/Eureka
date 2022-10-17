@@ -563,8 +563,9 @@ def convert_s5_LC(meta, log):
             # Get remaining column names and number
             colnames = lc_table.colnames
             n_col = len(colnames)
+            n_int = len(time)
             # Create numpy array to hold data
-            lc_array = np.zeros((n_col, niter, meta.n_int))
+            lc_array = np.zeros((n_col, niter, n_int))
         else:
             lc_table.remove_column('time')
         # Assign remaining values to array
