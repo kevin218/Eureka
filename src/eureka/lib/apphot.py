@@ -171,6 +171,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
     .. highlight:: python
     .. code-block:: python
+
         >>> import sys
         >>> sys.path.append('/home/esp01/code/python/photpipe/lib/')
         >>> import apphot as ap
@@ -427,7 +428,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
             print('skyfrac must be in range [0,1]')
             return ret[np.where(retidx)]
 
-        if expand != np.long(expand) or expand < 1:
+        if expand != np.compat.long(expand) or expand < 1:
             print('invalid expand')
             return ret[np.where(retidx)]
 

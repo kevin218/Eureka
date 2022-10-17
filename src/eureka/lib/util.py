@@ -7,7 +7,7 @@ from scipy.interpolate import griddata
 
 
 def readfiles(meta, log):
-    """Reads in the files saved in topdir + inputdir and saves them into a list.
+    """Reads in files saved in topdir + inputdir and saves them in a list.
 
     Parameters
     ----------
@@ -159,13 +159,19 @@ def check_nans(data, mask, log, name=''):
         or infs.
     """
     data = np.ma.masked_where(mask == 0, np.copy(data))
-    num_nans = np.sum(np.ma.masked_invalid(data).mask)
+    masked = np.ma.masked_invalid(data).mask
+    inan = np.where(masked)
+    num_nans = np.sum(masked)
     num_pixels = np.size(data)
     perc_nans = 100*num_nans/num_pixels
-    if num_nans > 0:
+    if num_nans > 0 and name == 'wavelength':
+        log.writelog(f"  WARNING: Your {name} array has {num_nans} NaNs, which"
+                     f" are outside of the wavelength solution. You should "
+                     f"consider removing indices {inan} as their data quality "
+                     f"may be poor.")
+    elif num_nans > 0:
         log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
                      f"{perc_nans:.2f}% of all pixels.")
-        inan = np.where(np.ma.masked_invalid(data).mask)
         mask[inan] = 0
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "
@@ -356,6 +362,36 @@ def find_fits(meta):
         meta.inputdir += os.sep
 
     return meta
+
+
+def binData(data, nbin=100, err=False):
+    """Temporally bin data for easier visualization.
+
+    Parameters
+    ----------
+    data : ndarray (1D)
+        The data to temporally bin.
+    nbin : int, optional
+        The number of bins there should be. By default 100.
+    err : bool, optional
+        If True, divide the binned data by sqrt(N) to get the error on the
+        mean. By default False.
+
+    Returns
+    -------
+    binned : ndarray
+        The binned data.
+    """
+    # Make a copy for good measure
+    data = np.ma.copy(data)
+    data = np.ma.masked_invalid(data)
+    # Make sure there's a whole number of bins
+    data = data[:nbin*int(len(data)/nbin)]
+    # Bin data
+    binned = np.ma.mean(data.reshape(nbin, -1), axis=1)
+    if err:
+        binned /= np.sqrt(int(len(data)/nbin))
+    return binned
 
 
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
@@ -579,7 +615,8 @@ def interp_masked(data, meta, i, log):
     data : Xarray Dataset
         The updated Dataset object with requested pixels masked.
     """
-    log.writelog('Interpolating masked values...', mute=(not meta.verbose))
+    if i == 0:
+        log.writelog('Interpolating masked values...', mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]

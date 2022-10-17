@@ -41,6 +41,19 @@ class PolynomialModel(Model):
         # Update coefficients
         self._parse_coeffs()
 
+    @property
+    def time(self):
+        """A getter for the time."""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time."""
+        self._time = time_array
+        if self.time is not None:
+            # Convert to local time
+            self.time_local = self.time - self.time.mean()
+
     def _parse_coeffs(self):
         """Convert dict of 'c#' coefficients into a list
         of coefficients in decreasing order, i.e. ['c2','c1','c0'].
@@ -84,13 +97,10 @@ class PolynomialModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Convert to local time
-        time_local = self.time - self.time.mean()
-
         # Create the polynomial from the coeffs
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
             poly = np.poly1d(self.coeffs[c])
-            lcpiece = np.polyval(poly, time_local)
+            lcpiece = np.polyval(poly, self.time_local)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

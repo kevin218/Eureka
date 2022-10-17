@@ -390,7 +390,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
 
 
 def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
-    '''Construct normalized spatial profile using a Gaussian smoothing function.
+    '''Construct normalized spatial profile using Gaussian smoothing function.
 
     Parameters
     ----------
@@ -511,7 +511,7 @@ def clean_median_flux(data, meta, log, m):
     log.writelog('  Computing clean median frame...', mute=(not meta.verbose))
 
     # Compute median flux using masked arrays
-    flux_ma = np.ma.masked_where(data['mask'].values == 0, data.flux.values)
+    flux_ma = np.ma.masked_where(data.mask.values == 0, data.flux.values)
     medflux = np.ma.median(flux_ma, axis=0)
     ny, nx = medflux.shape
 
@@ -613,7 +613,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
                  mute=(not meta.verbose))
     data['optspec'] = (['time', 'x'], np.zeros(data.stdspec.shape))
     data['opterr'] = (['time', 'x'], np.zeros(data.stdspec.shape))
-    data['optmask'] = (['time', 'x'], np.ones(data.stdspec.shape))
+    data['optmask'] = (['time', 'x'], np.zeros(data.stdspec.shape, dtype=bool))
     data['optspec'].attrs['flux_units'] = data.flux.attrs['flux_units']
     data['optspec'].attrs['time_units'] = data.flux.attrs['time_units']
     data['optspec'].attrs['wave_units'] = data.wave_1d.attrs['wave_units']
@@ -648,7 +648,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
     optspec_ma = np.ma.masked_invalid(data.optspec.values)
     opterr_ma = np.ma.masked_invalid(data.opterr.values)
     optmask = np.logical_or(np.ma.getmaskarray(optspec_ma),
-                            np.ma.getmaskarray(opterr_ma)).astype(int)
+                            np.ma.getmaskarray(opterr_ma))
     data.optmask.values = optmask
 
     return data, meta, log

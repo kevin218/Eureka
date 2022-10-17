@@ -1,36 +1,60 @@
 import numpy as np
 import os
 from tqdm import tqdm
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scipy.interpolate as spi
-from .source_pos import gauss
-from ..lib import util
-from ..lib.plots import figure_filetype
 import scipy.stats as stats
+from scipy.interpolate import interp1d
 from matplotlib.colors import LogNorm
 from mpl_toolkits import axes_grid1
 
+from .source_pos import gauss
+from ..lib import util, plots
+
 
 def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
-    '''Plot a 2D light curve without drift correction. (Fig 3101)
+    '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
+
+    Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
+    detector pixel x-axis.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    wave_1d : ndarray
+    wave_1d : Xarray Dataset
         Wavelength array with trimmed edges depending on xwindow and ywindow
         which have been set in the S3 ecf
-    optspec : ndarray
+    optspec : Xarray Dataset
         The optimally extracted spectrum.
-    optmask : ndarray (1D); optional
+    optmask : Xarray Dataset; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
     '''
-    normspec = util.normalize_spectrum(meta, optspec, optmask=optmask)
-    wmin = np.ma.min(wave_1d)
-    wmax = np.ma.max(wave_1d)
+    normspec = util.normalize_spectrum(meta, optspec.values,
+                                       optmask=optmask.values)
+
+    # Save the wavelength units as the copy below will erase them
+    wave_units = wave_1d.wave_units
+
+    # For plotting purposes, extrapolate NaN wavelengths
+    wave_1d = np.ma.masked_invalid(np.copy(wave_1d))
+    if np.any(wave_1d.mask):
+        masked = np.where(wave_1d.mask)[0]
+        inds = np.arange(len(wave_1d))
+        wave_1d_valid = np.delete(wave_1d, masked)
+        inds_valid = np.delete(inds, masked)
+        # Do a spline extrapolation of third order
+        interp_fn = interp1d(inds_valid, wave_1d_valid, kind='cubic',
+                             fill_value="extrapolate", assume_sorted=True)
+        wave_1d[masked] = interp_fn(masked)
+    wave_1d = wave_1d.data
+
+    wmin = np.nanmin(wave_1d)
+    wmax = np.nanmax(wave_1d)
+    # Don't do min and max because MIRI is backwards
+    pmin = int(optspec.x[0].values)
+    pmax = int(optspec.x[-1].values)
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -42,26 +66,56 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
               " Using 'y' by default.")
         meta.time_axis = 'y'
 
-    plt.figure(3101, figsize=(8, 8))
-    plt.clf()
+    cmap = plt.cm.RdYlBu_r.copy()
+    fig1 = plt.figure(3101, figsize=(8, 8))
+    fig2 = plt.figure(3102, figsize=(8, 8))
+    fig1.clf()
+    fig2.clf()
+    ax1 = fig1.gca()
+    ax2 = fig2.gca()
     if meta.time_axis == 'y':
-        plt.imshow(normspec, origin='lower', aspect='auto',
-                   extent=[wmin, wmax, 0, meta.n_int], vmin=meta.vmin,
-                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
-        plt.ylabel('Integration Number')
-        plt.xlabel(r'Wavelength ($\mu m$)')
+        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int),
+                             normspec, vmin=meta.vmin, vmax=meta.vmax,
+                             cmap=cmap)
+        im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
+                         extent=[pmin, pmax, 0, meta.n_int], vmin=meta.vmin,
+                         vmax=meta.vmax, cmap=cmap)
+        ax1.set_xlim(wmin, wmax)
+        ax2.set_xlim(pmin, pmax)
+        ax1.set_ylim(0, meta.n_int)
+        ax2.set_ylim(0, meta.n_int)
+        ax1.set_ylabel('Integration Number')
+        ax2.set_ylabel('Integration Number')
+        ax1.set_xlabel(f'Wavelength ({wave_units})')
+        ax2.set_xlabel('Detector Pixel Position')
     else:
-        plt.imshow(normspec.swapaxes(0, 1), origin='lower', aspect='auto',
-                   extent=[0, meta.n_int, wmin, wmax], vmin=meta.vmin,
-                   vmax=meta.vmax, cmap=plt.cm.RdYlBu_r)
-        plt.ylabel(r'Wavelength ($\mu m$)')
-        plt.xlabel('Integration Number')
+        im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
+                             normspec.swapaxes(0, 1), vmin=meta.vmin,
+                             vmax=meta.vmax, cmap=cmap)
+        im2 = ax2.imshow(normspec.swapaxes(0, 1), origin='lower',
+                         aspect='auto', extent=[0, meta.n_int, pmin, pmax],
+                         vmin=meta.vmin, vmax=meta.vmax, cmap=cmap)
+        ax1.set_ylim(wmin, wmax)
+        ax2.set_ylim(pmin, pmax)
+        ax1.set_xlim(0, meta.n_int)
+        ax2.set_xlim(0, meta.n_int)
+        ax1.set_ylabel(f'Wavelength ({wave_units})')
+        ax2.set_ylabel('Detector Pixel Position')
+        ax1.set_xlabel('Integration Number')
+        ax2.set_xlabel('Integration Number')
 
-    plt.title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
-    plt.colorbar(label='Normalized Flux')
-    plt.tight_layout()
-    fname = f'figs{os.sep}fig3101-2D_LC'+figure_filetype
-    plt.savefig(meta.outputdir+fname, dpi=300)
+    ax1.minorticks_on()
+    ax2.minorticks_on()
+    ax1.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+    ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
+    fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
+    fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
+    fig1.set_tight_layout(True)
+    fig2.set_tight_layout(True)
+    fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
+    fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
+    fig1.savefig(meta.outputdir+fname1, dpi=300)
+    fig2.savefig(meta.outputdir+fname2, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -97,7 +151,7 @@ def image_and_background(data, meta, log, m):
     median = np.ma.median(subbg)
     std = np.ma.std(subbg)
     # Set bad pixels to plot as black
-    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
     iterfn = range(meta.int_end-meta.int_start)
     if meta.verbose:
@@ -109,13 +163,15 @@ def image_and_background(data, meta, log, m):
         plt.subplot(211)
         plt.title('Background-Subtracted Frame')
         plt.imshow(subdata[n], origin='lower', aspect='auto', cmap=cmap,
-                   vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
+                   vmin=vmin, vmax=vmax, interpolation='nearest',
+                   extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.subplot(212)
         plt.title('Subtracted Background')
         plt.imshow(subbg[n], origin='lower', aspect='auto', cmap=cmap,
                    vmin=median-3*std, vmax=median+3*std,
+                   interpolation='nearest',
                    extent=[xmin, xmax, ymin, ymax])
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
@@ -125,14 +181,14 @@ def image_and_background(data, meta, log, m):
                                        + 1))
         int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
         fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
-                 '_ImageAndBackground'+figure_filetype)
+                 '_ImageAndBackground'+plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
 
 
 def drift_2D(data, meta):
-    '''Plot the fitted 2D drift. (Fig 3105)
+    '''Plot the fitted 2D drift. (Fig 3106)
 
     Parameters
     ----------
@@ -141,21 +197,23 @@ def drift_2D(data, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     '''
-    plt.figure(3105, figsize=(8, 6))
+    plt.figure(3106, figsize=(8, 6))
     plt.clf()
     plt.subplot(211)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
-        plt.plot(iscans, data.drift2D[iscans, 1], '.')
-    plt.ylabel(f'Drift Along y ({data.drift2D.drift_units})')
+        if len(iscans) > 0:
+            plt.plot(iscans, data.centroid_y, '.')
+    plt.ylabel(f'Drift Along y ({data.centroid_y.units})')
     plt.subplot(212)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
-        plt.plot(iscans, data.drift2D[iscans, 0], '.')
-    plt.ylabel(f'Drift Along x ({data.drift2D.drift_units})')
+        if len(iscans) > 0:
+            plt.plot(iscans, data.centroid_x, '.')
+    plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = f'figs{os.sep}fig3105_Drift2D{figure_filetype}'
+    fname = f'figs{os.sep}fig3106_Drift2D{plots.figure_filetype}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -194,7 +252,7 @@ def optimal_spectrum(data, meta, n, m):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
-             '_Spectrum'+figure_filetype)
+             '_Spectrum'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -203,7 +261,7 @@ def optimal_spectrum(data, meta, n, m):
 def source_position(meta, x_dim, pos_max, m, n,
                     isgauss=False, x=None, y=None, popt=None,
                     isFWM=False, y_pixels=None, sum_row=None, y_pos=None):
-    '''Plot source position for MIRI data. (Figs 3102)
+    '''Plot source position for MIRI data. (Figs 3103)
 
     Parameters
     ----------
@@ -243,7 +301,7 @@ def source_position(meta, x_dim, pos_max, m, n,
     - Oct 15, 2021: Taylor Bell
         Tidied up the code a bit to reduce repeated code.
     '''
-    plt.figure(3102)
+    plt.figure(3103)
     plt.clf()
     plt.plot(y_pixels, sum_row, 'o', label='Data')
     if isgauss:
@@ -261,8 +319,8 @@ def source_position(meta, x_dim, pos_max, m, n,
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fname = (f'figs{os.sep}fig3102_file{file_number}_int{int_number}' +
-             '_source_pos'+figure_filetype)
+    fname = (f'figs{os.sep}fig3103_file{file_number}_int{int_number}' +
+             '_source_pos'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -293,18 +351,19 @@ def profile(meta, profile, submask, n, m):
     submask = np.ma.masked_where(mask, submask)
     vmin = np.ma.min(profile*submask)
     vmax = vmin + 0.05*np.ma.max(profile*submask)
+    cmap = plt.cm.viridis.copy()
     plt.figure(3303)
     plt.clf()
     plt.suptitle(f"Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
-               vmax=vmax, vmin=vmin)
+               vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}_Profile' +
-             figure_filetype)
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -345,43 +404,14 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
     fname = (f'figs{os.sep}fig3501_file{file_number}_int{int_number}' +
-             f'_col{col_number}_subdata'+figure_filetype)
+             f'_col{col_number}_subdata'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
 def driftypos(data, meta):
-    '''Plot the spatial jitter. (Fig 3103)
-
-    Parameters
-    ----------
-    data : Xarray Dataset
-        The Dataset object.
-    meta : eureka.lib.readECF.MetaClass
-        The metadata object.
-
-    Notes
-    -----
-    History:
-
-    - 2022-07-11 Caroline Piaulet
-        First version of this function
-    '''
-    plt.figure(3103, figsize=(8, 4))
-    plt.clf()
-    plt.plot(np.arange(meta.n_int), data["driftypos"].values, '.')
-    plt.ylabel('Spectrum spatial profile center')
-    plt.xlabel('Integration Number')
-    plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3103_DriftYPos'+figure_filetype
-    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
-
-
-def driftywidth(data, meta):
-    '''Plot the spatial profile's fitted Gaussian width. (Fig 3104)
+    '''Plot the spatial jitter. (Fig 3104)
 
     Parameters
     ----------
@@ -399,11 +429,40 @@ def driftywidth(data, meta):
     '''
     plt.figure(3104, figsize=(8, 4))
     plt.clf()
-    plt.plot(np.arange(meta.n_int), data["driftywidth"].values, '.')
+    plt.plot(np.arange(meta.n_int), data["centroid_y"].values, '.')
+    plt.ylabel('Spectrum spatial profile center')
+    plt.xlabel('Integration Number')
+    plt.tight_layout()
+    fname = 'figs'+os.sep+'fig3104_DriftYPos'+plots.figure_filetype
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def driftywidth(data, meta):
+    '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - 2022-07-11 Caroline Piaulet
+        First version of this function
+    '''
+    plt.figure(3105, figsize=(8, 4))
+    plt.clf()
+    plt.plot(np.arange(meta.n_int), data["centroid_sy"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3104_DriftYWidth'+figure_filetype
+    fname = 'figs'+os.sep+'fig3105_DriftYWidth'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -446,7 +505,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
     # Set bad pixels to plot as black
-    cmap = mpl.cm.get_cmap("plasma").copy()
+    cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
     plt.figure(3304, figsize=(8, 3.5))
@@ -454,14 +513,15 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
-              cmap=cmap, extent=[xmin, xmax, ymin, ymax])
+              cmap=cmap, interpolation='nearest',
+              extent=[xmin, xmax, ymin, ymax])
     a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
     a0.hlines([ymin+meta.src_ypos+meta.spec_hw,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
     a0.axes.set_xlabel("Detector Pixel Position")
-    a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap='plasma',
+    a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap=cmap,
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
     a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
@@ -478,7 +538,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
     fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(vmin, vmax),
-                 cmap='plasma'), ax=a1)
+                 cmap=cmap), ax=a1)
     fig.subplots_adjust(top=0.97,
                         bottom=0.155,
                         left=0.08,
@@ -487,7 +547,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
                         wspace=0.08)
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3304_file{file_number}' +
-             '_ResidualBG'+figure_filetype)
+             '_ResidualBG'+plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
@@ -495,7 +555,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
 
 def curvature(meta, column_coms, smooth_coms, int_coms, m):
     '''Plot the measured, smoothed, and integer correction from the measured
-    curvature. (Fig 3106)
+    curvature. (Fig 3107)
 
     Parameters
     ----------
@@ -517,29 +577,29 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
     - 2022-07-31 KBS
         Initial version
     '''
-    colors = mpl.cm.viridis
+    cmap = plt.cm.viridis.copy()
 
-    plt.figure(3106)
+    plt.figure(3107)
     plt.clf()
     plt.title("Trace Curvature")
-    plt.plot(column_coms, '.', label='Measured', color=colors(0.25))
-    plt.plot(smooth_coms, '-', label='Smoothed', color=colors(0.98))
-    plt.plot(int_coms, 's', label='Integer', color=colors(0.7), ms=2)
+    plt.plot(column_coms, '.', label='Measured', color=cmap(0.25))
+    plt.plot(smooth_coms, '-', label='Smoothed', color=cmap(0.98))
+    plt.plot(int_coms, 's', label='Integer', color=cmap(0.7), ms=2)
     plt.legend()
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3106_file{file_number}_Curvature' +
-             figure_filetype)
+    fname = (f'figs{os.sep}fig3107_file{file_number}_Curvature' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
 
 
 def median_frame(data, meta, m):
-    '''Plot the cleaned time-median frame. (Fig 3401)
+    '''Plot the cleaned time-median frame. (Fig 3308)
 
     Parameters
     ----------
@@ -560,21 +620,23 @@ def median_frame(data, meta, m):
     xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
     vmin = data.medflux.min().values
-    vmax = vmin + 2000
+    vmax = np.max([2000, vmin+2000])
+    cmap = plt.cm.plasma.copy()
 
-    plt.figure(3401, figsize=(8, 4))
+    plt.figure(3308, figsize=(8, 4))
     plt.clf()
     plt.title("Cleaned Median Frame")
     plt.imshow(data.medflux, origin='lower', aspect='auto',
-               vmin=vmin, vmax=vmax, extent=[xmin, xmax, ymin, ymax])
+               vmin=vmin, vmax=vmax, interpolation='nearest',
+               extent=[xmin, xmax, ymin, ymax], cmap=cmap)
+    plt.colorbar()
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
-    plt.colorbar()
     plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
-    fname = (f'figs{os.sep}fig3401_file{file_number}_MedianFrame' +
-             figure_filetype)
+    fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.1)
@@ -584,7 +646,7 @@ def median_frame(data, meta, m):
 def phot_lc(data, meta):
     """
     Plots the flux as determined by the photometry routine as a function of
-    time. (Fig 3107)
+    time. (Fig 3108)
 
     Parameters
     ----------
@@ -600,14 +662,14 @@ def phot_lc(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3107)
+    plt.figure(3108)
     plt.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3107-1D_LC' + figure_filetype)
+    fname = (f'figs{os.sep}fig3108-1D_LC' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -641,7 +703,7 @@ def phot_bg(data, meta):
         plt.ylabel('Flux')
         plt.xlabel('Time')
         plt.tight_layout()
-        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + figure_filetype)
+        fname = (f'figs{os.sep}fig3305-1D_LC_BG' + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -650,7 +712,7 @@ def phot_bg(data, meta):
 def phot_centroid(data, meta):
     """
     Plots the (x, y) centroids and (sx, sy) the Gaussian 1-sigma half-widths
-    as a function of time. (Fig 3108)
+    as a function of time. (Fig 3109)
 
     Parameters
     ----------
@@ -666,7 +728,7 @@ def phot_centroid(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3108)
+    plt.figure(3109)
     plt.clf()
     fig, ax = plt.subplots(4, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
@@ -696,7 +758,7 @@ def phot_centroid(data, meta):
     fig.subplots_adjust(hspace=0.02)
 
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3108-Centroid' + figure_filetype)
+    fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -732,7 +794,7 @@ def phot_npix(data, meta):
     plt.ylabel('nskypix')
     plt.xlabel('Time')
     plt.tight_layout()
-    fname = (f'figs{os.sep}fig3502_aperture_size' + figure_filetype)
+    fname = (f'figs{os.sep}fig3502_aperture_size' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -799,7 +861,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     plt.tight_layout()
     fname = (f'figs{os.sep}fig3503_file{file_number}_int{int_number}'
-             f'_Centroid_Fit' + figure_filetype)
+             f'_Centroid_Fit' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -887,7 +949,7 @@ def phot_2d_frame(data, meta, m, i):
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
-             + figure_filetype)
+             + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -931,7 +993,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.legend()
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
-                 f'_2D_Frame_Zoom' + figure_filetype)
+                 f'_2D_Frame_Zoom' + plots.figure_filetype)
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -969,14 +1031,15 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     plt.clf()
     fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
 
+    cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
-                 norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
+                 norm=LogNorm(vmin=0.1, vmax=40), cmap=cmap)
     ax[0].set_title('Before 1/f correction')
     ax[0].set_ylabel('y pixels')
 
     flux = data.flux.values[i]
     im1 = ax[1].imshow(flux, origin='lower',
-                       norm=LogNorm(vmin=0.1, vmax=40), cmap='viridis')
+                       norm=LogNorm(vmin=0.1, vmax=40), cmap=cmap)
     ax[1].set_title('After 1/f correction')
     ax[1].set_xlabel('x pixels')
     ax[1].set_ylabel('y pixels')
@@ -990,7 +1053,7 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     fig.suptitle((f'Segment {file_number}, Integration {int_number}'), y=0.99)
 
     fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}'
-             f'_2D_Frame_OneOverF' + figure_filetype)
+             f'_2D_Frame_OneOverF' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -1032,7 +1095,7 @@ def phot_2d_frame_diff(data, meta):
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int)) + 1))
         plt.suptitle((f'Integration {int_number}'), y=0.99)
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)

@@ -23,13 +23,14 @@ p3thresh        10          # X-sigma threshold for outlier rejection during bac
 # Spectral extraction parameters
 spec_hw         6           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         smooth      # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
-window_len      31          # Smoothing window length, for median frame or when fittype = smooth
+median_thresh   5           # Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
+window_len      13          # Smoothing window length, for median frame or when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
 prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        60          # X-sigma threshold for outlier rejection during optimal spectral extraction
 
 # G395H curvature treatment
-curvature       correct     # How to manage the curved trace on the detector (Options: None, correct)
+curvature       None        # How to manage the curved trace on the detector (Options: None, correct). Use correct for NIRSpec/G395.
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
