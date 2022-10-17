@@ -5,9 +5,11 @@ import os
 from importlib import reload
 import time as time_pkg
 
+import numpy as np
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
-from eureka.lib.util import pathdirectory
+from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 import eureka.lib.plots
 try:
     from eureka.S2_calibrations import s2_calibrate as s2
@@ -57,13 +59,20 @@ def test_NIRSpec(capsys):
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+        
+        s2_cites = np.union1d(COMMON_IMPORTS[1], ["nirspec"])
+        assert np.array_equal(s2_meta.citations, s2_cites)
+
+        s3_cites = np.union1d(s2_cites, COMMON_IMPORTS[2])
     else:
         s2_meta = None
+        s3_cites = np.union1d(COMMON_IMPORTS[2], ["nirspec"])
+
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
-    s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
+    s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
     # run assertions for S2
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
@@ -80,6 +89,8 @@ def test_NIRSpec(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
+    assert np.array_equal(s3_meta.citations, s3_cites)
+
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage4{os.sep}')
@@ -87,12 +98,18 @@ def test_NIRSpec(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
+    s4_cites = np.union1d(s3_cites, COMMON_IMPORTS[3])
+    assert np.array_equal(s4_meta.citations, s4_cites)
+
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage5{os.sep}')
     name = pathdirectory(meta, 'S5', 1, ap=8, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
+
+    s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["batman"])
+    assert np.array_equal(s5_meta.citations, s5_cites)
 
     # remove temporary files
     if s2_installed:

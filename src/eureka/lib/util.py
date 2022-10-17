@@ -7,6 +7,20 @@ from scipy.interpolate import griddata
 
 from .citations import CITATIONS
 
+# populate common imports for current stage
+COMMON_IMPORTS = np.array([
+    ["astropy", "eureka", "h5py", "jwst", "numpy", ],
+    ["astropy", "eureka", "h5py", "jwst", "matplotlib", ],
+    ["astraeus", "astropy", "crds", "eureka", "h5py", "jwst",
+     "matplotlib", "numpy", "scipy", "xarray", ],
+    ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
+     "pandas", "scipy", "xarray", ],
+    ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
+     "pandas", "scipy", "xarray", ],
+    ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
+     "pandas", "xarray", ],
+])
+
 
 def readfiles(meta, log):
     """Reads in the files saved in topdir + inputdir 
@@ -659,31 +673,19 @@ def make_citations(meta, stage=None):
             The integer number of the current stage (1,2,3,4,5,6)
     """
 
-    # populate common imports for current stage
-    common_imports = [
-        ["astropy", "eureka", "h5py", "jwst", "numpy", ],
-        ["astropy", "eureka", "h5py", "jwst", "matplotlib", ],
-        ["astraeus", "astropy", "crds", "eureka", "h5py", "jwst",
-         "matplotlib", "numpy", "scipy", "xarray", ],
-        ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
-         "pandas", "scipy", "xarray", ],
-        ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
-         "pandas", "scipy", "xarray", ],
-        ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
-         "pandas", "xarray", ],
-    ]
-
     # get common modules for the current stage
-    module_cites = common_imports[stage-1]
+    module_cites = COMMON_IMPORTS[stage-1]
 
     # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
     
     if stage == 5:
         # concat non-lsq fit methods (emcee/dynesty) to the citation list
-        if "lsq" not in meta.fit_method:
-            other_cites = other_cites + meta.fit_method
-        
+        if "emcee" in meta.fit_method:
+            other_cites = other_cites + ["emcee"]  # meta.fit_method
+        if "dynesty" in meta.fit_method:
+            other_cites = other_cites + ["dynesty"]  # meta.fit_method
+
         # check if batman or GP is being used for transit/eclipse modeling
         if "batman_tr" or "batman_ecl" in meta.run_myfuncs:
             other_cites.append("batman")
@@ -713,7 +715,7 @@ def make_citations(meta, stage=None):
                         Please choose from {insts}.')
 
     # make sure instrument is in citation list
-    module_cites.append(meta.inst)
+    other_cites.append(meta.inst)
 
     # get all new citations together
     current_cites = np.union1d(module_cites, other_cites)
