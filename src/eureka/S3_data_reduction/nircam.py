@@ -75,12 +75,16 @@ def read(filename, data, meta, log):
         # FINDME: make this better for all filters
         if hdulist[0].header['FILTER'] == 'F210M':
             # will be deleted at the end of S3
-            wave_1d = np.ones_like(sci[0, 0]) * 2.1
+            wave_1d = np.ones_like(sci[0, 0]) * 2.095
             # Is used in S4 for plotting.
-            meta.phot_wave = 2.1
+            meta.phot_wave = 2.095
         elif hdulist[0].header['FILTER'] == 'F187N':
-            wave_1d = np.ones_like(sci[0, 0]) * 1.87
-            meta.phot_wave = 1.87
+            wave_1d = np.ones_like(sci[0, 0]) * 1.874
+            meta.phot_wave = 1.874
+        elif (hdulist[0].header['FILTER'] == 'WLP4'
+              or hdulist[0].header['FILTER'] == 'F212N'):
+            wave_1d = np.ones_like(sci[0, 0]) * 2.121
+            meta.phot_wave = 2.121
 
     # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
@@ -311,7 +315,8 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     data : Xarray Dataset
         The updated Dataset object after the 1/f correction has been completed.
     """
-    print('Correcting for 1/f noise...')
+    if i == 0:
+        log.writelog('Correcting for 1/f noise...', mute=(not meta.verbose))
 
     # Let's first determine which amplifier regions are left in the frame.
     # For NIRCam: 4 amplifiers, 512 pixels in x dimension per amplifier

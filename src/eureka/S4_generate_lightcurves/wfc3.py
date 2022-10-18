@@ -70,13 +70,14 @@ def sum_reads(spec, lc, meta):
     spec.stdvar['time'] = time
 
     # For these values, just use the first read's value
-    spec.drift2D['time'] = time
+    spec.centroid_x['time'] = time
+    spec.centroid_y['time'] = time
     spec.guess['time'] = time
     spec.scandir['time'] = time
-    lc.drift2D['time'] = time
+    lc.centroid_x['time'] = time
+    lc.centroid_sx['time'] = time
+    lc.centroid_y['time'] = time
     lc.scandir['time'] = time
-    lc.driftxpos['time'] = time
-    lc.driftxwidth['time'] = time
     lc.driftmask['time'] = time
 
     # Update meta parameters

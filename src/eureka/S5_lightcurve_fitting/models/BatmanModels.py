@@ -54,7 +54,7 @@ class BatmanTransitModel(Model):
         self.ld_from_file = kwargs.get('ld_from_file')
         
         # Replace fixed u parameters with generated limb-darkening values
-        if self.ld_from_S4 is not None:
+        if self.ld_from_S4:
             self.ld_S4_array = kwargs.get('ld_coeffs')[len_params-2]
             for c in np.arange(self.nchan):
                 for u in self.coeffs:

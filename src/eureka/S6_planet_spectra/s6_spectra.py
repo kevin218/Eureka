@@ -6,6 +6,10 @@ import time as time_pkg
 from copy import copy
 from glob import glob
 import re
+from matplotlib.pyplot import rcParams
+import h5py
+from astraeus import xarrayIO as xrio
+
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -13,7 +17,7 @@ from . import plots_s6 as plots
 from ..lib import astropytable
 
 
-def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
+def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     '''Gathers together different wavelength fits and makes
     transmission/emission spectra.
 
@@ -27,6 +31,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     s5_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S5 step (if running S5
         and S6 sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -42,9 +49,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
     '''
     print("\nStarting Stage 6: Light Curve Fitting\n")
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S6_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S6_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -112,6 +123,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 x_unit = getattr(units, meta.x_unit)
             else:
                 log.writelog('Assuming a wavelength unit of microns')
+                meta.x_unit = 'um'
                 x_unit = units.um
             # FINDME: For now this is assuming that the data is in units of
             # microns We should add something to S3 that notes what the units
@@ -155,14 +167,28 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
 
                 log.writelog(f'Plotting {meta.y_param}...')
 
+                meta.spectrum_median = []
+                meta.spectrum_err = []
+
                 # Read in S5 fitted values
-                if meta.sharedp:
-                    meta.spectrum_median, meta.spectrum_err = \
-                        parse_s5_saves(meta, log, fit_methods, 'shared')
+                if meta.y_param == 'fn':
+                    # Compute nightside flux
+                    meta = compute_fn(meta, log, fit_methods)
+                elif 'pc_offset' in meta.y_param:
+                    # Compute phase curve offset
+                    meta = compute_offset(meta, log, fit_methods)
+                elif 'pc_amp' in meta.y_param:
+                    # Compute phase curve amplitude
+                    meta = compute_amp(meta, log, fit_methods)
                 else:
-                    meta = parse_unshared_saves(meta, log, fit_methods)
-                
-                if all(x is None for x in meta.spectrum_median):
+                    # Just load the parameter
+                    if meta.sharedp:
+                        meta = parse_s5_saves(meta, log, fit_methods, 'shared')
+                    else:
+                        meta = parse_unshared_saves(meta, log, fit_methods)
+
+                if (len(meta.spectrum_median) == 0
+                        or all(x is None for x in meta.spectrum_median)):
                     # The parameter could not be found - skip it
                     continue
 
@@ -182,7 +208,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                         meta.y_label = r'$R_{\rm p}/R_{\rm *}$'
                     elif meta.y_param == 'fp':
                         # Eclipse depth
-                        meta.y_label = r'$F_{\rm p}/F_{\rm *}$'
+                        meta.y_label = r'$F_{\rm p,day}/F_{\rm *}$'
+                    elif meta.y_param == 'fn':
+                        # Nightside emission
+                        meta.y_label = r'$F_{\rm p,night}/F_{\rm *}$'
                     elif meta.y_param in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         meta.y_label = r'$u_{\rm '+meta.y_param[-1]+'}$'
@@ -202,16 +231,32 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                         meta.y_label = r'$t_{\rm 0}$'
                     elif meta.y_param == 'AmpSin1':
                         # Sine amplitude
-                        meta.y_label = (r'Amplitude of $\sin(\phi)$')
+                        meta.y_label = r'Amplitude of $\sin(\phi)$'
                     elif meta.y_param == 'AmpSin2':
                         # Sine2 amplitude
-                        meta.y_label = (r'Amplitude of $\sin(2\phi)$')
+                        meta.y_label = r'Amplitude of $\sin(2\phi)$'
                     elif meta.y_param == 'AmpCos1':
                         # Cosine amplitude
-                        meta.y_label = (r'Amplitude of $\cos(\phi)$')
+                        meta.y_label = r'Amplitude of $\cos(\phi)$'
                     elif meta.y_param == 'AmpCos2':
                         # Cosine2 amplitude
-                        meta.y_label = (r'Amplitude of $\cos(2\phi)$')
+                        meta.y_label = r'Amplitude of $\cos(2\phi)$'
+                    elif meta.y_param == 'pc_offset':
+                        # Phase Curve Offset, first order
+                        meta.y_label = 'Phase Curve Offset'
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = r'($^{\circ}$E)'
+                    elif meta.y_param == 'pc_amp':
+                        # Phase Curve Amplitude, first order
+                        meta.y_label = 'Phase Curve Amplitude'
+                    elif meta.y_param == 'pc_offset2':
+                        # Phase Curve Offset, second order
+                        meta.y_label = ('Second Order Phase Curve Offset')
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = r'($^{\circ}$E)'
+                    elif meta.y_param == 'pc_amp2':
+                        # Phase Curve Amplitude, second order
+                        meta.y_label = ('Second Order Phase Curve Amplitude')
                     elif meta.y_param in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient
                         meta.y_label = r'$c_{\rm '+meta.y_param[1:]+'}$'
@@ -232,7 +277,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                     if meta.y_scalar == 1e6:
                         meta.y_label_unit = ' (ppm)'
                     elif meta.y_scalar == 100:
-                        meta.y_label_unit = ' (%)'
+                        meta.y_label_unit = r' (%)'
                     elif meta.y_scalar != 1:
                         meta.y_label_unit = f' * {meta.y_scalar}'
                     else:
@@ -240,6 +285,12 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                 elif meta.y_label_unit[0] != ' ':
                     # Make sure there's a leading space for proper formatting
                     meta.y_label_unit = ' '+meta.y_label_unit
+
+                if (rcParams['text.usetex'] and
+                        (meta.y_label_unit.count(r'\%') != 
+                         meta.y_label_unit.count('%'))):
+                    # Need to escape % with \ for LaTeX
+                    meta.y_label_unit = meta.y_label_unit.replace('%', r'\%')
 
                 # Add any units to the y label
                 meta.y_label += meta.y_label_unit
@@ -269,8 +320,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None):
                                         meta.y_label, meta.xlabel,
                                         scale_height, meta.planet_R0)
 
-                log.writelog('Saving results as astropy table')
-                save_table(meta)
+                save_table(meta, log)
 
             # make citations for current stage
             util.make_citations(meta, 6)
@@ -318,60 +368,71 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     else:
         y_param = meta.y_param
 
-    for fitter in fit_methods:
-        if fitter in ['dynesty', 'emcee']:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
-                                        skipinitialspace=True)
-            full_keys = list(fitted_values["Parameter"])
+    if 'dynesty' in fit_methods:
+        fitter = 'dynesty'
+    elif 'emcee' in fit_methods:
+        fitter = 'emcee'
+    elif 'lsq' in fit_methods:
+        fitter = 'lsq'
+    else:
+        raise ValueError('No recognized fitters in fit_methods = '
+                         f'{fit_methods}')
 
-            fname = f'S5_{fitter}_samples_{channel_key}'
+    lowers = []
+    uppers = []
+    medians = []
+    errs = []
 
-            keys = [key for key in full_keys if y_param in key]
-            if len(keys) == 0:
-                log.writelog(f'Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n['
-                             + ', '.join(full_keys)+']')
-                log.writelog(f'Skipping {y_param}')
-                return None, None
+    if fitter in ['dynesty', 'emcee']:
+        fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+        fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                    skipinitialspace=True)
+        full_keys = list(fitted_values["Parameter"])
 
-            lowers = []
-            uppers = []
-            medians = []
+        fname = f'S5_{fitter}_samples_{channel_key}'
 
-            for i, key in enumerate(keys):
-                ind = np.where(fitted_values["Parameter"] == key)[0][0]
-                lowers.append(np.abs(fitted_values["-1sigma"][ind]))
-                uppers.append(np.abs(fitted_values["+1sigma"][ind]))
-                medians.append(np.abs(fitted_values["50th"][ind]))
+        keys = [key for key in full_keys if y_param in key]
+        if len(keys) == 0:
+            log.writelog(f'  Parameter {y_param} was not in the list of '
+                         'fitted parameters which includes:\n  ['
+                         + ', '.join(full_keys)+']')
+            log.writelog(f'  Skipping {y_param}')
+            return None, None
 
-            errs = np.array([lowers, uppers])
-            medians = np.array(medians)
+        for i, key in enumerate(keys):
+            ind = np.where(fitted_values["Parameter"] == key)[0][0]
+            lowers.append(np.abs(fitted_values["-1sigma"][ind]))
+            uppers.append(fitted_values["+1sigma"][ind])
+            medians.append(fitted_values["50th"][ind])
 
-        else:
-            fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-            fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
-                                        skipinitialspace=True)
-            full_keys = list(fitted_values["Parameter"])
-            keys = [key for key in full_keys if y_param in key]
-            if len(keys) == 0:
-                log.writelog(f'Parameter {y_param} was not in the list of '
-                             'fitted parameters which includes:\n['
-                             + ', '.join(full_keys)+']')
-                log.writelog(f'Skipping {y_param}')
-                return None, None
+        errs = np.array([lowers, uppers])
+        medians = np.array(medians)
+    else:
+        fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+        fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
+                                    skipinitialspace=True)
+        full_keys = list(fitted_values["Parameter"])
+        keys = [key for key in full_keys if y_param in key]
+        if len(keys) == 0:
+            log.writelog(f'Parameter {y_param} was not in the list of '
+                         'fitted parameters which includes:\n['
+                         + ', '.join(full_keys)+']')
+            log.writelog(f'Skipping {y_param}')
+            return None, None
 
-            medians = []
-            for i, key in enumerate(keys):
-                ind = np.where(fitted_values["Parameter"] == key)[0][0]
-                if "50th" in fitted_values.keys():
-                    medians.append(fitted_values["50th"][ind])
-                else:
-                    medians.append(fitted_values["Mean"][ind])
-            medians = np.array(medians)
+        medians = []
+        for i, key in enumerate(keys):
+            ind = np.where(fitted_values["Parameter"] == key)[0][0]
+            if "50th" in fitted_values.keys():
+                medians.append(fitted_values["50th"][ind])
+            else:
+                medians.append(fitted_values["Mean"][ind])
+        medians = np.array(medians)
 
-            # if lsq, no uncertainties
-            errs = np.ones((2, len(medians)))*np.nan
+        # if lsq, no uncertainties
+        errs = np.ones((2, len(medians)))*np.nan
+
+    meta.spectrum_median, meta.spectrum_err = medians, errs
 
     return medians, errs
 
@@ -393,22 +454,23 @@ def parse_unshared_saves(meta, log, fit_methods):
     meta : eureka.lib.readECF.MetaClass
         The updated meta data object.
     """
-    meta.spectrum_median = []
-    meta.spectrum_err = []
+    spectrum_median = []
+    spectrum_err = []
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
         median, err = parse_s5_saves(meta, log, fit_methods, channel_key)
         if median is None:
             # Parameter was found, so don't keep looking for it
-            meta.spectrum_median = [None for _ in range(meta.nspecchan)]
-            meta.spectrum_err = [None for _ in range(meta.nspecchan)]
+            meta.spectrum_median = np.array([None for _ in
+                                             range(meta.nspecchan)])
+            meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
             return meta
-        meta.spectrum_median.extend(median)
-        meta.spectrum_err.extend(err.T)
+        spectrum_median.extend(median)
+        spectrum_err.extend(err.T)
     
-    meta.spectrum_median = np.array(meta.spectrum_median)
-    meta.spectrum_err = np.array(meta.spectrum_err).T
+    meta.spectrum_median = np.array(spectrum_median)
+    meta.spectrum_err = np.array(spectrum_err).T
 
     return meta
 
@@ -455,12 +517,243 @@ def compute_timescale(meta):
     if not np.all(np.isnan(meta.spectrum_err)):
         lower = meta.spectrum_err[0, :]
         upper = meta.spectrum_err[1, :]
-        lower = np.abs(1/(median-lower) - 1/median)
-        upper = np.abs(1/(median+upper) - 1/median)
+        lower = 1/(median-lower) - 1/median
+        upper = 1/median - 1/(median+upper)
         meta.spectrum_err = np.append(lower.reshape(1, -1),
                                       upper.reshape(1, -1), axis=0)
     meta.spectrum_median = 1/median
 
+    return meta
+
+
+def load_s5_saves(meta, log, fit_methods):
+    if 'dynesty' in fit_methods:
+        fitter = 'dynesty'
+    elif 'emcee' in fit_methods:
+        fitter = 'emcee'
+    elif 'lsq' in fit_methods:
+        fitter = 'lsq'
+    else:
+        raise ValueError('No recognized fitters in fit_methods = '
+                         f'{fit_methods}')
+    meta.fitter = fitter
+
+    if fitter in ['dynesty', 'emcee']:
+        if meta.sharedp:
+            niter = 1
+        else:
+            niter = meta.nspecchan
+        samples = []
+        for ch in range(niter):
+            # Get the channel key
+            if meta.sharedp:
+                channel_key = 'shared'
+            else:
+                nzfill = int(np.floor(np.log10(meta.nspecchan))+1)
+                channel_key = 'ch'+str(ch).zfill(nzfill)
+
+            fname = f'S5_{fitter}_samples_{channel_key}'
+        
+            # Load HDF5 files
+            full_fname = meta.inputdir+fname+'.h5'
+            ds = xrio.readXR(full_fname, verbose=False)
+            if ds is None:
+                # Working with an old save file
+                with h5py.File(full_fname, 'r') as hf:
+                    sample = hf['samples'][:]
+                # Need to figure out which columns are which
+                fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
+                fitted_values = pd.read_csv(meta.inputdir+fname, 
+                                            escapechar='#',
+                                            skipinitialspace=True)
+                full_keys = np.array(fitted_values["Parameter"])
+                ind = np.where(full_keys == meta.y_param)[0]
+                sample = sample[:, ind].flatten()
+            else:
+                if meta.y_param in list(ds._variables):
+                    sample = ds[meta.y_param].values
+                else:
+                    sample = np.zeros(0)
+            samples.append(sample)
+    else:
+        # No samples for lsq, so just shape it as a single value
+        if meta.sharedp:
+            meta = parse_s5_saves(meta, log, fit_methods, 'shared')
+        else:
+            meta = parse_unshared_saves(meta, log, fit_methods)
+        samples = np.array(meta.spectrum_median)
+        if all(x is None for x in samples):
+            samples = np.zeros((meta.nspecchan, 0))
+    
+    return np.array(samples)
+
+
+def compute_offset(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    second = (meta.y_param[-1] == '2')
+    if second:
+        suffix = '2'
+    else:
+        suffix = '1'
+    
+    # Load sine amplitude
+    meta.y_param = 'AmpSin'+suffix
+    ampsin = load_s5_saves(meta, log, fit_methods)
+    if ampsin.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos'+suffix
+    ampcos = load_s5_saves(meta, log, fit_methods)
+    if ampcos.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    for i in range(meta.nspecchan):
+        offsets = -np.arctan2(ampsin[i], ampcos[i])*180/np.pi
+        if second:
+            offsets /= 2
+        offset = np.percentile(np.array(offsets), [16, 50, 84])[[1, 2, 0]]
+        offset[1] -= offset[0]
+        offset[2] = offset[0]-offset[2]
+        meta.spectrum_median.append(offset[0])
+        meta.spectrum_err.append(offset[1:])
+    
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+    
+    return meta
+
+
+def compute_amp(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Figure out the desired order
+    second = (meta.y_param[-1] == '2')
+    if second:
+        suffix = '2'
+    else:
+        suffix = '1'
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    fp = load_s5_saves(meta, log, fit_methods)
+    if fp.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Load sine amplitude
+    meta.y_param = 'AmpSin'+suffix
+    ampsin = load_s5_saves(meta, log, fit_methods)
+    if ampsin.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos'+suffix
+    ampcos = load_s5_saves(meta, log, fit_methods)
+    if ampcos.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    
+    for i in range(meta.nspecchan):
+        amps = fp[i]*np.sqrt(ampcos[i]**2+ampsin[i]**2)*2
+        amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
+        amp[1] -= amp[0]
+        amp[2] = amp[0]-amp[2]
+        meta.spectrum_median.append(amp[0])
+        meta.spectrum_err.append(amp[1:])
+    
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+    
+    return meta
+
+
+def compute_fn(meta, log, fit_methods, nsamp=1e4):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    fp = load_s5_saves(meta, log, fit_methods)
+    if fp.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos1'
+    ampcos = load_s5_saves(meta, log, fit_methods)
+    if ampcos.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+    
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    for i in range(meta.nspecchan):
+        fluxes = fp[i]*(1-2*ampcos[i])
+        flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+    
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+    
     return meta
 
 
@@ -603,14 +896,20 @@ def load_model(meta, log, x_unit):
     return model_x, model_y
 
 
-def save_table(meta):
+def save_table(meta, log):
     """Clean y_param for filenames and save the table of values.
+
+    Also calls transit_latex_table().
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
     """
+    log.writelog('  Saving results as an astropy table')
+
     event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
                    str(meta.bg_hw_val))
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
@@ -623,4 +922,197 @@ def save_table(meta):
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
                               wave_errs, meta.spectrum_median,
                               meta.spectrum_err)
+
+    transit_latex_table(meta, log)
+    
+    return
+
+
+def roundToSigFigs(x, sigFigs=2):
+    """Round a value to a requested number of significant figures.
+
+    Parameters
+    ----------
+    x : numerical type
+        A float or int to be rounded.
+    sigFigs : int; optional
+        The number of significant figures desired, by default 2.
+
+    Returns
+    -------
+    nDec : int
+        The number of decimals corresponding to sigFigs where nDec = -1 for
+        a value rounded to the ten's place (e.g. 101 -> 100 if nDec = -1).
+    output : str
+        x formatted as a string with the requested number of significant
+        figures.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-22, Taylor J Bell
+        Imported code written for SPCA, and optimized for Python3.
+    """
+    if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
+        return np.nan, ""
+    nDec = -int(np.floor(np.log10(np.abs(x))))+sigFigs-1
+    rounded = np.round(x, nDec)
+    if nDec <= 0:
+        # format this as an integer
+        return nDec, f"{rounded:g}"
+    else:
+        # format this as a float
+        return nDec, f"{rounded:.{nDec}f}"
+
+
+def roundToDec(x, nDec=2):
+    """Round a value to a requested number of decimals.
+
+    Parameters
+    ----------
+    x : numerical type
+        A float or int to be rounded.
+    nDec : int
+        The number of decimals desired, by default 2.
+
+    Returns
+    -------
+    output : str
+        x formatted as a string with the requested number of decimals.
+
+    Notes
+    -----
+    History:
+
+    - 2022-08-22, Taylor J Bell
+        Imported code written for SPCA, and optimized for Python3.
+    """
+    if not np.isfinite(nDec):
+        return str(x)
+
+    if isinstance(nDec, float):
+        nDec = int(np.round(nDec))
+
+    rounded = np.round(x, nDec)
+    if nDec <= 0:
+        # format this as an integer
+        return f"{rounded:g}"
+    else:
+        # format this as a float
+        return f"{rounded:.{nDec}f}"
+
+
+def transit_latex_table(meta, log):
+    """Write a nicely formatted LaTeX table for each plotted value.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The current meta data object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+    """
+    log.writelog('  Saving results as a LaTeX table')
+
+    data = pd.read_csv(meta.tab_filename_s6, comment='#',
+                       delim_whitespace=True)
+
+    # Figure out the number of rows and columns in the table
+    nvals = data.shape[0]
+    if not hasattr(meta, 'ncols'):
+        meta.ncols = 4
+    rows = int(np.ceil(nvals/meta.ncols))
+
+    # Figure out the labels for the columns
+    if meta.y_param == 'rp^2':
+        colhead = "\\colhead{Transit Depth}"
+    elif meta.y_param == 'rp':
+        colhead = "\\colhead{$R_{\\rm p}/R_{\\rm *}$}"
+    elif meta.y_param == 'fp':
+        colhead = "\\colhead{Eclipse Depth}"
+    else:
+        colhead = f"\\colhead{{{meta.y_label}}}"
+
+    # Begin the table
+    out = "\\begin{deluxetable}{"
+    # Center each column
+    for i in range(meta.ncols):
+        out += "CC|"
+    out = out[:-1]+"}\n"
+    # Give the table a caption based on the tabulated data
+    if meta.y_param in ['rp', 'rp^2']:
+        out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy "
+        out += "Results \\label{tab:eureka_transit_spectra}}\n"
+    elif meta.y_param == 'fp':
+        out += "\\tablecaption{\\texttt{Eureka!}'s Eclipse Spectroscopy "
+        out += "Results \\label{tab:eureka_eclipse_spectra}}\n"
+    # Label each column
+    out += "\\tablehead{\n"
+    for i in range(meta.ncols):
+        out += "\\colhead{Wavelength} & "+colhead+" &"
+    out = out[:-1]+" \\\\\n"
+    # Provide each column's unit
+    for i in range(meta.ncols):
+        if meta.x_unit == 'um':
+            xunit = '$\\mu$m'
+        else:
+            xunit = meta.xunit
+        if meta.y_label_unit == '':
+            y_unit = ''
+        else:
+            # Trim off the leading space
+            y_unit = meta.y_label_unit[1:]
+            # Need to make sure to escape % with \ for LaTeX
+            if (meta.y_label_unit.count(r'\%') != 
+                    meta.y_label_unit.count('%')):
+                y_unit = y_unit.replace('%', r'\%')
+        out += "\\colhead{("+xunit+")} & \\colhead{"+y_unit+"} &"
+    out = out[:-1]+"\n}\n"
+    # Begin tabulating the data
+    out += "\\startdata\n"
+    for i in range(rows):
+        for j in range(meta.ncols):
+            if j == meta.ncols-1:
+                # Last column, add a newline
+                end = '\\\\\n'
+            else:
+                # Not the last column, add an ampersand
+                end = ' & '
+
+            if i+rows*j >= nvals:
+                # Ran out of values - put blanks
+                out += "&"+end
+                continue
+            line = data.iloc[i+rows*j]
+
+            # Round values to the correct number of significant figures
+            val = line[meta.y_param+'_value']*meta.y_scalar
+            upper = line[meta.y_param+'_errorpos']
+            lower = line[meta.y_param+'_errorneg']
+            if np.isnan(upper) and np.isnan(lower):
+                nDec = 10
+            else:
+                nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
+                nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
+                nDec = int(np.nanmax([nDec1, nDec2]))
+            val = roundToDec(val, nDec)
+            upper = roundToDec(upper, nDec)
+            lower = roundToDec(lower, nDec)
+
+            # Wavelength
+            out += f"{np.round(line['wavelength'], 2):.2f} & "
+            # val^{+upper}_{-lower}
+            out += f"{val}^{{+{upper}}}_{{-{lower}}}$"
+            out += end
+
+    # End the table
+    out += "\\enddata\n"
+    out += "\\end{deluxetable}"
+    
+    # Save the table as a txt file
+    meta.tab_filename_s6_latex = meta.tab_filename_s6[:-4]+'_LaTeX.txt'
+    with open(meta.tab_filename_s6_latex, 'w') as file:
+        file.write(out)
+
     return
