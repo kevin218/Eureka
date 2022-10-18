@@ -987,6 +987,10 @@ def roundToDec(x, nDec=2):
     """
     if not np.isfinite(nDec):
         return str(x)
+
+    if isinstance(nDec, float):
+        nDec = int(np.round(nDec))
+
     rounded = np.round(x, nDec)
     if nDec <= 0:
         # format this as an integer
@@ -1083,12 +1087,12 @@ def transit_latex_table(meta, log):
             val = line[meta.y_param+'_value']*meta.y_scalar
             upper = line[meta.y_param+'_errorpos']
             lower = line[meta.y_param+'_errorneg']
-            if np.isnan(upper) or np.isnan(lower):
+            if np.isnan(upper) and np.isnan(lower):
                 nDec = 10
             else:
                 nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
                 nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
-                nDec = np.nanmax([nDec1, nDec2])
+                nDec = int(np.nanmax([nDec1, nDec2]))
             val = roundToDec(val, nDec)
             upper = roundToDec(upper, nDec)
             lower = roundToDec(lower, nDec)

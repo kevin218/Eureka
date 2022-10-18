@@ -7,7 +7,7 @@ from scipy.interpolate import griddata
 
 
 def readfiles(meta, log):
-    """Reads in the files saved in topdir + inputdir and saves them into a list.
+    """Reads in files saved in topdir + inputdir and saves them in a list.
 
     Parameters
     ----------
@@ -615,7 +615,8 @@ def interp_masked(data, meta, i, log):
     data : Xarray Dataset
         The updated Dataset object with requested pixels masked.
     """
-    log.writelog('Interpolating masked values...', mute=(not meta.verbose))
+    if i == 0:
+        log.writelog('Interpolating masked values...', mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]
