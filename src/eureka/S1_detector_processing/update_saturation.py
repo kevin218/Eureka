@@ -92,7 +92,7 @@ def update_sat(input_model, log, meta):
     # Saturation flagging condition
     # Where our saturation mask is True and dq is not already flagged
 
-    condition = ((new_sat_mask == True) & (input_model.groupdq == 0))
+    condition = np.where((new_sat_mask) & (input_model.groupdq == 0))
     # Now update the groupdq map
     input_model.groupdq[condition] = sat_flag
 
