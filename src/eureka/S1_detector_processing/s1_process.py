@@ -179,6 +179,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         if instrument in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
             self.persistence.skip = meta.skip_persistence
             self.superbias.skip = meta.skip_superbias
+            if meta.custom_bias:
+                self.superbias.override_superbias = meta.superbias_file
         elif instrument in ['MIRI']:
             self.firstframe.skip = meta.skip_firstframe
             self.lastframe.skip = meta.skip_lastframe
