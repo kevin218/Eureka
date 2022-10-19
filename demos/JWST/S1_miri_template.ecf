@@ -26,10 +26,6 @@ skip_gain_scale     False
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
 
-#Custom bias frames
-custom_bias         False
-superbias_file	   /path/to/custom/superbias/fits/file
-
 # Project directory
 topdir              /home/User
 

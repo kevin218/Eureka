@@ -18,6 +18,8 @@ from jwst.datamodels import dqflags
 from jwst.lib import reffile_utils
 from jwst.lib import pipe_utils
 
+from . import update_saturation
+
 import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -87,6 +89,12 @@ default='none') # max number of processes to create
             Updated for JWST version 1.3.3, code restructure
         '''
         with datamodels.RampModel(input) as input_model:
+
+            if self.s1_meta.update_sat_flags:
+                input_model = update_saturation.update_sat(input_model, 
+                                                           self.s1_log, 
+                                                           self.s1_meta)
+
             readnoise_filename = self.get_reference_file(input_model,
                                                          'readnoise')
             gain_filename = self.get_reference_file(input_model, 'gain')
