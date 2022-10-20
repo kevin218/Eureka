@@ -191,6 +191,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
         self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
+        self.ramp_fit.s1_meta = meta
+        self.ramp_fit.s1_log = log
 
         # Default ramp fitting settings
         if self.ramp_fit.algorithm == 'default':
