@@ -140,6 +140,13 @@ Now that everything is set up, you should now be able to run the pipeline using:
 
 This will start printing information to your terminal, saving a bunch of output data/figures to the ``outputdir`` file locations you assigned above, and depending on the number of processors you were brave enough to allocate, potentially make your laptop as noisy as the engine of a Boeing 747. 
 
+While running ``Eureka!`` on these simulated data, you should expect to see a few warnings as there are some imperfections in the simulated data which should not be present in real observations.
+When you begin to work on your own real observation, you should use your critical judgement to determine whether a warning is relevant to your situation. In general though, it's not uncommon for you to
+see a warning about leaked semaphore objects at the end of a run that includes ``ncpu > 1`` in Stage 3 or 5, and these warnings can be safely ignored.
+
+5. Examine Outputs 🤨
+-------------------------
+
 Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Also, feel free to dig through the output directories and get a gauge of what each stage is doing at your own speed.
 
 Stage 1: Ramp Fitting
@@ -165,7 +172,11 @@ To the right you can see a 2D representation of the variation in flux between co
 
 Finally, note that the actual data for these produced 1D spectra are contained in the ``*Table_Save.txt`` file.
 
-.. image:: ../media/stage3_quickstart.png
+.. image:: ../media/stage3_quickstart1.png
+   :width: 49.5%
+
+.. image:: ../media/stage3_quickstart2.png
+   :width: 49.5%
 
 Stage 4: Create Lightcurves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,7 +207,7 @@ The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcur
 
 .. image:: ../media/stage6_quickstart.png
 
-5. Where to go next 👩‍💻
+6. Where to go next 👩‍💻
 -------------------------
 
 You made it! Congratulations, it's time to reward yourself with a break 😊
