@@ -52,8 +52,8 @@ testing_model   False         # Boolean, set True to only inject a model source 
 hide_plots      False         # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          /home/User
+topdir          /home/User/Data/TargetName/WFC3/
 
 # Directories relative to project dir
-inputdir        /Data/TargetName/WFC3/Stage4    # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-outputdir       /Data/TargetName/WFC3/Stage5
+inputdir        Stage4    # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
+outputdir       Stage5

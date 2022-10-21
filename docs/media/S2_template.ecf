@@ -35,8 +35,8 @@ testing_S2              False
 hide_plots              False   # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir                  /home/User/
+topdir                  /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir                /Data/JWST-Sim/NIRSpec/Stage1
-outputdir               /Data/JWST-Sim/NIRSpec/Stage2
+inputdir                Stage1
+outputdir               Stage2

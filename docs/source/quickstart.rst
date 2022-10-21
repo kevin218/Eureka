@@ -30,6 +30,12 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 3. Set up your run directory 🗂
 -------------------------------
 
+In general, it is recommended to interface with Eureka! using "Eureka! Control Files" (ECFs) and running command line scripts.
+This helps to increase the automation of the pipeline and increases the reproducibility of your results as the ECF you used
+will be copied to the output folder and your analysis will follow a pre-defined order. That way if somebody asks you how you
+analyzed your data, you can just send them your copied ECF files and the version number of Eureka! that you used. In the
+following section, we will walk you through the process of gathering the relevant ECF templates and editing them as needed for
+your particular analysis.
 
 .. _demos:
 
@@ -80,21 +86,21 @@ Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's us
         eventlabel = 'wasp39b'
 
 
-Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. For the ``S2_wasp39b.ecf``, you want something like:
+Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. **Note** that ``inputdir`` and ``outputdir`` are both relative to ``topdir``. For the ``S2_wasp39b.ecf``, you can do something like:
 
 .. code-block:: bash
 
-	topdir		/User
-	inputdir	/Data/JWST-Sim/NIRSpec
-	outputdir	/DataAnalysis/JWST/MyFirstEureka/Stage2
+	topdir		/home/User/
+	inputdir	Data/JWST-Sim/NIRSpec
+	outputdir	DataAnalysis/JWST/MyFirstEureka/Stage2
 
-However, for the later stages you can use something simpler, e.g. for the ``S3_wasp39b.ecf``:
+Specifically, you'll want to set ``inputdir`` to the folder where you have put your downloaded FITS files, and ``outputdir`` to the folder where you want the results of your analyses to be stored. This may be useful if you want to store the raw data on an external hard drive while storing the analysis outputs on your internal hard drive. For the later stages you could use something simpler, e.g. for the ``S3_wasp39b.ecf``:
 
 .. code-block:: bash
 
-	topdir		/User/DataAnalysis/JWST/MyFirstEureka
-	inputdir	/Stage2
-	outputdir	/Stage3
+	topdir		/home/User/DataAnalysis/JWST/MyFirstEureka/
+	inputdir	Stage2
+	outputdir	Stage3
 
 The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, there are a few important settings we must adjust.
 
