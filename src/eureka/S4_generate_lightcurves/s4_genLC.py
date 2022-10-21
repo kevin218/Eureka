@@ -133,9 +133,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
+            specData_savefile = (
+                meta.inputdir + 
+                meta.filename_S3_SpecData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
-            spec = xrio.readXR(meta.filename_S3_SpecData)
+            spec = xrio.readXR(specData_savefile)
 
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
@@ -241,6 +244,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if hasattr(spec, 'centroid_x'):
                 # centroid_x already measured in 2D in S3 - setup to add 1D fit
                 lc['centroid_x'] = spec.centroid_x
+            if hasattr(spec, 'centroid_sx'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_sx'] = spec.centroid_sx
             elif meta.recordDrift or meta.correctDrift:
                 # Setup the centroid_x array
                 lc['centroid_x'] = (['time'], np.zeros(meta.n_int))

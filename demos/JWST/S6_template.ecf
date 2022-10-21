@@ -28,7 +28,7 @@ isplots_S6      5      # Generate few (1), some (3), or many (5) figures (Option
 hide_plots      False  # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          /home/User/
+topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Model to plot underneath the fitted data points
 model_spectrum  None   # Path to the model spectrum relative to topdir. Set to None if no model should be plotted.
@@ -39,5 +39,5 @@ model_zorder    0      # The zorder of the model on the plot (0 for beneath the 
 model_delimiter None   # Delimiter between columns. Typical options: None (for space), ',' for comma
 
 # Directories relative to topdir
-inputdir        /Data/JWST-Sim/NIRSpec/Stage5/   # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
-outputdir       /Data/JWST-Sim/NIRSpec/Stage6/
+inputdir        Stage5   # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
+outputdir       Stage6

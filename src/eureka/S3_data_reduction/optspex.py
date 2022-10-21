@@ -4,6 +4,8 @@ import scipy.interpolate as spi
 import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
+import warnings
+
 from ..lib import gaussian as g
 from ..lib import smooth
 from . import plots_s3
@@ -200,7 +202,10 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with warnings.catch_warnings():
+        # Ignore warnings about columns that are completely masked
+        warnings.filterwarnings("ignore", "invalid value encountered in")
+        profile /= np.nansum(profile, axis=0)
 
     return profile
 
@@ -390,7 +395,7 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
 
 
 def profile_gauss(subdata, mask, threshold=10, guess=None, isplots=0):
-    '''Construct normalized spatial profile using a Gaussian smoothing function.
+    '''Construct normalized spatial profile using Gaussian smoothing function.
 
     Parameters
     ----------
