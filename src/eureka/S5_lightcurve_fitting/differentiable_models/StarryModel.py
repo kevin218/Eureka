@@ -69,8 +69,8 @@ class StarryModel(PyMC3Model):
                     setattr(temp, key, getattr(self.model, key))
             
             # Initialize star object
-            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg, amp=1.0),
-                                  m=temp.Ms, r=temp.Rs, prot=1.0)
+            star = starry.Primary(starry.Map(udeg=self.udeg),
+                                  m=temp.Ms, r=temp.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -104,7 +104,7 @@ class StarryModel(PyMC3Model):
 
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
+                starry.Map(ydeg=self.ydeg, amp=amp),
                 # Convert mass to M_sun units
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
@@ -135,7 +135,7 @@ class StarryModel(PyMC3Model):
                     planet.map[2, 1] = temp.AmpSin2
             # Offset is controlled by AmpSin1
             planet.theta0 = 180.0
-            planet.tref = 0
+            planet.t0 = temp.t0
 
             # Instantiate the system
             sys = starry.System(star, planet)
@@ -152,15 +152,13 @@ class StarryModel(PyMC3Model):
         if eval:
             lib = np
             systems = self.fit.systems
-            t0 = self.fit.t0
         else:
             lib = tt
             systems = self.systems
-            t0 = self.model.t0
 
         phys_flux = lib.zeros(0)
         for c in channels:
-            lcpiece = systems[c].flux(self.time-t0)
+            lcpiece = systems[c].flux(self.time)
             if eval:
                 lcpiece = lcpiece.eval()
         phys_flux = lib.concatenate([phys_flux, lcpiece])
@@ -188,8 +186,8 @@ class StarryModel(PyMC3Model):
                     setattr(temp, key, getattr(self.fit, key))
 
             # Initialize star object
-            star = starry.Primary(starry.Map(ydeg=0, udeg=self.udeg, amp=1.0),
-                                  m=temp.Ms, r=temp.Rs, prot=1.0)
+            star = starry.Primary(starry.Map(udeg=self.udeg),
+                                  m=temp.Ms, r=temp.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -223,7 +221,7 @@ class StarryModel(PyMC3Model):
 
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, udeg=0, amp=amp, inc=90.0, obl=0.0),
+                starry.Map(ydeg=self.ydeg, amp=amp),
                 # Convert mass to M_sun units
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
@@ -254,7 +252,7 @@ class StarryModel(PyMC3Model):
                     planet.map[2, 1] = temp.AmpSin2
             # Offset is controlled by AmpSin1
             planet.theta0 = 180.0
-            planet.tref = 0
+            planet.t0 = temp.t0
 
             # Instantiate the system
             sys = starry.System(star, planet)
