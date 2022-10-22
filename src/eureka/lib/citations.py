@@ -629,5 +629,27 @@ CITATIONS = {
                     doi          = {10.5281/zenodo.598201},
                     url          = {https://doi.org/10.5281/zenodo.598201}
                     }""", ],
+    "wfc3": [r"""@INPROCEEDINGS{Kimble2008,
+                author = {{Kimble}, Randy A. and {MacKenty}, John W. and 
+                        {O'Connell}, Robert W. and {Townsend}, Jacqueline A.},
+                title = "{Wide Field Camera 3: a powerful new imager for 
+                        the Hubble Space Telescope}",
+                booktitle = {Space Telescopes and Instrumentation 2008: 
+                            Optical, Infrared, and Millimeter},
+                year = 2008,
+                editor = {{Oschmann}, Jacobus M., Jr. and {de Graauw}, 
+                         Mattheus W.~M. and {MacEwen}, Howard A.},
+                series = {Society of Photo-Optical Instrumentation Engineers 
+                         (SPIE) Conference Series},
+                volume = {7010},
+                month = jul,
+                eid = {70101E},
+                pages = {70101E},
+                doi = {10.1117/12.789581},
+                adsurl = 
+                    {https://ui.adsabs.harvard.edu/abs/2008SPIE.7010E..1EK},
+                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+            }
+            """],
 }
 

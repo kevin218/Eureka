@@ -762,7 +762,12 @@ def make_citations(meta, stage=None):
     if hasattr(meta, 'citations'):
         prev_cites = meta.citations
     
-    all_cites = np.union1d(current_cites, prev_cites)
+    all_cites = np.union1d(current_cites, prev_cites).tolist()
+
+    # make sure everything in meta citation list can be added to bibliography
+    for entry in all_cites:
+        if entry not in CITATIONS.keys():
+            all_cites.remove(entry)
 
     # store everything in the meta object
     meta.citations = all_cites
