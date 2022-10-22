@@ -4,6 +4,7 @@ import astropy.constants as const
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
 import theano.tensor as tt
+import pymc3_ext as pmx
 
 # Avoid tonnes of "Cannot construct a scalar test value" messages
 import logging
@@ -50,7 +51,9 @@ class StarryModel(PyMC3Model):
         else:
             self.ydeg = 0
 
-    def setup(self):
+    def setup(self, full_model):
+        self.full_model = full_model
+        
         self.systems = []
         for c in range(self.nchan):
             # To save ourselves from tonnes of getattr lines, let's make a
@@ -90,10 +93,8 @@ class StarryModel(PyMC3Model):
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
             
-            if hasattr(temp, 'fp'):
-                amp = temp.fp
-            else:
-                amp = 0
+            if not hasattr(temp, 'L'):
+                temp.L = 0
             
             # Solve Keplerian orbital period equation for Mp
             # (otherwise starry is going to mess with P or a...)
@@ -102,9 +103,11 @@ class StarryModel(PyMC3Model):
             Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
                   - temp.Ms)
 
+            planet_map = starry.Map(ydeg=self.ydeg, amp=temp.L)
+
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, amp=amp),
+                planet_map,
                 # Convert mass to M_sun units
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
@@ -164,6 +167,14 @@ class StarryModel(PyMC3Model):
         phys_flux = lib.concatenate([phys_flux, lcpiece])
 
         return phys_flux
+    
+    def compute_fp(self):
+        with self.full_model.model:
+            fps = []
+            for c in range(self.nchan):
+                fp = self.systems[c].secondaries[0].map.flux(theta=0)[0]
+                return pmx.eval_in_model(fp)
+            return fps
 
     def update(self, newparams):
         super().update(newparams)
@@ -207,10 +218,8 @@ class StarryModel(PyMC3Model):
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
             
-            if hasattr(temp, 'fp'):
-                amp = temp.fp
-            else:
-                amp = 0
+            if not hasattr(temp, 'L'):
+                temp.L = 0
             
             # Solve Keplerian orbital period equation for Mp
             # (otherwise starry is going to mess with P or a...)
@@ -221,7 +230,7 @@ class StarryModel(PyMC3Model):
 
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, amp=amp),
+                starry.Map(ydeg=self.ydeg, amp=temp.L),
                 # Convert mass to M_sun units
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,

@@ -97,6 +97,9 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                            np.ma.median(lc.unc[chan*lc.time.size:
                                                (chan+1)*lc.time.size]) * 1e6)
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
+        elif 'L' in freenames[i]:
+            fp = model.compute_fp()
+            log.writelog(f'{freenames[i]}: {fit_params[i]}; fp = {fp}')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
     log.writelog('')

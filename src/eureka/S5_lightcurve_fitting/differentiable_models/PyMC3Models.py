@@ -172,7 +172,7 @@ class PyMC3Model:
         for val, key in zip(newparams, self.freenames):
             setattr(self.fit, key, val)
     
-    def setup(self):
+    def setup(self, **kwargs):
         """A placeholder function to do any additional setup.
         """
         return
@@ -355,7 +355,7 @@ class CompositePyMC3Model(PyMC3Model):
             for component in self.components:
                 # Do any one-time setup needed after model initialization and
                 # before evaluating the model
-                component.setup()
+                component.setup(full_model=self)
 
             # This is how we tell pymc3 about our observations;
             # we are assuming they are normally distributed about
@@ -447,6 +447,12 @@ class CompositePyMC3Model(PyMC3Model):
                 flux *= component.eval(eval=eval, channel=channel, **kwargs)
 
         return flux, self.time
+    
+    def compute_fp(self):
+        # Evaluate flux at each model
+        for component in self.components:
+            if component.name == 'starry':
+                return component.compute_fp()
 
     def update(self, newparams, **kwargs):
         """Update parameters in the model components.
