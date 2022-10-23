@@ -56,13 +56,13 @@ class PyMC3Model:
         for arg, val in kwargs.items():
             if arg != 'log':
                 setattr(self, arg, val)
-        
+
         # Initialize fit with all parameters (including fixed and independent)
         # which won't get changed throughout the fit
         self.fit = fit_class()
         for key in self.parameters.dict.keys():
             setattr(self.fit, key, getattr(self.parameters, key).value)
-    
+
     def __mul__(self, other):
         """Multiply model components to make a combined model.
 
@@ -171,12 +171,12 @@ class PyMC3Model:
         """
         for val, key in zip(newparams, self.freenames):
             setattr(self.fit, key, val)
-    
+
     def setup(self, **kwargs):
         """A placeholder function to do any additional setup.
         """
         return
-    
+
     def plot(self, time, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model
@@ -213,7 +213,7 @@ class PyMC3Model:
         else:
             channel = chan
         model = self.eval(channel=channel, **kwargs)
-        
+
         ax.plot(self.time, model, '.', ls='', ms=2, label=label,
                 color=color, zorder=zorder)
 
@@ -447,12 +447,12 @@ class CompositePyMC3Model(PyMC3Model):
                 flux *= component.eval(eval=eval, channel=channel, **kwargs)
 
         return flux, self.time
-    
-    def compute_fp(self):
+
+    def compute_fp(self, theta=0):
         # Evaluate flux at each model
         for component in self.components:
             if component.name == 'starry':
-                return component.compute_fp()
+                return component.compute_fp(theta=theta)
 
     def update(self, newparams, **kwargs):
         """Update parameters in the model components.

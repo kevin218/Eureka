@@ -4,7 +4,6 @@ import astropy.constants as const
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
 import theano.tensor as tt
-import pymc3_ext as pmx
 
 # Avoid tonnes of "Cannot construct a scalar test value" messages
 import logging
@@ -53,7 +52,7 @@ class StarryModel(PyMC3Model):
 
     def setup(self, full_model):
         self.full_model = full_model
-        
+
         self.systems = []
         for c in range(self.nchan):
             # To save ourselves from tonnes of getattr lines, let's make a
@@ -70,7 +69,7 @@ class StarryModel(PyMC3Model):
                     setattr(temp, key, getattr(self.model, key+'_'+str(c)))
                 else:
                     setattr(temp, key, getattr(self.model, key))
-            
+
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
                                   m=temp.Ms, r=temp.Rs)
@@ -92,10 +91,7 @@ class StarryModel(PyMC3Model):
                                f'       limb_dark must be one of uniform, '
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
-            
-            if not hasattr(temp, 'L'):
-                temp.L = 0
-            
+
             # Solve Keplerian orbital period equation for Mp
             # (otherwise starry is going to mess with P or a...)
             a = temp.a*temp.Rs*const.R_sun.value
@@ -103,11 +99,12 @@ class StarryModel(PyMC3Model):
             Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
                   - temp.Ms)
 
-            planet_map = starry.Map(ydeg=self.ydeg, amp=temp.L)
+            if not hasattr(temp, 'fp'):
+                temp.fp = 0
 
             # Initialize planet object
             planet = starry.Secondary(
-                planet_map,
+                starry.Map(ydeg=self.ydeg, amp=temp.fp),
                 # Convert mass to M_sun units
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
@@ -141,8 +138,8 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            sys = starry.System(star, planet)
-            self.systems.append(sys)
+            system = starry.System(star, planet)
+            self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
         if channel is None:
@@ -167,14 +164,13 @@ class StarryModel(PyMC3Model):
         phys_flux = lib.concatenate([phys_flux, lcpiece])
 
         return phys_flux
-    
-    def compute_fp(self):
+
+    def compute_fp(self, theta=0):
         with self.full_model.model:
             fps = []
             for c in range(self.nchan):
-                fp = self.systems[c].secondaries[0].map.flux(theta=0)[0]
-                return pmx.eval_in_model(fp)
-            return fps
+                fps.append(self.fit.systems[c].secondaries[0].map.flux(theta=theta).eval())
+            return np.array(fps)
 
     def update(self, newparams):
         super().update(newparams)
@@ -218,8 +214,8 @@ class StarryModel(PyMC3Model):
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
             
-            if not hasattr(temp, 'L'):
-                temp.L = 0
+            if not hasattr(temp, 'fp'):
+                temp.fp = 0
             
             # Solve Keplerian orbital period equation for Mp
             # (otherwise starry is going to mess with P or a...)
@@ -230,7 +226,7 @@ class StarryModel(PyMC3Model):
 
             # Initialize planet object
             planet = starry.Secondary(
-                starry.Map(ydeg=self.ydeg, amp=temp.L),
+                starry.Map(ydeg=self.ydeg, amp=temp.fp),
                 # Convert mass to M_sun units
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
@@ -266,8 +262,6 @@ class StarryModel(PyMC3Model):
             # Instantiate the system
             sys = starry.System(star, planet)
             self.fit.systems.append(sys)
-
-        return
 
     @property
     def time(self):

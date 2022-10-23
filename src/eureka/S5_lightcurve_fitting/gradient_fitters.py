@@ -60,6 +60,15 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     fit_params = np.array([map_soln[name] for name in freenames])
     model.update(fit_params)
 
+    # Convert L values to fp
+    log.writelog('Converting planet.L to Fp/Fs...', mute=(not meta.verbose))
+    fps = model.compute_fp()
+    for c in range(model.nchan):
+        if c == 0:
+            fit_params[freenames == 'fp'] = fps[c]
+        else:
+            fit_params[freenames == f'fp_{c}'] = fps[c]
+
     if "scatter_ppm" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
@@ -97,9 +106,6 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                            np.ma.median(lc.unc[chan*lc.time.size:
                                                (chan+1)*lc.time.size]) * 1e6)
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
-        elif 'L' in freenames[i]:
-            fp = model.compute_fp()
-            log.writelog(f'{freenames[i]}: {fit_params[i]}; fp = {fp}')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
     log.writelog('')
@@ -182,6 +188,18 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         print()
 
     samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
+
+    # Convert L values to fp
+    log.writelog('Converting planet.L to Fp/Fs...', mute=(not meta.verbose))
+    for i in range(int(meta.tune*meta.chains)):
+        sample = samples[i]
+        model.update(sample)
+        fps = model.compute_fp()
+        for c in range(model.nchan):
+            if c == 0:
+                sample[freenames == 'fp'] = fps[c]
+            else:
+                sample[freenames == f'fp_{c}'] = fps[c]
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
