@@ -608,21 +608,27 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
     if ampsin.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        meta.y_param = f'Y{suffix}1'
+        ampsin = -load_s5_saves(meta, log, fit_methods)
+        if ampsin.shape[-1] == 0:
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
     
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
     if ampcos.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        meta.y_param = f'Y{suffix}0'
+        ampcos = load_s5_saves(meta, log, fit_methods)
+        if ampcos.shape[-1] == 0:
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
     
     # Reset meta.y_param
     meta.y_param = y_param
@@ -675,21 +681,27 @@ def compute_amp(meta, log, fit_methods, nsamp=1e4):
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
     if ampsin.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        meta.y_param = f'Y{suffix}1'
+        ampsin = -load_s5_saves(meta, log, fit_methods)
+        if ampsin.shape[-1] == 0:
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
 
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
     if ampcos.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        meta.y_param = f'Y{suffix}0'
+        ampcos = load_s5_saves(meta, log, fit_methods)
+        if ampcos.shape[-1] == 0:
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
     
     # Reset meta.y_param
     meta.y_param = y_param
