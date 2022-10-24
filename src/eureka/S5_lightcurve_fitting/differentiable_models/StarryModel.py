@@ -43,9 +43,10 @@ class StarryModel(PyMC3Model):
             self.udeg = 1
         else:
             self.udeg = 0
-        if 'AmpCos2' in self.paramtitles or 'AmpSin2' in self.paramtitles:
+        if np.any(np.array(['Y2' == par[:2] for par in self.paramtitles])):
             self.ydeg = 2
-        elif 'AmpCos1' in self.paramtitles or 'AmpSin1' in self.paramtitles:
+        elif np.any(np.array(['Y1' == par[:2] in par
+                              for par in self.paramtitles])):
             self.ydeg = 1
         else:
             self.ydeg = 0
@@ -104,19 +105,11 @@ class StarryModel(PyMC3Model):
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
                 planet_map2 = starry.Map(ydeg=self.ydeg)
-                if hasattr(temp, 'AmpCos1'):
-                    planet_map[1, 0] = temp.AmpCos1
-                    planet_map2[1, 0] = temp.AmpCos1
-                if hasattr(temp, 'AmpSin1'):
-                    planet_map[1, 1] = temp.AmpSin1
-                    planet_map2[1, 1] = temp.AmpSin1
-                if self.ydeg == 2:
-                    if hasattr(temp, 'AmpCos2'):
-                        planet_map[2, 0] = temp.AmpCos2
-                        planet_map2[2, 0] = temp.AmpCos2
-                    if hasattr(temp, 'AmpSin2'):
-                        planet_map[2, 1] = temp.AmpSin2
-                        planet_map2[2, 1] = temp.AmpSin2
+                for ell in range(1, self.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        if hasattr(temp, f'Y{ell}{m}'):
+                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
+                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
                 amp = temp.fp/planet_map2.flux(theta=0)[0]
                 planet_map.amp = amp
 
@@ -142,7 +135,7 @@ class StarryModel(PyMC3Model):
             planet.porb = temp.per
             # Setting prot here may not override a
             planet.prot = temp.per
-            # Offset is controlled by AmpSin1
+            # Offset is controlled by Y11
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
@@ -236,19 +229,11 @@ class StarryModel(PyMC3Model):
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
                 planet_map2 = starry.Map(ydeg=self.ydeg)
-                if hasattr(temp, 'AmpCos1'):
-                    planet_map[1, 0] = temp.AmpCos1
-                    planet_map2[1, 0] = temp.AmpCos1
-                if hasattr(temp, 'AmpSin1'):
-                    planet_map[1, 1] = temp.AmpSin1
-                    planet_map2[1, 1] = temp.AmpSin1
-                if self.ydeg == 2:
-                    if hasattr(temp, 'AmpCos2'):
-                        planet_map[2, 0] = temp.AmpCos2
-                        planet_map2[2, 0] = temp.AmpCos2
-                    if hasattr(temp, 'AmpSin2'):
-                        planet_map[2, 1] = temp.AmpSin2
-                        planet_map2[2, 1] = temp.AmpSin2
+                for ell in range(1, self.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        if hasattr(temp, f'Y{ell}{m}'):
+                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
+                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
                 amp = temp.fp/planet_map2.flux(theta=0)[0]
                 planet_map.amp = amp
 
@@ -274,7 +259,7 @@ class StarryModel(PyMC3Model):
             planet.porb = temp.per
             # Setting prot here may not override a
             planet.prot = temp.per
-            # Offset is controlled by AmpSin1
+            # Offset is controlled by Y11
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
