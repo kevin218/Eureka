@@ -164,7 +164,13 @@ class SinusoidPhaseCurveModel(Model):
 
             lcfinal = np.append(lcfinal, phaseVars)
 
-        transit = self.transit_model.eval()
-        eclipse = self.eclipse_model.eval()
+        if self.transit_model is None:
+            transit = 1
+        else:
+            transit = self.transit_model.eval()
+        if self.eclipse_model is None:
+            eclipse = 1
+        else:
+            eclipse = self.eclipse_model.eval()
 
         return transit + lcfinal*(eclipse-1)
