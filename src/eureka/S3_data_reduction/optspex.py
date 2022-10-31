@@ -534,6 +534,10 @@ def clean_median_flux(data, meta, log, m):
         residuals = medflux - smoothflux
 
         # Flag outliers
+        if not hasattr(meta, 'median_thresh'):
+            log.writelog('  Using a default value of median_thresh=5',
+                         mute=(not meta.verbose))
+            meta.median_thresh = 5
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
                               axis=1, cenfunc='median')
 
