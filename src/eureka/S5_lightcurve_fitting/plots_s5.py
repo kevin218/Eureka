@@ -157,7 +157,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
             nbin_plot = 100
-        elif meta.nbin_plot < len(lc.time):
+        elif meta.nbin_plot > len(lc.time):
             nbin_plot = len(lc.time)
         else:
             nbin_plot = meta.nbin_plot
