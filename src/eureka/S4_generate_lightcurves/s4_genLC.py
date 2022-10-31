@@ -179,14 +179,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
                 # User wants unbinned spectra
                 dwav = np.ediff1d(wave_1d)/2
-                # Approximate the first dwav as the same as the second
-                dwav = np.append(dwav[0], dwav)
+                # Approximate the first neg_dwav as the same as the second
+                neg_dwav = np.append(dwav[0], dwav)
+                # Approximate the last pos_dwav as the same as the second last
+                pos_dwav = np.append(dwav, dwav[-1])
                 indices = np.logical_and(wave_1d >= meta.wave_min,
                                          wave_1d <= meta.wave_max)
-                dwav = dwav[indices]/2
+                neg_dwav = neg_dwav[indices]
+                pos_dwav = pos_dwav[indices]
                 meta.wave = wave_1d[indices]
-                meta.wave_low = meta.wave-dwav
-                meta.wave_hi = meta.wave+dwav
+                meta.wave_low = meta.wave-neg_dwav
+                meta.wave_hi = meta.wave+pos_dwav
                 meta.nspecchan = len(meta.wave)
             elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
