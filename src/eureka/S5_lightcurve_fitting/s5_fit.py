@@ -436,7 +436,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
-                                      paramtitles=paramtitles,
+                                      paramtitles=paramtitles, meta=meta,
                                       transit_model=t_model,
                                       eclipse_model=e_model)
         modellist.append(t_phase)

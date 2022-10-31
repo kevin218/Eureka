@@ -162,6 +162,14 @@ class SinusoidPhaseCurveModel(Model):
                              pc_params['AmpCos2']*(np.cos(2.*phi)-1.) +
                              pc_params['AmpSin2']*np.sin(2.*phi))
 
+            # If requested, force positive phase variations
+            if (hasattr(self.meta, 'force_positivity') and
+                    self.meta.force_positivity and
+                    np.any(phaseVars < 0)):
+                # Returning nans or infs breaks the fits, so this was
+                # the best I could think of
+                phaseVars = 1e12*np.ones_like(self.time)
+
             lcfinal = np.append(lcfinal, phaseVars)
 
         if self.transit_model is None:
