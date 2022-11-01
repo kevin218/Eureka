@@ -51,7 +51,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         Enabled Astraeus
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
-    
+
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S5_' + eventlabel + '.ecf'
@@ -159,6 +159,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             else:
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
+            # Record units for Stage 6
+            meta.time_units = time_units
+            meta.wave_units = lc.data.attrs['wave_units']
 
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
@@ -231,7 +234,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 try:
                     ld_coeffs = np.loadtxt(ld_fix_file)
                 except FileNotFoundError:
-                    raise Exception("The limb-darkening file " + ld_fix_file + 
+                    raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
             else:
                 ld_coeffs = None

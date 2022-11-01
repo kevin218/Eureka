@@ -1,6 +1,4 @@
-import sys
 import os
-sys.path.append(f'..{os.sep}..{os.sep}')
 import eureka.lib.plots
 import eureka.S3_data_reduction.s3_reduce as s3
 import eureka.S4_generate_lightcurves.s4_genLC as s4

@@ -57,8 +57,8 @@ testing_model   False   # Boolean, set True to only inject a model source of sys
 hide_plots      False   # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          /home/User
+topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir        /Data/JWST-Sim/NIRSpec/Stage4/   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-outputdir       /Data/JWST-Sim/NIRSpec/Stage5/
+inputdir        Stage4   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
+outputdir       Stage5

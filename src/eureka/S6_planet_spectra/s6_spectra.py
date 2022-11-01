@@ -287,7 +287,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     meta.y_label_unit = ' '+meta.y_label_unit
 
                 if (rcParams['text.usetex'] and
-                        (meta.y_label_unit.count(r'\%') != 
+                        (meta.y_label_unit.count(r'\%') !=
                          meta.y_label_unit.count('%'))):
                     # Need to escape % with \ for LaTeX
                     meta.y_label_unit = meta.y_label_unit.replace('%', r'\%')
@@ -321,6 +321,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         scale_height, meta.planet_R0)
 
                 save_table(meta, log)
+                convert_s5_LC(meta, log)
 
             # Save results
             log.writelog('Saving results')
@@ -469,7 +470,7 @@ def parse_unshared_saves(meta, log, fit_methods):
             return meta
         spectrum_median.extend(median)
         spectrum_err.extend(err.T)
-    
+
     meta.spectrum_median = np.array(spectrum_median)
     meta.spectrum_err = np.array(spectrum_err).T
 
@@ -527,6 +528,79 @@ def compute_timescale(meta):
     return meta
 
 
+def convert_s5_LC(meta, log):
+    '''
+    Loads spectroscopic light curves save files from S5 and write as
+    single Xarray save file.
+    '''
+    event_ap_bg = (meta.eventlabel+"_ap"+str(meta.spec_hw_val)+'_bg' +
+                   str(meta.bg_hw_val))
+
+    if meta.sharedp:
+        niter = 1
+    else:
+        niter = meta.nspecchan
+    wavelengths = np.zeros(niter)
+    bin_widths = np.zeros(niter)
+    for ch in range(niter):
+        # Get the channel key
+        if meta.sharedp:
+            channel_key = 'shared'
+        else:
+            nzfill = int(np.floor(np.log10(meta.nspecchan))+1)
+            channel_key = 'ch'+str(ch).zfill(nzfill)
+
+        # Load text file
+        fname = f'S5_{event_ap_bg}_Table_Save_{channel_key}.txt'
+        full_fname = meta.inputdir+fname
+        lc_table = astropytable.readtable(full_fname)
+
+        # Assign known values to array
+        wavelengths[ch] = lc_table['wavelength'][0]
+        bin_widths[ch] = lc_table['bin_width'][0]
+        lc_table.remove_column('wavelength')
+        lc_table.remove_column('bin_width')
+        if ch == 0:
+            # Record time array
+            time = lc_table['time']
+            lc_table.remove_column('time')
+            # Get remaining column names and number
+            colnames = lc_table.colnames
+            n_col = len(colnames)
+            n_int = len(time)
+            # Create numpy array to hold data
+            lc_array = np.zeros((n_col, niter, n_int))
+        else:
+            lc_table.remove_column('time')
+        # Assign remaining values to array
+        for i, col in enumerate(lc_table.itercols()):
+            lc_array[i, ch] = col.value
+
+    # Create Xarray DataArrays and dictionary
+    flux_units = 'Normalized'
+    if hasattr(meta, 'wave_units'):
+        wave_units = meta.wave_units
+    else:
+        wave_units = 'microns'
+    if hasattr(meta, 'time_units'):
+        time_units = meta.time_units
+    else:
+        time_units = 'BMJD'
+    lc_da = []
+    dict = {}
+    for i in range(n_col):
+        lc_da.append(xrio.makeLCDA(lc_array[i], wavelengths, time, flux_units,
+                                   wave_units, time_units, name=colnames[i]))
+        dict[colnames[i]] = lc_da[-1]
+
+    # Create Xarray Dataset
+    ds = xrio.makeDataset(dict)
+    # Write to file
+    meta.lc_filename_s6 = (meta.outputdir+'S6_'+event_ap_bg + "_LC")
+    xrio.writeXR(meta.lc_filename_s6, ds)
+    return meta
+
+
 def load_s5_saves(meta, log, fit_methods):
     if 'dynesty' in fit_methods:
         fitter = 'dynesty'
@@ -559,7 +633,7 @@ def load_s5_saves(meta, log, fit_methods):
                 channel_key = 'ch'+str(ch).zfill(nzfill)
 
             fname = f'S5_{fitter}_samples_{channel_key}'
-        
+
             # Load HDF5 files
             full_fname = meta.inputdir+fname+'.h5'
             ds = xrio.readXR(full_fname, verbose=False)
@@ -569,7 +643,7 @@ def load_s5_saves(meta, log, fit_methods):
                     sample = hf['samples'][:]
                 # Need to figure out which columns are which
                 fname = f'S5_{fitter}_fitparams_{channel_key}.csv'
-                fitted_values = pd.read_csv(meta.inputdir+fname, 
+                fitted_values = pd.read_csv(meta.inputdir+fname,
                                             escapechar='#',
                                             skipinitialspace=True)
                 full_keys = np.array(fitted_values["Parameter"])
@@ -590,7 +664,7 @@ def load_s5_saves(meta, log, fit_methods):
         samples = np.array(meta.spectrum_median)
         if all(x is None for x in samples):
             samples = np.zeros((meta.nspecchan, 0))
-    
+
     return np.array(samples)
 
 
@@ -603,7 +677,7 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
         suffix = '2'
     else:
         suffix = '1'
-    
+
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
@@ -645,14 +719,14 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
         offset[2] = offset[0]-offset[2]
         meta.spectrum_median.append(offset[0])
         meta.spectrum_err.append(offset[1:])
-    
+
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
     if meta.fitter == 'lsq':
         meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
     else:
         meta.spectrum_err = np.array(meta.spectrum_err).T
-    
+
     return meta
 
 
@@ -708,7 +782,7 @@ def compute_amp(meta, log, fit_methods, nsamp=1e4):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
-    
+
     for i in range(meta.nspecchan):
         amps = fp[i]*np.sqrt(ampcos[i]**2+ampsin[i]**2)*2
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
@@ -716,14 +790,14 @@ def compute_amp(meta, log, fit_methods, nsamp=1e4):
         amp[2] = amp[0]-amp[2]
         meta.spectrum_median.append(amp[0])
         meta.spectrum_err.append(amp[1:])
-    
+
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
     if meta.fitter == 'lsq':
         meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
     else:
         meta.spectrum_err = np.array(meta.spectrum_err).T
-    
+
     return meta
 
 
@@ -740,7 +814,7 @@ def compute_fn(meta, log, fit_methods, nsamp=1e4):
                      'fitted parameters')
         log.writelog(f'  Skipping {y_param}')
         return meta
-    
+
     # Load cosine amplitude
     meta.y_param = 'AmpCos1'
     ampcos = load_s5_saves(meta, log, fit_methods)
@@ -750,7 +824,7 @@ def compute_fn(meta, log, fit_methods, nsamp=1e4):
                      'fitted parameters')
         log.writelog(f'  Skipping {y_param}')
         return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -764,14 +838,14 @@ def compute_fn(meta, log, fit_methods, nsamp=1e4):
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
         meta.spectrum_err.append(flux[1:])
-    
+
     # Convert the lists to an array
     meta.spectrum_median = np.array(meta.spectrum_median)
     if meta.fitter == 'lsq':
         meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
     else:
         meta.spectrum_err = np.array(meta.spectrum_err).T
-    
+
     return meta
 
 
@@ -942,7 +1016,7 @@ def save_table(meta, log):
                               meta.spectrum_err)
 
     transit_latex_table(meta, log)
-    
+
     return
 
 
@@ -974,6 +1048,9 @@ def roundToSigFigs(x, sigFigs=2):
     """
     if not np.isfinite(x) or not np.isfinite(np.log10(np.abs(x))):
         return np.nan, ""
+    elif not np.isfinite(sigFigs):
+        return 10, str(np.round(x, 10))
+
     nDec = -int(np.floor(np.log10(np.abs(x))))+sigFigs-1
     rounded = np.round(x, nDec)
     if nDec <= 0:
@@ -1082,7 +1159,7 @@ def transit_latex_table(meta, log):
             # Trim off the leading space
             y_unit = meta.y_label_unit[1:]
             # Need to make sure to escape % with \ for LaTeX
-            if (meta.y_label_unit.count(r'\%') != 
+            if (meta.y_label_unit.count(r'\%') !=
                     meta.y_label_unit.count('%')):
                 y_unit = y_unit.replace('%', r'\%')
         out += "\\colhead{("+xunit+")} & \\colhead{"+y_unit+"} &"
@@ -1108,12 +1185,16 @@ def transit_latex_table(meta, log):
             val = line[meta.y_param+'_value']*meta.y_scalar
             upper = line[meta.y_param+'_errorpos']
             lower = line[meta.y_param+'_errorneg']
-            if np.isnan(upper) and np.isnan(lower):
+            if not (np.isfinite(upper) or np.isfinite(lower)):
                 nDec = 10
             else:
                 nDec1, _ = roundToSigFigs(upper*meta.y_scalar)
                 nDec2, _ = roundToSigFigs(lower*meta.y_scalar)
-                nDec = int(np.nanmax([nDec1, nDec2]))
+                nDec = np.nanmax([nDec1, nDec2])
+                if not np.isfinite(nDec):
+                    nDec = 10
+                else:
+                    nDec = int(nDec)
             val = roundToDec(val, nDec)
             upper = roundToDec(upper, nDec)
             lower = roundToDec(lower, nDec)
@@ -1127,7 +1208,7 @@ def transit_latex_table(meta, log):
     # End the table
     out += "\\enddata\n"
     out += "\\end{deluxetable}"
-    
+
     # Save the table as a txt file
     meta.tab_filename_s6_latex = meta.tab_filename_s6[:-4]+'_LaTeX.txt'
     with open(meta.tab_filename_s6_latex, 'w') as file:
