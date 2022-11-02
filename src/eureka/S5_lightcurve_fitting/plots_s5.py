@@ -12,7 +12,7 @@ import gc
 from dynesty import plotting as dyplot
 
 
-def plot_fit(lc, model, meta, fitter, isTitle=True):
+def plot_fit(log, lc, model, meta, fitter, isTitle=True): #zieba
     """Plot the fitted model over the data. (Figs 5101)
 
     Parameters
@@ -88,6 +88,10 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
         ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
+        rms_res = np.sqrt(np.mean(residuals**2))*1e6 #zieba
+        print(rms_res) #zieba
+        # Log results #zieba
+        log.writelog(f'rms of residuals: {rms_res}', mute=(not meta.verbose)) #zieba
         ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)

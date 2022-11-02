@@ -808,7 +808,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                                 queue_size=queue_size, bound=bound, sample=sample,
                                 logl_args=l_args,
                                 ptform_args=[prior1, prior2, priortype])
-        dsampler.run_nested(dlogz_init=0.1, nlive_init=40, nlive_batch=60, use_stop=True, maxbatch=10)
+        dsampler.run_nested(dlogz_init=0.1, nlive_init=50, nlive_batch=60, use_stop=True, maxbatch=15) #zieba
         sampler = dsampler
     else:
         sampler = NestedSampler(ln_like, ptform, ndims, pool=pool,
@@ -908,7 +908,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Plot fit
     if meta.isplots_S5 >= 1:
-        plots.plot_fit(lc, model, meta, fitter='dynesty')
+        plots.plot_fit(log, lc, model, meta, fitter='dynesty') #zieba
         plots.plot_fit2(lc, model, meta, fitter='dynesty')
         #plots.dyplot_runplot(res, meta)
         plots.dyplot_traceplot(res, freenames, meta)

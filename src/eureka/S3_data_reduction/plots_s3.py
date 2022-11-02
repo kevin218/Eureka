@@ -56,22 +56,25 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     ax1 = fig1.gca()
     ax2 = fig2.gca()
     if meta.time_axis == 'y':
-        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int),
+        print(wave_1d.shape) #zieba
+        print(np.arange(meta.n_int).shape) #zieba
+        print(normspec.shape) #zieba
+        im1 = ax1.pcolormesh(wave_1d, np.arange(normspec.shape[0]), #zieba
                              normspec, vmin=meta.vmin, vmax=meta.vmax,
                              cmap=cmap)
         im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
-                         extent=[pmin, pmax, 0, meta.n_int], vmin=meta.vmin,
+                         extent=[pmin, pmax, 0, normspec.shape[0]], vmin=meta.vmin, #zieba
                          vmax=meta.vmax, cmap=cmap)
         ax1.set_xlim(wmin, wmax)
         ax2.set_xlim(pmin, pmax)
-        ax1.set_ylim(0, meta.n_int)
-        ax2.set_ylim(0, meta.n_int)
+        ax1.set_ylim(0, normspec.shape[0]) #zieba
+        ax2.set_ylim(0, normspec.shape[0]) #zieba
         ax1.set_ylabel('Integration Number')
         ax2.set_ylabel('Integration Number')
         ax1.set_xlabel(r'Wavelength ($\mu m$)')
         ax2.set_xlabel('Detector Pixel Position')
     else:
-        im1 = ax1.pcolormesh(np.arange(meta.n_int), wave_1d,
+        im1 = ax1.pcolormesh(np.arange(normspec.shape[0]), wave_1d, #zieba
                              normspec.swapaxes(0, 1), vmin=meta.vmin,
                              vmax=meta.vmax, cmap=cmap)
         im2 = ax2.imshow(normspec.swapaxes(0, 1), origin='lower',
@@ -236,6 +239,7 @@ def optimal_spectrum(data, meta, n, m):
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
+    plt.close() #zieba
 
 
 def source_position(meta, x_dim, pos_max, m, n,

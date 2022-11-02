@@ -160,6 +160,7 @@ def check_nans(data, mask, log, name=''):
     """
     data = np.ma.masked_where(mask == 0, np.copy(data))
     num_nans = np.sum(np.ma.masked_invalid(data).mask)
+    print(np.transpose(np.where(np.ma.masked_invalid(data).mask == 1))) #zieba
     num_pixels = np.size(data)
     perc_nans = 100*num_nans/num_pixels
     if num_nans > 0:
