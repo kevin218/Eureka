@@ -50,7 +50,7 @@ class GPModel(Model):
         self.kernel_input_arrays = []
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
-        self.unc_fit = lc.unc
+        self.unc_fit = lc.unc_fit
         self.time = lc.time
 
         # Check for Parameters instance

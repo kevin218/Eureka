@@ -23,7 +23,7 @@ p3thresh        5           # X-sigma threshold for outlier rejection during bac
 spec_hw         8           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
 median_thresh   5           # X-sigma threshold when flagging outliers in median frame
-window_len      31          # Smoothing window length, for median frame or when fittype = smooth
+window_len      13          # Smoothing window length, for median frame or when fittype = smooth
 prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
@@ -40,8 +40,8 @@ save_output     True        # Save outputs for use in S4
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User/
+topdir          /home/User/Data/JWST-Sim/NIRCam/
 
 # Directories relative to topdir
-inputdir        /Data/JWST-Sim/NIRCam/Stage2/   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
-outputdir       /Data/JWST-Sim/NIRCam/Stage3/
+inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+outputdir       Stage3

@@ -39,7 +39,7 @@ from ..lib import util
 from ..lib import centerdriver, apphot
 
 
-def reduce(eventlabel, ecf_path=None, s2_meta=None):
+def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters
@@ -52,6 +52,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     s2_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S2 step (if running S2 and S3
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -73,9 +76,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         Added photometry S3
     '''
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S3_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S3_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta    
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -103,8 +110,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                    meta.spec_hw[2])
     elif hasattr(meta, 'spec_hw'):
         meta.spec_hw_range = [meta.spec_hw]
-    elif hasattr(meta, 'photometry') and meta.photometry:
-        # Photometry currently does not support lists of apertures
+    elif hasattr(meta, 'photap') and isinstance(meta.photap, list):
+        meta.spec_hw_range = range(meta.photap[0],
+                                   meta.photap[1]+meta.photap[2],
+                                   meta.photap[2])
+    elif hasattr(meta, 'photap'):
         meta.spec_hw_range = [meta.photap]
 
     # check for range of background apertures
@@ -114,10 +124,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                  meta.bg_hw[2])
     elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
-    elif hasattr(meta, 'photometry') and meta.photometry:
+    elif hasattr(meta, 'skyin') and hasattr(meta, 'skyout'):
         # E.g., if skyin = 90 and skyout = 150, then the
         # directory will use "bg90_150"
-        meta.bg_hw_range = [str(meta.skyin) + '_' + str(meta.skyout)]
+        if not isinstance(meta.skyin, list):
+            meta.skyin = [meta.skyin]
+        if not isinstance(meta.skyout, list):
+            meta.skyout = [meta.skyout]
+        meta.bg_hw_range = [f'{s_in}_{s_out}' for s_in in meta.skyin
+                            for s_out in meta.skyout]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -302,6 +317,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                                        data.wave_2d[meta.src_ypos].values)
                     data['wave_1d'].attrs['wave_units'] = \
                         data.wave_2d.attrs['wave_units']
+                
+                # Check for bad wavelength pixels (beyond wavelength solution)
+                util.check_nans(data.wave_1d.values, np.ones(meta.subnx), log,
+                                name='wavelength')
 
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
@@ -312,26 +331,22 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                     data = optspex.clean_median_flux(data, meta, log, m)
 
                     # correct spectral curvature
-                    if hasattr(meta, 'curvature') and \
-                            meta.curvature == 'correct':
-                        data, meta = \
-                            straighten.straighten_trace(data, meta, log, m)
+                    if (hasattr(meta, 'curvature')
+                            and meta.curvature == 'correct'):
+                        data, meta = straighten.straighten_trace(data, meta,
+                                                                 log, m)
 
                     # Perform outlier rejection of
                     # sky background along time axis
                     data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction
-                    data = bg.BGsubtraction(data, meta, log, meta.isplots_S3)
-
-                    # Make image+background plots
-                    if meta.isplots_S3 >= 3:
-                        plots_s3.image_and_background(data, meta, log, m)
+                    data = bg.BGsubtraction(data, meta, log, m)
 
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):
-                        data, meta, log = \
-                            inst.correct_drift2D(data, meta, log, m)
+                        data, meta, log = inst.correct_drift2D(data, meta, log,
+                                                               m)
                     elif meta.record_ypos:
                         # Record y position and width for all integrations
                         data, meta, log = \
@@ -369,6 +384,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             plots_s3.residualBackground(data, meta, m)
 
                 else:  # Do Photometry reduction
+                    meta.photap = meta.spec_hw
+                    meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
+                                                       ).astype(int)
+
                     # Do outlier reduction along time axis for
                     # each individual pixel
                     if meta.flag_bg:
@@ -379,8 +398,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                     for i in tqdm(range(len(data.time)),
                                   desc='Looping over Integrations'):
-                        if (meta.isplots_S3 >= 3) and \
-                                (meta.oneoverf_corr is not None):
+                        if (meta.isplots_S3 >= 3
+                                and meta.oneoverf_corr is not None):
                             # save current flux into an array for
                             # plotting 1/f correction comparison
                             flux_w_oneoverf = np.copy(data.flux.values[i])
@@ -389,8 +408,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         # We do this twice. First a coarse estimation,
                         # then a more precise one.
                         # Use the center of the frame as an initial guess
-                        centroid_guess = \
-                            [data.flux.shape[1]//2, data.flux.shape[2]//2]
+                        centroid_guess = [data.flux.shape[1]//2,
+                                          data.flux.shape[2]//2]
                         # Do a 2D gaussian fit to the whole frame
                         position, extra = \
                             centerdriver.centerdriver('fgc',
@@ -407,7 +426,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data = \
                                 inst.do_oneoverf_corr(data, meta, i,
                                                       position[1], log)
-                            if meta.isplots_S3 >= 3:
+                            if meta.isplots_S3 >= 3 and i < meta.nplots:
                                 plots_s3.phot_2d_frame_oneoverf(
                                     data, meta, m, i, flux_w_oneoverf)
 
@@ -430,7 +449,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
                         # Plot 2D frame, the centroid and the centroid position
-                        if meta.isplots_S3 >= 3:
+                        if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
 
                         # Interpolate masked pixels before we perform
@@ -440,27 +459,30 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
                         # Calculate flux in aperture and subtract
                         # background flux
-                        aphot = \
-                            apphot.apphot(meta, image=data.flux[i].values,
-                                          ctr=position, photap=meta.photap,
-                                          skyin=meta.skyin, skyout=meta.skyout,
-                                          betahw=1, targpos=position,
-                                          mask=data.mask[i].values,
-                                          imerr=data.err[i].values,
-                                          skyfrac=0.1, med=True, expand=1,
-                                          isbeta=False, nochecks=False,
-                                          aperr=True, nappix=True, skylev=True,
-                                          skyerr=True, nskypix=True,
-                                          nskyideal=True, status=True,
-                                          betaper=True)
+                        aphot = apphot.apphot(
+                            meta, image=data.flux[i].values,
+                            ctr=position, photap=meta.photap,
+                            skyin=meta.skyin, skyout=meta.skyout,
+                            betahw=1, targpos=position,
+                            mask=data.mask[i].values,
+                            imerr=data.err[i].values,
+                            skyfrac=0.1, med=True, expand=1,
+                            isbeta=False, nochecks=False,
+                            aperr=True, nappix=True, skylev=True,
+                            skyerr=True, nskypix=True,
+                            nskyideal=True, status=True,
+                            betaper=True)
                         # Save results into arrays
-                        data['aplev'][i], data['aperr'][i], \
-                            data['nappix'][i], data['skylev'][i], \
-                            data['skyerr'][i], data['nskypix'][i], \
-                            data['nskyideal'][i], data['status'][i], \
-                            data['betaper'][i] = aphot
+                        (data['aplev'][i], data['aperr'][i],
+                            data['nappix'][i], data['skylev'][i],
+                            data['skyerr'][i], data['nskypix'][i],
+                            data['nskyideal'][i], data['status'][i],
+                            data['betaper'][i]) = aphot
 
-                if meta.save_output:
+                if not hasattr(meta, 'save_fluxdata'):
+                    meta.save_fluxdata = True
+
+                if meta.save_fluxdata:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
                                    "_FluxData_seg"+str(m).zfill(4)+".h5")
@@ -473,11 +495,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         success = xrio.writeXR(filename_xr, data,
                                                verbose=meta.verbose,
                                                append=False)
+                    else:
+                        print(f"Finished writing to {filename_xr}")
+                else:
+                    del (data.attrs['filename'])
+                    del (data.attrs['mhdr'])
+                    del (data.attrs['shdr'])
 
                 # Remove large 3D arrays from Dataset
                 del (data['err'], data['dq'], data['v0'],
-                     data['mask'],
-                     data.attrs['intstart'], data.attrs['intend'])
+                     data['mask'], data.attrs['intstart'],
+                     data.attrs['intend'])
                 if not meta.photometry:
                     del (data['flux'], data['bg'], data['wave_2d'])
                 elif meta.inst == 'wfc3':
@@ -488,6 +516,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
 
             # Concatenate results along time axis (default)
             spec = xrio.concat(datasets)
+
+            # Update n_int after merging batches
+            meta.n_int = len(spec.time)
 
             # Plot light curve and centroids over time
             if meta.photometry:
@@ -513,10 +544,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 spec, meta, log = inst.conclusion_step(spec, meta, log)
 
             # Save Dataset object containing time-series of 1D spectra
-            meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                         "_SpecData.h5")
-            success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                   verbose=True)
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
 
             # Compute MAD value
             if not meta.photometry:

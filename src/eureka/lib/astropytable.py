@@ -3,8 +3,8 @@ from astropy.io import ascii
 import numpy as np
 
 
-def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model,
-                 residuals):
+def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
+                 individual_models, model, residuals):
     """Save the results from Stage 5 as an ECSV file.
 
     Parameters
@@ -21,6 +21,8 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model,
         The normalized flux measurements for each data point.
     lcerr : ndarray (1D)
         The normalized uncertainties for each data point.
+    individual_models : ndarray (2D)
+        An array containing pairs of model names and evaluated models.
     model : ndarray (1D)
         The predicted values from the fitted model.
     residuals : ndarray (1D)
@@ -35,28 +37,33 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr, model,
 
     orig_shapes = [str(time.shape), str(wavelength.shape),
                    str(bin_width.shape), str(lcdata.shape), str(lcerr.shape),
-                   str(model.shape), str(residuals.shape)]
+                   str(individual_models.shape), str(model.shape),
+                   str(residuals.shape)]
 
     time = np.tile(time, dims[1])
     wavelength = np.repeat(wavelength, dims[0])
     bin_width = np.repeat(bin_width, dims[0])
     lcdata = lcdata.flatten()
     lcerr = lcerr.flatten()
-    model = model.flatten()
+    model_names = individual_models[:, 0]
+    model_values = individual_models[:, 1]
+    full_model = model.flatten()
     residuals = residuals.flatten()
 
-    arr = [time, wavelength, bin_width, lcdata, lcerr, model, residuals]
+    arr = [time, wavelength, bin_width, lcdata, lcerr, *model_values,
+           full_model, residuals]
 
     try:
         table = QTable(arr, names=('time', 'wavelength', 'bin_width',
-                                   'lcdata', 'lcerr', 'model', 'residuals'))
+                                   'lcdata', 'lcerr', *model_names, 'model',
+                                   'residuals'))
         ascii.write(table, filename, format='ecsv', overwrite=True,
                     fast_writer=True)
     except ValueError as e:
         raise ValueError("There was a shape mismatch between your arrays which"
                          " had shapes:\n"
-                         "time, wavelength, bin_width, lcdata, lcerr, model, "
-                         "residuals\n"
+                         "time, wavelength, bin_width, lcdata, lcerr, "
+                         "individual_models, model, residuals\n"
                          ",".join(orig_shapes)) from e
 
 

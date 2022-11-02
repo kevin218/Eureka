@@ -11,6 +11,9 @@ y_label_units   [None, None, None, None, None, None]  # The formatted string for
 y_scalars       [1e6, 1, 1, 1, 1, 1]  # Can be used to convert to percent (100), ppm (1e6), etc.
 x_unit          um  # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
 
+# Tabulating parameters
+ncol            4  # The number of columns you want in your LaTeX formatted tables
+
 # This section is relevant if isplots_S6>=3
 # Scale height parameters (if you want a second copy of the plot with a second y-axis with units of scale height)
 star_Rad        0.6506 # The radius of the star in units of solar radii
@@ -25,7 +28,7 @@ isplots_S6      5      # Generate few (1), some (3), or many (5) figures (Option
 hide_plots      False  # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          /home/User/
+topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Model to plot underneath the fitted data points
 model_spectrum  None   # Path to the model spectrum relative to topdir. Set to None if no model should be plotted.
@@ -36,5 +39,5 @@ model_zorder    0      # The zorder of the model on the plot (0 for beneath the 
 model_delimiter None   # Delimiter between columns. Typical options: None (for space), ',' for comma
 
 # Directories relative to topdir
-inputdir        /Data/JWST-Sim/NIRSpec/Stage5/   # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
-outputdir       /Data/JWST-Sim/NIRSpec/Stage6/
+inputdir        Stage5   # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
+outputdir       Stage6

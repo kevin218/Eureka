@@ -10,12 +10,13 @@ from photutils import MMMBackground, MedianBackground, Background2D
 import os
 
 from ..lib import clipping
-from ..lib.plots import figure_filetype
+from ..lib import plots
+from . import plots_s3
 
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
 
-def BGsubtraction(data, meta, log, isplots):
+def BGsubtraction(data, meta, log, m):
     """Does background subtraction using inst.fit_bg & background.fitbg
 
     Parameters
@@ -27,8 +28,8 @@ def BGsubtraction(data, meta, log, isplots):
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
-    isplots : int
-        The amount of plots saved; set in ecf.
+    m : int
+        The current file/batch number.
 
     Returns
     -------
@@ -44,6 +45,14 @@ def BGsubtraction(data, meta, log, isplots):
     - Apr 20, 2022 Kevin Stevenson
         Convert to using Xarray Dataset
     """
+    if meta.bg_deg is None:
+        # Need to skip doing background subtraction
+        log.writelog('  Skipping background subtraction...',
+                     mute=(not meta.verbose))
+        data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
+        data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
+        return data
+
     # Load instrument module
     if meta.inst == 'miri':
         from . import miri as inst
@@ -86,17 +95,17 @@ def BGsubtraction(data, meta, log, isplots):
         for n in iterfn:
             # Fit sky background with out-of-spectra data
             if meta.inst == 'niriss':
-                writeBG(inst.fit_bg(data, meta, n, isplots))
+                writeBG(inst.fit_bg(data, meta, n, meta.isplots_S3))
             elif meta.inst == 'wfc3':
                 writeBG_WFC3(inst.fit_bg(data.flux[n].values,
                                          data.mask[n].values,
                                          data.v0[n].values,
                                          data.variance[n].values,
                                          data.guess[n].values,
-                                         n, meta, isplots))
+                                         n, meta, meta.isplots_S3))
             else:
                 writeBG(inst.fit_bg(data.flux[n].values, data.mask[n].values,
-                                    n, meta, isplots))
+                                    n, meta, meta.isplots_S3))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
@@ -106,7 +115,7 @@ def BGsubtraction(data, meta, log, isplots):
         # (see nircam and below for example)
         if meta.inst == 'niriss':
             for n in range(meta.int_start, meta.n_int):
-                args_list.append((data, meta, n, isplots))
+                args_list.append((data, meta, n, meta.isplots_S3))
             jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,),
                                      callback=writeBG) for args in args_list]
         elif meta.inst == 'wfc3':
@@ -118,14 +127,14 @@ def BGsubtraction(data, meta, log, isplots):
                                            data.v0[n].values,
                                            data.variance[n].values,
                                            data.guess[n].values,
-                                           n, meta, isplots,),
+                                           n, meta, meta.isplots_S3,),
                                      callback=writeBG_WFC3)
                     for n in range(meta.int_start, meta.n_int)]
         else:
             jobs = [pool.apply_async(func=inst.fit_bg,
                                      args=(data.flux[n].values,
                                            data.mask[n].values,
-                                           n, meta, isplots,),
+                                           n, meta, meta.isplots_S3,),
                                      callback=writeBG)
                     for n in range(meta.int_start, meta.n_int)]
         pool.close()
@@ -140,6 +149,10 @@ def BGsubtraction(data, meta, log, isplots):
     data['flux'] -= data.bg
     if hasattr(data, 'medflux'):
         data['medflux'] -= np.median(data.bg, axis=0)
+
+    # Make image+background plots
+    if meta.isplots_S3 >= 3:
+        plots_s3.image_and_background(data, meta, log, m)
 
     return data
 
@@ -271,7 +284,8 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
-                    fname = 'figs'+os.sep+'Fig3601_BG_'+str(j)+figure_filetype
+                    fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
+                             plots.plots.figure_filetype)
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 
@@ -388,7 +402,8 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
                         plt.title(str(j))
                         plt.plot(goodxvals, dataslice, 'bo')
                         plt.plot(goodxvals, model, 'g-')
-                        fname = 'figs'+os.sep+'Fig6_BG_'+str(j)+figure_filetype
+                        fname = ('figs'+os.sep+'Fig6_BG_'+str(j) +
+                                 plots.figure_filetype)
                         plt.savefig(meta.outputdir + fname, dpi=300)
                         plt.pause(0.01)
 

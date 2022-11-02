@@ -54,8 +54,8 @@ hide_plots      False   # If True, plots will automatically be closed rather tha
 verbose         False   # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User
+topdir          /home/User/Data/TargetName/WFC3/
 
 # Directories relative to project dir
-inputdir        /Data/TargetName/WFC3/Stage3 # The folder containing the outputs from Eureka!'s S3 (will be overwritten if calling S3 and S4 sequentially)
-outputdir       /Data/TargetName/WFC3/Stage4
+inputdir        Stage3 # The folder containing the outputs from Eureka!'s S3 (will be overwritten if calling S3 and S4 sequentially)
+outputdir       Stage4

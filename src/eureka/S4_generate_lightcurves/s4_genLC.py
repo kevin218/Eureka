@@ -29,7 +29,7 @@ from ..lib import util
 from ..lib import clipping
 
 
-def genlc(eventlabel, ecf_path=None, s3_meta=None):
+def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
@@ -42,6 +42,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -68,9 +71,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     - July 2022 Sebastian Zieba
          Added photometry S4
     '''
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S4_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S4_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -126,9 +133,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
+            specData_savefile = (
+                meta.inputdir + 
+                meta.filename_S3_SpecData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
-            spec = xrio.readXR(meta.filename_S3_SpecData)
+            spec = xrio.readXR(specData_savefile)
 
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
@@ -227,8 +237,19 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                    'mask': lcmask})
             if hasattr(spec, 'scandir'):
                 lc['scandir'] = spec.scandir
-            if hasattr(spec, 'drift2D'):
-                lc['drift2D'] = spec.drift2D
+            if hasattr(spec, 'centroid_y'):
+                lc['centroid_y'] = spec.centroid_y
+            if hasattr(spec, 'centroid_sy'):
+                lc['centroid_sy'] = spec.centroid_sy
+            if hasattr(spec, 'centroid_x'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_x'] = spec.centroid_x
+            if hasattr(spec, 'centroid_sx'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_sx'] = spec.centroid_sx
+            elif meta.recordDrift or meta.correctDrift:
+                # Setup the centroid_x array
+                lc['centroid_x'] = (['time'], np.zeros(meta.n_int))
             lc['wave_low'] = (['wavelength'], meta.wave_low)
             lc['wave_hi'] = (['wavelength'], meta.wave_hi)
             lc['wave_mid'] = (lc.wave_hi + lc.wave_low)/2
@@ -267,11 +288,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                              f'wavelength',
                              mute=meta.verbose)
 
-            if (hasattr(meta, 'record_ypos') and meta.record_ypos
-                    and not meta.photometry):
-                lc['driftypos'] = (['time'], spec.driftypos.data)
-                lc['driftywidth'] = (['time'], spec.driftywidth.data)
-
             # Record and correct for 1D drift/jitter
             if meta.recordDrift or meta.correctDrift:
                 # Calculate drift over all frames and non-destructive reads
@@ -286,12 +302,18 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                     drift1d, driftmask, Box1DKernel(meta.box_width))
                 driftwidth = clipping.replace_moving_mean(
                     driftwidth, driftmask, Box1DKernel(meta.box_width))
-                lc['driftxpos'] = (['time'], drift1d)
-                lc['driftxwidth'] = (['time'], driftwidth)
+                # Add in case centroid_x already measured in 2D in S3
+                lc['centroid_x'] = lc.centroid_x+drift1d
+                lc['centroid_sx'] = (['time'], driftwidth)
                 lc['driftmask'] = (['time'], driftmask)
 
-                spec['driftxpos'] = (['time'], drift1d)
-                spec['driftxwidth'] = (['time'], driftwidth)
+                if hasattr(spec, 'centroid_x'):
+                    # Add if centroid_x already measured in 2D in S3
+                    spec['centroid_x'] = spec.centroid_x+drift1d
+                else:
+                    spec['centroid_x'] = (['time'], drift1d)
+                    spec.centroid_x.attrs['units'] = 'pixels'
+                spec['centroid_sx'] = (['time'], driftwidth)
                 spec['driftmask'] = (['time'], driftmask)
 
                 if meta.correctDrift:
@@ -315,12 +337,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                        optmask, k=3, s=0,
                                                        w=weights)
                         spec.optspec[n] = spline(np.arange(meta.subnx) +
-                                                 lc.driftxpos[n].values)
+                                                 lc.centroid_x[n].values)
                         spec.opterr[n] = spline2(np.arange(meta.subnx) +
-                                                 lc.driftxpos[n].values)
+                                                 lc.centroid_x[n].values)
                         # Also shift mask if moving by >= 0.5 pixels
                         optmask = spline3(np.arange(meta.subnx) +
-                                          lc.driftxpos[n].values)
+                                          lc.centroid_x[n].values)
                         spec.optmask[n] = optmask >= 0.5
                 # Plot Drift
                 if meta.isplots_S4 >= 1:
@@ -474,6 +496,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
                                                 ld_3para)
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
+                
+                if meta.compute_white:
+                    ld_lin_w, ld_quad_w, ld_3para_w, ld_4para_w = \
+                        generate_LD.exotic_ld(meta, spec, log, white=True)
+                    lc['exotic-ld_lin_white'] = (['wavelength', 'exotic-ld_1'],
+                                                 ld_lin_w)
+                    lc['exotic-ld_quad_white'] = (['wavelength',
+                                                   'exotic-ld_2'],
+                                                  ld_quad_w)
+                    lc['exotic-ld_nonlin_3para_white'] = (['wavelength',
+                                                           'exotic-ld_3'],
+                                                          ld_3para_w)
+                    lc['exotic-ld_nonlin_4para_white'] = (['wavelength',
+                                                           'exotic-ld_4'],
+                                                          ld_4para_w)
 
             log.writelog('Saving results...')
 
