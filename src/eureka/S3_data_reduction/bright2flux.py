@@ -156,9 +156,15 @@ def bright2dn(data, meta, mjy=False):
                            (phot['pupil'] == data.attrs['mhdr']['PUPIL']) *
                            (phot['order'] == 1))[0][0]
     elif meta.inst == 'miri':
-        ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
-                       (phot['subarray'] == data.attrs['mhdr']['SUBARRAY'])
-                       )[0][0]
+        if meta.photometry:
+            data.attrs['mhdr']['SUBARRAY'] = 'GENERIC'
+            ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+                           (phot['subarray'] == data.attrs['mhdr']['SUBARRAY'])
+                           )[0][0]
+        else:
+            ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
+                           (phot['subarray'] == data.attrs['mhdr']['SUBARRAY'])
+                           )[0][0]
     elif meta.inst == 'nirspec':
         ind = np.where((phot['filter'] == data.attrs['mhdr']['FILTER']) *
                        (phot['grating'] == data.attrs['mhdr']['GRATING']) *

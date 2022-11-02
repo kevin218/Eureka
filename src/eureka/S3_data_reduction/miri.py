@@ -8,6 +8,8 @@ except ImportError:
           'wavelength solution will not be able to be calculated in Stage 3.')
 from . import nircam
 from ..lib.util import read_time
+from tqdm import tqdm
+from . import sigrej
 
 
 def read(filename, data, meta, log):
@@ -63,25 +65,36 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
-
-    meta.photometry = False  # Photometry for MIRI not implemented yet.
-
-    # If wavelengths are all zero or missing --> use jwst to get wavelengths
-    # Otherwise use the wavelength array from the header
-    try:
-        hdulist['WAVELENGTH', 1]
-        wl_missing = False
-    except:
-        if meta.firstFile:
-            log.writelog('  WAVELENGTH extension not found, using '
-                         'miri.wave_MIRI_jwst function instead.')
-        wl_missing = True
-
-    if wl_missing or np.all(hdulist['WAVELENGTH', 1].data == 0):
-        wave_2d = wave_MIRI_jwst(filename, meta, log)
-    else:
-        wave_2d = hdulist['WAVELENGTH', 1].data
     int_times = hdulist['INT_TIMES', 1].data
+
+    if hdulist[0].header['EXP_TYPE'] == 'MIR_LRS-SLITLESS':
+        # If wavelengths are all zero or missing --> use jwst to get wavelengths
+        # Otherwise use the wavelength array from the header
+        try:
+            hdulist['WAVELENGTH', 1]
+            wl_missing = False
+        except:
+            if meta.firstFile:
+                log.writelog('  WAVELENGTH extension not found, using '
+                             'miri.wave_MIRI_jwst function instead.')
+            wl_missing = True
+
+        if wl_missing or np.all(hdulist['WAVELENGTH', 1].data == 0):
+            wave_2d = wave_MIRI_jwst(filename, meta, log)
+        else:
+            wave_2d = hdulist['WAVELENGTH', 1].data
+    elif hdulist[0].header['EXP_TYPE'] == 'MIR_IMAGE':
+        # Photometry will have "SHORT" as CHANNEL
+        meta.photometry = True
+        # The DISPAXIS argument does not exist in the header of the photometry
+        # data. Added it here so that code in other sections doesn't have to
+        # be changed
+        data.attrs['shdr']['DISPAXIS'] = 1
+
+        # FINDME: make this better for all filters
+        if hdulist[0].header['FILTER'] == 'F1500W':
+            wave_1d = np.ones_like(sci[0, 0]) * 15.0
+            meta.phot_wave = 15.0
 
     # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
@@ -184,8 +197,13 @@ def read(filename, data, meta, log):
                                      name='dq', x=x)
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0', x=x)
-    data['wave_2d'] = (['y', 'x'], wave_2d)
-    data['wave_2d'].attrs['wave_units'] = wave_units
+
+    if not meta.photometry:
+        data['wave_2d'] = (['y', 'x'], wave_2d)
+        data['wave_2d'].attrs['wave_units'] = wave_units
+    else:
+        data['wave_1d'] = (['x'], wave_1d)
+        data['wave_1d'].attrs['wave_units'] = wave_units
 
     return data, meta, log
 
@@ -323,3 +341,53 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of segment along time axis adjusted for the
+    photometry reduction routine.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    log.writelog('  Performing outlier rejection...',
+                 mute=(not meta.verbose))
+
+    flux = data.flux.values
+    mask = data.mask.values
+    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
+    # Need to test performance with and without estsig on real data.
+    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+        bgerr = np.median(data.err)
+        estsig = [bgerr for j in range(len(meta.bg_thresh))]
+    else:
+        estsig = None
+
+    nbadpix_total = 0
+    for i in tqdm(range(flux.shape[1]),
+                  desc='Looping over Rows for outlier removal'):
+        for j in range(flux.shape[2]):  # Loops over Columns
+            ngoodpix = np.sum(mask[:, i, j] == 1)
+            data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j],
+                                                   meta.bg_thresh,
+                                                   mask[:, i, j], estsig)
+            if not all(data['mask'][:, i, j].values):
+                # counting the amount of flagged bad pixels
+                nbadpix = ngoodpix - np.sum(data['mask'][:, i, j].values)
+                nbadpix_total += nbadpix
+    flag_percent = nbadpix_total/np.product(flux.shape)*100
+    log.writelog(f"  {flag_percent:.5f} of the pixels have been flagged as "
+                 "outliers\n", mute=(not meta.verbose))
+
+    return data

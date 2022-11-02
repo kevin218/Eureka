@@ -836,14 +836,14 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
+    print(x, y, sx, sy, i, m)
     plt.figure(3503)
     plt.clf()
 
     fig, ax = plt.subplots(2, 2, figsize=(8, 8))
     plt.suptitle('Centroid gaussian fit')
     fig.delaxes(ax[1, 1])
-    ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
-
+    ax[0, 0].imshow(img, origin='lower', aspect='auto')
     ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
     x_plot = np.linspace(0, len(np.sum(img, axis=0)))
     norm_distr_x = stats.norm.pdf(x_plot, x, sx)
@@ -924,9 +924,7 @@ def phot_2d_frame(data, meta, m, i):
     xmax = data.flux.x.max().values-meta.xwindow[0]
     ymin = data.flux.y.min().values-meta.ywindow[0]
     ymax = data.flux.y.max().values-meta.ywindow[0]
-
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
-                    extent=[xmin, xmax, ymin, ymax])
+    im = plt.imshow(flux, origin='lower', aspect='equal')
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                 label='centroid')
     plt.title('Full 2D frame')
@@ -943,8 +941,8 @@ def phot_2d_frame(data, meta, m, i):
     plt.gca().add_patch(circle2)
     plt.gca().add_patch(circle3)
     add_colorbar(im, label='Flux (electrons)')
-    plt.xlim(0, flux.shape[1])
-    plt.ylim(0, flux.shape[0])
+    #plt.xlim(0, flux.shape[1])
+    #plt.ylim(0, flux.shape[0])
     plt.xlabel('x pixels')
     plt.ylabel('y pixels')
 
@@ -964,8 +962,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.clf()
         plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
 
-        im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
-                        extent=[xmin, xmax, ymin, ymax])
+        im = plt.imshow(flux, vmin=0, origin='lower', aspect='equal')
         plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                     label='centroid')
         plt.title('Zoom into 2D frame')
@@ -1037,14 +1034,12 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
 
     cmap = plt.cm.viridis.copy()
-    ax[0].imshow(flux_w_oneoverf, origin='lower',
-                 norm=LogNorm(vmin=0.1, vmax=40), cmap=cmap)
+    ax[0].imshow(flux_w_oneoverf, origin='lower', cmap=cmap)
     ax[0].set_title('Before 1/f correction')
     ax[0].set_ylabel('y pixels')
 
     flux = data.flux.values[i]
-    im1 = ax[1].imshow(flux, origin='lower',
-                       norm=LogNorm(vmin=0.1, vmax=40), cmap=cmap)
+    im1 = ax[1].imshow(flux, origin='lower', cmap=cmap)
     ax[1].set_title('After 1/f correction')
     ax[1].set_xlabel('x pixels')
     ax[1].set_ylabel('y pixels')
@@ -1090,9 +1085,9 @@ def phot_2d_frame_diff(data, meta):
         plt.suptitle('2D frame differences')
         flux1 = data.flux.values[i]
         flux2 = data.flux.values[i+1]
-        plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
-        plt.xlim(1064-120-512, 1064+120-512)
-        plt.ylim(0, flux1.shape[0])
+        plt.imshow(flux2-flux1, origin='lower')
+        #plt.xlim(1064-120-512, 1064+120-512)
+        #plt.ylim(0, flux1.shape[0])
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
         plt.colorbar(label='Delta Flux (electrons)')
