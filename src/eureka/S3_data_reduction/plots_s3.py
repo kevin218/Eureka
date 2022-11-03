@@ -508,10 +508,9 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304, figsize=(8, 3.5))
-    plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
+    fig.clf()
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
@@ -831,12 +830,9 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3503)
-    plt.clf()
-
-    fig, ax = plt.subplots(2, 2, figsize=(8, 8))
+    fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
+    fig.clf()
     plt.suptitle('Centroid gaussian fit')
-    fig.delaxes(ax[1, 1])
     ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
 
     ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
@@ -1027,9 +1023,8 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3307)
-    plt.clf()
-    fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
+    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2))
+    fig.clf()
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
