@@ -172,6 +172,10 @@ photometry
 ''''''''''
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
+poly_wavelength
+'''''''''''''''
+If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
+
 hst_cal
 '''''''
 Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
@@ -367,7 +371,7 @@ Sets how many plots should be saved when running Stage 3. A full description of 
 
 nplots
 ''''''
-Sets how many integrations will be used for per-integration figures (Figs 3301, 3302, 3303, 3501). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
+Sets how many integrations will be used for per-integration figures (Figs 3301, 3302, 3303, 3307, 3501, 3505). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
 
 vmin
 ''''
@@ -388,6 +392,10 @@ If set to ``True`` only the last segment (which is usually the smallest) in the 
 save_output
 '''''''''''
 If set to ``True`` output will be saved as files for use in S4. Setting this to ``False`` is useful for quick testing
+
+save_fluxdata
+'''''''''''''
+If set to ``True`` (the default if save_fluxdata is not in your ECF), then save FluxData outputs for debugging or use with other tools. Note that these can be quite large files and may fill your drive if you are trying many spec_hw,bg_hw pairs.
 
 hide_plots
 ''''''''''

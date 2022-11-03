@@ -39,7 +39,7 @@ from ..lib import util
 from ..lib import centerdriver, apphot
 
 
-def reduce(eventlabel, ecf_path=None, s2_meta=None):
+def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     '''Reduces data images and calculates optimal spectra.
 
     Parameters
@@ -52,6 +52,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
     s2_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S2 step (if running S2 and S3
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -73,9 +76,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
         Added photometry S3
     '''
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S3_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S3_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta    
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -419,7 +426,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data = \
                                 inst.do_oneoverf_corr(data, meta, i,
                                                       position[1], log)
-                            if meta.isplots_S3 >= 3:
+                            if meta.isplots_S3 >= 3 and i < meta.nplots:
                                 plots_s3.phot_2d_frame_oneoverf(
                                     data, meta, m, i, flux_w_oneoverf)
 
@@ -442,7 +449,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
                         # Plot 2D frame, the centroid and the centroid position
-                        if meta.isplots_S3 >= 3:
+                        if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
 
                         # Interpolate masked pixels before we perform
@@ -472,7 +479,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                             data['nskyideal'][i], data['status'][i],
                             data['betaper'][i]) = aphot
 
-                if meta.save_output:
+                if not hasattr(meta, 'save_fluxdata'):
+                    meta.save_fluxdata = True
+
+                if meta.save_fluxdata:
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
                                    "_FluxData_seg"+str(m).zfill(4)+".h5")
@@ -485,6 +495,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                         success = xrio.writeXR(filename_xr, data,
                                                verbose=meta.verbose,
                                                append=False)
+                    else:
+                        print(f"Finished writing to {filename_xr}")
+                else:
+                    del (data.attrs['filename'])
+                    del (data.attrs['mhdr'])
+                    del (data.attrs['shdr'])
 
                 # Remove large 3D arrays from Dataset
                 del (data['err'], data['dq'], data['v0'],
@@ -528,10 +544,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None):
                 spec, meta, log = inst.conclusion_step(spec, meta, log)
 
             # Save Dataset object containing time-series of 1D spectra
-            meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
-                                         "_SpecData.h5")
-            success = xrio.writeXR(meta.filename_S3_SpecData, spec,
-                                   verbose=True)
+            if meta.save_output:
+                meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
+                                             "_SpecData.h5")
+                success = xrio.writeXR(meta.filename_S3_SpecData, spec,
+                                       verbose=True)
 
             # Compute MAD value
             if not meta.photometry:

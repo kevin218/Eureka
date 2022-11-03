@@ -63,7 +63,27 @@ def read(filename, data, meta, log):
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
-        wave_2d = hdulist['WAVELENGTH', 1].data
+        if not hasattr(meta, 'poly_wavelength') or not meta.poly_wavelength:
+            # Use the FITS data
+            wave_2d = hdulist['WAVELENGTH', 1].data
+        elif hdulist[0].header['FILTER'] == 'F322W2':
+            # The new way, using the polynomial model Everett Schlawin computed
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            Xprime = (X - 1571)/1000
+            wave_2d = (3.9269369110332657
+                       + 0.9811653393151226*Xprime
+                       + 0.001666535535484272*Xprime**2
+                       - 0.002874123523765872*Xprime**3)
+            # Convert 1D array to 2D
+            wave_2d *= np.ones((hdulist['WAVELENGTH', 1].data.shape[0], 1))
+        elif hdulist[0].header['FILTER'] == 'F444W':
+            # The new way, using the polynomial model Everett Schlawin computed
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            Xprime = (X - 852.0756)/1000
+            wave_2d = (3.928041104137344
+                       + 0.979649332832983*Xprime)
+            # Convert 1D array to 2D
+            wave_2d *= np.ones((hdulist['WAVELENGTH', 1].data.shape[0], 1))
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
@@ -75,12 +95,16 @@ def read(filename, data, meta, log):
         # FINDME: make this better for all filters
         if hdulist[0].header['FILTER'] == 'F210M':
             # will be deleted at the end of S3
-            wave_1d = np.ones_like(sci[0, 0]) * 2.1
+            wave_1d = np.ones_like(sci[0, 0]) * 2.095
             # Is used in S4 for plotting.
-            meta.phot_wave = 2.1
+            meta.phot_wave = 2.095
         elif hdulist[0].header['FILTER'] == 'F187N':
-            wave_1d = np.ones_like(sci[0, 0]) * 1.87
-            meta.phot_wave = 1.87
+            wave_1d = np.ones_like(sci[0, 0]) * 1.874
+            meta.phot_wave = 1.874
+        elif (hdulist[0].header['FILTER'] == 'WLP4'
+              or hdulist[0].header['FILTER'] == 'F212N'):
+            wave_1d = np.ones_like(sci[0, 0]) * 2.121
+            meta.phot_wave = 2.121
 
     # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
@@ -311,7 +335,8 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     data : Xarray Dataset
         The updated Dataset object after the 1/f correction has been completed.
     """
-    print('Correcting for 1/f noise...')
+    if i == 0:
+        log.writelog('Correcting for 1/f noise...', mute=(not meta.verbose))
 
     # Let's first determine which amplifier regions are left in the frame.
     # For NIRCam: 4 amplifiers, 512 pixels in x dimension per amplifier

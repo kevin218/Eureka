@@ -29,7 +29,7 @@ from ..lib import util
 from ..lib import clipping
 
 
-def genlc(eventlabel, ecf_path=None, s3_meta=None):
+def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
@@ -42,6 +42,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     s3_meta : eureka.lib.readECF.MetaClass
         The metadata object from Eureka!'s S3 step (if running S3 and S4
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -68,9 +71,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
     - July 2022 Sebastian Zieba
          Added photometry S4
     '''
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S4_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S4_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -126,9 +133,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             log.writelog('Copying S4 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            log.writelog(f"Loading S3 save file:\n{meta.filename_S3_SpecData}",
+            specData_savefile = (
+                meta.inputdir + 
+                meta.filename_S3_SpecData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
-            spec = xrio.readXR(meta.filename_S3_SpecData)
+            spec = xrio.readXR(specData_savefile)
 
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
@@ -234,6 +244,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None):
             if hasattr(spec, 'centroid_x'):
                 # centroid_x already measured in 2D in S3 - setup to add 1D fit
                 lc['centroid_x'] = spec.centroid_x
+            if hasattr(spec, 'centroid_sx'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_sx'] = spec.centroid_sx
             elif meta.recordDrift or meta.correctDrift:
                 # Setup the centroid_x array
                 lc['centroid_x'] = (['time'], np.zeros(meta.n_int))

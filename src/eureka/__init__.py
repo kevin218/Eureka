@@ -8,6 +8,10 @@ except ModuleNotFoundError:
     __version__ = get_version(root=f'..{os.sep}..{os.sep}',
                               relative_to=__file__)
 
+from astropy.utils.exceptions import AstropyDeprecationWarning
+import warnings
+warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
+
 from . import lib
 try:
     import jwst

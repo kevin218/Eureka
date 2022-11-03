@@ -62,8 +62,8 @@ save_output     True        # Save outputs for use in S4
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User/
+topdir          /home/User/Data/TargetName/WFC3/
 
 # Directories relative to project dir
-inputdir        /Data/TargetName/WFC3/IMA # The folder containing the data files from HST
-outputdir       /Data/TargetName/WFC3/Stage3
+inputdir        IMA # The folder containing the data files from HST
+outputdir       Stage3

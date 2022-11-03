@@ -11,7 +11,7 @@ from . import lightcurve
 from . import models as m
 
 
-def fitlc(eventlabel, ecf_path=None, s4_meta=None):
+def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -24,6 +24,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     s4_meta : eureka.lib.readECF.MetaClass; optional
         The metadata object from Eureka!'s S4 step (if running S4 and S5
         sequentially). Defaults to None.
+    input_meta : eureka.lib.readECF.MetaClass; optional
+        An optional input metadata object, so you can manually edit the meta
+        object without having to edit the ECF file.
 
     Returns
     -------
@@ -49,9 +52,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
     '''
     print("\nStarting Stage 5: Light Curve Fitting\n")
 
-    # Load Eureka! control file and store values in Event object
-    ecffile = 'S5_' + eventlabel + '.ecf'
-    meta = readECF.MetaClass(ecf_path, ecffile)
+    if input_meta is None:
+        # Load Eureka! control file and store values in Event object
+        ecffile = 'S5_' + eventlabel + '.ecf'
+        meta = readECF.MetaClass(ecf_path, ecffile)
+    else:
+        meta = input_meta
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -101,8 +108,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
 
-            lc = xrio.readXR(meta.filename_S4_LCData)
-
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
                                                 ap=spec_hw_val, bg=bg_hw_val)
@@ -116,6 +121,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             # Copy ECF
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
             meta.copy_ecf()
+
+            specData_savefile = (
+                meta.inputdir + 
+                meta.filename_S4_LCData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S4 save file:\n{specData_savefile}",
+                         mute=(not meta.verbose))
+            lc = xrio.readXR(specData_savefile)
 
             # Set the intial fitting parameters
             params = Parameters(meta.folder, meta.fit_par)
@@ -147,6 +159,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
             else:
                 time_units = lc.data.attrs['time_units']
             meta.time = lc.time.values
+            # Record units for Stage 6
+            meta.time_units = time_units
+            meta.wave_units = lc.data.attrs['wave_units']
 
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
@@ -219,7 +234,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None):
                 try:
                     ld_coeffs = np.loadtxt(ld_fix_file)
                 except FileNotFoundError:
-                    raise Exception("The limb-darkening file " + ld_fix_file + 
+                    raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
             else:
                 ld_coeffs = None
