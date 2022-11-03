@@ -616,7 +616,8 @@ def interp_masked(data, meta, i, log):
         The updated Dataset object with requested pixels masked.
     """
     if i == 0:
-        log.writelog('Interpolating masked values...', mute=(not meta.verbose))
+        log.writelog('  Interpolating masked values...',
+                     mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]
