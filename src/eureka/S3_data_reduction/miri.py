@@ -323,3 +323,27 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of segment along time axis adjusted for the
+    photometry reduction routine.
+
+    Uses the code written for NIRCam which works for MIRI as long
+    as the MIRI data gets rotated.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    return nircam.flag_bg_phot(data, meta, log)
