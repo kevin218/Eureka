@@ -397,7 +397,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data = util.phot_arrays(data)
 
                     for i in tqdm(range(len(data.time)),
-                                  desc='Looping over Integrations'):
+                                  desc='  Looping over Integrations'):
                         if (meta.isplots_S3 >= 3
                                 and meta.oneoverf_corr is not None):
                             # save current flux into an array for
@@ -405,21 +405,30 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             flux_w_oneoverf = np.copy(data.flux.values[i])
 
                         # Determine centroid position
-                        # We do this twice. First a coarse estimation,
-                        # then a more precise one.
-                        # Use the center of the frame as an initial guess
-                        centroid_guess = [data.flux.shape[1]//2,
-                                          data.flux.shape[2]//2]
-                        # Do a 2D gaussian fit to the whole frame
-                        position, extra = \
-                            centerdriver.centerdriver('fgc',
-                                                      data.flux.values[i],
-                                                      centroid_guess, 0, 0, 0,
-                                                      mask=None, uncd=None,
-                                                      fitbg=1, maskstar=True,
-                                                      expand=1.0, psf=None,
-                                                      psfctr=None, i=i, m=m,
-                                                      meta=meta)
+                        if (not hasattr(meta, 'ctr_guess') or
+                                meta.ctr_guess is None):
+                            # If meta.ctr_guess is None, first do a coarse
+                            # centroiding using the center of the frame as an
+                            # initial guess
+                            centroid_guess = [data.flux.shape[1]//2,
+                                              data.flux.shape[2]//2]
+                            # Do a 2D gaussian fit to the whole frame
+                            position, extra = \
+                                centerdriver.centerdriver('fgc',
+                                                          data.flux.values[i],
+                                                          centroid_guess,
+                                                          0, 0, 0,
+                                                          mask=None, uncd=None,
+                                                          fitbg=1,
+                                                          maskstar=True,
+                                                          expand=1.0, psf=None,
+                                                          psfctr=None,
+                                                          i=i, m=m,
+                                                          meta=meta)
+                        else:
+                            guess = np.array(meta.ctr_guess)[::-1]
+                            trim = np.array([meta.ywindow[0], meta.xwindow[0]])
+                            position = guess - trim
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f
