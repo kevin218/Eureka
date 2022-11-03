@@ -266,6 +266,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_start = 0
                 if not hasattr(meta, 'nplots') or meta.nplots is None:
+                    meta.nplots = meta.n_int
                     meta.int_end = meta.n_int
                 elif meta.int_start+meta.nplots > meta.n_int:
                     # Too many figures requested, so reduce it

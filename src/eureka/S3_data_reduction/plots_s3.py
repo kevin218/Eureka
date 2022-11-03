@@ -1079,7 +1079,7 @@ def phot_2d_frame_diff(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    for i in range(len(data.aplev.values)-1):
+    for i in range(meta.nplots):
         plt.figure(3505)
         plt.clf()
         plt.suptitle('2D frame differences')
