@@ -41,7 +41,6 @@ grouplevel_bg 		True
 ncpu				6
 bg_y1 				6
 bg_y2 				26
-bg_y_width    [None, None] # bkg from y[bg_y1-1-bg_y_width[0]: bg_y1-1] and y[bg_y2 + 1, bg_y2 + 1 + bg_y_width[1]]. ignored if None, can be [None, 4] or [4, None]  
 bg_deg 				0 
 p3thresh			5
 verbose				True

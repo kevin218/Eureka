@@ -73,15 +73,11 @@ Number of cpus to use for GLBS
 
 bg_y1
 '''''''''''''''''
-The pixel number for the end of the bottom background region
+The pixel number for the end of the bottom background region. The background region goes from the bottom of the subarray to this pixel.
 
 bg_y2
 '''''''''''''''''
-The pixel number for the start of the top background region
-
-bg_y_width
-'''''''''''''''''
-The width of the bottom and top background regions. If None the background region runs from the edge of the subarray to the designated pixels in bg_y1 and bg_y2
+The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
 
 bg_deg
 '''''''''''''''''
