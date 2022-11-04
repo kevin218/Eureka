@@ -1,0 +1,37 @@
+# Eureka! Control File for Stage 3: Data Reduction of NIRISS
+
+# Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
+
+ncpu            1           # Number of CPUs
+suffix          calints     # Data file suffix
+
+# Order location estimation
+trace_method    edges        # Which method to identify orders by (see docs)
+poly_order      4           # Degree polynomial to fit to trace edge extraction method
+save_table      False       # Saves a table of central value for each order
+radius          1           # Sets the radius for edge extraction method
+filter          4           # Sets the filter size for edge extraction method
+
+# Simple box mask Parameters
+boxsize1        24    # Box width (in pixels) for the first order
+
+# Background parameters
+
+
+# Spectral extraction parameters
+proftype        median      # What profile shape to use
+opt_sigma       20          # Sigma outlier value
+
+# Diagnostics
+isplots_S3      3           # Generate a few (1), some (3), or many (5) diagnostic figures
+save_output     True        # Save outpurs for use in S4
+testing_S3      False       # Boolean, set True to only use last file and generate select figures
+hide_plots      False       # If True, plots will automatically be closed rather than popping up
+verbose         True        # If True, more details will be printed about steps
+
+# Project directory
+topdir          /home/Users/
+
+# Directories relative to project dir
+inputdir        /Data/JWST-Sim/NIRISS/Stage2
+outputdir       /Data/JWST-Sim/NIRISS/Stage3
