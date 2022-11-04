@@ -16,8 +16,9 @@ __all__ = ['image_filtering', 'simplify_niriss_img',
            'mask_method_edges', 'f277_mask', 'ref_file']
 
 
-def image_filtering(img, radius=1, gf=4):
-    """Does some simple image processing to isolate where the
+def image_filtering(img, radius=1, gf=4, cutoff=90, isplots=0):
+    """
+    Does some simple image processing to isolate where the
     spectra are located on the detector.
 
     This routine is optimized for NIRISS S2 processed data and
@@ -38,9 +39,13 @@ def image_filtering(img, radius=1, gf=4):
     z : np.ndarray
        The identified edges of the first two orders.
     g : np.ndarray
-       Gaussian filtered image of the orders. Used for plotting as a check.
+       Gaussian filtered image of the orders. Used just for plotting as a check.
     """
-    mask = filters.rank.maximum(img/np.nanmax(img),
+    normalized = img/np.nanmax(img)
+    normalized[normalized < -1] = np.nanmedian(normalized)
+    normalized[70:, 750:1300] = -1
+
+    mask = filters.rank.maximum(normalized,
                                 disk(radius=radius))
     mask = np.array(mask, dtype=bool)
 
@@ -51,7 +56,7 @@ def image_filtering(img, radius=1, gf=4):
     # g > 4 to be a good cut-off for what is part of the
     #   the profile, and what is background. 10000 is simply
     #   an easy number to identify later.
-    g[g > 4] = 10000
+    g[g > 90] = 10000
     edges = filters.sobel(g)
 
     # This defines the edges. Edges will have values
@@ -61,13 +66,26 @@ def image_filtering(img, radius=1, gf=4):
 
     # turns edge array into a boolean array
     edges = (edges-np.nanmax(edges)) * -1
+    edges[70:, 750:1300] = np.nanmedian(edges[70:, 1300:1500])
+    edges[:40, :620] = np.nanmedian(edges[70:, 1300:1500])
     z = feature.canny(edges)
+
+    if isplots == 8:
+        fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(14,4))
+        ax1.imshow(g, aspect='auto', vmin=-1, vmax=70)
+        ax1.set_title('gaussian filtered')
+        ax2.imshow(edges, aspect='auto', vmin=-1, vmax=10)
+        ax2.set_title('edges')
+        ax3.imshow(z, aspect='auto', vmin=-1, vmax=1)
+        ax3.set_title('canny edges')
+        plt.show()
 
     return z, g
 
 
-def simplify_niriss_img(data):
-    """Creates an image to map out where the orders are in
+def simplify_niriss_img(data, cutoff, isplots=0):
+    """
+    Creates an image to map out where the orders are in
     the NIRISS data.
 
     Parameters
@@ -82,14 +100,14 @@ def simplify_niriss_img(data):
        A 2D array that marks where the NIRISS first
        and second orders are.
     """
-    perc = np.nanmax(data, axis=0)
     # creates data img mask
-    z, g = image_filtering(perc)
+    z, g = image_filtering(data, cutoff=cutoff, isplots=isplots)
     return g
 
 
 def f277_mask(f277, radius=1, gf=4):
-    """Marks the overlap region in the f277w filter image.
+    """
+    Marks the overlap region in the f277w filter image.
 
     Parameters
     ----------
@@ -98,8 +116,8 @@ def f277_mask(f277, radius=1, gf=4):
     radius : float, optional
        The size of the radius to use in the image filtering. Default is 1.
     gf : float, optional
-       The size of the Gaussian filter to use in the image filtering. Default
-       is 4.
+       The size of the Gaussian filter to use in the image filtering. Default is
+       4.
 
     Returns
     -------
@@ -108,10 +126,9 @@ def f277_mask(f277, radius=1, gf=4):
     mid : np.ndarray
        (x,y) anchors for where the overlap region is located.
     """
-    img = np.nanmax(f277, axis=(0, 1))
-    mask, _ = image_filtering(img[:150, :500], radius, gf)
+    mask, _ = image_filtering(f277[:150, :500], radius, gf)
     mid = np.zeros((mask.shape[1], 2), dtype=int)
-    new_mask = np.zeros(img.shape)
+    new_mask = np.zeros(f277.shape)
 
     for i in range(mask.shape[1]):
         inds = np.where(mask[:, i])[0]
@@ -124,9 +141,9 @@ def f277_mask(f277, radius=1, gf=4):
     return new_mask, mid[q]
 
 
-def mask_method_edges(data, radius=1, gf=4,
+def mask_method_edges(data, radius=1, gf=4, cutoff=90,
                       save=False,
-                      outdir=None):
+                      outdir=None, isplots=0):
     """
     There are some hard-coded numbers in here right now. The idea
     is that once we know what the real data looks like, nobody will
@@ -142,14 +159,13 @@ def mask_method_edges(data, radius=1, gf=4,
     radius : float, optional
        The size of the radius to use in the image filtering. Default is 1.
     gf : float, optional
-       The size of the Gaussian filter to use in the image filtering. Default
-       is 4.
+       The size of the Gaussian filter to use in the image filtering. Default is
+       4.
     save : bool, optional
        An option to save the polynomial fits to a CSV. Default
        is True. Output table is saved under `niriss_order_guesses.csv`.
     outdir : str, optional
-       The path where to save the output table, if requested. Default is
-       None.
+       The path where to save the output table, if requested. Default is `none`.
 
     Returns
     -------
@@ -179,51 +195,37 @@ def mask_method_edges(data, radius=1, gf=4,
 
         return centers
 
-    def clean_and_fit(x1, x2, y1, y2):
+    def clean_and_fit(x1, y1):#x2, y1, y2):
         # Cleans up outlier points potentially included when identifying
         #   the center of each trace. Removes those bad points in the
         #   profile fitting.
         x1, y1 = x1[y1 > 0], y1[y1 > 0]
-        x2, y2 = x2[y2 > 0], y2[y2 > 0]
+        #x2, y2 = x2[y2 > 0], y2[y2 > 0]
 
-        poly = np.polyfit(np.append(x1, x2),
-                          np.append(y1, y2),
+        poly = np.polyfit(x1,#np.append(x1, x2),
+                          y1,#np.append(y1, y2),
                           deg=4)  # hard coded deg of polynomial fit
         fit = np.poly1d(poly)
         return fit
 
-    g = simplify_niriss_img(data.data)
-    f, _ = f277_mask(data.f277, radius, gf)
+    g = simplify_niriss_img(data, cutoff, isplots=isplots)
 
     # g_centers = find_centers(g, cutends=None)
-    f_centers = find_centers(f, cutends=430)  # hard coded end of the F277 img
 
     gcenters_1 = np.zeros(len(g[0]), dtype=int)
-    gcenters_2 = np.zeros(len(g[0]), dtype=int)
 
     for i in range(len(g[0])):
         inds = np.where(g[:, i] > 100)[0]
-        inds_1 = inds[inds <= 78]  # hard coded y-boundary for the first order
-        inds_2 = inds[inds >= 80]  # hard coded y-boundary for the second order
-
-        if len(inds_1) >= 1:
-            gcenters_1[i] = np.nanmean(inds_1)
-        if len(inds_2) >= 1:
-            gcenters_2[i] = np.nanmean(inds_2)
+        gcenters_1[i] = np.nanmedian(inds)
 
     gcenters_1 = rm_outliers(gcenters_1)
-    gcenters_2 = rm_outliers(gcenters_2)
     x = np.arange(0, len(gcenters_1), 1)
 
-    fit1 = clean_and_fit(x, x[x > 800],
-                         f_centers, gcenters_1[x > 800])
-    fit2 = clean_and_fit(x, x[(x > 800) & (x < 1800)],
-                         f_centers, gcenters_2[(x > 800) & (x < 1800)])
+    fit1 = clean_and_fit(x, gcenters_1)
 
     tab = Table()
     tab['x'] = x
     tab['order_1'] = fit1(x)
-    tab['order_2'] = fit2(x)
 
     fn = 'niriss_order_fits_edges.csv'
     if save:
