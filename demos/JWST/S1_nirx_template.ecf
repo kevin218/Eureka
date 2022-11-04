@@ -46,7 +46,6 @@ bg_deg 				0
 p3thresh			5
 verbose				True
 isplots 			1
-isplots_S3 		False  #calling a S3 function requires this separate input
 hide_plots    True
 
 #mask curved traces

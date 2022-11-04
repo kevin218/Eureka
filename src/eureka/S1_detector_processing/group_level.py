@@ -63,12 +63,12 @@ def GLBS(input_model, log, meta):
         data['flux'].attrs['flux_units'] = 'n/a'
         if ngrp == all_data.shape[1]-1:
             data = bkg.BGsubtraction(data, meta, 
-                                     log, 
+                                     log, 0, 
                                      meta.isplots)
         else:
             # do not show plots except for the last group
             data = bkg.BGsubtraction(data, meta, 
-                                     log, 0)
+                                     log, 0, 0)
         all_data[:, ngrp, :, :] = data['flux'].values
     input_model.data = all_data
 
