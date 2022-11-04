@@ -45,7 +45,7 @@ path to custom superbias file
 
 update_sat_flags
 '''''''''''''''''
-Boolean, allows user to have more control over saturation flags
+Boolean, allows user to have more control over saturation flags. Must be True to use the settings expand_prev_group, dq_sat_mode, and dq_sat_percentile or dq_sat_columns.
 
 expand_prev_group
 '''''''''''''''''
@@ -65,7 +65,7 @@ If dq_sat_mode = defined, list of columns. Should have length Ngroups, each elem
 
 grouplevel_bg
 '''''''''''''''''
-Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting
+Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
 
 ncpu
 '''''''''''''''''
@@ -121,7 +121,7 @@ Columns above this index will not be used to create the mask
 
 refpix_corr
 '''''''''''''''''
-Boolean, runs a custom ROEBA routine for PRISM observations which do not have reference pixels within the subarray
+Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray. 
 
 npix_top 
 '''''''''''''''''
