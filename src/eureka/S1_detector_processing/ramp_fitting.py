@@ -19,6 +19,7 @@ from jwst.lib import reffile_utils
 from jwst.lib import pipe_utils
 
 from . import update_saturation
+from . import group_level
 
 import logging
 log = logging.getLogger(__name__)
@@ -90,44 +91,28 @@ default='none') # max number of processes to create
         '''
         with datamodels.RampModel(input) as input_model:
 
-            if self.s1_meta.update_sat_flags:
+            if hasattr(self.s1_meta, 
+                       'update_sat_flags') and self.s1_meta.update_sat_flags:
                 input_model = update_saturation.update_sat(input_model, 
                                                            self.s1_log, 
                                                            self.s1_meta)
 
-            if self.s1_meta.grouplevel_bg:
-                from ..S3_data_reduction import background as bkg
-                import astraeus.xarrayIO as xrio
-                
-                all_data = input_model.data
-                dq = input_model.groupdq
-
-                self.s1_meta.inst = input_model.meta.instrument.name.lower()
-                self.s1_meta.int_start = 0
-                self.s1_meta.n_int = all_data.shape[0]
-
-                for ngrp in range(all_data.shape[1]):
-                    grp_data = all_data[:, ngrp, :, :]
-                    grp_mask = np.ones(grp_data.shape, dtype=bool)
-                    dqmask = np.where((dq[:, ngrp, :, :] % 2 == 1) |
-                                      (dq[:, ngrp, :, :] == 2))
-                    grp_mask[dqmask] = 0
-
-                    xrdata = (['time', 'y', 'x'], grp_data)
-                    xrmask = (['time', 'y', 'x'], grp_mask)                
-                    xrdict = dict(flux=xrdata, mask=xrmask)
-                    data = xrio.makeDataset(dictionary=xrdict)
-                    data['flux'].attrs['flux_units'] = 'n/a'
-                    if ngrp == all_data.shape[1]-1:
-                        data = bkg.BGsubtraction(data, self.s1_meta, 
-                                                 self.s1_log, 
-                                                 self.s1_meta.isplots)
-                    else:
-                        # do not show plots except for the last group
-                        data = bkg.BGsubtraction(data, self.s1_meta, 
-                                                 self.s1_log, 0)
-                    all_data[:, ngrp, :, :] = data['flux'].values
-                input_model.data = all_data
+            if hasattr(self.s1_meta, 'masktrace') and self.s1_meta.masktrace:
+                input_model = group_level.mask_trace(input_model,
+                                                     self.s1_log,
+                                                     self.s1_meta)
+            
+            if hasattr(self.s1_meta, 
+                       'refpix_corr') and self.s1_meta.refpix_corr:
+                input_model = group_level.custom_ref_pixel(input_model,
+                                                           self.s1_log,
+                                                           self.s1_meta)
+            
+            if hasattr(self.s1_meta, 
+                       'grouplevel_bg') and self.s1_meta.grouplevel_bg:
+                input_model = group_level.GLBS(input_model,
+                                               self.s1_log,
+                                               self.s1_meta)
 
             readnoise_filename = self.get_reference_file(input_model,
                                                          'readnoise')

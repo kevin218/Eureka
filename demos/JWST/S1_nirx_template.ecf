@@ -41,13 +41,25 @@ grouplevel_bg 		True
 ncpu				6
 bg_y1 				6
 bg_y2 				26
-bg_y_width          [None, None] # bkg from y[bg_y1-1-bg_y_width[0]: bg_y1-1] and y[bg_y2 + 1, bg_y2 + 1 + bg_y_width[1]]. ignored if None, can be [None, 4] or [4, None]  
+bg_y_width    [None, None] # bkg from y[bg_y1-1-bg_y_width[0]: bg_y1-1] and y[bg_y2 + 1, bg_y2 + 1 + bg_y_width[1]]. ignored if None, can be [None, 4] or [4, None]  
 bg_deg 				0 
 p3thresh			5
 verbose				True
 isplots 			1
-isplots_S3 			False  #calling a S3 function requires this separate input
-hide_plots          True
+isplots_S3 		False  #calling a S3 function requires this separate input
+hide_plots    True
+
+#mask curved traces
+masktrace           True
+window_len          11
+expand_mask         8
+ignore_low          600
+ignore_hi						None
+
+#manual reference pixel correction for PRISM
+refpix_corr      False
+npix_top         8
+npix_bot         8
 
 # Project directory
 topdir              /home/User
