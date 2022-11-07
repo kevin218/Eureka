@@ -7,7 +7,7 @@ dependencies:
     - asdf
     - astropy
     - batman-package
-    - bokeh==2.4.3
+    - bokeh=2.4.3
     - ccdproc
     - celerite
     - corner
