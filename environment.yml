@@ -34,7 +34,7 @@ dependencies:
         - crds
         - exotic-ld
         - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
-        - jwst==1.6.0
+        - jwst==1.8.0
         - myst-parser # Needed for documentation
         - sphinx-rtd-theme # Needed for documentation
         - stcal
