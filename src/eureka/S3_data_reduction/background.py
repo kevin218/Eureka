@@ -288,7 +288,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
                     fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
-                             plots.plots.figure_filetype)
+                             plots.figure_filetype)
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 

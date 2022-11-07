@@ -137,12 +137,18 @@ def image_and_background(data, meta, log, m):
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
 
+    # If need be, transpose array so that largest dimension is on x axis
+    if len(data.flux.x.values) < len(data.flux.y.values):
+        data = data.transpose('time', 'x', 'y')
+        ymin, ymax = data.flux.x.min().values, data.flux.x.max().values
+        xmin, xmax = data.flux.y.min().values, data.flux.y.max().values
+    else:
+        xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+        ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
-
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     # Commented out vmax calculation is sensitive to unflagged hot pixels
     # vmax = np.ma.max(np.ma.masked_invalid(subdata))/40

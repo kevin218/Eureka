@@ -1,6 +1,7 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
+from . import background
 try:
     from jwst import datamodels
 except ImportError:
@@ -284,7 +285,16 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+    if hasattr(meta, 'isrotate'):
+        isrotate = meta.isrotate
+    else:
+        isrotate = 2
+    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
+                                meta.bg_y2, deg=meta.bg_deg,
+                                threshold=meta.p3thresh, isrotate=isrotate,
+                                isplots=isplots)
+    return bg, mask, n
+    # return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots, **kwargs)
 
 
 def cut_aperture(data, meta, log):
