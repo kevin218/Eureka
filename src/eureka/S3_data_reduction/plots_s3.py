@@ -916,7 +916,10 @@ def phot_2d_frame(data, meta, m, i):
     ymin = data.flux.y.min().values-meta.ywindow[0]
     ymax = data.flux.y.max().values-meta.ywindow[0]
 
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
+    vmax = np.ma.median(flux)+8*np.ma.std(flux)
+    vmin = np.ma.median(flux)-3*np.ma.std(flux)
+
+    im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower', aspect='equal',
                     extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                 label='centroid')
@@ -940,10 +943,10 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylabel('y pixels')
 
     plt.legend()
+    plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
              + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -955,8 +958,8 @@ def phot_2d_frame(data, meta, m, i):
         plt.clf()
         plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
 
-        im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
-                        extent=[xmin, xmax, ymin, ymax])
+        im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower',
+                        aspect='equal', extent=[xmin, xmax, ymin, ymax])
         plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                     label='centroid')
         plt.title('Zoom into 2D frame')
@@ -987,6 +990,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylabel('y pixels')
 
         plt.legend()
+        plt.tight_layout()
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
                  f'_2D_Frame_Zoom' + plots.figure_filetype)
