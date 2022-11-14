@@ -1,28 +1,19 @@
 CITATIONS = {
     "eureka": 
-    [r"""@ARTICLE{eureka,
-        author = {{Bell}, Taylor J. and {Ahrer}, Eva-Maria and {Brande}, 
-        Jonathan and {Carter}, Aarynn L. and {Feinstein}, Adina D. and 
-        {Guzman Caloca}, Giannina and {Mansfield}, Megan and {Zieba}, 
-        Sebastian and {Piaulet}, Caroline and {Benneke}, Bj{\"o}rn and 
-        {Filippazzo}, Joseph and {May}, Erin M. and {Roy}, Pierre-Alexis and 
-        {Kreidberg}, Laura and {Stevenson}, Kevin B.},
-        title = "{Eureka!: An End-to-End Pipeline for 
-                JWST Time-Series Observations}",
-        journal = {arXiv e-prints},
-        keywords = {Astrophysics - Instrumentation and Methods 
-                    for Astrophysics, Astrophysics - 
-                    Earth and Planetary Astrophysics},
-                    year = 2022,
-                    month = jul,
-                    eid = {arXiv:2207.03585},
-                    pages = {arXiv:2207.03585},
-            archivePrefix = {arXiv},
-            eprint = {2207.03585},
-            primaryClass = {astro-ph.IM},
-            adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXiv220703585B},
-            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-            }"""],
+    [r"""@article{eureka, 
+         doi = {10.21105/joss.04503}, 
+         url = {https://doi.org/10.21105/joss.04503}, 
+         year = {2022}, publisher = {The Open Journal}, 
+         volume = {7}, number = {79}, pages = {4503}, 
+         author = {Taylor J. Bell and Eva-Maria Ahrer and 
+                   Jonathan Brande and Aarynn L. Carter and Adina D. Feinstein 
+                   and Giannina {Guzman Caloca} and Megan Mansfield and 
+                   Sebastian Zieba and Caroline Piaulet and Björn Benneke and 
+                   Joseph Filippazzo and Erin M. May and Pierre-Alexis Roy and 
+                   Laura Kreidberg and Kevin B. Stevenson}, 
+         title = {Eureka!: An End-to-End Pipeline for 
+                  JWST Time-Series Observations}, 
+        journal = {Journal of Open Source Software} }"""],
     "numpy": 
     [r"""@Article{numpy,
         title  = {Array programming with {NumPy}},
