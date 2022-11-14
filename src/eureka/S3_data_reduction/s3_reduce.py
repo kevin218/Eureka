@@ -341,7 +341,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction
-                    data = bg.BGsubtraction(data, meta, log, m)
+                    data = bg.BGsubtraction(data, meta, log, 
+                                            m, meta.isplots_S3)
 
                     # Calulate and correct for 2D drift
                     if hasattr(inst, 'correct_drift2D'):

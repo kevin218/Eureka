@@ -30,6 +30,12 @@ Note that for Eureka! you do *not* need to download any ancillary data - any add
 3. Set up your run directory 🗂
 -------------------------------
 
+In general, it is recommended to interface with Eureka! using "Eureka! Control Files" (ECFs) and running command line scripts.
+This helps to increase the automation of the pipeline and increases the reproducibility of your results as the ECF you used
+will be copied to the output folder and your analysis will follow a pre-defined order. That way if somebody asks you how you
+analyzed your data, you can just send them your copied ECF files and the version number of Eureka! that you used. In the
+following section, we will walk you through the process of gathering the relevant ECF templates and editing them as needed for
+your particular analysis.
 
 .. _demos:
 
@@ -80,21 +86,21 @@ Notice that all of the ``*.ecf`` files have a common ``wasp39b`` string. It's us
         eventlabel = 'wasp39b'
 
 
-Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. For the ``S2_wasp39b.ecf``, you want something like:
+Finally, you need to connect everything together by opening up each ``.ecf`` file and updating the ``topdir``, ``inputdir``, and ``outputdir`` parameters within. **Note** that ``inputdir`` and ``outputdir`` are both relative to ``topdir``. For the ``S2_wasp39b.ecf``, you can do something like:
 
 .. code-block:: bash
 
-	topdir		/User
-	inputdir	/Data/JWST-Sim/NIRSpec
-	outputdir	/DataAnalysis/JWST/MyFirstEureka/Stage2
+	topdir		/home/User/
+	inputdir	Data/JWST-Sim/NIRSpec
+	outputdir	DataAnalysis/JWST/MyFirstEureka/Stage2
 
-However, for the later stages you can use something simpler, e.g. for the ``S3_wasp39b.ecf``:
+Specifically, you'll want to set ``inputdir`` to the folder where you have put your downloaded FITS files, and ``outputdir`` to the folder where you want the results of your analyses to be stored. This may be useful if you want to store the raw data on an external hard drive while storing the analysis outputs on your internal hard drive. For the later stages you could use something simpler, e.g. for the ``S3_wasp39b.ecf``:
 
 .. code-block:: bash
 
-	topdir		/User/DataAnalysis/JWST/MyFirstEureka
-	inputdir	/Stage2
-	outputdir	/Stage3
+	topdir		/home/User/DataAnalysis/JWST/MyFirstEureka/
+	inputdir	Stage2
+	outputdir	Stage3
 
 The explicit settings for the ``S4_wasp39b.ecf``, ``S5_wasp39b.ecf`` and ``S6_wasp39b.ecf`` will be skipped here for brevity (but you should still do them!). However, there are a few important settings we must adjust.
 
@@ -140,6 +146,13 @@ Now that everything is set up, you should now be able to run the pipeline using:
 
 This will start printing information to your terminal, saving a bunch of output data/figures to the ``outputdir`` file locations you assigned above, and depending on the number of processors you were brave enough to allocate, potentially make your laptop as noisy as the engine of a Boeing 747. 
 
+While running ``Eureka!`` on these simulated data, you should expect to see a few warnings as there are some imperfections in the simulated data which should not be present in real observations.
+When you begin to work on your own real observation, you should use your critical judgement to determine whether a warning is relevant to your situation. In general though, it's not uncommon for you to
+see a warning about leaked semaphore objects at the end of a run that includes ``ncpu > 1`` in Stage 3 or 5, and these warnings can be safely ignored.
+
+5. Examine Outputs 🤨
+-------------------------
+
 Carry on reading for more information on each individual stage in the pipeline and some of the products it produces. Also, feel free to dig through the output directories and get a gauge of what each stage is doing at your own speed.
 
 Stage 1: Ramp Fitting
@@ -165,7 +178,11 @@ To the right you can see a 2D representation of the variation in flux between co
 
 Finally, note that the actual data for these produced 1D spectra are contained in the ``*Table_Save.txt`` file.
 
-.. image:: ../media/stage3_quickstart.png
+.. image:: ../media/stage3_quickstart1.png
+   :width: 49.5%
+
+.. image:: ../media/stage3_quickstart2.png
+   :width: 49.5%
 
 Stage 4: Create Lightcurves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,7 +213,7 @@ The final Stage of ``Eureka!``, Stage 6, takes the output data from the lightcur
 
 .. image:: ../media/stage6_quickstart.png
 
-5. Where to go next 👩‍💻
+6. Where to go next 👩‍💻
 -------------------------
 
 You made it! Congratulations, it's time to reward yourself with a break 😊

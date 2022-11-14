@@ -63,7 +63,27 @@ def read(filename, data, meta, log):
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
-        wave_2d = hdulist['WAVELENGTH', 1].data
+        if not hasattr(meta, 'poly_wavelength') or not meta.poly_wavelength:
+            # Use the FITS data
+            wave_2d = hdulist['WAVELENGTH', 1].data
+        elif hdulist[0].header['FILTER'] == 'F322W2':
+            # The new way, using the polynomial model Everett Schlawin computed
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            Xprime = (X - 1571)/1000
+            wave_2d = (3.9269369110332657
+                       + 0.9811653393151226*Xprime
+                       + 0.001666535535484272*Xprime**2
+                       - 0.002874123523765872*Xprime**3)
+            # Convert 1D array to 2D
+            wave_2d *= np.ones((hdulist['WAVELENGTH', 1].data.shape[0], 1))
+        elif hdulist[0].header['FILTER'] == 'F444W':
+            # The new way, using the polynomial model Everett Schlawin computed
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            Xprime = (X - 852.0756)/1000
+            wave_2d = (3.928041104137344
+                       + 0.979649332832983*Xprime)
+            # Convert 1D array to 2D
+            wave_2d *= np.ones((hdulist['WAVELENGTH', 1].data.shape[0], 1))
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True

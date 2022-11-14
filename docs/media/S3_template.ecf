@@ -44,8 +44,8 @@ save_output     True        # Save outputs for use in S4
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User/
+topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir        /Data/JWST-Sim/NIRSpec/Stage2/   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
-outputdir       /Data/JWST-Sim/NIRSpec/Stage3/
+inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+outputdir       Stage3
