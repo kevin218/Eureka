@@ -224,7 +224,7 @@ def plot_fit2(lc, model, meta, fitter, isTitle=True):
             fname_tag = f'ch{ch_number}'
 
         fname = (f'figs{os.sep}fig5110_{fname_tag}_lc_{fitter}'
-                 + figure_filetype)
+                 + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)

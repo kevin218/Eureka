@@ -671,6 +671,10 @@ def phot_lc(data, meta):
     plt.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
+    flux  = data['aplev'][90:160].values
+    resid = data['aplev'][90:160].values - np.mean(data['aplev'][90:160].values)
+    rms   = 1.0e6*np.sqrt(np.mean((resid/flux)**2))
+    print('rms:', rms, 'ppm')
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()

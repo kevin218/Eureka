@@ -2,6 +2,7 @@ import numpy as np
 from . import imageedit as ie
 from . import gaussian as g
 from ..S3_data_reduction import plots_s3
+from . import psf_fit     as pf
 
 
 def centerdriver(method, data, guess, trim, radius, size,
@@ -91,10 +92,10 @@ def centerdriver(method, data, guess, trim, radius, size,
     # elif method == 'lac':
     #     y, x = ctr.actr(img, loc, asym_rad=radius,
     #                     asym_size=size, method='col')
-    # elif method == 'bpf' or method == 'ipf':
-    #     y, x, flux, sky = pf.spitzer_fit(img, msk, weights, psf, psfctr,
-    #                                      expand, method)
-    #     extra = flux, sky
+    elif method == 'bpf' or method == 'ipf':
+        y, x, flux, sky, flux_err, sky_err = pf.spitzer_fit(img, msk, weights, psf, psfctr,
+                                         expand, method)
+        extra = flux, sky, flux_err, sky_err
 
     # Make trimming correction and return
     return ((y, x) + cen - trim), extra
