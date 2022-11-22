@@ -457,12 +457,16 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                     paramtitles=paramtitles)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
-        t_step = m.StepModel(parameters=params, name='step', fmt='r--',
-                             log=log, time=time, time_units=time_units,
-                             freenames=freenames,
-                             longparamlist=lc_model.longparamlist,
-                             nchan=lc_model.nchannel_fitted,
-                             paramtitles=paramtitles)
+        if 'starry' in meta.run_myfuncs:
+            StepModel = dm.StepModel
+        else:
+            StepModel = m.StepModel
+        t_step = StepModel(parameters=params, name='step', fmt='r--',
+                           log=log, time=time, time_units=time_units,
+                           freenames=freenames,
+                           longparamlist=lc_model.longparamlist,
+                           nchan=lc_model.nchannel_fitted,
+                           paramtitles=paramtitles)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
