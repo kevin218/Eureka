@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import pymc3 as pm
 import pymc3_ext as pmx
 from astropy import table
 
@@ -178,6 +179,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                            chains=meta.chains, cores=meta.ncpu)
         print()
 
+        # Log detailed convergence and sampling statistics
+        log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
+        log.writelog(pm.summary(trace, var_names=freenames),
+                     mute=(not meta.verbose))
+        log.writelog('', mute=(not meta.verbose))
+
     samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
 
     # Record median + percentiles
@@ -219,7 +226,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    log.writelog('PYMC3 NUTS RESULTS:')
+    log.writelog('\nPYMC3 NUTS RESULTS:')
     for i in range(ndim):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
@@ -260,9 +267,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='nuts')
 
-    # Plot residuals distribution
     if meta.isplots_S5 >= 3:
+        # Plot residuals distribution
         plots.plot_res_distr(lc, model, meta, fitter='nuts')
+
+        # Plot trace evolution
+        plots.plot_trace(trace, model, lc, freenames, meta)
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')

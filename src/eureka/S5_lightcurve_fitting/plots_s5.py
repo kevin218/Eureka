@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import corner
 from scipy import stats
+import arviz as az
 
 from .likelihood import computeRMS
 from ..lib import plots, util
@@ -481,6 +482,59 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                     pad_inches=0.05, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
+               **kwargs):
+    """Plot the evolution of the trace to look for temporal trends. (Figs 5305)
+
+    Parameters
+    ----------
+    trace : pymc3.backends.base.MultiTrace or arviz.InferenceData
+        A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the
+        samples.
+    model : 
+
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    freenames : iterable
+        The names of the fitted parameters.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str; optional
+        The name of the fitter (for plot filename). Defaults to 'nuts'.
+    compact: bool; optional
+        Plot multidimensional variables in a single plot. Defailts to False.
+    **kwargs : dict
+        Additional keyword arguments to pass to pm.traceplot.
+
+    Notes
+    -----
+    History:
+
+    - November 22, 2022 Taylor Bell
+        Initial version.
+    """
+
+    with model.model:
+        ax = az.plot_trace(trace, var_names=freenames, compact=compact,
+                           show=False, **kwargs)
+    fig = ax[0][0].figure
+
+    if lc.white:
+        fname_tag = 'white'
+    else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        fname_tag = f'ch{ch_number}'
+    fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
+    fname += '_'+fitter
+    fname += plots.figure_filetype
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight',
+                pad_inches=0.05, dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+    else:
+        plt.close(fig)
 
 
 def plot_res_distr(lc, model, meta, fitter):

@@ -18,6 +18,9 @@ from jwst.datamodels import dqflags
 from jwst.lib import reffile_utils
 from jwst.lib import pipe_utils
 
+from . import update_saturation
+from . import group_level
+
 import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -87,6 +90,30 @@ default='none') # max number of processes to create
             Updated for JWST version 1.3.3, code restructure
         '''
         with datamodels.RampModel(input) as input_model:
+
+            if hasattr(self.s1_meta, 
+                       'update_sat_flags') and self.s1_meta.update_sat_flags:
+                input_model = update_saturation.update_sat(input_model, 
+                                                           self.s1_log, 
+                                                           self.s1_meta)
+
+            if hasattr(self.s1_meta, 'masktrace') and self.s1_meta.masktrace:
+                input_model = group_level.mask_trace(input_model,
+                                                     self.s1_log,
+                                                     self.s1_meta)
+            
+            if hasattr(self.s1_meta, 
+                       'refpix_corr') and self.s1_meta.refpix_corr:
+                input_model = group_level.custom_ref_pixel(input_model,
+                                                           self.s1_log,
+                                                           self.s1_meta)
+            
+            if hasattr(self.s1_meta, 
+                       'grouplevel_bg') and self.s1_meta.grouplevel_bg:
+                input_model = group_level.GLBS(input_model,
+                                               self.s1_log,
+                                               self.s1_meta)
+
             readnoise_filename = self.get_reference_file(input_model,
                                                          'readnoise')
             gain_filename = self.get_reference_file(input_model, 'gain')
