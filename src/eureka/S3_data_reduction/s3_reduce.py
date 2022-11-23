@@ -179,7 +179,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             # Create list of file segments
             meta = util.readfiles(meta, log)
-
+            psf_f1500w_load = np.loadtxt('/home/zieba/Desktop/Projects/Code/webbpsf/psf_f1500w.txt')
             # Load instrument module
             if meta.inst == 'miri':
                 from . import miri as inst
@@ -410,74 +410,99 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Use the center of the frame as an initial guess
                         centroid_guess = [data.flux.shape[1]//2,
                                           data.flux.shape[2]//2]
-                        # Do a 2D gaussian fit to the whole frame
-                        position, extra = \
-                            centerdriver.centerdriver('fgc',
-                                                      data.flux.values[i],
-                                                      centroid_guess, 0, 0, 0,
-                                                      mask=None, uncd=None,
-                                                      fitbg=1, maskstar=True,
-                                                      expand=1.0, psf=None,
-                                                      psfctr=None, i=i, m=m,
-                                                      meta=meta)
-
-                        if meta.oneoverf_corr is not None:
-                            # Correct for 1/f
-                            data = \
-                                inst.do_oneoverf_corr(data, meta, i,
-                                                      position[1], log)
+                        psf_extraction = True
+                        if psf_extraction:
+                            scale = 5
+                            psfctr = [2560 // 2, 2560 // 2]
+                            position, extra = centerdriver.centerdriver('ipf',
+                                                           data.flux.values[i],
+                                                           centroid_guess, 0, 0, 0,
+                                                           mask=data.mask.values[i],
+                                                           uncd=None,
+                                                           fitbg=1, maskstar=True,
+                                                           expand=scale, psf=psf_f1500w_load,
+                                                           psfctr=psfctr)
+                            # Store centroid positions and
+                            # the Gaussian 1-sigma half-widths
+                            data['centroid_y'][i], data['centroid_x'][i] = position
+                            print(position)
+                            # Save results into arrays
+                            data['aplev'][i], data['aperr'][i],\
+                            data['skylev'][i], data['skyerr'][i] = extra
+                            print(extra)
+                            # Plot 2D frame, the centroid and the centroid position
                             if meta.isplots_S3 >= 3 and i < meta.nplots:
-                                plots_s3.phot_2d_frame_oneoverf(
-                                    data, meta, m, i, flux_w_oneoverf)
+                                plots_s3.phot_2d_frame(data, meta, m, i)
 
-                        # Use the determined centroid and
-                        # cut out ctr_cutout_size pixels around it
-                        # Then perform another 2D gaussian fit
-                        position, extra = \
-                            centerdriver.centerdriver('fgc',
-                                                      data.flux.values[i],
-                                                      position,
-                                                      meta.ctr_cutout_size,
-                                                      0, 0,
-                                                      mask=data.mask.values[i],
-                                                      uncd=None, fitbg=1,
-                                                      maskstar=True, expand=1,
-                                                      psf=None, psfctr=None,
-                                                      i=i, m=m, meta=meta)
-                        # Store centroid positions and
-                        # the Gaussian 1-sigma half-widths
-                        data['centroid_y'][i], data['centroid_x'][i] = position
-                        data['centroid_sy'][i], data['centroid_sx'][i] = extra
-                        # Plot 2D frame, the centroid and the centroid position
-                        if meta.isplots_S3 >= 3 and i < meta.nplots:
-                            plots_s3.phot_2d_frame(data, meta, m, i)
+                        else:
+                            # Do a 2D gaussian fit to the whole frame
+                            position, extra = \
+                                centerdriver.centerdriver('fgc',
+                                                          data.flux.values[i],
+                                                          centroid_guess, 0, 0, 0,
+                                                          mask=None, uncd=None,
+                                                          fitbg=1, maskstar=True,
+                                                          expand=1.0, psf=None,
+                                                          psfctr=None, i=i, m=m,
+                                                          meta=meta)
 
-                        # Interpolate masked pixels before we perform
-                        # aperture photometry
-                        if meta.interp_method is not None:
-                            util.interp_masked(data, meta, i, log)
+                            if meta.oneoverf_corr is not None:
+                                # Correct for 1/f
+                                data = \
+                                    inst.do_oneoverf_corr(data, meta, i,
+                                                          position[1], log)
+                                if meta.isplots_S3 >= 3 and i < meta.nplots:
+                                    plots_s3.phot_2d_frame_oneoverf(
+                                        data, meta, m, i, flux_w_oneoverf)
 
-                        # Calculate flux in aperture and subtract
-                        # background flux
-                        aphot = apphot.apphot(
-                            meta, image=data.flux[i].values,
-                            ctr=position, photap=meta.photap,
-                            skyin=meta.skyin, skyout=meta.skyout,
-                            betahw=1, targpos=position,
-                            mask=data.mask[i].values,
-                            imerr=data.err[i].values,
-                            skyfrac=0.1, med=True, expand=1,
-                            isbeta=False, nochecks=False,
-                            aperr=True, nappix=True, skylev=True,
-                            skyerr=True, nskypix=True,
-                            nskyideal=True, status=True,
-                            betaper=True)
-                        # Save results into arrays
-                        (data['aplev'][i], data['aperr'][i],
-                            data['nappix'][i], data['skylev'][i],
-                            data['skyerr'][i], data['nskypix'][i],
-                            data['nskyideal'][i], data['status'][i],
-                            data['betaper'][i]) = aphot
+                            # Use the determined centroid and
+                            # cut out ctr_cutout_size pixels around it
+                            # Then perform another 2D gaussian fit
+                            position, extra = \
+                                centerdriver.centerdriver('fgc',
+                                                          data.flux.values[i],
+                                                          position,
+                                                          meta.ctr_cutout_size,
+                                                          0, 0,
+                                                          mask=data.mask.values[i],
+                                                          uncd=None, fitbg=1,
+                                                          maskstar=True, expand=1,
+                                                          psf=None, psfctr=None,
+                                                          i=i, m=m, meta=meta)
+                            # Store centroid positions and
+                            # the Gaussian 1-sigma half-widths
+                            data['centroid_y'][i], data['centroid_x'][i] = position
+                            data['centroid_sy'][i], data['centroid_sx'][i] = extra
+                            # Plot 2D frame, the centroid and the centroid position
+                            if meta.isplots_S3 >= 3 and i < meta.nplots:
+                                plots_s3.phot_2d_frame(data, meta, m, i)
+
+                            # Interpolate masked pixels before we perform
+                            # aperture photometry
+                            if meta.interp_method is not None:
+                                util.interp_masked(data, meta, i, log)
+
+                            # Calculate flux in aperture and subtract
+                            # background flux
+                            aphot = apphot.apphot(
+                                meta, image=data.flux[i].values,
+                                ctr=position, photap=meta.photap,
+                                skyin=meta.skyin, skyout=meta.skyout,
+                                betahw=1, targpos=position,
+                                mask=data.mask[i].values,
+                                imerr=data.err[i].values,
+                                skyfrac=0.1, med=False, expand=10,
+                                isbeta=False, nochecks=False,
+                                aperr=True, nappix=True, skylev=True,
+                                skyerr=True, nskypix=True,
+                                nskyideal=True, status=True,
+                                betaper=True)
+                            # Save results into arrays
+                            (data['aplev'][i], data['aperr'][i],
+                                data['nappix'][i], data['skylev'][i],
+                                data['skyerr'][i], data['nskypix'][i],
+                                data['nskyideal'][i], data['status'][i],
+                                data['betaper'][i]) = aphot
 
                 if not hasattr(meta, 'save_fluxdata'):
                     meta.save_fluxdata = True
