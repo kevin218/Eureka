@@ -30,10 +30,9 @@ class TestModels(unittest.TestCase):
         self.assertEqual(self.model.name, name)
 
         # Test model units
-        self.assertEqual(str(self.model.units), 'd')
-        self.model.units = 'MJD'
-        self.assertEqual(self.model.units, 'MJD')
-        self.assertRaises(TypeError, setattr, self.model.units, 'foobar')
+        self.assertEqual(str(self.model.time_units), 'BMJD_TDB')
+        self.model.time_units = 'MJD'
+        self.assertEqual(self.model.time_units, 'MJD')
 
     def test_compositemodel(self):
         """Tests for the CompositeModel class"""

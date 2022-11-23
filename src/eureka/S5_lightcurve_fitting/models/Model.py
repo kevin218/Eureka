@@ -59,7 +59,12 @@ class Model:
 
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
-        paramtitles = self.paramtitles.append(other.paramtitles)
+        if self.paramtitles is None:
+            paramtitles = other.paramtitles
+        elif other.paramtitles is not None:
+            paramtitles = self.paramtitles.append(other.paramtitles)
+        else:
+            paramtitles = self.paramtitles
 
         return CompositeModel([copy.copy(self), other], parameters=parameters,
                               paramtitles=paramtitles)

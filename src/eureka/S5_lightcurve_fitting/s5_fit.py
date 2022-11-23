@@ -436,6 +436,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         if 'eclipse' in model_names:
             e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
+        # Check if should enforce positivity
+        if not hasattr(meta, 'force_positivity'):
+            meta.force_positivity = False
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log, time=time,
@@ -443,7 +446,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
-                                      paramtitles=paramtitles, meta=meta,
+                                      paramtitles=paramtitles,
+                                      force_positivity=meta.force_positivity,
                                       transit_model=t_model,
                                       eclipse_model=e_model)
         modellist.append(t_phase)
