@@ -8,7 +8,11 @@ from ..lib import util, logedit
 from ..lib.readEPF import Parameters
 from . import lightcurve
 from . import models as m
-from . import differentiable_models as dm
+try:
+    from . import differentiable_models as dm
+except:
+    # PyMC3 hasn't been installed
+    pass
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):

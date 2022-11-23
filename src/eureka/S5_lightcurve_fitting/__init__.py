@@ -1,7 +1,21 @@
 """
 Package to fit models to light curve data
 """
-from . import differentiable_models
+# Do some checks here to avoid spamming these warnings
+try:
+    import theano
+    import pymc3
+    import starry
+    import pymc3_ext
+    import arviz
+    success = True
+except ImportError:
+    success = False
+    print("Could not import starry and/or pymc3 related packages. "
+          "Functionality may be limited.")
+if success:
+    from . import differentiable_models
+
 from . import fitters
 from . import gradient_fitters
 from . import lightcurve

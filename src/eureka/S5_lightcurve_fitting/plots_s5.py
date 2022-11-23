@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import corner
 from scipy import stats
-import arviz as az
+try:
+    import arviz as az
+except:
+    # PyMC3 hasn't been installed
+    pass
 
 from .likelihood import computeRMS
 from ..lib import plots, util

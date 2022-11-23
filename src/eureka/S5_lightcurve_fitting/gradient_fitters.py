@@ -1,7 +1,11 @@
 import numpy as np
 import copy
-import pymc3 as pm
-import pymc3_ext as pmx
+try:
+    import pymc3 as pm
+    import pymc3_ext as pmx
+except:
+    # PyMC3 hasn't been installed
+    pass
 from astropy import table
 
 from .likelihood import computeRedChiSq
