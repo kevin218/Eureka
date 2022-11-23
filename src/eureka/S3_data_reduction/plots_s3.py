@@ -671,6 +671,20 @@ def phot_lc(data, meta):
     plt.clf()
     plt.suptitle('Photometric light curve')
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
+
+    flux = data['aplev'].values
+    err = data['aperr'].values
+    model = np.median(flux)
+    resid = flux - model
+    rms_1 = 1e6 * np.sqrt(np.mean((resid / flux) ** 2))
+    rms_2 = 1e6 * np.sqrt(np.mean((resid / model) ** 2))
+
+    rms_pred = 1.0e6*np.sqrt(np.mean((err/flux)**2))
+
+    print(f'rms LK: {rms_1:.1f}, {rms_1/rms_pred:.3f}')
+    print(f'rms ME: {rms_2:.1f}, {rms_2/rms_pred:.3f}')
+    print(f'rms_pred: {rms_pred:.1f}')
+
     plt.ylabel('Flux')
     plt.xlabel('Time')
     plt.tight_layout()
@@ -735,7 +749,7 @@ def phot_centroid(data, meta):
     """
     plt.figure(3109)
     plt.clf()
-    fig, ax = plt.subplots(4, 1, sharex=True)
+    fig, ax = plt.subplots(2, 1, sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
@@ -743,28 +757,38 @@ def phot_centroid(data, meta):
     cy = data.centroid_y.values
     cy_rms = np.sqrt(np.mean((cy - np.median(cy)) ** 2))
 
-    ax[0].plot(data.time, data.centroid_x-np.mean(data.centroid_x),
-               label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms))
-    ax[0].set_ylabel('Delta x')
-    ax[0].legend()
+    ax[0].plot(data.time-59879, data.centroid_x-np.mean(data.centroid_x),
+                c='k', lw=2.4, alpha=0.7)
+    #label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms),
+    ax[0].set_ylabel(r'$\Delta$x')
+    ax[0].set_ylim(-0.025, 0.025)
+    #ax[0].legend()
 
-    ax[1].plot(data.time, data.centroid_y-np.mean(data.centroid_y),
-               label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms))
-    ax[1].set_ylabel('Delta y')
-    ax[1].legend()
+    ax[1].plot(data.time-59879, data.centroid_y-np.mean(data.centroid_y),
+                c='k', lw=2.4, alpha=0.7)
+    #label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms)
+    ax[1].set_ylabel(r'$\Delta$y')
+    ax[1].set_ylim(-0.025, 0.025)
+    #ax[1].legend()
 
-    ax[2].plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
-    ax[2].set_ylabel('Delta sx')
+    print('delta x:', cx_rms)
+    print('delta y:', cy_rms)
+    #ax[2].plot(data.time-59879, data.centroid_sy-np.mean(data.centroid_sx),
+    #            c='k', lw=2.4, alpha=0.7)
+    #ax[2].set_ylabel('Delta sx')
 
-    ax[3].plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
-    ax[3].set_ylabel('Delta sy')
-    ax[3].set_xlabel('Time')
+    #ax[3].plot(data.time-59879, data.centroid_sy-np.mean(data.centroid_sy),
+    #            c='k', lw=2.4, alpha=0.7)
+    #ax[3].set_ylabel('Delta sy')
 
-    fig.subplots_adjust(hspace=0.02)
+    ax[1].set_xlabel('Time (MJD - 59879.0 days)')
+    #ax[3].set_xlabel('Time (MJD - 59879.0 days)')
+
+    fig.subplots_adjust(hspace=0.01)
 
     plt.tight_layout()
     fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
+    plt.savefig(meta.outputdir + fname, dpi=350)
     if not meta.hide_plots:
         plt.pause(0.2)
 
@@ -913,9 +937,9 @@ def phot_2d_frame(data, meta, m, i):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3306, figsize=(8, 3))
+    plt.figure(3306, figsize=(7, 7))
     plt.clf()
-    plt.suptitle('2D frame with centroid and apertures')
+    #plt.suptitle('2D frame with centroid and apertures')
 
     flux, centroid_x, centroid_y = \
         data.flux[i], data.centroid_x[i], data.centroid_y[i]
@@ -924,7 +948,10 @@ def phot_2d_frame(data, meta, m, i):
     xmax = data.flux.x.max().values-meta.xwindow[0]
     ymin = data.flux.y.min().values-meta.ywindow[0]
     ymax = data.flux.y.max().values-meta.ywindow[0]
-    im = plt.imshow(flux, origin='lower', aspect='equal')
+    vmin = 3.29500e4
+    vmax = 3.2850e4
+    from matplotlib.colors import LogNorm
+    im = plt.imshow(flux, origin='lower', aspect='equal', norm=LogNorm(vmin=vmin, vmax=vmax))
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                 label='centroid')
     plt.title('Full 2D frame')
@@ -932,11 +959,11 @@ def phot_2d_frame(data, meta, m, i):
     plt.xlabel('x pixels')
 
     circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                         fill=False, lw=3, alpha=0.7, label='target aperture')
+                         fill=False, lw=3.1, alpha=0.75, label='target aperture')
     circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
-                         fill=False, lw=4, alpha=0.8, label='sky aperture')
+                         fill=False, lw=2.6, alpha=0.85, label='sky aperture')
     circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
-                         fill=False, lw=4, alpha=0.8)
+                         fill=False, lw=2.6, alpha=0.85)
     plt.gca().add_patch(circle1)
     plt.gca().add_patch(circle2)
     plt.gca().add_patch(circle3)
@@ -946,16 +973,16 @@ def phot_2d_frame(data, meta, m, i):
     plt.xlabel('x pixels')
     plt.ylabel('y pixels')
 
-    plt.legend()
+    #plt.legend()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
              + plots.figure_filetype)
-    plt.savefig(meta.outputdir + fname, dpi=250)
+    plt.savefig(meta.outputdir + fname, dpi=350)
     if not meta.hide_plots:
-        plt.pause(0.2)
+        plt.pause(0.1)
 
     if meta.isplots_S3 >= 5:
         plt.figure(3504, figsize=(6, 5))

@@ -825,7 +825,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                                 queue_size=queue_size, bound=bound, sample=sample,
                                 logl_args=l_args,
                                 ptform_args=[prior1, prior2, priortype])
-        dsampler.run_nested(dlogz_init=0.1, nlive_init=50, nlive_batch=60, use_stop=True, maxbatch=15) #zieba
+        dsampler.run_nested(dlogz_init=0.001, nlive_init=250, nlive_batch=250, use_stop=True, maxbatch=30) #zieba
         sampler = dsampler
     else:
         sampler = NestedSampler(ln_like, ptform, ndims, pool=pool,
