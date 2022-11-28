@@ -563,7 +563,11 @@ def load_specific_s3_meta_info(meta):
     meta.inputdir = inputdir
     s3_meta, meta.inputdir, meta.inputdir_raw = \
         me.findevent(meta, 'S3', allowFail=False)
+    filename_S3_SpecData = s3_meta.filename_S3_SpecData
     # Merge S4 meta into old S3 meta
     meta = me.mergeevents(meta, s3_meta)
+    
+    # Make sure the filename_S3_SpecData is kept
+    meta.filename_S3_SpecData = filename_S3_SpecData
 
     return meta

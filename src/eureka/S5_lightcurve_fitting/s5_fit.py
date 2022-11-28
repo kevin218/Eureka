@@ -715,7 +715,11 @@ def load_specific_s4_meta_info(meta):
     meta.inputdir = inputdir
     s4_meta, meta.inputdir, meta.inputdir_raw = \
         me.findevent(meta, 'S4', allowFail=False)
+    filename_S4_LCData = s4_meta.filename_S4_LCData
     # Merge S5 meta into old S4 meta
     meta = me.mergeevents(meta, s4_meta)
+
+    # Make sure the filename_S4_LCData is kept
+    meta.filename_S4_LCData = filename_S4_LCData
 
     return meta
