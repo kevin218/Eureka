@@ -47,7 +47,7 @@ class PyMC3Model:
         self._parameters = Parameters()
         self.longparamlist = None
         self.paramtitles = None
-        self.components = None
+        self.components = []
         self.modeltype = None
         self.fmt = None
         self.nchan = 1
@@ -116,25 +116,19 @@ class PyMC3Model:
         return self._time
 
     @time.setter
-    def time(self, time_array, time_units='BMJD'):
+    def time(self, time_array):
         """A setter for the time
 
         Parameters
         ----------
         time_array: sequence, astropy.units.quantity.Quantity
             The time array
-        time_units: str
-            The units of the input time_array, e.g. ['MJD', 'BMJD', 'phase']
         """
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
-        # Set the units
-        self.time_units = time_units
-
         # Set the array
-        # self._time = np.array(time_array)
         self._time = np.ma.masked_array(time_array)
 
     @property
@@ -475,3 +469,28 @@ class CompositePyMC3Model(PyMC3Model):
         """
         for component in self.components:
             component.update(newparams, **kwargs)
+
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time
+
+        Parameters
+        ----------
+        time_array: sequence, astropy.units.quantity.Quantity
+            The time array
+        """
+        # Check the type
+        if not isinstance(time_array, (np.ndarray, tuple, list)):
+            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+
+        # Set the array
+        self._time = np.ma.masked_array(time_array)
+
+        # Set the array for the components
+        for component in self.components:
+            component.time = time_array

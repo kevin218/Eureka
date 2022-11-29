@@ -96,22 +96,17 @@ class Model:
         return self._time
 
     @time.setter
-    def time(self, time_array, time_units='BMJD'):
+    def time(self, time_array):
         """A setter for the time
 
         Parameters
         ----------
         time_array: sequence, astropy.units.quantity.Quantity
             The time array
-        time_units: str
-            The units of the input time_array, e.g. ['MJD', 'BMJD', 'phase']
         """
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the units
-        self.time_units = time_units
 
         # Set the array
         # self._time = np.array(time_array)

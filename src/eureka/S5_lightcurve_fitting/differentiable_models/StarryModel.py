@@ -266,30 +266,3 @@ class StarryModel(PyMC3Model):
             # Instantiate the system
             sys = starry.System(star, planet)
             self.fit.systems.append(sys)
-
-    @property
-    def time(self):
-        """A getter for the time"""
-        return self._time
-
-    @time.setter
-    def time(self, time_array, time_units='BJD'):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        time_units: str
-            The units of the input time_array, ['MJD', 'BJD', 'phase']
-        """
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the units
-        self.time_units = time_units
-
-        # Set the array
-        # self._time = np.array(time_array)
-        self._time = np.ma.masked_array(time_array)
