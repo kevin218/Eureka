@@ -7,7 +7,7 @@ dependencies:
     - asdf
     - astropy
     - batman-package
-    - bokeh
+    - bokeh[version='<3.0']
     - ccdproc
     - celerite
     - corner
@@ -40,7 +40,7 @@ dependencies:
         - myst-parser # Needed for documentation
         - pymc3
         - sphinx-rtd-theme # Needed for documentation
-        - starry>=1
+        - starry>=1,<2
         - stcal
         - stdatamodels
         - svo_filters
