@@ -885,27 +885,67 @@ This file describes the transit/eclipse and systematics parameters and their pri
 ``Name`` defines the specific parameter being fit for. Available options are:
    - Transit and Eclipse Parameters
       - ``rp`` - planet-to-star radius ratio, for the transit models.
-      - ``fp`` - planet/star flux ratio, for the eclipse models.
+      - ``fp`` - planet-to-star flux ratio, for the eclipse models.
    - Orbital Parameters
       - ``per`` - orbital period (in days)
-      - ``t0`` - transit time (in days)
+      - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
       - ``inc`` - orbital inclination (in degrees)
       - ``a`` - a/R*, the ratio of the semimajor axis to the stellar radius
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
-   - Phase Curve Parameters - the phase curve model allows for the addition of up to four sinusoids into a single phase curve
+      - ``Rs`` - the host star's radius in units of solar radii.
+
+         This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
+         If not provided for batman_ecl fits, the finite speed of light will not be accounted for.
+         Fits with the starry model **require** that ``Rs`` be provided as starry always accounts for light travel time. This parameter should be set to ``fixed``
+         unless you really want to marginalize over ``Rs``.
+      - ``Ms`` - the host star's mass in units of solar masses.
+
+         This parameter is **required** for fits with the starry model as starry currently requires the parameter to be provided. In practice, the stellar mass is not
+         actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
+         unless you really want to marginalize over ``Ms``.
+   - Sinusoidal Phase Curve Parameters
+      The sinusoid_pc phase curve model allows for the inclusion of up to four sinusoids into a single phase curve
+
       - ``AmpCos1`` - Amplitude of the first cosine
       - ``AmpSin1`` - Amplitude of the first sine
       - ``AmpCos2`` - Amplitude of the second cosine
       - ``AmpSin2`` - Amplitude of the second sine
+   - Starry Phase Curve and Eclipse Mapping Parameters
+      The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
+
+      - ``Yl_m`` - Spherical harmonic coefficients normalized by the Y0_0 term where ``l`` and ``m`` should be replaced with integers.
+
+         ``l`` can be any integer greater than or equal to 1, and ``m`` can be any integer between ``-l`` to ``+l``.
+         For example, the ``Y1_0`` term fits for the sub-stellar to anti-stellar brightness ratio (comparable to ``AmpCos1``),
+         the ``Y1_1`` term fits for the East--West brightness ratio (comparable to ``-AmpSin1``),
+         and the ``Y1_-1`` term fits for the North--South pole brightness ratio (undetectable using phase variations, but potentially detectable using eclipse mapping).
+         The ``Y0_0`` term cannot be fit directly but is instead fit through the more observable ``fp`` term which is composed of the ``Y0_0`` term and the square of the ``rp`` term.
    - Limb Darkening Parameters
-      - ``limb_dark`` - The limb darkening model to be used. Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential', '4-parameter']``
-      - ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``, ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``, ``4-parameter`` has four parameters ``u1, u2, u3, u4``
+      - ``limb_dark`` - The limb darkening model to be used.
+      
+         Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential', '4-parameter']``.
+         ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``,
+         ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``,
+         and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
-      - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials. The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.). The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array. Polynomial fits should include at least ``c0`` for usable results.
-      - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models. The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``, where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset. If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``. Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters; instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.
-      - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events). For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
+      - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
+      
+         The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
+         The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
+         Polynomial fits should include at least ``c0`` for usable results.
+      - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models.
+      
+         The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``,
+         where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset.
+         If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
+         Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters;
+         instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising)
+         while fitting for the remaining coefficients.
+      - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events).
+      
+         For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
       - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
