@@ -246,6 +246,8 @@ class CompositePyMC3Model(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
+        self.issetup = False
+
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -320,6 +322,10 @@ class CompositePyMC3Model(PyMC3Model):
                                     getattr(self.model, parname))
 
     def setup(self, time, flux, lc_unc):
+        if self.issetup:
+            # Only setup once if trying multiple different fitting algorithms
+            return
+
         self.time = time
         self.flux = flux
         self.lc_unc = lc_unc
@@ -363,6 +369,8 @@ class CompositePyMC3Model(PyMC3Model):
             # likelihood function.
             pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
                       observed=self.flux)
+        
+        self.issetup = True
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the model components.
