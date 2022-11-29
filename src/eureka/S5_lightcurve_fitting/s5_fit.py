@@ -1,7 +1,9 @@
 import numpy as np
 import os
 import time as time_pkg
+from copy import deepcopy
 import astraeus.xarrayIO as xrio
+
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -54,7 +56,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     - April 2022 Kevin Stevenson
         Enabled Astraeus
     '''
-    print("\nStarting Stage 5: Light Curve Fitting\n")
+    s4_meta = deepcopy(s4_meta)
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
@@ -119,6 +122,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             # Copy existing S4 log file and resume log
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
+            log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 

@@ -17,10 +17,12 @@
 import os
 import time as time_pkg
 import numpy as np
+from copy import deepcopy
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
 from tqdm import tqdm
+
 from . import plots_s4, drift, generate_LD, wfc3
 from ..lib import logedit
 from ..lib import readECF
@@ -71,6 +73,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     - July 2022 Sebastian Zieba
          Added photometry S4
     '''
+    s3_meta = deepcopy(s3_meta)
+    input_meta = deepcopy(input_meta)
+
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S4_' + eventlabel + '.ecf'

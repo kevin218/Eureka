@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 import pandas as pd
 from astropy import units, constants
 import os
@@ -47,7 +48,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     - Feb 14, 2022 Taylor Bell
         Original version
     '''
-    print("\nStarting Stage 6: Light Curve Fitting\n")
+    s5_meta = deepcopy(s5_meta)
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
@@ -103,6 +105,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
             log = logedit.Logedit(meta.s6_logname, read=meta.s5_logname)
+            log.writelog("\nStarting Stage 6: Light Curve Fitting\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
