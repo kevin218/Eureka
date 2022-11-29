@@ -176,6 +176,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     for name, val in zip(freenames, freepars):
         start[name] = val
 
+    if not hasattr(meta, 'target_accept'):
+        meta.target_accept = 0.85
+
     log.writelog('Running PyMC3 NUTS sampler...')
     with model.model:
         trace = pmx.sample(tune=meta.tune, draws=meta.draws, start=start,
