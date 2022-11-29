@@ -117,13 +117,7 @@ class PyMC3Model:
 
     @time.setter
     def time(self, time_array):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        """
+        """A setter for the time"""
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
@@ -159,6 +153,11 @@ class PyMC3Model:
         ----------
         new_time : sequence
             The time array.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
@@ -195,21 +194,28 @@ class PyMC3Model:
 
     def plot(self, time, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
-        """Plot the model
+        """Plot the model.
 
         Parameters
         ----------
-        time: array-like
-            The time axis to use
-        components: bool
-            Plot all model components
-        ax: Matplotlib Axes
-            The figure axes to plot on
-
-        Returns
-        -------
-        bokeh.plotting.figure
-            The figure
+        time : array-like
+            The time axis to use.
+        components : bool; optional
+            Plot all model components.
+        ax : Matplotlib Axes; optional
+            The figure axes to plot on.
+        draw : bool; optional
+            Whether or not to display the plot. Defaults to False.
+        color : str; optional
+            The color to use for the plot. Defaults to 'blue'.
+        zorder : numeric; optional
+            The zorder for the plot. Defaults to np.inf.
+        share : bool; optional
+            Whether or not this model is a shared model. Defaults to False.
+        chan : int; optional
+            The current channel number. Detaults to 0.
+        **kwargs : dict
+            Additional parameters to pass to plot and self.eval().
         """
         # Make the figure
         if ax is None:
@@ -256,11 +262,11 @@ class CompositePyMC3Model(PyMC3Model):
 
         Parameters
         ----------
-        models : sequence
-            The list of models.
+        components : sequence
+            The list of model components.
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
         self.issetup = False
 
@@ -338,6 +344,17 @@ class CompositePyMC3Model(PyMC3Model):
                                     getattr(self.model, parname))
 
     def setup(self, time, flux, lc_unc):
+        """Setup a model for evaluation and fitting.
+
+        Parameters
+        ----------
+        time : array-like
+            The time axis to use.
+        flux : array-like
+            The observed flux.
+        lc_unc : array-like
+            The estimated uncertainties from Stages 3-4.
+        """
         if self.issetup:
             # Only setup once if trying multiple different fitting algorithms
             return
@@ -393,6 +410,11 @@ class CompositePyMC3Model(PyMC3Model):
 
         Parameters
         ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -421,6 +443,11 @@ class CompositePyMC3Model(PyMC3Model):
 
         Parameters
         ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -449,6 +476,11 @@ class CompositePyMC3Model(PyMC3Model):
 
         Parameters
         ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         interp : bool; optional
             Whether to uniformly sample in time or just use
             the self.time time points. Defaults to False.
@@ -461,6 +493,9 @@ class CompositePyMC3Model(PyMC3Model):
             The evaluated physical model predictions at the times self.time
             if interp==False, else at evenly spaced times between self.time[0]
             and self.time[-1] with spacing self.time[1]-self.time[0].
+        new_time : ndarray
+            The value of self.time if interp==False, otherwise the time points
+            used in the temporally interpolated model.
         """
         # Get the time
         if self.time is None:
@@ -491,6 +526,22 @@ class CompositePyMC3Model(PyMC3Model):
         return flux, new_time
 
     def compute_fp(self, theta=0):
+        """Compute the planetary flux at an arbitrary orbital position.
+
+        This will only be run on the first starry model contained in the
+        components list.
+
+        Parameters
+        ----------
+        theta : int, ndarray; optional
+            The orbital angle(s) in degrees with respect to mid-eclipse.
+            Defaults to 0.
+
+        Returns
+        -------
+        ndarray
+            The disk-integrated planetary flux for each value of theta.
+        """
         # Evaluate flux at each model
         for component in self.components:
             if component.name == 'starry':
@@ -505,7 +556,7 @@ class CompositePyMC3Model(PyMC3Model):
             New parameter values.
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.update().
         """
         for component in self.components:
             component.update(newparams, **kwargs)
@@ -517,13 +568,7 @@ class CompositePyMC3Model(PyMC3Model):
 
     @time.setter
     def time(self, time_array):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        """
+        """A setter for the time"""
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")

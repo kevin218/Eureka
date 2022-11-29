@@ -97,13 +97,7 @@ class Model:
 
     @time.setter
     def time(self, time_array):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        """
+        """A setter for the time"""
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
@@ -203,11 +197,6 @@ class Model:
             The current channel number. Detaults to 0.
         **kwargs : dict
             Additional parameters to pass to plot and self.eval().
-
-        Returns
-        -------
-        figure
-            The figure.
         """
         # Make the figure
         if ax is None:
