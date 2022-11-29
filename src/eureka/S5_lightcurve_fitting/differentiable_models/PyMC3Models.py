@@ -152,6 +152,28 @@ class PyMC3Model:
         # Set the parameters attribute
         self._parameters = params
 
+    def interp(self, new_time, eval=True, channel=None, **kwargs):
+        """Evaluate the model over a different time array.
+
+        Parameters
+        ----------
+        new_time : sequence
+            The time array.
+        **kwargs : dict
+            Additional parameters to pass to self.eval().
+        """
+        # Save the current time array
+        old_time = copy.deepcopy(self.time)
+
+        # Evaluate the model on the new time array
+        self.time = new_time
+        interp_flux = self.eval(eval=eval, channel=channel, **kwargs)
+
+        # Reset the time array
+        self.time = old_time
+
+        return interp_flux
+
     def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
 
@@ -422,11 +444,14 @@ class CompositePyMC3Model(PyMC3Model):
 
         return flux
 
-    def physeval(self, eval=True, channel=None, **kwargs):
+    def physeval(self, eval=True, channel=None, interp=False, **kwargs):
         """Evaluate the physical model components only.
 
         Parameters
         ----------
+        interp : bool; optional
+            Whether to uniformly sample in time or just use
+            the self.time time points. Defaults to False.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -434,21 +459,36 @@ class CompositePyMC3Model(PyMC3Model):
         -------
         flux : ndarray
             The evaluated physical model predictions at the times self.time
+            if interp==False, else at evenly spaced times between self.time[0]
+            and self.time[-1] with spacing self.time[1]-self.time[0].
         """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if interp:
+            dt = self.time[1]-self.time[0]
+            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
+            new_time = np.linspace(self.time[0], self.time[-1], steps,
+                                   endpoint=True)
+        else:
+            new_time = self.time
+
+        flux = np.ones(len(new_time)*self.nchan)
 
         # Evaluate flux at each model
         for component in self.components:
             if component.modeltype == 'physical':
                 if component.time is None:
                     component.time = self.time
-                flux *= component.eval(eval=eval, channel=channel, **kwargs)
+                if interp:
+                    flux *= component.interp(new_time, eval=eval,
+                                             channel=channel, **kwargs)
+                else:
+                    flux *= component.eval(eval=eval, channel=channel,
+                                           **kwargs)
 
-        return flux, self.time
+        return flux, new_time
 
     def compute_fp(self, theta=0):
         # Evaluate flux at each model
