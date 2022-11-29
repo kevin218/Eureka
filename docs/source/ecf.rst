@@ -749,6 +749,7 @@ manual_clip
 '''''''''''
 Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
 
+
 Limb Darkening Parameters
 '''''''''''''''''''''''''
 The following three parameters control the use of pre-generated limb darkening coefficients.
@@ -764,6 +765,7 @@ If you want to use custom calculated limb-darkening coefficients, set to the ful
 ld_file_white
 ^^^^^^^^^^^^^
 The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
+
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''
@@ -844,6 +846,10 @@ target_accept
 ^^^^^^^^^^^^^
 Adapt the step size such that the average acceptance probability across the trajectories are close to target_accept. Higher values for target_accept lead to smaller step sizes. A default of 0.8 is recommended, but setting this to higher values like 0.9 or 0.99 can help with sampling from difficult posteriors. Valid values are between 0 and 1 (exclusive).
 
+
+force_positivity
+''''''''''''''''
+Used by the sinusoid_pc model. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
 
 interp
 ''''''
