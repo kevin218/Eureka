@@ -732,12 +732,18 @@ If True, more details will be printed about steps.
 
 fit_method
 ''''''''''
-Fitting routines to run for Stage 5 lightcurve fitting. Can be one or more of the following: [lsq, emcee, dynesty]
+Fitting routines to run for Stage 5 lightcurve fitting.
+For standard numpy functions, this can be one or more of the following: [lsq, emcee, dynesty].
+For theano-based differentiable functions, this can be one or more of the following: [exoplanet, nuts] where exoplanet uses a gradient based optimization method and nuts uses the No U-Turn Sampling method implemented in PyMC3.
 
 run_myfuncs
 '''''''''''
-Determines the astrophysical and systematics models used in the Stage 5 fitting. Can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP]
+Determines the astrophysical and systematics models used in the Stage 5 fitting.
+For standard numpy functions, this be one or more (separated by commas) of the following:
+[batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
+For theano-based differentiable functions, this can be one or more of the following:
+[starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc.
 
 manual_clip
 '''''''''''
@@ -745,19 +751,18 @@ Optional. A list of lists specifying the start and end integration numbers for m
 
 Limb Darkening Parameters
 '''''''''''''''''''''''''
-
 The following three parameters control the use of pre-generated limb darkening coefficients.
 
 use_generate_ld
-'''''''''''''''
+^^^^^^^^^^^^^^^
 If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
 
 ld_file
-'''''''
+^^^^^^^
 If you want to use custom calculated limb-darkening coefficients, set to the fully qualified path to a file containing limb darkening coefficients that you want to use. Otherwise, set to None. Note: this option only works if use_generate_ld=None. The file should be a plain .txt file with one column for each limb darkening coefficient and one row for each wavelength range.
 
 ld_file_white
-'''''''''''''
+^^^^^^^^^^^^^
 The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
 
 Least-Squares Fitting Parameters
@@ -765,11 +770,11 @@ Least-Squares Fitting Parameters
 The following set the parameters for running the least-squares fitter.
 
 lsq_method
-''''''''''
+^^^^^^^^^^
 Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.
 
 lsq_tolerance
-'''''''''''''
+^^^^^^^^^^^^^
 Float to determine the tolerance of the scipy.optimize.minimize method.
 
 
@@ -778,23 +783,23 @@ Emcee Fitting Parameters
 The following set the parameters for running emcee.
 
 old_chain
-'''''''''
+^^^^^^^^^
 Output folder containing previous emcee chains to resume previous runs. To start from scratch, set to None.
 
 lsq_first
-'''''''''
+^^^^^^^^^
 Boolean to determine whether to run least-squares fitting before MCMC. This can shorten burn-in but should be turned off if least-squares fails. Only used if old_chain is None.
 
 run_nsteps
-''''''''''
+^^^^^^^^^^
 Integer. The number of steps for emcee to run.
 
 run_nwalkers
-''''''''''''
+^^^^^^^^^^^^
 Integer. The number of walkers to use.
 
 run_nburn
-'''''''''
+^^^^^^^^^
 Integer. The number of burn-in steps to run.
 
 
@@ -803,20 +808,41 @@ Dynesty Fitting Parameters
 The following set the parameters for running dynesty. These options are described in more detail in: https://dynesty.readthedocs.io/en/latest/api.html?highlight=unif#module-dynesty.dynesty
 
 run_nlive
-'''''''''
+^^^^^^^^^
 Integer. Number of live points for dynesty to use. Should be at least greater than (ndim * (ndim+1)) / 2, where ndim is the total number of fitted parameters. For shared fits, multiply the number of free parameters by the number of wavelength bins specified in Stage 4. For convenience, this can be set to 'min' to automatically set run_nlive to (ndim * (ndim+1)) / 2.
 
 run_bound
-'''''''''
+^^^^^^^^^
 The bounding method to use. Options are: ['none', 'single', 'multi', 'balls', 'cubes']
 
 run_sample
-''''''''''
+^^^^^^^^^^
 The sampling method to use. Options are ['auto', 'unif', 'rwalk', 'rstagger', 'slice', 'rslice', 'hslice']
 
 run_tol
-'''''''
+^^^^^^^
 Float. The tolerance for the dynesty run. Determines the stopping criterion. The run will stop when the estimated contribution of the remaining prior volume to the total evidence falls below this threshold.
+
+
+NUTS Fitting Parameters
+'''''''''''''''''''''''
+The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
+
+tune
+^^^^
+Number of iterations to tune. Samplers adjust the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition to the number specified in the draws argument.
+
+draws
+^^^^^
+The number of samples to draw. The number of tuned samples are discarded by default.
+
+chains
+^^^^^^
+The number of chains to sample. Running independent chains is important for some convergence statistics and can also reveal multiple modes in the posterior. If None, then set to either ncpu or 2, whichever is larger.
+
+target_accept
+^^^^^^^^^^^^^
+Adapt the step size such that the average acceptance probability across the trajectories are close to target_accept. Higher values for target_accept lead to smaller step sizes. A default of 0.8 is recommended, but setting this to higher values like 0.9 or 0.99 can help with sampling from difficult posteriors. Valid values are between 0 and 1 (exclusive).
 
 
 interp
