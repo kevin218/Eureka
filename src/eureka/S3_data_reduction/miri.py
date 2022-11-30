@@ -71,7 +71,7 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
 
-    if data.attrs['mhdr']['DETECTOR'] == 'MIRIMAGE':
+    if data.attrs['mhdr']['EXP_TYPE'] == 'MIR_IMAGE':
         # Working on photometry data
         meta.photometry = True  # Photometry for MIRI not implemented yet.
         # The DISPAXIS argument does not exist in the header of the photometry
@@ -102,7 +102,7 @@ def read(filename, data, meta, log):
         
         wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
     else:
-        meta.photometry = False  # Photometry for MIRI not implemented yet.
+        meta.photometry = False
 
         # If wavelengths are all zero or missing --> use jwst to get
         # wavelengths. Otherwise use the wavelength array from the header
