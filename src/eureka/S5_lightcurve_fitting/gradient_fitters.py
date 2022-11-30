@@ -1,7 +1,11 @@
 import numpy as np
 import copy
-import pymc3 as pm
-import pymc3_ext as pmx
+try:
+    import pymc3 as pm
+    import pymc3_ext as pmx
+except:
+    # PyMC3 hasn't been installed
+    pass
 from astropy import table
 
 from .likelihood import computeRedChiSq
@@ -171,6 +175,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+
+    if not hasattr(meta, 'target_accept'):
+        meta.target_accept = 0.85
 
     log.writelog('Running PyMC3 NUTS sampler...')
     with model.model:

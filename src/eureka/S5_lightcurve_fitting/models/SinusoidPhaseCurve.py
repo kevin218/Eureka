@@ -56,6 +56,10 @@ class SinusoidPhaseCurveModel(Model):
         self.nchan = kwargs.get('nchan')
         self.paramtitles = kwargs.get('paramtitles')
 
+        # Check if should enforce positivity
+        if not hasattr(self, 'force_positivity'):
+            self.force_positivity = False
+
     @property
     def time(self):
         """A getter for the time."""
@@ -163,9 +167,7 @@ class SinusoidPhaseCurveModel(Model):
                              pc_params['AmpSin2']*np.sin(2.*phi))
 
             # If requested, force positive phase variations
-            if (hasattr(self.meta, 'force_positivity') and
-                    self.meta.force_positivity and
-                    np.any(phaseVars < 0)):
+            if self.force_positivity and np.any(phaseVars < 0):
                 # Returning nans or infs breaks the fits, so this was
                 # the best I could think of
                 phaseVars = 1e12*np.ones_like(self.time)

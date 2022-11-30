@@ -59,7 +59,12 @@ class Model:
 
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
-        paramtitles = self.paramtitles.append(other.paramtitles)
+        if self.paramtitles is None:
+            paramtitles = other.paramtitles
+        elif other.paramtitles is not None:
+            paramtitles = self.paramtitles.append(other.paramtitles)
+        else:
+            paramtitles = self.paramtitles
 
         return CompositeModel([copy.copy(self), other], parameters=parameters,
                               paramtitles=paramtitles)
@@ -91,22 +96,11 @@ class Model:
         return self._time
 
     @time.setter
-    def time(self, time_array, time_units='BMJD'):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        time_units: str
-            The units of the input time_array, e.g. ['MJD', 'BMJD', 'phase']
-        """
+    def time(self, time_array):
+        """A setter for the time"""
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the units
-        self.time_units = time_units
 
         # Set the array
         # self._time = np.array(time_array)
@@ -203,11 +197,6 @@ class Model:
             The current channel number. Detaults to 0.
         **kwargs : dict
             Additional parameters to pass to plot and self.eval().
-
-        Returns
-        -------
-        figure
-            The figure.
         """
         # Make the figure
         if ax is None:

@@ -47,7 +47,7 @@ class PyMC3Model:
         self._parameters = Parameters()
         self.longparamlist = None
         self.paramtitles = None
-        self.components = None
+        self.components = []
         self.modeltype = None
         self.fmt = None
         self.nchan = 1
@@ -116,25 +116,13 @@ class PyMC3Model:
         return self._time
 
     @time.setter
-    def time(self, time_array, time_units='BMJD'):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        time_units: str
-            The units of the input time_array, e.g. ['MJD', 'BMJD', 'phase']
-        """
+    def time(self, time_array):
+        """A setter for the time"""
         # Check the type
         if not isinstance(time_array, (np.ndarray, tuple, list)):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
-        # Set the units
-        self.time_units = time_units
-
         # Set the array
-        # self._time = np.array(time_array)
         self._time = np.ma.masked_array(time_array)
 
     @property
@@ -158,6 +146,33 @@ class PyMC3Model:
         # Set the parameters attribute
         self._parameters = params
 
+    def interp(self, new_time, eval=True, channel=None, **kwargs):
+        """Evaluate the model over a different time array.
+
+        Parameters
+        ----------
+        new_time : sequence
+            The time array.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Additional parameters to pass to self.eval().
+        """
+        # Save the current time array
+        old_time = copy.deepcopy(self.time)
+
+        # Evaluate the model on the new time array
+        self.time = new_time
+        interp_flux = self.eval(eval=eval, channel=channel, **kwargs)
+
+        # Reset the time array
+        self.time = old_time
+
+        return interp_flux
+
     def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
 
@@ -179,21 +194,28 @@ class PyMC3Model:
 
     def plot(self, time, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
-        """Plot the model
+        """Plot the model.
 
         Parameters
         ----------
-        time: array-like
-            The time axis to use
-        components: bool
-            Plot all model components
-        ax: Matplotlib Axes
-            The figure axes to plot on
-
-        Returns
-        -------
-        bokeh.plotting.figure
-            The figure
+        time : array-like
+            The time axis to use.
+        components : bool; optional
+            Plot all model components.
+        ax : Matplotlib Axes; optional
+            The figure axes to plot on.
+        draw : bool; optional
+            Whether or not to display the plot. Defaults to False.
+        color : str; optional
+            The color to use for the plot. Defaults to 'blue'.
+        zorder : numeric; optional
+            The zorder for the plot. Defaults to np.inf.
+        share : bool; optional
+            Whether or not this model is a shared model. Defaults to False.
+        chan : int; optional
+            The current channel number. Detaults to 0.
+        **kwargs : dict
+            Additional parameters to pass to plot and self.eval().
         """
         # Make the figure
         if ax is None:
@@ -240,12 +262,14 @@ class CompositePyMC3Model(PyMC3Model):
 
         Parameters
         ----------
-        models : sequence
-            The list of models.
+        components : sequence
+            The list of model components.
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
+        self.issetup = False
+
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -320,6 +344,21 @@ class CompositePyMC3Model(PyMC3Model):
                                     getattr(self.model, parname))
 
     def setup(self, time, flux, lc_unc):
+        """Setup a model for evaluation and fitting.
+
+        Parameters
+        ----------
+        time : array-like
+            The time axis to use.
+        flux : array-like
+            The observed flux.
+        lc_unc : array-like
+            The estimated uncertainties from Stages 3-4.
+        """
+        if self.issetup:
+            # Only setup once if trying multiple different fitting algorithms
+            return
+
         self.time = time
         self.flux = flux
         self.lc_unc = lc_unc
@@ -363,12 +402,19 @@ class CompositePyMC3Model(PyMC3Model):
             # likelihood function.
             pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
                       observed=self.flux)
+        
+        self.issetup = True
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the model components.
 
         Parameters
         ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -397,6 +443,11 @@ class CompositePyMC3Model(PyMC3Model):
 
         Parameters
         ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -420,11 +471,19 @@ class CompositePyMC3Model(PyMC3Model):
 
         return flux
 
-    def physeval(self, eval=True, channel=None, **kwargs):
+    def physeval(self, eval=True, channel=None, interp=False, **kwargs):
         """Evaluate the physical model components only.
 
         Parameters
         ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        interp : bool; optional
+            Whether to uniformly sample in time or just use
+            the self.time time points. Defaults to False.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -432,23 +491,57 @@ class CompositePyMC3Model(PyMC3Model):
         -------
         flux : ndarray
             The evaluated physical model predictions at the times self.time
+            if interp==False, else at evenly spaced times between self.time[0]
+            and self.time[-1] with spacing self.time[1]-self.time[0].
+        new_time : ndarray
+            The value of self.time if interp==False, otherwise the time points
+            used in the temporally interpolated model.
         """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if interp:
+            dt = self.time[1]-self.time[0]
+            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
+            new_time = np.linspace(self.time[0], self.time[-1], steps,
+                                   endpoint=True)
+        else:
+            new_time = self.time
+
+        flux = np.ones(len(new_time)*self.nchan)
 
         # Evaluate flux at each model
         for component in self.components:
             if component.modeltype == 'physical':
                 if component.time is None:
                     component.time = self.time
-                flux *= component.eval(eval=eval, channel=channel, **kwargs)
+                if interp:
+                    flux *= component.interp(new_time, eval=eval,
+                                             channel=channel, **kwargs)
+                else:
+                    flux *= component.eval(eval=eval, channel=channel,
+                                           **kwargs)
 
-        return flux, self.time
+        return flux, new_time
 
     def compute_fp(self, theta=0):
+        """Compute the planetary flux at an arbitrary orbital position.
+
+        This will only be run on the first starry model contained in the
+        components list.
+
+        Parameters
+        ----------
+        theta : int, ndarray; optional
+            The orbital angle(s) in degrees with respect to mid-eclipse.
+            Defaults to 0.
+
+        Returns
+        -------
+        ndarray
+            The disk-integrated planetary flux for each value of theta.
+        """
         # Evaluate flux at each model
         for component in self.components:
             if component.name == 'starry':
@@ -463,7 +556,26 @@ class CompositePyMC3Model(PyMC3Model):
             New parameter values.
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.update().
         """
         for component in self.components:
             component.update(newparams, **kwargs)
+
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time"""
+        # Check the type
+        if not isinstance(time_array, (np.ndarray, tuple, list)):
+            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+
+        # Set the array
+        self._time = np.ma.masked_array(time_array)
+
+        # Set the array for the components
+        for component in self.components:
+            component.time = time_array

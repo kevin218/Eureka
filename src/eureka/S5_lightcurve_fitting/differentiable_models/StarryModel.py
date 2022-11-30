@@ -24,6 +24,14 @@ class temp_class:
 
 class StarryModel(PyMC3Model):
     def __init__(self, **kwargs):
+        """Initialize the model.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+        """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -52,6 +60,13 @@ class StarryModel(PyMC3Model):
             self.ydeg = 0
 
     def setup(self, full_model):
+        """Setup a model for evaluation and fitting.
+
+        Parameters
+        ----------
+        full_model : CompositePyMC3Model
+            The full composite model - used to get the PyMC3 model.
+        """
         self.full_model = full_model
 
         self.systems = []
@@ -144,6 +159,23 @@ class StarryModel(PyMC3Model):
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        ndarray
+            The value of the model at the times self.time.
+        """
         if channel is None:
             nchan = self.nchan
             channels = np.arange(nchan)
@@ -168,6 +200,19 @@ class StarryModel(PyMC3Model):
         return phys_flux
 
     def compute_fp(self, theta=0):
+        """Compute the planetary flux at an arbitrary orbital position.
+
+        Parameters
+        ----------
+        theta : int, ndarray; optional
+            The orbital angle(s) in degrees with respect to mid-eclipse.
+            Defaults to 0.
+
+        Returns
+        -------
+        ndarray
+            The disk-integrated planetary flux for each value of theta.
+        """
         with self.full_model.model:
             fps = []
             for c in range(self.nchan):
@@ -175,8 +220,18 @@ class StarryModel(PyMC3Model):
                 fps.append(planet_map.flux(theta=theta).eval())
             return np.array(fps)
 
-    def update(self, newparams):
-        super().update(newparams)
+    def update(self, newparams, **kwargs):
+        """Update parameters and update the self.fit.systems list.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.update().
+        """
+        super().update(newparams, **kwargs)
 
         self.fit.systems = []
         for c in range(self.nchan):
@@ -266,30 +321,3 @@ class StarryModel(PyMC3Model):
             # Instantiate the system
             sys = starry.System(star, planet)
             self.fit.systems.append(sys)
-
-    @property
-    def time(self):
-        """A getter for the time"""
-        return self._time
-
-    @time.setter
-    def time(self, time_array, time_units='BJD'):
-        """A setter for the time
-
-        Parameters
-        ----------
-        time_array: sequence, astropy.units.quantity.Quantity
-            The time array
-        time_units: str
-            The units of the input time_array, ['MJD', 'BJD', 'phase']
-        """
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the units
-        self.time_units = time_units
-
-        # Set the array
-        # self._time = np.array(time_array)
-        self._time = np.ma.masked_array(time_array)

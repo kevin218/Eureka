@@ -1,14 +1,20 @@
 import numpy as np
 import os
 import time as time_pkg
+from copy import deepcopy
 import astraeus.xarrayIO as xrio
+
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
 from . import lightcurve
 from . import models as m
-from . import differentiable_models as dm
+try:
+    from . import differentiable_models as dm
+except:
+    # PyMC3 hasn't been installed
+    pass
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -50,7 +56,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     - April 2022 Kevin Stevenson
         Enabled Astraeus
     '''
-    print("\nStarting Stage 5: Light Curve Fitting\n")
+    s4_meta = deepcopy(s4_meta)
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
@@ -115,6 +122,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             # Copy existing S4 log file and resume log
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
+            log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -432,6 +440,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         if 'eclipse' in model_names:
             e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
+        # Check if should enforce positivity
+        if not hasattr(meta, 'force_positivity'):
+            meta.force_positivity = False
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log, time=time,
@@ -439,7 +450,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                       freenames=freenames,
                                       longparamlist=lc_model.longparamlist,
                                       nchan=lc_model.nchannel_fitted,
-                                      paramtitles=paramtitles, meta=meta,
+                                      paramtitles=paramtitles,
+                                      force_positivity=meta.force_positivity,
                                       transit_model=t_model,
                                       eclipse_model=e_model)
         modellist.append(t_phase)

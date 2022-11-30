@@ -14,6 +14,14 @@ from . import PyMC3Model
 
 class PolynomialModel(PyMC3Model):
     def __init__(self, **kwargs):
+        """Initialize the model.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
+        """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -34,6 +42,23 @@ class PolynomialModel(PyMC3Model):
             self.time_local = self.time - self.time.mean()
 
     def eval(self, eval=True, channel=None, **kwargs):
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        ndarray
+            The value of the model at the times self.time.
+        """
         if channel is None:
             nchan = self.nchan
             channels = np.arange(nchan)
