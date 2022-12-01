@@ -526,6 +526,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                        + "_LCData.h5")
             xrio.writeXR(meta.filename_S4_LCData, lc, verbose=True)
 
+            # make citations for current stage
+            util.make_citations(meta, 4)
+
             # Save results
             fname = meta.outputdir+'S4_'+meta.eventlabel+"_Meta_Save"
             me.saveevent(meta, fname, save=[])

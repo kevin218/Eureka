@@ -92,6 +92,10 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                      filename.split(os.sep)[-1])
 
         with fits.open(filename, mode='update') as hdulist:
+            # record instrument information in meta object for citations
+            if not hasattr(meta, 'inst'):
+                meta.inst = hdulist[0].header["INSTRUME"].lower()
+
             # jwst 1.3.3 breaks unless NDITHPTS/NRIMDTPT are integers rather
             # than the strings that they are in the old simulated NIRCam data
             if hdulist[0].header['INSTRUME'] == 'NIRCAM':
@@ -104,6 +108,9 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
+    # make citations for current stage
+    util.make_citations(meta, 1)
+    
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')

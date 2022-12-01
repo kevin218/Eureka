@@ -120,6 +120,11 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     with fits.open(meta.segment_list[0]) as hdulist:
         # Figure out which observatory and observation mode we are using
         telescope = hdulist[0].header['TELESCOP']
+
+        # record instrument information in meta object for citations
+        if not hasattr(meta, 'inst'):
+            meta.inst = hdulist[0].header["INSTRUME"].lower()
+
     if telescope == 'JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
         if 'image' in exp_type.lower():
@@ -164,6 +169,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
                 hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
+    
+    # make citations for current stage
+    util.make_citations(meta, 2)
 
     # Save results
     if not meta.testing_S2:
