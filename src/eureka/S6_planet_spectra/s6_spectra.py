@@ -326,6 +326,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 save_table(meta, log)
                 convert_s5_LC(meta, log)
 
+            # make citations for current stage
+            util.make_citations(meta, 6)
+
             # Save results
             log.writelog('Saving results')
             fname = meta.outputdir+'S6_'+meta.eventlabel+"_Meta_Save"
