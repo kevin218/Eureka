@@ -11,6 +11,7 @@ import numpy as np
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
 from eureka.lib.util import COMMON_IMPORTS, pathdirectory
+from eureka.lib.citations import CITATIONS
 import eureka.lib.plots
 try:
     from eureka.S1_detector_processing import s1_process as s1
@@ -87,6 +88,7 @@ def test_MIRI(capsys):
 
     # Test differentiable models if pymc3 related dependencies are installed
     if pymc3_installed:
+        # Copy the S5 meta and manually edit some settings
         s5_meta2 = deepcopy(s5_meta)
         s5_meta2.fit_method = '[exoplanet,nuts]'
         s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
@@ -97,8 +99,13 @@ def test_MIRI(capsys):
         s5_meta2.chains = 1
         s5_meta2.target_accept = 0.5
         s5_meta2.isplots_S5 = 3
-        s5_meta2 = s5.fitlc(meta.eventlabel, ecf_path=ecf_path,
-                            s4_meta=s4_meta, input_meta=s5_meta2)
+        # Reset the citations list
+        s5_meta2.citations = s4_meta.citations
+        s5_meta2.bibliography = [CITATIONS[entry] for entry
+                                 in s5_meta2.citations]
+        # Run S5 with the new parameters
+        s5_meta2 = s5.fitlc(meta.eventlabel, s4_meta=s4_meta,
+                            input_meta=s5_meta2)
 
     s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
                               s5_meta=s5_meta)
@@ -144,6 +151,10 @@ def test_MIRI(capsys):
     
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["dynesty", "batman"])
     assert np.array_equal(s5_meta.citations, s5_cites)
+
+    s5_cites2 = np.union1d(s4_cites, COMMON_IMPORTS[4] +
+                           ["pymc3", "exoplanet", "starry"])
+    assert np.array_equal(s5_meta2.citations, s5_cites2)
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
