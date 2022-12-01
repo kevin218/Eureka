@@ -32,29 +32,34 @@ analyzed your data, you can just send them your copied ECF files and the version
 The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin218/Eureka>`_.
 
 
-Citing ``Eureka!``
-~~~~~~~~~~~~~~~~~~
+Citing ``Eureka!`` and its dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you wish to cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://arxiv.org/abs/2207.03585>`_.
+If you wish to just cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://joss.theoj.org/papers/10.21105/joss.04503>`_. 
 
 .. code-block::
 
-    @ARTICLE{Bell2022,
-          author = {{Bell}, Taylor J. and {Ahrer}, Eva-Maria and {Brande}, Jonathan and {Carter}, Aarynn L. and {Feinstein}, Adina D. and {Guzman Caloca}, Giannina and {Mansfield}, Megan and {Zieba}, Sebastian and {Piaulet}, Caroline and {Benneke}, Bj{\"o}rn and {Filippazzo}, Joseph and {May}, Erin M. and {Roy}, Pierre-Alexis and {Kreidberg}, Laura and {Stevenson}, Kevin B.},
-            title = "{Eureka!: An End-to-End Pipeline for JWST Time-Series Observations}",
-          journal = {arXiv e-prints},
-        keywords = {Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
-            year = 2022,
-            month = jul,
-              eid = {arXiv:2207.03585},
-            pages = {arXiv:2207.03585},
-    archivePrefix = {arXiv},
-          eprint = {2207.03585},
-    primaryClass = {astro-ph.IM},
-          adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXiv220703585B},
-          adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+    @article{Bell2022, 
+         doi = {10.21105/joss.04503}, 
+         url = {https://doi.org/10.21105/joss.04503}, 
+         year = {2022}, 
+         publisher = {The Open Journal}, 
+         volume = {7}, 
+         number = {79}, 
+         pages = {4503}, 
+         author = {Taylor J. Bell and Eva-Maria Ahrer and 
+                   Jonathan Brande and Aarynn L. Carter and Adina D. Feinstein 
+                   and Giannina {Guzman Caloca} and Megan Mansfield and 
+                   Sebastian Zieba and Caroline Piaulet and Björn Benneke and 
+                   Joseph Filippazzo and Erin M. May and Pierre-Alexis Roy and 
+                   Laura Kreidberg and Kevin B. Stevenson}, 
+         title = {Eureka!: An End-to-End Pipeline for 
+                  JWST Time-Series Observations}, 
+        journal = {Journal of Open Source Software} 
     }
 
+Citation information for ``Eureka!`` dependencies is available in the ``meta`` objects returned at each stage. ``meta.citations`` stores a list of names of all Python packages and JWST instruments used in the analysis,
+and ``meta.bibliography`` stores a list of key-value pairs where the keys are the elements of ``meta.citations`` and the values are lists of the relevant BibTeX entries for each citable dependency or instrument. 
 
 Similar Tools
 ~~~~~~~~~~~~~
@@ -74,8 +79,6 @@ some similarity to this pipeline, and some snippets of that pipeline have also b
 and JWST data. `PACMAN <https://github.com/sebastian-zieba/PACMAN>`_ is another open-source end-to-end pipeline
 developed for HST/WFC3 observations. The `exoplanet <https://github.com/exoplanet-dev/exoplanet>`_
 and `juliet <https://github.com/nespinoza/juliet>`_ packages offer some similar capabilities as the observation fitting parts of `Eureka!`.
-
-
 
 .. toctree::
    :maxdepth: 2

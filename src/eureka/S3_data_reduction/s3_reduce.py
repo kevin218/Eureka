@@ -571,6 +571,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                                         optmask=spec.optmask)
 
+            # make citations for current stage
+            util.make_citations(meta, 3)
+
             # Save results
             if meta.save_output:
                 log.writelog('Saving Metadata')

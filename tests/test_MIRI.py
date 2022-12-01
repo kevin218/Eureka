@@ -6,9 +6,11 @@ from importlib import reload
 import time as time_pkg
 from copy import deepcopy
 
+import numpy as np
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
-from eureka.lib.util import pathdirectory
+from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 import eureka.lib.plots
 try:
     from eureka.S1_detector_processing import s1_process as s1
@@ -69,8 +71,14 @@ def test_MIRI(capsys):
         # Only run S1-2 stuff if jwst package has been installed
         # s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
+
+        s2_cites = np.union1d(COMMON_IMPORTS[1], ["miri"])
+        assert np.array_equal(s2_meta.citations, s2_cites)
+        s3_cites = np.union1d(s2_cites, COMMON_IMPORTS[2])
     else:
         s2_meta = None
+        s3_cites = np.union1d(COMMON_IMPORTS[2], ["miri"])
+
     s3_spec, s3_meta = s3.reduce(meta.eventlabel, ecf_path=ecf_path,
                                  s2_meta=s2_meta)
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
@@ -92,7 +100,8 @@ def test_MIRI(capsys):
         s5_meta2 = s5.fitlc(meta.eventlabel, ecf_path=ecf_path,
                             s4_meta=s4_meta, input_meta=s5_meta2)
 
-    s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)
+    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                              s5_meta=s5_meta)
 
     # run assertions for S2
     if s2_installed:
@@ -113,6 +122,8 @@ def test_MIRI(capsys):
     name = pathdirectory(meta, 'S3', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
+    
+    assert np.array_equal(s3_meta.citations, s3_cites)
 
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
@@ -121,12 +132,18 @@ def test_MIRI(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
+    s4_cites = np.union1d(s3_cites, COMMON_IMPORTS[3])
+    assert np.array_equal(s4_meta.citations, s4_cites)
+
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage5{os.sep}')
     name = pathdirectory(meta, 'S5', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
+    
+    s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["dynesty", "batman"])
+    assert np.array_equal(s5_meta.citations, s5_cites)
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
@@ -134,6 +151,9 @@ def test_MIRI(capsys):
     name = pathdirectory(meta, 'S6', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
+
+    s6_cites = np.union1d(s5_cites, COMMON_IMPORTS[5])
+    assert np.array_equal(s6_meta.citations, s6_cites)
 
     # remove temporary files
     if s2_installed:
