@@ -19,7 +19,7 @@ COMMON_IMPORTS = np.array([
      "pandas", "scipy", "xarray", ],
     ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
      "pandas", "xarray", ],
-])
+], dtype=object)
 
 
 def readfiles(meta, log):
