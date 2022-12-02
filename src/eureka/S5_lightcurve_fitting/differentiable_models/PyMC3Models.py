@@ -184,6 +184,10 @@ class PyMC3Model:
             Unused by the base
             eureka.S5_lightcurve_fitting.diferentiable_models.PyMC3Model class.
         """
+        for val, arg in zip(newparams, self.freenames):
+            # For now, the dict and Parameter are separate
+            self.parameters.dict[arg][0] = val
+            getattr(self.parameters, arg).value = val
         for val, key in zip(newparams, self.freenames):
             setattr(self.fit, key, val)
 
