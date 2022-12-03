@@ -825,11 +825,20 @@ def compute_fn(meta, log, fit_methods, nsamp=1e4):
     meta.y_param = 'AmpCos1'
     ampcos = load_s5_saves(meta, log, fit_methods)
     if ampcos.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        # FINDME: The following only works if the model does not include any
+        # terms other than Y10, Y11, Y20, Y22 (or other higher order terms
+        # which evaluate to zero at the anti-stellar point). In general, should
+        # use the compute_fp function.
+        # FINDME: This is also not the nightside flux for starry models - just
+        # the anti-stellar point flux. Really do need to use compute_fp instead
+        meta.y_param = 'Y10'
+        ampcos = load_s5_saves(meta, log, fit_methods)
+        if ampcos.shape[-1] == 0:
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
 
     # Reset meta.y_param
     meta.y_param = y_param
