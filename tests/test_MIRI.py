@@ -152,9 +152,10 @@ def test_MIRI(capsys):
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["dynesty", "batman"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
-    s5_cites2 = np.union1d(s4_cites, COMMON_IMPORTS[4] +
-                           ["pymc3", "exoplanet", "starry"])
-    assert np.array_equal(s5_meta2.citations, s5_cites2)
+    if pymc3_installed:
+        s5_cites2 = np.union1d(s4_cites, COMMON_IMPORTS[4] +
+                               ["pymc3", "exoplanet", "starry"])
+        assert np.array_equal(s5_meta2.citations, s5_cites2)
 
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
