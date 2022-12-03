@@ -314,7 +314,7 @@ class CompositePyMC3Model(PyMC3Model):
                             elif param.prior == 'N':
                                 if parname in ['rp', 'per', 'ecc',
                                                'scatter_mult', 'scatter_ppm',
-                                               'c0']:
+                                               'c0', 'r1', 'r4']:
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0(
                                                 parname_temp,
