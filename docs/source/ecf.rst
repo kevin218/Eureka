@@ -739,7 +739,7 @@ For theano-based differentiable functions, this can be one or more of the follow
 run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
-For standard numpy functions, this be one or more (separated by commas) of the following:
+For standard numpy functions, this can be one or more (separated by commas) of the following:
 [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
