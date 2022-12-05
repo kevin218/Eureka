@@ -36,6 +36,7 @@ dependencies:
         - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
         - jwst==1.6.0
         - myst-parser # Needed for documentation
+        - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
         - stcal
         - stdatamodels
