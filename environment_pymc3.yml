@@ -39,6 +39,7 @@ dependencies:
         - jwst==1.6.0
         - myst-parser # Needed for documentation
         - pymc3
+        - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
         - starry>=1,<2
         - stcal
