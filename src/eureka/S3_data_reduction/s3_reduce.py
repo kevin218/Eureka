@@ -135,8 +135,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.skyin = [meta.skyin]
         if not isinstance(meta.skyout, list):
             meta.skyout = [meta.skyout]
-        meta.bg_hw_range = [f'{s_in}_{s_out}' for s_in in meta.skyin
-                            for s_out in meta.skyout]
+        meta.bg_hw_range = [f'{meta.skyin[i]}_{meta.skyout[i]}'
+                            for i in range(len(meta.skyin))]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
