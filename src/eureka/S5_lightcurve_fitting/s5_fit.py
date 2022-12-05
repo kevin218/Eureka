@@ -171,6 +171,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.time_units = time_units
             meta.wave_units = lc.data.attrs['wave_units']
 
+            # make citations for current stage
+            util.make_citations(meta, 5)
+
             # If any of the parameters' ptypes are set to 'white_free', enforce
             # a Gaussian prior based on a white-light light curve fit. If any
             # are 'white_fixed' freeze them to the white-light curve best fit

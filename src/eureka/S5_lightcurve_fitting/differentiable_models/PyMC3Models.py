@@ -184,6 +184,10 @@ class PyMC3Model:
             Unused by the base
             eureka.S5_lightcurve_fitting.diferentiable_models.PyMC3Model class.
         """
+        for val, arg in zip(newparams, self.freenames):
+            # For now, the dict and Parameter are separate
+            self.parameters.dict[arg][0] = val
+            getattr(self.parameters, arg).value = val
         for val, key in zip(newparams, self.freenames):
             setattr(self.fit, key, val)
 
@@ -310,7 +314,7 @@ class CompositePyMC3Model(PyMC3Model):
                             elif param.prior == 'N':
                                 if parname in ['rp', 'per', 'ecc',
                                                'scatter_mult', 'scatter_ppm',
-                                               'c0']:
+                                               'c0', 'r1', 'r4']:
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0(
                                                 parname_temp,
