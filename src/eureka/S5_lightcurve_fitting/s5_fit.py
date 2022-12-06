@@ -130,13 +130,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             log.writelog('Copying S5 control file', mute=(not meta.verbose))
             meta.copy_ecf()
 
-            specData_savefile = (
-                meta.inputdir + 
-                meta.filename_S4_LCData.split(os.path.sep)[-1])
-            log.writelog(f"Loading S4 save file:\n{specData_savefile}",
-                         mute=(not meta.verbose))
-            lc = xrio.readXR(specData_savefile)
-
             # Set the intial fitting parameters
             params = Parameters(meta.folder, meta.fit_par)
             # Copy EPF
@@ -153,6 +146,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
+
+            # Load save file(s)
+            lcData_savefile = (
+                meta.inputdir + 
+                meta.filename_S4_LCData.split(os.path.sep)[-1])
+            log.writelog(f"Loading S4 save file:\n{lcData_savefile}",
+                         mute=(not meta.verbose))
+            lc = xrio.readXR(lcData_savefile)
 
             if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
                 # Remove requested data points
