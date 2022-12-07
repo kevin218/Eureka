@@ -11,6 +11,12 @@ from matplotlib.pyplot import rcParams
 import h5py
 from astraeus import xarrayIO as xrio
 
+try:
+    import starry
+except ModuleNotFoundError:
+    # starry hasn't been installed
+    pass
+
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
@@ -736,7 +742,7 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     return meta
 
 
-def compute_amp(meta, log, fit_methods, nsamp=1e4):
+def compute_amp(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -807,7 +813,10 @@ def compute_amp(meta, log, fit_methods, nsamp=1e4):
     return meta
 
 
-def compute_fn(meta, log, fit_methods, nsamp=1e4):
+def compute_fn(meta, log, fit_methods):
+    if 'nuts' in fit_methods or 'exoplanet' in fit_methods:
+        return compute_fn_starry(meta, log, fit_methods)
+
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -864,6 +873,80 @@ def compute_fn(meta, log, fit_methods, nsamp=1e4):
     return meta
 
 
+def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
+    nsamp = int(nsamp)
+
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    fp = load_s5_saves(meta, log, fit_methods)
+    if fp.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    nsamp = max([nsamp, len(fp[0])])
+    inds = np.random.randint(0, len(fp[0]), nsamp)
+
+    class temp_class:
+        def __init__(self):
+            pass
+
+    # Load map parameters
+    if not hasattr(meta, 'ydeg'):
+        meta.ydeg = 2  # For backwards compatibility with my old saves
+    temp = temp_class()
+    for ell in range(1, meta.ydeg+1):
+        for m in range(-ell, ell+1):
+            meta.y_param = f'Y{ell}{m}'
+            val = load_s5_saves(meta, log, fit_methods)
+            if val.shape[-1] != 0:
+                setattr(temp, f'Y{ell}{m}', val[:, inds])
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    # If no parameters could not be found - skip it
+    if len(temp.__dict__.keys()) == 0:
+        log.writelog('  No Ylm parameters were found...')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    planet_map = starry.Map(ydeg=meta.ydeg, nw=nsamp)
+    planet_map2 = starry.Map(ydeg=meta.ydeg, nw=nsamp)
+    for i in range(meta.nspecchan):
+        inds = np.random.randint(0, len(fp[i]), nsamp)
+        for ell in range(1, meta.ydeg+1):
+            for m in range(-ell, ell+1):
+                if hasattr(temp, f'Y{ell}{m}'):
+                    planet_map[ell, m, :] = getattr(temp, f'Y{ell}{m}')[i]
+                    planet_map2[ell, m, :] = getattr(temp, f'Y{ell}{m}')[i]
+        planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
+
+        fluxes = planet_map.flux(theta=180)[0].eval()
+        flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
+
+
 def compute_scale_height(meta, log):
     """Compute the atmospheric scale height for a planet.
 
@@ -891,14 +974,14 @@ def compute_scale_height(meta, log):
                                             constants.R_sun)).si.value
     meta.planet_g = ((constants.G*meta.planet_Mass*constants.M_jup) /
                      (meta.planet_Rad*constants.R_jup)**2).si.value
-    log.writelog(f'Calculated g={np.round(meta.planet_g,2)} m/s^2 '
+    log.writelog(f'  Calculated g={np.round(meta.planet_g,2)} m/s^2 '
                  f'with Rp={np.round(meta.planet_Rad, 2)} R_jup '
                  f'and Mp={meta.planet_Mass} M_jup')
     scale_height = (constants.k_B*(meta.planet_Teq*units.K) /
                     ((meta.planet_mu*units.u) *
                      (meta.planet_g*units.m/units.s**2)))
     scale_height = scale_height.si.to('km')
-    log.writelog(f'Calculated H={np.round(scale_height,2)} with '
+    log.writelog(f'  Calculated H={np.round(scale_height,2)} with '
                  f'g={np.round(meta.planet_g, 2)} m/s^2, '
                  f'Teq={meta.planet_Teq} K, and '
                  f'mu={meta.planet_mu} u')
