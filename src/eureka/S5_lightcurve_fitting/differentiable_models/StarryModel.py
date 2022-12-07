@@ -51,11 +51,14 @@ class StarryModel(PyMC3Model):
             self.udeg = 1
         else:
             self.udeg = 0
-        if np.any(np.array(['Y2' == par[:2] for par in self.paramtitles])):
-            self.ydeg = 2
-        elif np.any(np.array(['Y1' == par[:2] in par
-                              for par in self.paramtitles])):
-            self.ydeg = 1
+
+        # Find the Ylm value with the largest l value to set ydeg
+        ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
+                               for par in self.paramtitles])[0]
+        if len(ylm_params) > 0:
+            l_vals = [int(self.paramtitles[ind][1:].split('_')[0])
+                      for ind in ylm_params]
+            self.ydeg = max(l_vals)
         else:
             self.ydeg = 0
 
