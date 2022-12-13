@@ -70,6 +70,8 @@ def exotic_ld(meta, spec, log, white=False):
     # Compute wavelength ranges
     if white:
         wavelength_range = np.array([meta.wave_min, meta.wave_max])
+        wavelength_range = np.repeat(wavelength_range[np.newaxis],
+                                     meta.nspecchan, axis=0)
     else:
         wsdata = np.array(meta.wave_low)
         wsdata = np.append(wsdata, meta.wave_hi[-1])
