@@ -492,7 +492,8 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     - 2022-07-29 KBS
         Initial version
     '''
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+    xmin = int(data.flux.x.values[0])
+    xmax = int(data.flux.x.values[-1])
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     # Median flux of segment
