@@ -329,7 +329,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
-                data, meta = b2f.convert_to_e(data, meta, log)
+                if not hasattr(meta, 'convert_to_e'):
+                    meta.convert_to_e = True
+                if meta.convert_to_e:
+                    data, meta = b2f.convert_to_e(data, meta, log)
 
                 if not meta.photometry:
                     # Compute clean median frame
