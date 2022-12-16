@@ -684,11 +684,8 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Save meta.y_param
     y_param = meta.y_param
 
-    second = (meta.y_param[-1] == '2')
-    if second:
-        suffix = '2'
-    else:
-        suffix = '1'
+    # Figure out the desired order
+    suffix = meta.y_param[-1]
 
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
@@ -724,7 +721,7 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
 
     for i in range(meta.nspecchan):
         offsets = -np.arctan2(ampsin[i], ampcos[i])*180/np.pi
-        if second:
+        if suffix == '2':
             offsets /= 2
         offset = np.percentile(np.array(offsets), [16, 50, 84])[[1, 2, 0]]
         offset[1] -= offset[0]
@@ -743,16 +740,15 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
 
 
 def compute_amp(meta, log, fit_methods):
+    if 'nuts' in fit_methods or 'exoplanet' in fit_methods:
+        return compute_amp_starry(meta, log, fit_methods)
+
     # Save meta.y_param
     y_param = meta.y_param
 
     # Figure out the desired order
-    second = (meta.y_param[-1] == '2')
-    if second:
-        suffix = '2'
-    else:
-        suffix = '1'
-
+    suffix = meta.y_param[-1]
+    
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
@@ -798,6 +794,83 @@ def compute_amp(meta, log, fit_methods):
     for i in range(meta.nspecchan):
         amps = fp[i]*np.sqrt(ampcos[i]**2+ampsin[i]**2)*2
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
+        amp[1] -= amp[0]
+        amp[2] = amp[0]-amp[2]
+        meta.spectrum_median.append(amp[0])
+        meta.spectrum_err.append(amp[1:])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
+
+
+def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
+    nsamp = int(nsamp)
+
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    # Load eclipse depth
+    meta.y_param = 'fp'
+    fp = load_s5_saves(meta, log, fit_methods)
+    if fp.shape[-1] == 0:
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    nsamp = min([nsamp, len(fp[0])])
+    inds = np.random.randint(0, len(fp[0]), nsamp)
+
+    class temp_class:
+        def __init__(self):
+            pass
+
+    # Load map parameters
+    ydeg = int(y_param[-1])
+    temp = temp_class()
+    ell = ydeg
+    for m in range(-ell, ell+1):
+        meta.y_param = f'Y{ell}{m}'
+        val = load_s5_saves(meta, log, fit_methods)
+        if val.shape[-1] != 0:
+            setattr(temp, f'Y{ell}{m}', val[:, inds])
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    # If no parameters could not be found - skip it
+    if len(temp.__dict__.keys()) == 0:
+        log.writelog('  No Ylm parameters were found...')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+
+    planet_map = starry.Map(ydeg=ydeg, nw=nsamp)
+    planet_map2 = starry.Map(ydeg=ydeg, nw=nsamp)
+    for i in range(meta.nspecchan):
+        inds = np.random.randint(0, len(fp[i]), nsamp)
+        ell = ydeg
+        for m in range(-ell, ell+1):
+            if hasattr(temp, f'Y{ell}{m}'):
+                planet_map[ell, m, :] = getattr(temp, f'Y{ell}{m}')[i]
+                planet_map2[ell, m, :] = getattr(temp, f'Y{ell}{m}')[i]
+        planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
+
+        theta = np.linspace(0, 359, 360)
+        fluxes = np.array(planet_map.flux(theta=theta).eval())
+        min_fluxes = np.min(fluxes, axis=0)
+        max_fluxes = np.max(fluxes, axis=0)
+        amps = (max_fluxes-min_fluxes)
+        amp = np.percentile(amps, [16, 50, 84])[[1, 2, 0]]
         amp[1] -= amp[0]
         amp[2] = amp[0]-amp[2]
         meta.spectrum_median.append(amp[0])
@@ -889,7 +962,7 @@ def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
         log.writelog(f'  Skipping {y_param}')
         return meta
 
-    nsamp = max([nsamp, len(fp[0])])
+    nsamp = min([nsamp, len(fp[0])])
     inds = np.random.randint(0, len(fp[0]), nsamp)
 
     class temp_class:
