@@ -12,7 +12,8 @@ from ..lib import plots
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, unc=None, time_units='BJD',
-                 name='My Light Curve', share=False, white=False):
+                 name='My Light Curve', share=False, white=False,
+                 multwhite=False, mwhites_nexp=[]):
         """
         A class to store the actual light curve
 
@@ -41,6 +42,11 @@ class LightCurve(m.Model):
             Whether the fit shares parameters between spectral channels.
         white : bool; optional
             Whether the current fit is for a white-light light curve
+        multwhite : bool; optional
+            Whether the current fit is for a multi white-light lightcurve fit.
+        mwhites_nexp : bool; optional
+            Number of exposures of each white lightcurve for splitting
+            up time array.
 
         Notes
         -----
@@ -51,6 +57,8 @@ class LightCurve(m.Model):
             Added a channel number.
         - Jan. 15, 2022 Megan Mansfield
             Added ability to share fit between all channels
+        - Oct. 2022 Erin May
+            Added ability to joint fit WLCs with different time arrays    
         """
         # Initialize the model
         super().__init__()
@@ -60,15 +68,20 @@ class LightCurve(m.Model):
         self.white = white
         self.channel = channel
         self.nchannel = nchannel
-        if self.share:
+        self.multwhite = multwhite
+        self.mwhites_nexp = mwhites_nexp
+        if self.share or self.multwhite:
             self.nchannel_fitted = self.nchannel
             self.fitted_channels = np.arange(self.nchannel)
+        elif self.multwhite:
+            self.nchannel_fitted = self.nchannel
+            self.fitted_channels = np.array([self.nchannel])
         else:
             self.nchannel_fitted = 1
             self.fitted_channels = np.array([self.channel])
 
         # Check data
-        if len(time)*self.nchannel_fitted != len(flux):
+        if len(time)*self.nchannel_fitted != len(flux) and not self.multwhite:
             raise ValueError('Time and flux axes must be the same length.')
 
         # Set the time and flux axes
@@ -82,7 +95,8 @@ class LightCurve(m.Model):
             if type(unc) == float or type(unc) == np.float64:
                 log.writelog('Warning: Only one uncertainty input, assuming '
                              'constant uncertainty.')
-            elif len(time)*self.nchannel_fitted != len(unc):
+            elif (len(time)*self.nchannel_fitted != len(unc)
+                  and not self.multwhite):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
@@ -132,6 +146,8 @@ class LightCurve(m.Model):
         fit_model = None
 
         model.time = self.time
+        model.multwhite = meta.multwhite
+
         if fitter not in ['exoplanet', 'nuts']:
             # Make sure the model is a CompositeModel
             if not isinstance(model, m.CompositeModel):
@@ -176,15 +192,26 @@ class LightCurve(m.Model):
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
             unc = np.ma.copy(self.unc_fit)
-            if self.share:
+            time = self.time
+            
+            if self.share and not meta.multwhite:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
+                
+            mwhites_trim = []
+            if meta.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:i])
+                trim2 = trim1 + self.mwhites_nexp[i]
+                mwhites_trim = [trim1, trim2]
+                time = self.time[trim1:trim2]
+                flux = flux[trim1:trim2]
+                unc = unc[trim1:trim2]
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i],
+            ax.errorbar(time, flux, unc, fmt='.', color=self.colors[i],
                         zorder=0)
 
             # Make a new color generator for the models
@@ -194,7 +221,9 @@ class LightCurve(m.Model):
             if fits and len(self.results) > 0:
                 for model in self.results:
                     model.plot(self.time, ax=ax, color=next(plot_COLORS),
-                               zorder=np.inf, share=self.share, chan=channel)
+                               zorder=np.inf, share=self.share, chan=channel,
+                               multwhite=meta.multwhite,
+                               mwhites_trim=mwhites_trim)
 
             # Format axes
             ax.set_title(f'{meta.eventlabel} - Channel {channel}')

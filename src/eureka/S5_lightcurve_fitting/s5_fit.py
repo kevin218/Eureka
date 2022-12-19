@@ -94,6 +94,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         # Only fit a single channel while testing unless doing a shared fit,
         # then do two
         chanrng = 1
+    elif meta.multwhite:
+        chanrng = int(len(meta.inputdirlist) + 1)
     else:
         chanrng = meta.nspecchan
 
@@ -114,6 +116,36 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
+            filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
+            lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+
+            meta.mwhites_nexp = []
+            if meta.multwhite:
+                # Need to normalize each one if doing a joint fit
+                lc_whites = []
+
+                meta.stimes_plt = [lc.time.values[0]]
+                meta.etimes_plt = [lc.time.values[-1]]
+                meta.mwhites_nexp = [len(lc.time.values)]
+
+                lc_whites.append(lc)
+                for p in range(len(meta.inputdirlist)):
+                    lc_hold = xrio.readXR(meta.topdir+meta.inputdirlist[p]
+                                          + f'ap{meta.spec_hw}_bg{meta.bg_hw}'
+                                          + os.sep+filename_S4_hold)
+                    meta.wave_low = np.append(meta.wave_low,
+                                              lc_hold.wave_low.values)
+                    meta.wave_hi = np.append(meta.wave_hi,
+                                             lc_hold.wave_hi.values)
+
+                    meta.stimes_plt = np.append(meta.stimes_plt,
+                                                lc_hold.time.values[0])
+                    meta.etimes_plt = np.append(meta.etimes_plt,
+                                                lc_hold.time.values[-1])
+                    meta.mwhites_nexp = np.append(meta.mwhites_nexp,
+                                                  len(lc_hold.time.values))
+
+                    lc_whites.append(lc_hold)
 
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
@@ -147,17 +179,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
-            # Load save file(s)
-            lcData_savefile = (
-                meta.inputdir + 
-                meta.filename_S4_LCData.split(os.path.sep)[-1])
-            log.writelog(f"Loading S4 save file:\n{lcData_savefile}",
-                         mute=(not meta.verbose))
-            lc = xrio.readXR(lcData_savefile)
-
             if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
                 # Remove requested data points
                 meta, lc, log = util.manual_clip(lc, meta, log)
+                if meta.multwhite:
+                    for p in range(len(meta.inputdirlist)+1):
+                        meta, lc_whites[p], log = \
+                            util.manual_clip(lc_whites[p], meta, log)
+                        meta.mwhites_nexp[p] = len(lc_whites[p].time.values)
 
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
@@ -255,8 +284,40 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             longparamlist, paramtitles = make_longparamlist(meta, params,
                                                             chanrng)
 
-            # Now fit the multi-wavelength light curves
-            if meta.sharedp:
+            # Joint White Light Fits (may have different time axis)
+            if meta.multwhite:
+                log.writelog("\nStarting Shared Fit of White Lights\n")
+
+                flux = np.ma.masked_array([])
+                flux_err = np.ma.masked_array([])
+                time = np.ma.masked_array([])
+
+                for pi in range(len(meta.inputdirlist)+1):
+                    mask = lc_whites[pi].mask.values[0, :]
+                    flux_temp = np.ma.masked_where(
+                        mask, lc_whites[pi].data.values[0, :])
+                    err_temp = np.ma.masked_where(
+                        mask, lc_whites[pi].err.values[0, :])
+                    flux_temp, err_temp = util.normalize_spectrum(
+                        meta, flux_temp, err_temp)
+                    time_temp = lc_whites[pi].time.values - offset                                              
+
+                    flux = np.ma.append(flux, flux_temp)
+                    flux_err = np.ma.append(flux_err, err_temp)
+                    time = np.ma.append(time, time_temp)
+
+                meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
+                                           eventlabel, params, log,
+                                           longparamlist, time_units,
+                                           paramtitles, chanrng, ld_coeffs)
+
+                # Save results
+                log.writelog('Saving results')
+                me.saveevent(meta, (meta.outputdir+'S5_'+meta.eventlabel +
+                                    "_Meta_Save"), save=[])
+
+            # Now fit the multi-wavelength light curves    
+            elif meta.sharedp and not meta.multwhite:
                 log.writelog(f"\nStarting Shared Fit of {chanrng} Channels\n")
 
                 flux = np.ma.masked_array([])
@@ -368,7 +429,8 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                      longparamlist, params,
                                      unc=flux_err, time_units=time_units,
                                      name=eventlabel, share=meta.sharedp,
-                                     white=white)
+                                     white=white, multwhite=meta.multwhite,
+                                     mwhites_nexp=meta.mwhites_nexp)
 
     if hasattr(meta, 'testing_model') and meta.testing_model:
         # FINDME: Use this area to add systematics into the data
@@ -422,7 +484,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                          paramtitles=paramtitles,
                                          ld_from_S4=meta.use_generate_ld,
                                          ld_from_file=meta.ld_file,
-                                         ld_coeffs=ldcoeffs)
+                                         ld_coeffs=ldcoeffs,
+                                         multwhite=lc_model.multwhite,
+                                         mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
@@ -471,7 +535,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                     freenames=freenames,
                                     longparamlist=lc_model.longparamlist,
                                     nchan=lc_model.nchannel_fitted,
-                                    paramtitles=paramtitles)
+                                    paramtitles=paramtitles,
+                                    multwhite=lc_model.multwhite,
+                                    mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -678,7 +744,9 @@ def make_longparamlist(meta, params, chanrng):
     paramtitles : list
         The names of the fitted parameters.
     """
-    if meta.sharedp:
+    if meta.multwhite:
+        nspecchan = int(len(meta.inputdirlist)+1)
+    elif meta.sharedp and not meta.multwhite:
         nspecchan = chanrng
     else:
         nspecchan = 1
