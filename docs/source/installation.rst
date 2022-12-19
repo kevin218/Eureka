@@ -6,8 +6,8 @@ Installation methods
 --------------------
 
 In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
-the most recent stable release of ``Eureka!``, v0.7. The following installation instructions are written with this in mind,
-and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.7>`_.
+the most recent stable release of ``Eureka!``, v0.8. The following installation instructions are written with this in mind,
+and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.8>`_.
 Also note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
 installation instructions below as the pip dependencies fail to build on the M1 processor.
 
@@ -31,7 +31,7 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 .. code-block:: bash
 
-	git clone -b v0.7 https://github.com/kevin218/Eureka.git
+	git clone -b v0.8 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
@@ -49,7 +49,7 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@v0.7#egg=eureka[jwst]
+	pip install -e git+https://github.com/kevin218/Eureka.git@v0.8#egg=eureka[jwst]
 
 Other specific branches can be installed using:
 
@@ -89,7 +89,7 @@ To install using conda:
 
 .. code-block:: bash
 
-	git clone -b v0.7 https://github.com/kevin218/Eureka.git
+	git clone -b v0.8 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	conda env create --file environment.yml --force
 	conda activate eureka

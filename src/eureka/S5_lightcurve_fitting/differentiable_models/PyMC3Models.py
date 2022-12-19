@@ -2,6 +2,7 @@ import os
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+import astropy.constants as const
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
@@ -288,6 +289,20 @@ class CompositePyMC3Model(PyMC3Model):
 
         # Setup PyMC3 model parameters
         with self.model:
+
+            # Check that Ms, per, and a are compatible
+            a = (self.parameters.a.value*self.parameters.Rs.value
+                 * const.R_sun.value)
+            p = self.parameters.per.value*(24.*3600.)
+            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                  - self.parameters.Ms.value)
+            if Mp <= 0:
+                raise AssertionError('The input Ms, per, and a values are '
+                                     'incompatible and imply a negative '
+                                     'planetary mass. As a result, the '
+                                     'starry model is going to crash. '
+                                     'You should likely reduce your Ms value.')
+
             for parname in self.paramtitles:
                 param = getattr(self.parameters, parname)
                 if param.ptype in ['independent', 'fixed']:
@@ -314,7 +329,7 @@ class CompositePyMC3Model(PyMC3Model):
                             elif param.prior == 'N':
                                 if parname in ['rp', 'per', 'ecc',
                                                'scatter_mult', 'scatter_ppm',
-                                               'c0', 'r1', 'r4']:
+                                               'c0', 'r1', 'r4', 'r7', 'r10']:
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0(
                                                 parname_temp,

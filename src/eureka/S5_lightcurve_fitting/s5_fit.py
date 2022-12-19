@@ -411,6 +411,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                   nchan=lc_model.nchannel_fitted,
                                   paramtitles=paramtitles)
         modellist.append(t_starry)
+        meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = m.BatmanTransitModel(parameters=params, name='transit',
                                          fmt='r--', log=log, time=time,
