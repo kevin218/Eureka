@@ -56,8 +56,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
+        
+        time = lc.time
+        new_timet = new_time
 
-        if lc.share:
+        if lc.share and not meta.multwhite:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -65,29 +68,42 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
                                   (channel+1)*len(lc.time)]
             model_phys = model_phys[channel*len(new_time):
                                     (channel+1)*len(new_time)]
+        elif meta.multwhite:
+            trim1 = np.nansum(meta.mwhites_nexp[:i])
+            trim2 = trim1 + meta.mwhites_nexp[i]
+            
+            time = time[trim1:trim2]
+            new_timet = new_time[trim1:trim2]
+            flux = flux[trim1:trim2]
+            unc = unc[trim1:trim2]
+            model = model[trim1:trim2]
+            model_sys = model_sys[trim1:trim2]
+            model_phys = model_phys[trim1:trim2]
 
         residuals = flux - model
+
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
+
         ax = fig.subplots(3, 1)
-        ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w',
+        ax[0].errorbar(time, flux, yerr=unc, fmt='.', color='w',
                        ecolor=color, mec=color)
-        ax[0].plot(lc.time, model, '.', ls='', ms=2, color='0.3', zorder=10)
+        ax[0].plot(time, model, '.', ls='', ms=2, color='0.3', zorder=10)
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
         ax[0].set_xticks([])
 
-        ax[1].errorbar(lc.time, flux/model_sys, yerr=unc, fmt='.', color='w',
+        ax[1].errorbar(time, flux/model_sys, yerr=unc, fmt='.', color='w',
                        ecolor=color, mec=color)
-        ax[1].plot(new_time, model_phys, color='0.3', zorder=10)
+        ax[1].plot(new_timet, model_phys, color='0.3', zorder=10)
         ax[1].set_ylabel('Calibrated Flux', size=14)
         ax[1].set_xticks([])
 
-        ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.',
+        ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
-        ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
+        ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
@@ -278,7 +294,7 @@ def plot_rms(lc, model, meta, fitter):
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
         model = np.ma.copy(model_lc)
-        if lc.share:
+        if lc.share and not meta.multwhite:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
 

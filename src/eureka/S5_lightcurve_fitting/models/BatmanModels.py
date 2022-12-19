@@ -100,6 +100,13 @@ class BatmanTransitModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
             # Set all parameters
             for index, item in enumerate(self.longparamlist[c]):
                 setattr(bm_params, self.paramtitles[index],
@@ -121,7 +128,7 @@ class BatmanTransitModel(Model):
                     (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was the
                 # best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                 continue
 
             # Use batman ld_profile name
@@ -133,7 +140,7 @@ class BatmanTransitModel(Model):
                 if bm_params.u[0] <= 0:
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                     continue
                 bm_params.limb_dark = 'quadratic'
                 u1 = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
@@ -141,7 +148,7 @@ class BatmanTransitModel(Model):
                 bm_params.u = np.array([u1, u2])
 
             # Make the transit model
-            m_transit = batman.TransitModel(bm_params, self.time,
+            m_transit = batman.TransitModel(bm_params, time,
                                             transittype='primary')
 
             lcfinal = np.append(lcfinal, m_transit.light_curve(bm_params))
@@ -246,6 +253,13 @@ class BatmanEclipseModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
             # Set all parameters
             for index, item in enumerate(self.longparamlist[c]):
                 setattr(bm_params, self.paramtitles[index],
@@ -259,7 +273,7 @@ class BatmanEclipseModel(Model):
                     (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was
                 # the best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                 continue
 
             bm_params.limb_dark = 'uniform'
@@ -267,10 +281,10 @@ class BatmanEclipseModel(Model):
 
             if self.compute_ltt:
                 if c == 0 or not self.compute_ltt_once:
-                    self.adjusted_time = correct_light_travel_time(self.time,
+                    self.adjusted_time = correct_light_travel_time(time,
                                                                    bm_params)
             else:
-                self.adjusted_time = self.time
+                self.adjusted_time = time
 
             if not np.any(['t_secondary' in key
                            for key in self.longparamlist[c]]):

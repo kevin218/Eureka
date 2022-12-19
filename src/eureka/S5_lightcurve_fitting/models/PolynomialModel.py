@@ -65,7 +65,7 @@ class PolynomialModel(Model):
                             self.parameters.dict[f'c{i}'][0]
                     else:
                         self.coeffs[j, 9-i] = \
-                            self.parameters.dict[f'c{i}_j'][0]
+                            self.parameters.dict[f'c{i}_{j}'][0]
                 except KeyError:
                     pass
 
@@ -93,6 +93,12 @@ class PolynomialModel(Model):
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
             poly = np.poly1d(self.coeffs[c])
-            lcpiece = np.polyval(poly, self.time_local)
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                time = self.time_local[trim1:trim2]
+            else:
+                time = self.time_local
+            lcpiece = np.polyval(poly, time)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

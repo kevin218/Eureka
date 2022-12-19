@@ -174,7 +174,8 @@ class Model:
         return
 
     def plot(self, time, components=False, ax=None, draw=False, color='blue',
-             zorder=np.inf, share=False, chan=0, **kwargs):
+             zorder=np.inf, share=False, multwhite=False, mwhites_trim=[],
+             chan=0, **kwargs):
         """Plot the model.
 
         Parameters
@@ -212,15 +213,19 @@ class Model:
             label += ': '+self.name
 
         model = self.eval(**kwargs)
-        if share:
+        if share and not multwhite:
+            time = self.time
             model = model[chan*len(self.time):(chan+1)*len(self.time)]
+        if multwhite:
+            time = time[mwhites_trim[0]:mwhites_trim[1]]
+            model = model[mwhites_trim[0]:mwhites_trim[1]]
 
-        ax.plot(self.time, model, '.', ls='', ms=2, label=label, color=color,
+        ax.plot(time, model, '.', ls='', ms=2, label=label, color=color,
                 zorder=zorder)
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False,
+                component.plot(time, ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
                                chan=chan, **kwargs)
 
@@ -278,7 +283,10 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if self.multwhite:
+            flux = np.ones(len(self.time))
+        else:
+            flux = np.ones(len(self.time)*self.nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -309,7 +317,10 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if self.multwhite:
+            flux = np.ones(len(self.time))
+        else:
+            flux = np.ones(len(self.time)*self.nchan)
 
         # Evaluate flux at each model
         for model in self.components:
@@ -340,7 +351,10 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
 
         # Set the default value
-        flux = np.zeros(len(self.time)*self.nchan)
+        if self.multwhite:
+            flux = np.ones(len(self.time))
+        else:
+            flux = np.ones(len(self.time)*self.nchan)
 
         # Evaluate flux
         for model in self.components:
@@ -378,7 +392,10 @@ class CompositeModel(Model):
         else:
             new_time = self.time
 
-        flux = np.ones(len(new_time)*self.nchan)
+        if self.multwhite:
+            flux = np.ones(len(new_time))
+        else:
+            flux = np.ones(len(new_time)*self.nchan)
 
         # Evaluate flux at each model
         for model in self.components:
