@@ -509,10 +509,9 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304, figsize=(8, 3.5))
-    plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
+    fig.clf()
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
@@ -832,12 +831,9 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3503)
-    plt.clf()
-
-    fig, ax = plt.subplots(2, 2, figsize=(8, 8))
+    fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
+    fig.clf()
     plt.suptitle('Centroid gaussian fit')
-    fig.delaxes(ax[1, 1])
     ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
 
     ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
@@ -921,7 +917,10 @@ def phot_2d_frame(data, meta, m, i):
     ymin = data.flux.y.min().values-meta.ywindow[0]
     ymax = data.flux.y.max().values-meta.ywindow[0]
 
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
+    vmax = np.ma.median(flux)+8*np.ma.std(flux)
+    vmin = np.ma.median(flux)-3*np.ma.std(flux)
+
+    im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower', aspect='equal',
                     extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                 label='centroid')
@@ -945,10 +944,10 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylabel('y pixels')
 
     plt.legend()
+    plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
              + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -960,8 +959,8 @@ def phot_2d_frame(data, meta, m, i):
         plt.clf()
         plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
 
-        im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
-                        extent=[xmin, xmax, ymin, ymax])
+        im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower',
+                        aspect='equal', extent=[xmin, xmax, ymin, ymax])
         plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                     label='centroid')
         plt.title('Zoom into 2D frame')
@@ -992,6 +991,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylabel('y pixels')
 
         plt.legend()
+        plt.tight_layout()
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
                  f'_2D_Frame_Zoom' + plots.figure_filetype)
@@ -1028,9 +1028,8 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3307)
-    plt.clf()
-    fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
+    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2))
+    fig.clf()
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
@@ -1080,7 +1079,7 @@ def phot_2d_frame_diff(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    for i in range(len(data.aplev.values)-1):
+    for i in range(meta.nplots):
         plt.figure(3505)
         plt.clf()
         plt.suptitle('2D frame differences')

@@ -335,6 +335,7 @@ class EurekaImage2Pipeline(Image2Pipeline):
             Initial version
         '''
         # Skip steps according to input ecf file
+        self.assign_wcs.skip = meta.skip_assign_wcs
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.flat_field.skip = meta.skip_flat_field
         self.photom.skip = meta.skip_photom
