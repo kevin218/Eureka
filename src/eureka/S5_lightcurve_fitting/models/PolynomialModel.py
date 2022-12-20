@@ -44,7 +44,15 @@ class PolynomialModel(Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time.mean()
+            if self.multwhite:
+                self.time_local = []
+                for c in np.arange(self.nchan):
+                    trim1 = np.nansum(self.mwhites_nexp[:c])
+                    trim2 = trim1 + self.mwhites_nexp[c]
+                    time = self.time[trim1:trim2]
+                    self.time_local.append(time - time.mean())
+            else:
+                self.time_local = self.time - self.time.mean()
 
     def _parse_coeffs(self):
         """Convert dict of 'c#' coefficients into a list

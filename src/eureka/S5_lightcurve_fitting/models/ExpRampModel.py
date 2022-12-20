@@ -53,7 +53,15 @@ class ExpRampModel(Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time[0]
+            if self.multwhite:
+                self.time_local = []
+                for c in np.arange(self.nchan):
+                    trim1 = np.nansum(self.mwhites_nexp[:c])
+                    trim2 = trim1 + self.mwhites_nexp[c]
+                    time = self.time[trim1:trim2]
+                    self.time_local.append(time - time[0])
+            else:
+                self.time_local = self.time - self.time[0]
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list
@@ -95,8 +103,14 @@ class ExpRampModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                time = self.time_local[trim1:trim2]
+            else:
+                time = self.time_local
             r0, r1, r2, r3, r4, r5 = self.coeffs[c]
-            lcpiece = (1+r0*np.exp(-r1*self.time_local + r2)
-                       + r3*np.exp(-r4*self.time_local + r5))
+            lcpiece = (1+r0*np.exp(-r1*time + r2)
+                       + r3*np.exp(-r4*time + r5))
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

@@ -485,7 +485,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                   freenames=freenames,
                                   longparamlist=lc_model.longparamlist,
                                   nchan=lc_model.nchannel_fitted,
-                                  paramtitles=paramtitles)
+                                  paramtitles=paramtitles,
+                                  multwhite=lc_model.multwhite,
+                                  mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
@@ -538,7 +540,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                       paramtitles=paramtitles,
                                       force_positivity=meta.force_positivity,
                                       transit_model=t_model,
-                                      eclipse_model=e_model)
+                                      eclipse_model=e_model,
+                                      multwhite=lc_model.multwhite,
+                                      mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -565,7 +569,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                            freenames=freenames,
                            longparamlist=lc_model.longparamlist,
                            nchan=lc_model.nchannel_fitted,
-                           paramtitles=paramtitles)
+                           paramtitles=paramtitles,
+                           multwhite=lc_model.multwhite,
+                           mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -577,7 +583,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                               freenames=freenames,
                               longparamlist=lc_model.longparamlist,
                               nchan=lc_model.nchannel_fitted,
-                              paramtitles=paramtitles)
+                              paramtitles=paramtitles,
+                              multwhite=lc_model.multwhite,
+                              mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_ramp)
     if 'xpos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -590,7 +598,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='xpos', centroid=lc.centroid_x.values)
+                               axis='xpos', centroid=lc.centroid_x.values,
+                               multwhite=lc_model.multwhite,
+                               mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -603,7 +613,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='xwidth', centroid=lc.centroid_sx.values)
+                               axis='xwidth', centroid=lc.centroid_sx.values,
+                               multwhite=lc_model.multwhite,
+                               mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -616,7 +628,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='ypos', centroid=lc.centroid_y.values)
+                               axis='ypos', centroid=lc.centroid_y.values,
+                               multwhite=lc_model.multwhite,
+                               mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -629,7 +643,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='ywidth', centroid=lc.centroid_sy.values)
+                               axis='ywidth', centroid=lc.centroid_sy.values,
+                               multwhite=lc_model.multwhite,
+                               mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
@@ -639,7 +655,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                          freenames=freenames,
                          longparamlist=lc_model.longparamlist,
                          nchan=lc_model.nchannel_fitted,
-                         paramtitles=paramtitles)
+                         paramtitles=paramtitles,
+                         multwhite=lc_model.multwhite,
+                         mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_GP)
 
     if 'starry' in meta.run_myfuncs:

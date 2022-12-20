@@ -61,7 +61,15 @@ class CentroidModel(Model):
         self._centroid = np.ma.masked_invalid(centroid_array)
         if self.centroid is not None:
             # Convert to local centroid
-            self.centroid_local = self.centroid - np.ma.mean(self.centroid)
+            if self.multwhite:
+                self.time_local = []
+                for c in np.arange(self.nchan):
+                    trim1 = np.nansum(self.mwhites_nexp[:c])
+                    trim2 = trim1 + self.mwhites_nexp[c]
+                    centroid = self.centroid[trim1:trim2]
+                    self.centroid_local.append(centroid - centroid.mean())
+            else:
+                self.centroid_local = self.centroid - self.centroid.mean()
 
     def eval(self, **kwargs):
         """Evaluate the function with the given values.
@@ -69,12 +77,12 @@ class CentroidModel(Model):
         Parameters
         ----------
         **kwargs : dict
-            Must pass in the time array here if not already set.
+            Must pass in the centroid array here if not already set.
 
         Returns
         -------
         lcfinal : ndarray
-            The value of the model at the times self.time.
+            The value of the model at the centroid self.centroid.
         """
         # Get the centroids
         if self.centroid is None:
@@ -83,7 +91,13 @@ class CentroidModel(Model):
         # Create the centroid model for each wavelength
         lcfinal = np.array([])
         for c in np.arange(self.nchan):
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                centroid = self.centroid_local[trim1:trim2]
+            else:
+                centroid = self.centroid_local
             coeff = getattr(self.parameters, self.coeff_keys[c]).value
-            lcpiece = 1 + self.centroid_local*coeff
+            lcpiece = 1 + centroid*coeff
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
