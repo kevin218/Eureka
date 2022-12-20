@@ -104,7 +104,13 @@ class StepModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.ones((self.nchan, len(self.time)))
         for c in range(self.nchan):
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
             for s in np.where(self.steps[c] != 0)[0]:
-                lcfinal[c, self.time >= self.steptimes[c, s]] += \
+                lcfinal[c, time >= self.steptimes[c, s]] += \
                     self.steps[c, s]
         return lcfinal.flatten()

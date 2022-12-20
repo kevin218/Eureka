@@ -52,7 +52,8 @@ class CentroidModel(Model):
         if self.nchan == 1:
             self.coeff_keys = [self.axis]
         else:
-            self.coeff_keys = [f'{self.axis}_{i}' for i in range(self.nchan)]
+            self.coeff_keys = [f'{self.axis}_{i}' if i > 0 else f'{self.axis}'
+                               for i in range(self.nchan)]
 
     @property
     def centroid(self):
@@ -66,12 +67,13 @@ class CentroidModel(Model):
         if self.centroid is not None:
             # Convert to local centroid
             if self.multwhite:
-                self.time_local = []
+                self.centroid_local = []
                 for c in np.arange(self.nchan):
                     trim1 = np.nansum(self.mwhites_nexp[:c])
                     trim2 = trim1 + self.mwhites_nexp[c]
                     centroid = self.centroid[trim1:trim2]
-                    self.centroid_local.append(centroid - centroid.mean())
+                    self.centroid_local.extend(centroid - centroid.mean())
+                self.centroid_local = np.array(self.centroid_local)
             else:
                 self.centroid_local = self.centroid - self.centroid.mean()
 

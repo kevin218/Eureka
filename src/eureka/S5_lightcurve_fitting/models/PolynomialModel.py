@@ -54,7 +54,8 @@ class PolynomialModel(Model):
                     trim1 = np.nansum(self.mwhites_nexp[:c])
                     trim2 = trim1 + self.mwhites_nexp[c]
                     time = self.time[trim1:trim2]
-                    self.time_local.append(time - time.mean())
+                    self.time_local.extend(time - time.mean())
+                self.time_local = np.array(self.time_local)
             else:
                 self.time_local = self.time - self.time.mean()
 

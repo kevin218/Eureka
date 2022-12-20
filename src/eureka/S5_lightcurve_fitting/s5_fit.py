@@ -215,6 +215,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.time_units = time_units
             meta.wave_units = lc.data.attrs['wave_units']
 
+            xpos = np.ma.masked_invalid(lc.centroid_x.values)
+            xwidth = np.ma.masked_invalid(lc.centroid_sx.values)
+            ypos = np.ma.masked_invalid(lc.centroid_y.values)
+            ywidth = np.ma.masked_invalid(lc.centroid_sy.values)
+
             # make citations for current stage
             util.make_citations(meta, 5)
 
@@ -264,7 +269,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, 1, ld_coeffs, True)
+                                           paramtitles, 1, ld_coeffs,
+                                           xpos, ypos, xwidth, ywidth, True)
 
                 # Save results
                 log.writelog('Saving results', mute=(not meta.verbose))
@@ -314,16 +320,29 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         mask, lc_whites[pi].err.values[0, :])
                     flux_temp, err_temp = util.normalize_spectrum(
                         meta, flux_temp, err_temp)
-                    time_temp = lc_whites[pi].time.values - offset                                              
+                    time_temp = lc_whites[pi].time.values - offset
+                    xpos_temp = np.ma.masked_invalid(
+                        lc_whites[pi].centroid_x.values)
+                    xwidth_temp = np.ma.masked_invalid(
+                        lc_whites[pi].centroid_sx.values)
+                    ypos_temp = np.ma.masked_invalid(
+                        lc_whites[pi].centroid_y.values)
+                    ywidth_temp = np.ma.masked_invalid(
+                        lc_whites[pi].centroid_sy.values)
 
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)
+                    xpos = np.ma.append(xpos, xpos_temp)
+                    ypos = np.ma.append(ypos, ypos_temp)
+                    xwidth = np.ma.append(xwidth, xwidth_temp)
+                    ywidth = np.ma.append(ywidth, ywidth_temp)
 
                 meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng, ld_coeffs)
+                                           paramtitles, chanrng, ld_coeffs,
+                                           xpos, ypos, xwidth, ywidth)
 
                 # Save results
                 log.writelog('Saving results')
@@ -351,7 +370,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng, ld_coeffs)
+                                           paramtitles, chanrng, ld_coeffs,
+                                           xpos, ypos, xwidth, ywidth)
 
                 # Save results
                 log.writelog('Saving results')
@@ -378,7 +398,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     meta, params = fit_channel(meta, lc, time, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
-                                               paramtitles, chanrng, ld_coeffs)
+                                               paramtitles, chanrng, ld_coeffs,
+                                               xpos, ypos, xwidth, ywidth)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -396,7 +417,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
 def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                 log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
-                white=False):
+                xpos, ypos, xwidth, ywidth, white=False):
     """Run a fit for one channel or perform a shared fit.
 
     Parameters
@@ -598,7 +619,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='xpos', centroid=lc.centroid_x.values,
+                               axis='xpos', centroid=xpos,
                                multwhite=lc_model.multwhite,
                                mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
@@ -613,7 +634,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='xwidth', centroid=lc.centroid_sx.values,
+                               axis='xwidth', centroid=xwidth,
                                multwhite=lc_model.multwhite,
                                mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
@@ -628,7 +649,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='ypos', centroid=lc.centroid_y.values,
+                               axis='ypos', centroid=ypos,
                                multwhite=lc_model.multwhite,
                                mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
@@ -643,7 +664,7 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                longparamlist=lc_model.longparamlist,
                                nchan=lc_model.nchannel_fitted,
                                paramtitles=paramtitles,
-                               axis='ywidth', centroid=lc.centroid_sy.values,
+                               axis='ywidth', centroid=ywidth,
                                multwhite=lc_model.multwhite,
                                mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_cent)
@@ -671,7 +692,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                        paramtitles=paramtitles)
     else:
         model = m.CompositeModel(modellist, time=time,
-                                 nchan=lc_model.nchannel_fitted)
+                                 nchan=lc_model.nchannel_fitted,
+                                 multwhite=lc_model.multwhite,
+                                 mwhites_nexp=lc_model.mwhites_nexp)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")

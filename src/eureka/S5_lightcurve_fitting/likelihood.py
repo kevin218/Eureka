@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from scipy.stats import norm
 
 
@@ -38,18 +39,30 @@ def ln_like(theta, lc, model, freenames):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
+            if model.multwhite:
+                trim1 = np.nansum(model.mwhites_nexp[:chan])
+                trim2 = trim1 + model.mwhites_nexp[chan]
+                time = lc.time[trim1:trim2]
+            else:
+                time = lc.time
+            lc.unc_fit[chan*time.size:(chan+1)*time.size] = \
                 theta[ind[chan]] * 1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
-        if np.any(theta[ind] < 0):
-            # Force noise multiplier to be positive
-            return -np.inf
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                theta[ind[chan]] * lc.unc[chan*lc.time.size:
-                                          (chan+1)*lc.time.size]
+            if model.multwhite:
+                trim1 = np.nansum(model.mwhites_nexp[:chan])
+                trim2 = trim1 + model.mwhites_nexp[chan]
+                time = lc.time[trim1:trim2]
+            else:
+                time = lc.time
+            lc.unc_fit[chan*time.size:(chan+1)*time.size] = \
+                (theta[ind[chan]] *
+                 lc.unc[chan*time.size:(chan+1)*time.size])
+
     if model.GP:
         ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)
     else:
