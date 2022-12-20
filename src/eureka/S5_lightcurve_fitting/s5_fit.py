@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import time as time_pkg
+from glob import glob
 from copy import deepcopy
 import astraeus.xarrayIO as xrio
 
@@ -130,9 +131,22 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                 lc_whites.append(lc)
                 for p in range(len(meta.inputdirlist)):
-                    lc_hold = xrio.readXR(meta.topdir+meta.inputdirlist[p]
-                                          + f'ap{meta.spec_hw}_bg{meta.bg_hw}'
-                                          + os.sep+filename_S4_hold)
+                    # Specify where glob should search for the save file
+                    path = os.path.join(meta.topdir, meta.inputdirlist[p],
+                                        f'ap{meta.spec_hw}_bg{meta.bg_hw}')
+                    # Search
+                    path = glob(path+f'**{os.sep}*LCData.h5',
+                                recursive=True)
+                    if len(path) == 0:
+                        raise AssertionError(
+                            'Unable to find any LCData save files at '
+                            f'{path}')
+                    elif len(path) > 1:
+                        print(f'WARNING: Found {len(path)} LCData save '
+                              f'files... Using {path[0]}')
+                    # Use the first file found
+                    path = path[0]
+                    lc_hold = xrio.readXR(path)
                     meta.wave_low = np.append(meta.wave_low,
                                               lc_hold.wave_low.values)
                     meta.wave_hi = np.append(meta.wave_hi,
@@ -495,7 +509,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                          freenames=freenames,
                                          longparamlist=lc_model.longparamlist,
                                          nchan=lc_model.nchannel_fitted,
-                                         paramtitles=paramtitles)
+                                         paramtitles=paramtitles,
+                                         multwhite=lc_model.multwhite,
+                                         mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_eclipse)
     if 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])

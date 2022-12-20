@@ -29,7 +29,6 @@ class Model:
         self._parameters = Parameters()
         self.longparamlist = None
         self.paramtitles = None
-        self.components = None
         self.modeltype = None
         self.fmt = None
         self.nchan = 1
@@ -252,16 +251,31 @@ class CompositeModel(Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Inherit from Model class
-        super().__init__(**kwargs)
-
         # Store the models
         self.components = models
+
+        # Inherit from Model class
+        super().__init__(**kwargs)
 
         self.GP = False
         for model in self.components:
             if model.modeltype == 'GP':
                 self.GP = True
+
+    @property
+    def freenames(self):
+        """A getter for the freenames."""
+        return self._freenames
+
+    @freenames.setter
+    def freenames(self, freenames):
+        """A setter for the freenames."""
+        # Update the components' freenames
+        for component in self.components:
+            component.freenames = freenames
+
+        # Set the freenames attribute
+        self._freenames = freenames
 
     def eval(self, incl_GP=False, **kwargs):
         """Evaluate the model components.

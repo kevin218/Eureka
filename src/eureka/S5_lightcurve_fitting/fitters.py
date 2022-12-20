@@ -1146,6 +1146,8 @@ def group_variables(model):
     prior2 = np.array(prior2)
     priortype = np.array(priortype)
 
+    model.freenames = freenames
+
     return freenames, freepars, prior1, prior2, priortype, indep_vars
 
 
