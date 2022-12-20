@@ -20,18 +20,18 @@ class Model:
             which is required for multiprocessing.
         """
         # Set up default model attributes
-        self.name = 'New Model'
-        self.fitter = None
-        self._time = None
-        self.time_units = 'BMJD_TDB'
-        self._flux = None
-        self.freenames = None
-        self._parameters = Parameters()
-        self.longparamlist = None
-        self.paramtitles = None
-        self.modeltype = None
-        self.fmt = None
-        self.nchan = 1
+        self.name = kwargs.get('name', 'New Model')
+        self.nchan = kwargs.get('nchan', 1)
+        self.fitter = kwargs.get('fitter', None)
+        self.time = kwargs.get('time', None)
+        self.time_units = kwargs.get('time_units', 'BMJD_TDB')
+        self.flux = kwargs.get('flux', None)
+        self.freenames = kwargs.get('freenames', None)
+        self._parameters = kwargs.get('_parameters', Parameters())
+        self.longparamlist = kwargs.get('longparamlist', None)
+        self.paramtitles = kwargs.get('paramtitles', None)
+        self.modeltype = kwargs.get('modeltype', None)
+        self.fmt = kwargs.get('fmt', None)
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
@@ -83,7 +83,7 @@ class Model:
             The flux array
         """
         # Check the type
-        if not isinstance(flux_array, (np.ndarray, tuple, list)):
+        if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
@@ -98,7 +98,7 @@ class Model:
     def time(self, time_array):
         """A setter for the time"""
         # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
+        if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
         # Set the array

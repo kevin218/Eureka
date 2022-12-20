@@ -23,6 +23,10 @@ class CentroidModel(Model):
             Can pass in the parameters, longparamlist, nchan,
             paramtitles, axis, and centroid arguments here.
         """
+        # Needed before setting centroid
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+
         # Inherit from Model class
         super().__init__(**kwargs)
 
