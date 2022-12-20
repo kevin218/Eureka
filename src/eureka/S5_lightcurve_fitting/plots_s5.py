@@ -6,6 +6,7 @@ import corner
 from scipy import stats
 try:
     import arviz as az
+    from arviz.rcparams import rcParams as az_rcParams
 except:
     # PyMC3 hasn't been installed
     pass
@@ -560,25 +561,32 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
         Initial version.
     """
 
-    with model.model:
-        ax = az.plot_trace(trace, var_names=freenames, compact=compact,
-                           show=False, **kwargs)
-    fig = ax[0][0].figure
+    max_subplots = az_rcParams['plot.max_subplots'] // 2
+    nplots = int(np.ceil(len(freenames)/max_subplots))
+    npanels = min([len(freenames), max_subplots])
 
-    if lc.white:
-        fname_tag = 'white'
-    else:
-        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        fname_tag = f'ch{ch_number}'
-    fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
-    fname += '_'+fitter
-    fname += plots.figure_filetype
-    fig.savefig(meta.outputdir+fname, bbox_inches='tight',
-                pad_inches=0.05, dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
-    else:
-        plt.close(fig)
+    for i in range(nplots):
+        with model.model:
+            ax = az.plot_trace(trace,
+                               var_names=freenames[i*npanels:(i+1)*npanels],
+                               compact=compact, show=False, **kwargs)
+        fig = ax[0][0].figure
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = f'figs{os.sep}fig5305_{fname_tag}_trace'
+        fname += '_'+fitter
+        fname += f'figure{i+1}of{nplots}'
+        fname += plots.figure_filetype
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight',
+                    pad_inches=0.05, dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+        else:
+            plt.close(fig)
 
 
 def plot_res_distr(lc, model, meta, fitter):
