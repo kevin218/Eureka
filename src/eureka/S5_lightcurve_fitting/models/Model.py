@@ -211,20 +211,26 @@ class Model:
         if self.name != 'New Model':
             label += ': '+self.name
 
-        model = self.eval(**kwargs)
+        if not share:
+            channel = 0
+        else:
+            channel = chan
+        model = self.eval(channel=channel, **kwargs)
+
         if share and not multwhite:
             time = self.time
             model = model[chan*len(self.time):(chan+1)*len(self.time)]
-        if multwhite:
-            time = time[mwhites_trim[0]:mwhites_trim[1]]
-            model = model[mwhites_trim[0]:mwhites_trim[1]]
+        elif multwhite:
+            trim1 = np.nansum(self.mwhites_nexp[:chan])
+            trim2 = trim1 + self.mwhites_nexp[chan]
+            time = time[trim1:trim2]
 
         ax.plot(time, model, '.', ls='', ms=2, label=label, color=color,
                 zorder=zorder)
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(time, ax=ax, draw=False,
+                component.plot(self.time, ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
                                chan=chan, **kwargs)
 
@@ -277,7 +283,7 @@ class CompositeModel(Model):
         # Set the freenames attribute
         self._freenames = freenames
 
-    def eval(self, incl_GP=False, **kwargs):
+    def eval(self, incl_GP=False, channel=None, **kwargs):
         """Evaluate the model components.
 
         Parameters
@@ -285,6 +291,8 @@ class CompositeModel(Model):
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -298,7 +306,13 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
 
         if self.multwhite:
-            flux = np.ones(len(self.time))
+            if channel is not None:
+                trim1 = np.nansum(self.mwhites_nexp[:channel])
+                trim2 = trim1 + self.mwhites_nexp[channel]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+            flux = np.ones(len(time))
         else:
             flux = np.ones(len(self.time)*self.nchan)
 
@@ -307,18 +321,20 @@ class CompositeModel(Model):
             if component.time is None:
                 component.time = self.time
             if component.modeltype != 'GP':
-                flux *= component.eval(**kwargs)
+                flux *= component.eval(channel=channel, **kwargs)
 
         if incl_GP:
             flux += self.GPeval(flux)
 
         return flux
 
-    def syseval(self, **kwargs):
+    def syseval(self, channel=None, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -332,7 +348,13 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
 
         if self.multwhite:
-            flux = np.ones(len(self.time))
+            if channel is not None:
+                trim1 = np.nansum(self.mwhites_nexp[:channel])
+                trim2 = trim1 + self.mwhites_nexp[channel]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+            flux = np.ones(len(time))
         else:
             flux = np.ones(len(self.time)*self.nchan)
 
@@ -341,7 +363,7 @@ class CompositeModel(Model):
             if model.modeltype == 'systematic':
                 if model.time is None:
                     model.time = self.time
-                flux *= model.eval(**kwargs)
+                flux *= model.eval(channel=channel, **kwargs)
 
         return flux
 
@@ -376,7 +398,7 @@ class CompositeModel(Model):
                 flux = model.eval(fit, **kwargs)
         return flux
 
-    def physeval(self, interp=False, **kwargs):
+    def physeval(self, interp=False, channel=None, **kwargs):
         """Evaluate the physical model components only.
 
         Parameters
@@ -384,6 +406,8 @@ class CompositeModel(Model):
         interp : bool; optional
             Whether to uniformly sample in time or just use
             the self.time time points. Defaults to False.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -407,7 +431,13 @@ class CompositeModel(Model):
             new_time = self.time
 
         if self.multwhite:
-            flux = np.ones(len(new_time))
+            if channel is not None:
+                trim1 = np.nansum(self.mwhites_nexp[:channel])
+                trim2 = trim1 + self.mwhites_nexp[channel]
+                time = new_time[trim1:trim2]
+            else:
+                time = new_time
+            flux = np.ones(len(time))
         else:
             flux = np.ones(len(new_time)*self.nchan)
 
@@ -419,7 +449,7 @@ class CompositeModel(Model):
                 if interp:
                     flux *= model.interp(new_time, **kwargs)
                 else:
-                    flux *= model.eval(**kwargs)
+                    flux *= model.eval(channel=channel, **kwargs)
         return flux, new_time
 
     def update(self, newparams, **kwargs):

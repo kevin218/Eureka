@@ -85,11 +85,13 @@ class PolynomialModel(Model):
         # Trim zeros
         self.coeffs = self.coeffs[:, ~np.all(self.coeffs == 0, axis=0)]
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -98,17 +100,26 @@ class PolynomialModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         # Create the polynomial from the coeffs
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
-            poly = np.poly1d(self.coeffs[c])
+        for c in range(nchan):
+            chan = channels[c]
+
+            poly = np.poly1d(self.coeffs[chan])
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:c])
-                trim2 = trim1 + self.mwhites_nexp[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time_local[trim1:trim2]
             else:
                 time = self.time_local

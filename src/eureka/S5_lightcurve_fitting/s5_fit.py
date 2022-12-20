@@ -689,7 +689,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                        freenames=freenames,
                                        longparamlist=lc_model.longparamlist,
                                        nchan=lc_model.nchannel_fitted,
-                                       paramtitles=paramtitles)
+                                       paramtitles=paramtitles,
+                                       multwhite=lc_model.multwhite,
+                                       mwhites_nexp=lc_model.mwhites_nexp)
     else:
         model = m.CompositeModel(modellist, time=time,
                                  nchan=lc_model.nchannel_fitted,

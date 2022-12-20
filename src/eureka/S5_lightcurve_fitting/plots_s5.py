@@ -58,9 +58,9 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         color = lc.colors[i]
         
         time = lc.time
-        new_timet = new_time
 
         if lc.share and not meta.multwhite:
+            new_timet = new_time
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
@@ -69,8 +69,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model_phys = model_phys[channel*len(new_time):
                                     (channel+1)*len(new_time)]
         elif meta.multwhite:
-            trim1 = np.nansum(meta.mwhites_nexp[:i])
-            trim2 = trim1 + meta.mwhites_nexp[i]
+            trim1 = np.nansum(meta.mwhites_nexp[:channel])
+            trim2 = trim1 + meta.mwhites_nexp[channel]
             
             time = time[trim1:trim2]
             new_timet = new_time[trim1:trim2]
@@ -160,11 +160,27 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         flux /= model_sys
         color = lc.colors[i]
 
-        if lc.share:
+        if lc.share and not meta.multwhite:
+            time = lc.time
+            new_timet = new_time
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+            model_sys = model_sys[channel*len(lc.time):
+                                  (channel+1)*len(lc.time)]
             model_phys = model_phys[channel*len(new_time):
                                     (channel+1)*len(new_time)]
+        elif meta.multwhite:
+            trim1 = np.nansum(meta.mwhites_nexp[:channel])
+            trim2 = trim1 + meta.mwhites_nexp[channel]
+            
+            time = lc.time[trim1:trim2]
+            new_timet = new_time[trim1:trim2]
+            flux = flux[trim1:trim2]
+            unc = unc[trim1:trim2]
+            model = model[trim1:trim2]
+            model_sys = model_sys[trim1:trim2]
+            model_phys = model_phys[trim1:trim2]
 
         # Normalize to zero flux at eclipse
         flux -= 1
@@ -178,11 +194,11 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
             nbin_plot = 100
-        elif meta.nbin_plot > len(lc.time):
-            nbin_plot = len(lc.time)
+        elif meta.nbin_plot > len(time):
+            nbin_plot = len(time)
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData(lc.time, nbin_plot)
+        binned_time = util.binData(time, nbin_plot)
         binned_flux = util.binData(flux, nbin_plot)
         binned_unc = util.binData(unc, nbin_plot, err=True)
 
@@ -201,13 +217,14 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
                     color='w', ecolor=color, mec=color)
         # Plot the model
-        ax.plot(lc.time, model_phys, '.', ls='', ms=2, color='0.3', zorder=10)
+        ax.plot(new_timet, model_phys, '.', ls='', ms=2, color='0.3',
+                zorder=10)
 
         # Set nice axis limits
         sigma = np.ma.mean(binned_unc)
         max_astro = np.ma.max((model_phys-1))
         ax.set_ylim(-4*sigma, max_astro+6*sigma)
-        ax.set_xlim(np.min(lc.time), np.max(lc.time))
+        ax.set_xlim(np.min(time), np.max(time))
 
         # Save/show the figure
         if lc.white:
@@ -234,19 +251,19 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             fig.patch.set_facecolor('white')
 
             # Plot the unbinned data without errorbars
-            ax.plot(lc.time, flux, '.', c='k', zorder=0, alpha=0.01)
+            ax.plot(time, flux, '.', c='k', zorder=0, alpha=0.01)
             # Plot the binned data with errorbars
             ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
                         color=color, zorder=1)
             # Plot the physical model
-            ax.plot(lc.time, model_phys, '.', ls='', ms=2, color='0.3',
+            ax.plot(new_time, model_phys, '.', ls='', ms=2, color='0.3',
                     zorder=10)
 
             # Set nice axis limits
             sigma = np.ma.std(flux-model_phys)
             max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
-            ax.set_xlim(np.min(lc.time), np.max(lc.time))
+            ax.set_xlim(np.min(time), np.max(time))
             
             # Save/show the figure
             if lc.white:
@@ -288,16 +305,24 @@ def plot_rms(lc, model, meta, fitter):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    time = lc.time
     model_lc = model.eval()
 
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
         model = np.ma.copy(model_lc)
+
         if lc.share and not meta.multwhite:
+            time = lc.time
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-
+        elif meta.multwhite:
+            trim1 = np.nansum(meta.mwhites_nexp[:channel])
+            trim2 = trim1 + meta.mwhites_nexp[channel]
+            
+            time = lc.time[trim1:trim2]
+            flux = flux[trim1:trim2]
+            model = model[trim1:trim2]
+            
         residuals = flux - model
         residuals = residuals[np.argsort(time)]
 
@@ -325,7 +350,6 @@ def plot_rms(lc, model, meta, fitter):
         ax.legend(loc=1)
 
         # Add second x-axis using time instead of N-binned
-        time = np.array(lc.time)
         dt = (time[1]-time[0])*24*3600
 
         def t_N(N):
@@ -591,10 +615,18 @@ def plot_res_distr(lc, model, meta, fitter):
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(np.array(lc.unc_fit))
         model = np.ma.copy(model_lc)
-        if lc.share:
+
+        if lc.share and not meta.multwhite:
             flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
             unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
             model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+        elif meta.multwhite:
+            trim1 = np.nansum(meta.mwhites_nexp[:channel])
+            trim2 = trim1 + meta.mwhites_nexp[channel]
+            
+            flux = flux[trim1:trim2]
+            unc = unc[trim1:trim2]
+            model = model[trim1:trim2]
 
         residuals = flux - model
         hist_vals = residuals/unc

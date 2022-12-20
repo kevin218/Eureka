@@ -22,6 +22,10 @@ class PolynomialModel(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
+        # Needed before setting time
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -39,7 +43,16 @@ class PolynomialModel(PyMC3Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time.mean()
+            if self.multwhite:
+                self.time_local = []
+                for c in range(self.nchan):
+                    trim1 = np.nansum(self.mwhites_nexp[:c])
+                    trim2 = trim1 + self.mwhites_nexp[c]
+                    time = self.time[trim1:trim2]
+                    self.time_local.extend(time - time.mean())
+                self.time_local = np.array(self.time_local)
+            else:
+                self.time_local = self.time - self.time.mean()
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -76,22 +89,31 @@ class PolynomialModel(PyMC3Model):
             model = self.model
         
         # Parse 'c#' keyword arguments as coefficients
-        for j in range(nchan):
+        for c in range(nchan):
+            chan = channels[c]
             for i in range(10):
                 try:
-                    if channels[j] == 0:
-                        poly_coeffs[j][i] = getattr(model, f'c{i}')
+                    if chan == 0:
+                        poly_coeffs[c][i] = getattr(model, f'c{i}')
                     else:
-                        poly_coeffs[j][i] = getattr(model,
-                                                    f'c{i}_{channels[j]}')
+                        poly_coeffs[c][i] = getattr(model,
+                                                    f'c{i}_{chan}')
                 except AttributeError:
                     pass
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):
-            lcpiece = lib.zeros(len(self.time))
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                time = self.time_local[trim1:trim2]
+            else:
+                time = self.time_local
+
+            lcpiece = lib.zeros(len(time))
             for power in range(len(poly_coeffs[c])):
-                lcpiece += poly_coeffs[c][power] * self.time_local**power
+                lcpiece += poly_coeffs[c][power] * time**power
             poly_flux = lib.concatenate([poly_flux, lcpiece])
 
         return poly_flux

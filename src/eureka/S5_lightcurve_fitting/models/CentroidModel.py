@@ -62,7 +62,7 @@ class CentroidModel(Model):
 
     @centroid.setter
     def centroid(self, centroid_array):
-        """A setter for the time."""
+        """A setter for the centroid."""
         self._centroid = np.ma.masked_invalid(centroid_array)
         if self.centroid is not None:
             # Convert to local centroid
@@ -77,11 +77,13 @@ class CentroidModel(Model):
             else:
                 self.centroid_local = self.centroid - self.centroid.mean()
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the centroid array here if not already set.
 
@@ -90,20 +92,29 @@ class CentroidModel(Model):
         lcfinal : ndarray
             The value of the model at the centroid self.centroid.
         """
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the centroids
         if self.centroid is None:
             self.centroid = kwargs.get('centroid')
 
         # Create the centroid model for each wavelength
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            chan = channels[c]
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:c])
-                trim2 = trim1 + self.mwhites_nexp[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
                 centroid = self.centroid_local[trim1:trim2]
             else:
                 centroid = self.centroid_local
-            coeff = getattr(self.parameters, self.coeff_keys[c]).value
+
+            coeff = getattr(self.parameters, self.coeff_keys[chan]).value
             lcpiece = 1 + centroid*coeff
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

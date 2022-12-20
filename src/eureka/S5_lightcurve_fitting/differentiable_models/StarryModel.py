@@ -32,6 +32,10 @@ class StarryModel(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
+        # Needed before setting time
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -180,10 +184,8 @@ class StarryModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            channels = np.arange(self.nchan)
         else:
-            nchan = 1
             channels = [channel, ]
 
         if eval:
@@ -195,10 +197,17 @@ class StarryModel(PyMC3Model):
 
         phys_flux = lib.zeros(0)
         for c in channels:
-            lcpiece = systems[c].flux(self.time)
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:c])
+                trim2 = trim1 + self.mwhites_nexp[c]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
+            lcpiece = systems[c].flux(time)
             if eval:
                 lcpiece = lcpiece.eval()
-        phys_flux = lib.concatenate([phys_flux, lcpiece])
+            phys_flux = lib.concatenate([phys_flux, lcpiece])
 
         return phys_flux
 
@@ -245,7 +254,7 @@ class StarryModel(PyMC3Model):
             temp = temp_class()
             for key in self.paramtitles:
                 ptype = getattr(self.parameters, key).ptype
-                if (ptype not in ['fixed', 'independent']
+                if (ptype not in ['fixed', 'independent', 'shared']
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact

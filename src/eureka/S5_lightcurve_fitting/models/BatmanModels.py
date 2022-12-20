@@ -77,11 +77,13 @@ class BatmanTransitModel(Model):
                             self.parameters.dict[item][0] = \
                                 self.ld_file_array[c][param-1]
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -90,6 +92,13 @@ class BatmanTransitModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -99,16 +108,18 @@ class BatmanTransitModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            chan = channels[c]
+
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:c])
-                trim2 = trim1 + self.mwhites_nexp[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time[trim1:trim2]
             else:
                 time = self.time
 
             # Set all parameters
-            for index, item in enumerate(self.longparamlist[c]):
+            for index, item in enumerate(self.longparamlist[chan]):
                 setattr(bm_params, self.paramtitles[index],
                         self.parameters.dict[item][0])
 
@@ -117,7 +128,7 @@ class BatmanTransitModel(Model):
             for u in self.coeffs:
                 index = np.where(np.array(self.paramtitles) == u)[0]
                 if len(index) != 0:
-                    item = self.longparamlist[c][index[0]]
+                    item = self.longparamlist[chan][index[0]]
                     uarray.append(self.parameters.dict[item][0])
             bm_params.u = uarray
 
@@ -230,11 +241,13 @@ class BatmanEclipseModel(Model):
                              f"         will not be accounting for "
                              f"light-travel time).")
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -243,6 +256,13 @@ class BatmanEclipseModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -252,16 +272,18 @@ class BatmanEclipseModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            chan = channels[c]
+
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:c])
-                trim2 = trim1 + self.mwhites_nexp[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time[trim1:trim2]
             else:
                 time = self.time
 
             # Set all parameters
-            for index, item in enumerate(self.longparamlist[c]):
+            for index, item in enumerate(self.longparamlist[chan]):
                 setattr(bm_params, self.paramtitles[index],
                         self.parameters.dict[item][0])
 
@@ -287,7 +309,7 @@ class BatmanEclipseModel(Model):
                 self.adjusted_time = time
 
             if not np.any(['t_secondary' in key
-                           for key in self.longparamlist[c]]):
+                           for key in self.longparamlist[chan]]):
                 # If not explicitly fitting for the time of eclipse, get
                 # the time of eclipse from the time of transit, period,
                 # eccentricity, and argument of periastron

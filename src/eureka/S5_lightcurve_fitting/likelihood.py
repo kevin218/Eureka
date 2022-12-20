@@ -42,13 +42,12 @@ def ln_like(theta, lc, model, freenames):
             if model.multwhite:
                 trim1 = np.nansum(model.mwhites_nexp[:chan])
                 trim2 = trim1 + model.mwhites_nexp[chan]
-                time = lc.time[trim1:trim2]
+                lc.unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
             else:
-                time = lc.time
-            lc.unc_fit[chan*time.size:(chan+1)*time.size] = \
-                theta[ind[chan]] * 1e-6
+                size = lc.time.size
+                lc.unc_fit[chan*size:(chan+1)*size] = theta[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
+        ind = [i for i in range(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
@@ -56,12 +55,11 @@ def ln_like(theta, lc, model, freenames):
             if model.multwhite:
                 trim1 = np.nansum(model.mwhites_nexp[:chan])
                 trim2 = trim1 + model.mwhites_nexp[chan]
-                time = lc.time[trim1:trim2]
+                lc.unc_fit[trim1:trim2] = theta[ind[chan]]*lc.unc[trim1:trim2]
             else:
-                time = lc.time
-            lc.unc_fit[chan*time.size:(chan+1)*time.size] = \
-                (theta[ind[chan]] *
-                 lc.unc[chan*time.size:(chan+1)*time.size])
+                size = lc.time.size
+                lc.unc_fit[chan*size:(chan+1)*size] = \
+                    theta[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
 
     if model.GP:
         ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)

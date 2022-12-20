@@ -84,11 +84,13 @@ class StepModel(Model):
                 self.steptimes[chan, int(split_key[0][8:])] = \
                     self.parameters.dict[key][0]
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -97,20 +99,28 @@ class StepModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchan
+            channels = np.arange(nchan)
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         # Create the ramp from the coeffs
-        lcfinal = np.ones((self.nchan, len(self.time)))
-        for c in range(self.nchan):
+        lcfinal = np.ones((nchan, len(self.time)))
+        for c in range(nchan):
+            chan = channels[c]
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:c])
-                trim2 = trim1 + self.mwhites_nexp[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time[trim1:trim2]
             else:
                 time = self.time
-            for s in np.where(self.steps[c] != 0)[0]:
-                lcfinal[c, time >= self.steptimes[c, s]] += \
-                    self.steps[c, s]
+            for s in np.where(self.steps[chan] != 0)[0]:
+                lcfinal[chan, time >= self.steptimes[chan, s]] += \
+                    self.steps[chan, s]
         return lcfinal.flatten()

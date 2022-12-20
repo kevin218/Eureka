@@ -22,6 +22,10 @@ class CentroidModel(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
+        # Needed before setting time
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -35,7 +39,8 @@ class CentroidModel(PyMC3Model):
         if self.nchan == 1:
             self.coeff_keys = [self.axis]
         else:
-            self.coeff_keys = [f'{self.axis}_{i}' for i in range(self.nchan)]
+            self.coeff_keys = [f'{self.axis}_{i}' if i > 0 else f'{self.axis}'
+                               for i in range(self.nchan)]
 
     @property
     def centroid(self):
@@ -45,10 +50,19 @@ class CentroidModel(PyMC3Model):
     @centroid.setter
     def centroid(self, centroid_array):
         """A setter for the centroid."""
-        self._centroid = centroid_array
+        self._centroid = np.ma.masked_invalid(centroid_array)
         if self.centroid is not None:
             # Convert to local centroid
-            self.centroid_local = self.centroid - self.centroid.mean()
+            if self.multwhite:
+                self.centroid_local = []
+                for c in np.arange(self.nchan):
+                    trim1 = np.nansum(self.mwhites_nexp[:c])
+                    trim2 = trim1 + self.mwhites_nexp[c]
+                    centroid = self.centroid[trim1:trim2]
+                    self.centroid_local.extend(centroid - centroid.mean())
+                self.centroid_local = np.array(self.centroid_local)
+            else:
+                self.centroid_local = self.centroid - self.centroid.mean()
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -89,7 +103,15 @@ class CentroidModel(PyMC3Model):
         
         centroid_flux = lib.zeros(0)
         for c in range(nchan):
-            lcpiece = 1 + self.centroid_local*coeffs[c]
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                centroid = self.centroid_local[trim1:trim2]
+            else:
+                centroid = self.centroid_local
+
+            lcpiece = 1 + centroid*coeffs[c]
             centroid_flux = lib.concatenate([centroid_flux, lcpiece])
 
         return centroid_flux

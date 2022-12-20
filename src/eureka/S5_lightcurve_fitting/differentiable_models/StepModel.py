@@ -22,6 +22,10 @@ class StepModel(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
+        # Needed before setting time
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -53,8 +57,8 @@ class StepModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        steps = np.zeros((self.nchan, 10)).tolist()
-        steptimes = np.zeros((self.nchan, 10)).tolist()
+        steps = np.zeros((nchan, 10)).tolist()
+        steptimes = np.zeros((nchan, 10)).tolist()
 
         if eval:
             lib = np
@@ -79,9 +83,17 @@ class StepModel(PyMC3Model):
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):
-            lcpiece = lib.ones(len(self.time))
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
+            lcpiece = lib.ones(len(time))
             for s in np.where(steps[c] != 0)[0]:
-                lcpiece += steps[c][s]*(self.time >= steptimes[c][s])
+                lcpiece += steps[c][s]*(time >= steptimes[c][s])
             poly_flux = lib.concatenate([poly_flux, lcpiece])
 
         return poly_flux
