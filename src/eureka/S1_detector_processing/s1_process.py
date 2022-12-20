@@ -1,6 +1,7 @@
 import os
 import time as time_pkg
 import numpy as np
+from copy import deepcopy
 from astropy.io import fits
 
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
@@ -47,6 +48,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         Updated for JWST version 1.3.3, code restructure
     """
     t0 = time_pkg.time()
+
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object

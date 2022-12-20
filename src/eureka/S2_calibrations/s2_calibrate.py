@@ -13,19 +13,20 @@
 import os
 import shutil
 import time as time_pkg
+from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from functools import partial
 from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
+import jwst.assign_wcs.nirspec
+
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import plots
-
-import jwst.assign_wcs.nirspec
-from functools import partial
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -62,6 +63,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         Initial version
     '''
     t0 = time_pkg.time()
+
+    s1_meta = deepcopy(s1_meta)
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object

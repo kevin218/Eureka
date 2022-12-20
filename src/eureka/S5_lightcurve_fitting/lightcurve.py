@@ -3,7 +3,8 @@ import os
 import matplotlib.pyplot as plt
 
 from . import models as m
-from . import fitters as f
+from . import fitters
+from . import gradient_fitters
 from .utils import COLORS, color_gen
 from ..lib import plots
 
@@ -131,21 +132,26 @@ class LightCurve(m.Model):
         fit_model = None
 
         model.time = self.time
-        # Make sure the model is a CompositeModel
-        if not isinstance(model, m.CompositeModel):
-            model = m.CompositeModel([model])
-            model.time = self.time
+        if fitter not in ['exoplanet', 'nuts']:
+            # Make sure the model is a CompositeModel
+            if not isinstance(model, m.CompositeModel):
+                model = m.CompositeModel([model])
+                model.time = self.time
 
         if fitter == 'lmfit':
-            self.fitter_func = f.lmfitter
+            self.fitter_func = fitters.lmfitter
         elif fitter == 'lsq':
-            self.fitter_func = f.lsqfitter
+            self.fitter_func = fitters.lsqfitter
         # elif fitter == 'demc':
-        #     self.fitter_func = f.demcfitter
+        #     self.fitter_func = fitters.demcfitter
         elif fitter == 'emcee':
-            self.fitter_func = f.emceefitter
+            self.fitter_func = fitters.emceefitter
         elif fitter == 'dynesty':
-            self.fitter_func = f.dynestyfitter
+            self.fitter_func = fitters.dynestyfitter
+        elif fitter == 'exoplanet':
+            self.fitter_func = gradient_fitters.exoplanetfitter
+        elif fitter == 'nuts':
+            self.fitter_func = gradient_fitters.nutsfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 

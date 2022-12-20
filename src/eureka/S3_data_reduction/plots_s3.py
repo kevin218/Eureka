@@ -203,13 +203,13 @@ def drift_2D(data, meta):
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
         if len(iscans) > 0:
-            plt.plot(iscans, data.centroid_y, '.')
+            plt.plot(iscans, data.centroid_y[iscans], '.')
     plt.ylabel(f'Drift Along y ({data.centroid_y.units})')
     plt.subplot(212)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
         if len(iscans) > 0:
-            plt.plot(iscans, data.centroid_x, '.')
+            plt.plot(iscans, data.centroid_x[iscans], '.')
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
     plt.tight_layout()
@@ -492,7 +492,8 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     - 2022-07-29 KBS
         Initial version
     '''
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+    xmin = int(data.flux.x.values[0])
+    xmax = int(data.flux.x.values[-1])
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     # Median flux of segment

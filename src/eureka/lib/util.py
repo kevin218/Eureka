@@ -19,11 +19,11 @@ COMMON_IMPORTS = np.array([
      "pandas", "scipy", "xarray", ],
     ["astraeus", "astropy", "eureka", "h5py", "matplotlib", "numpy",
      "pandas", "xarray", ],
-])
+], dtype=object)
 
 
 def readfiles(meta, log):
-    """Reads in files saved in topdir + inputdir and saves them in a list.
+    """Read in the files saved in topdir + inputdir and save them to a list.
 
     Parameters
     ----------
@@ -718,13 +718,19 @@ def make_citations(meta, stage=None):
     if stage == 5:
         # concat non-lsq fit methods (emcee/dynesty) to the citation list
         if "emcee" in meta.fit_method:
-            other_cites = other_cites + ["emcee"]  # meta.fit_method
+            other_cites = other_cites + ["emcee"]
         if "dynesty" in meta.fit_method:
-            other_cites = other_cites + ["dynesty"]  # meta.fit_method
+            other_cites = other_cites + ["dynesty"]
+        if "nuts" in meta.fit_method:
+            other_cites = other_cites + ["pymc3"]
+        if "exoplanet" in meta.fit_method:
+            other_cites = other_cites + ["exoplanet"]
 
         # check if batman or GP is being used for transit/eclipse modeling
-        if "batman_tr" or "batman_ecl" in meta.run_myfuncs:
+        if "batman_tr" in meta.run_myfuncs or "batman_ecl" in meta.run_myfuncs:
             other_cites.append("batman")
+        if "starry" in meta.run_myfuncs:
+            other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
                 other_cites.append(meta.GP_package) 
