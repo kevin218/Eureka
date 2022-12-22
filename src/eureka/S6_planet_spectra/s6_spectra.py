@@ -687,6 +687,10 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Figure out the desired order
     suffix = meta.y_param[-1]
 
+    if not suffix.isnumeric():
+        # First order doesn't have a numeric suffix
+        suffix = '1'
+
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
@@ -749,6 +753,10 @@ def compute_amp(meta, log, fit_methods):
     # Figure out the desired order
     suffix = meta.y_param[-1]
     
+    if not suffix.isnumeric():
+        # First order doesn't have a numeric suffix
+        suffix = '1'
+
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
