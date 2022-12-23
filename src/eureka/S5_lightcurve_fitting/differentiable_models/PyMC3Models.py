@@ -413,7 +413,7 @@ class CompositePyMC3Model(PyMC3Model):
             for component in self.components:
                 # Do any one-time setup needed after model initialization and
                 # before evaluating the model
-                component.setup(full_model=self)
+                component.setup()
 
             # This is how we tell pymc3 about our observations;
             # we are assuming they are normally distributed about
