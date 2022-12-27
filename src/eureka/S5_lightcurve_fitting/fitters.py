@@ -145,7 +145,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    print('\nLSQ RESULTS:')
+    log.writelog('\nLSQ RESULTS:')
     for i in range(len(freenames)):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
@@ -451,13 +451,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
-    # Plot chain evolution
-    if meta.isplots_S5 >= 3:
-        plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
-                         fitter='emcee', burnin=True, nburn=meta.run_nburn)
-        plots.plot_chain(sampler.get_chain(discard=meta.run_nburn), lc, meta,
-                         freenames, fitter='emcee', burnin=False)
-
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='emcee')
@@ -466,6 +459,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 3:
         plots.plot_res_distr(lc, model, meta, fitter='emcee')
 
+    # Plot chain evolution
     if meta.isplots_S5 >= 3:
         plots.plot_chain(sampler.get_chain(), lc, meta, freenames,
                          fitter='emcee', burnin=True, nburn=meta.run_nburn)
@@ -1310,7 +1304,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                                   for comp in model.components], dtype=object)
     model_lc = model.eval()
     residuals = lc.flux-model_lc
-    astropytable.savetable_S5(meta.tab_filename_s5, meta.time,
+    astropytable.savetable_S5(meta.tab_filename_s5, lc.time,
                               wavelengths[lc.fitted_channels],
                               wave_errs[lc.fitted_channels],
                               lc.flux, lc.unc_fit, individual_models, model_lc,

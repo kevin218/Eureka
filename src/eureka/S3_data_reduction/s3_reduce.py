@@ -25,9 +25,11 @@
 import os
 import time as time_pkg
 import numpy as np
+from copy import deepcopy
 import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
+
 from . import optspex
 from . import plots_s3, source_pos, straighten
 from . import background as bg
@@ -75,6 +77,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     - July 2022 Sebastian Zieba
         Added photometry S3
     '''
+    s2_meta = deepcopy(s2_meta)
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
@@ -566,6 +570,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                                         optmask=spec.optmask)
+
+            # make citations for current stage
+            util.make_citations(meta, 3)
 
             # Save results
             if meta.save_output:

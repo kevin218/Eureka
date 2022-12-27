@@ -23,20 +23,12 @@ class PolynomialModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
             coeff_dict = kwargs.get('coeff_dict')
             params = {cN: coeff for cN, coeff in coeff_dict.items()
                       if cN.startswith('c') and cN[1:].isdigit()}
             self.parameters = Parameters(**params)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
 
         # Update coefficients
         self._parse_coeffs()
