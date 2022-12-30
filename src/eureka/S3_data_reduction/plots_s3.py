@@ -358,9 +358,9 @@ def profile(meta, profile, submask, n, m):
     vmin = np.ma.min(profile*submask)
     vmax = vmin + 0.05*np.ma.max(profile*submask)
     cmap = plt.cm.viridis.copy()
-    plt.figure(3303)
+    plt.figure(3303, figsize=(8, 4))
     plt.clf()
-    plt.suptitle(f"Profile - Integration {n}")
+    plt.title(f"Optimal Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
     plt.ylabel('Relative Pixel Position')
@@ -375,7 +375,7 @@ def profile(meta, profile, submask, n, m):
         plt.pause(0.2)
 
 
-def subdata(meta, i, n, m, subdata, submask, expected, loc):
+def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     '''Show 1D view of profile for each column. (Figs 3501)
 
     Parameters
@@ -401,8 +401,10 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
     plt.figure(3501)
     plt.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
-    plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
-             subdata[np.where(submask[:, i])[0], i], 'bo')
+    plt.errorbar(np.arange(ny)[np.where(submask[:, i])[0]],
+             subdata[np.where(submask[:, i])[0], i],
+             np.sqrt(variance[np.where(submask[:, i])[0], i]),
+             fmt='.', color='b')
     plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
              expected[np.where(submask[:, i])[0], i], 'g-')
     plt.plot((loc[i]), (subdata[loc[i], i]), 'ro')
@@ -1106,3 +1108,46 @@ def phot_2d_frame_diff(data, meta):
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+def stddev_profile(meta, n, m, stdevs, p7thresh):
+    """
+    Plots the difference between the data and optimal profile in units
+    of standard deviations.  The scale goes from 0 to p7thresh. (Fig 3506)
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    n : int
+        The current integration number.
+    m : int
+        The file number.
+    stdevs : 2D array
+        Difference between data and profile in standard deviations
+    p7thresh : int
+        X-sigma threshold for outlier rejection during optimal spectral
+        extraction
+
+    Notes
+    -----
+    History:
+
+    - 2022-12-29 Kevin Stevenson
+        Initial version
+    """
+    plt.figure(3506, figsize=(8, 4))
+    plt.clf()
+    cmap = plt.cm.viridis.copy()
+    plt.title(f'Std. Dev. from Optimal Profile - Integration {n}')
+    plt.imshow(stdevs, origin='lower', aspect='auto',
+               vmax=p7thresh, vmin=0, cmap=cmap,
+               interpolation='nearest')
+    plt.ylabel('Relative Pixel Position')
+    plt.xlabel('Relative Pixel Position')
+    plt.colorbar()
+    plt.tight_layout()
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
+             f'_Std_Dev_Profile'+plots.figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=200)
