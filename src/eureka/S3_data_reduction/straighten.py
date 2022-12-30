@@ -35,7 +35,7 @@ def find_column_median_shifts(data, meta, m):
                    np.sum(data, axis=0))
 
     # Smooth CoM values to get rid of outliers
-    smooth_coms = smooth.medfilt(column_coms, meta.window_len)
+    smooth_coms = smooth.medfilt(column_coms, 11)
 
     # Convert to interget pixels
     int_coms = np.around(smooth_coms).astype(int)
