@@ -80,6 +80,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model = model[trim1:trim2]
             model_sys = model_sys[trim1:trim2]
             model_phys = model_phys[trim1:trim2]
+        else:
+            new_timet = new_time
 
         residuals = flux - model
 
@@ -182,6 +184,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             model = model[trim1:trim2]
             model_sys = model_sys[trim1:trim2]
             model_phys = model_phys[trim1:trim2]
+        else:
+            time = lc.time
+            new_timet = new_time
 
         # Normalize to zero flux at eclipse
         flux -= 1
@@ -323,6 +328,8 @@ def plot_rms(lc, model, meta, fitter):
             time = lc.time[trim1:trim2]
             flux = flux[trim1:trim2]
             model = model[trim1:trim2]
+        else:
+            time = lc.time
             
         residuals = flux - model
         residuals = residuals[np.argsort(time)]

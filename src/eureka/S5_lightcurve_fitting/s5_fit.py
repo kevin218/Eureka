@@ -121,6 +121,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
 
             meta.mwhites_nexp = []
+            if not hasattr(meta, 'multwhite'):
+                meta.multwhite = False
+
             if meta.multwhite:
                 # Need to normalize each one if doing a joint fit
                 lc_whites = []
