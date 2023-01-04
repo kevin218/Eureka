@@ -15,6 +15,7 @@ logger.setLevel(logging.ERROR)
 
 import pymc3 as pm
 BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
+BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
 from ...lib.readEPF import Parameters
@@ -337,9 +338,17 @@ class CompositePyMC3Model(PyMC3Model):
                                                    upper=param.priorpar2,
                                                    testval=param.value))
                             elif param.prior == 'N':
-                                if parname in ['rp', 'per', 'ecc',
-                                               'scatter_mult', 'scatter_ppm',
-                                               'c0', 'r1', 'r4', 'r7', 'r10']:
+                                BoundedNormal_0_1
+                                if parname == 'ecc':
+                                    setattr(self.model, parname_temp,
+                                            BoundedNormal_0_1(
+                                                parname_temp,
+                                                mu=param.priorpar1,
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
+                                elif parname in ['rp', 'per', 'scatter_mult',
+                                                 'scatter_ppm', 'c0', 'r1',
+                                                 'r4', 'r7', 'r10']:
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0(
                                                 parname_temp,
