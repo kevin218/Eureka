@@ -70,6 +70,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
+    if not hasattr(meta, 'multwhite'):
+        meta.multwhite = False
+
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
         # that old MetaClass
@@ -121,9 +124,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
 
             meta.mwhites_nexp = []
-            if not hasattr(meta, 'multwhite'):
-                meta.multwhite = False
-
             if meta.multwhite:
                 # Need to normalize each one if doing a joint fit
                 lc_whites = []
