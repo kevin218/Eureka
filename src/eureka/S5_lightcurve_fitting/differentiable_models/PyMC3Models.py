@@ -338,7 +338,6 @@ class CompositePyMC3Model(PyMC3Model):
                                                    upper=param.priorpar2,
                                                    testval=param.value))
                             elif param.prior == 'N':
-                                BoundedNormal_0_1
                                 if parname == 'ecc':
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0_1(
@@ -485,7 +484,7 @@ class CompositePyMC3Model(PyMC3Model):
             for component in self.components:
                 # Do any one-time setup needed after model initialization and
                 # before evaluating the model
-                component.setup(full_model=self)
+                component.setup()
 
             # This is how we tell pymc3 about our observations;
             # we are assuming they are normally distributed about

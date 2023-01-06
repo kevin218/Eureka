@@ -539,7 +539,21 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                          multwhite=lc_model.multwhite,
                                          mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_eclipse)
-    if 'sinusoid_pc' in meta.run_myfuncs:
+    if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
+        model_names = np.array([model.name for model in modellist])
+        # Nest the starry model inside of the phase curve model
+        starry_model = modellist.pop(np.where(model_names == 'starry')[0][0])
+        t_phase = \
+            dm.SinusoidPhaseCurveModel(starry_model,
+                                       parameters=params, name='phasecurve',
+                                       fmt='r--', log=log, time=time,
+                                       time_units=time_units,
+                                       freenames=freenames,
+                                       longparamlist=lc_model.longparamlist,
+                                       nchan=lc_model.nchannel_fitted,
+                                       paramtitles=paramtitles)
+        modellist.append(t_phase)
+    elif 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
         t_model = None
         e_model = None

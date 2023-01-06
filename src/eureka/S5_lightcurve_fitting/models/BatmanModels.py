@@ -381,4 +381,4 @@ def correct_light_travel_time(time, bm_params):
 
     # Subtract light travel time as a first-order correction
     # Batman will then calculate the model at a slightly earlier time
-    return time-delta_t
+    return time-delta_t.flatten()
