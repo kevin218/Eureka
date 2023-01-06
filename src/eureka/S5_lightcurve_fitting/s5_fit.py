@@ -135,10 +135,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 lc_whites.append(lc)
                 for p in range(len(meta.inputdirlist)):
                     # Specify where glob should search for the save file
-                    path = os.path.join(meta.topdir, meta.inputdirlist[p],
-                                        f'ap{meta.spec_hw}_bg{meta.bg_hw}')
+                    path = os.path.join(meta.topdir, meta.inputdirlist[p])
                     # Search
-                    path = glob(path+f'**{os.sep}*LCData.h5',
+                    path = glob(path+os.sep+f'**{os.sep}*LCData.h5',
                                 recursive=True)
                     if len(path) == 0:
                         raise AssertionError(
