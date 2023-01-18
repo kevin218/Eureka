@@ -841,7 +841,10 @@ def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
             pass
 
     # Load map parameters
-    ydeg = int(y_param[-1])
+    if y_param[-1].isnumeric():
+        ydeg = int(y_param[-1])
+    else:
+        ydeg = 1
     temp = temp_class()
     ell = ydeg
     for m in range(-ell, ell+1):
