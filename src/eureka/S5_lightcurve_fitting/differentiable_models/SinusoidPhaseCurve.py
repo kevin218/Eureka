@@ -129,11 +129,18 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         lcfinal = lib.zeros(0)
         for c in range(nchan):
             chan = channels[c]
-            phaseVars = lib.ones(len(self.time))
+            if self.multwhite:
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
+            phaseVars = lib.ones(len(time))
             
             # Compute orbital phase
             # FINDME: for now this assumes a circular orbit
-            t = self.time - model.t0 - model.per/2.
+            t = time - model.t0 - model.per/2.
             phi = 2.*np.pi/model.per*t
 
             for order in range(1, self.maxOrder+1):
@@ -148,7 +155,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
             if self.starry_model is not None:
                 # Combine with the starry model
-                flux_star, flux_planet = systems[chan].flux(self.time,
+                flux_star, flux_planet = systems[chan].flux(time,
                                                             total=False)
                 lcpiece = flux_star + flux_planet*phaseVars
                 if eval:

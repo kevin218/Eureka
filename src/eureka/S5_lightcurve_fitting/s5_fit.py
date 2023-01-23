@@ -550,7 +550,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
                                        freenames=freenames,
                                        longparamlist=lc_model.longparamlist,
                                        nchan=lc_model.nchannel_fitted,
-                                       paramtitles=paramtitles)
+                                       paramtitles=paramtitles,
+                                       multwhite=lc_model.multwhite,
+                                       mwhites_nexp=lc_model.mwhites_nexp)
         modellist.append(t_phase)
     elif 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
