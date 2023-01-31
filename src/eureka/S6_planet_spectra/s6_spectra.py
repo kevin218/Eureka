@@ -744,7 +744,8 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
 
 
 def compute_amp(meta, log, fit_methods):
-    if 'nuts' in fit_methods or 'exoplanet' in fit_methods:
+    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
+            'sinusoid_pc' not in meta.run_myfuncs):
         return compute_amp_starry(meta, log, fit_methods)
 
     # Save meta.y_param
@@ -898,7 +899,8 @@ def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
 
 
 def compute_fn(meta, log, fit_methods):
-    if 'nuts' in fit_methods or 'exoplanet' in fit_methods:
+    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
+            'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_starry(meta, log, fit_methods)
 
     # Save meta.y_param
