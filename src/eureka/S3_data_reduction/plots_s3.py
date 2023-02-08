@@ -53,8 +53,13 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     wmin = np.nanmin(wave_1d)
     wmax = np.nanmax(wave_1d)
     # Don't do min and max because MIRI is backwards
-    pmin = int(optspec.x[0].values)
-    pmax = int(optspec.x[-1].values)
+    # Correctly place label at center of pixel
+    if meta.inst == 'miri':
+        pmin = int(optspec.x[0].values+0.5)
+        pmax = int(optspec.x[-1].values-0.5)
+    else:
+        pmin = int(optspec.x[0].values-0.5)
+        pmax = int(optspec.x[-1].values+0.5)
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
