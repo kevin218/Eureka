@@ -172,7 +172,7 @@ def read(filename, data, meta, log):
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
-    
+
     # Figure out the x-axis (aka the original y-axis) pixel numbers since we've
     # reversed the order of the x-axis
     x = np.arange(sci.shape[2])[::-1]
@@ -294,7 +294,6 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
                                 threshold=meta.p3thresh, isrotate=isrotate,
                                 isplots=isplots)
     return bg, mask, n
-    # return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots, **kwargs)
 
 
 def cut_aperture(data, meta, log):

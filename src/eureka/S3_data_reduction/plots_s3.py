@@ -401,6 +401,8 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         Expected profile
     loc : ndarray
         Location of worst outliers.
+    variance : ndarray
+        Variance of background subtracted data.
     '''
     ny, nx = subdata.shape
     plt.figure(3501)
@@ -1156,3 +1158,5 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
              f'_Std_Dev_Profile'+plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=200)
+    if not meta.hide_plots:
+        plt.pause(0.1)

@@ -548,14 +548,6 @@ def clean_median_flux(data, meta, log, m):
         outliers = sigma_clip(residuals, sigma=meta.median_thresh,
                               maxiters=None, axis=1, cenfunc='median')
 
-        #FINDME: Need to move this figure to plots_s3.py
-        # plt.figure(2, figsize=(8, 4))
-        # plt.clf()
-        # plt.title("Outliers")
-        # plt.imshow(outliers, origin='lower', aspect='auto')
-        # plt.colorbar()
-        # plt.pause(1)
-
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
         xx = np.arange(nx)
@@ -785,7 +777,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                             plt.clf()
                             plt.suptitle(str(i) + "/" + str(nx))
                             plt.errorbar(np.arange(ny), subdata[:, i],
-                                         np.sqrt(variance[:, i]),
+                                         yerr=np.sqrt(variance[:, i]),
                                          fmt='.', color='b')
                             plt.plot(expected[:, i], 'g-')
                             plt.pause(0.01)
