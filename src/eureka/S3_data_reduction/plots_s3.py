@@ -409,9 +409,9 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     plt.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
     plt.errorbar(np.arange(ny)[np.where(submask[:, i])[0]],
-             subdata[np.where(submask[:, i])[0], i],
-             np.sqrt(variance[np.where(submask[:, i])[0], i]),
-             fmt='.', color='b')
+                 subdata[np.where(submask[:, i])[0], i],
+                 np.sqrt(variance[np.where(submask[:, i])[0], i]),
+                 fmt='.', color='b')
     plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
              expected[np.where(submask[:, i])[0], i], 'g-')
     plt.plot((loc[i]), (subdata[loc[i], i]), 'ro')
@@ -1116,6 +1116,7 @@ def phot_2d_frame_diff(data, meta):
         if not meta.hide_plots:
             plt.pause(0.2)
 
+
 def stddev_profile(meta, n, m, stdevs, p7thresh):
     """
     Plots the difference between the data and optimal profile in units
@@ -1156,7 +1157,7 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
-             f'_Std_Dev_Profile'+plots.figure_filetype)
+             '_Std_Dev_Profile'+plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=200)
     if not meta.hide_plots:
         plt.pause(0.1)
