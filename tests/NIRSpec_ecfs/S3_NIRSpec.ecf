@@ -12,9 +12,13 @@ src_pos_type gaussian   # Determine source position when not given in header (Op
 record_ypos True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 dqmask      True        # Mask pixels with an odd entry in the DQ array
 
+# Outlier rejection along time axis
+ff_outlier      False   # Set True to use full frame; set False to use only background region
+ff_thresh       [5,5]   # Full Frame double-iteration X-sigma threshold for outlier rejection along time axis
+bg_thresh       [15,15] # Background region double-iteration X-sigma threshold for outlier rejection along time axis
+
 # Background parameters
 bg_hw       10         # Half-width of exclusion region for BG subtraction (relative to source position)
-bg_thresh   [15,15]    # Double-iteration X-sigma threshold for outlier rejection along time axis
 bg_deg      0          # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh    2          # X-sigma threshold for outlier rejection during background subtraction
 
