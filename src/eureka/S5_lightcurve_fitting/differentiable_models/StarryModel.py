@@ -56,7 +56,7 @@ class StarryModel(PyMC3Model):
         ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
                                for par in self.paramtitles])[0]
         if len(ylm_params) > 0:
-            l_vals = [int(self.paramtitles[ind][1:].split('_')[0])
+            l_vals = [int(self.paramtitles[ind][1])
                       for ind in ylm_params]
             self.ydeg = max(l_vals)
         else:
