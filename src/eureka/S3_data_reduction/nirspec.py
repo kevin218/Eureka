@@ -121,8 +121,6 @@ def flag_bg(data, meta, log):
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
-    # Need to test performance with and without estsig on real data.
     if hasattr(meta, 'use_estsig') and meta.use_estsig:
         # This might not be necessary for real data
         bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.bg_y1], 0))

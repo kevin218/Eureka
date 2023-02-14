@@ -332,7 +332,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 if not meta.photometry:
                     # Perform outlier rejection of
-                    # spectral region along time axis
+                    # full frame along time axis
                     if hasattr(meta, 'ff_outlier') and meta.ff_outlier:
                         data = inst.flag_ff(data, meta, log)
 
