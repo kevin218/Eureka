@@ -117,9 +117,6 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
-    meta.bg_y2 = meta.src_ypos + meta.bg_hw
-    meta.bg_y1 = meta.src_ypos - meta.bg_hw
-
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
@@ -140,6 +137,44 @@ def flag_bg(data, meta, log):
     data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
                                                  bgmask2, estsig2)
 
+    return data
+
+
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    log.writelog('  Performing full frame outlier rejection...',
+                 mute=(not meta.verbose))
+
+    size = data.mask.size
+    prev_count = data.mask.values.sum()
+
+    # Compute new pixel mask
+    data['mask'] = sigrej.sigrej(data.flux, meta.ff_thresh, data.mask, None)
+
+    # Count difference in number of good pixels
+    new_count = data.mask.values.sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                    mute=(not meta.verbose))
+    
     return data
 
 
