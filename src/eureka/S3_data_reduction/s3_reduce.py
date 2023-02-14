@@ -350,7 +350,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.bg_y2 = meta.src_ypos + meta.bg_hw
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
                     if (not hasattr(meta, 'ff_outlier')
-                            or meta.ff_outlier == False):
+                            or meta.ff_outlier is False):
                         data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction
