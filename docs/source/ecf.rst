@@ -35,21 +35,29 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+custom_linearity
+''''''''''''''''
+Boolean. If True, allows user to supply a custom linearity correction file and overwrite the default file.
+
+linearity_file
+''''''''''''''
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+
 custom_bias
-'''''''''''''''''
-Boolean, allows user to supply a custom bias file and overwrite the default file
+'''''''''''
+Boolean, allows user to supply a custom superbias file and overwrite the default file.
 
 superbias_file
-'''''''''''''''''
-path to custom superbias file
+''''''''''''''
+The fully qualified path to the custom superbias file to use if custom_bias is True.
 
 update_sat_flags
-'''''''''''''''''
+''''''''''''''''
 Boolean, allows user to have more control over saturation flags. Must be True to use the settings expand_prev_group, dq_sat_mode, and dq_sat_percentile or dq_sat_columns.
 
 expand_prev_group
 '''''''''''''''''
-Boolean, if a given group is saturated, this option will mark the previous group as saturated as well
+Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
 '''''''''''''''''
@@ -60,75 +68,75 @@ dq_sat_percentile
 If dq_sat_mode = percentile, percentile threshold to use
 
 dq_sat_columns
-'''''''''''''''''
+''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
 grouplevel_bg
-'''''''''''''''''
+'''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
 
 ncpu
-'''''''''''''''''
+''''
 Number of cpus to use for GLBS
 
 bg_y1
-'''''''''''''''''
+'''''
 The pixel number for the end of the bottom background region. The background region goes from the bottom of the subarray to this pixel.
 
 bg_y2
-'''''''''''''''''
+'''''
 The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
 
 bg_deg
-'''''''''''''''''
+''''''
 See Stage 3 inputs
 
 p3thresh
-'''''''''''''''''
+''''''''
 See Stage 3 inputs
 
 verbose
-'''''''''''''''''
+'''''''
 See Stage 3 inputs
 
 isplots
-'''''''''''''''''
+'''''''
 See Stage 3 inputs
 
 hide_plots
-'''''''''''''''''
+''''''''''
 See Stage 3 inputs
 
 masktrace
-'''''''''''''''''
+'''''''''
 Boolean, creates a mask centered on the trace prior to GLBS for curved traces
 
 window_len
-'''''''''''''''''
+''''''''''
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''''''''
+'''''''''''
 Aperture around the trace to mask
 
 ignore_low
-'''''''''''''''''
+''''''''''
 Columns below this index will not be used to create the mask
 
 ignore_hi
-'''''''''''''''''
+'''''''''
 Columns above this index will not be used to create the mask
 
 refpix_corr
-'''''''''''''''''
+'''''''''''
 Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray. 
 
 npix_top 
-'''''''''''''''''
+''''''''
 Number of rows to use for ROEBA routine along the top of the subarray
 
 npix_bot 
-'''''''''''''''''
+''''''''
 Number of rows to use for ROEBA routine along the bottom of the subarray
 
 
