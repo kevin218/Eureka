@@ -273,6 +273,10 @@ poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
 
+gain
+''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+
 hst_cal
 '''''''
 Only used for HST analyses. The fully qualified path to the folder containing HST calibration files.
@@ -742,8 +746,8 @@ Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
 [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
 For theano-based differentiable functions, this can be one or more of the following:
-[starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
-where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc.
+[starry, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 
 manual_clip
 '''''''''''
@@ -912,12 +916,12 @@ This file describes the transit/eclipse and systematics parameters and their pri
          actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Ms``.
    - Sinusoidal Phase Curve Parameters
-      The sinusoid_pc phase curve model allows for the inclusion of up to four sinusoids into a single phase curve
+      The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
-      - ``AmpCos1`` - Amplitude of the first cosine
-      - ``AmpSin1`` - Amplitude of the first sine
-      - ``AmpCos2`` - Amplitude of the second cosine
-      - ``AmpSin2`` - Amplitude of the second sine
+      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5)
+      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75
+      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0)
+      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
