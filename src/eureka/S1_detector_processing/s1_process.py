@@ -175,6 +175,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ipc.skip = meta.skip_ipc
         self.refpix.skip = meta.skip_refpix
         self.linearity.skip = meta.skip_linearity
+        if hasattr(meta, 'custom_linearity') and meta.custom_linearity:
+            self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
         if (hasattr(meta, 'jump_rejection_threshold') and
