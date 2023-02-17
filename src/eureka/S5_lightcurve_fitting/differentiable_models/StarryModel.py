@@ -198,7 +198,7 @@ class StarryModel(PyMC3Model):
             lcpiece = systems[c].flux(self.time)
             if eval:
                 lcpiece = lcpiece.eval()
-        phys_flux = lib.concatenate([phys_flux, lcpiece])
+            phys_flux = lib.concatenate([phys_flux, lcpiece])
 
         return phys_flux
 

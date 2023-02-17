@@ -66,7 +66,7 @@ class ExpRampModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        ramp_coeffs = np.zeros((nchan, 6)).tolist()
+        ramp_coeffs = np.zeros((nchan, 12)).tolist()
 
         if eval:
             lib = np
@@ -77,7 +77,7 @@ class ExpRampModel(PyMC3Model):
 
         # Parse 'r#' keyword arguments as coefficients
         for j in range(nchan):
-            for i in range(6):
+            for i in range(12):
                 try:
                     if channels[j] == 0:
                         ramp_coeffs[j][i] = getattr(model, f'r{i}')
@@ -89,9 +89,11 @@ class ExpRampModel(PyMC3Model):
 
         ramp_flux = lib.zeros(0)
         for c in range(nchan):
-            r0, r1, r2, r3, r4, r5 = ramp_coeffs[c]
+            r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11 = ramp_coeffs[c]
             lcpiece = (r0*lib.exp(-r1*self.time_local + r2) +
                        r3*lib.exp(-r4*self.time_local + r5) +
+                       r6*lib.exp(-r7*self.time_local + r8) +
+                       r9*lib.exp(-r10*self.time_local + r11) +
                        1)
             ramp_flux = lib.concatenate([ramp_flux, lcpiece])
 
