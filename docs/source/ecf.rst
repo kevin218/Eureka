@@ -269,6 +269,10 @@ photometry
 ''''''''''
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
+convert_to_e
+''''''''''''
+An optional input parameter. If True (default), convert the units of the images to electrons for easy noise estimation. If False (useful for flux-calibrated photometry), the units of the images will not be changed.
+
 poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
@@ -434,9 +438,13 @@ interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
+ctr_guess
+'''''''''
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+
 ctr_cutout_size
 '''''''''''''''
-Only used for photometry analyses. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+Only used for photometry analyses. Amount of pixels all around the guessed centroid location which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
 oneoverf_corr
 '''''''''''''
@@ -456,11 +464,11 @@ Only used for photometry analyses. Size of photometry aperture in pixels. The sh
 
 skyin
 '''''
-Only used for photometry analyses. Inner sky annulus edge, in pixels.
+Only used for photometry analyses. Inner sky annulus edge, in pixels. If this is a list, it must be the same length as skyout. skyin[0] will only be used with skyout[0], skyin[1] with skyout[1], etc.
 
 skyout
 ''''''
-Only used for photometry analyses. Outer sky annulus edge, in pixels.
+Only used for photometry analyses. Outer sky annulus edge, in pixels. If this is a list, it must be the same length as skyin. skyin[0] will only be used with skyout[0], skyin[1] with skyout[1], etc.
 
 isplots_S3
 ''''''''''
