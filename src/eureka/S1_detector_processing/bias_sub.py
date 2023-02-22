@@ -86,12 +86,12 @@ def do_correction(input_model, bias_model, meta, log):
             if isinstance(meta.bias_group, int):
                 # Scale superbias frame using single value for all groups
                 jj = meta.bias_group
-                assert jj >= 0, f"Number of groups should be >=0, got: {jj}"
-                assert jj < ngroup, f"Number of groups should be <{ngroup}" + \
+                assert jj > 0, f"Group number should be >0, got: {jj}"
+                assert jj <= ngroup, f"Group number should be <={ngroup}" + \
                     ", got: {jj}"
                 log.writelog('  Applying mean bias correction using ' +
                              f'group {jj}.')
-                bias_model.data *= mean_scale_factor[jj]
+                bias_model.data *= mean_scale_factor[jj-1]
             elif meta.bias_group == "each":
                 # Scale superbias frame using means values for each group
                 log.writelog('  Applying mean bias correction to each group.')
@@ -101,7 +101,7 @@ def do_correction(input_model, bias_model, meta, log):
             else:
                 raise ValueError('Incorrect meta.bias_group value: ' + 
                                  f'{meta.bias_group}. Should be ' +
-                                 '[0, 1, 2, ..., each].')
+                                 '[1, 2, ..., each].')
         elif (meta.bias_correction == "group_level") or \
              (meta.bias_correction == "smooth"):
             # Apply correction for zeroframe
@@ -109,12 +109,12 @@ def do_correction(input_model, bias_model, meta, log):
             if isinstance(meta.bias_group, int):
                 # Scale superbias frame using values from one group
                 jj = meta.bias_group
-                assert jj >= 0, f"Number of groups should be >=0, got: {jj}"
-                assert jj < ngroup, f"Number of groups should be <{ngroup}" + \
+                assert jj > 0, f"Group number should be >0, got: {jj}"
+                assert jj <= ngroup, f"Group number should be <={ngroup}" + \
                     ", got: {jj}"
                 log.writelog('  Applying group-level bias correction using ' +
                              f'group {jj}.')
-                bias_data *= scale_factor[:, jj, np.newaxis, 
+                bias_data *= scale_factor[:, jj-1, np.newaxis, 
                                           np.newaxis, np.newaxis]
             elif meta.bias_group == "each":
                 # Scale superbias frame using values from each group
@@ -124,7 +124,7 @@ def do_correction(input_model, bias_model, meta, log):
             else:
                 raise ValueError('Incorrect meta.bias_group value: ' + 
                                  f'{meta.bias_group}. Should be ' +
-                                 '[0, 1, 2, ..., each].')
+                                 '[1, 2, ..., each].')
         else:
             log.writelog('  No bias correction applied.')
             bias_data = None
