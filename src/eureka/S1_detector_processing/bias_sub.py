@@ -7,6 +7,7 @@ import logging
 from jwst.lib import reffile_utils
 from .group_level import mask_trace
 from ..lib.astropytable import savetable_S1
+from ..lib.smooth import smooth
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -63,7 +64,16 @@ def do_correction(input_model, bias_model, meta, log):
     # Save scale factor to ECSV file
     fname = meta.outputdir+"S1_seg"+segment+"_BiasScaleFactor.ecsv"
     savetable_S1(fname, scale_factor)
-    
+
+    # Smooth scale factor
+    if meta.bias_correction == "smooth":
+        for jj in range(ngroup):
+            scale_factor[:, jj] = smooth(scale_factor[:, jj], 
+                                         meta.bias_smooth_length)
+        # Save smoothed scale factor to ECSV file
+        fname = meta.outputdir+"S1_seg"+segment+"_BiasSmoothedScaleFactor.ecsv"
+        savetable_S1(fname, scale_factor)
+
     # Replace NaN's in the superbias with zeros
     bias_model.data[np.isnan(bias_model.data)] = 0.0
 
@@ -92,7 +102,8 @@ def do_correction(input_model, bias_model, meta, log):
                 raise ValueError('Incorrect meta.bias_group value: ' + 
                                  f'{meta.bias_group}. Should be ' +
                                  '[0, 1, 2, ..., each].')
-        elif meta.bias_correction == "group_level":
+        elif (meta.bias_correction == "group_level") or \
+             (meta.bias_correction == "smooth"):
             # Apply correction for zeroframe
             bias_model.data *= mean_scale_factor[0]
             if isinstance(meta.bias_group, int):
