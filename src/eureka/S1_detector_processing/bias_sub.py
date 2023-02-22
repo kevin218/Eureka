@@ -32,8 +32,6 @@ def do_correction(input_model, bias_model, meta, log):
         bias-subtracted science data
 
     """
-    log.writelog('  Subtracting bias using scaled superbias.')
-
     # Check for subarray mode and extract subarray from the
     # bias reference data if necessary
     if not reffile_utils.ref_matches_sci(input_model, bias_model):
@@ -46,6 +44,7 @@ def do_correction(input_model, bias_model, meta, log):
     # Compute median of bias frame outside of trace
     bias_median = np.nanmedian(bias_model.data[np.where(trace_mask)])
 
+    log.writelog('  Computing scale factor for superbias correction.')
     # Compute median of each integration/group outside of trace
     # Using double-for loop to avoid heavy memory usage
     nint, ngroup, nrow, ncol = input_model.data.shape
@@ -55,20 +54,9 @@ def do_correction(input_model, bias_model, meta, log):
         for jj in range(ngroup):
             data_median = np.nanmedian(data[jj][np.where(trace_mask)])
             scale_factor[ii, jj] = data_median/bias_median
-    mean_scale_factor = np.mean(scale_factor)
-    log.writelog(f'  Mean bias scale factor: {mean_scale_factor}')
+    mean_scale_factor = np.mean(scale_factor, axis=0)
+    log.writelog(f'  Mean bias scale factors (by group): {mean_scale_factor}')
     
-    # Replace NaN's in the superbias with zeros
-    bias_model.data[np.isnan(bias_model.data)] = 0.0
-
-    # Scale superbias frame (used for zeroframe)
-    bias_model.data *= mean_scale_factor
-
-    # Create 4D bias array for each integration/group and apply scale factor 
-    bias_data = np.ones((nint, ngroup, nrow, ncol)) * \
-        bias_model.data[np.newaxis, np.newaxis, :, :]
-    bias_data *= scale_factor[:, :, np.newaxis, np.newaxis]
-
     # Get segment number
     segment = str(input_model.meta.exposure.segment_number).zfill(3)
 
@@ -76,6 +64,63 @@ def do_correction(input_model, bias_model, meta, log):
     fname = meta.outputdir+"S1_seg"+segment+"_BiasScaleFactor.ecsv"
     savetable_S1(fname, scale_factor)
     
+    # Replace NaN's in the superbias with zeros
+    bias_model.data[np.isnan(bias_model.data)] = 0.0
+
+    # Create 4D bias array for each integration/group and apply scale factor 
+    bias_data = np.ones((nint, ngroup, nrow, ncol)) * \
+        bias_model.data[np.newaxis, np.newaxis, :, :]
+    
+    try:
+        if meta.bias_correction == "mean":
+            if isinstance(meta.bias_group, int):
+                # Scale superbias frame using single value for all groups
+                jj = meta.bias_group
+                assert jj >= 0, f"Number of groups should be >=0, got: {jj}"
+                assert jj < ngroup, f"Number of groups should be <{ngroup}" + \
+                    ", got: {jj}"
+                log.writelog('  Applying mean bias correction using ' +
+                             f'group {jj}.')
+                bias_model.data *= mean_scale_factor[jj]
+            elif meta.bias_group == "each":
+                # Scale superbias frame using means values for each group
+                log.writelog('  Applying mean bias correction to each group.')
+                bias_model.data *= mean_scale_factor[0]
+                bias_data *= mean_scale_factor[np.newaxis, :, np.newaxis, 
+                                               np.newaxis]
+            else:
+                raise ValueError('Incorrect meta.bias_group value: ' + 
+                                 f'{meta.bias_group}. Should be ' +
+                                 '[0, 1, 2, ..., each].')
+        elif meta.bias_correction == "group_level":
+            # Apply correction for zeroframe
+            bias_model.data *= mean_scale_factor[0]
+            if isinstance(meta.bias_group, int):
+                # Scale superbias frame using values from one group
+                jj = meta.bias_group
+                assert jj >= 0, f"Number of groups should be >=0, got: {jj}"
+                assert jj < ngroup, f"Number of groups should be <{ngroup}" + \
+                    ", got: {jj}"
+                log.writelog('  Applying group-level bias correction using ' +
+                             f'group {jj}.')
+                bias_data *= scale_factor[:, jj, np.newaxis, 
+                                          np.newaxis, np.newaxis]
+            elif meta.bias_group == "each":
+                # Scale superbias frame using values from each group
+                log.writelog('  Applying group-level bias correction to ' + 
+                             'each group.')
+                bias_data *= scale_factor[:, :, np.newaxis, np.newaxis]
+            else:
+                raise ValueError('Incorrect meta.bias_group value: ' + 
+                                 f'{meta.bias_group}. Should be ' +
+                                 '[0, 1, 2, ..., each].')
+        else:
+            log.writelog('  No bias correction applied.')
+            bias_data = None
+    except Exception as error:
+        print(repr(error))
+        return None
+
     # Subtract the bias data from the science data
     output_model = subtract_bias(input_model, bias_model, bias_data)
 
