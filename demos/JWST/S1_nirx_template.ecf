@@ -25,9 +25,12 @@ skip_gain_scale     False
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
 
-#Custom bias frames
+#Bias
+bias_correction     None    # Bias correction options: [mean, group_level, smooth, None]
+bias_group          1       # Group number options: [1, 2, ..., each]
+bias_smooth_length  201     # Window length when using 'smooth' bias correction
 custom_bias         False
-superbias_file	   /path/to/custom/superbias/fits/file
+superbias_file	    /path/to/custom/superbias/fits/file
 
 #Saturation
 update_sat_flags    False   #Wheter to update the saturation flags more aggressively
