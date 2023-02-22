@@ -1,6 +1,6 @@
-#
-#  Module for subtracting a super-bias image from science data sets
-#
+# Module for subtracting a super-bias image from science data sets
+# This is based on the superbias_step from the JWST pipeline v1.8.0
+# adapted by Kevin Stevenson, Feb 2023
 
 import numpy as np
 import logging
