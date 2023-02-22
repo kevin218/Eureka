@@ -21,7 +21,7 @@ def savetable_S1(filename, scale_factor):
     nint, ngroup = scale_factor.shape
 
     names = []
-    for ii in range(1,ngroup+1):
+    for ii in range(1, ngroup+1):
         names.append(f'group{ii}')
     names = tuple(names)
 
