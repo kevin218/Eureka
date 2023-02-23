@@ -47,15 +47,16 @@ bg_y2 				26
 bg_deg 				0 
 p3thresh			5
 verbose				True
-isplots 			1
-hide_plots    True
+isplots_S1 			3
+nplots              5
+hide_plots          True
 
 #mask curved traces
 masktrace           True
 window_len          11
 expand_mask         8
 ignore_low          600
-ignore_hi						None
+ignore_hi			None
 
 #manual reference pixel correction for PRISM
 refpix_corr      False
