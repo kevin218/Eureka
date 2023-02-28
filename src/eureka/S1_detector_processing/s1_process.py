@@ -105,6 +105,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
 
+            meta.intstart = hdulist[0].header['INTSTART']-1
+            meta.intend = hdulist[0].header['INTEND']
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time

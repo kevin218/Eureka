@@ -9,6 +9,9 @@ wave_min        1.5         # Minimum wavelength. Set to None to use the shortes
 wave_max        4.5         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 allapers        False       # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
+# Mannualy mask pixel columns by index number
+# mask_columns    []
+
 # Parameters for drift correction of 1D spectra
 recordDrift     False    # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
 correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
