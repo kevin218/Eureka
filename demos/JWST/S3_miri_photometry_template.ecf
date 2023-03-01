@@ -8,8 +8,10 @@ max_memory      0.5         # The maximum fraction of memory you want utilized b
 suffix          calints     # Data file suffix
 photometry      True        # Set to True if the user wants to analyse a photometric dataset
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
-ywindow         [400, 650]	# Vertical axis as seen in DS9
+ywindow         [400, 650]  # Vertical axis as seen in DS9
 xwindow         [550, 800]  # Horizontal axis as seen in DS9
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 
@@ -19,7 +21,7 @@ bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rej
 
 # Photometric extraction parameters
 interp_method   linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
-ctr_guess		[698, 516]	# Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
+ctr_guess       [698, 516]  # Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
 ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation
 oneoverf_corr   None        # Options: None, meanerr, median
 skip_apphot_bg  False       # Skips the background subtraction during the aperture photometry step
@@ -40,5 +42,5 @@ verbose         True        # If True, more details will be printed about steps
 topdir          /home/User/Data/JWST-Sim/MIRI/
 
 # Directories relative to topdir
-inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       Stage3

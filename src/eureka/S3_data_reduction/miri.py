@@ -73,7 +73,7 @@ def read(filename, data, meta, log):
 
     if data.attrs['mhdr']['EXP_TYPE'] == 'MIR_IMAGE':
         # Working on photometry data
-        meta.photometry = True  # Photometry for MIRI not implemented yet.
+        meta.photometry = True
         # The DISPAXIS argument does not exist in the header of the photometry
         # data. Added it here so that code in other sections doesn't have to
         # be changed

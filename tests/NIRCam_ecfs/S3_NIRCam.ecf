@@ -5,6 +5,8 @@ nfiles      1           # The number of data files to analyze simultaneously
 max_memory  0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix      calints     # Data file suffix
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
 ywindow     [5,64]      # Vertical axis as seen in DS9
 xwindow     [100,1700]  # Horizontal axis as seen in DS9
