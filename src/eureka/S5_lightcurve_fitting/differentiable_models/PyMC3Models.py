@@ -42,13 +42,19 @@ class PyMC3Model:
         # Set up default model attributes
         self.components = kwargs.get('components', [])
         self.name = kwargs.get('name', 'New PyMC3Model')
-        self.nchan = kwargs.get('nchan', 1)
+        self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
+        self.fitted_channels = kwargs.get('fitted_channels', [0, ])
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
         self.fitter = kwargs.get('fitter', None)
         self.time = kwargs.get('time', None)
         self.time_units = kwargs.get('time_units', 'BMJD_TDB')
         self.flux = kwargs.get('flux', None)
         self.freenames = kwargs.get('freenames', None)
-        self._parameters = kwargs.get('_parameters', Parameters())
+        self._parameters = kwargs.get('parameters', None)
+        # Generate parameters from kwargs if necessary
+        if self.parameters is None:
+            self.parameters = Parameters(**kwargs)
         self.longparamlist = kwargs.get('longparamlist', None)
         self.paramtitles = kwargs.get('paramtitles', None)
         self.modeltype = kwargs.get('modeltype', None)
@@ -245,7 +251,6 @@ class PyMC3Model:
 
         if share and not multwhite:
             time = self.time
-            model = model[chan*len(self.time):(chan+1)*len(self.time)]
         elif multwhite:
             trim1 = np.nansum(self.mwhites_nexp[:chan])
             trim2 = trim1 + self.mwhites_nexp[chan]
@@ -324,7 +329,7 @@ class CompositePyMC3Model(PyMC3Model):
                                f'{param.name} is not recognized.')
                     raise ValueError(message)
                 else:
-                    for c in range(self.nchan):
+                    for c in range(self.nchannel_fitted):
                         if c != 0:
                             parname_temp = parname+'_'+str(c)
                         else:
@@ -338,7 +343,12 @@ class CompositePyMC3Model(PyMC3Model):
                                                    upper=param.priorpar2,
                                                    testval=param.value))
                             elif param.prior == 'N':
-                                if parname == 'ecc':
+                                if (parname == 'ecc' or
+                                        (parname in ['u1', 'u2'] and
+                                         self.parameters.limb_dark.value ==
+                                         'kipping2013')):
+                                    # Kipping2013 parameters are only on [0,1]
+                                    # Eccentricity is only [0,1]
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0_1(
                                                 parname_temp,
@@ -355,6 +365,7 @@ class CompositePyMC3Model(PyMC3Model):
                                                 sigma=param.priorpar2,
                                                 testval=param.value))
                                 elif parname in ['inc']:
+                                    # An inclination > 90 is not meaningful
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_90(
                                                 parname_temp,
@@ -436,7 +447,7 @@ class CompositePyMC3Model(PyMC3Model):
 
         with self.model:
             if hasattr(self.model, 'scatter_ppm'):
-                for c in range(self.nchan):
+                for c in range(self.nchannel_fitted):
                     if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
                         parname_temp = 'scatter_ppm'
                     else:
@@ -457,7 +468,7 @@ class CompositePyMC3Model(PyMC3Model):
                             tt.concatenate([self.scatter_array, unc])
             if hasattr(self.model, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
-                for c in range(self.nchan):
+                for c in range(self.nchannel_fitted):
                     if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
                         parname_temp = 'scatter_mult'
                     else:
@@ -517,6 +528,11 @@ class CompositePyMC3Model(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
         if self.multwhite:
             if channel is not None:
                 trim1 = np.nansum(self.mwhites_nexp[:channel])
@@ -526,7 +542,7 @@ class CompositePyMC3Model(PyMC3Model):
                 time = self.time
             flux = np.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*self.nchan)
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -559,6 +575,11 @@ class CompositePyMC3Model(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
         if self.multwhite:
             if channel is not None:
                 trim1 = np.nansum(self.mwhites_nexp[:channel])
@@ -568,7 +589,7 @@ class CompositePyMC3Model(PyMC3Model):
                 time = self.time
             flux = np.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*self.nchan)
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:
@@ -609,6 +630,11 @@ class CompositePyMC3Model(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
         if interp:
             dt = self.time[1]-self.time[0]
             steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
@@ -626,7 +652,7 @@ class CompositePyMC3Model(PyMC3Model):
                 time = new_time
             flux = np.ones(len(time))
         else:
-            flux = np.ones(len(new_time)*self.nchan)
+            flux = np.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:

@@ -22,10 +22,6 @@ class ExpRampModel(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
-        # Needed before setting time
-        self.multwhite = kwargs.get('multwhite')
-        self.mwhites_nexp = kwargs.get('mwhites_nexp')
-
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -45,9 +41,9 @@ class ExpRampModel(PyMC3Model):
             # Convert to local time
             if self.multwhite:
                 self.time_local = []
-                for c in np.arange(self.nchan):
-                    trim1 = np.nansum(self.mwhites_nexp[:c])
-                    trim2 = trim1 + self.mwhites_nexp[c]
+                for chan in self.fitted_channels:
+                    trim1 = np.nansum(self.mwhites_nexp[:chan])
+                    trim2 = trim1 + self.mwhites_nexp[chan]
                     time = self.time[trim1:trim2]
                     self.time_local.extend(time - time[0])
                 self.time_local = np.array(self.time_local)
@@ -73,8 +69,8 @@ class ExpRampModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -90,7 +86,10 @@ class ExpRampModel(PyMC3Model):
 
         # Parse 'r#' keyword arguments as coefficients
         for c in range(nchan):
-            chan = channels[c]
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             for i in range(12):
                 try:
                     if chan == 0:

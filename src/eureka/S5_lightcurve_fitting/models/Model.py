@@ -21,13 +21,20 @@ class Model:
         """
         # Set up default model attributes
         self.name = kwargs.get('name', 'New Model')
-        self.nchan = kwargs.get('nchan', 1)
+        self.nchannel = kwargs.get('nchannel', 1)
+        self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
+        self.fitted_channels = kwargs.get('fitted_channels', [0, ])
+        self.multwhite = kwargs.get('multwhite')
+        self.mwhites_nexp = kwargs.get('mwhites_nexp')
         self.fitter = kwargs.get('fitter', None)
         self.time = kwargs.get('time', None)
         self.time_units = kwargs.get('time_units', 'BMJD_TDB')
         self.flux = kwargs.get('flux', None)
         self.freenames = kwargs.get('freenames', None)
-        self._parameters = kwargs.get('_parameters', Parameters())
+        self._parameters = kwargs.get('parameters', None)
+        # Generate parameters from kwargs if necessary
+        if self.parameters is None:
+            self.parameters = Parameters(**kwargs)
         self.longparamlist = kwargs.get('longparamlist', None)
         self.paramtitles = kwargs.get('paramtitles', None)
         self.modeltype = kwargs.get('modeltype', None)
@@ -219,7 +226,6 @@ class Model:
 
         if share and not multwhite:
             time = self.time
-            model = model[chan*len(self.time):(chan+1)*len(self.time)]
         elif multwhite:
             trim1 = np.nansum(self.mwhites_nexp[:chan])
             trim2 = trim1 + self.mwhites_nexp[chan]
@@ -305,6 +311,11 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
         if self.multwhite:
             if channel is not None:
                 trim1 = np.nansum(self.mwhites_nexp[:channel])
@@ -314,7 +325,7 @@ class CompositeModel(Model):
                 time = self.time
             flux = np.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*self.nchan)
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -347,6 +358,11 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
         if self.multwhite:
             if channel is not None:
                 trim1 = np.nansum(self.mwhites_nexp[:channel])
@@ -356,7 +372,7 @@ class CompositeModel(Model):
                 time = self.time
             flux = np.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*self.nchan)
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux at each model
         for model in self.components:
@@ -388,9 +404,9 @@ class CompositeModel(Model):
 
         # Set the default value
         if self.multwhite:
-            flux = np.ones(len(self.time))
+            flux = np.zeros(len(self.time))
         else:
-            flux = np.ones(len(self.time)*self.nchan)
+            flux = np.zeros(len(self.time)*self.nchannel_fitted)
 
         # Evaluate flux
         for model in self.components:
@@ -422,6 +438,11 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
         if interp:
             dt = self.time[1]-self.time[0]
             steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
@@ -439,7 +460,7 @@ class CompositeModel(Model):
                 time = new_time
             flux = np.ones(len(time))
         else:
-            flux = np.ones(len(new_time)*self.nchan)
+            flux = np.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for model in self.components:

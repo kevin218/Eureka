@@ -1,7 +1,6 @@
 import numpy as np
 
 from .Model import Model
-from ...lib.readEPF import Parameters
 
 
 class CentroidModel(Model):
@@ -33,27 +32,12 @@ class CentroidModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Figure out if using xpos, ypos, xwidth, ywidth
         self.axis = kwargs.get('axis')
         self.centroid = kwargs.get('centroid')
 
-        if self.nchan == 1:
-            self.coeff_keys = [self.axis, ]
-        else:
-            self.coeff_keys = [f'{self.axis}_{i}' if i > 0 else self.axis
-                               for i in range(self.nchan)]
+        self.coeff_keys = [f'{self.axis}_{c}' if c > 0 else self.axis
+                           for c in range(self.nchannel_fitted)]
 
     @property
     def centroid(self):
@@ -68,7 +52,7 @@ class CentroidModel(Model):
             # Convert to local centroid
             if self.multwhite:
                 self.centroid_local = []
-                for c in np.arange(self.nchan):
+                for c in self.fitted_channels:
                     trim1 = np.nansum(self.mwhites_nexp[:c])
                     trim2 = trim1 + self.mwhites_nexp[c]
                     centroid = self.centroid[trim1:trim2]
@@ -93,8 +77,8 @@ class CentroidModel(Model):
             The value of the model at the centroid self.centroid.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -106,14 +90,18 @@ class CentroidModel(Model):
         # Create the centroid model for each wavelength
         lcfinal = np.array([])
         for c in range(nchan):
-            chan = channels[c]
             if self.multwhite:
+                chan = channels[c]
                 trim1 = np.nansum(self.mwhites_nexp[:chan])
                 trim2 = trim1 + self.mwhites_nexp[chan]
                 centroid = self.centroid_local[trim1:trim2]
             else:
                 centroid = self.centroid_local
 
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             coeff = getattr(self.parameters, self.coeff_keys[chan]).value
             lcpiece = 1 + centroid*coeff
             lcfinal = np.append(lcfinal, lcpiece)

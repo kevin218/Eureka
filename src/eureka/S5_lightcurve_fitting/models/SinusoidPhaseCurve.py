@@ -5,7 +5,6 @@ except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
-from ...lib.readEPF import Parameters
 
 
 class SinusoidPhaseCurveModel(Model):
@@ -43,18 +42,6 @@ class SinusoidPhaseCurveModel(Model):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
 
         # Check if should enforce positivity
         if not hasattr(self, 'force_positivity'):
@@ -107,8 +94,8 @@ class SinusoidPhaseCurveModel(Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -125,7 +112,10 @@ class SinusoidPhaseCurveModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
-            chan = channels[c]
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
 
             # Set all parameters
             for index, item in enumerate(self.longparamlist[chan]):
@@ -152,8 +142,8 @@ class SinusoidPhaseCurveModel(Model):
                 t_secondary = self.parameters.dict['t_secondary'][0]
 
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:c])
-                trim2 = trim1 + self.mwhites_nexp[c]
+                trim1 = np.nansum(self.mwhites_nexp[:channels[c]])
+                trim2 = trim1 + self.mwhites_nexp[channels[c]]
                 time = self.time[trim1:trim2]
             else:
                 time = self.time

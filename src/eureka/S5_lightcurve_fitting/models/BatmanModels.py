@@ -7,7 +7,6 @@ except ImportError:
 
 from ..limb_darkening_fit import ld_profile
 from .Model import Model
-from ...lib.readEPF import Parameters
 
 from .KeplerOrbit import KeplerOrbit
 import astropy.constants as const
@@ -32,18 +31,6 @@ class BatmanTransitModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         ld_func = ld_profile(self.parameters.limb_dark.value, 
@@ -53,29 +40,28 @@ class BatmanTransitModel(Model):
 
         self.ld_from_file = kwargs.get('ld_from_file')
         
-        # Replace fixed u parameters with generated limb-darkening values
-        if self.ld_from_S4:
-            self.ld_S4_array = kwargs.get('ld_coeffs')[len_params-2]
-            for c in np.arange(self.nchan):
+        # Replace u parameters with generated limb-darkening values
+        if self.ld_from_S4 or self.ld_from_file:
+            self.ld_array = kwargs.get('ld_coeffs')
+            if self.ld_from_S4:
+                self.ld_array = self.ld_array[len_params-2]
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
-                        param = int(item[-1])
-                        if self.parameters.dict[item][1] == 'fixed':
-                            self.parameters.dict[item][0] = \
-                                self.ld_S4_array[c][param-1]
-        elif self.ld_from_file:
-            self.ld_file_array = kwargs.get('ld_coeffs')
-            for c in np.arange(self.nchan):
-                for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[c][index[0]]
-                        param = int(item[-1])
-                        if self.parameters.dict[item][1] == 'fixed':
-                            self.parameters.dict[item][0] = \
-                                self.ld_file_array[c][param-1]
+                        param = int(item.split('_')[0][-1])
+                        ld_val = self.ld_array[chan][param-1]
+                        # Use the file value as the starting guess
+                        self.parameters.dict[item][0] = ld_val
+                        # In a normal prior, center at the file value
+                        if (self.parameters.dict[item][-1] == 'N' and
+                                self.recenter_ld_prior):
+                            self.parameters.dict[item][-3] = ld_val
+                        # Update the non-dictionary form as well
+                        setattr(self.parameters, item,
+                                self.parameters.dict[item])
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -93,8 +79,8 @@ class BatmanTransitModel(Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -109,15 +95,18 @@ class BatmanTransitModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
-            chan = channels[c]
-
             if self.multwhite:
+                chan = channels[c]
                 trim1 = np.nansum(self.mwhites_nexp[:chan])
                 trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time[trim1:trim2]
             else:
                 time = self.time
 
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             # Set all parameters
             for index, item in enumerate(self.longparamlist[chan]):
                 setattr(bm_params, self.paramtitles[index],
@@ -184,18 +173,6 @@ class BatmanEclipseModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         log = kwargs.get('log')
 
         # Get the parameters relevant to light travel time correction
@@ -206,7 +183,7 @@ class BatmanEclipseModel(Model):
         if self.compute_ltt:
             # Check if we need to do ltt correction for each
             # wavelength or only one
-            if self.nchan > 1:
+            if self.nchannel_fitted > 1:
                 # Check whether the parameters are all either fixed or shared
                 once_type = ['shared', 'fixed']
                 self.compute_ltt_once = \
@@ -257,8 +234,8 @@ class BatmanEclipseModel(Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]

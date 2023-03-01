@@ -1161,8 +1161,8 @@ def group_variables(model):
     """
     all_params = []
     alreadylist = []
-    for chan in range(model.components[0].nchan):
-        temp = model.components[0].longparamlist[chan]
+    for c in range(model.components[0].nchannel_fitted):
+        temp = model.components[0].longparamlist[c]
         for par in list(model.components[0].parameters.dict.items()):
             if par[0] in temp:
                 if not all_params:

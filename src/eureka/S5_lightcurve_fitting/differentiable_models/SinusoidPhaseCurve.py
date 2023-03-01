@@ -109,8 +109,8 @@ class SinusoidPhaseCurveModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -128,8 +128,8 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
-            chan = channels[c]
             if self.multwhite:
+                chan = channels[c]
                 trim1 = np.nansum(self.mwhites_nexp[:chan])
                 trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time[trim1:trim2]
@@ -144,7 +144,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
             phi = 2.*np.pi/model.per*t
 
             for order in range(1, self.maxOrder+1):
-                if chan == 0:
+                if self.nchannel_fitted == 1 or chan == 0:
                     suffix = ''
                 else:
                     suffix = f'_{chan}'

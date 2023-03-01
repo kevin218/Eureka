@@ -25,7 +25,6 @@ class StepModel(Model):
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
-
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
             steps_dict = kwargs.get('steps_dict')
@@ -37,14 +36,9 @@ class StepModel(Model):
                                key[9:].isdigit())})
             self.parameters = Parameters(**params)
 
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Update coefficients
-        self.steps = np.zeros((self.nchan, 10))
-        self.steptimes = np.zeros((self.nchan, 10))
+        self.steps = np.zeros((self.nchannel_fitted, 10))
+        self.steptimes = np.zeros((self.nchannel_fitted, 10))
         self.keys = list(self.parameters.dict.keys())
         self.keys = [key for key in self.keys if key.startswith('step')]
         self._parse_coeffs()
@@ -100,8 +94,8 @@ class StepModel(Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -113,14 +107,15 @@ class StepModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.ones((nchan, len(self.time)))
         for c in range(nchan):
-            chan = channels[c]
             if self.multwhite:
+                chan = channels[c]
                 trim1 = np.nansum(self.mwhites_nexp[:chan])
                 trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time[trim1:trim2]
             else:
                 time = self.time
-            for s in np.where(self.steps[chan] != 0)[0]:
-                lcfinal[chan, time >= self.steptimes[chan, s]] += \
-                    self.steps[chan, s]
+
+            for s in np.where(self.steps[c] != 0)[0]:
+                lcfinal[c, time >= self.steptimes[c, s]] += \
+                    self.steps[c, s]
         return lcfinal.flatten()

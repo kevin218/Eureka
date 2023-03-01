@@ -17,16 +17,14 @@ class PolynomialModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Needed before setting time
-        self.multwhite = kwargs.get('multwhite')
-        self.mwhites_nexp = kwargs.get('mwhites_nexp')
-
         # Inherit from Model class
         super().__init__(**kwargs)
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
 
+        # Check for Parameters instance
+        self.parameters = kwargs.get('parameters')
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
             coeff_dict = kwargs.get('coeff_dict')
@@ -50,9 +48,9 @@ class PolynomialModel(Model):
             # Convert to local time
             if self.multwhite:
                 self.time_local = []
-                for c in np.arange(self.nchan):
-                    trim1 = np.nansum(self.mwhites_nexp[:c])
-                    trim2 = trim1 + self.mwhites_nexp[c]
+                for chan in self.fitted_channels:
+                    trim1 = np.nansum(self.mwhites_nexp[:chan])
+                    trim2 = trim1 + self.mwhites_nexp[chan]
                     time = self.time[trim1:trim2]
                     self.time_local.extend(time - time.mean())
                 self.time_local = np.array(self.time_local)
@@ -69,16 +67,20 @@ class PolynomialModel(Model):
             The sequence of coefficient values
         """
         # Parse 'c#' keyword arguments as coefficients
-        self.coeffs = np.zeros((self.nchan, 10))
-        for j in range(self.nchan):
+        self.coeffs = np.zeros((self.nchannel_fitted, 10))
+        for c in range(self.nchannel_fitted):
+            if self.nchannel_fitted > 1:
+                chan = self.fitted_channels[c]
+            else:
+                chan = 0
             for i in range(9, -1, -1):
                 try:
-                    if j == 0:
-                        self.coeffs[j, 9-i] = \
+                    if chan == 0:
+                        self.coeffs[c, 9-i] = \
                             self.parameters.dict[f'c{i}'][0]
                     else:
-                        self.coeffs[j, 9-i] = \
-                            self.parameters.dict[f'c{i}_{j}'][0]
+                        self.coeffs[c, 9-i] = \
+                            self.parameters.dict[f'c{i}_{chan}'][0]
                 except KeyError:
                     pass
 
@@ -101,8 +103,8 @@ class PolynomialModel(Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -114,15 +116,19 @@ class PolynomialModel(Model):
         # Create the polynomial from the coeffs
         lcfinal = np.array([])
         for c in range(nchan):
-            chan = channels[c]
-
-            poly = np.poly1d(self.coeffs[chan])
             if self.multwhite:
+                chan = channels[c]
                 trim1 = np.nansum(self.mwhites_nexp[:chan])
                 trim2 = trim1 + self.mwhites_nexp[chan]
                 time = self.time_local[trim1:trim2]
             else:
                 time = self.time_local
+            
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+            poly = np.poly1d(self.coeffs[chan])
             lcpiece = np.polyval(poly, time)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

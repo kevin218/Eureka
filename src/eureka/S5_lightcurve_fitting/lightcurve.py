@@ -73,9 +73,6 @@ class LightCurve(m.Model):
         if self.share or self.multwhite:
             self.nchannel_fitted = self.nchannel
             self.fitted_channels = np.arange(self.nchannel)
-        elif self.multwhite:
-            self.nchannel_fitted = self.nchannel
-            self.fitted_channels = np.array([self.nchannel])
         else:
             self.nchannel_fitted = 1
             self.fitted_channels = np.array([self.channel])
@@ -200,8 +197,8 @@ class LightCurve(m.Model):
                 
             mwhites_trim = []
             if meta.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:i])
-                trim2 = trim1 + self.mwhites_nexp[i]
+                trim1 = np.nansum(self.mwhites_nexp[:channel])
+                trim2 = trim1 + self.mwhites_nexp[channel]
                 mwhites_trim = [trim1, trim2]
                 time = self.time[trim1:trim2]
                 flux = flux[trim1:trim2]

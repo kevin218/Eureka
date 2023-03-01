@@ -22,10 +22,6 @@ class StepModel(PyMC3Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
-        # Needed before setting time
-        self.multwhite = kwargs.get('multwhite')
-        self.mwhites_nexp = kwargs.get('mwhites_nexp')
-
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
 
@@ -51,8 +47,8 @@ class StepModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -68,16 +64,20 @@ class StepModel(PyMC3Model):
             model = self.model
         
         # Parse 'c#' keyword arguments as coefficients
-        for j in range(nchan):
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             for i in range(10):
                 try:
-                    if channels[j] == 0:
-                        steps[j][i] = getattr(model, f'step{i}')
-                        steptimes[j][i] = getattr(model, f'steptime{i}')
+                    if chan == 0:
+                        steps[c][i] = getattr(model, f'step{i}')
+                        steptimes[c][i] = getattr(model, f'steptime{i}')
                     else:
-                        steps[j][i] = getattr(model, f'step{i}_{channels[j]}')
-                        steptimes[j][i] = getattr(model,
-                                                  f'steptime{i}_{channels[j]}')
+                        steps[c][i] = getattr(model, f'step{i}_{chan}')
+                        steptimes[c][i] = getattr(model,
+                                                  f'steptime{i}_{chan}')
                 except AttributeError:
                     pass
 
