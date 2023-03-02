@@ -92,7 +92,7 @@ class StepModel(PyMC3Model):
                 time = self.time
 
             lcpiece = lib.ones(len(time))
-            for s in np.where(steps[c] != 0)[0]:
+            for s in range(10):
                 lcpiece += steps[c][s]*(time >= steptimes[c][s])
             poly_flux = lib.concatenate([poly_flux, lcpiece])
 
