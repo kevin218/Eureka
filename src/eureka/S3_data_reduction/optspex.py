@@ -526,10 +526,14 @@ def clean_median_flux(data, meta, log, m):
     for j in range(ny):
         x1 = xx[~np.ma.getmaskarray(medflux[j])]
         goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
-        f = spi.interp1d(x1, goodrow, 'linear',
-                         fill_value='extrapolate')
-        # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-        interp_med[j] = f(xx)
+        if len(goodrow) > 0:
+            f = spi.interp1d(x1, goodrow, 'linear',
+                            fill_value='extrapolate')
+            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+            interp_med[j] = f(xx)
+        else:
+            log.writelog(f'    Row {j}: Interpolation failed. No good pixels.')
+            interp_med[j] = medflux[j]
 
     if meta.window_len > 1:
         # Apply smoothing filter along dispersion direction
