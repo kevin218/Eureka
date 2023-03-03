@@ -276,7 +276,6 @@ def flag_ff(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier pixels flagged.
     '''
-    
     return nircam.flag_ff(data, meta, log)
 
 

@@ -157,23 +157,7 @@ def flag_ff(data, meta, log):
     data : Xarray Dataset
         The updated Dataset object with outlier pixels flagged.
     '''
-    log.writelog('  Performing full frame outlier rejection...',
-                 mute=(not meta.verbose))
-
-    size = data.mask.size
-    prev_count = data.mask.values.sum()
-
-    # Compute new pixel mask
-    data['mask'] = sigrej.sigrej(data.flux, meta.ff_thresh, data.mask, None)
-
-    # Count difference in number of good pixels
-    new_count = data.mask.values.sum()
-    diff_count = prev_count - new_count
-    perc_rej = 100*(diff_count/size)
-    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
-                 mute=(not meta.verbose))
-    
-    return data
+    return nircam.flag_ff(data, meta, log)
 
 
 def fit_bg(dataim, datamask, n, meta, isplots=0):

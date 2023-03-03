@@ -206,7 +206,7 @@ def flag_ff(data, meta, log):
     prev_count = data.mask.values.sum()
 
     # Compute new pixel mask
-    data['mask'] = sigrej.sigrej(data.flux, meta.ff_thresh, data.mask, None)
+    data['mask'] = sigrej.sigrej(data.flux, meta.bg_thresh, data.mask, None)
 
     # Count difference in number of good pixels
     new_count = data.mask.values.sum()
