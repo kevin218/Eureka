@@ -528,7 +528,7 @@ def clean_median_flux(data, meta, log, m):
         goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
         if len(goodrow) > 0:
             f = spi.interp1d(x1, goodrow, 'linear',
-                            fill_value='extrapolate')
+                             fill_value='extrapolate')
             # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
             interp_med[j] = f(xx)
         else:
