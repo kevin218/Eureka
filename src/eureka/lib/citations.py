@@ -275,6 +275,25 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2017JATIS...3c5001G},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }"""],
+    "nircam_photometry":
+        [r"""@ARTICLE{schlawin2023,
+            author = {{Schlawin}, Everett and {Beatty}, Thomas and {Brooks}, Brian and {Nikolov}, Nikolay K. and {Greene}, Thomas P. and {Espinoza}, N{\'e}stor and {Glidic}, Kayli and {Baka}, Keith and {Egami}, Eiichi and {Stansberry}, John and {Boyer}, Martha and {Gennaro}, Mario and {Leisenring}, Jarron and {Hilbert}, Bryan and {Misselt}, Karl and {Kelly}, Doug and {Canipe}, Alicia and {Beichman}, Charles and {Correnti}, Matteo and {Knight}, J. Scott and {Jurling}, Alden and {Perrin}, Marshall D. and {Feinberg}, Lee D. and {McElwain}, Michael W. and {Bond}, Nicholas and {Ciardi}, David and {Kendrew}, Sarah and {Rieke}, Marcia},
+                title = "{JWST NIRCam Defocused Imaging: Photometric Stability Performance and How It Can Sense Mirror Tilts}",
+            journal = {\pasp},
+            keywords = {Exoplanet atmospheres, Space vehicle instruments, Time series analysis, Multiple mirror telescopes, 487, 1548, 1916, 1080, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
+                year = 2023,
+                month = jan,
+            volume = {135},
+            number = {1043},
+                eid = {018001},
+                pages = {018001},
+                doi = {10.1088/1538-3873/aca718},
+        archivePrefix = {arXiv},
+            eprint = {2211.16727},
+        primaryClass = {astro-ph.IM},
+            adsurl = {https://ui.adsabs.harvard.edu/abs/2023PASP..135a8001S},
+            adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        }"""],
     "niriss": 
         [r"""@ARTICLE{willott2022,
             author = {{Willott}, Chris J. and {Doyon}, Ren{\'e} and {Albert}, 
