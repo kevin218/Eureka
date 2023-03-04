@@ -31,7 +31,6 @@ def do_correction(input_model, bias_model, meta, log):
     -------
     output_model: data model object
         bias-subtracted science data
-
     """
     # Check for subarray mode and extract subarray from the
     # bias reference data if necessary
@@ -55,7 +54,7 @@ def do_correction(input_model, bias_model, meta, log):
         for jj in range(ngroup):
             data_median = np.nanmedian(data[jj][np.where(trace_mask)])
             scale_factor[ii, jj] = data_median/bias_median
-    mean_scale_factor = np.mean(scale_factor, axis=0)
+    mean_scale_factor = np.nanmean(scale_factor, axis=0)
     log.writelog(f'  Mean bias scale factors (by group): {mean_scale_factor}')
     
     # Get segment number
@@ -88,10 +87,11 @@ def do_correction(input_model, bias_model, meta, log):
                 jj = meta.bias_group
                 assert jj > 0, f"Group number should be >0, got: {jj}"
                 assert jj <= ngroup, f"Group number should be <={ngroup}" + \
-                    ", got: {jj}"
+                    f", got: {jj}"
                 log.writelog('  Applying mean bias correction using ' +
                              f'group {jj}.')
                 bias_model.data *= mean_scale_factor[jj-1]
+                bias_data = None
             elif meta.bias_group == "each":
                 # Scale superbias frame using means values for each group
                 log.writelog('  Applying mean bias correction to each group.')
@@ -111,7 +111,7 @@ def do_correction(input_model, bias_model, meta, log):
                 jj = meta.bias_group
                 assert jj > 0, f"Group number should be >0, got: {jj}"
                 assert jj <= ngroup, f"Group number should be <={ngroup}" + \
-                    ", got: {jj}"
+                    f", got: {jj}"
                 log.writelog('  Applying group-level bias correction using ' +
                              f'group {jj}.')
                 bias_data *= scale_factor[:, jj-1, np.newaxis, 
@@ -129,7 +129,7 @@ def do_correction(input_model, bias_model, meta, log):
             log.writelog('  No bias correction applied.')
             bias_data = None
     except Exception as error:
-        print(repr(error))
+        log.writelog(repr(error))
         return None
 
     # Subtract the bias data from the science data
@@ -154,14 +154,15 @@ def subtract_bias(input, bias, bias_data=None):
 
     bias: superbias model object
         the superbias image data
+    
+    bias_data: array
+        4D array of superbias images
 
     Returns
     -------
     output: data model object
         bias-subtracted science data
-
     """
-
     # Create output as a copy of the input science data model
     output = input.copy()
 
