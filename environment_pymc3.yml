@@ -36,7 +36,7 @@ dependencies:
         - exotic-ld
         - exoplanet
         - image_registration==0.2.6
-        - jwst==1.6.0
+        - jwst==1.8.0
         - myst-parser # Needed for documentation
         - pymc3
         - setuptools_scm # Needed for version number

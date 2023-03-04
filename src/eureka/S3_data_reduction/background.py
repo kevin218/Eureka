@@ -261,11 +261,11 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     residuals = dataslice - model
                     # Simple standard deviation (faster but prone to missing
                     # scanned background stars)
-                    # stdres = np.std(residuals)
+                    stdres = np.std(residuals)
                     # Median Absolute Deviation (slower but more robust)
                     # stdres  = np.median(np.abs(np.ediff1d(residuals)))
                     # Mean Absolute Deviation (good compromise)
-                    stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    # stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     if stdres == 0:
                         stdres = np.inf
                     stdevs = np.abs(residuals) / stdres
@@ -281,14 +281,14 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
             # background image
             if len(goodxvals) != 0:
                 bg[j] = np.polyval(coeffs, range(nx))
-                if isplots >= 6:
+                if isplots == 6:
                     plt.figure(3601)
                     plt.clf()
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
                     fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
-                             plots.plots.figure_filetype)
+                             plots.figure_filetype)
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 
