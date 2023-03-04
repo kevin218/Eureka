@@ -139,7 +139,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             meta.copy_ecf()
 
             specData_savefile = (
-                meta.inputdir + 
+                meta.inputdir +
                 meta.filename_S3_SpecData.split(os.path.sep)[-1])
             log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
@@ -270,6 +270,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not hasattr(meta, 'boundary'):
                 # The default value before this was added as an option
                 meta.boundary = 'extend'
+
+            # Manually mask pixel columns by index number
+            if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
+                for w in meta.mask_columns:
+                    log.writelog(f"Masking absolute pixel column {w}.")
+                    offset = spec.optmask.x[0]
+                    spec.optmask[:, w-offset] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -504,7 +511,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                 ld_3para)
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
-                
+
                 if meta.compute_white:
                     ld_lin_w, ld_quad_w, ld_3para_w, ld_4para_w = \
                         generate_LD.exotic_ld(meta, spec, log, white=True)
@@ -574,7 +581,7 @@ def load_specific_s3_meta_info(meta):
     filename_S3_SpecData = s3_meta.filename_S3_SpecData
     # Merge S4 meta into old S3 meta
     meta = me.mergeevents(meta, s3_meta)
-    
+
     # Make sure the filename_S3_SpecData is kept
     meta.filename_S3_SpecData = filename_S3_SpecData
 

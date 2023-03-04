@@ -1,6 +1,7 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
+from . import background
 try:
     from jwst import datamodels
 except ImportError:
@@ -171,7 +172,7 @@ def read(filename, data, meta, log):
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
-    
+
     # Figure out the x-axis (aka the original y-axis) pixel numbers since we've
     # reversed the order of the x-axis
     x = np.arange(sci.shape[2])[::-1]
@@ -256,6 +257,28 @@ def flag_bg(data, meta, log):
     return nircam.flag_bg(data, meta, log)
 
 
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    return nircam.flag_ff(data, meta, log)
+
+
 def fit_bg(dataim, datamask, n, meta, isplots=0):
     """Fit for a non-uniform background.
 
@@ -284,7 +307,15 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+    if hasattr(meta, 'isrotate'):
+        isrotate = meta.isrotate
+    else:
+        isrotate = 2
+    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
+                                meta.bg_y2, deg=meta.bg_deg,
+                                threshold=meta.p3thresh, isrotate=isrotate,
+                                isplots=isplots)
+    return bg, mask, n
 
 
 def cut_aperture(data, meta, log):
