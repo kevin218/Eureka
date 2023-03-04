@@ -718,8 +718,8 @@ def make_citations(meta, stage=None):
     # check for nircam photometry in S3
     if stage == 3:
         if hasattr(meta, 'inst') and hasattr(meta, "photometry"):
-                if meta.photometry and meta.inst == "nircam":
-                        other_cites = other_cites + ["nircam_photometry"]
+            if meta.photometry and meta.inst == "nircam":
+                other_cites = other_cites + ["nircam_photometry"]
 
     if stage == 5:
         # concat non-lsq fit methods (emcee/dynesty) to the citation list
