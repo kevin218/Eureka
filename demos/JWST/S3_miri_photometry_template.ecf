@@ -27,7 +27,7 @@ oneoverf_corr   None        # Options: None, meanerr, median
 skip_apphot_bg  False       # Skips the background subtraction during the aperture photometry step
 photap          5           # Size of photometry aperture in pixels
 skyin           12          # Inner sky annulus edge, in pixels
-skyout          30          # Outer sky annulus edge, in pixels
+skywidth        18          # Width of the sky annulus, in pixels
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
