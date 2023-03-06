@@ -25,7 +25,6 @@ class ExpRampModel(Model):
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
-
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
             coeff_dict = kwargs.get('coeff_dict')
@@ -33,13 +32,8 @@ class ExpRampModel(Model):
                       if rN.startswith('r') and rN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Update coefficients
-        self.coeffs = np.zeros((self.nchan, 6))
+        self.coeffs = np.zeros((self.nchannel_fitted, 6))
         self._parse_coeffs()
 
     @property
@@ -53,7 +47,16 @@ class ExpRampModel(Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time[0]
+            if self.multwhite:
+                self.time_local = []
+                for chan in self.fitted_channels:
+                    trim1 = np.nansum(self.mwhites_nexp[:chan])
+                    trim2 = trim1 + self.mwhites_nexp[chan]
+                    time = self.time[trim1:trim2]
+                    self.time_local.extend(time - time[0])
+                self.time_local = np.array(self.time_local)
+            else:
+                self.time_local = self.time - self.time[0]
 
     def _parse_coeffs(self):
         """Convert dict of 'r#' coefficients into a list
@@ -65,21 +68,28 @@ class ExpRampModel(Model):
             The sequence of coefficient values.
         """
         # Parse 'r#' keyword arguments as coefficients
-        for j in range(self.nchan):
+        for c in range(self.nchannel_fitted):
+            if self.nchannel_fitted > 1:
+                chan = self.fitted_channels[c]
+            else:
+                chan = 0
             for i in range(6):
                 try:
-                    if j == 0:
-                        self.coeffs[j, i] = self.parameters.dict[f'r{i}'][0]
+                    if chan == 0:
+                        self.coeffs[c, i] = self.parameters.dict[f'r{i}'][0]
                     else:
-                        self.coeffs[j, i] = self.parameters.dict[f'r{i}_j'][0]
+                        self.coeffs[c, i] = \
+                            self.parameters.dict[f'r{i}_{chan}'][0]
                 except KeyError:
                     pass
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -88,15 +98,34 @@ class ExpRampModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         # Create the ramp from the coeffs
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                time = self.time_local[trim1:trim2]
+            else:
+                time = self.time_local
+            
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             r0, r1, r2, r3, r4, r5 = self.coeffs[c]
-            lcpiece = (1+r0*np.exp(-r1*self.time_local + r2)
-                       + r3*np.exp(-r4*self.time_local + r5))
+            lcpiece = (1+r0*np.exp(-r1*time + r2)
+                       + r3*np.exp(-r4*time + r5))
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

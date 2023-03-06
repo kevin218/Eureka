@@ -1,13 +1,15 @@
-# Last Updated: 2022-08-16
+# Last Updated: 2023-03-04
 
 import sys
 import os
 from importlib import reload
 import time as time_pkg
 
+import numpy as np
+
 sys.path.insert(0, '..'+os.sep+'src'+os.sep)
 from eureka.lib.readECF import MetaClass
-from eureka.lib.util import pathdirectory
+from eureka.lib.util import COMMON_IMPORTS, pathdirectory
 import eureka.lib.plots
 # try:
 #     from eureka.S2_calibrations import s2_calibrate as s2
@@ -51,12 +53,18 @@ def test_NIRCam(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
+    s3_cites = np.union1d(COMMON_IMPORTS[2], ["nircam", "nircam_photometry"])
+    assert np.array_equal(s3_meta.citations, s3_cites)
+
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}Photometry{os.sep}NIRCam{os.sep}'
                           f'Stage4{os.sep}')
     name = pathdirectory(meta, 'S4', 1, ap=60, bg='70_90')
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
+
+    s4_cites = np.union1d(s3_cites, COMMON_IMPORTS[3])
+    assert np.array_equal(s4_meta.citations, s4_cites)
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")

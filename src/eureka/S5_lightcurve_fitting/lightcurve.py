@@ -200,8 +200,8 @@ class LightCurve(m.Model):
                 
             mwhites_trim = []
             if meta.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:i])
-                trim2 = trim1 + self.mwhites_nexp[i]
+                trim1 = np.nansum(self.mwhites_nexp[:channel])
+                trim2 = trim1 + self.mwhites_nexp[channel]
                 mwhites_trim = [trim1, trim2]
                 time = self.time[trim1:trim2]
                 flux = flux[trim1:trim2]

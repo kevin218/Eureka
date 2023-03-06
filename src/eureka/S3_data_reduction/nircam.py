@@ -160,15 +160,10 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
-    meta.bg_y2 = meta.src_ypos + meta.bg_hw
-    meta.bg_y1 = meta.src_ypos - meta.bg_hw
-
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
-    # Need to test performance with and without estsig on real data.
     if hasattr(meta, 'use_estsig') and meta.use_estsig:
         bgerr1 = np.median(data.err[:, :meta.bg_y1])
         bgerr2 = np.median(data.err[:, meta.bg_y2:])
@@ -181,6 +176,44 @@ def flag_bg(data, meta, log):
                                                  bgmask1, estsig1)
     data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
                                                  bgmask2, estsig2)
+
+    return data
+
+
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    log.writelog('  Performing full frame outlier rejection...',
+                 mute=(not meta.verbose))
+
+    size = data.mask.size
+    prev_count = data.mask.values.sum()
+
+    # Compute new pixel mask
+    data['mask'] = sigrej.sigrej(data.flux, meta.bg_thresh, data.mask, None)
+
+    # Count difference in number of good pixels
+    new_count = data.mask.values.sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                 mute=(not meta.verbose))
 
     return data
 
@@ -297,7 +330,7 @@ def flag_bg_phot(data, meta, log):
 
     nbadpix_total = 0
     for i in tqdm(range(flux.shape[1]),
-                  desc='Looping over Rows for outlier removal'):
+                  desc='  Looping over rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
             ngoodpix = np.sum(mask[:, i, j] == 1)
             data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j],

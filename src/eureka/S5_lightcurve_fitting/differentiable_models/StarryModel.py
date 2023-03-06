@@ -1,4 +1,5 @@
 import numpy as np
+import inspect
 import astropy.constants as const
 
 import theano
@@ -15,6 +16,7 @@ starry.config.quiet = True
 starry.config.lazy = True
 
 from . import PyMC3Model
+from ..limb_darkening_fit import ld_profile
 
 
 class temp_class:
@@ -56,24 +58,52 @@ class StarryModel(PyMC3Model):
         ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
                                for par in self.paramtitles])[0]
         if len(ylm_params) > 0:
-            l_vals = [int(self.paramtitles[ind][1:].split('_')[0])
+            l_vals = [int(self.paramtitles[ind][1])
                       for ind in ylm_params]
             self.ydeg = max(l_vals)
         else:
             self.ydeg = 0
+        
+        # Store the ld_profile
+        self.ld_from_S4 = kwargs.get('ld_from_S4')
+        if hasattr(self.parameters, 'limb_dark'):
+            ld_func = ld_profile(self.parameters.limb_dark.value, 
+                                 use_gen_ld=self.ld_from_S4)
+            len_params = len(inspect.signature(ld_func).parameters)
+            self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
-    def setup(self, full_model):
+        self.ld_from_file = kwargs.get('ld_from_file')
+
+        self.recenter_ld_prior = kwargs.get('recenter_ld_prior')
+
+        # Replace u parameters with generated limb-darkening values
+        if self.ld_from_S4 or self.ld_from_file:
+            self.ld_array = kwargs.get('ld_coeffs')
+            if self.ld_from_S4:
+                self.ld_array = self.ld_array[len_params-2]
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[c][index[0]]
+                        param = int(item.split('_')[0][-1])
+                        ld_val = self.ld_array[chan][param-1]
+                        # Use the file value as the starting guess
+                        self.parameters.dict[item][0] = ld_val
+                        # In a normal prior, center at the file value
+                        if (self.parameters.dict[item][-1] == 'N' and
+                                self.recenter_ld_prior):
+                            self.parameters.dict[item][-3] = ld_val
+                        # Update the non-dictionary form as well
+                        setattr(self.parameters, item,
+                                self.parameters.dict[item])
+
+    def setup(self):
         """Setup a model for evaluation and fitting.
-
-        Parameters
-        ----------
-        full_model : CompositePyMC3Model
-            The full composite model - used to get the PyMC3 model.
         """
-        self.full_model = full_model
-
         self.systems = []
-        for c in range(self.nchan):
+        for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
             # For example, this way we can do `temp.u1` rather than
@@ -85,7 +115,8 @@ class StarryModel(PyMC3Model):
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact
-                    setattr(temp, key, getattr(self.model, key+'_'+str(c)))
+                    setattr(temp, key, getattr(self.model,
+                                               key+'_'+str(c)))
                 else:
                     setattr(temp, key, getattr(self.model, key))
 
@@ -180,8 +211,8 @@ class StarryModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -194,11 +225,23 @@ class StarryModel(PyMC3Model):
             systems = self.systems
 
         phys_flux = lib.zeros(0)
-        for c in channels:
-            lcpiece = systems[c].flux(self.time)
+        for c in range(nchan):
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+            lcpiece = systems[chan].flux(time)
             if eval:
                 lcpiece = lcpiece.eval()
-        phys_flux = lib.concatenate([phys_flux, lcpiece])
+            phys_flux = lib.concatenate([phys_flux, lcpiece])
 
         return phys_flux
 
@@ -216,10 +259,10 @@ class StarryModel(PyMC3Model):
         ndarray
             The disk-integrated planetary flux for each value of theta.
         """
-        with self.full_model.model:
+        with self.model:
             fps = []
-            for c in range(self.nchan):
-                planet_map = self.fit.systems[c].secondaries[0].map
+            for system in self.fit.systems:
+                planet_map = system.secondaries[0].map
                 fps.append(planet_map.flux(theta=theta).eval())
             return np.array(fps)
 
@@ -237,7 +280,7 @@ class StarryModel(PyMC3Model):
         super().update(newparams, **kwargs)
 
         self.fit.systems = []
-        for c in range(self.nchan):
+        for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
             # For example, this way we can do `temp.u1` rather than
@@ -245,7 +288,7 @@ class StarryModel(PyMC3Model):
             temp = temp_class()
             for key in self.paramtitles:
                 ptype = getattr(self.parameters, key).ptype
-                if (ptype not in ['fixed', 'independent']
+                if (ptype not in ['fixed', 'independent', 'shared']
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact

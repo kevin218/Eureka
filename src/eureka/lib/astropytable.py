@@ -3,7 +3,7 @@ from astropy.io import ascii
 import numpy as np
 
 
-def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
+def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
                  individual_models, model, residuals):
     """Save the results from Stage 5 as an ECSV file.
 
@@ -36,13 +36,18 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
     dims = [len(time), len(wavelength)]
 
     orig_shapes = [str(time.shape), str(wavelength.shape),
-                   str(bin_width.shape), str(lcdata.shape), str(lcerr.shape),
-                   str(individual_models.shape), str(model.shape),
-                   str(residuals.shape)]
+                   str(bin_width.shape), str(lcdata.shape), str(lcerr.shape)]
+    orig_shapes.extend([str(individual_models[i, 1].shape)
+                        for i in range(individual_models.shape[0])])
+    orig_shapes.extend([str(model.shape), str(residuals.shape)])
 
-    time = np.tile(time, dims[1])
-    wavelength = np.repeat(wavelength, dims[0])
-    bin_width = np.repeat(bin_width, dims[0])
+    if not meta.multwhite:
+        time = np.tile(time, dims[1])
+        wavelength = np.repeat(wavelength, dims[0])
+        bin_width = np.repeat(bin_width, dims[0])
+    else:
+        wavelength = np.repeat(wavelength, int(dims[0]/dims[1]))
+        bin_width = np.repeat(bin_width, int(dims[0]/dims[1]))
     lcdata = lcdata.flatten()
     lcerr = lcerr.flatten()
     model_names = individual_models[:, 0]
@@ -62,9 +67,10 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
     except ValueError as e:
         raise ValueError("There was a shape mismatch between your arrays which"
                          " had shapes:\n"
-                         "time, wavelength, bin_width, lcdata, lcerr, "
-                         "individual_models, model, residuals\n"
-                         ",".join(orig_shapes)) from e
+                         "time, wavelength, bin_width, lcdata, lcerr, " +
+                         ', '.join(model_names) +
+                         ", model, residuals\n" +
+                         ", ".join(orig_shapes)) from e
 
 
 def savetable_S6(filename, key, wavelength, bin_width, value, error):

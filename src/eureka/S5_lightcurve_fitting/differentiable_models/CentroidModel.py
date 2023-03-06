@@ -32,10 +32,8 @@ class CentroidModel(PyMC3Model):
         self.axis = kwargs.get('axis')
         self.centroid = kwargs.get('centroid')
 
-        if self.nchan == 1:
-            self.coeff_keys = [self.axis]
-        else:
-            self.coeff_keys = [f'{self.axis}_{i}' for i in range(self.nchan)]
+        self.coeff_keys = [f'{self.axis}_{c}' if c > 0 else self.axis
+                           for c in range(self.nchannel_fitted)]
 
     @property
     def centroid(self):
@@ -45,10 +43,19 @@ class CentroidModel(PyMC3Model):
     @centroid.setter
     def centroid(self, centroid_array):
         """A setter for the centroid."""
-        self._centroid = centroid_array
+        self._centroid = np.ma.masked_invalid(centroid_array)
         if self.centroid is not None:
             # Convert to local centroid
-            self.centroid_local = self.centroid - self.centroid.mean()
+            if self.multwhite:
+                self.centroid_local = []
+                for c in self.fitted_channels:
+                    trim1 = np.nansum(self.mwhites_nexp[:c])
+                    trim2 = trim1 + self.mwhites_nexp[c]
+                    centroid = self.centroid[trim1:trim2]
+                    self.centroid_local.extend(centroid - centroid.mean())
+                self.centroid_local = np.array(self.centroid_local)
+            else:
+                self.centroid_local = self.centroid - self.centroid.mean()
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -69,8 +76,8 @@ class CentroidModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -85,11 +92,19 @@ class CentroidModel(PyMC3Model):
             model = self.model
         
         for c in range(nchan):
-            coeffs[c] = getattr(model, self.coeff_keys[channels[c]])
+            coeffs[c] = getattr(model, self.coeff_keys[c])
         
         centroid_flux = lib.zeros(0)
         for c in range(nchan):
-            lcpiece = 1 + self.centroid_local*coeffs[c]
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                centroid = self.centroid_local[trim1:trim2]
+            else:
+                centroid = self.centroid_local
+
+            lcpiece = 1 + centroid*coeffs[c]
             centroid_flux = lib.concatenate([centroid_flux, lcpiece])
 
         return centroid_flux

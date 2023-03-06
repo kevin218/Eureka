@@ -47,14 +47,14 @@ class StepModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
 
-        steps = np.zeros((self.nchan, 10)).tolist()
-        steptimes = np.zeros((self.nchan, 10)).tolist()
+        steps = np.zeros((nchan, 10)).tolist()
+        steptimes = np.zeros((nchan, 10)).tolist()
 
         if eval:
             lib = np
@@ -64,24 +64,36 @@ class StepModel(PyMC3Model):
             model = self.model
         
         # Parse 'c#' keyword arguments as coefficients
-        for j in range(nchan):
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             for i in range(10):
                 try:
-                    if channels[j] == 0:
-                        steps[j][i] = getattr(model, f'step{i}')
-                        steptimes[j][i] = getattr(model, f'steptime{i}')
+                    if chan == 0:
+                        steps[c][i] = getattr(model, f'step{i}')
+                        steptimes[c][i] = getattr(model, f'steptime{i}')
                     else:
-                        steps[j][i] = getattr(model, f'step{i}_{channels[j]}')
-                        steptimes[j][i] = getattr(model,
-                                                  f'steptime{i}_{channels[j]}')
+                        steps[c][i] = getattr(model, f'step{i}_{chan}')
+                        steptimes[c][i] = getattr(model,
+                                                  f'steptime{i}_{chan}')
                 except AttributeError:
                     pass
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):
-            lcpiece = lib.ones(len(self.time))
-            for s in np.where(steps[c] != 0)[0]:
-                lcpiece += steps[c][s]*(self.time >= steptimes[c][s])
+            if self.multwhite:
+                chan = channels[c]
+                trim1 = np.nansum(self.mwhites_nexp[:chan])
+                trim2 = trim1 + self.mwhites_nexp[chan]
+                time = self.time[trim1:trim2]
+            else:
+                time = self.time
+
+            lcpiece = lib.ones(len(time))
+            for s in range(10):
+                lcpiece += steps[c][s]*(time >= steptimes[c][s])
             poly_flux = lib.concatenate([poly_flux, lcpiece])
 
         return poly_flux

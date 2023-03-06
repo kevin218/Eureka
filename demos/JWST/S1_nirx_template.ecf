@@ -25,39 +25,43 @@ skip_gain_scale     False
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
 
-#Custom bias frames
+# Custom linearity reference file
+custom_linearity    False
+superbias_file      /path/to/custom/linearity/fits/file
+
+# Custom bias frames
 custom_bias         False
-superbias_file	   /path/to/custom/superbias/fits/file
+superbias_file      /path/to/custom/superbias/fits/file
 
-#Saturation
-update_sat_flags    False   #Wheter to update the saturation flags more aggressively
-expand_prev_group   False   #Expand saturation flags to previous group
-dq_sat_mode         percentile # options: [percentile, min, defined]
-dq_sat_percentile   50      # percentile of the entire time series to use to define the saturation mask (50=median)
-dq_sat_columns	    [[0, 0], [0,0], [0,0], [0,0], [0,0]]  #for dq_sat_mode = defined, user defined saturated columns 
+# Saturation
+update_sat_flags    False   # Wheter to update the saturation flags more aggressively
+expand_prev_group   False   # Expand saturation flags to previous group
+dq_sat_mode         percentile # Options: [percentile, min, defined]
+dq_sat_percentile   50      # Percentile of the entire time series to use to define the saturation mask (50=median)
+dq_sat_columns	    [[0, 0], [0,0], [0,0], [0,0], [0,0]]  #for dq_sat_mode = defined, user defined saturated columns
 
-#Background subtraction
-grouplevel_bg 		True
-ncpu				6
-bg_y1 				6
-bg_y2 				26
-bg_deg 				0 
-p3thresh			5
-verbose				True
-isplots 			1
-hide_plots    True
+# Background subtraction
+grouplevel_bg       True
+ncpu                6
+bg_y1               6
+bg_y2               26
+bg_deg              0 
+p3thresh            5
+verbose             True
+isplots             1
+hide_plots          True
 
-#mask curved traces
+# Mask curved traces
 masktrace           True
 window_len          11
 expand_mask         8
 ignore_low          600
-ignore_hi						None
+ignore_hi           None
 
-#manual reference pixel correction for PRISM
-refpix_corr      False
-npix_top         8
-npix_bot         8
+# Manual reference pixel correction for NIRSpec PRISM
+refpix_corr         False
+npix_top            8
+npix_bot            8
 
 # Project directory
 topdir              /home/User/Data/JWST-Sim/NIRSpec/

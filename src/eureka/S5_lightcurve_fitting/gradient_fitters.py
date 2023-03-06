@@ -69,17 +69,31 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            if meta.multwhite:
+                trim1 = np.nansum(meta.mwhites_nexp[:chan])
+                trim2 = trim1 + meta.mwhites_nexp[chan]
+                lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
+            else:
+                size = lc.time.size
+                lc.unc_fit[chan*size:(chan+1)*size] = \
+                    fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                (fit_params[ind[chan]] *
-                 lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
+            if meta.multwhite:
+                trim1 = np.nansum(meta.mwhites_nexp[:chan])
+                trim2 = trim1 + meta.mwhites_nexp[chan]
+                lc.unc_fit[trim1:trim2] = \
+                    fit_params[ind[chan]]*lc.unc[trim1:trim2]
+            else:
+                size = lc.time.size
+                lc.unc_fit[chan*size:(chan+1)*size] = \
+                    fit_params[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
+    else:
+        lc.unc_fit = lc.unc
 
     t_results = table.Table([freenames, fit_params],
                             names=("Parameter", "Mean"))
@@ -98,9 +112,14 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]) * 1e6)
+            if meta.multwhite:
+                trim1 = np.nansum(meta.mwhites_nexp[:chan])
+                trim2 = trim1 + meta.mwhites_nexp[chan]
+                unc = np.ma.median(lc.unc[trim1:trim2])
+            else:
+                size = lc.time.size
+                unc = np.ma.median(lc.unc[chan*size:(chan+1)*size])
+            scatter_ppm = 1e6*fit_params[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
@@ -215,15 +234,29 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            if meta.multwhite:
+                trim1 = np.nansum(meta.mwhites_nexp[:chan])
+                trim2 = trim1 + meta.mwhites_nexp[chan]
+                lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
+            else:
+                size = lc.time.size
+                lc.unc_fit[chan*size:(chan+1)*size] = \
+                    fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]
+            if meta.multwhite:
+                trim1 = np.nansum(meta.mwhites_nexp[:chan])
+                trim2 = trim1 + meta.mwhites_nexp[chan]
+                lc.unc_fit[trim1:trim2] = \
+                    fit_params[ind[chan]]*lc.unc[trim1:trim2]
+            else:
+                size = lc.time.size
+                lc.unc_fit[chan*size:(chan+1)*size] = \
+                    fit_params[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
     else:
         lc.unc_fit = lc.unc
 
@@ -241,15 +274,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (1e6 * fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]))
-            scatter_ppm_upper = (1e6 * upper_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
-            scatter_ppm_lower = (1e6 * lower_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
+            if meta.multwhite:
+                trim1 = np.nansum(meta.mwhites_nexp[:chan])
+                trim2 = trim1 + meta.mwhites_nexp[chan]
+                unc = np.ma.median(lc.unc[trim1:trim2])
+            else:
+                size = lc.time.size
+                unc = np.ma.median(lc.unc[chan*size:(chan+1)*size])
+            scatter_ppm = 1e6*fit_params[i]*unc
+            scatter_ppm_upper = 1e6*upper_errs[i]*unc
+            scatter_ppm_lower = 1e6*lower_errs[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]}); {scatter_ppm} '
                          f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm')
