@@ -73,9 +73,6 @@ class LightCurve(m.Model):
         if self.share or self.multwhite:
             self.nchannel_fitted = self.nchannel
             self.fitted_channels = np.arange(self.nchannel)
-        elif self.multwhite:
-            self.nchannel_fitted = self.nchannel
-            self.fitted_channels = np.array([self.nchannel])
         else:
             self.nchannel_fitted = 1
             self.fitted_channels = np.array([self.channel])

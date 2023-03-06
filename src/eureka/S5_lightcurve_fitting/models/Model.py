@@ -236,7 +236,7 @@ class Model:
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(time, ax=ax, draw=False,
+                component.plot(self.time, ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
                                chan=chan, **kwargs)
 
