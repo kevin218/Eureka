@@ -378,8 +378,10 @@ The plot below shows you which parts will be used for the background calculation
 
 .. image:: ../media/bg_hw.png
 
+If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If spec_hw and bg_hw are both lists, all combinations of the two will be attempted.
+
 ff_outlier
-'''''''''
+''''''''''
 Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.  
 
 bg_thresh
@@ -476,15 +478,15 @@ Only used for photometry analyses. Skips the background subtraction in the apert
 
 photap
 ''''''
-Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered.
+Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
 
 skyin
 '''''
-Only used for photometry analyses. Inner sky annulus edge, in pixels. If this is a list, it must be the same length as skyout. skyin[0] will only be used with skyout[0], skyin[1] with skyout[1], etc.
+Only used for photometry analyses. Inner sky annulus edge, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skywidth are also lists, all combinations of the three will be attempted.
 
-skyout
-''''''
-Only used for photometry analyses. Outer sky annulus edge, in pixels. If this is a list, it must be the same length as skyin. skyin[0] will only be used with skyout[0], skyin[1] with skyout[1], etc.
+skywidth
+''''''''
+Only used for photometry analyses. The width of the sky annulus, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skyin are also lists, all combinations of the three will be attempted.
 
 isplots_S3
 ''''''''''

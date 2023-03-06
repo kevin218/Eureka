@@ -8,6 +8,8 @@ max_memory      0.5         # The maximum fraction of memory you want utilized b
 suffix          calints     # Data file suffix
 photometry      True        # Set to True if the user wants to analyze a photometric dataset
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
 ywindow         [4, 256]      # Vertical axis as seen in DS9
 xwindow         [512, 1536]  # Horizontal axis as seen in DS9

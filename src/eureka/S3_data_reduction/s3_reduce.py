@@ -128,15 +128,24 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                  meta.bg_hw[2])
     elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
-    elif hasattr(meta, 'skyin') and hasattr(meta, 'skyout'):
-        # E.g., if skyin = 90 and skyout = 150, then the
+    elif hasattr(meta, 'skyin') and hasattr(meta, 'skywidth'):
+        # E.g., if skyin = 90 and skywidth = 60, then the
         # directory will use "bg90_150"
         if not isinstance(meta.skyin, list):
             meta.skyin = [meta.skyin]
-        if not isinstance(meta.skyout, list):
-            meta.skyout = [meta.skyout]
-        meta.bg_hw_range = [f'{meta.skyin[i]}_{meta.skyout[i]}'
-                            for i in range(len(meta.skyin))]
+        else:
+            meta.skyin = range(meta.skyin[0],
+                               meta.skyin[1]+meta.skyin[2],
+                               meta.skyin[2])
+        if not isinstance(meta.skywidth, list):
+            meta.skywidth = [meta.skywidth]
+        else:
+            meta.skywidth = range(meta.skywidth[0],
+                                  meta.skywidth[1]+meta.skywidth[2],
+                                  meta.skywidth[2])
+        meta.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
+                            for skyin in meta.skyin
+                            for skywidth in meta.skywidth]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
