@@ -27,7 +27,7 @@ oneoverf_dist   300         # How many pixels away from the centroid should be c
 skip_apphot_bg  True        # Skips the background subtraction during the aperture photometry step
 photap          60          # Size of photometry aperture in pixels
 skyin           70          # Inner sky annulus edge, in pixels
-skyout          90         # Outer sky annulus edge, in pixels
+skywidth        20          # Width of the sky annulus, in pixels
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
