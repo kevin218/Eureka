@@ -344,6 +344,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data, meta = b2f.convert_to_e(data, meta, log)
 
                 if not meta.photometry:
+                    # Perform outlier rejection of
+                    # full frame along time axis
+                    if hasattr(meta, 'ff_outlier') and meta.ff_outlier:
+                        data = inst.flag_ff(data, meta, log)
+
                     # Compute clean median frame
                     data = optspex.clean_median_flux(data, meta, log, m)
 
@@ -355,7 +360,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # Perform outlier rejection of
                     # sky background along time axis
-                    data = inst.flag_bg(data, meta, log)
+                    meta.bg_y2 = meta.src_ypos + meta.bg_hw
+                    meta.bg_y1 = meta.src_ypos - meta.bg_hw
+                    if (not hasattr(meta, 'ff_outlier')
+                            or not meta.ff_outlier):
+                        data = inst.flag_bg(data, meta, log)
 
                     # Do the background subtraction
                     data = bg.BGsubtraction(data, meta, log, 

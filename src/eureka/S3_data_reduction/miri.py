@@ -304,6 +304,28 @@ def flag_bg(data, meta, log):
     return nircam.flag_bg(data, meta, log)
 
 
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    return nircam.flag_ff(data, meta, log)
+
+
 def fit_bg(dataim, datamask, n, meta, isplots=0):
     """Fit for a non-uniform background.
 

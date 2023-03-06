@@ -366,13 +366,17 @@ The plot below shows you which parts will be used for the background calculation
 
 .. image:: ../media/bg_hw.png
 
- If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If spec_hw and bg_hw are both lists, all combinations of the two will be attempted.
+If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If spec_hw and bg_hw are both lists, all combinations of the two will be attempted.
+
+ff_outlier
+''''''''''
+Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.  
 
 bg_thresh
 '''''''''
 Double-iteration X-sigma threshold for outlier rejection along time axis.
-The flux of every background pixel will be considered over time for the current data segment.
-e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed in time for every background pixel. Outliers will be masked and not considered in the background flux calculation.
+The flux of every full-frame or background pixel will be considered over time for the current data segment.
+e.g: ``bg_thresh = [5,5]``: Two iterations of 5-sigma clipping will be performed in time for every full-frame or background pixel. Outliers will be masked and not considered in the flux calculation.
 
 bg_deg
 ''''''
