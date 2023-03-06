@@ -603,7 +603,7 @@ def manmask(data, meta, log):
                  mute=(not meta.verbose))
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]
-        data['mask'][rowstart:rowend, colstart:colend] = 0
+        data['mask'][:, rowstart:rowend, colstart:colend] = 0
 
     return data
 
@@ -716,6 +716,12 @@ def make_citations(meta, stage=None):
     # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
     
+    # check for nircam photometry in S3
+    if stage == 3:
+        if hasattr(meta, 'inst') and hasattr(meta, "photometry"):
+            if meta.photometry and meta.inst == "nircam":
+                other_cites = other_cites + ["nircam_photometry"]
+
     if stage == 5:
         # concat non-lsq fit methods (emcee/dynesty) to the citation list
         if "emcee" in meta.fit_method:

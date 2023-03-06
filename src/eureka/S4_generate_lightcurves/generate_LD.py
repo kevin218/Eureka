@@ -12,7 +12,7 @@ def exotic_ld(meta, spec, log, white=False):
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    spec :  Astreaus object 
+    spec :  Astreaus object
         Data object of wavelength-like arrrays.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
@@ -32,21 +32,21 @@ def exotic_ld(meta, spec, log, white=False):
     - July 2022, Eva-Maria Ahrer
         Initial version based on exotic_ld documentation.
     '''
-    
+
     log.writelog("...using exotic-ld package...",
                  mute=(not meta.verbose))
-    
+
     # Check if exotic-ld directory includes csv files
     exotic_ld_files = glob.glob(meta.exotic_ld_direc + os.sep + '**' + os.sep +
                                 '*.flx', recursive=True)
     if not exotic_ld_files:
         raise AssertionError('Unable to find ancillary files.' +
                              'Have you downloaded them? (see Zenodo link)')
-    
+
     # Set the observing mode
     custom_wavelengths = None
     custom_throughput = None
-    
+
     if hasattr(meta, 'exotic_ld_file'):
         mode = 'custom'
         log.writelog("Using custom throughput file " +
@@ -56,6 +56,10 @@ def exotic_ld(meta, spec, log, white=False):
         custom_data = pd.read_csv(meta.exotic_ld_file)
         custom_wavelengths = custom_data['wave'].values
         custom_throughput = custom_data['tp'].values
+        if (custom_wavelengths[0] > 0.3) and (custom_wavelengths[0] < 30):
+            log.writelog("Custom wavelengths appear to be in microns. " +
+                         "Converting to Angstroms.")
+            custom_wavelengths *= 1e4
     elif meta.inst == 'miri':
         mode = 'JWST_MIRI_' + meta.inst_filter
     elif meta.inst == 'nircam':
@@ -86,8 +90,8 @@ def exotic_ld(meta, spec, log, white=False):
 
     # compute stellar limb darkening model
     sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
-                               meta.exotic_ld_grid, meta.exotic_ld_direc) 
-    
+                               meta.exotic_ld_grid, meta.exotic_ld_direc)
+
     lin_c1 = np.zeros((meta.nspecchan, 1))
     quad = np.zeros((meta.nspecchan, 2))
     nonlin_3 = np.zeros((meta.nspecchan, 3))
@@ -97,17 +101,17 @@ def exotic_ld(meta, spec, log, white=False):
         lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
                                                  mode, custom_wavelengths,
                                                  custom_throughput)[0]
-        quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode, 
+        quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode,
                                                   custom_wavelengths,
                                                   custom_throughput)
         nonlin_3[i] = \
-            sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i], 
-                                                         mode, 
+            sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i],
+                                                         mode,
                                                          custom_wavelengths,
                                                          custom_throughput)
         nonlin_4[i] = \
-            sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i], 
-                                                         mode, 
+            sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i],
+                                                         mode,
                                                          custom_wavelengths,
                                                          custom_throughput)
     return lin_c1, quad, nonlin_3, nonlin_4
