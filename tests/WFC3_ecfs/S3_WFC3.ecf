@@ -7,6 +7,8 @@ nfiles          1           # The max number of data files to analyze simultaneo
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix          ima         # Data file suffix
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Calibration files
 hst_cal         ../tests/data/WFC3/cal/                # The path to the reference files
 horizonsfile    2014_02.vec                            # Generate your horizonsfile at https://ssd.jpl.nasa.gov/horizons/app.html#/
