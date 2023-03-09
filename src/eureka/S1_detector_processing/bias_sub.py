@@ -15,8 +15,6 @@ log.setLevel(logging.DEBUG)
 
 def do_correction(input_model, bias_model, meta, log):
     """
-    Short Summary
-    -------------
     Execute all tasks for Super-Bias Subtraction
 
     Parameters
@@ -130,7 +128,7 @@ def do_correction(input_model, bias_model, meta, log):
             bias_data = None
     except Exception as error:
         log.writelog(repr(error))
-        return None
+        raise error
 
     # Subtract the bias data from the science data
     output_model = subtract_bias(input_model, bias_model, bias_data)
