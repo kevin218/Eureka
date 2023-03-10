@@ -35,6 +35,18 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+bias_correction
+'''''''''''''''''
+Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
+
+bias_group
+'''''''''''''''''
+Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
+
+bias_smooth_length
+'''''''''''''''''
+Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
+
 custom_bias
 '''''''''''''''''
 Boolean, allows user to supply a custom bias file and overwrite the default file
@@ -91,7 +103,11 @@ verbose
 '''''''''''''''''
 See Stage 3 inputs
 
-isplots
+isplots_S1
+'''''''''''''''''
+Sets how many plots should be saved when running Stage 1. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
+
+nplots
 '''''''''''''''''
 See Stage 3 inputs
 
@@ -109,7 +125,7 @@ Smoothing length for the trace location
 
 expand_mask
 '''''''''''''''''
-Aperture around the trace to mask
+Aperture (in pixels) around the trace to mask
 
 ignore_low
 '''''''''''''''''
@@ -565,6 +581,11 @@ Start and End of the wavelength range being considered. Set to None to use the s
 allapers
 ''''''''
 If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
+
+
+mask_columns
+''''''''
+List of pixel columns that should not be used when constructing a light curve.  Absolute (not relative) pixel columns should be used. Figure 3102 is very helpful for identifying bad pixel columns.
 
 
 recordDrift
