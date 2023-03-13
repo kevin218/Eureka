@@ -11,8 +11,8 @@ photometry      True        # Set to True if the user wants to analyse a photome
 convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
 
 # Subarray region of interest
-ywindow         [4, 256]    # Vertical axis as seen in DS9
-xwindow         [512, 1536] # Horizontal axis as seen in DS9
+ywindow         [400, 650]  # Vertical axis as seen in DS9
+xwindow         [550, 800]  # Horizontal axis as seen in DS9
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 
 # Background parameters
@@ -21,13 +21,13 @@ bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rej
 
 # Photometric extraction parameters
 interp_method   linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
-ctr_cutout_size 7           # Cutoff size all around the centroid after the coarse centroid calculation
-oneoverf_corr   median      # Options: None, meanerr, median
-oneoverf_dist   300         # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
-skip_apphot_bg  True        # Skips the background subtraction during the aperture photometry step
-photap          80          # Size of photometry aperture in pixels
-skyin           90          # Inner sky annulus edge, in pixels
-skywidth        30          # Width of the sky annulus, in pixels
+ctr_guess       [698, 516]  # Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
+ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation
+oneoverf_corr   None        # Options: None, meanerr, median
+skip_apphot_bg  False       # Skips the background subtraction during the aperture photometry step
+photap          5           # Size of photometry aperture in pixels
+skyin           12          # Inner sky annulus edge, in pixels
+skywidth        18          # Width of the sky annulus, in pixels
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -35,10 +35,11 @@ nplots          5           # How many of each type of figure do you want to mak
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
 hide_plots      False       # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
+save_fluxdata   True        # Save FluxData outputs for debugging or use with other tools (can be quite large files)
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
-topdir          /home/User/Data/JWST-Sim/NIRCam/
+topdir          /home/User/Data/JWST-Sim/MIRI/
 
 # Directories relative to topdir
 inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)

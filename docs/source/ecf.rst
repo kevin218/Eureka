@@ -43,6 +43,18 @@ linearity_file
 ''''''''''''''
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
+bias_correction
+'''''''''''''''''
+Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
+
+bias_group
+'''''''''''''''''
+Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
+
+bias_smooth_length
+'''''''''''''''''
+Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
+
 custom_bias
 '''''''''''
 Boolean, allows user to supply a custom superbias file and overwrite the default file.
@@ -99,8 +111,12 @@ verbose
 '''''''
 See Stage 3 inputs
 
-isplots
-'''''''
+isplots_S1
+'''''''''''''''''
+Sets how many plots should be saved when running Stage 1. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
+
+nplots
+'''''''''''''''''
 See Stage 3 inputs
 
 hide_plots
@@ -116,8 +132,8 @@ window_len
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''
-Aperture around the trace to mask
+'''''''''''''''''
+Aperture (in pixels) around the trace to mask
 
 ignore_low
 ''''''''''
@@ -277,6 +293,10 @@ photometry
 ''''''''''
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
+convert_to_e
+''''''''''''
+An optional input parameter. If True (default), convert the units of the images to electrons for easy noise estimation. If False (useful for flux-calibrated photometry), the units of the images will not be changed.
+
 poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
@@ -374,8 +394,10 @@ The plot below shows you which parts will be used for the background calculation
 
 .. image:: ../media/bg_hw.png
 
+If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If spec_hw and bg_hw are both lists, all combinations of the two will be attempted.
+
 ff_outlier
-'''''''''
+''''''''''
 Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.  
 
 bg_thresh
@@ -450,9 +472,13 @@ interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
+ctr_guess
+'''''''''
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+
 ctr_cutout_size
 '''''''''''''''
-Only used for photometry analyses. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+Only used for photometry analyses. Amount of pixels all around the guessed centroid location which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
 oneoverf_corr
 '''''''''''''
@@ -468,15 +494,15 @@ Only used for photometry analyses. Skips the background subtraction in the apert
 
 photap
 ''''''
-Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered.
+Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
 
 skyin
 '''''
-Only used for photometry analyses. Inner sky annulus edge, in pixels.
+Only used for photometry analyses. Inner sky annulus edge, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skywidth are also lists, all combinations of the three will be attempted.
 
-skyout
-''''''
-Only used for photometry analyses. Outer sky annulus edge, in pixels.
+skywidth
+''''''''
+Only used for photometry analyses. The width of the sky annulus, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skyin are also lists, all combinations of the three will be attempted.
 
 isplots_S3
 ''''''''''
@@ -567,6 +593,11 @@ Start and End of the wavelength range being considered. Set to None to use the s
 allapers
 ''''''''
 If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
+
+
+mask_columns
+''''''''
+List of pixel columns that should not be used when constructing a light curve.  Absolute (not relative) pixel columns should be used. Figure 3102 is very helpful for identifying bad pixel columns.
 
 
 recordDrift

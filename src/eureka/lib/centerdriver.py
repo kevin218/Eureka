@@ -80,7 +80,8 @@ def centerdriver(method, data, guess, trim, radius, size,
         extra = sy, sx  # Gaussian 1-sigma half-widths
         # only plot when we do the second fit --> so we fit the dot in
         # the middle of the target.
-        if meta.isplots_S3 >= 5 and len(img) == (2 * meta.ctr_cutout_size + 1):
+        if (meta.isplots_S3 >= 5 and i < meta.nplots and
+                len(img) == (2 * meta.ctr_cutout_size + 1)):
             plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # elif method == 'col':
