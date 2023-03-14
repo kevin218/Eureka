@@ -303,7 +303,15 @@ If True, use an updated polynomial wavelength solution for NIRCam longwave spect
 
 gain
 ''''
-Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None *AND* gainfile is None, this specifies the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+
+gainfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the GAIN files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
+
+photfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute between brightness units (e.g. MJy/sr) to ADU or DN if required. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the PHOTOM files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
 
 hst_cal
 '''''''
