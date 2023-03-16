@@ -51,10 +51,7 @@ class PyMC3Model:
         self.time_units = kwargs.get('time_units', 'BMJD_TDB')
         self.flux = kwargs.get('flux', None)
         self.freenames = kwargs.get('freenames', None)
-        self._parameters = kwargs.get('parameters', None)
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
+        self._parameters = kwargs.get('parameters', Parameters())
         self.longparamlist = kwargs.get('longparamlist', None)
         self.paramtitles = kwargs.get('paramtitles', None)
         self.modeltype = kwargs.get('modeltype', None)
