@@ -406,7 +406,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             if ampl_used_bool[k]:
                 edges_temp = edges_all[k]
                 data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
-                    np.median(flux_all[k], axis=1)[:, None]
+                    np.nanmedian(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
                      ' Please choose between meanerr or median.',

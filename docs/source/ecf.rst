@@ -434,6 +434,10 @@ interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
+centroid_method
+'''''''''''''''
+Only used for photometry analyses. Selects the method used for an intial centroid guess. There is a first and second centroid guess location along with gaussian widths created with the mgmc method. The mgmc method creats a median frame from the current integration set and preforms a centroiding technique on the median frame. The optimal technique found has been 'com' or 'center of mass' when using mgmc. 'fgc' is the legacy centroiding method. Options: mgmc, fgc
+
 ctr_cutout_size
 '''''''''''''''
 Only used for photometry analyses. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
@@ -461,6 +465,14 @@ Only used for photometry analyses. Inner sky annulus edge, in pixels.
 skyout
 ''''''
 Only used for photometry analyses. Outer sky annulus edge, in pixels.
+
+centroid_tech
+'''''''''''''
+Only used for photometry analyses. Technique used for first and second guess centroiding location. Only required for the mgmc method. Options: com, gauss1d, gauss2d
+
+gauss_frame
+'''''''''''
+Only used for photometry analyses. Range away from first centroid guess to include in centroiding map for gaussian widths. Only required for mgmc method. Options: 1 -> Max frame size (type integer).
 
 isplots_S3
 ''''''''''

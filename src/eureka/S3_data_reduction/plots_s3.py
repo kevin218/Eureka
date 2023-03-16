@@ -728,37 +728,50 @@ def phot_centroid(data, meta):
 
     - 2022-08-02 Sebastian Zieba
         Initial version
+    - 2023-02-24 Isaac Edelman
+        Enchanced graph layout, 
+        added sig display values for sy,sx,
+        and fixed issue with ax[2] displaying sy instead of sx.
     """
     plt.figure(3109)
     plt.clf()
-    fig, ax = plt.subplots(4, 1, sharex=True)
+    fig, ax = plt.subplots(4, 1, figsize=(10, 6), sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
     cx_rms = np.sqrt(np.mean((cx - np.median(cx)) ** 2))
     cy = data.centroid_y.values
     cy_rms = np.sqrt(np.mean((cy - np.median(cy)) ** 2))
+    csx = data.centroid_sx.values
+    csx_rms = np.sqrt(np.mean((csx - np.median(csx)) ** 2))
+    csy = data.centroid_sy.values
+    csy_rms = np.sqrt(np.mean((csy - np.median(csy)) ** 2))
 
     ax[0].plot(data.time, data.centroid_x-np.mean(data.centroid_x),
                label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms))
     ax[0].set_ylabel('Delta x')
-    ax[0].legend()
+    ax[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
     ax[1].plot(data.time, data.centroid_y-np.mean(data.centroid_y),
                label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms))
     ax[1].set_ylabel('Delta y')
-    ax[1].legend()
+    ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
-    ax[2].plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
+    ax[2].plot(data.time, data.centroid_sx-np.mean(data.centroid_sx),
+               label=r'$\sigma$sx = {0:.4f} pxls'.format(csx_rms))
     ax[2].set_ylabel('Delta sx')
+    ax[2].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
-    ax[3].plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
+    ax[3].plot(data.time, data.centroid_sy-np.mean(data.centroid_sy),
+               label=r'$\sigma$sy = {0:.4f} pxls'.format(csy_rms))
     ax[3].set_ylabel('Delta sy')
     ax[3].set_xlabel('Time')
+    ax[3].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
     fig.subplots_adjust(hspace=0.02)
 
     plt.tight_layout()
+    fig.align_ylabels()
     fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
