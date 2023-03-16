@@ -28,7 +28,7 @@ jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection thresho
 
 # Custom linearity reference file
 custom_linearity    False
-superbias_file      /path/to/custom/linearity/fits/file
+linearity_file      /path/to/custom/linearity/fits/file
 
 # Custom bias frames
 custom_bias         False

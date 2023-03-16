@@ -7,6 +7,7 @@ from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
+from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
@@ -200,6 +201,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
             self.lastframe.skip = meta.skip_lastframe
             self.rscd.skip = meta.skip_rscd
 
+        # Define superbias offset procedure
+        self.superbias = Eureka_SuperBiasStep()
+        self.superbias.s1_meta = meta
+        self.superbias.s1_log = log
+        
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm

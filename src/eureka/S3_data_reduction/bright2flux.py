@@ -297,7 +297,24 @@ def convert_to_e(data, meta, log):
                        'reference files for non-JWST observations!')
             log.writelog(message, mute=True)
             raise ValueError(message)
-        meta.photfile, meta.gainfile = retrieve_ancil(data.attrs['filename'])
+
+        # Retrieve the required reference files if not manually specified
+        if not hasattr(meta, 'gainfile') or not hasattr(meta, 'photfile'):
+            photfile, gainfile = retrieve_ancil(data.attrs['filename'])
+
+        if not hasattr(meta, 'photfile'):
+            meta.photfile = photfile
+        else:
+            log.writelog(f'  Using provided photfile={meta.photfile} to '
+                         'convert units to DN...',
+                         mute=(not meta.verbose))
+
+        if not hasattr(meta, 'gainfile'):
+            meta.gainfile = gainfile
+        else:
+            log.writelog(f'  Using provided gainfile={meta.gainfile} to '
+                         'convert units to electrons...',
+                         mute=(not meta.verbose))
     else:
         log.writelog('  Converting from electrons per second (e/s) to '
                      'electrons...', mute=(not meta.verbose))

@@ -3,6 +3,34 @@ from astropy.io import ascii
 import numpy as np
 
 
+def savetable_S1(filename, scale_factor):
+    """Save the scale factor from Stage 1 as an ECSV.
+
+    Parameters
+    ----------
+    filename : str
+        The fully qualified filename that the results will be stored in.
+    scale_factor : ndarray (2D)
+        The bias scale factor of dimension nints by ngroup
+
+    Raises
+    ------
+    ValueError
+        There was a shape mismatch between your arrays
+    """
+    nint, ngroup = scale_factor.shape
+
+    names = []
+    for ii in range(1, ngroup+1):
+        names.append(f'group{ii}')
+    names = tuple(names)
+
+    table = QTable(scale_factor, names=names)
+    ascii.write(table, filename, format='ecsv', overwrite=True,
+                fast_writer=True)
+    return
+
+
 def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
                  individual_models, model, residuals):
     """Save the results from Stage 5 as an ECSV file.

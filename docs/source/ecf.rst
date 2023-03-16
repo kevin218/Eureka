@@ -43,6 +43,18 @@ linearity_file
 ''''''''''''''
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
+bias_correction
+'''''''''''''''''
+Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
+
+bias_group
+'''''''''''''''''
+Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
+
+bias_smooth_length
+'''''''''''''''''
+Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
+
 custom_bias
 '''''''''''
 Boolean, allows user to supply a custom superbias file and overwrite the default file.
@@ -99,8 +111,12 @@ verbose
 '''''''
 See Stage 3 inputs
 
-isplots
-'''''''
+isplots_S1
+'''''''''''''''''
+Sets how many plots should be saved when running Stage 1. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
+
+nplots
+'''''''''''''''''
 See Stage 3 inputs
 
 hide_plots
@@ -116,8 +132,8 @@ window_len
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''
-Aperture around the trace to mask
+'''''''''''''''''
+Aperture (in pixels) around the trace to mask
 
 ignore_low
 ''''''''''
@@ -287,7 +303,15 @@ If True, use an updated polynomial wavelength solution for NIRCam longwave spect
 
 gain
 ''''
-Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None *AND* gainfile is None, this specifies the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+
+gainfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the GAIN files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
+
+photfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute between brightness units (e.g. MJy/sr) to ADU or DN if required. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the PHOTOM files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
 
 hst_cal
 '''''''
@@ -577,6 +601,11 @@ Start and End of the wavelength range being considered. Set to None to use the s
 allapers
 ''''''''
 If True, run S4 on all of the apertures considered in S3. Otherwise the code will use the only or newest S3 outputs found in the inputdir. To specify a particular S3 save file, ensure that "inputdir" points to the procedurally generated folder containing that save file (e.g. set inputdir to /Data/JWST-Sim/NIRCam/Stage3/S3_2021-11-08_nircam_wfss_ap10_bg10_run1/).
+
+
+mask_columns
+''''''''
+List of pixel columns that should not be used when constructing a light curve.  Absolute (not relative) pixel columns should be used. Figure 3102 is very helpful for identifying bad pixel columns.
 
 
 recordDrift
