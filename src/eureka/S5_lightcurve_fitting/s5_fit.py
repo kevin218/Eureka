@@ -217,10 +217,22 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.time_units = time_units
             meta.wave_units = lc.data.attrs['wave_units']
 
-            xpos = np.ma.masked_invalid(lc.centroid_x.values)
-            xwidth = np.ma.masked_invalid(lc.centroid_sx.values)
-            ypos = np.ma.masked_invalid(lc.centroid_y.values)
-            ywidth = np.ma.masked_invalid(lc.centroid_sy.values)
+            if hasattr(lc, 'centroid_x'):
+                xpos = np.ma.masked_invalid(lc.centroid_x.values)
+            else:
+                xpos = None
+            if hasattr(lc, 'centroid_sx'):
+                xwidth = np.ma.masked_invalid(lc.centroid_sx.values)
+            else:
+                xwidth = None
+            if hasattr(lc, 'centroid_y'):
+                ypos = np.ma.masked_invalid(lc.centroid_y.values)
+            else:
+                ypos = None
+            if hasattr(lc, 'centroid_sy'):
+                ywidth = np.ma.masked_invalid(lc.centroid_sy.values)
+            else:
+                ywidth = None
 
             # make citations for current stage
             util.make_citations(meta, 5)
