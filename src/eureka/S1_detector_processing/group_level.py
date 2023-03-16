@@ -38,8 +38,17 @@ def GLBS(input_model, log, meta):
     dq = input_model.groupdq
 
     meta.inst = input_model.meta.instrument.name.lower()
-    meta.int_start = 0
     meta.n_int = all_data.shape[0]
+    meta.int_start = 0
+    if not hasattr(meta, 'nplots') or meta.nplots is None:
+        meta.int_end = meta.n_int
+    elif meta.int_start+meta.nplots > meta.n_int:
+        # Too many figures requested, so reduce it
+        meta.int_end = meta.n_int
+    else:
+        meta.int_end = meta.int_start+meta.nplots
+    if meta.inst == 'miri':
+        meta.isrotate = False
 
     for ngrp in range(all_data.shape[1]):
         grp_data = all_data[:, ngrp, :, :]
@@ -61,10 +70,11 @@ def GLBS(input_model, log, meta):
         xrdict = dict(flux=xrdata, mask=xrmask)
         data = xrio.makeDataset(dictionary=xrdict)
         data['flux'].attrs['flux_units'] = 'n/a'
+        data.attrs['intstart'] = meta.intstart
         if ngrp == all_data.shape[1]-1:
             data = bkg.BGsubtraction(data, meta, 
                                      log, 0, 
-                                     meta.isplots)
+                                     meta.isplots_S1)
         else:
             # do not show plots except for the last group
             data = bkg.BGsubtraction(data, meta, 

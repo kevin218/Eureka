@@ -96,7 +96,8 @@ def centerdriver(method, data, guess, trim, radius, size,
         sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths
         
-    if meta.isplots_S3 >= 5 and len(img) == (2 * meta.ctr_cutout_size + 1):
+    if (meta.isplots_S3 >= 5 and i < meta.nplots and
+            len(img) == (2 * meta.ctr_cutout_size + 1)):
         plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return

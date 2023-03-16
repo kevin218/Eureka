@@ -8,6 +8,8 @@ max_memory           0.5              # The maximum fraction of memory you want 
 suffix               calints          # Data file suffix
 photometry           True             # Set to True if the user wants to analyse a photometric dataset
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
 ywindow              [4, 256]         # Vertical axis as seen in DS9
 xwindow              [512, 1536]      # Horizontal axis as seen in DS9
@@ -24,9 +26,9 @@ ctr_cutout_size      11               # Cutoff size all around the centroid afte
 oneoverf_corr        median           # Options: None, meanerr, median
 oneoverf_dist        350              # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
 skip_apphot_bg       False            # Skips the background subtraction during the aperture photometry step
-photap               65               # Size of photometry aperture in pixels (NOTE TO SELF:automatically set appratures by doing [55,75,5])
+photap               65               # Size of photometry aperture in pixels
 skyin                70               # Inner sky annulus edge, in pixels
-skyout               90               # Outer sky annulus edge, in pixels
+skywidth             20               # Width of the sky annulus, in pixels
 centroid_tech        com              # (mgmc method param) Technique used for centroiding. Options: com, gauss1d, gauss2d
 gauss_frame          100              # (mgmc method param) Range away from first centroid guess to include in centroiding map for gaussian widths. Options: 1 -> Max frame size.
 
@@ -42,5 +44,5 @@ verbose              True        # If True, more details will be printed about s
 topdir          /home/User/Data/JWST-Sim/NIRCam/
 
 # Directories relative to topdir
-inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       Stage3

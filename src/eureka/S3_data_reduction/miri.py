@@ -1,6 +1,7 @@
 import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
+from . import background
 try:
     from jwst import datamodels
 except ImportError:
@@ -56,34 +57,72 @@ def read(filename, data, meta, log):
     data.attrs['filename'] = filename
     data.attrs['mhdr'] = hdulist[0].header
     data.attrs['shdr'] = hdulist['SCI', 1].header
-    data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
-    data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    try:
+        data.attrs['intstart'] = data.attrs['mhdr']['INTSTART']-1
+    except:
+        data.attrs['intstart'] = 0
+    try:
+        data.attrs['intend'] = data.attrs['mhdr']['INTEND']
+    except:
+        data.attrs['intend'] = (data.attrs['intstart'] +
+                                data.attrs['mhdr']['NINTS'])
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
 
-    meta.photometry = False  # Photometry for MIRI not implemented yet.
+    if data.attrs['mhdr']['EXP_TYPE'] == 'MIR_IMAGE':
+        # Working on photometry data
+        meta.photometry = True
+        # The DISPAXIS argument does not exist in the header of the photometry
+        # data. Added it here so that code in other sections doesn't have to
+        # be changed
+        data.attrs['shdr']['DISPAXIS'] = 1
 
-    # If wavelengths are all zero or missing --> use jwst to get wavelengths
-    # Otherwise use the wavelength array from the header
-    try:
-        hdulist['WAVELENGTH', 1]
-        wl_missing = False
-    except:
-        if meta.firstFile:
-            log.writelog('  WAVELENGTH extension not found, using '
-                         'miri.wave_MIRI_jwst function instead.')
-        wl_missing = True
-
-    if wl_missing or np.all(hdulist['WAVELENGTH', 1].data == 0):
-        wave_2d = wave_MIRI_jwst(filename, meta, log)
+        # FINDME: make this better for all filters
+        if hdulist[0].header['FILTER'] == 'F560W':
+            meta.phot_wave = 5.60
+        elif hdulist[0].header['FILTER'] == 'F770W':
+            meta.phot_wave = 7.70
+        elif hdulist[0].header['FILTER'] == 'F1000W':
+            meta.phot_wave = 10.00
+        elif hdulist[0].header['FILTER'] == 'F1130W':
+            meta.phot_wave = 11.30
+        elif hdulist[0].header['FILTER'] == 'F1280W':
+            meta.phot_wave = 12.80
+        elif hdulist[0].header['FILTER'] == 'F1500W':
+            meta.phot_wave = 15.00
+        elif hdulist[0].header['FILTER'] == 'F1800W':
+            meta.phot_wave = 18.00
+        elif hdulist[0].header['FILTER'] == 'F2100W':
+            meta.phot_wave = 21.00
+        elif (hdulist[0].header['FILTER'] == 'F2550W' or
+              hdulist[0].header['FILTER'] == 'F2550WR'):
+            meta.phot_wave = 25.50
+        
+        wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
     else:
-        wave_2d = hdulist['WAVELENGTH', 1].data
-    int_times = hdulist['INT_TIMES', 1].data
+        meta.photometry = False
 
+        # If wavelengths are all zero or missing --> use jwst to get
+        # wavelengths. Otherwise use the wavelength array from the header
+        try:
+            hdulist['WAVELENGTH', 1]
+            wl_missing = False
+        except:
+            if meta.firstFile:
+                log.writelog('  WAVELENGTH extension not found, using '
+                             'miri.wave_MIRI_jwst function instead.')
+            wl_missing = True
+
+        if wl_missing or np.all(hdulist['WAVELENGTH', 1].data == 0):
+            wave_2d = wave_MIRI_jwst(filename, meta, log)
+        else:
+            wave_2d = hdulist['WAVELENGTH', 1].data
+    
     # Record integration mid-times in BMJD_TDB
+    int_times = hdulist['INT_TIMES', 1].data
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
@@ -145,9 +184,11 @@ def read(filename, data, meta, log):
                                endpoint=True)[data.attrs['intstart']:
                                               data.attrs['intend']-1]
         else:
-            raise AssertionError('Eureka does not currently know how to '
-                                 'generate the time array for these'
-                                 'simulations.')
+            if meta.firstFile:
+                log.writelog('  Eureka does not currently know how to '
+                             'generate the time array for these '
+                             'simulations. Using integer number instead.')
+            time = np.arange(data.attrs['intstart'], data.attrs['intend'])
     else:
         time = int_times['int_mid_BJD_TDB']
 
@@ -172,9 +213,12 @@ def read(filename, data, meta, log):
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
     
-    # Figure out the x-axis (aka the original y-axis) pixel numbers since we've
-    # reversed the order of the x-axis
-    x = np.arange(sci.shape[2])[::-1]
+    if meta.photometry:
+        x = None
+    else:
+        # Figure out the x-axis (aka the original y-axis) pixel numbers since
+        # we've reversed the order of the x-axis
+        x = np.arange(sci.shape[2])[::-1]
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
                                        name='flux', x=x)
@@ -184,8 +228,12 @@ def read(filename, data, meta, log):
                                      name='dq', x=x)
     data['v0'] = xrio.makeFluxLikeDA(v0, time, flux_units, time_units,
                                      name='v0', x=x)
-    data['wave_2d'] = (['y', 'x'], wave_2d)
-    data['wave_2d'].attrs['wave_units'] = wave_units
+    if not meta.photometry:
+        data['wave_2d'] = (['y', 'x'], wave_2d)
+        data['wave_2d'].attrs['wave_units'] = wave_units
+    else:
+        data['wave_1d'] = (['x'], wave_1d)
+        data['wave_1d'].attrs['wave_units'] = wave_units
 
     return data, meta, log
 
@@ -256,6 +304,28 @@ def flag_bg(data, meta, log):
     return nircam.flag_bg(data, meta, log)
 
 
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    return nircam.flag_ff(data, meta, log)
+
+
 def fit_bg(dataim, datamask, n, meta, isplots=0):
     """Fit for a non-uniform background.
 
@@ -284,7 +354,15 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    return nircam.fit_bg(dataim, datamask, n, meta, isplots=isplots)
+    if hasattr(meta, 'isrotate'):
+        isrotate = meta.isrotate
+    else:
+        isrotate = 2
+    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
+                                meta.bg_y2, deg=meta.bg_deg,
+                                threshold=meta.p3thresh, isrotate=isrotate,
+                                isplots=isplots)
+    return bg, mask, n
 
 
 def cut_aperture(data, meta, log):
@@ -323,3 +401,27 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def flag_bg_phot(data, meta, log):
+    '''Outlier rejection of segment along time axis adjusted for the
+    photometry reduction routine.
+
+    Uses the code written for NIRCam which works for MIRI as long
+    as the MIRI data gets rotated.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier background pixels flagged.
+    '''
+    return nircam.flag_bg_phot(data, meta, log)

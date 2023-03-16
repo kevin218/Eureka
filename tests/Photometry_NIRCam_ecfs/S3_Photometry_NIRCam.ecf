@@ -8,6 +8,8 @@ max_memory      0.5         # The maximum fraction of memory you want utilized b
 suffix          calints     # Data file suffix
 photometry      True        # Set to True if the user wants to analyze a photometric dataset
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
 ywindow         [4, 256]     # Vertical axis as seen in DS9
 xwindow         [512, 1536]  # Horizontal axis as seen in DS9
@@ -19,14 +21,14 @@ bg_thresh       [5,5]        # Double-iteration X-sigma threshold for outlier re
 
 # Photometric extraction parameters
 interp_method    linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
-centroid_method  fgc        # Method used for centroiding. Options: mgmc, fgc
+centroid_method  fgc         # Method used for centroiding. Options: mgmc, fgc
 ctr_cutout_size  7           # Cutoff size all around the centroid after the coarse centroid calculation
 oneoverf_corr    median      # Options: None, meanerr, median
 oneoverf_dist    300         # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
 skip_apphot_bg   True        # Skips the background subtraction during the aperture photometry step
 photap           60          # Size of photometry aperture in pixels
 skyin            70          # Inner sky annulus edge, in pixels
-skyout           90          # Outer sky annulus edge, in pixels
+skywidth         20          # Width of the sky annulus, in pixels
 centroid_tech    com         # (mgmc method param) Technique used for centroiding. Options: com, gauss1d, gauss2d
 gauss_frame      100         # (mgmc method param) Range away from first centroid guess to include in centroiding map for gaussian widths. Options: 1 -> Max frame size.
 
