@@ -508,6 +508,9 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
             freenames.append(key)
     freenames = np.array(freenames)
 
+    if not hasattr(meta, 'recenter_ld_prior'):
+        meta.recenter_ld_prior = True
+
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
@@ -518,9 +521,6 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
         lc_model.unc_fit[masked] = np.ma.median(lc_model.unc_fit)
         lc_model.unc.mask = False
         lc_model.unc_fit.mask = False
-        
-        if not hasattr(meta, 'recenter_ld_prior'):
-            meta.recenter_ld_prior = True
 
         t_starry = dm.StarryModel(parameters=params, name='starry',
                                   fmt='r--', log=log,
