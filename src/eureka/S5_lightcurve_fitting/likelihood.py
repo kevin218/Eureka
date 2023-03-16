@@ -39,6 +39,10 @@ def ln_like(theta, lc, model, freenames):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
+            if theta[ind[chan]] <= 0:
+                # Force scatter_ppm to be > 0
+                return -np.inf
+
             if model.multwhite:
                 trim1 = np.nansum(model.mwhites_nexp[:chan])
                 trim2 = trim1 + model.mwhites_nexp[chan]
@@ -52,6 +56,10 @@ def ln_like(theta, lc, model, freenames):
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
+            if theta[ind[chan]] <= 0:
+                # Force scatter_mult to be > 0
+                return -np.inf
+
             if model.multwhite:
                 trim1 = np.nansum(model.mwhites_nexp[:chan])
                 trim2 = trim1 + model.mwhites_nexp[chan]
