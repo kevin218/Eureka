@@ -56,22 +56,15 @@ class StarryModel(PyMC3Model):
         ylm_params = np.where(['Y' == par[0] and par[1].isnumeric()
                                for par in self.paramtitles])[0]
         if len(ylm_params) > 0:
-            l_vals = [int(self.paramtitles[ind][1:].split('_')[0])
+            l_vals = [int(self.paramtitles[ind][1])
                       for ind in ylm_params]
             self.ydeg = max(l_vals)
         else:
             self.ydeg = 0
 
-    def setup(self, full_model):
+    def setup(self):
         """Setup a model for evaluation and fitting.
-
-        Parameters
-        ----------
-        full_model : CompositePyMC3Model
-            The full composite model - used to get the PyMC3 model.
         """
-        self.full_model = full_model
-
         self.systems = []
         for c in range(self.nchan):
             # To save ourselves from tonnes of getattr lines, let's make a
@@ -85,7 +78,8 @@ class StarryModel(PyMC3Model):
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact
-                    setattr(temp, key, getattr(self.model, key+'_'+str(c)))
+                    setattr(temp, key, getattr(self.model,
+                                               key+'_'+str(c)))
                 else:
                     setattr(temp, key, getattr(self.model, key))
 
@@ -216,7 +210,7 @@ class StarryModel(PyMC3Model):
         ndarray
             The disk-integrated planetary flux for each value of theta.
         """
-        with self.full_model.model:
+        with self.model:
             fps = []
             for c in range(self.nchan):
                 planet_map = self.fit.systems[c].secondaries[0].map

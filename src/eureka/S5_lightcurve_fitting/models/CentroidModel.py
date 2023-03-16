@@ -46,9 +46,10 @@ class CentroidModel(Model):
         self.centroid = kwargs.get('centroid')
 
         if self.nchan == 1:
-            self.coeff_keys = [self.axis]
+            self.coeff_keys = [self.axis, ]
         else:
-            self.coeff_keys = [f'{self.axis}_{i}' for i in range(self.nchan)]
+            self.coeff_keys = [f'{self.axis}_{i}' if i > 0 else self.axis
+                               for i in range(self.nchan)]
 
     @property
     def centroid(self):

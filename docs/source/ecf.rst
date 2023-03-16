@@ -35,6 +35,14 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+custom_linearity
+''''''''''''''''
+Boolean. If True, allows user to supply a custom linearity correction file and overwrite the default file.
+
+linearity_file
+''''''''''''''
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+
 bias_correction
 '''''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
@@ -48,20 +56,20 @@ bias_smooth_length
 Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
 
 custom_bias
-'''''''''''''''''
-Boolean, allows user to supply a custom bias file and overwrite the default file
+'''''''''''
+Boolean, allows user to supply a custom superbias file and overwrite the default file.
 
 superbias_file
-'''''''''''''''''
-path to custom superbias file
+''''''''''''''
+The fully qualified path to the custom superbias file to use if custom_bias is True.
 
 update_sat_flags
-'''''''''''''''''
+''''''''''''''''
 Boolean, allows user to have more control over saturation flags. Must be True to use the settings expand_prev_group, dq_sat_mode, and dq_sat_percentile or dq_sat_columns.
 
 expand_prev_group
 '''''''''''''''''
-Boolean, if a given group is saturated, this option will mark the previous group as saturated as well
+Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
 '''''''''''''''''
@@ -72,35 +80,35 @@ dq_sat_percentile
 If dq_sat_mode = percentile, percentile threshold to use
 
 dq_sat_columns
-'''''''''''''''''
+''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
 grouplevel_bg
-'''''''''''''''''
+'''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
 
 ncpu
-'''''''''''''''''
+''''
 Number of cpus to use for GLBS
 
 bg_y1
-'''''''''''''''''
+'''''
 The pixel number for the end of the bottom background region. The background region goes from the bottom of the subarray to this pixel.
 
 bg_y2
-'''''''''''''''''
+'''''
 The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
 
 bg_deg
-'''''''''''''''''
+''''''
 See Stage 3 inputs
 
 p3thresh
-'''''''''''''''''
+''''''''
 See Stage 3 inputs
 
 verbose
-'''''''''''''''''
+'''''''
 See Stage 3 inputs
 
 isplots_S1
@@ -112,15 +120,15 @@ nplots
 See Stage 3 inputs
 
 hide_plots
-'''''''''''''''''
+''''''''''
 See Stage 3 inputs
 
 masktrace
-'''''''''''''''''
+'''''''''
 Boolean, creates a mask centered on the trace prior to GLBS for curved traces
 
 window_len
-'''''''''''''''''
+''''''''''
 Smoothing length for the trace location
 
 expand_mask
@@ -128,23 +136,23 @@ expand_mask
 Aperture (in pixels) around the trace to mask
 
 ignore_low
-'''''''''''''''''
+''''''''''
 Columns below this index will not be used to create the mask
 
 ignore_hi
-'''''''''''''''''
+'''''''''
 Columns above this index will not be used to create the mask
 
 refpix_corr
-'''''''''''''''''
+'''''''''''
 Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray. 
 
 npix_top 
-'''''''''''''''''
+''''''''
 Number of rows to use for ROEBA routine along the top of the subarray
 
 npix_bot 
-'''''''''''''''''
+''''''''
 Number of rows to use for ROEBA routine along the bottom of the subarray
 
 
@@ -292,6 +300,18 @@ An optional input parameter. If True (default), convert the units of the images 
 poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
+
+gain
+''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None *AND* gainfile is None, this specifies the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+
+gainfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the GAIN files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
+
+photfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute between brightness units (e.g. MJy/sr) to ADU or DN if required. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the PHOTOM files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
 
 hst_cal
 '''''''
@@ -777,8 +797,8 @@ Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
 [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
 For theano-based differentiable functions, this can be one or more of the following:
-[starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
-where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc.
+[starry, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 
 manual_clip
 '''''''''''
@@ -947,12 +967,12 @@ This file describes the transit/eclipse and systematics parameters and their pri
          actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Ms``.
    - Sinusoidal Phase Curve Parameters
-      The sinusoid_pc phase curve model allows for the inclusion of up to four sinusoids into a single phase curve
+      The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
-      - ``AmpCos1`` - Amplitude of the first cosine
-      - ``AmpSin1`` - Amplitude of the first sine
-      - ``AmpCos2`` - Amplitude of the second cosine
-      - ``AmpSin2`` - Amplitude of the second sine
+      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5)
+      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75
+      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0)
+      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
