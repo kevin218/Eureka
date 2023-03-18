@@ -197,12 +197,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
                 # Remove requested data points
-                meta, lc, log = util.manual_clip(lc, meta, log)
                 if meta.multwhite:
                     for p in range(len(meta.inputdirlist)+1):
                         meta, lc_whites[p], log = \
                             util.manual_clip(lc_whites[p], meta, log)
                         meta.mwhites_nexp[p] = len(lc_whites[p].time.values)
+                else:
+                    meta, lc, log = util.manual_clip(lc, meta, log)
 
             # Subtract off the user provided time value to avoid floating
             # point precision problems when fitting for values like t0
