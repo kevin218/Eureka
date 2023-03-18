@@ -201,15 +201,12 @@ class PyMC3Model:
         """
         return
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue',
-             zorder=np.inf, share=False, multwhite=False, mwhites_trim=[],
-             chan=0, **kwargs):
+    def plot(self, components=False, ax=None, draw=False, color='blue',
+             zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model.
 
         Parameters
         ----------
-        time : array-like
-            The time axis to use.
         components : bool; optional
             Plot all model components.
         ax : Matplotlib Axes; optional
@@ -232,9 +229,6 @@ class PyMC3Model:
             fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
-        # Set the time
-        self.time = time
-
         # Plot the model
         label = self.fitter
         if self.name != 'New PyMC3Model':
@@ -246,22 +240,21 @@ class PyMC3Model:
             channel = chan
         model = self.eval(channel=channel, **kwargs)
 
-        if share and not multwhite:
+        if share and not self.multwhite:
             time = self.time
-        elif multwhite:
+        elif self.multwhite:
             trim1 = np.nansum(self.mwhites_nexp[:chan])
             trim2 = trim1 + self.mwhites_nexp[chan]
-            time = time[trim1:trim2]
+            time = self.time[trim1:trim2]
 
         ax.plot(time, model, '.', ls='', ms=2, label=label,
                 color=color, zorder=zorder)
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False,
+                component.plot(ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
-                               chan=chan, multwhite=multwhite,
-                               mwhites_trim=mwhites_trim, **kwargs)
+                               chan=chan, **kwargs)
 
         # Format axes
         ax.set_xlabel(str(self.time_units))

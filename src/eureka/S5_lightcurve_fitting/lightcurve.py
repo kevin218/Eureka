@@ -194,12 +194,9 @@ class LightCurve(m.Model):
             if self.share and not meta.multwhite:
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
-                
-            mwhites_trim = []
-            if meta.multwhite:
+            elif meta.multwhite:
                 trim1 = np.nansum(self.mwhites_nexp[:channel])
                 trim2 = trim1 + self.mwhites_nexp[channel]
-                mwhites_trim = [trim1, trim2]
                 time = self.time[trim1:trim2]
                 flux = flux[trim1:trim2]
                 unc = unc[trim1:trim2]
@@ -217,10 +214,8 @@ class LightCurve(m.Model):
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(plot_COLORS),
-                               zorder=np.inf, share=self.share, chan=channel,
-                               multwhite=meta.multwhite,
-                               mwhites_trim=mwhites_trim)
+                    model.plot(ax=ax, color=next(plot_COLORS),
+                               zorder=np.inf, share=self.share, chan=channel)
 
             # Format axes
             ax.set_title(f'{meta.eventlabel} - Channel {channel}')

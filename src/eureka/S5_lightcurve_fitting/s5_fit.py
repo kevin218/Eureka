@@ -217,22 +217,18 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.time_units = time_units
             meta.wave_units = lc.data.attrs['wave_units']
 
-            if hasattr(lc, 'centroid_x'):
-                xpos = np.ma.masked_invalid(lc.centroid_x.values)
-            else:
-                xpos = None
-            if hasattr(lc, 'centroid_sx'):
-                xwidth = np.ma.masked_invalid(lc.centroid_sx.values)
-            else:
-                xwidth = None
-            if hasattr(lc, 'centroid_y'):
-                ypos = np.ma.masked_invalid(lc.centroid_y.values)
-            else:
-                ypos = None
-            if hasattr(lc, 'centroid_sy'):
-                ywidth = np.ma.masked_invalid(lc.centroid_sy.values)
-            else:
-                ywidth = None
+            # Collect the covariates for potential decorrelation
+            centroid_param_list = []
+            for centroid_param in ['centroid_x', 'centroid_sx',
+                                   'centroid_y', 'centroid_sy']:
+                if hasattr(lc, centroid_param):
+                    centroid_param_list.append(
+                        np.ma.masked_invalid(
+                            getattr(lc, centroid_param).values))
+                else:
+                    centroid_param_list.append(
+                        np.zeros_like(lc.time.values))
+            xpos, ypos, xwidth, ywidth = centroid_param_list
 
             # make citations for current stage
             util.make_citations(meta, 5)
@@ -280,7 +276,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 # flux values
                 flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
 
-                meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
+                meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
                                            paramtitles, 1, ld_coeffs,
@@ -325,6 +321,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
                 time = np.ma.masked_array([])
+                xpos = np.ma.masked_array([])
+                ypos = np.ma.masked_array([])
+                xwidth = np.ma.masked_array([])
+                ywidth = np.ma.masked_array([])
 
                 for pi in range(len(meta.inputdirlist)+1):
                     mask = lc_whites[pi].mask.values[0, :]
@@ -352,7 +352,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     xwidth = np.ma.append(xwidth, xwidth_temp)
                     ywidth = np.ma.append(ywidth, ywidth_temp)
 
-                meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
+                meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
                                            paramtitles, chanrng, ld_coeffs,
@@ -381,7 +381,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
 
-                meta, params = fit_channel(meta, lc, time, flux, 0, flux_err,
+                meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
                                            paramtitles, chanrng, ld_coeffs,
@@ -409,7 +409,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     flux, flux_err = util.normalize_spectrum(meta, flux,
                                                              flux_err)
 
-                    meta, params = fit_channel(meta, lc, time, flux, channel,
+                    meta, params = fit_channel(meta, time, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
                                                paramtitles, chanrng, ld_coeffs,
@@ -429,7 +429,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     return meta
 
 
-def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
+def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                 log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
                 xpos, ypos, xwidth, ywidth, white=False):
     """Run a fit for one channel or perform a shared fit.
@@ -438,8 +438,6 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    lc : Xarray Dataset
-        The light curve object.
     time : ndarray
         The time array.
     flux : ndarray
