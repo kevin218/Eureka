@@ -52,7 +52,7 @@ class CentroidModel(PyMC3Model):
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    centroid = split([self.centroid, ], self.nints, chan)
+                    centroid = split([self.centroid, ], self.nints, chan)[0]
                     self.centroid_local.extend(centroid - centroid.mean())
                 self.centroid_local = np.array(self.centroid_local)
             else:

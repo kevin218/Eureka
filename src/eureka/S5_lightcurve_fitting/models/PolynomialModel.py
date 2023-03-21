@@ -52,7 +52,7 @@ class PolynomialModel(Model):
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)
+                    time = split([self.time, ], self.nints, chan)[0]
                     self.time_local.extend(time - time.mean())
                 self.time_local = np.array(self.time_local)
             else:
