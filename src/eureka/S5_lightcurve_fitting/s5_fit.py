@@ -128,8 +128,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 # Need to normalize each one if doing a joint fit
                 lc_whites = []
 
-                meta.stimes_plt = [lc.time.values[0]]
-                meta.etimes_plt = [lc.time.values[-1]]
+                # Get the number of exposures in this white lightcurve so
+                # that we know how to split the flattened arrays
                 meta.mwhites_nexp = [len(lc.time.values)]
 
                 lc_whites.append(lc)
@@ -154,10 +154,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     meta.wave_hi = np.append(meta.wave_hi,
                                              lc_hold.wave_hi.values)
 
-                    meta.stimes_plt = np.append(meta.stimes_plt,
-                                                lc_hold.time.values[0])
-                    meta.etimes_plt = np.append(meta.etimes_plt,
-                                                lc_hold.time.values[-1])
+                    # Get the number of exposures in this white lightcurve so
+                    # that we know how to split the flattened arrays
                     meta.mwhites_nexp = np.append(meta.mwhites_nexp,
                                                   len(lc_hold.time.values))
 
