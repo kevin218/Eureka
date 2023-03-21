@@ -67,5 +67,5 @@ def test_NIRCam(capsys):
     assert np.array_equal(s4_meta.citations, s4_cites)
 
     # remove temporary files
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")
-    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage4")
+    os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage3")
+    os.system(f"rm -r data{os.sep}Photometry{os.sep}NIRCam{os.sep}Stage4")
