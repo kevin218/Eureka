@@ -152,13 +152,16 @@ class PyMC3Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def interp(self, new_time, eval=True, channel=None, **kwargs):
+    def interp(self, new_time, nints, eval=True, channel=None, **kwargs):
         """Evaluate the model over a different time array.
 
         Parameters
         ----------
         new_time : sequence
             The time array.
+        nints : list
+            The number of integrations for each channel, for the new
+            time array.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
@@ -167,15 +170,18 @@ class PyMC3Model:
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Save the current time array
+        # Save the current values
         old_time = copy.deepcopy(self.time)
+        old_nints = copy.deepcopy(self.nints)
 
         # Evaluate the model on the new time array
         self.time = new_time
+        self.nints = nints
         interp_flux = self.eval(eval=eval, channel=channel, **kwargs)
 
-        # Reset the time array
+        # Reset the old values
         self.time = old_time
+        self.nints = old_nints
 
         return interp_flux
 
@@ -629,7 +635,7 @@ class CompositePyMC3Model(PyMC3Model):
                     dt = time[1]-time[0]
                     steps = int(np.round((time[-1]-time[0])/dt+1))
                     nints_interp.append(steps)
-                    new_time.append(np.linspace(time[0], time[-1], steps,
+                    new_time.extend(np.linspace(time[0], time[-1], steps,
                                                 endpoint=True))
                 new_time = np.array(new_time)
             else:
@@ -646,7 +652,10 @@ class CompositePyMC3Model(PyMC3Model):
             nints_interp = self.nints
 
         # Setup the flux array
-        flux = np.ones(len(new_time)*nchan)
+        if self.multwhite:
+            flux = np.ones(len(new_time))
+        else:
+            flux = np.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:
@@ -654,7 +663,7 @@ class CompositePyMC3Model(PyMC3Model):
                 if component.time is None:
                     component.time = self.time
                 if interp:
-                    flux *= component.interp(new_time, eval=eval,
+                    flux *= component.interp(new_time, nints_interp, eval=eval,
                                              channel=channel, **kwargs)
                 else:
                     flux *= component.eval(eval=eval, channel=channel,

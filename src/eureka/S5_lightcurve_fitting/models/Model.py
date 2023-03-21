@@ -131,25 +131,31 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def interp(self, new_time, **kwargs):
+    def interp(self, new_time, nints, **kwargs):
         """Evaluate the model over a different time array.
 
         Parameters
         ----------
         new_time : sequence
             The time array.
+        nints : list
+            The number of integrations for each channel, for the new
+            time array.
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Save the current time array
+        # Save the current values
         old_time = copy.deepcopy(self.time)
+        old_nints = copy.deepcopy(self.nints)
 
         # Evaluate the model on the new time array
         self.time = new_time
+        self.nints = nints
         interp_flux = self.eval(**kwargs)
 
-        # Reset the time array
+        # Reset the old values
         self.time = old_time
+        self.nints = old_nints
 
         return interp_flux
 
@@ -260,8 +266,8 @@ class CompositeModel(Model):
         super().__init__(**kwargs)
 
         self.GP = False
-        for model in self.components:
-            if model.modeltype == 'GP':
+        for component in self.components:
+            if component.modeltype == 'GP':
                 self.GP = True
 
     @property
@@ -360,12 +366,12 @@ class CompositeModel(Model):
         else:
             flux = np.ones(len(self.time)*nchan)
 
-        # Evaluate flux at each model
-        for model in self.components:
-            if model.modeltype == 'systematic':
-                if model.time is None:
-                    model.time = self.time
-                flux *= model.eval(channel=channel, **kwargs)
+        # Evaluate flux at each component
+        for component in self.components:
+            if component.modeltype == 'systematic':
+                if component.time is None:
+                    component.time = self.time
+                flux *= component.eval(channel=channel, **kwargs)
 
         return flux
 
@@ -395,9 +401,9 @@ class CompositeModel(Model):
             flux = np.zeros(len(self.time)*self.nchannel_fitted)
 
         # Evaluate flux
-        for model in self.components:
-            if model.modeltype == 'GP':
-                flux = model.eval(fit, **kwargs)
+        for component in self.components:
+            if component.modeltype == 'GP':
+                flux = component.eval(fit, **kwargs)
         return flux
 
     def physeval(self, interp=False, channel=None, **kwargs):
@@ -448,7 +454,7 @@ class CompositeModel(Model):
                     dt = time[1]-time[0]
                     steps = int(np.round((time[-1]-time[0])/dt+1))
                     nints_interp.append(steps)
-                    new_time.append(np.linspace(time[0], time[-1], steps,
+                    new_time.extend(np.linspace(time[0], time[-1], steps,
                                                 endpoint=True))
                 new_time = np.array(new_time)
             else:
@@ -465,17 +471,20 @@ class CompositeModel(Model):
             nints_interp = self.nints
 
         # Setup the flux array
-        flux = np.ones(len(new_time)*nchan)
+        if self.multwhite:
+            flux = np.ones(len(new_time))
+        else:
+            flux = np.ones(len(new_time)*nchan)
 
-        # Evaluate flux at each model
-        for model in self.components:
-            if model.modeltype == 'physical':
-                if model.time is None:
-                    model.time = self.time
+        # Evaluate flux at each component
+        for component in self.components:
+            if component.modeltype == 'physical':
+                if component.time is None:
+                    component.time = self.time
                 if interp:
-                    flux *= model.interp(new_time, **kwargs)
+                    flux *= component.interp(new_time, nints_interp, **kwargs)
                 else:
-                    flux *= model.eval(channel=channel, **kwargs)
+                    flux *= component.eval(channel=channel, **kwargs)
         return flux, new_time, nints_interp
 
     def update(self, newparams, **kwargs):
