@@ -13,6 +13,7 @@ except:
 
 from .likelihood import computeRMS
 from ..lib import plots, util
+from ..lib.split_channels import split
 
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
@@ -47,7 +48,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
                          f'{type(fitter)}')
 
     model_sys_full = model.syseval()
-    model_phys_full, new_time = model.physeval(interp=meta.interp)
+    model_phys_full, new_time, nints_interp = \
+        model.physeval(interp=meta.interp)
     model_lc = model.eval()
 
     for i, channel in enumerate(lc.fitted_channels):
@@ -57,30 +59,30 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
-        
-        time = lc.time
 
         if lc.share and not meta.multwhite:
+            time = lc.time
             new_timet = new_time
-            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model_sys = model_sys[channel*len(lc.time):
-                                  (channel+1)*len(lc.time)]
-            model_phys = model_phys[channel*len(new_time):
-                                    (channel+1)*len(new_time)]
+
+            # Split the arrays that have lengths of the original time axis
+            flux, unc, model, model_sys = split([flux, unc, model, model_sys],
+                                                meta.nints, channel)
+
+            # Split the arrays that have lengths of the new (potentially
+            # interpolated) time axis
+            model_phys = split([model_phys, ], nints_interp, channel)[0]
         elif meta.multwhite:
-            trim1 = np.nansum(meta.mwhites_nexp[:channel])
-            trim2 = trim1 + meta.mwhites_nexp[channel]
-            
-            time = time[trim1:trim2]
-            new_timet = new_time[trim1:trim2]
-            flux = flux[trim1:trim2]
-            unc = unc[trim1:trim2]
-            model = model[trim1:trim2]
-            model_sys = model_sys[trim1:trim2]
-            model_phys = model_phys[trim1:trim2]
+            # Split the arrays that have lengths of the original time axis
+            time, flux, unc, model, model_sys = \
+                split([lc.time, flux, unc, model, model_sys],
+                      meta.nints, channel)
+
+            # Split the arrays that have lengths of the new (potentially
+            # interpolated) time axis
+            model_phys, new_timet = split([model_phys, new_time],
+                                          nints_interp, channel)
         else:
+            time = lc.time
             new_timet = new_time
 
         residuals = flux - model
@@ -153,7 +155,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                          f'{type(fitter)}')
 
     model_sys_full = model.syseval()
-    model_phys_full, new_time = model.physeval(interp=meta.interp)
+    model_phys_full, new_time, nints_interp = \
+        model.physeval(interp=meta.interp)
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
@@ -166,24 +169,25 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         if lc.share and not meta.multwhite:
             time = lc.time
             new_timet = new_time
-            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model_sys = model_sys[channel*len(lc.time):
-                                  (channel+1)*len(lc.time)]
-            model_phys = model_phys[channel*len(new_time):
-                                    (channel+1)*len(new_time)]
+
+            # Split the arrays that have lengths of the original time axis
+            flux, unc, model, model_sys = split([flux, unc, model, model_sys],
+                                                meta.nints, channel)
+
+            # Split the arrays that have lengths of the new (potentially
+            # interpolated) time axis
+            model_phys = split([model_phys, ],
+                               nints_interp, channel)[0]
         elif meta.multwhite:
-            trim1 = np.nansum(meta.mwhites_nexp[:channel])
-            trim2 = trim1 + meta.mwhites_nexp[channel]
-            
-            time = lc.time[trim1:trim2]
-            new_timet = new_time[trim1:trim2]
-            flux = flux[trim1:trim2]
-            unc = unc[trim1:trim2]
-            model = model[trim1:trim2]
-            model_sys = model_sys[trim1:trim2]
-            model_phys = model_phys[trim1:trim2]
+            # Split the arrays that have lengths of the original time axis
+            time, flux, unc, model, model_sys = \
+                split([lc.time, flux, unc, model, model_sys],
+                      meta.nints, channel)
+
+            # Split the arrays that have lengths of the new (potentially
+            # interpolated) time axis
+            model_phys, new_timet = split([model_phys, new_time],
+                                          nints_interp, channel)
         else:
             time = lc.time
             new_timet = new_time
@@ -319,18 +323,16 @@ def plot_rms(lc, model, meta, fitter):
 
         if lc.share and not meta.multwhite:
             time = lc.time
-            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
+
+            # Split the arrays that have lengths of the original time axis
+            flux, model = split([flux, model], meta.nints, channel)
         elif meta.multwhite:
-            trim1 = np.nansum(meta.mwhites_nexp[:channel])
-            trim2 = trim1 + meta.mwhites_nexp[channel]
-            
-            time = lc.time[trim1:trim2]
-            flux = flux[trim1:trim2]
-            model = model[trim1:trim2]
+            # Split the arrays that have lengths of the original time axis
+            time, flux, model = split([lc.time, flux, model],
+                                      meta.nints, channel)
         else:
             time = lc.time
-            
+
         residuals = flux - model
         residuals = residuals[np.argsort(time)]
 
@@ -631,17 +633,10 @@ def plot_res_distr(lc, model, meta, fitter):
         unc = np.ma.copy(np.array(lc.unc_fit))
         model = np.ma.copy(model_lc)
 
-        if lc.share and not meta.multwhite:
-            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-        elif meta.multwhite:
-            trim1 = np.nansum(meta.mwhites_nexp[:channel])
-            trim2 = trim1 + meta.mwhites_nexp[channel]
-            
-            flux = flux[trim1:trim2]
-            unc = unc[trim1:trim2]
-            model = model[trim1:trim2]
+        if lc.share or meta.multwhite:
+            # Split the arrays that have lengths of the original time axis
+            flux, unc, model = split([flux, unc, model],
+                                     meta.nints, channel)
 
         residuals = flux - model
         hist_vals = residuals/unc
@@ -696,7 +691,6 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
     model_with_GP = model.eval(incl_GP=True)
     model_sys_full = model.syseval()
-    model_phys_full, new_time = model.physeval(interp=meta.interp)
     model_lc = model.eval()
     model_GP = model.GPeval(model_lc)
 
@@ -705,39 +699,39 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_with_GP)
         model_sys = model_sys_full
-        model_phys = model_phys_full
         model_GP_component = model_GP
         color = lc.colors[i]
 
-        if lc.share:
-            flux = flux[channel*len(lc.time):(channel+1)*len(lc.time)]
-            unc = unc[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model = model[channel*len(lc.time):(channel+1)*len(lc.time)]
-            model_sys = model_sys[channel*len(lc.time):
-                                  (channel+1)*len(lc.time)]
-            model_phys = model_phys[channel*len(new_time):
-                                    (channel+1)*len(new_time)]
-            model_GP_component = model_GP_component[channel*len(lc.time):
-                                                    (channel+1)*len(lc.time)]
+        if lc.share and not meta.multwhite:
+            time = lc.time
+            # Split the arrays that have lengths of the original time axis
+            flux, unc, model, model_sys, model_GP_component = \
+                split([flux, unc, model, model_sys, model_GP_component],
+                      meta.nints, channel)
+        elif meta.multwhite:
+            # Split the arrays that have lengths of the original time axis
+            time, flux, unc, model, model_sys, model_GP_component = \
+                split([lc.time, flux, unc, model, model_sys,
+                       model_GP_component], meta.nints, channel)
 
         residuals = flux - model
         fig = plt.figure(5102, figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3, 1)
-        ax[0].errorbar(lc.time, flux, yerr=unc, fmt='.', color='w',
+        ax[0].errorbar(time, flux, yerr=unc, fmt='.', color='w',
                        ecolor=color, mec=color)
-        ax[0].plot(lc.time, model, '.', ls='', ms=2, color='0.3',
+        ax[0].plot(time, model, '.', ls='', ms=2, color='0.3',
                    zorder=10)
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
-        ax[1].plot(lc.time, model_GP_component, '.', color=color)
+        ax[1].plot(time, model_GP_component, '.', color=color)
         ax[1].set_ylabel('GP component', size=14)
         ax[1].set_xlabel(str(lc.time_units), size=14)
-        ax[2].errorbar(lc.time, residuals*1e6, yerr=unc*1e6, fmt='.',
+        ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
-        ax[2].plot(lc.time, np.zeros_like(lc.time), color='0.3', zorder=10)
+        ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 

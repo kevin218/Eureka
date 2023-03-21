@@ -7,13 +7,14 @@ from . import fitters
 from . import gradient_fitters
 from .utils import COLORS, color_gen
 from ..lib import plots
+from ..lib.split_channels import split
 
 
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,
-                 multwhite=False, mwhites_nexp=[]):
+                 multwhite=False, nints=[]):
         """
         A class to store the actual light curve
 
@@ -44,7 +45,7 @@ class LightCurve(m.Model):
             Whether the current fit is for a white-light light curve
         multwhite : bool; optional
             Whether the current fit is for a multi white-light lightcurve fit.
-        mwhites_nexp : bool; optional
+        nints : bool; optional
             Number of exposures of each white lightcurve for splitting
             up time array.
 
@@ -69,7 +70,7 @@ class LightCurve(m.Model):
         self.channel = channel
         self.nchannel = nchannel
         self.multwhite = multwhite
-        self.mwhites_nexp = mwhites_nexp
+        self.nints = nints
         if self.share or self.multwhite:
             self.nchannel_fitted = self.nchannel
             self.fitted_channels = np.arange(self.nchannel)
@@ -192,14 +193,12 @@ class LightCurve(m.Model):
             time = self.time
             
             if self.share and not meta.multwhite:
-                flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
-                unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
+                # Split the arrays that have lengths of the original time axis
+                flux, unc = split([flux, unc], meta.nints, channel)
             elif meta.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = self.time[trim1:trim2]
-                flux = flux[trim1:trim2]
-                unc = unc[trim1:trim2]
+                # Split the arrays that have lengths of the original time axis
+                time, flux, unc = split([time, flux, unc],
+                                        meta.nints, channel)
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()

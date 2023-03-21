@@ -10,6 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
+from ...lib.split_channels import split
 
 
 class ExpRampModel(PyMC3Model):
@@ -42,9 +43,9 @@ class ExpRampModel(PyMC3Model):
             if self.multwhite:
                 self.time_local = []
                 for chan in self.fitted_channels:
-                    trim1 = np.nansum(self.mwhites_nexp[:chan])
-                    trim2 = trim1 + self.mwhites_nexp[chan]
-                    time = self.time[trim1:trim2]
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    time = split([self.time, ], self.nints, chan)
                     self.time_local.extend(time - time[0])
                 self.time_local = np.array(self.time_local)
             else:
@@ -102,13 +103,11 @@ class ExpRampModel(PyMC3Model):
 
         ramp_flux = lib.zeros(0)
         for c in range(nchan):
+            time = self.time_local
             if self.multwhite:
                 chan = channels[c]
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time_local[trim1:trim2]
-            else:
-                time = self.time_local
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11 = ramp_coeffs[c]
             lcpiece = (r0*lib.exp(-r1*time + r2) +

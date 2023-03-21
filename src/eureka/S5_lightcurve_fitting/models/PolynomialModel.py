@@ -2,6 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class PolynomialModel(Model):
@@ -49,9 +50,9 @@ class PolynomialModel(Model):
             if self.multwhite:
                 self.time_local = []
                 for chan in self.fitted_channels:
-                    trim1 = np.nansum(self.mwhites_nexp[:chan])
-                    trim2 = trim1 + self.mwhites_nexp[chan]
-                    time = self.time[trim1:trim2]
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    time = split([self.time, ], self.nints, chan)
                     self.time_local.extend(time - time.mean())
                 self.time_local = np.array(self.time_local)
             else:
@@ -116,13 +117,11 @@ class PolynomialModel(Model):
         # Create the polynomial from the coeffs
         lcfinal = np.array([])
         for c in range(nchan):
+            time = self.time_local
             if self.multwhite:
                 chan = channels[c]
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time_local[trim1:trim2]
-            else:
-                time = self.time_local
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
             
             if self.nchannel_fitted > 1:
                 chan = channels[c]

@@ -19,6 +19,7 @@ from dynesty.utils import resample_equal
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 from ..lib import astropytable
+from ..lib.split_channels import get_trim
 
 from multiprocessing import Pool
 
@@ -123,29 +124,16 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = \
-                    fit_params[ind[chan]]*lc.unc[trim1:trim2]
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -167,13 +155,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                unc = np.ma.median(lc.unc[trim1:trim2])
-            else:
-                size = lc.time.size
-                unc = np.ma.median(lc.unc[chan*size:(chan+1)*size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
             scatter_ppm = 1e6*fit_params[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
@@ -400,29 +383,16 @@ def emceefitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = \
-                    fit_params[ind[chan]]*lc.unc[trim1:trim2]
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -455,13 +425,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                unc = np.ma.median(lc.unc[trim1:trim2])
-            else:
-                size = lc.time.size
-                unc = np.ma.median(lc.unc[chan*size:(chan+1)*size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
             scatter_ppm = 1e6*fit_params[i]*unc
             scatter_ppm_upper = 1e6*upper_errs[i]*unc
             scatter_ppm_lower = 1e6*lower_errs[i]*unc
@@ -894,29 +859,16 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = \
-                    fit_params[ind[chan]]*lc.unc[trim1:trim2]
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -938,13 +890,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                unc = np.ma.median(lc.unc[trim1:trim2])
-            else:
-                size = lc.time.size
-                unc = np.ma.median(lc.unc[chan*size:(chan+1)*size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
             scatter_ppm = 1e6*fit_params[i]*unc
             scatter_ppm_upper = 1e6*upper_errs[i]*unc
             scatter_ppm_lower = 1e6*lower_errs[i]*unc
@@ -1059,29 +1006,16 @@ def lmfitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            if meta.multwhite:
-                trim1 = np.nansum(meta.mwhites_nexp[:chan])
-                trim2 = trim1 + meta.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = \
-                    fit_params[ind[chan]]*lc.unc[trim1:trim2]
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    fit_params[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 

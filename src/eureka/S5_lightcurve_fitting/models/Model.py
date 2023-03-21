@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import copy
 import os
 
-from ...lib.readEPF import Parameters
 from ..utils import COLORS
+from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class Model:
@@ -25,7 +26,7 @@ class Model:
         self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
         self.fitted_channels = kwargs.get('fitted_channels', [0, ])
         self.multwhite = kwargs.get('multwhite')
-        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+        self.nints = kwargs.get('nints')
         self.fitter = kwargs.get('fitter', None)
         self.time = kwargs.get('time', None)
         self.time_units = kwargs.get('time_units', 'BMJD_TDB')
@@ -215,12 +216,10 @@ class Model:
             channel = chan
         model = self.eval(channel=channel, **kwargs)
 
-        if share and not self.multwhite:
-            time = self.time
-        elif self.multwhite:
-            trim1 = np.nansum(self.mwhites_nexp[:chan])
-            trim2 = trim1 + self.mwhites_nexp[chan]
-            time = time[trim1:trim2]
+        time = self.time
+        if self.multwhite:
+            # Split the arrays that have lengths of the original time axis
+            time = split([time, ], self.nints, chan)[0]
 
         ax.plot(time, model, '.', ls='', ms=2, label=label, color=color,
                 zorder=zorder)
@@ -308,12 +307,10 @@ class CompositeModel(Model):
             nchan = 1
 
         if self.multwhite:
+            time = self.time
             if channel is not None:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
             flux = np.ones(len(time))
         else:
             flux = np.ones(len(self.time)*nchan)
@@ -355,12 +352,10 @@ class CompositeModel(Model):
             nchan = 1
 
         if self.multwhite:
+            time = self.time
             if channel is not None:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
             flux = np.ones(len(time))
         else:
             flux = np.ones(len(self.time)*nchan)
@@ -424,6 +419,11 @@ class CompositeModel(Model):
             The evaluated physical model predictions at the times self.time
             if interp==False, else at evenly spaced times between self.time[0]
             and self.time[-1] with spacing self.time[1]-self.time[0].
+        new_time : ndarray
+            The time values at which flux has been computed.
+        nints_interp : list
+            The number of time points per lightcurve for each lightcurve
+            (after interpolation if interp is True).
         """
         # Get the time
         if self.time is None:
@@ -431,27 +431,41 @@ class CompositeModel(Model):
 
         if channel is None:
             nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
+            channels = [channel]
 
         if interp:
-            dt = self.time[1]-self.time[0]
-            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps,
-                                   endpoint=True)
+            if self.multwhite:
+                new_time = []
+                nints_interp = []
+                for chan in channels:
+                    # Split the arrays that have lengths of
+                    # the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    
+                    dt = time[1]-time[0]
+                    steps = int(np.round((time[-1]-time[0])/dt+1))
+                    nints_interp.append(steps)
+                    new_time.append(np.linspace(time[0], time[-1], steps,
+                                                endpoint=True))
+                new_time = np.array(new_time)
+            else:
+                time = self.time
+                dt = time[1]-time[0]
+                steps = int(np.round((time[-1]-time[0])/dt+1))
+                nints_interp = np.ones(nchan)*steps
+                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
         else:
             new_time = self.time
+            if self.multwhite and channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                new_time = split([new_time, ], self.nints, channel)[0]
+            nints_interp = self.nints
 
-        if self.multwhite:
-            if channel is not None:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = new_time[trim1:trim2]
-            else:
-                time = new_time
-            flux = np.ones(len(time))
-        else:
-            flux = np.ones(len(new_time)*nchan)
+        # Setup the flux array
+        flux = np.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for model in self.components:
@@ -462,7 +476,7 @@ class CompositeModel(Model):
                     flux *= model.interp(new_time, **kwargs)
                 else:
                     flux *= model.eval(channel=channel, **kwargs)
-        return flux, new_time
+        return flux, new_time, nints_interp
 
     def update(self, newparams, **kwargs):
         """Update parameters in the model components.

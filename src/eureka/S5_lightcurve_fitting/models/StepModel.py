@@ -2,6 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class StepModel(Model):
@@ -107,13 +108,11 @@ class StepModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.ones((nchan, len(self.time)))
         for c in range(nchan):
+            time = self.time
             if self.multwhite:
                 chan = channels[c]
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             for s in np.where(self.steps[c] != 0)[0]:
                 lcfinal[c, time >= self.steptimes[c, s]] += \

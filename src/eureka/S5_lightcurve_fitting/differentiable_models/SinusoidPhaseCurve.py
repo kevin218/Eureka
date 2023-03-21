@@ -10,6 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
+from ...lib.split_channels import split
 
 
 class SinusoidPhaseCurveModel(PyMC3Model):
@@ -128,13 +129,11 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
+            time = self.time
             if self.multwhite:
                 chan = channels[c]
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             phaseVars = lib.ones(len(time))
             

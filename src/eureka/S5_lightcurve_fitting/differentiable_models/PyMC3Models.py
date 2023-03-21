@@ -18,8 +18,9 @@ BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
 BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
-from ...lib.readEPF import Parameters
 from ..utils import COLORS
+from ...lib.readEPF import Parameters
+from ...lib.split_channels import split, get_trim
 
 
 class fit_class:
@@ -45,7 +46,7 @@ class PyMC3Model:
         self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
         self.fitted_channels = kwargs.get('fitted_channels', [0, ])
         self.multwhite = kwargs.get('multwhite')
-        self.mwhites_nexp = kwargs.get('mwhites_nexp')
+        self.nints = kwargs.get('nints')
         self.fitter = kwargs.get('fitter', None)
         self.time = kwargs.get('time', None)
         self.time_units = kwargs.get('time_units', 'BMJD_TDB')
@@ -240,12 +241,10 @@ class PyMC3Model:
             channel = chan
         model = self.eval(channel=channel, **kwargs)
 
-        if share and not self.multwhite:
-            time = self.time
-        elif self.multwhite:
-            trim1 = np.nansum(self.mwhites_nexp[:chan])
-            trim2 = trim1 + self.mwhites_nexp[chan]
-            time = self.time[trim1:trim2]
+        time = self.time
+        if self.multwhite:
+            # Split the arrays that have lengths of the original time axis
+            time = split([time, ], self.nints, chan)[0]
 
         ax.plot(time, model, '.', ls='', ms=2, label=label,
                 color=color, zorder=zorder)
@@ -442,11 +441,9 @@ class CompositePyMC3Model(PyMC3Model):
                         parname_temp = 'scatter_ppm'
                     else:
                         parname_temp = 'scatter_ppm_'+str(c)
-                    
+
                     if self.multwhite:
-                        trim1 = np.nansum(self.mwhites_nexp[:c])
-                        trim2 = trim1 + self.mwhites_nexp[c]
-                        size = self.time[trim1:trim2].size
+                        size = self.nints[c]
                     else:
                         size = self.time.size
                     unc = getattr(self.model, parname_temp)*tt.ones(size)/1e6
@@ -463,14 +460,11 @@ class CompositePyMC3Model(PyMC3Model):
                         parname_temp = 'scatter_mult'
                     else:
                         parname_temp = 'scatter_mult_'+str(c)
-                    
-                    if self.multwhite:
-                        trim1 = np.nansum(self.mwhites_nexp[:c])
-                        trim2 = trim1 + self.mwhites_nexp[c]
-                        unc = self.lc_unc[trim1:trim2]
-                    else:
-                        size = self.time.size
-                        unc = self.lc_unc[c*size:(c+1)*size]
+
+                    chan = self.fitted_channels[c]
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    unc = self.lc_unc[trim1:trim2]
+
                     scatter_mult = getattr(self.model, parname_temp)
                     if c == 0:
                         self.scatter_array = unc*scatter_mult
@@ -524,12 +518,10 @@ class CompositePyMC3Model(PyMC3Model):
             nchan = 1
 
         if self.multwhite:
+            time = self.time
             if channel is not None:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
             flux = np.ones(len(time))
         else:
             flux = np.ones(len(self.time)*nchan)
@@ -571,12 +563,10 @@ class CompositePyMC3Model(PyMC3Model):
             nchan = 1
 
         if self.multwhite:
+            time = self.time
             if channel is not None:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
             flux = np.ones(len(time))
         else:
             flux = np.ones(len(self.time)*nchan)
@@ -622,27 +612,41 @@ class CompositePyMC3Model(PyMC3Model):
 
         if channel is None:
             nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
+            channels = [channel]
 
         if interp:
-            dt = self.time[1]-self.time[0]
-            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps,
-                                   endpoint=True)
+            if self.multwhite:
+                new_time = []
+                nints_interp = []
+                for chan in channels:
+                    # Split the arrays that have lengths of
+                    # the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    
+                    dt = time[1]-time[0]
+                    steps = int(np.round((time[-1]-time[0])/dt+1))
+                    nints_interp.append(steps)
+                    new_time.append(np.linspace(time[0], time[-1], steps,
+                                                endpoint=True))
+                new_time = np.array(new_time)
+            else:
+                time = self.time
+                dt = time[1]-time[0]
+                steps = int(np.round((time[-1]-time[0])/dt+1))
+                nints_interp = np.ones(nchan)*steps
+                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
         else:
             new_time = self.time
+            if self.multwhite and channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                new_time = split([new_time, ], self.nints, channel)[0]
+            nints_interp = self.nints
 
-        if self.multwhite:
-            if channel is not None:
-                trim1 = np.nansum(self.mwhites_nexp[:channel])
-                trim2 = trim1 + self.mwhites_nexp[channel]
-                time = new_time[trim1:trim2]
-            else:
-                time = new_time
-            flux = np.ones(len(time))
-        else:
-            flux = np.ones(len(new_time)*nchan)
+        # Setup the flux array
+        flux = np.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:
@@ -656,7 +660,7 @@ class CompositePyMC3Model(PyMC3Model):
                     flux *= component.eval(eval=eval, channel=channel,
                                            **kwargs)
 
-        return flux, new_time
+        return flux, new_time, nints_interp
 
     def compute_fp(self, theta=0):
         """Compute the planetary flux at an arbitrary orbital position.

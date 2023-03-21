@@ -17,6 +17,7 @@ starry.config.lazy = True
 
 from . import PyMC3Model
 from ..limb_darkening_fit import ld_profile
+from ...lib.split_channels import split
 
 
 class temp_class:
@@ -226,13 +227,11 @@ class StarryModel(PyMC3Model):
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
+            time = self.time
             if self.multwhite:
                 chan = channels[c]
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             if self.nchannel_fitted > 1:
                 chan = channels[c]

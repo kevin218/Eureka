@@ -5,6 +5,7 @@ except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
+from ...lib.split_channels import split
 
 
 class SinusoidPhaseCurveModel(Model):
@@ -141,12 +142,11 @@ class SinusoidPhaseCurveModel(Model):
             else:
                 t_secondary = self.parameters.dict['t_secondary'][0]
 
+            time = self.time
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:channels[c]])
-                trim2 = trim1 + self.mwhites_nexp[channels[c]]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                chan = channels[c]
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             if self.parameters.dict['ecc'][0] == 0.:
                 # the planet is on a circular orbit

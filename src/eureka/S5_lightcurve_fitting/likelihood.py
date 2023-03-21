@@ -2,6 +2,8 @@ import numpy as np
 import copy
 from scipy.stats import norm
 
+from ..lib.split_channels import get_trim
+
 
 def ln_like(theta, lc, model, freenames):
     """Compute the log-likelihood.
@@ -43,13 +45,8 @@ def ln_like(theta, lc, model, freenames):
                 # Force scatter_ppm to be > 0
                 return -np.inf
 
-            if model.multwhite:
-                trim1 = np.nansum(model.mwhites_nexp[:chan])
-                trim2 = trim1 + model.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = theta[ind[chan]]*1e-6
+            trim1, trim2 = get_trim(model.nints, chan)
+            lc.unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in range(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
@@ -60,14 +57,8 @@ def ln_like(theta, lc, model, freenames):
                 # Force scatter_mult to be > 0
                 return -np.inf
 
-            if model.multwhite:
-                trim1 = np.nansum(model.mwhites_nexp[:chan])
-                trim2 = trim1 + model.mwhites_nexp[chan]
-                lc.unc_fit[trim1:trim2] = theta[ind[chan]]*lc.unc[trim1:trim2]
-            else:
-                size = lc.time.size
-                lc.unc_fit[chan*size:(chan+1)*size] = \
-                    theta[ind[chan]]*lc.unc[chan*size:(chan+1)*size]
+            trim1, trim2 = get_trim(model.nints, chan)
+            lc.unc_fit[trim1:trim2] = theta[ind[chan]]*lc.unc[trim1:trim2]
 
     if model.GP:
         ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)

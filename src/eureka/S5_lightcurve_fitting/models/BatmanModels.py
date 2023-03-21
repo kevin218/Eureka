@@ -1,15 +1,15 @@
 import numpy as np
+import astropy.constants as const
 import inspect
 try:
     import batman
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
-from ..limb_darkening_fit import ld_profile
 from .Model import Model
-
 from .KeplerOrbit import KeplerOrbit
-import astropy.constants as const
+from ..limb_darkening_fit import ld_profile
+from ...lib.split_channels import split
 
 
 class BatmanTransitModel(Model):
@@ -95,13 +95,11 @@ class BatmanTransitModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
+            time = self.time
             if self.multwhite:
                 chan = channels[c]
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -251,13 +249,10 @@ class BatmanEclipseModel(Model):
         lcfinal = np.array([])
         for c in range(nchan):
             chan = channels[c]
-
+            time = self.time
             if self.multwhite:
-                trim1 = np.nansum(self.mwhites_nexp[:chan])
-                trim2 = trim1 + self.mwhites_nexp[chan]
-                time = self.time[trim1:trim2]
-            else:
-                time = self.time
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
 
             # Set all parameters
             for index, item in enumerate(self.longparamlist[chan]):

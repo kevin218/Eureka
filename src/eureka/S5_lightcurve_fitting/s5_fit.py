@@ -123,16 +123,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
             lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
 
-            meta.mwhites_nexp = []
+            # Get the number of integrations in this lightcurve so
+            # that we know how to split the flattened arrays
+            meta.nints = [len(lc.time.values)]
+            
             if meta.multwhite:
                 # Need to normalize each one if doing a joint fit
-                lc_whites = []
+                lc_whites = [lc, ]
 
-                # Get the number of exposures in this white lightcurve so
-                # that we know how to split the flattened arrays
-                meta.mwhites_nexp = [len(lc.time.values)]
-
-                lc_whites.append(lc)
                 for p in range(len(meta.inputdirlist)):
                     # Specify where glob should search for the save file
                     path = os.path.join(meta.topdir, meta.inputdirlist[p])
@@ -154,10 +152,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     meta.wave_hi = np.append(meta.wave_hi,
                                              lc_hold.wave_hi.values)
 
-                    # Get the number of exposures in this white lightcurve so
-                    # that we know how to split the flattened arrays
-                    meta.mwhites_nexp = np.append(meta.mwhites_nexp,
-                                                  len(lc_hold.time.values))
+                    # Get the number of integrations in this white lightcurve
+                    # so that we know how to split the flattened arrays
+                    meta.nints = np.append(meta.nints,
+                                           len(lc_hold.time.values))
 
                     lc_whites.append(lc_hold)
 
@@ -199,7 +197,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     for p in range(len(meta.inputdirlist)+1):
                         meta, lc_whites[p], log = \
                             util.manual_clip(lc_whites[p], meta, log)
-                        meta.mwhites_nexp[p] = len(lc_whites[p].time.values)
+                        meta.nints[p] = len(lc_whites[p].time.values)
                 else:
                     meta, lc, log = util.manual_clip(lc, meta, log)
 
@@ -364,6 +362,11 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             # Now fit the multi-wavelength light curves    
             elif meta.sharedp and not meta.multwhite:
+                # Get the number of exposures in this lightcurve so
+                # that we know how to split the flattened arrays
+                size = len(lc.time.values)
+                meta.nints = np.ones(chanrng, dtype=int)*size
+
                 log.writelog(f"\nStarting Shared Fit of {chanrng} Channels\n")
 
                 flux = np.ma.masked_array([])
@@ -476,7 +479,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                      unc=flux_err, time_units=time_units,
                                      name=eventlabel, share=meta.sharedp,
                                      white=white, multwhite=meta.multwhite,
-                                     mwhites_nexp=meta.mwhites_nexp)
+                                     nints=meta.nints)
 
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
@@ -533,7 +536,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   ld_coeffs=ldcoeffs,
                                   recenter_ld_prior=meta.recenter_ld_prior,
                                   multwhite=lc_model.multwhite,
-                                  mwhites_nexp=lc_model.mwhites_nexp)
+                                  nints=lc_model.nints)
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
@@ -551,7 +554,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          ld_coeffs=ldcoeffs,
                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                          multwhite=lc_model.multwhite,
-                                         mwhites_nexp=lc_model.mwhites_nexp)
+                                         nints=lc_model.nints)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
@@ -564,7 +567,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          fitted_channels=fitted_channels,
                                          paramtitles=paramtitles,
                                          multwhite=lc_model.multwhite,
-                                         mwhites_nexp=lc_model.mwhites_nexp)
+                                         nints=lc_model.nints)
         modellist.append(t_eclipse)
     if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
@@ -582,7 +585,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        fitted_channels=fitted_channels,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
-                                       mwhites_nexp=lc_model.mwhites_nexp)
+                                       nints=lc_model.nints)
         modellist.append(t_phase)
     elif 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
@@ -613,7 +616,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       transit_model=t_model,
                                       eclipse_model=e_model,
                                       multwhite=lc_model.multwhite,
-                                      mwhites_nexp=lc_model.mwhites_nexp)
+                                      nints=lc_model.nints)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -630,7 +633,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     fitted_channels=fitted_channels,
                                     paramtitles=paramtitles,
                                     multwhite=lc_model.multwhite,
-                                    mwhites_nexp=lc_model.mwhites_nexp)
+                                    nints=lc_model.nints)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -646,7 +649,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            fitted_channels=fitted_channels,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
-                           mwhites_nexp=lc_model.mwhites_nexp)
+                           nints=lc_model.nints)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -662,7 +665,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                               fitted_channels=fitted_channels,
                               paramtitles=paramtitles,
                               multwhite=lc_model.multwhite,
-                              mwhites_nexp=lc_model.mwhites_nexp)
+                              nints=lc_model.nints)
         modellist.append(t_ramp)
     if 'xpos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -679,7 +682,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='xpos', centroid=xpos,
                                multwhite=lc_model.multwhite,
-                               mwhites_nexp=lc_model.mwhites_nexp)
+                               nints=lc_model.nints)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -696,7 +699,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='xwidth', centroid=xwidth,
                                multwhite=lc_model.multwhite,
-                               mwhites_nexp=lc_model.mwhites_nexp)
+                               nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -713,7 +716,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='ypos', centroid=ypos,
                                multwhite=lc_model.multwhite,
-                               mwhites_nexp=lc_model.mwhites_nexp)
+                               nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -730,7 +733,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='ywidth', centroid=ywidth,
                                multwhite=lc_model.multwhite,
-                               mwhites_nexp=lc_model.mwhites_nexp)
+                               nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
@@ -744,7 +747,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                          fitted_channels=fitted_channels,
                          paramtitles=paramtitles,
                          multwhite=lc_model.multwhite,
-                         mwhites_nexp=lc_model.mwhites_nexp)
+                         nints=lc_model.nints)
         modellist.append(t_GP)
 
     if 'starry' in meta.run_myfuncs:
@@ -759,14 +762,14 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        fitted_channels=fitted_channels,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
-                                       mwhites_nexp=lc_model.mwhites_nexp)
+                                       nints=lc_model.nints)
     else:
         model = m.CompositeModel(modellist, parameters=params, time=time,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
                                  multwhite=lc_model.multwhite,
-                                 mwhites_nexp=lc_model.mwhites_nexp)
+                                 nints=lc_model.nints)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")

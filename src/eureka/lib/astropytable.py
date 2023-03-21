@@ -2,6 +2,8 @@ from astropy.table import QTable
 from astropy.io import ascii
 import numpy as np
 
+from .split_channels import get_trim
+
 
 def savetable_S1(filename, scale_factor):
     """Save the scale factor from Stage 1 as an ECSV.
@@ -73,8 +75,7 @@ def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
         wavelength = np.zeros(dims[0])
         bin_width = np.zeros(dims[0])
         for chan in range(dims[1]):
-            trim1 = np.nansum(meta.mwhites_nexp[:chan])
-            trim2 = trim1 + meta.mwhites_nexp[chan]
+            trim1, trim2 = get_trim(meta.nints, chan)
             wavelength[trim1:trim2] = terse_waves[chan]
             bin_width[trim1:trim2] = terse_widths[chan]
 
