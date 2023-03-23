@@ -37,7 +37,8 @@ def find_column_median_shifts(data, meta, m):
     # Smooth CoM values to get rid of outliers
     smooth_coms = smooth.medfilt(column_coms, 11)
     # if a value in smooth coms is nan, set it to the last non-nan value
-    smooth_coms[np.isnan(smooth_coms)] = smooth_coms[~np.isnan(smooth_coms)][-1]
+    smooth_coms[np.isnan(smooth_coms)] = \
+        smooth_coms[~np.isnan(smooth_coms)][-1]
 
     # Convert to interget pixels
     int_coms = np.around(smooth_coms).astype(int)

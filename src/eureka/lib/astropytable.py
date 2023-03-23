@@ -2,6 +2,8 @@ from astropy.table import QTable
 from astropy.io import ascii
 import numpy as np
 
+from .split_channels import get_trim
+
 
 def savetable_S1(filename, scale_factor):
     """Save the scale factor from Stage 1 as an ECSV.
@@ -31,7 +33,7 @@ def savetable_S1(filename, scale_factor):
     return
 
 
-def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
+def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
                  individual_models, model, residuals):
     """Save the results from Stage 5 as an ECSV file.
 
@@ -63,15 +65,26 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
     """
     dims = [len(time), len(wavelength)]
 
+    if not meta.multwhite:
+        time = np.tile(time, dims[1])
+        wavelength = np.repeat(wavelength, dims[0])
+        bin_width = np.repeat(bin_width, dims[0])
+    else:
+        terse_waves = np.copy(wavelength)
+        terse_widths = np.copy(bin_width)
+        wavelength = np.zeros(dims[0])
+        bin_width = np.zeros(dims[0])
+        for chan in range(dims[1]):
+            trim1, trim2 = get_trim(meta.nints, chan)
+            wavelength[trim1:trim2] = terse_waves[chan]
+            bin_width[trim1:trim2] = terse_widths[chan]
+
     orig_shapes = [str(time.shape), str(wavelength.shape),
                    str(bin_width.shape), str(lcdata.shape), str(lcerr.shape)]
     orig_shapes.extend([str(individual_models[i, 1].shape)
                         for i in range(individual_models.shape[0])])
     orig_shapes.extend([str(model.shape), str(residuals.shape)])
 
-    time = np.tile(time, dims[1])
-    wavelength = np.repeat(wavelength, dims[0])
-    bin_width = np.repeat(bin_width, dims[0])
     lcdata = lcdata.flatten()
     lcerr = lcerr.flatten()
     model_names = individual_models[:, 0]

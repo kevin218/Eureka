@@ -10,6 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
+from ...lib.split_channels import split
 
 
 class SinusoidPhaseCurveModel(PyMC3Model):
@@ -109,8 +110,8 @@ class SinusoidPhaseCurveModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -128,8 +129,13 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
-            chan = channels[c]
-            phaseVars = lib.ones(len(self.time))
+            time = self.time
+            if self.multwhite:
+                chan = channels[c]
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
+            phaseVars = lib.ones(len(time))
             
             # Compute orbital phase
             if model.ecc == 0.:
@@ -142,7 +148,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 phi = anom + model.w*np.pi/180. + np.pi/2.
 
             for order in range(1, self.maxOrder+1):
-                if chan == 0:
+                if self.nchannel_fitted == 1 or chan == 0:
                     suffix = ''
                 else:
                     suffix = f'_{chan}'
@@ -153,7 +159,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
             if self.starry_model is not None:
                 # Combine with the starry model
-                flux_star, flux_planet = systems[chan].flux(self.time,
+                flux_star, flux_planet = systems[chan].flux(time,
                                                             total=False)
                 lcpiece = flux_star + flux_planet*phaseVars
                 if eval:
