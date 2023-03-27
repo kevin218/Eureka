@@ -275,13 +275,18 @@ def separate_direct(meta, log):
         CRPIX2 = CRPIX2[obstypes == 'SPECTROSCOPIC'][0]
 
         # Figure out which direct image should be used by each science image
-        # If there are multiple direct images, this will usethe most recent one
+        # If there are multiple, this will use the most recent one
+        # If there haven't been any yet, will use the next one
         direct_times = obstimes[obstypes == 'IMAGING']
         science_times = obstimes[obstypes == 'SPECTROSCOPIC']
         meta.direct_index = np.zeros(meta.segment_list.shape, dtype=int)
         for i in range(len(science_times)):
-            meta.direct_index[i] = \
-                np.where(science_times[i] > direct_times)[0][-1]
+            indices = np.where(science_times[i] > direct_times)[0]
+            if len(indices) == 0:
+                index = 0
+            else:
+                index = indices[-1]
+            meta.direct_index[i] = index
 
     meta.obstimes = obstimes
     meta.CRPIX1 = CRPIX1

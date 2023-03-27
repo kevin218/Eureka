@@ -30,10 +30,9 @@ class TestModels(unittest.TestCase):
         self.assertEqual(self.model.name, name)
 
         # Test model units
-        self.assertEqual(str(self.model.units), 'd')
-        self.model.units = 'MJD'
-        self.assertEqual(self.model.units, 'MJD')
-        self.assertRaises(TypeError, setattr, self.model.units, 'foobar')
+        self.assertEqual(str(self.model.time_units), 'BMJD_TDB')
+        self.model.time_units = 'MJD'
+        self.assertEqual(self.model.time_units, 'MJD')
 
     def test_compositemodel(self):
         """Tests for the CompositeModel class"""
@@ -77,6 +76,7 @@ class TestModels(unittest.TestCase):
         # Make the transit model
         meta = MetaClass()
         meta.sharedp = False
+        meta.multwhite = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -112,6 +112,7 @@ class TestModels(unittest.TestCase):
         # Make the eclipse model
         meta = MetaClass()
         meta.sharedp = False
+        meta.multwhite = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -161,6 +162,7 @@ class TestModels(unittest.TestCase):
         # Create the model
         meta = MetaClass()
         meta.sharedp = False
+        meta.multwhite = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:

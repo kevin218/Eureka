@@ -83,31 +83,36 @@ def dn2electrons(data, meta):
     nx = data.attrs['mhdr']['SUBSIZE1']
     ny = data.attrs['mhdr']['SUBSIZE2']
 
-    # Load gain array in units of e-/ADU
-    gain_header = fits.getheader(meta.gainfile)
-    xstart_gain = gain_header['SUBSTRT1']
-    ystart_gain = gain_header['SUBSTRT2']
+    if hasattr(meta, 'gain') and meta.gain is not None:
+        # Load gain array or value
+        gain = np.array(meta.gain)
+    else:
+        # Load gain array in units of e-/ADU
+        gain_header = fits.getheader(meta.gainfile)
+        xstart_gain = gain_header['SUBSTRT1']
+        ystart_gain = gain_header['SUBSTRT2']
 
-    ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero                                                         
-    xstart_trim = xstart-xstart_gain + 1
+        ystart_trim = ystart-ystart_gain + 1  # 1 indexed, NOT zero
+        xstart_trim = xstart-xstart_gain + 1
 
-    gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny,
-                                       xstart_trim:xstart_trim+nx]
+        gain = fits.getdata(meta.gainfile)[ystart_trim:ystart_trim+ny,
+                                           xstart_trim:xstart_trim+nx]
 
-    if data.attrs['shdr']['DISPAXIS'] == 2:
+    if data.attrs['shdr']['DISPAXIS'] == 2 and gain.size > 1:
         # In the case of MIRI data, the gain file data has to be
         # rotated by 90 degrees and mirrored along that new x-axis
         # so that wavelength increases to the right
         gain = np.swapaxes(gain, 0, 1)[:, ::-1]
 
-    # Gain subarray
-    subgain = gain[meta.ywindow[0]:meta.ywindow[1],
-                   meta.xwindow[0]:meta.xwindow[1]]
+    if gain.size > 1:
+        # Get the gain subarray
+        gain = gain[meta.ywindow[0]:meta.ywindow[1],
+                    meta.xwindow[0]:meta.xwindow[1]]
 
     # Convert to electrons
-    data['flux'] *= subgain
-    data['err'] *= subgain
-    data['v0'] *= (subgain)**2  # FINDME: should this really be squared
+    data['flux'] *= gain
+    data['err'] *= gain
+    data['v0'] *= (gain)**2  # FINDME: should this really be squared
 
     return data
 
@@ -280,7 +285,11 @@ def convert_to_e(data, meta, log):
         # HST/WFC3 spectra are in ELECTRONS already, so do nothing
         return data, meta
 
-    if data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S':
+    if (data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S' and
+            hasattr(meta, 'gain') and meta.gain is not None):
+        log.writelog(f'  Using provided gain={meta.gain} to convert units'
+                     ' to electrons...', mute=(not meta.verbose))
+    elif data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S':
         log.writelog('  Automatically getting reference files to convert units'
                      ' to electrons...', mute=(not meta.verbose))
         if data.attrs['mhdr']['TELESCOP'] != 'JWST':
@@ -288,7 +297,24 @@ def convert_to_e(data, meta, log):
                        'reference files for non-JWST observations!')
             log.writelog(message, mute=True)
             raise ValueError(message)
-        meta.photfile, meta.gainfile = retrieve_ancil(data.attrs['filename'])
+
+        # Retrieve the required reference files if not manually specified
+        if not hasattr(meta, 'gainfile') or not hasattr(meta, 'photfile'):
+            photfile, gainfile = retrieve_ancil(data.attrs['filename'])
+
+        if not hasattr(meta, 'photfile'):
+            meta.photfile = photfile
+        else:
+            log.writelog(f'  Using provided photfile={meta.photfile} to '
+                         'convert units to DN...',
+                         mute=(not meta.verbose))
+
+        if not hasattr(meta, 'gainfile'):
+            meta.gainfile = gainfile
+        else:
+            log.writelog(f'  Using provided gainfile={meta.gainfile} to '
+                         'convert units to electrons...',
+                         mute=(not meta.verbose))
     else:
         log.writelog('  Converting from electrons per second (e/s) to '
                      'electrons...', mute=(not meta.verbose))

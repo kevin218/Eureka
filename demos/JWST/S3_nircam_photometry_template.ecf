@@ -8,9 +8,11 @@ max_memory      0.5         # The maximum fraction of memory you want utilized b
 suffix          calints     # Data file suffix
 photometry      True        # Set to True if the user wants to analyse a photometric dataset
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
-ywindow         [4, 256]      # Vertical axis as seen in DS9
-xwindow         [512, 1536]  # Horizontal axis as seen in DS9
+ywindow         [4, 256]    # Vertical axis as seen in DS9
+xwindow         [512, 1536] # Horizontal axis as seen in DS9
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 
 # Background parameters
@@ -25,7 +27,7 @@ oneoverf_dist   300         # How many pixels away from the centroid should be c
 skip_apphot_bg  True        # Skips the background subtraction during the aperture photometry step
 photap          80          # Size of photometry aperture in pixels
 skyin           90          # Inner sky annulus edge, in pixels
-skyout          120         # Outer sky annulus edge, in pixels
+skywidth        30          # Width of the sky annulus, in pixels
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -39,5 +41,5 @@ verbose         True        # If True, more details will be printed about steps
 topdir          /home/User/Data/JWST-Sim/NIRCam/
 
 # Directories relative to topdir
-inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       Stage3

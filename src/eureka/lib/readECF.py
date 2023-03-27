@@ -209,7 +209,7 @@ class MetaClass:
             self.outputdir += os.sep
 
     def write(self, folder):
-        """Write an ECF file based on the current MetaClass values.
+        """Write an ECF file based on the current MetaClass settings.
 
         NOTE: For now this rewrites the input_meta data to a new ECF file
         in the requested folder. In the future this function should make a full
