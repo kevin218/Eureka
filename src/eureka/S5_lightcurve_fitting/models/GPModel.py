@@ -3,7 +3,6 @@ import george
 from george import kernels
 import celerite
 from .Model import Model
-from ...lib.readEPF import Parameters
 
 # tinygp is not supported yet
 try:
@@ -52,18 +51,6 @@ class GPModel(Model):
         self.flux = lc.flux
         self.unc_fit = lc.unc_fit
         self.time = lc.time
-
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
 
         # Update coefficients
         self._parse_coeffs()

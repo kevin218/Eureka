@@ -76,6 +76,7 @@ class TestModels(unittest.TestCase):
         # Make the transit model
         meta = MetaClass()
         meta.sharedp = False
+        meta.multwhite = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -111,6 +112,7 @@ class TestModels(unittest.TestCase):
         # Make the eclipse model
         meta = MetaClass()
         meta.sharedp = False
+        meta.multwhite = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -160,6 +162,7 @@ class TestModels(unittest.TestCase):
         # Create the model
         meta = MetaClass()
         meta.sharedp = False
+        meta.multwhite = False
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:

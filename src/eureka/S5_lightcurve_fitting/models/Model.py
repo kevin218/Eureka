@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import copy
 import os
 
-from ...lib.readEPF import Parameters
 from ..utils import COLORS
+from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class Model:
@@ -20,19 +21,22 @@ class Model:
             which is required for multiprocessing.
         """
         # Set up default model attributes
-        self.name = 'New Model'
-        self.fitter = None
-        self._time = None
-        self.time_units = 'BMJD_TDB'
-        self._flux = None
-        self.freenames = None
-        self._parameters = Parameters()
-        self.longparamlist = None
-        self.paramtitles = None
-        self.components = None
-        self.modeltype = None
-        self.fmt = None
-        self.nchan = 1
+        self.name = kwargs.get('name', 'New Model')
+        self.nchannel = kwargs.get('nchannel', 1)
+        self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
+        self.fitted_channels = kwargs.get('fitted_channels', [0, ])
+        self.multwhite = kwargs.get('multwhite')
+        self.nints = kwargs.get('nints')
+        self.fitter = kwargs.get('fitter', None)
+        self.time = kwargs.get('time', None)
+        self.time_units = kwargs.get('time_units', 'BMJD_TDB')
+        self.flux = kwargs.get('flux', None)
+        self.freenames = kwargs.get('freenames', None)
+        self._parameters = kwargs.get('parameters', Parameters())
+        self.longparamlist = kwargs.get('longparamlist', None)
+        self.paramtitles = kwargs.get('paramtitles', None)
+        self.modeltype = kwargs.get('modeltype', None)
+        self.fmt = kwargs.get('fmt', None)
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
@@ -84,7 +88,7 @@ class Model:
             The flux array
         """
         # Check the type
-        if not isinstance(flux_array, (np.ndarray, tuple, list)):
+        if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
@@ -99,7 +103,7 @@ class Model:
     def time(self, time_array):
         """A setter for the time"""
         # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
+        if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
         # Set the array
@@ -127,25 +131,31 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def interp(self, new_time, **kwargs):
+    def interp(self, new_time, nints, **kwargs):
         """Evaluate the model over a different time array.
 
         Parameters
         ----------
         new_time : sequence
             The time array.
+        nints : list
+            The number of integrations for each channel, for the new
+            time array.
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Save the current time array
+        # Save the current values
         old_time = copy.deepcopy(self.time)
+        old_nints = copy.deepcopy(self.nints)
 
         # Evaluate the model on the new time array
         self.time = new_time
+        self.nints = nints
         interp_flux = self.eval(**kwargs)
 
-        # Reset the time array
+        # Reset the old values
         self.time = old_time
+        self.nints = old_nints
 
         return interp_flux
 
@@ -173,14 +183,12 @@ class Model:
         """
         return
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue',
+    def plot(self, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model.
 
         Parameters
         ----------
-        time : array-like
-            The time axis to use.
         components : bool; optional
             Plot all model components.
         ax : Matplotlib Axes; optional
@@ -203,19 +211,23 @@ class Model:
             fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
-        # Set the time
-        self.time = time
-
         # Plot the model
         label = self.fitter
         if self.name != 'New Model':
             label += ': '+self.name
 
-        model = self.eval(**kwargs)
-        if share:
-            model = model[chan*len(self.time):(chan+1)*len(self.time)]
+        if not share:
+            channel = 0
+        else:
+            channel = chan
+        model = self.eval(channel=channel, **kwargs)
 
-        ax.plot(self.time, model, '.', ls='', ms=2, label=label, color=color,
+        time = self.time
+        if self.multwhite:
+            # Split the arrays that have lengths of the original time axis
+            time = split([time, ], self.nints, chan)[0]
+
+        ax.plot(time, model, '.', ls='', ms=2, label=label, color=color,
                 zorder=zorder)
 
         if components and self.components is not None:
@@ -247,18 +259,33 @@ class CompositeModel(Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Inherit from Model class
-        super().__init__(**kwargs)
-
         # Store the models
         self.components = models
 
+        # Inherit from Model class
+        super().__init__(**kwargs)
+
         self.GP = False
-        for model in self.components:
-            if model.modeltype == 'GP':
+        for component in self.components:
+            if component.modeltype == 'GP':
                 self.GP = True
 
-    def eval(self, incl_GP=False, **kwargs):
+    @property
+    def freenames(self):
+        """A getter for the freenames."""
+        return self._freenames
+
+    @freenames.setter
+    def freenames(self, freenames):
+        """A setter for the freenames."""
+        # Update the components' freenames
+        for component in self.components:
+            component.freenames = freenames
+
+        # Set the freenames attribute
+        self._freenames = freenames
+
+    def eval(self, incl_GP=False, channel=None, **kwargs):
         """Evaluate the model components.
 
         Parameters
@@ -266,6 +293,8 @@ class CompositeModel(Model):
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -278,25 +307,39 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.ones(len(time))
+        else:
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
             if component.time is None:
                 component.time = self.time
             if component.modeltype != 'GP':
-                flux *= component.eval(**kwargs)
+                flux *= component.eval(channel=channel, **kwargs)
 
         if incl_GP:
             flux += self.GPeval(flux)
 
         return flux
 
-    def syseval(self, **kwargs):
+    def syseval(self, channel=None, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -309,14 +352,26 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
 
-        # Evaluate flux at each model
-        for model in self.components:
-            if model.modeltype == 'systematic':
-                if model.time is None:
-                    model.time = self.time
-                flux *= model.eval(**kwargs)
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.ones(len(time))
+        else:
+            flux = np.ones(len(self.time)*nchan)
+
+        # Evaluate flux at each component
+        for component in self.components:
+            if component.modeltype == 'systematic':
+                if component.time is None:
+                    component.time = self.time
+                flux *= component.eval(channel=channel, **kwargs)
 
         return flux
 
@@ -340,15 +395,18 @@ class CompositeModel(Model):
             self.time = kwargs.get('time')
 
         # Set the default value
-        flux = np.zeros(len(self.time)*self.nchan)
+        if self.multwhite:
+            flux = np.zeros(len(self.time))
+        else:
+            flux = np.zeros(len(self.time)*self.nchannel_fitted)
 
         # Evaluate flux
-        for model in self.components:
-            if model.modeltype == 'GP':
-                flux = model.eval(fit, **kwargs)
+        for component in self.components:
+            if component.modeltype == 'GP':
+                flux = component.eval(fit, **kwargs)
         return flux
 
-    def physeval(self, interp=False, **kwargs):
+    def physeval(self, interp=False, channel=None, **kwargs):
         """Evaluate the physical model components only.
 
         Parameters
@@ -356,6 +414,8 @@ class CompositeModel(Model):
         interp : bool; optional
             Whether to uniformly sample in time or just use
             the self.time time points. Defaults to False.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -365,31 +425,67 @@ class CompositeModel(Model):
             The evaluated physical model predictions at the times self.time
             if interp==False, else at evenly spaced times between self.time[0]
             and self.time[-1] with spacing self.time[1]-self.time[0].
+        new_time : ndarray
+            The time values at which flux has been computed.
+        nints_interp : list
+            The number of time points per lightcurve for each lightcurve
+            (after interpolation if interp is True).
         """
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel]
+
         if interp:
-            dt = self.time[1]-self.time[0]
-            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps,
-                                   endpoint=True)
+            if self.multwhite:
+                new_time = []
+                nints_interp = []
+                for chan in channels:
+                    # Split the arrays that have lengths of
+                    # the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    
+                    dt = time[1]-time[0]
+                    steps = int(np.round((time[-1]-time[0])/dt+1))
+                    nints_interp.append(steps)
+                    new_time.extend(np.linspace(time[0], time[-1], steps,
+                                                endpoint=True))
+                new_time = np.array(new_time)
+            else:
+                time = self.time
+                dt = time[1]-time[0]
+                steps = int(np.round((time[-1]-time[0])/dt+1))
+                nints_interp = np.ones(nchan)*steps
+                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
         else:
             new_time = self.time
+            if self.multwhite and channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                new_time = split([new_time, ], self.nints, channel)[0]
+            nints_interp = self.nints
 
-        flux = np.ones(len(new_time)*self.nchan)
+        # Setup the flux array
+        if self.multwhite:
+            flux = np.ones(len(new_time))
+        else:
+            flux = np.ones(len(new_time)*nchan)
 
-        # Evaluate flux at each model
-        for model in self.components:
-            if model.modeltype == 'physical':
-                if model.time is None:
-                    model.time = self.time
+        # Evaluate flux at each component
+        for component in self.components:
+            if component.modeltype == 'physical':
+                if component.time is None:
+                    component.time = self.time
                 if interp:
-                    flux *= model.interp(new_time, **kwargs)
+                    flux *= component.interp(new_time, nints_interp, **kwargs)
                 else:
-                    flux *= model.eval(**kwargs)
-        return flux, new_time
+                    flux *= component.eval(channel=channel, **kwargs)
+        return flux, new_time, nints_interp
 
     def update(self, newparams, **kwargs):
         """Update parameters in the model components.

@@ -1,16 +1,15 @@
 import numpy as np
+import astropy.constants as const
 import inspect
 try:
     import batman
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
-from ..limb_darkening_fit import ld_profile
 from .Model import Model
-from ...lib.readEPF import Parameters
-
 from .KeplerOrbit import KeplerOrbit
-import astropy.constants as const
+from ..limb_darkening_fit import ld_profile
+from ...lib.split_channels import split
 
 
 class BatmanTransitModel(Model):
@@ -32,18 +31,6 @@ class BatmanTransitModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         ld_func = ld_profile(self.parameters.limb_dark.value, 
@@ -53,35 +40,36 @@ class BatmanTransitModel(Model):
 
         self.ld_from_file = kwargs.get('ld_from_file')
         
-        # Replace fixed u parameters with generated limb-darkening values
-        if self.ld_from_S4:
-            self.ld_S4_array = kwargs.get('ld_coeffs')[len_params-2]
-            for c in np.arange(self.nchan):
+        # Replace u parameters with generated limb-darkening values
+        if self.ld_from_S4 or self.ld_from_file:
+            self.ld_array = kwargs.get('ld_coeffs')
+            if self.ld_from_S4:
+                self.ld_array = self.ld_array[len_params-2]
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
-                        param = int(item[-1])
-                        if self.parameters.dict[item][1] == 'fixed':
-                            self.parameters.dict[item][0] = \
-                                self.ld_S4_array[c][param-1]
-        elif self.ld_from_file:
-            self.ld_file_array = kwargs.get('ld_coeffs')
-            for c in np.arange(self.nchan):
-                for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[c][index[0]]
-                        param = int(item[-1])
-                        if self.parameters.dict[item][1] == 'fixed':
-                            self.parameters.dict[item][0] = \
-                                self.ld_file_array[c][param-1]
+                        param = int(item.split('_')[0][-1])
+                        ld_val = self.ld_array[chan][param-1]
+                        # Use the file value as the starting guess
+                        self.parameters.dict[item][0] = ld_val
+                        # In a normal prior, center at the file value
+                        if (self.parameters.dict[item][-1] == 'N' and
+                                self.recenter_ld_prior):
+                            self.parameters.dict[item][-3] = ld_val
+                        # Update the non-dictionary form as well
+                        setattr(self.parameters, item,
+                                self.parameters.dict[item])
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -90,6 +78,13 @@ class BatmanTransitModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -99,9 +94,19 @@ class BatmanTransitModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            time = self.time
+            if self.multwhite:
+                chan = channels[c]
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             # Set all parameters
-            for index, item in enumerate(self.longparamlist[c]):
+            for index, item in enumerate(self.longparamlist[chan]):
                 setattr(bm_params, self.paramtitles[index],
                         self.parameters.dict[item][0])
 
@@ -110,7 +115,7 @@ class BatmanTransitModel(Model):
             for u in self.coeffs:
                 index = np.where(np.array(self.paramtitles) == u)[0]
                 if len(index) != 0:
-                    item = self.longparamlist[c][index[0]]
+                    item = self.longparamlist[chan][index[0]]
                     uarray.append(self.parameters.dict[item][0])
             bm_params.u = uarray
 
@@ -121,7 +126,7 @@ class BatmanTransitModel(Model):
                     (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was the
                 # best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                 continue
 
             # Use batman ld_profile name
@@ -133,7 +138,7 @@ class BatmanTransitModel(Model):
                 if bm_params.u[0] <= 0:
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                     continue
                 bm_params.limb_dark = 'quadratic'
                 u1 = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
@@ -141,7 +146,7 @@ class BatmanTransitModel(Model):
                 bm_params.u = np.array([u1, u2])
 
             # Make the transit model
-            m_transit = batman.TransitModel(bm_params, self.time,
+            m_transit = batman.TransitModel(bm_params, time,
                                             transittype='primary')
 
             lcfinal = np.append(lcfinal, m_transit.light_curve(bm_params))
@@ -166,18 +171,6 @@ class BatmanEclipseModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         log = kwargs.get('log')
 
         # Get the parameters relevant to light travel time correction
@@ -188,7 +181,7 @@ class BatmanEclipseModel(Model):
         if self.compute_ltt:
             # Check if we need to do ltt correction for each
             # wavelength or only one
-            if self.nchan > 1:
+            if self.nchannel_fitted > 1:
                 # Check whether the parameters are all either fixed or shared
                 once_type = ['shared', 'fixed']
                 self.compute_ltt_once = \
@@ -223,11 +216,13 @@ class BatmanEclipseModel(Model):
                              f"         will not be accounting for "
                              f"light-travel time).")
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -236,6 +231,13 @@ class BatmanEclipseModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -245,9 +247,15 @@ class BatmanEclipseModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            chan = channels[c]
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
             # Set all parameters
-            for index, item in enumerate(self.longparamlist[c]):
+            for index, item in enumerate(self.longparamlist[chan]):
                 setattr(bm_params, self.paramtitles[index],
                         self.parameters.dict[item][0])
 
@@ -259,7 +267,7 @@ class BatmanEclipseModel(Model):
                     (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was
                 # the best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(self.time))
+                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                 continue
 
             bm_params.limb_dark = 'uniform'
@@ -267,13 +275,13 @@ class BatmanEclipseModel(Model):
 
             if self.compute_ltt:
                 if c == 0 or not self.compute_ltt_once:
-                    self.adjusted_time = correct_light_travel_time(self.time,
+                    self.adjusted_time = correct_light_travel_time(time,
                                                                    bm_params)
             else:
-                self.adjusted_time = self.time
+                self.adjusted_time = time
 
             if not np.any(['t_secondary' in key
-                           for key in self.longparamlist[c]]):
+                           for key in self.longparamlist[chan]]):
                 # If not explicitly fitting for the time of eclipse, get
                 # the time of eclipse from the time of transit, period,
                 # eccentricity, and argument of periastron
