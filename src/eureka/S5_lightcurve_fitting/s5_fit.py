@@ -125,7 +125,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
-            meta.nints = [len(lc.time.values)]
+            meta.nints = [len(lc.time.values), ]
             
             if meta.multwhite:
                 # Need to normalize each one if doing a joint fit
