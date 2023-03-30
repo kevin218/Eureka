@@ -227,16 +227,16 @@ class StarryModel(PyMC3Model):
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
-            time = self.time
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
+
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
             lcpiece = systems[chan].flux(time)
             if eval:
                 lcpiece = lcpiece.eval()

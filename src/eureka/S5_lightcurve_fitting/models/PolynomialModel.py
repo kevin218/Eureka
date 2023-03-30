@@ -74,6 +74,7 @@ class PolynomialModel(Model):
                 chan = self.fitted_channels[c]
             else:
                 chan = 0
+
             for i in range(9, -1, -1):
                 try:
                     if chan == 0:
@@ -117,16 +118,16 @@ class PolynomialModel(Model):
         # Create the polynomial from the coeffs
         lcfinal = np.array([])
         for c in range(nchan):
-            time = self.time_local
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-            
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
+
+            time = self.time_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+            
             poly = np.poly1d(self.coeffs[chan])
             lcpiece = np.polyval(poly, time)
             lcfinal = np.append(lcfinal, lcpiece)

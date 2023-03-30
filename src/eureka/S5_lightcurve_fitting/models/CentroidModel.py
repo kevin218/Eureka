@@ -91,16 +91,16 @@ class CentroidModel(Model):
         # Create the centroid model for each wavelength
         lcfinal = np.array([])
         for c in range(nchan):
-            centroid = self.centroid_local
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                centroid = split([centroid, ], self.nints, chan)[0]
-
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
+
+            centroid = self.centroid_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                centroid = split([centroid, ], self.nints, chan)[0]
+
             coeff = getattr(self.parameters, self.coeff_keys[chan]).value
             lcpiece = 1 + centroid*coeff
             lcfinal = np.append(lcfinal, lcpiece)
