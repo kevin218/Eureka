@@ -328,7 +328,7 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         Moved code to separate file, added documentation.
     """
     data = np.ma.masked_invalid(np.ma.copy(data))
-    
+
     # bin data into multiple bin sizes
     npts = data.size
     if maxnbins is None:

@@ -6,7 +6,7 @@ from . import models as m
 from . import fitters
 from . import gradient_fitters
 from .utils import COLORS, color_gen
-from ..lib import plots
+from ..lib import plots, util
 
 
 class LightCurve(m.Model):
@@ -180,12 +180,22 @@ class LightCurve(m.Model):
                 flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
                 unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
 
+            # Get binned data and times
+            if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
+               meta.nbin_plot > len(self.time):
+                nbin_plot = len(self.time)
+            else:
+                nbin_plot = meta.nbin_plot
+            binned_time = util.binData(self.time, nbin_plot)
+            binned_flux = util.binData(flux, nbin_plot)
+            binned_unc = util.binData(unc, nbin_plot, err=True)
+
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i],
-                        zorder=0)
+            ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
+                        color=self.colors[i], zorder=0)
 
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
