@@ -15,6 +15,7 @@ from . import readEPF
 from . import smooth
 from . import sort_nicely
 from . import splinterp
+from . import split_channels
 from . import suntimecorr
 from . import utc_tt
 from . import util

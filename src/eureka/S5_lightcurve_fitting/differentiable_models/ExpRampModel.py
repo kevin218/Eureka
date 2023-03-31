@@ -10,6 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
+from ...lib.split_channels import split
 
 
 class ExpRampModel(PyMC3Model):
@@ -39,7 +40,16 @@ class ExpRampModel(PyMC3Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time[0]
+            if self.multwhite:
+                self.time_local = []
+                for chan in self.fitted_channels:
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    self.time_local.extend(time - time[0])
+                self.time_local = np.array(self.time_local)
+            else:
+                self.time_local = self.time - self.time[0]
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -60,8 +70,8 @@ class ExpRampModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -76,24 +86,34 @@ class ExpRampModel(PyMC3Model):
             model = self.model
 
         # Parse 'r#' keyword arguments as coefficients
-        for j in range(nchan):
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             for i in range(12):
                 try:
-                    if channels[j] == 0:
-                        ramp_coeffs[j][i] = getattr(model, f'r{i}')
+                    if chan == 0:
+                        ramp_coeffs[c][i] = getattr(model, f'r{i}')
                     else:
-                        ramp_coeffs[j][i] = getattr(model,
-                                                    f'r{i}_{channels[j]}')
+                        ramp_coeffs[c][i] = getattr(model,
+                                                    f'r{i}_{chan}')
                 except AttributeError:
                     pass
 
         ramp_flux = lib.zeros(0)
         for c in range(nchan):
+            time = self.time_local
+            if self.multwhite:
+                chan = channels[c]
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
             r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11 = ramp_coeffs[c]
-            lcpiece = (r0*lib.exp(-r1*self.time_local + r2) +
-                       r3*lib.exp(-r4*self.time_local + r5) +
-                       r6*lib.exp(-r7*self.time_local + r8) +
-                       r9*lib.exp(-r10*self.time_local + r11) +
+            lcpiece = (r0*lib.exp(-r1*time + r2) +
+                       r3*lib.exp(-r4*time + r5) +
+                       r6*lib.exp(-r7*time + r8) +
+                       r9*lib.exp(-r10*time + r11) +
                        1)
             ramp_flux = lib.concatenate([ramp_flux, lcpiece])
 
