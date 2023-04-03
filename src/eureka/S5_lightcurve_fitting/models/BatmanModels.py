@@ -95,16 +95,16 @@ class BatmanTransitModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
-            time = self.time
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
+
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
             # Set all parameters
             for index, item in enumerate(self.longparamlist[chan]):
                 setattr(bm_params, self.paramtitles[index],
@@ -248,7 +248,11 @@ class BatmanEclipseModel(Model):
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
-            chan = channels[c]
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             time = self.time
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis

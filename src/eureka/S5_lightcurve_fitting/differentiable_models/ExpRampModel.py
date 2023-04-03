@@ -91,6 +91,7 @@ class ExpRampModel(PyMC3Model):
                 chan = channels[c]
             else:
                 chan = 0
+
             for i in range(12):
                 try:
                     if chan == 0:
@@ -103,9 +104,13 @@ class ExpRampModel(PyMC3Model):
 
         ramp_flux = lib.zeros(0)
         for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             time = self.time_local
             if self.multwhite:
-                chan = channels[c]
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 

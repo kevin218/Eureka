@@ -140,13 +140,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
             # (or someone is putting weird files into Eureka!)
             pipeline = EurekaSpec2Pipeline()
 
-            # By default pipeline can trim the dispersion axis,
-            # override the function that does this with specific 
-            # wavelength range that you want to trim to.
-            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
-                        wavelength_range=[meta.waverange_start,
-                                          meta.waverange_end])
+            if (meta.waverange_start is not None or
+                    meta.waverange_end is not None):
+                # By default pipeline can trim the dispersion axis,
+                # override the function that does this with specific 
+                # wavelength range that you want to trim to.
+                jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
+                    partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
+                            wavelength_range=[meta.waverange_start,
+                                              meta.waverange_end])
     elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
         # Clean up temporary folder
