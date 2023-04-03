@@ -117,7 +117,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     #     plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames):
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
+                                  'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
@@ -266,7 +267,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     #     plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames):
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
+                                  'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
     # Plot Allan plot

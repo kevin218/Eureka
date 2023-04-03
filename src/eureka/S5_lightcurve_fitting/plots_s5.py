@@ -262,7 +262,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
         if meta.isplots_S5 >= 3:
             # Setup the figure
-            fig = plt.figure(5104, figsize=(8, 6))
+            fig = plt.figure(5304, figsize=(8, 6))
             plt.clf()
             ax = fig.gca()
             if isTitle:
