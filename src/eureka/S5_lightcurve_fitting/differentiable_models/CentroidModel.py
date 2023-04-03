@@ -97,9 +97,13 @@ class CentroidModel(PyMC3Model):
         
         centroid_flux = lib.zeros(0)
         for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             centroid = self.centroid_local
             if self.multwhite:
-                chan = channels[c]
                 # Split the arrays that have lengths of the original time axis
                 centroid = split([centroid, ], self.nints, chan)[0]
 

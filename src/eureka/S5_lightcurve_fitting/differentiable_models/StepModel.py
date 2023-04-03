@@ -70,6 +70,7 @@ class StepModel(PyMC3Model):
                 chan = channels[c]
             else:
                 chan = 0
+
             for i in range(10):
                 try:
                     if chan == 0:
@@ -84,9 +85,13 @@ class StepModel(PyMC3Model):
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             time = self.time
             if self.multwhite:
-                chan = channels[c]
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 

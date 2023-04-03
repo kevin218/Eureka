@@ -125,7 +125,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
-            meta.nints = [len(lc.time.values)]
+            meta.nints = [len(lc.time.values), ]
             
             if meta.multwhite:
                 # Need to normalize each one if doing a joint fit
@@ -225,7 +225,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 else:
                     centroid_param_list.append(
                         np.zeros_like(lc.time.values))
-            xpos, ypos, xwidth, ywidth = centroid_param_list
+            xpos, xwidth, ypos, ywidth = centroid_param_list
 
             # make citations for current stage
             util.make_citations(meta, 5)

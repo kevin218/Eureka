@@ -129,9 +129,13 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             time = self.time
             if self.multwhite:
-                chan = channels[c]
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 

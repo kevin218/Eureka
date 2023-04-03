@@ -144,7 +144,6 @@ class SinusoidPhaseCurveModel(Model):
 
             time = self.time
             if self.multwhite:
-                chan = channels[c]
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 

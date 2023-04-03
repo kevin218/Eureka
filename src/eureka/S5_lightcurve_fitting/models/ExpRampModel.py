@@ -74,6 +74,7 @@ class ExpRampModel(Model):
                 chan = self.fitted_channels[c]
             else:
                 chan = 0
+
             for i in range(6):
                 try:
                     if chan == 0:
@@ -113,16 +114,16 @@ class ExpRampModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.array([])
         for c in range(nchan):
-            time = self.time_local
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
+
+            time = self.time_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
             r0, r1, r2, r3, r4, r5 = self.coeffs[c]
             lcpiece = (1+r0*np.exp(-r1*time + r2)
                        + r3*np.exp(-r4*time + r5))
