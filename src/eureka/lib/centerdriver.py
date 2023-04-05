@@ -44,7 +44,6 @@ def centerdriver(method, data, guess, trim, radius, size,
     23-11-2010 patricio   Written by Patricio Cubillos
                           pcubillos@fulbrightmail.org
     2-24-2023  Isaac      Edited by Isaac edelman
-                          edelman@baeri.org
                           Added new centroiding method 
                           called mgmc_pri and mgmc_sec
     """
@@ -72,9 +71,6 @@ def centerdriver(method, data, guess, trim, radius, size,
             cen = np.array([0, 0])
             loc = np.rint(guess) 
             img, msk, err = data, mask, uncd
-        # If all data is bad:
-        if not np.any(msk):
-            raise Exception('Bad Frame Exception!')
         weights = 1.0 / np.abs(err)
     else:
         trim = 0
@@ -82,6 +78,10 @@ def centerdriver(method, data, guess, trim, radius, size,
         loc = guess
         cen = np.array([0, 0])
 
+    # If all data is bad:
+    if not np.any(msk):
+        raise Exception('Bad Frame Exception!')
+    
     # Get the center with one of the methods:
     if method in ['fgc', 'fgc_sec']:
         sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk,
@@ -95,9 +95,11 @@ def centerdriver(method, data, guess, trim, radius, size,
         # Second enhanced centroid position + gaussian widths
         sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths
-        
+
+    # only plot when we do the second fit
     if (meta.isplots_S3 >= 5 and i < meta.nplots and
-            len(img) == (2 * meta.ctr_cutout_size + 1)):
+            len(img) == (2 * meta.ctr_cutout_size + 1) and 
+            method[-4:] == '_sec'):
         plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return

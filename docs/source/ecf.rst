@@ -446,7 +446,7 @@ Only used for photometry analyses. Interpolate bad pixels. Options: None (if no 
 
 centroid_method
 '''''''''''''''
-Only used for photometry analyses. Selects the method used for an intial centroid guess. There is a first and second centroid guess location along with gaussian widths created with the mgmc method. The mgmc method creats a median frame from the current integration set and preforms a centroiding technique on the median frame. The optimal technique found has been 'com' or 'center of mass' when using mgmc. 'fgc' is the legacy centroiding method. Options: mgmc, fgc
+Only used for photometry analyses. Selects the method used for determining the centroid position (options: fgc or mgmc). For it's initial centroid guess, the 'mgmc' method creates a median frame from each batch of integrations and performs centroiding on the median frame (with the exact centroiding method set by the centroid_tech parameter). For each integration, the 'mgmc' method will then crop out an area around that guess using the value of ctr_cutout_size, and then perform a second round of centroiding to measure how the centroid moves over time. The 'fgc' method is the legacy centroiding method and is not currently recommended.
 
 ctr_guess
 '''''''''
@@ -482,7 +482,7 @@ Only used for photometry analyses. The width of the sky annulus, in pixels. If y
 
 centroid_tech
 '''''''''''''
-Only used for photometry analyses. Technique used for first and second guess centroiding location. Only required for the mgmc method. Options: com, gauss1d, gauss2d
+Only used for photometry analyses. The centroiding technique used if centroid_method is set to mgmc. The options are: com, 1dg, 2dg. The recommended technique is com (standing for Center of Mass). More details about the options can be found in the photutils documentation at https://photutils.readthedocs.io/en/stable/centroids.html.
 
 gauss_frame
 '''''''''''

@@ -29,8 +29,8 @@ skip_apphot_bg       False            # Skips the background subtraction during 
 photap               65               # Size of photometry aperture in pixels
 skyin                70               # Inner sky annulus edge, in pixels
 skywidth             20               # Width of the sky annulus, in pixels
-centroid_tech        com              # (mgmc method param) Technique used for centroiding. Options: com, gauss1d, gauss2d
-gauss_frame          100              # (mgmc method param) Range away from first centroid guess to include in centroiding map for gaussian widths. Options: 1 -> Max frame size.
+centroid_tech        com              # (mgmc method param) Technique used for centroiding. Options: com, 1dg, 2dg
+gauss_frame          100              # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Options: his should be set to something larger than your expected PSF size; ~100 for defocused NIRCam photometry, or ~15 for MIRI photometry.
 
 # Diagnostics
 isplots_S3           3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

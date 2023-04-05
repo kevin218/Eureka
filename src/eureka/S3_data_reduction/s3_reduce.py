@@ -237,6 +237,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                       meta.files_per_batch))
 
             datasets = []
+            tilt_event_median_frame_flag = False
+            saved_median_tilt_frame = None
             for m in range(meta.nbatch):
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
@@ -456,7 +458,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             # save current flux into an array for
                             # plotting 1/f correction comparison
                             flux_w_oneoverf = np.copy(data.flux.values[i])
-
+                            
                         # Determine centroid position
                         # We do this twice. First a coarse estimation,
                         # then a more precise one.
@@ -502,7 +504,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                 uncd=None, fitbg=1,
                                 maskstar=True, expand=1, psf=None, 
                                 psfctr=None, i=i, m=m, meta=meta)
-                        
+
                         # Store centroid positions and
                         # the Gaussian 1-sigma half-widths
                         data['centroid_y'][i], data['centroid_x'][i] = position
@@ -541,6 +543,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 if not hasattr(meta, 'save_fluxdata'):
                     meta.save_fluxdata = True
+
+                # plot tilt events
+                if (meta.isplots_S3 >= 5 and meta.inst == 'nircam'): 
+                    median_tilt_frame = \
+                        plots_s3.tilt_events(meta, data, m, 
+                                             position, 
+                                             saved_median_tilt_frame)
+                    
+                    if not tilt_event_median_frame_flag:
+                        saved_median_tilt_frame = median_tilt_frame
+                        tilt_event_median_frame_flag = True
 
                 if meta.save_fluxdata:
                     # Save flux data from current segment

@@ -1,11 +1,10 @@
 from scipy.optimize import minimize
 import numpy as np
-from photutils.centroids import (centroid_com, centroid_1dg, 
+import sys
+from photutils.centroids import (centroid_com, centroid_1dg,  # noqa: F401
                                  centroid_2dg, centroid_sources)
 
 
-# minfunc > evaluate guassian model 
-# with frame centroid pos + param guess
 def evalgauss(params, x, y, x0, y0):
     """
     Calculate the values of an unrotated Gauss function 
@@ -17,9 +16,9 @@ def evalgauss(params, x, y, x0, y0):
         List components : amplitude, x_stddev, y_stddev. 
         Acts as the inital guess from meta (params_guess).
     x : ndarray
-        Data frame map within meta bounds.
+        The x-coordinates for every pixel within the considered frame.
     y :  ndarray
-        Data frame map within meta bounds.
+        The y-coordinates for every pixel within the considered frame.
     x0 : float
         X position guess for centroid.
     y0 : float
@@ -27,14 +26,15 @@ def evalgauss(params, x, y, x0, y0):
 
     Returns
     -------
-    A 2D array of a 2D gaussian formula.
+    ndarray 
+        A 2D array of a 2D gaussian formula.
 
     Notes
     -----
     History:
 
     - Feb 22, 2023 Isaac Edelman 
-        Written and implemented by Isaac Edelman, edelman@baeri.org
+        Initial implementation.
     """
     # unpack params
     amplitude, x_stddev, y_stddev = params
@@ -44,11 +44,10 @@ def evalgauss(params, x, y, x0, y0):
                              (y-y0)**2/(2*y_stddev**2)))
 
 
-# results > minimize the gaussian model 
-# against the frame
 def minfunc(params, frame, x, y, x_mean, y_mean):
     """
-    Use the mesh grid to create a two dimensional gaussian distribution.
+    A cost function that should be minimized 
+    when fitting for the Gaussian PSF widths.
 
     Parameters
     ----------
@@ -58,38 +57,33 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     frame : 2D ndarray
         Array containing the star image.
     x : ndarray
-        Data frame map within meta bounds.
+        The x-coordinates for every pixel within the considered frame.
     y : ndarray
-        Data frame map within meta bounds.
+        The y-coordinates for every pixel within the considered frame.
     x_mean : float
         X position guess for centroid.
     y_mean : float
         Y position guess for centroid.
 
-    Returns
-    -------
-    A 2D array of a reduced 2D gaussian array.
+    Returns 
+    ------- 
+    float 
+        The mean-squared error of the Gaussian centroid model.
 
     Notes
     -----
     History:
 
     - Feb 22, 2023 Isaac Edelman 
-        Written and implemented by Isaac Edelman, edelman@baeri.org
+        Initial implementation.
     """
     # Evaluates the guassian using parameters given
-    model_gauss = evalgauss(params, 
-                            x, 
-                            y, 
-                            x_mean, 
-                            y_mean)
+    model_gauss = evalgauss(params, x, y, x_mean, y_mean)
     
     # Returns the model - observations squared or "R^2" value
-    return np.nansum((model_gauss-frame)**2)
+    return np.nanmean((model_gauss-frame)**2)
 
 
-# Make median frame 
-# then create centroid inital guess with com, 1dg, 2dg
 def pri_cent(img, meta):
     """
     Create initial centroid guess based off of median frame of data.
@@ -101,85 +95,80 @@ def pri_cent(img, meta):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
-    Returns
-    -------
-    x : First guess of x centroid position, float.
-    y : Frirst guess of y centroid position, float.
+    Returns 
+    ------- 
+    x : float 
+        First guess of x centroid position. 
+    y : float 
+        First guess of y centroid position.
 
     Notes
     -----
     History:
 
     - Feb 22, 2023 Isaac Edelman 
-        Written and implemented by Isaac Edelman, edelman@baeri.org
+        Initial implementation.
     """
     # Create median frame from Integration
     median_Frame = np.ma.median(img, axis=0)
 
     # Create initial centroid guess using specified method
-    if meta.centroid_tech.lower() == 'com': 
-        x, y = centroid_com(median_Frame)
-
-    elif meta.centroid_tech.lower() == 'gauss1d':
-        x, y = centroid_1dg(median_Frame)
-
-    elif meta.centroid_tech.lower() == 'gauss2d':
-        x, y = centroid_2dg(median_Frame)
+    if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
+        cent_func = getattr(sys.modules[__name__], 
+                            ("centroid_" + meta.centroid_tech.lower()))
+        x, y = cent_func(median_Frame)
+    else:
+        print("Invalid centroid_tech option")
 
     # Returns x,y coordinates of centroid position
     return x, y
 
 
-# Second centroid fit for x,y values 
-# + guassian fit for xs, ys
 def mingauss(img, yxguess, meta):
     """
-    Use an inital centroid guess 
-    and a minimized gaussian meshgrid on each frame 
-    to create an enchanced centroid position (x, y) 
-    and gaussian widths (sx, sy).
+    Using an inital centroid guess, 
+    get a more precise centroid and PSF-width measurement 
+    using only pixels near the inital guess.
     
     Parameters
     ----------
     img : 2D ndarray
         Array containing the star image.
     yxguess : tuple
-        A guess at the centroid. 
-        Defaults to None which uses the data point 
-        with the highest value.
+        A guess at the y and x centroid positions.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
 
     Returns
     -------
-    sy : gaussian width in y direction, float.
-    sx : gaussian width in x direction, float.
-    x : Refined centroid x position, float.
-    y : Refined centroid y position, float.
+    sy : float
+        Gaussian width in y direction.
+    sx : float
+        Gaussian width in x direction.
+    x : float
+        Refined centroid x position.
+    y : float
+        Refined centroid y position.
 
     Notes
     -----
     History:
 
     - Feb 22, 2023 Isaac Edelman 
-        Written and implemented by Isaac Edelman, 
-        edelman@baeri.org
+        Initial implementation.
     """
     # Create centroid position x,y 
     # based off of centroid method 
     # and inital centroid guess
-    if meta.centroid_tech.lower() == 'com':
-        x, y = centroid_sources(img, yxguess[1], 
-                                yxguess[0], centroid_func=centroid_com, 
+    if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
+        cent_func = getattr(sys.modules[__name__], 
+                            ("centroid_" + meta.centroid_tech.lower()))
+        x, y = centroid_sources(img, yxguess[1], yxguess[0], 
+                                centroid_func=cent_func, 
                                 box_size=meta.ctr_cutout_size)
-    elif meta.centroid_tech.lower() == 'gauss1d':
-        x, y = centroid_sources(img, yxguess[1], 
-                                yxguess[0], centroid_func=centroid_1dg, 
-                                box_size=meta.ctr_cutout_size)
-    elif meta.centroid_tech.lower() == 'gauss2d':
-        x, y = centroid_sources(img, yxguess[1], 
-                                yxguess[0], centroid_func=centroid_1dg, 
-                                box_size=meta.ctr_cutout_size)
+        x, y = x[0], y[0]
+    else:
+        print("Invalid centroid_tech option")
     
     # Cropping frame to speed up guassian fit
     minx = -int(meta.gauss_frame)+int(x)
@@ -189,22 +178,30 @@ def mingauss(img, yxguess, meta):
     frame = img[:, minx:maxx]
 
     # Create meshgrid
-    x_shape = np.arange(img.shape[1])
+    x_shape = np.arange(img.shape[1])[minx:maxx]
     y_shape = np.arange(img.shape[0])
     x_mesh, y_mesh = np.meshgrid(x_shape, y_shape)
 
-    # Fit the gaussian width by minimizing minfunc with Nelder-Mead method. 
-    # The inital guess is [400, 41, 41] 
+    # The inital guess for miri is [400, 41, 41] 
     # or [brightness of pixles in area of interest, xsigma, ysigma].
-    results = minimize(minfunc, [400, 41, 41], 
-                       args=(frame, x_mesh[:, minx:maxx], 
-                             y_mesh[:, minx:maxx], x, y), 
+    # This guess is used as a starting point for the algorithm.
+    if (meta.inst == 'nircam'):
+        initial_guess = [400, 5, 5]
+    elif (meta.inst == 'miri'):
+        initial_guess = [400, 41, 41]
+    else:
+        print("Possible mgmc gaussian centroiding intial guess issue. " +
+              "Default values used for guess in gaussian_min minimize " + 
+              "function")
+        initial_guess = [400, 20, 20]
+
+    # Fit the gaussian width by minimizing minfunc with the Nelder-Mead method.
+    results = minimize(minfunc, initial_guess, 
+                       args=(frame, x_mesh, y_mesh, x, y), 
                        method='Nelder-Mead', 
-                       bounds=[(1e-9, None), 
-                               (1e-9, None), 
-                               (1e-9, None)])
+                       bounds=[(1e-9, None), (1e-9, None), (1e-9, None)])
     sy = results.x[2]
     sx = results.x[1]
 
     # Returns guassian widths (sy, sx) and centroid position (x,y)
-    return float(sy), float(sx), float(y), float(x)
+    return sy, sx, y, x
