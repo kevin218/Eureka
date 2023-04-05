@@ -448,7 +448,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                       data.flux.values, 
                                                       guess=1, trim=0, 
                                                       radius=None, size=None, 
-                                                      meta=meta)
+                                                      meta=meta, i=None, 
+                                                      m=None)
 
                     # for loop for integrations
                     for i in tqdm(range(len(data.time)), 

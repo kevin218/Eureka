@@ -5,9 +5,9 @@ from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, radius, size,
+def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
-                 expand=5.0, psf=None, psfctr=None, i=None, m=None, meta=None):
+                 expand=5.0, psf=None, psfctr=None):
     """
     Use the center method to find the center of a star in data, starting
     from position guess.
@@ -97,9 +97,8 @@ def centerdriver(method, data, guess, trim, radius, size,
         extra = sy, sx  # Gaussian 1-sigma half-widths
 
     # only plot when we do the second fit
-    if (meta.isplots_S3 >= 5 and i < meta.nplots and
-            len(img) == (2 * meta.ctr_cutout_size + 1) and 
-            method[-4:] == '_sec'):
+    if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots and
+            len(img) == (2 * meta.ctr_cutout_size + 1)):
         plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return
