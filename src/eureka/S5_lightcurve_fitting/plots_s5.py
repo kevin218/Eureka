@@ -89,11 +89,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-           meta.nbin_plot > len(lc.time):
-            nbin_plot = len(lc.time)
+           meta.nbin_plot > len(time):
+            nbin_plot = len(time)
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData(lc.time, nbin_plot)
+        binned_time = util.binData(time, nbin_plot)
         binned_flux = util.binData(flux, nbin_plot)
         binned_unc = util.binData(unc, nbin_plot, err=True)
         binned_normflux = util.binData(flux/model_sys, nbin_plot)
