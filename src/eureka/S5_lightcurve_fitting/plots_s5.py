@@ -105,7 +105,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         ax = fig.subplots(3, 1)
         ax[0].errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
                        color='w', ecolor=color, mec=color)
-        ax[0].plot(time, model, '.', ls='', ms=2, color='0.3', zorder=10)
+        ax[0].plot(time, model, '.', ls='', ms=1, color='0.3', zorder=10)
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
