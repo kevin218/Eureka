@@ -87,27 +87,39 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
         residuals = flux - model
 
+        # Get binned data and times
+        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
+           meta.nbin_plot > len(time):
+            nbin_plot = len(time)
+        else:
+            nbin_plot = meta.nbin_plot
+        binned_time = util.binData(time, nbin_plot)
+        binned_flux = util.binData(flux, nbin_plot)
+        binned_unc = util.binData(unc, nbin_plot, err=True)
+        binned_normflux = util.binData(flux/model_sys, nbin_plot)
+        binned_res = util.binData(residuals, nbin_plot)
+
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
 
         ax = fig.subplots(3, 1)
-        ax[0].errorbar(time, flux, yerr=unc, fmt='.', color='w',
-                       ecolor=color, mec=color)
-        ax[0].plot(time, model, '.', ls='', ms=2, color='0.3', zorder=10)
+        ax[0].errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
+                       color='w', ecolor=color, mec=color)
+        ax[0].plot(time, model, '.', ls='', ms=1, color='0.3', zorder=10)
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
         ax[0].set_xticks([])
 
-        ax[1].errorbar(time, flux/model_sys, yerr=unc, fmt='.', color='w',
-                       ecolor=color, mec=color)
+        ax[1].errorbar(binned_time, binned_normflux, yerr=binned_unc, fmt='.',
+                       color='w', ecolor=color, mec=color)
         ax[1].plot(new_timet, model_phys, color='0.3', zorder=10)
         ax[1].set_ylabel('Calibrated Flux', size=14)
         ax[1].set_xticks([])
 
-        ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
-                       color='w', ecolor=color, mec=color)
+        ax[2].errorbar(binned_time, binned_res*1e6, yerr=binned_unc*1e6,
+                       fmt='.', color='w', ecolor=color, mec=color)
         ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
@@ -247,10 +259,10 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
-        
+
         if meta.isplots_S5 >= 3:
             # Setup the figure
-            fig = plt.figure(5104, figsize=(8, 6))
+            fig = plt.figure(5304, figsize=(8, 6))
             plt.clf()
             ax = fig.gca()
             if isTitle:
@@ -274,7 +286,6 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
             ax.set_xlim(np.min(time), np.max(time))
-            
             # Save/show the figure
             if lc.white:
                 fname_tag = 'white'
@@ -547,7 +558,7 @@ def plot_trace(trace, model, lc, freenames, meta, fitter='nuts', compact=False,
     trace : pymc3.backends.base.MultiTrace or arviz.InferenceData
         A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the
         samples.
-    model : 
+    model :
 
     lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
         The lightcurve data object.
@@ -628,7 +639,7 @@ def plot_res_distr(lc, model, meta, fitter):
     for channel in lc.fitted_channels:
         plt.figure(5302, figsize=(8, 6))
         plt.clf()
-        
+
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(np.array(lc.unc_fit))
         model = np.ma.copy(model_lc)

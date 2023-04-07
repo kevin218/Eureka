@@ -252,7 +252,7 @@ class PyMC3Model:
             # Split the arrays that have lengths of the original time axis
             time = split([time, ], self.nints, chan)[0]
 
-        ax.plot(time, model, '.', ls='', ms=2, label=label,
+        ax.plot(time, model, '.', ls='', ms=1, label=label,
                 color=color, zorder=zorder)
 
         if components and self.components is not None:

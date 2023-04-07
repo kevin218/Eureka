@@ -1,12 +1,13 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from copy import copy
 
 from . import models as m
 from . import fitters
 from . import gradient_fitters
 from .utils import COLORS, color_gen
-from ..lib import plots
+from ..lib import plots, util
 from ..lib.split_channels import split
 
 
@@ -174,10 +175,10 @@ class LightCurve(m.Model):
 
         # Store it
         if fit_model is not None:
-            self.results.append(fit_model)
+            self.results.append(copy(fit_model))
 
     def plot(self, meta, fits=True):
-        """Plot the light curve with all available fits. (Figs 5103)
+        """Plot the light curve with all available fits. (Figs 5103 and 5306)
 
         Parameters
         ----------
@@ -200,12 +201,22 @@ class LightCurve(m.Model):
                 time, flux, unc = split([time, flux, unc],
                                         meta.nints, channel)
 
+            # Get binned data and times
+            if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
+               meta.nbin_plot > len(time):
+                nbin_plot = len(time)
+            else:
+                nbin_plot = meta.nbin_plot
+            binned_time = util.binData(time, nbin_plot)
+            binned_flux = util.binData(flux, nbin_plot)
+            binned_unc = util.binData(unc, nbin_plot, err=True)
+
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(time, flux, unc, fmt='.', color=self.colors[i],
-                        zorder=0)
+            ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
+                        color=self.colors[i], zorder=0)
 
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
@@ -233,6 +244,45 @@ class LightCurve(m.Model):
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
+
+            # Show unbinned data as well if requested
+            if nbin_plot != len(time) and meta.isplots_S5 >= 3:
+                fig = plt.figure(5306, figsize=(8, 6))
+                fig.clf()
+                # Draw the data
+                ax = fig.gca()
+                ax.plot(time, flux, '.', color=self.colors[i], zorder=0,
+                        alpha=0.01)
+                ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
+                            color=self.colors[i], zorder=1)
+
+                # Make a new color generator for the models
+                plot_COLORS = color_gen("Greys", 6)
+
+                # Draw best-fit model
+                if fits and len(self.results) > 0:
+                    for model in self.results:
+                        model.plot(ax=ax, color=next(plot_COLORS),
+                                   zorder=np.inf, share=self.share,
+                                   chan=channel)
+
+                # Format axes
+                ax.set_title(f'{meta.eventlabel} - Channel {channel}')
+                ax.set_xlabel(str(self.time_units))
+                ax.set_ylabel('Normalized Flux', size=14)
+                ax.legend(loc='best')
+                fig.tight_layout()
+
+                if self.white:
+                    fname_tag = 'white'
+                else:
+                    ch_number = str(channel).zfill(len(str(self.nchannel)))
+                    fname_tag = f'ch{ch_number}'
+                fname = (f'figs{os.sep}fig5306_{fname_tag}_all_fits' +
+                         plots.figure_filetype)
+                fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+                if not meta.hide_plots:
+                    plt.pause(0.2)
 
     def reset(self):
         """Reset the results"""

@@ -34,7 +34,7 @@ dependencies:
         - crds
         - exotic-ld
         - image_registration==0.2.6
-        - jwst==1.8.0
+        - jwst==1.8.2
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
