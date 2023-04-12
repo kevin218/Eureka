@@ -28,6 +28,8 @@ skip_apphot_bg  False       # Skips the background subtraction during the apertu
 photap          5           # Size of photometry aperture in pixels
 skyin           12          # Inner sky annulus edge, in pixels
 skywidth        18          # Width of the sky annulus, in pixels
+centroid_tech   com         # (mgmc method param) Technique used for centroiding. Options: com, 1dg, 2dg
+gauss_frame     15          # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Recommend ~15 for MIRI photometry.
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

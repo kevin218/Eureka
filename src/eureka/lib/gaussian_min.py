@@ -109,7 +109,7 @@ def pri_cent(img, meta):
     - Feb 22, 2023 Isaac Edelman 
         Initial implementation.
     """
-    # Create median frame from Integration
+    # Create median frame from batch
     median_Frame = np.ma.median(img, axis=0)
 
     # Create initial centroid guess using specified method
@@ -120,7 +120,6 @@ def pri_cent(img, meta):
     else:
         print("Invalid centroid_tech option")
 
-    # Returns x,y coordinates of centroid position
     return x, y
 
 
@@ -182,17 +181,14 @@ def mingauss(img, yxguess, meta):
     y_shape = np.arange(img.shape[0])
     x_mesh, y_mesh = np.meshgrid(x_shape, y_shape)
 
-    # The inital guess for miri is [400, 41, 41] 
-    # or [brightness of pixles in area of interest, xsigma, ysigma].
-    # This guess is used as a starting point for the algorithm.
-    if (meta.inst == 'nircam'):
+    # The initial guess for [Gaussian amplitude, xsigma, ysigma]
+    if meta.inst == 'miri':
         initial_guess = [400, 5, 5]
-    elif (meta.inst == 'miri'):
+    elif meta.inst == 'nircam':
         initial_guess = [400, 41, 41]
     else:
-        print("Possible mgmc gaussian centroiding intial guess issue. " +
-              "Default values used for guess in gaussian_min minimize " + 
-              "function")
+        print(f"Warning: Photometry has only been tested on MIRI and NIRCam"
+              f"while meta.inst is set to {meta.inst}")
         initial_guess = [400, 20, 20]
 
     # Fit the gaussian width by minimizing minfunc with the Nelder-Mead method.

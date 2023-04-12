@@ -750,7 +750,7 @@ def phot_centroid(data, meta):
     """
     plt.figure(3109)
     plt.clf()
-    fig, ax = plt.subplots(4, 1, figsize=(10, 6), sharex=True)
+    fig, ax = plt.subplots(4, 1, num=3019, figsize=(10, 6), sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
@@ -1177,7 +1177,7 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
         plt.pause(0.1)
 
 
-def tilt_events(meta, data, m, position, median_tilt_frame):
+def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     """
     Plots the mirror tilt events by divinding 
     an integrations' flux values by a 
@@ -1190,6 +1190,8 @@ def tilt_events(meta, data, m, position, median_tilt_frame):
         The metadata object.
     data : Xarray Dataset
         The Dataset object.
+    log : logedit.Logedit
+        The current log.
     m : int
         The file number.
     position : ndarray
@@ -1229,18 +1231,18 @@ def tilt_events(meta, data, m, position, median_tilt_frame):
     asb_ypos_max = data.y.values[maxy]
 
     # Create median frame
-    if median_tilt_frame is None:
-        median_frame = ((np.nanmedian(data.flux.values[:10], 
-                                      axis=0))[miny:maxy, minx:maxx])
+    if saved_refrence_tilt_frame is None:
+        refrence_tilt_frame = ((np.nanmedian(data.flux.values[:10], 
+                                             axis=0))[miny:maxy, minx:maxx])
     else:
-        median_frame = median_tilt_frame
+        refrence_tilt_frame = saved_refrence_tilt_frame
 
     # Plot each integration
     for i in tqdm(range(len(data.time)), desc='  Creating tilt event figures'):
 
         # Caluculate flux ratio
         flux_tilt = (data.flux.values[i, miny:maxy, 
-                                      minx:maxx] / median_frame)
+                                      minx:maxx] / refrence_tilt_frame)
         
         # Create plot
         plt.figure(3507, figsize=(6, 6))
@@ -1289,33 +1291,39 @@ def tilt_events(meta, data, m, position, median_tilt_frame):
         images.append(imageio.v2.imread(meta.outputdir + fname))
 
     # Figure fig3507b
-    # Create .gif per segment
-    for i in tqdm(range(1), desc='  Creating segment tilt event GIF'):
-        imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
-                        f'fig3507b_tilt_event_segment_{file_number}.gif', 
-                        images, fps=20)
+    # Create .gif per batch
+    log.writelog('  Creating batch tilt event GIF',
+                 mute=(not meta.verbose))
+    imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
+                    f'fig3507b_tilt_event_batch_{file_number}.gif', 
+                    images, fps=20)
 
     # Figure fig3507c
     # Create .gif of all tilt event segments combined
-    if meta.testing_S3 is False and (m + 1 is meta.num_data_files):
-        for i in tqdm(range(1), desc='  Creating all segment tilt event GIF'):
+    if not meta.testing_S3 and (m + 1 == meta.nbatch):
+        log.writelog('  Creating all segment tilt event GIF',
+                     mute=(not meta.verbose))
 
-            # Create list of all .png tilt images in tilt_event folder
-            all_images = []
-            in_filenames = os.listdir(meta.outputdir + 
-                                      f'figs{os.sep}tilt_events{os.sep}')
-            in_filenames.sort()
+        # Create list of all .png tilt images in tilt_event folder
+        all_images = []
+        for file in os.listdir(meta.outputdir + 
+                               f'figs{os.sep}tilt_events{os.sep}'):
+            if file.endswith(".png"):
+                in_filenames = os.path.join(meta.outputdir + 
+                                            f'figs{os.sep}' + 
+                                            f'tilt_events{os.sep}', file)
+        in_filenames.sort()
 
-            # Create list of all figure names to pull from later to create .gif
-            for i in range(0, len(in_filenames)):
-                all_images.append(imageio.v2.imread(meta.outputdir + 
-                                                    f'figs{os.sep}' + 
-                                                    f'tilt_events{os.sep}' + 
-                                                    in_filenames[i]))
+        # Create list of all figure names to pull from later to create .gif
+        for i in range(len(in_filenames)):
+            all_images.append(imageio.v2.imread(meta.outputdir + 
+                                                f'figs{os.sep}' + 
+                                                f'tilt_events{os.sep}' + 
+                                                in_filenames[i]))
 
-            # Create .gif of all tilt event segments
-            imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
-                            'fig3507c_tilt_events_all_segments.gif', 
-                            all_images, fps=60)
+        # Create .gif of all tilt event segments
+        imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
+                        'fig3507c_tilt_events_all_segments.gif', 
+                        all_images, fps=60)
 
-    return median_frame
+    return refrence_tilt_frame

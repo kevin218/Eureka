@@ -237,8 +237,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                       meta.files_per_batch))
 
             datasets = []
-            tilt_event_median_frame_flag = False
-            saved_median_tilt_frame = None
+            saved_refrence_tilt_frame = None
+            
             for m in range(meta.nbatch):
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
@@ -547,14 +547,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # plot tilt events
                 if (meta.isplots_S3 >= 5 and meta.inst == 'nircam'): 
-                    median_tilt_frame = \
-                        plots_s3.tilt_events(meta, data, m, 
+                    refrence_tilt_frame = \
+                        plots_s3.tilt_events(meta, data, log, m, 
                                              position, 
-                                             saved_median_tilt_frame)
-                    
-                    if not tilt_event_median_frame_flag:
-                        saved_median_tilt_frame = median_tilt_frame
-                        tilt_event_median_frame_flag = True
+                                             saved_refrence_tilt_frame)
+
+                    if saved_refrence_tilt_frame is not None:
+                        saved_refrence_tilt_frame = refrence_tilt_frame
 
                 if meta.save_fluxdata:
                     # Save flux data from current segment
