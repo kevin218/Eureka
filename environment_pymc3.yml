@@ -35,8 +35,8 @@ dependencies:
         - crds
         - exotic-ld
         - exoplanet
-        - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
-        - jwst==1.8.0
+        - image_registration==0.2.6
+        - jwst==1.8.2
         - myst-parser # Needed for documentation
         - pymc3
         - setuptools_scm # Needed for version number

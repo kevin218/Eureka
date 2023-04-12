@@ -2,8 +2,38 @@ from astropy.table import QTable
 from astropy.io import ascii
 import numpy as np
 
+from .split_channels import get_trim
 
-def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
+
+def savetable_S1(filename, scale_factor):
+    """Save the scale factor from Stage 1 as an ECSV.
+
+    Parameters
+    ----------
+    filename : str
+        The fully qualified filename that the results will be stored in.
+    scale_factor : ndarray (2D)
+        The bias scale factor of dimension nints by ngroup
+
+    Raises
+    ------
+    ValueError
+        There was a shape mismatch between your arrays
+    """
+    nint, ngroup = scale_factor.shape
+
+    names = []
+    for ii in range(1, ngroup+1):
+        names.append(f'group{ii}')
+    names = tuple(names)
+
+    table = QTable(scale_factor, names=names)
+    ascii.write(table, filename, format='ecsv', overwrite=True,
+                fast_writer=True)
+    return
+
+
+def savetable_S5(filename, meta, time, wavelength, bin_width, lcdata, lcerr,
                  individual_models, model, residuals):
     """Save the results from Stage 5 as an ECSV file.
 
@@ -35,14 +65,26 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
     """
     dims = [len(time), len(wavelength)]
 
-    orig_shapes = [str(time.shape), str(wavelength.shape),
-                   str(bin_width.shape), str(lcdata.shape), str(lcerr.shape),
-                   str(individual_models.shape), str(model.shape),
-                   str(residuals.shape)]
+    if not meta.multwhite:
+        time = np.tile(time, dims[1])
+        wavelength = np.repeat(wavelength, dims[0])
+        bin_width = np.repeat(bin_width, dims[0])
+    else:
+        terse_waves = np.copy(wavelength)
+        terse_widths = np.copy(bin_width)
+        wavelength = np.zeros(dims[0])
+        bin_width = np.zeros(dims[0])
+        for chan in range(dims[1]):
+            trim1, trim2 = get_trim(meta.nints, chan)
+            wavelength[trim1:trim2] = terse_waves[chan]
+            bin_width[trim1:trim2] = terse_widths[chan]
 
-    time = np.tile(time, dims[1])
-    wavelength = np.repeat(wavelength, dims[0])
-    bin_width = np.repeat(bin_width, dims[0])
+    orig_shapes = [str(time.shape), str(wavelength.shape),
+                   str(bin_width.shape), str(lcdata.shape), str(lcerr.shape)]
+    orig_shapes.extend([str(individual_models[i, 1].shape)
+                        for i in range(individual_models.shape[0])])
+    orig_shapes.extend([str(model.shape), str(residuals.shape)])
+
     lcdata = lcdata.flatten()
     lcerr = lcerr.flatten()
     model_names = individual_models[:, 0]
@@ -62,9 +104,10 @@ def savetable_S5(filename, time, wavelength, bin_width, lcdata, lcerr,
     except ValueError as e:
         raise ValueError("There was a shape mismatch between your arrays which"
                          " had shapes:\n"
-                         "time, wavelength, bin_width, lcdata, lcerr, "
-                         "individual_models, model, residuals\n"
-                         ",".join(orig_shapes)) from e
+                         "time, wavelength, bin_width, lcdata, lcerr, " +
+                         ', '.join(model_names) +
+                         ", model, residuals\n" +
+                         ", ".join(orig_shapes)) from e
 
 
 def savetable_S6(filename, key, wavelength, bin_width, value, error):
