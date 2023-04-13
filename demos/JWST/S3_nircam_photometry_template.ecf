@@ -22,7 +22,7 @@ bg_thresh            [7,7]            # Double-iteration X-sigma threshold for o
 # Photometric extraction parameters
 interp_method        cubic            # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 centroid_method      mgmc             # Method used for centroiding. Options: mgmc, fgc
-ctr_cutout_size      5                # Cutoff size all around the centroid after the coarse centroid calculation. For the mgmc method the value used must be odd and is used to define a box area for the second centroid guess. 
+ctr_cutout_size      5                # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method.
 oneoverf_corr        median           # Options: None, meanerr, median
 oneoverf_dist        350              # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
 skip_apphot_bg       False            # Skips the background subtraction during the aperture photometry step
