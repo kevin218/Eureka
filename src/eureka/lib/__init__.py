@@ -5,6 +5,7 @@ from . import centroid
 from . import clipping
 from . import disk
 from . import gaussian
+from . import gaussian_min
 from . import gelmanrubin
 from . import logedit
 from . import manageevent

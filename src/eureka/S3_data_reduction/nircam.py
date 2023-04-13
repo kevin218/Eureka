@@ -426,6 +426,16 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         err_all.append(data.err.values[i][:, use_cols_temp])
         mask_all.append(data.mask.values[i][:, use_cols_temp])
 
+    # Do odd even column subtraction
+    odd_cols = data.flux.values[i, :, ::2]
+    even_cols = data.flux.values[i, :, 1::2]
+    use_cols_odd = use_cols[::2]
+    use_cols_even = use_cols[1::2]
+    odd_median = np.nanmedian(odd_cols[:, use_cols_odd])
+    even_median = np.nanmedian(even_cols[:, use_cols_even])
+    data.flux.values[i, :, ::2] -= odd_median
+    data.flux.values[i, :, 1::2] -= even_median
+
     if meta.oneoverf_corr == 'meanerr':
         for j in range(128):
             for k in range(4):
@@ -439,7 +449,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             if ampl_used_bool[k]:
                 edges_temp = edges_all[k]
                 data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
-                    np.median(flux_all[k], axis=1)[:, None]
+                    np.nanmedian(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
                      ' Please choose between meanerr or median.',

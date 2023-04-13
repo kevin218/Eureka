@@ -480,13 +480,17 @@ interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
+centroid_method
+'''''''''''''''
+Only used for photometry analyses. Selects the method used for determining the centroid position (options: fgc or mgmc). For it's initial centroid guess, the 'mgmc' method creates a median frame from each batch of integrations and performs centroiding on the median frame (with the exact centroiding method set by the centroid_tech parameter). For each integration, the 'mgmc' method will then crop out an area around that guess using the value of ctr_cutout_size, and then perform a second round of centroiding to measure how the centroid moves over time. The 'fgc' method is the legacy centroiding method and is not currently recommended.
+
 ctr_guess
 '''''''''
 Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
 
 ctr_cutout_size
 '''''''''''''''
-Only used for photometry analyses. Amount of pixels all around the guessed centroid location which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+Only used for photometry analyses. For the 'fgc' and 'mgmc' methods this parameter is the amount of pixels all around the guessed centroid location which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
 oneoverf_corr
 '''''''''''''
@@ -511,6 +515,14 @@ Only used for photometry analyses. Inner sky annulus edge, in pixels. If you wan
 skywidth
 ''''''''
 Only used for photometry analyses. The width of the sky annulus, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skyin are also lists, all combinations of the three will be attempted.
+
+centroid_tech
+'''''''''''''
+Only used for photometry analyses. The centroiding technique used if centroid_method is set to mgmc. The options are: com, 1dg, 2dg. The recommended technique is com (standing for Center of Mass). More details about the options can be found in the photutils documentation at https://photutils.readthedocs.io/en/stable/centroids.html.
+
+gauss_frame
+'''''''''''
+Only used for photometry analyses. Range away from first centroid guess to include in centroiding map for gaussian widths. Only required for mgmc method. Options: 1 -> Max frame size (type integer).
 
 isplots_S3
 ''''''''''
