@@ -114,7 +114,7 @@ def pri_cent(img, meta):
 
     # Create initial centroid guess using specified method
     if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
-        cent_func = getattr(sys.modules[__name__], 
+        cent_func = getattr(sys.modules[__name__],
                             ("centroid_" + meta.centroid_tech.lower()))
         x, y = cent_func(median_Frame)
     else:
@@ -160,11 +160,11 @@ def mingauss(img, yxguess, meta):
     # based off of centroid method 
     # and inital centroid guess
     if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
-        cent_func = getattr(sys.modules[__name__], 
+        cent_func = getattr(sys.modules[__name__],
                             ("centroid_" + meta.centroid_tech.lower()))
-        x, y = centroid_sources(img, yxguess[1], yxguess[0], 
-                                centroid_func=cent_func, 
-                                box_size=meta.ctr_cutout_size)
+        x, y = centroid_sources(img, yxguess[1], yxguess[0],
+                                centroid_func=cent_func,
+                                box_size=(2*meta.ctr_cutout_size+1))
         x, y = x[0], y[0]
     else:
         print("Invalid centroid_tech option")
@@ -192,9 +192,9 @@ def mingauss(img, yxguess, meta):
         initial_guess = [400, 20, 20]
 
     # Fit the gaussian width by minimizing minfunc with the Nelder-Mead method.
-    results = minimize(minfunc, initial_guess, 
-                       args=(frame, x_mesh, y_mesh, x, y), 
-                       method='Nelder-Mead', 
+    results = minimize(minfunc, initial_guess,
+                       args=(frame, x_mesh, y_mesh, x, y),
+                       method='Nelder-Mead',
                        bounds=[(1e-9, None), (1e-9, None), (1e-9, None)])
     sy = results.x[2]
     sx = results.x[1]

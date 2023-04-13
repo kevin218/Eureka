@@ -1196,7 +1196,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         The file number.
     position : ndarray
         The y, x position of the star.
-    median_tilt_frame : ndarray
+    saved_refrence_tilt_frame : ndarray
         The median of the first 10 integrations.
 
     Returns 
@@ -1232,7 +1232,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
 
     # Create median frame
     if saved_refrence_tilt_frame is None:
-        refrence_tilt_frame = ((np.nanmedian(data.flux.values[:10], 
+        refrence_tilt_frame = ((np.nanmedian(data.flux.values[:10],
                                              axis=0))[miny:maxy, minx:maxx])
     else:
         refrence_tilt_frame = saved_refrence_tilt_frame
@@ -1241,7 +1241,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     for i in tqdm(range(len(data.time)), desc='  Creating tilt event figures'):
 
         # Caluculate flux ratio
-        flux_tilt = (data.flux.values[i, miny:maxy, 
+        flux_tilt = (data.flux.values[i, miny:maxy,
                                       minx:maxx] / refrence_tilt_frame)
         
         # Create plot
@@ -1254,11 +1254,11 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         
         # Figure settings
         plt.title('Tilt Identification')
-        plt.xticks(np.arange(0, flux_tilt.shape[1], 1), 
-                   (np.arange(asb_xpos_min, asb_xpos_max, 1)), 
+        plt.xticks(np.arange(0, flux_tilt.shape[1], 1),
+                   (np.arange(asb_xpos_min, asb_xpos_max, 1)),
                    rotation='vertical')
-        plt.yticks(np.arange(0, flux_tilt.shape[0], 1), 
-                   (np.arange(asb_ypos_min, asb_ypos_max, 1)), 
+        plt.yticks(np.arange(0, flux_tilt.shape[0], 1),
+                   (np.arange(asb_ypos_min, asb_ypos_max, 1)),
                    rotation='horizontal')
         add_colorbar(im, label='Flux Ratio')
         plt.locator_params(nbins=11)
@@ -1275,7 +1275,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
         # Define names of files and labels
-        plt.suptitle((f'Segment {file_number}, Integration {int_number}'), 
+        plt.suptitle((f'Segment {file_number}, Integration {int_number}'),
                      y=0.99)
         fname = (f'figs{os.sep}tilt_events{os.sep}'
                  f'fig3507a_file{file_number}_int{int_number}'
@@ -1306,24 +1306,23 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
 
         # Create list of all .png tilt images in tilt_event folder
         all_images = []
-        for file in os.listdir(meta.outputdir + 
+        in_filenames = []
+        for file in os.listdir(meta.outputdir +
                                f'figs{os.sep}tilt_events{os.sep}'):
             if file.endswith(".png"):
-                in_filenames = os.path.join(meta.outputdir + 
-                                            f'figs{os.sep}' + 
-                                            f'tilt_events{os.sep}', file)
+                in_filenames.append(os.path.join(meta.outputdir +
+                                                 f'figs{os.sep}' +
+                                                 f'tilt_events{os.sep}', file))
         in_filenames.sort()
 
         # Create list of all figure names to pull from later to create .gif
-        for i in range(len(in_filenames)):
-            all_images.append(imageio.v2.imread(meta.outputdir + 
-                                                f'figs{os.sep}' + 
-                                                f'tilt_events{os.sep}' + 
-                                                in_filenames[i]))
+        for fname in in_filenames:
+            all_images.append(imageio.v2.imread(
+                meta.outputdir + f'figs{os.sep}tilt_events{os.sep}{fname}'))
 
         # Create .gif of all tilt event segments
         imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
-                        'fig3507c_tilt_events_all_segments.gif', 
+                        'fig3507c_tilt_events_all_segments.gif',
                         all_images, fps=60)
 
     return refrence_tilt_frame
