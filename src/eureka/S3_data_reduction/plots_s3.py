@@ -1320,8 +1320,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
 
         # Create list of all figure names to pull from later to create .gif
         for fname in in_filenames:
-            all_images.append(imageio.v2.imread(
-                meta.outputdir + f'figs{os.sep}tilt_events{os.sep}{fname}'))
+            all_images.append(imageio.v2.imread(fname))
 
         # Create .gif of all tilt event segments
         imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
