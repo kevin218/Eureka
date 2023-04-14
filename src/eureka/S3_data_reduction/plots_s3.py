@@ -525,9 +525,11 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
+    plt.figure(3304)
+    plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
-    fig.clf()
+    
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
@@ -860,8 +862,9 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
+    plt.figure(3503)
+    plt.clf()
     fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
-    fig.clf()
     plt.suptitle('Centroid gaussian fit')
     ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
 
