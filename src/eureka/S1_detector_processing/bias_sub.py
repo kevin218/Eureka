@@ -30,6 +30,8 @@ def do_correction(input_model, bias_model, meta, log):
     output_model: data model object
         bias-subtracted science data
     """
+    log.writelog('Doing super-bias subtraction.')
+
     # Check for subarray mode and extract subarray from the
     # bias reference data if necessary
     if not reffile_utils.ref_matches_sci(input_model, bias_model):

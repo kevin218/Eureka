@@ -32,7 +32,7 @@ def GLBS(input_model, log, meta):
         The input group-level data product with background removed.
     '''
 
-    log.writelog('  Running Group Level Background Subtraction.')
+    log.writelog('Running Group Level Background Subtraction.')
 
     all_data = input_model.data
     dq = input_model.groupdq
@@ -51,6 +51,8 @@ def GLBS(input_model, log, meta):
         meta.isrotate = False
 
     for ngrp in range(all_data.shape[1]):
+        log.writelog(f'  Starting group {ngrp}.')
+
         grp_data = all_data[:, ngrp, :, :]
         grp_mask = np.ones(grp_data.shape, dtype=bool)
         dqmask = np.where((dq[:, ngrp, :, :] % 2 == 1) |
@@ -103,7 +105,7 @@ def mask_trace(input_model, log, meta):
     input_model : jwst.datamodels.QuadModel
         The input group-level data product with trace mask object
     '''
-    log.writelog('  Masking Curved Trace.')
+    log.writelog('  Masking curved trace.')
 
     all_data = input_model.data
 
