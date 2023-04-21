@@ -5,7 +5,8 @@ from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
+def centerdriver(method, data, guess, trim, radius, size, i, m, meta, 
+                 saved_ref_median_frame,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
                  expand=5.0, psf=None, psfctr=None):
     """
@@ -90,15 +91,17 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         extra = sy, sx  # Gaussian 1-sigma half-widths
     elif method == 'mgmc_pri':
         # Median frame creation + first centroid
-        x, y = gmin.pri_cent(img, meta)
+        x, y, refrence_median_frame = gmin.pri_cent(img, meta,
+                                                    saved_ref_median_frame)
     elif method == 'mgmc_sec': 
         # Second enhanced centroid position + gaussian widths
         sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths
+        refrence_median_frame = None
 
     # only plot when we do the second fit
     if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
         plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return
-    return ((y, x) + cen - trim), extra
+    return ((y, x) + cen - trim), extra, refrence_median_frame

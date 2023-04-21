@@ -749,6 +749,8 @@ def phot_centroid(data, meta):
         Enchanced graph layout, 
         added sig display values for sy,sx,
         and fixed issue with ax[2] displaying sy instead of sx.
+    - 2023-04-21 Isaac Edelman
+        Added flat "0" lines to plots.
     """
     plt.figure(3109)
     plt.clf()
@@ -763,24 +765,30 @@ def phot_centroid(data, meta):
     csx_rms = np.sqrt(np.nanmean((csx - np.nanmedian(csx)) ** 2))
     csy = data.centroid_sy.values
     csy_rms = np.sqrt(np.nanmean((csy - np.nanmedian(csy)) ** 2))
+    flat_line = range(data.time)
+    flat_line_zeros = np.zeros(data.time)
 
     ax[0].plot(data.time, data.centroid_x-np.nanmean(data.centroid_x),
                label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms))
+    ax[0].plot(flat_line, flat_line_zeros, linestyle=':', color='r')
     ax[0].set_ylabel('Delta x')
     ax[0].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     ax[1].plot(data.time, data.centroid_y-np.nanmean(data.centroid_y),
                label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms))
+    ax[1].plot(flat_line, flat_line_zeros, linestyle=':', color='r')
     ax[1].set_ylabel('Delta y')
     ax[1].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     ax[2].plot(data.time, data.centroid_sx-np.nanmean(data.centroid_sx),
                label=r'$\sigma$sx = {0:.4f} pxls'.format(csx_rms))
+    ax[2].plot(flat_line, flat_line_zeros, linestyle=':', color='r')
     ax[2].set_ylabel('Delta sx')
     ax[2].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     ax[3].plot(data.time, data.centroid_sy-np.nanmean(data.centroid_sy),
                label=r'$\sigma$sy = {0:.4f} pxls'.format(csy_rms))
+    ax[3].plot(flat_line, flat_line_zeros, linestyle=':', color='r')
     ax[3].set_ylabel('Delta sy')
     ax[3].set_xlabel('Time')
     ax[3].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
@@ -861,34 +869,55 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
 
     - 2022-08-02 Sebastian Zieba
         Initial version
+    - 2023-04-19 Isaac Edelman
+        Cleaned up plot &
+        corrected plotting feature
     """
     plt.figure(3503)
     plt.clf()
     fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
-    plt.suptitle('Centroid gaussian fit')
-    ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
 
-    ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
-    x_plot = np.linspace(0, len(np.sum(img, axis=0)))
+    # Title
+    plt.suptitle('Centroid gaussian fit')
+
+    # Image of source
+    ax[1, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+
+    # X gaussian plot
+    norm_x_factor = np.sum(np.nansum(img, axis=0))
+    ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
+                  np.nansum(img, axis=0)/norm_x_factor)
+    x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
     norm_distr_x = stats.norm.pdf(x_plot, x, sx)
     norm_distr_x_scaled = \
-        norm_distr_x/np.max(norm_distr_x)*np.max(np.sum(img, axis=0))
-    ax[1, 0].plot(x_plot, norm_distr_x_scaled)
-    ax[1, 0].set_xlabel('x position')
-    ax[1, 0].set_ylabel('Flux (electrons)')
+        norm_distr_x/np.nanmax(norm_distr_x)*np.nanmax(np.nansum(img, axis=0))
+    ax[0, 0].plot(x_plot, norm_distr_x_scaled/norm_x_factor,
+                  linestyle='dashed')
+    ax[0, 0].set_xlabel('x position')
+    ax[0, 0].set_ylabel('Normalized Flux')
 
-    ax[0, 1].plot(np.sum(img, axis=1), range(len(np.sum(img, axis=1))))
-    y_plot = np.linspace(0, len(np.sum(img, axis=1)))
+    # Y gaussian plot
+    norm_y_factor = np.sum(np.nansum(img, axis=0))
+    ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
+                  range(len(np.nansum(img, axis=1))))
+    y_plot = np.linspace(0, len(np.nansum(img, axis=1)))
     norm_distr_y = stats.norm.pdf(y_plot, y, sy)
     norm_distr_y_scaled = \
-        norm_distr_y/np.max(norm_distr_y)*np.max(np.sum(img, axis=1))
-    ax[0, 1].plot(norm_distr_y_scaled, y_plot)
-    ax[0, 1].set_ylabel('y position')
-    ax[0, 1].set_xlabel('Flux (electrons)')
+        norm_distr_y/np.nanmax(norm_distr_y)*np.nanmax(np.nansum(img, axis=1))
+    ax[1, 1].plot(norm_distr_y_scaled/norm_y_factor, y_plot,
+                  linestyle='dashed')
+    ax[1, 1].set_ylabel('y position')
+    ax[1, 1].set_xlabel('Normalized Flux')
 
+    # Last plot in (0,1) not used
+    ax[0, 1].set_axis_off()
+
+    fig.tight_layout()
+    plt.tight_layout()
+
+    # Naming figure
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    plt.tight_layout()
     fname = (f'figs{os.sep}fig3503_file{file_number}_int{int_number}'
              f'_Centroid_Fit' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -1119,8 +1148,6 @@ def phot_2d_frame_diff(data, meta):
         flux1 = data.flux.values[i]
         flux2 = data.flux.values[i+1]
         plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
-        plt.xlim(1064-120-512, 1064+120-512)
-        plt.ylim(0, flux1.shape[0])
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
         plt.colorbar(label='Delta Flux (electrons)')
@@ -1232,7 +1259,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     asb_xpos_max = data.x.values[maxx]
     asb_ypos_min = data.y.values[miny]
     asb_ypos_max = data.y.values[maxy]
-
+    
     # Create median frame
     if saved_refrence_tilt_frame is None:
         refrence_tilt_frame = ((np.nanmedian(data.flux.values[:10],
@@ -1278,7 +1305,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
 
         # Define names of files and labels
-        plt.suptitle((f'Segment {file_number}, Integration {int_number}'),
+        plt.suptitle((f'Batch {file_number}, Integration {int_number}'),
                      y=0.99)
         fname = (f'figs{os.sep}tilt_events{os.sep}'
                  f'fig3507a_file{file_number}_int{int_number}'
