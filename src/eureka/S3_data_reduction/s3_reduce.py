@@ -546,7 +546,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.save_fluxdata = True
 
                 # plot tilt events
-                if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and
+                if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \
                    meta.photometry:
                     refrence_tilt_frame = \
                         plots_s3.tilt_events(meta, data, log, m,
