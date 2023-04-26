@@ -109,19 +109,19 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
-        ax[0].set_ylabel('Normalized Flux', size=14)
+        ax[0].set_ylabel('Normalized Flux', size=10)
         ax[0].set_xticks([])
 
         ax[1].errorbar(binned_time, binned_normflux, yerr=binned_unc, fmt='.',
                        color='w', ecolor=color, mec=color)
         ax[1].plot(new_timet, model_phys, color='0.3', zorder=10)
-        ax[1].set_ylabel('Calibrated Flux', size=14)
+        ax[1].set_ylabel('Calibrated Flux', size=10)
         ax[1].set_xticks([])
 
         ax[2].errorbar(binned_time, binned_res*1e6, yerr=binned_unc*1e6,
                        fmt='.', color='w', ecolor=color, mec=color)
         ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
-        ax[2].set_ylabel('Residuals (ppm)', size=14)
+        ax[2].set_ylabel('Residuals (ppm)', size=10)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
         fig.subplots_adjust(hspace=0)
