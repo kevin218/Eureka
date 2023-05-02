@@ -387,8 +387,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                           m, integ=None)
                         if meta.isplots_S3 >= 1:
                             # make y position and width plots
-                            plots_s3.driftypos(data, meta)
-                            plots_s3.driftywidth(data, meta)
+                            plots_s3.driftypos(data, meta, m)
+                            plots_s3.driftywidth(data, meta, m)
 
                     # Select only aperture region
                     apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
