@@ -204,9 +204,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 from . import nircam as inst
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
-                log.writelog('WARNING: Are you using real JWST data? If so, '
-                             'you should edit the flag_bg() function in '
-                             'nirspec.py and look at Issue #193 on Github!')
             elif meta.inst == 'niriss':
                 raise ValueError('NIRISS observations are currently '
                                  'unsupported!')
@@ -292,6 +289,20 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.int_end = meta.n_int
                 else:
                     meta.int_end = meta.int_start+meta.nplots
+
+                # Perform BG subtraction along dispersion direction
+                # for untrimmed NIRCam spectroscopic data
+                if hasattr(meta, 'bg_disp') and meta.bg_disp:
+                    log.writelog('  Performing BG subtraction along ' +
+                                 'dispersion direction...',
+                                 mute=(not meta.verbose))
+                    # Create bad pixel mask (1 = good, 0 = bad)
+                    data['mask'] = (['time', 'y', 'x'],
+                                    np.ones(data.flux.shape, dtype=bool))
+                    data = bg.BGsubtraction(data, meta, log,
+                                            m, meta.isplots_S3)
+                    meta.bg_disp = False
+                    meta.bg_deg = None
 
                 # Trim data to subarray region of interest
                 # Dataset object no longer contains untrimmed data
