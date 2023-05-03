@@ -142,12 +142,12 @@ def mask_trace(input_model, log, meta):
         for nc in range(meta.bg_x1, meta.bg_x2):
             mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
             mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
+            trace_mask[mask_low:mask_hih, nc] = np.nan
     else:
         for nc in range(ncol):
             mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
             mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
-
-        trace_mask[mask_low:mask_hih, nc] = np.nan
+            trace_mask[mask_low:mask_hih, nc] = np.nan
 
     input_model.trace_mask = trace_mask
 
