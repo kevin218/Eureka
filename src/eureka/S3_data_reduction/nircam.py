@@ -243,7 +243,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    if hasattr(meta, 'bg_disp') and meta.bg_disp:
+    if hasattr(meta, 'bg_dir') and meta.bg_dir == 'RxR':
         bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_x1,
                                     meta.bg_x2, deg=meta.bg_deg,
                                     threshold=meta.p3thresh, isrotate=0,

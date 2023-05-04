@@ -106,6 +106,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
 
+            meta.m = m
             meta.intstart = hdulist[0].header['INTSTART']-1
             meta.intend = hdulist[0].header['INTEND']
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
@@ -116,7 +117,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
 
     # make citations for current stage
     util.make_citations(meta, 1)
-    
+
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')
@@ -205,7 +206,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.superbias = Eureka_SuperBiasStep()
         self.superbias.s1_meta = meta
         self.superbias.s1_log = log
-        
+
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm

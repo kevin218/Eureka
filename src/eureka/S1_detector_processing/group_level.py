@@ -71,24 +71,22 @@ def GLBS(input_model, log, meta):
         data = xrio.makeDataset(dictionary=xrdict)
         data['flux'].attrs['flux_units'] = 'n/a'
         data.attrs['intstart'] = meta.intstart
+        meta.bg_dir = 'CxC'
         if ngrp == all_data.shape[1]-1:
-            data = bkg.BGsubtraction(data, meta,
-                                     log, 0,
+            data = bkg.BGsubtraction(data, meta, log, meta.m,
                                      meta.isplots_S1)
         else:
             # do not show plots except for the last group
-            data = bkg.BGsubtraction(data, meta,
-                                     log, 0, 0)
+            data = bkg.BGsubtraction(data, meta, log, meta.m, 0)
         # Perform BG subtraction along dispersion direction
         # (only useful for NIRCam data)
         if hasattr(meta, 'bg_disp') and meta.bg_disp:
-            log.writelog('  Performing BG subtraction along ' +
-                         'dispersion direction...',
-                         mute=(not meta.verbose))
+            meta.bg_dir = 'RxR'
             if ngrp == all_data.shape[1]-1:
-                data = bkg.BGsubtraction(data, meta, log, 0, meta.isplots_S1)
+                data = bkg.BGsubtraction(data, meta, log, meta.m,
+                                         meta.isplots_S1)
             else:
-                data = bkg.BGsubtraction(data, meta, log, 0, 0)
+                data = bkg.BGsubtraction(data, meta, log, meta.m, 0)
         # Overwrite values in all_data
         all_data[:, ngrp, :, :] = data['flux'].values
     input_model.data = all_data

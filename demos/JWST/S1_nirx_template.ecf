@@ -55,8 +55,8 @@ isplots_S1          3
 nplots              5
 hide_plots          True
 bg_disp             False   # Row-by-row BG subtraction (only useful for NIRCam)
-bg_x1               640     # Left edge of exclusion region for row-by-row BG subtraction
-bg_x2               2048    # Right edge of exclusion region for row-by-row BG subtraction
+bg_x1               None    # Left edge of exclusion region for row-by-row BG subtraction
+bg_x2               None    # Right edge of exclusion region for row-by-row BG subtraction
 
 # Mask curved traces
 masktrace           True

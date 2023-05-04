@@ -293,9 +293,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
                 if hasattr(meta, 'bg_disp') and meta.bg_disp:
-                    log.writelog('  Performing BG subtraction along ' +
-                                 'dispersion direction...',
-                                 mute=(not meta.verbose))
+                    meta.bg_dir = 'RxR'
                     # Create bad pixel mask (1 = good, 0 = bad)
                     data['mask'] = (['time', 'y', 'x'],
                                     np.ones(data.flux.shape, dtype=bool))
@@ -303,6 +301,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                             m, meta.isplots_S3)
                     meta.bg_disp = False
                     meta.bg_deg = None
+                meta.bg_dir = 'CxC'
 
                 # Trim data to subarray region of interest
                 # Dataset object no longer contains untrimmed data
