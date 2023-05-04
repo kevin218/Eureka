@@ -26,8 +26,8 @@ bg_hw           8           # Half-width of exclusion region for BG subtraction 
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
 bg_disp         False       # Row-by-row BG subtraction (only useful for NIRCam)
-bg_x1           640         # Left edge of exclusion region for row-by-row BG subtraction
-bg_x2           2048        # Right edge of exclusion region for row-by-row BG subtraction
+bg_x1           None        # Left edge of exclusion region for row-by-row BG subtraction
+bg_x2           None        # Right edge of exclusion region for row-by-row BG subtraction
 
 # Spectral extraction parameters
 spec_hw         8           # Half-width of aperture region for spectral extraction (relative to source position)
