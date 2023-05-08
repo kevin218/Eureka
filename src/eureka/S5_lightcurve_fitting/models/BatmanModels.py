@@ -47,7 +47,6 @@ class BatmanTransitModel(Model):
                 self.ld_array = self.ld_array[len_params-2]
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
-                print('***', chan)
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
