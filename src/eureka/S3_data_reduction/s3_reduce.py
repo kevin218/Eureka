@@ -366,7 +366,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # Perform outlier rejection of
                     # sky background along time axis
-                    meta.bg_y2 = meta.src_ypos + meta.bg_hw
+                    meta.bg_y2 = meta.src_ypos + meta.bg_hw + 1
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
                     if (not hasattr(meta, 'ff_outlier')
                             or not meta.ff_outlier):

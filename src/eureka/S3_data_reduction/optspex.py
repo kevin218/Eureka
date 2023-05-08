@@ -641,7 +641,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 
     # Select median frame over aperture region
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
     apmedflux = data.medflux[ap_y1:ap_y2].values
 
     # Perform optimal extraction on each of the frames
