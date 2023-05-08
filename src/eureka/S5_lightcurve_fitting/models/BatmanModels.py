@@ -47,6 +47,7 @@ class BatmanTransitModel(Model):
                 self.ld_array = self.ld_array[len_params-2]
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
+                print('***', chan)
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
@@ -121,7 +122,7 @@ class BatmanTransitModel(Model):
 
             # Enforce physicality to avoid crashes from batman by returning
             # something that should be a horrible fit
-            if not ((0 < bm_params.rp) and (0 < bm_params.per) and
+            if not ((0 < bm_params.per) and
                     (0 < bm_params.inc < 90) and (1 < bm_params.a) and
                     (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was the
