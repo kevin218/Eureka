@@ -209,6 +209,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                  'unsupported!')
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
+                meta.bg_dir = 'CxC'
                 meta, log = inst.preparation_step(meta, log)
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
