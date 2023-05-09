@@ -13,16 +13,16 @@ def evalgauss(params, x, y, x0, y0):
     Parameters
     ----------
     params : list
-        List components : amplitude, x_stddev, y_stddev. 
-        Acts as the inital guess from meta (params_guess).
+             List components : amplitude, x_stddev, y_stddev. 
+             Acts as the inital guess from meta (params_guess).
     x : ndarray
         The x-coordinates for every pixel within the considered frame.
     y :  ndarray
-        The y-coordinates for every pixel within the considered frame.
+         The y-coordinates for every pixel within the considered frame.
     x0 : float
-        X position guess for centroid.
+         X position guess for centroid.
     y0 : float
-        Y position guess for centroid.
+         Y position guess for centroid.
 
     Returns
     -------
@@ -52,18 +52,18 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     Parameters
     ----------
     params : list
-        List components : amplitude, x_stddev, y_stddev. 
-        Acts as the inital guess from meta (params_guess).
+             List components : amplitude, x_stddev, y_stddev. 
+             Acts as the inital guess from meta (params_guess).
     frame : 2D ndarray
-        Array containing the star image.
+            Array containing the star image.
     x : ndarray
         The x-coordinates for every pixel within the considered frame.
     y : ndarray
         The y-coordinates for every pixel within the considered frame.
     x_mean : float
-        X position guess for centroid.
+             X position guess for centroid.
     y_mean : float
-        Y position guess for centroid.
+             Y position guess for centroid.
 
     Returns 
     ------- 
@@ -91,9 +91,11 @@ def pri_cent(img, meta, saved_ref_median_frame):
     Parameters
     ----------
     img : 2D ndarray
-        Array containing the star image.
+          Array containing the star image.
     meta : eureka.lib.readECF.MetaClass
-        The metadata object.
+           The metadata object.
+    saved_ref_median_frame : ndarray
+                             The stored median frame of the first batch.
 
     Returns 
     ------- 
@@ -101,6 +103,8 @@ def pri_cent(img, meta, saved_ref_median_frame):
         First guess of x centroid position. 
     y : float 
         First guess of y centroid position.
+    refrence_median_frame : ndarray
+                            Median frame of the first batch.
 
     Notes
     -----
@@ -109,8 +113,7 @@ def pri_cent(img, meta, saved_ref_median_frame):
     - Feb 22, 2023 Isaac Edelman 
         Initial implementation.
     """
-    # Create median frame from batch
-    # median_Frame = np.ma.median(img, axis=0)
+
     # Create median frame
     if saved_ref_median_frame is None:
         refrence_median_frame = np.ma.median(img, axis=0)
@@ -137,18 +140,18 @@ def mingauss(img, yxguess, meta):
     Parameters
     ----------
     img : 2D ndarray
-        Array containing the star image.
+          Array containing the star image.
     yxguess : tuple
-        A guess at the y and x centroid positions.
+              A guess at the y and x centroid positions.
     meta : eureka.lib.readECF.MetaClass
-        The metadata object.
+           The metadata object.
 
     Returns
     -------
     sy : float
-        Gaussian width in y direction.
+         Gaussian width in y direction.
     sx : float
-        Gaussian width in x direction.
+         Gaussian width in x direction.
     x : float
         Refined centroid x position.
     y : float

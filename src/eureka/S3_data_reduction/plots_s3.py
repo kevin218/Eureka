@@ -765,29 +765,28 @@ def phot_centroid(data, meta):
     csx_rms = np.sqrt(np.nanmean((csx - np.nanmedian(csx)) ** 2))
     csy = data.centroid_sy.values
     csy_rms = np.sqrt(np.nanmean((csy - np.nanmedian(csy)) ** 2))
-    flat_line = np.zeros(len(data.centroid_x))
 
     ax[0].plot(data.time, data.centroid_x-np.nanmean(data.centroid_x),
                label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms))
-    ax[0].plot(data.time, flat_line, linestyle=':', color='r')
+    ax[0].axhline(y=0, linestyle=':', c='r')
     ax[0].set_ylabel('Delta x')
     ax[0].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     ax[1].plot(data.time, data.centroid_y-np.nanmean(data.centroid_y),
                label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms))
-    ax[1].plot(data.time, flat_line, linestyle=':', color='r')
+    ax[1].axhline(y=0, linestyle=':', c='r')
     ax[1].set_ylabel('Delta y')
     ax[1].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     ax[2].plot(data.time, data.centroid_sx-np.nanmean(data.centroid_sx),
                label=r'$\sigma$sx = {0:.4f} pxls'.format(csx_rms))
-    ax[2].plot(data.time, flat_line, linestyle=':', color='r')
+    ax[2].axhline(y=0, linestyle=':', c='r')
     ax[2].set_ylabel('Delta sx')
     ax[2].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     ax[3].plot(data.time, data.centroid_sy-np.nanmean(data.centroid_sy),
                label=r'$\sigma$sy = {0:.4f} pxls'.format(csy_rms))
-    ax[3].plot(data.time, flat_line, linestyle=':', color='r')
+    ax[3].axhline(y=0, linestyle=':', c='r')
     ax[3].set_ylabel('Delta sy')
     ax[3].set_xlabel('Time')
     ax[3].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
@@ -911,7 +910,6 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     # Last plot in (0,1) not used
     ax[0, 1].set_axis_off()
 
-    fig.tight_layout()
     plt.tight_layout()
 
     # Naming figure
