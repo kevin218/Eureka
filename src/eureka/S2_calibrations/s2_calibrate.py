@@ -234,11 +234,11 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         '''
 
         if hasattr(meta, 'slit_y_low') and meta.slit_y_low is not None:
-            # Controls the cross-dispersion extraction
+            #  NIRSpec subarray lower bound in cross-dispersion direction
             self.assign_wcs.slit_y_low = meta.slit_y_low
 
         if hasattr(meta, 'slit_y_high') and meta.slit_y_high is not None:
-            # Controls the cross-dispersion extraction
+            #  NIRSpec subarray upper bound in cross-dispersion direction
             self.assign_wcs.slit_y_high = meta.slit_y_high
 
         if hasattr(meta, 'tsgrism_extract_height') and \
