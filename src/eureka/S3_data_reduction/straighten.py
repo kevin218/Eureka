@@ -37,7 +37,8 @@ def find_column_median_shifts(data, meta, m):
     # Smooth CoM values to get rid of outliers
     smooth_coms = smooth.medfilt(column_coms, 11)
     # if a value in smooth coms is nan, set it to the last non-nan value
-    smooth_coms[np.isnan(smooth_coms)] = smooth_coms[~np.isnan(smooth_coms)][-1]
+    smooth_coms[np.isnan(smooth_coms)] = \
+        smooth_coms[~np.isnan(smooth_coms)][-1]
 
     # Convert to interget pixels
     int_coms = np.around(smooth_coms).astype(int)
@@ -138,7 +139,7 @@ def straighten_trace(data, meta, log, m):
     shifts, new_center = find_column_median_shifts(data.medflux, meta, m)
 
     # Correct wavelength (only one frame)
-    log.writelog('  Correcting the wavelength solution...',
+    log.writelog('    Correcting the wavelength solution...',
                  mute=(not meta.verbose))
     # broadcast to (1, detector.shape) which is the expected shape of
     # the function
@@ -148,7 +149,7 @@ def straighten_trace(data, meta, log, m):
     data.wave_2d.values = roll_columns(wave_data, single_shift)[0]
     data.wave_1d.values = data.wave_2d[new_center].values
 
-    log.writelog('  Correcting the curvature over all integrations...',
+    log.writelog('    Correcting the curvature over all integrations...',
                  mute=(not meta.verbose))
     # broadcast the shifts to the number of integrations
     shifts = np.reshape(np.repeat(shifts, data.flux.shape[0]),
@@ -164,7 +165,7 @@ def straighten_trace(data, meta, log, m):
                                        axis=0), shifts).squeeze()
 
     # update the new src_ypos
-    log.writelog(f'  Updating src_ypos to new center, row {new_center}...',
+    log.writelog(f'    Updating src_ypos to new center, row {new_center}...',
                  mute=(not meta.verbose))
     meta.src_ypos = new_center
 

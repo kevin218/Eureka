@@ -35,6 +35,14 @@ If True, skip the named step.
 .. note::
    Note that some instruments and observing modes might skip a step either way! See the `calwebb_detector1 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
 
+custom_linearity
+''''''''''''''''
+Boolean. If True, allows user to supply a custom linearity correction file and overwrite the default file.
+
+linearity_file
+''''''''''''''
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+
 bias_correction
 '''''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
@@ -48,20 +56,20 @@ bias_smooth_length
 Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
 
 custom_bias
-'''''''''''''''''
-Boolean, allows user to supply a custom bias file and overwrite the default file
+'''''''''''
+Boolean, allows user to supply a custom superbias file and overwrite the default file.
 
 superbias_file
-'''''''''''''''''
-path to custom superbias file
+''''''''''''''
+The fully qualified path to the custom superbias file to use if custom_bias is True.
 
 update_sat_flags
-'''''''''''''''''
+''''''''''''''''
 Boolean, allows user to have more control over saturation flags. Must be True to use the settings expand_prev_group, dq_sat_mode, and dq_sat_percentile or dq_sat_columns.
 
 expand_prev_group
 '''''''''''''''''
-Boolean, if a given group is saturated, this option will mark the previous group as saturated as well
+Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
 '''''''''''''''''
@@ -72,35 +80,35 @@ dq_sat_percentile
 If dq_sat_mode = percentile, percentile threshold to use
 
 dq_sat_columns
-'''''''''''''''''
+''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
 grouplevel_bg
-'''''''''''''''''
+'''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
 
 ncpu
-'''''''''''''''''
+''''
 Number of cpus to use for GLBS
 
 bg_y1
-'''''''''''''''''
+'''''
 The pixel number for the end of the bottom background region. The background region goes from the bottom of the subarray to this pixel.
 
 bg_y2
-'''''''''''''''''
+'''''
 The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
 
 bg_deg
-'''''''''''''''''
+''''''
 See Stage 3 inputs
 
 p3thresh
-'''''''''''''''''
+''''''''
 See Stage 3 inputs
 
 verbose
-'''''''''''''''''
+'''''''
 See Stage 3 inputs
 
 isplots_S1
@@ -112,15 +120,15 @@ nplots
 See Stage 3 inputs
 
 hide_plots
-'''''''''''''''''
+''''''''''
 See Stage 3 inputs
 
 masktrace
-'''''''''''''''''
+'''''''''
 Boolean, creates a mask centered on the trace prior to GLBS for curved traces
 
 window_len
-'''''''''''''''''
+''''''''''
 Smoothing length for the trace location
 
 expand_mask
@@ -128,23 +136,23 @@ expand_mask
 Aperture (in pixels) around the trace to mask
 
 ignore_low
-'''''''''''''''''
+''''''''''
 Columns below this index will not be used to create the mask
 
 ignore_hi
-'''''''''''''''''
+'''''''''
 Columns above this index will not be used to create the mask
 
 refpix_corr
-'''''''''''''''''
+'''''''''''
 Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray. 
 
 npix_top 
-'''''''''''''''''
+''''''''
 Number of rows to use for ROEBA routine along the top of the subarray
 
 npix_bot 
-'''''''''''''''''
+''''''''
 Number of rows to use for ROEBA routine along the bottom of the subarray
 
 
@@ -285,9 +293,25 @@ photometry
 ''''''''''
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
+convert_to_e
+''''''''''''
+An optional input parameter. If True (default), convert the units of the images to electrons for easy noise estimation. If False (useful for flux-calibrated photometry), the units of the images will not be changed.
+
 poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
+
+gain
+''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None *AND* gainfile is None, this specifies the gain in units of e-/ADU or e-/DN. The gain variable can either be a single value that is applied to the entire frame or an array of the same shape as the subarray you're using.
+
+gainfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute the gain. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the GAIN files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
+
+photfile
+''''''''
+Optional input. If None (default), automatically use reference files or FITS header to compute between brightness units (e.g. MJy/sr) to ADU or DN if required. If not None, this should be a fully qualified path to a FITS file with all the same formatting as the PHOTOM files hosted by the CRDS. This can be used to force the use of a different version of the reference file or the use of a customized reference file.
 
 hst_cal
 '''''''
@@ -378,8 +402,10 @@ The plot below shows you which parts will be used for the background calculation
 
 .. image:: ../media/bg_hw.png
 
+If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If spec_hw and bg_hw are both lists, all combinations of the two will be attempted.
+
 ff_outlier
-'''''''''
+''''''''''
 Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.  
 
 bg_thresh
@@ -454,9 +480,17 @@ interp_method
 '''''''''''''
 Only used for photometry analyses. Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 
+centroid_method
+'''''''''''''''
+Only used for photometry analyses. Selects the method used for determining the centroid position (options: fgc or mgmc). For it's initial centroid guess, the 'mgmc' method creates a median frame from each batch of integrations and performs centroiding on the median frame (with the exact centroiding method set by the centroid_tech parameter). For each integration, the 'mgmc' method will then crop out an area around that guess using the value of ctr_cutout_size, and then perform a second round of centroiding to measure how the centroid moves over time. The 'fgc' method is the legacy centroiding method and is not currently recommended.
+
+ctr_guess
+'''''''''
+Optional, and only used for photometry analyses. An initial guess for the [x, y] location of the star that will replace the default behavior of first doing a full-frame Gaussian centroiding to get an initial guess.
+
 ctr_cutout_size
 '''''''''''''''
-Only used for photometry analyses. Amount of pixels all around the current centroid which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
+Only used for photometry analyses. For the 'fgc' and 'mgmc' methods this parameter is the amount of pixels all around the guessed centroid location which should be used for the more precise second centroid determination after the coarse centroid calculation. E.g., if ctr_cutout_size = 10 and the centroid (as determined after coarse step) is at (200, 200) then the cutout will have its corners at (190,190), (210,210), (190,210) and (210,190). The cutout therefore has the dimensions 21 x 21 with the centroid pixel (determined in the coarse centroiding step) in the middle of the cutout image.
 
 oneoverf_corr
 '''''''''''''
@@ -472,15 +506,23 @@ Only used for photometry analyses. Skips the background subtraction in the apert
 
 photap
 ''''''
-Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered.
+Only used for photometry analyses. Size of photometry aperture in pixels. The shape of the aperture is a circle. If the center of a pixel is not included within the aperture, it is being considered. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If skyin and/or skywidth are also lists, all combinations of the three will be attempted.
 
 skyin
 '''''
-Only used for photometry analyses. Inner sky annulus edge, in pixels.
+Only used for photometry analyses. Inner sky annulus edge, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skywidth are also lists, all combinations of the three will be attempted.
 
-skyout
-''''''
-Only used for photometry analyses. Outer sky annulus edge, in pixels.
+skywidth
+''''''''
+Only used for photometry analyses. The width of the sky annulus, in pixels. If you want to try multiple values sequentially, you can provide a list in the format [Start, Stop, Step]; this will give you sizes ranging from Start to Stop (inclusively) in steps of size Step. For example, [10,14,2] tries [10,12,14], but [10,15,2] still tries [10,12,14]. If photap and/or skyin are also lists, all combinations of the three will be attempted.
+
+centroid_tech
+'''''''''''''
+Only used for photometry analyses. The centroiding technique used if centroid_method is set to mgmc. The options are: com, 1dg, 2dg. The recommended technique is com (standing for Center of Mass). More details about the options can be found in the photutils documentation at https://photutils.readthedocs.io/en/stable/centroids.html.
+
+gauss_frame
+'''''''''''
+Only used for photometry analyses. Range away from first centroid guess to include in centroiding map for gaussian widths. Only required for mgmc method. Options: 1 -> Max frame size (type integer).
 
 isplots_S3
 ''''''''''
@@ -767,8 +809,8 @@ Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
 [batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
 For theano-based differentiable functions, this can be one or more of the following:
-[starry, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
-where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc.
+[starry, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 
 manual_clip
 '''''''''''
@@ -937,12 +979,12 @@ This file describes the transit/eclipse and systematics parameters and their pri
          actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Ms``.
    - Sinusoidal Phase Curve Parameters
-      The sinusoid_pc phase curve model allows for the inclusion of up to four sinusoids into a single phase curve
+      The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
-      - ``AmpCos1`` - Amplitude of the first cosine
-      - ``AmpSin1`` - Amplitude of the first sine
-      - ``AmpCos2`` - Amplitude of the second cosine
-      - ``AmpSin2`` - Amplitude of the second sine
+      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5)
+      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75
+      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0)
+      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 

@@ -33,8 +33,8 @@ dependencies:
         - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
         - crds
         - exotic-ld
-        - image_registration @ git+https://github.com/keflavich/image_registration.git@master#egg=image_registration
-        - jwst==1.8.0
+        - image_registration==0.2.6
+        - jwst==1.8.2
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation

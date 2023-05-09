@@ -34,6 +34,7 @@ from . import optspex
 from . import plots_s3, source_pos, straighten
 from . import background as bg
 from . import bright2flux as b2f
+
 from ..lib import logedit
 from ..lib import readECF
 from ..lib import manageevent as me
@@ -76,6 +77,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
         + stored in Spec and add diagnostics plots
     - July 2022 Sebastian Zieba
         Added photometry S3
+    - Feb 2023 Isaac Edelman
+        Added new centroiding method (mgmc_pri, mgmc_sec) to 
+        correct for shortwave photometry data processing issues
     '''
     s2_meta = deepcopy(s2_meta)
     input_meta = deepcopy(input_meta)
@@ -128,15 +132,24 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                  meta.bg_hw[2])
     elif hasattr(meta, 'bg_hw'):
         meta.bg_hw_range = [meta.bg_hw]
-    elif hasattr(meta, 'skyin') and hasattr(meta, 'skyout'):
-        # E.g., if skyin = 90 and skyout = 150, then the
+    elif hasattr(meta, 'skyin') and hasattr(meta, 'skywidth'):
+        # E.g., if skyin = 90 and skywidth = 60, then the
         # directory will use "bg90_150"
         if not isinstance(meta.skyin, list):
             meta.skyin = [meta.skyin]
-        if not isinstance(meta.skyout, list):
-            meta.skyout = [meta.skyout]
-        meta.bg_hw_range = [f'{s_in}_{s_out}' for s_in in meta.skyin
-                            for s_out in meta.skyout]
+        else:
+            meta.skyin = range(meta.skyin[0],
+                               meta.skyin[1]+meta.skyin[2],
+                               meta.skyin[2])
+        if not isinstance(meta.skywidth, list):
+            meta.skywidth = [meta.skywidth]
+        else:
+            meta.skywidth = range(meta.skywidth[0],
+                                  meta.skywidth[1]+meta.skywidth[2],
+                                  meta.skywidth[2])
+        meta.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
+                            for skyin in meta.skyin
+                            for skywidth in meta.skywidth]
 
     # create directories to store data
     # run_s3 used to make sure we're always looking at the right run for
@@ -224,6 +237,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                       meta.files_per_batch))
 
             datasets = []
+            saved_refrence_tilt_frame = None
+            
             for m in range(meta.nbatch):
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
@@ -270,6 +285,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_start = 0
                 if not hasattr(meta, 'nplots') or meta.nplots is None:
+                    meta.nplots = meta.n_int
                     meta.int_end = meta.n_int
                 elif meta.int_start+meta.nplots > meta.n_int:
                     # Too many figures requested, so reduce it
@@ -341,6 +357,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
+                if not hasattr(meta, 'convert_to_e'):
+                    meta.convert_to_e = True
+
                 if meta.convert_to_e:
                     data, meta = b2f.convert_to_e(data, meta, log)
 
@@ -423,31 +442,59 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                     # Setting up arrays for photometry reduction
                     data = util.phot_arrays(data)
+                    
+                    # Set method used for centroiding
+                    if (not hasattr(meta, 'centroid_method')
+                            or meta.centroid_method is None):
+                        meta.centroid_method = 'fgc'
 
-                    for i in tqdm(range(len(data.time)),
-                                  desc='Looping over Integrations'):
+                    # Compute the median frame 
+                    # and position of first centroid guess 
+                    # for mgmc method
+                    if (hasattr(meta, 'ctr_guess') and
+                            meta.ctr_guess is not None):
+                        guess = np.array(meta.ctr_guess)[::-1]
+                        trim = np.array([meta.ywindow[0], meta.xwindow[0]])
+                        position = guess - trim
+                    elif meta.centroid_method == 'mgmc':
+                        position, extra = \
+                            centerdriver.centerdriver('mgmc_pri', 
+                                                      data.flux.values, 
+                                                      guess=1, trim=0, 
+                                                      radius=None, size=None, 
+                                                      meta=meta, i=None, 
+                                                      m=None)
+
+                    # for loop for integrations
+                    for i in tqdm(range(len(data.time)), 
+                                  desc='  Looping over Integrations'):
                         if (meta.isplots_S3 >= 3
                                 and meta.oneoverf_corr is not None):
                             # save current flux into an array for
                             # plotting 1/f correction comparison
                             flux_w_oneoverf = np.copy(data.flux.values[i])
-
+                            
                         # Determine centroid position
                         # We do this twice. First a coarse estimation,
                         # then a more precise one.
                         # Use the center of the frame as an initial guess
-                        centroid_guess = [data.flux.shape[1]//2,
-                                          data.flux.shape[2]//2]
-                        # Do a 2D gaussian fit to the whole frame
-                        position, extra = \
-                            centerdriver.centerdriver('fgc',
-                                                      data.flux.values[i],
-                                                      centroid_guess, 0, 0, 0,
-                                                      mask=None, uncd=None,
-                                                      fitbg=1, maskstar=True,
-                                                      expand=1.0, psf=None,
-                                                      psfctr=None, i=i, m=m,
-                                                      meta=meta)
+                        if (meta.centroid_method == 'fgc' and 
+                                (not hasattr(meta, 'ctr_guess') or
+                                 meta.ctr_guess is None)):
+                            centroid_guess = [data.flux.shape[1]//2, 
+                                              data.flux.shape[2]//2]
+                            # Do a 2D gaussian fit to the whole frame
+                            position, extra = \
+                                centerdriver.centerdriver('fgc', 
+                                                          data.flux.values[i],
+                                                          centroid_guess, 
+                                                          0, 0, 0,
+                                                          mask=None, uncd=None,
+                                                          fitbg=1, 
+                                                          maskstar=True,
+                                                          expand=1.0, psf=None,
+                                                          psfctr=None, i=i, 
+                                                          m=m, meta=meta)
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f
@@ -462,20 +509,22 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # cut out ctr_cutout_size pixels around it
                         # Then perform another 2D gaussian fit
                         position, extra = \
-                            centerdriver.centerdriver('fgc',
-                                                      data.flux.values[i],
-                                                      position,
-                                                      meta.ctr_cutout_size,
-                                                      0, 0,
-                                                      mask=data.mask.values[i],
-                                                      uncd=None, fitbg=1,
-                                                      maskstar=True, expand=1,
-                                                      psf=None, psfctr=None,
-                                                      i=i, m=m, meta=meta)
+                            centerdriver.centerdriver(
+                                meta.centroid_method+'_sec',
+                                data.flux.values[i], 
+                                guess=position,
+                                trim=meta.ctr_cutout_size, 
+                                radius=0, size=0,
+                                mask=data.mask.values[i], 
+                                uncd=None, fitbg=1,
+                                maskstar=True, expand=1, psf=None, 
+                                psfctr=None, i=i, m=m, meta=meta)
+
                         # Store centroid positions and
                         # the Gaussian 1-sigma half-widths
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
+                        
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
@@ -509,6 +558,16 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 if not hasattr(meta, 'save_fluxdata'):
                     meta.save_fluxdata = True
+
+                # plot tilt events
+                if (meta.isplots_S3 >= 5 and meta.inst == 'nircam'): 
+                    refrence_tilt_frame = \
+                        plots_s3.tilt_events(meta, data, log, m, 
+                                             position, 
+                                             saved_refrence_tilt_frame)
+
+                    if saved_refrence_tilt_frame is not None:
+                        saved_refrence_tilt_frame = refrence_tilt_frame
 
                 if meta.save_fluxdata:
                     # Save flux data from current segment

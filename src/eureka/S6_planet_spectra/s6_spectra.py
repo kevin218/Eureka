@@ -687,6 +687,10 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Figure out the desired order
     suffix = meta.y_param[-1]
 
+    if not suffix.isnumeric():
+        # First order doesn't have a numeric suffix
+        suffix = '1'
+
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
@@ -740,7 +744,8 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
 
 
 def compute_amp(meta, log, fit_methods):
-    if 'nuts' in fit_methods or 'exoplanet' in fit_methods:
+    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
+            'sinusoid_pc' not in meta.run_myfuncs):
         return compute_amp_starry(meta, log, fit_methods)
 
     # Save meta.y_param
@@ -749,6 +754,10 @@ def compute_amp(meta, log, fit_methods):
     # Figure out the desired order
     suffix = meta.y_param[-1]
     
+    if not suffix.isnumeric():
+        # First order doesn't have a numeric suffix
+        suffix = '1'
+
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
@@ -833,7 +842,10 @@ def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
             pass
 
     # Load map parameters
-    ydeg = int(y_param[-1])
+    if y_param[-1].isnumeric():
+        ydeg = int(y_param[-1])
+    else:
+        ydeg = 1
     temp = temp_class()
     ell = ydeg
     for m in range(-ell, ell+1):
@@ -887,7 +899,8 @@ def compute_amp_starry(meta, log, fit_methods, nsamp=1e3):
 
 
 def compute_fn(meta, log, fit_methods):
-    if 'nuts' in fit_methods or 'exoplanet' in fit_methods:
+    if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
+            'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_starry(meta, log, fit_methods)
 
     # Save meta.y_param

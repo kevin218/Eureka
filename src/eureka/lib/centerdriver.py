@@ -1,12 +1,13 @@
 import numpy as np
 from . import imageedit as ie
 from . import gaussian as g
+from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, radius, size,
+def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
-                 expand=5.0, psf=None, psfctr=None, i=None, m=None, meta=None):
+                 expand=5.0, psf=None, psfctr=None):
     """
     Use the center method to find the center of a star in data, starting
     from position guess.
@@ -42,7 +43,12 @@ def centerdriver(method, data, guess, trim, radius, size,
 
     23-11-2010 patricio   Written by Patricio Cubillos
                           pcubillos@fulbrightmail.org
+    2-24-2023  Isaac      Edited by Isaac edelman
+                          Added new centroiding method 
+                          called mgmc_pri and mgmc_sec
     """
+    
+    extra = []
 
     # Default mask: all good
     if mask is None:
@@ -52,49 +58,47 @@ def centerdriver(method, data, guess, trim, radius, size,
     if uncd is None:
         uncd = np.ones(np.shape(data))
 
-    # Trim the image if requested
-    if trim != 0:
-        # Integer part of center
-        cen = np.rint(guess)
-        # Center in the trimed image
-        loc = (trim, trim)
-        # Do the trim:
-        img, msk, err = ie.trimimage(data, cen, loc, mask=mask, uncd=uncd)
+    if method in ['fgc', 'fgc_sec']:
+        # Trim the image if requested
+        if trim != 0:
+            # Integer part of center
+            cen = np.rint(guess) 
+            # Center in the trimed image
+            loc = (trim, trim)
+            # Do the trim:
+            img, msk, err = ie.trimimage(data, cen, loc, mask=mask, uncd=uncd)
+        else:
+            cen = np.array([0, 0])
+            loc = np.rint(guess) 
+            img, msk, err = data, mask, uncd
+        weights = 1.0 / np.abs(err)
     else:
-        cen = np.array([0, 0])
-        loc = np.rint(guess)
+        trim = 0
         img, msk, err = data, mask, uncd
+        loc = guess
+        cen = np.array([0, 0])
 
     # If all data is bad:
     if not np.any(msk):
         raise Exception('Bad Frame Exception!')
-
-    weights = 1.0 / np.abs(err)
-    extra = []
-
+    
     # Get the center with one of the methods:
-    if method == 'fgc':
+    if method in ['fgc', 'fgc_sec']:
         sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk,
                                      weights=weights,
                                      fitbg=fitbg, maskg=maskstar)[0][0:4]
         extra = sy, sx  # Gaussian 1-sigma half-widths
-        # only plot when we do the second fit --> so we fit the dot in
-        # the middle of the target.
-        if meta.isplots_S3 >= 5 and len(img) == (2 * meta.ctr_cutout_size + 1):
-            plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
+    elif method == 'mgmc_pri':
+        # Median frame creation + first centroid
+        x, y = gmin.pri_cent(img, meta)
+    elif method == 'mgmc_sec': 
+        # Second enhanced centroid position + gaussian widths
+        sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
+        extra = sy, sx  # Gaussian 1-sigma half-widths
 
-    # elif method == 'col':
-    #     y, x = ctr.col(img)
-    # elif method == 'lag':
-    #     y, x = ctr.actr(img, loc, asym_rad=radius,
-    #                     asym_size=size, method='gaus')
-    # elif method == 'lac':
-    #     y, x = ctr.actr(img, loc, asym_rad=radius,
-    #                     asym_size=size, method='col')
-    # elif method == 'bpf' or method == 'ipf':
-    #     y, x, flux, sky = pf.spitzer_fit(img, msk, weights, psf, psfctr,
-    #                                      expand, method)
-    #     extra = flux, sky
+    # only plot when we do the second fit
+    if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
+        plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return
     return ((y, x) + cen - trim), extra

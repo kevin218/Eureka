@@ -15,10 +15,12 @@ logger.setLevel(logging.ERROR)
 
 import pymc3 as pm
 BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
+BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
-from ...lib.readEPF import Parameters
 from ..utils import COLORS
+from ...lib.readEPF import Parameters
+from ...lib.split_channels import split, get_trim
 
 
 class fit_class:
@@ -39,19 +41,22 @@ class PyMC3Model:
             which is required for multiprocessing.
         """
         # Set up default model attributes
-        self.name = 'New PyMC3Model'
-        self.fitter = None
-        self._time = None
-        self.time_units = 'BMJD_TDB'
-        self._flux = None
-        self.freenames = None
-        self._parameters = Parameters()
-        self.longparamlist = None
-        self.paramtitles = None
-        self.components = []
-        self.modeltype = None
-        self.fmt = None
-        self.nchan = 1
+        self.components = kwargs.get('components', [])
+        self.name = kwargs.get('name', 'New PyMC3Model')
+        self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
+        self.fitted_channels = kwargs.get('fitted_channels', [0, ])
+        self.multwhite = kwargs.get('multwhite')
+        self.nints = kwargs.get('nints')
+        self.fitter = kwargs.get('fitter', None)
+        self.time = kwargs.get('time', None)
+        self.time_units = kwargs.get('time_units', 'BMJD_TDB')
+        self.flux = kwargs.get('flux', None)
+        self.freenames = kwargs.get('freenames', None)
+        self._parameters = kwargs.get('parameters', Parameters())
+        self.longparamlist = kwargs.get('longparamlist', None)
+        self.paramtitles = kwargs.get('paramtitles', None)
+        self.modeltype = kwargs.get('modeltype', None)
+        self.fmt = kwargs.get('fmt', None)
 
         # Store the arguments as attributes
         for arg, val in kwargs.items():
@@ -105,7 +110,7 @@ class PyMC3Model:
             The flux array
         """
         # Check the type
-        if not isinstance(flux_array, (np.ndarray, tuple, list)):
+        if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError("flux axis must be a tuple, list, or numpy array.")
 
         # Set the array
@@ -120,7 +125,7 @@ class PyMC3Model:
     def time(self, time_array):
         """A setter for the time"""
         # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
+        if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
         # Set the array
@@ -147,13 +152,16 @@ class PyMC3Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def interp(self, new_time, eval=True, channel=None, **kwargs):
+    def interp(self, new_time, nints, eval=True, channel=None, **kwargs):
         """Evaluate the model over a different time array.
 
         Parameters
         ----------
         new_time : sequence
             The time array.
+        nints : list
+            The number of integrations for each channel, for the new
+            time array.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
@@ -162,15 +170,18 @@ class PyMC3Model:
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Save the current time array
+        # Save the current values
         old_time = copy.deepcopy(self.time)
+        old_nints = copy.deepcopy(self.nints)
 
         # Evaluate the model on the new time array
         self.time = new_time
+        self.nints = nints
         interp_flux = self.eval(eval=eval, channel=channel, **kwargs)
 
-        # Reset the time array
+        # Reset the old values
         self.time = old_time
+        self.nints = old_nints
 
         return interp_flux
 
@@ -197,14 +208,12 @@ class PyMC3Model:
         """
         return
 
-    def plot(self, time, components=False, ax=None, draw=False, color='blue',
+    def plot(self, components=False, ax=None, draw=False, color='blue',
              zorder=np.inf, share=False, chan=0, **kwargs):
         """Plot the model.
 
         Parameters
         ----------
-        time : array-like
-            The time axis to use.
         components : bool; optional
             Plot all model components.
         ax : Matplotlib Axes; optional
@@ -227,12 +236,9 @@ class PyMC3Model:
             fig = plt.figure(5103, figsize=(8, 6))
             ax = fig.gca()
 
-        # Set the time
-        self.time = time
-
         # Plot the model
         label = self.fitter
-        if self.name != 'New Model':
+        if self.name != 'New PyMC3Model':
             label += ': '+self.name
         
         if not share:
@@ -241,12 +247,17 @@ class PyMC3Model:
             channel = chan
         model = self.eval(channel=channel, **kwargs)
 
-        ax.plot(self.time, model, '.', ls='', ms=2, label=label,
+        time = self.time
+        if self.multwhite:
+            # Split the arrays that have lengths of the original time axis
+            time = split([time, ], self.nints, chan)[0]
+
+        ax.plot(time, model, '.', ls='', ms=1, label=label,
                 color=color, zorder=zorder)
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False,
+                component.plot(ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
                                chan=chan, **kwargs)
 
@@ -313,7 +324,7 @@ class CompositePyMC3Model(PyMC3Model):
                                f'{param.name} is not recognized.')
                     raise ValueError(message)
                 else:
-                    for c in range(self.nchan):
+                    for c in range(self.nchannel_fitted):
                         if c != 0:
                             parname_temp = parname+'_'+str(c)
                         else:
@@ -327,9 +338,21 @@ class CompositePyMC3Model(PyMC3Model):
                                                    upper=param.priorpar2,
                                                    testval=param.value))
                             elif param.prior == 'N':
-                                if parname in ['rp', 'per', 'ecc',
-                                               'scatter_mult', 'scatter_ppm',
-                                               'c0', 'r1', 'r4', 'r7', 'r10']:
+                                if (parname == 'ecc' or
+                                        (parname in ['u1', 'u2'] and
+                                         self.parameters.limb_dark.value ==
+                                         'kipping2013')):
+                                    # Kipping2013 parameters are only on [0,1]
+                                    # Eccentricity is only [0,1]
+                                    setattr(self.model, parname_temp,
+                                            BoundedNormal_0_1(
+                                                parname_temp,
+                                                mu=param.priorpar1,
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
+                                elif parname in ['rp', 'per', 'scatter_mult',
+                                                 'scatter_ppm', 'c0', 'r1',
+                                                 'r4', 'r7', 'r10']:
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0(
                                                 parname_temp,
@@ -337,6 +360,7 @@ class CompositePyMC3Model(PyMC3Model):
                                                 sigma=param.priorpar2,
                                                 testval=param.value))
                                 elif parname in ['inc']:
+                                    # An inclination > 90 is not meaningful
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_90(
                                                 parname_temp,
@@ -362,6 +386,40 @@ class CompositePyMC3Model(PyMC3Model):
                             setattr(self.model, parname_temp,
                                     getattr(self.model, parname))
 
+    @property
+    def time(self):
+        """A getter for the time"""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time"""
+        # Check the type
+        if not isinstance(time_array, (np.ndarray, tuple, list)):
+            raise TypeError("Time axis must be a tuple, list, or numpy array.")
+
+        # Set the array
+        self._time = np.ma.masked_array(time_array)
+
+        # Set the array for the components
+        for component in self.components:
+            component.time = time_array
+
+    @property
+    def freenames(self):
+        """A getter for the freenames."""
+        return self._freenames
+
+    @freenames.setter
+    def freenames(self, freenames):
+        """A setter for the freenames."""
+        # Update the components' freenames
+        for component in self.components:
+            component.freenames = freenames
+
+        # Set the freenames attribute
+        self._freenames = freenames
+
     def setup(self, time, flux, lc_unc):
         """Setup a model for evaluation and fitting.
 
@@ -384,28 +442,42 @@ class CompositePyMC3Model(PyMC3Model):
 
         with self.model:
             if hasattr(self.model, 'scatter_ppm'):
-                self.scatter_array = (self.model.scatter_ppm
-                                      * tt.ones(len(self.time)))
-                for c in range(1, self.nchan):
-                    parname_temp = 'scatter_ppm_'+str(c)
-                    self.scatter_array = tt.concatenate(
-                        [self.scatter_array,
-                         getattr(self.model, parname_temp)
-                         * tt.ones(len(self.time))])
-                self.scatter_array /= 1e6
+                for c in range(self.nchannel_fitted):
+                    if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
+                        parname_temp = 'scatter_ppm'
+                    else:
+                        parname_temp = 'scatter_ppm_'+str(c)
+
+                    if self.multwhite:
+                        size = self.nints[c]
+                    else:
+                        size = self.time.size
+                    unc = getattr(self.model, parname_temp)*tt.ones(size)/1e6
+
+                    if c == 0:
+                        self.scatter_array = unc
+                    else:
+                        self.scatter_array = \
+                            tt.concatenate([self.scatter_array, unc])
             if hasattr(self.model, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
-                self.scatter_array = (self.model.scatter_mult *
-                                      self.lc_unc[:len(self.time)])
-                for c in range(1, self.nchan):
-                    if self.parameters.scatter_mult.ptype == 'fixed':
+                for c in range(self.nchannel_fitted):
+                    if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
                         parname_temp = 'scatter_mult'
                     else:
                         parname_temp = 'scatter_mult_'+str(c)
-                    self.scatter_array = tt.concatenate(
-                        [self.scatter_array,
-                         (getattr(self.model, parname_temp) *
-                          self.lc_unc[c*len(self.time):(c+1)*len(self.time)])])
+
+                    chan = self.fitted_channels[c]
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    unc = self.lc_unc[trim1:trim2]
+
+                    scatter_mult = getattr(self.model, parname_temp)
+                    if c == 0:
+                        self.scatter_array = unc*scatter_mult
+                    else:
+                        self.scatter_array = \
+                            tt.concatenate([self.scatter_array,
+                                            unc*scatter_mult])
             if not hasattr(self, 'scatter_array'):
                 # Not fitting the noise level
                 self.scatter_array = self.lc_unc
@@ -413,7 +485,7 @@ class CompositePyMC3Model(PyMC3Model):
             for component in self.components:
                 # Do any one-time setup needed after model initialization and
                 # before evaluating the model
-                component.setup(full_model=self)
+                component.setup()
 
             # This is how we tell pymc3 about our observations;
             # we are assuming they are normally distributed about
@@ -446,7 +518,19 @@ class CompositePyMC3Model(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.ones(len(time))
+        else:
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -479,7 +563,19 @@ class CompositePyMC3Model(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        flux = np.ones(len(self.time)*self.nchan)
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.ones(len(time))
+        else:
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:
@@ -520,15 +616,46 @@ class CompositePyMC3Model(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel]
+
         if interp:
-            dt = self.time[1]-self.time[0]
-            steps = int(np.round((self.time[-1]-self.time[0])/dt+1))
-            new_time = np.linspace(self.time[0], self.time[-1], steps,
-                                   endpoint=True)
+            if self.multwhite:
+                new_time = []
+                nints_interp = []
+                for chan in channels:
+                    # Split the arrays that have lengths of
+                    # the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    
+                    dt = time[1]-time[0]
+                    steps = int(np.round((time[-1]-time[0])/dt+1))
+                    nints_interp.append(steps)
+                    new_time.extend(np.linspace(time[0], time[-1], steps,
+                                                endpoint=True))
+                new_time = np.array(new_time)
+            else:
+                time = self.time
+                dt = time[1]-time[0]
+                steps = int(np.round((time[-1]-time[0])/dt+1))
+                nints_interp = np.ones(nchan)*steps
+                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
         else:
             new_time = self.time
+            if self.multwhite and channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                new_time = split([new_time, ], self.nints, channel)[0]
+            nints_interp = self.nints
 
-        flux = np.ones(len(new_time)*self.nchan)
+        # Setup the flux array
+        if self.multwhite:
+            flux = np.ones(len(new_time))
+        else:
+            flux = np.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:
@@ -536,13 +663,13 @@ class CompositePyMC3Model(PyMC3Model):
                 if component.time is None:
                     component.time = self.time
                 if interp:
-                    flux *= component.interp(new_time, eval=eval,
+                    flux *= component.interp(new_time, nints_interp, eval=eval,
                                              channel=channel, **kwargs)
                 else:
                     flux *= component.eval(eval=eval, channel=channel,
                                            **kwargs)
 
-        return flux, new_time
+        return flux, new_time, nints_interp
 
     def compute_fp(self, theta=0):
         """Compute the planetary flux at an arbitrary orbital position.
@@ -579,22 +706,3 @@ class CompositePyMC3Model(PyMC3Model):
         """
         for component in self.components:
             component.update(newparams, **kwargs)
-
-    @property
-    def time(self):
-        """A getter for the time"""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time"""
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the array
-        self._time = np.ma.masked_array(time_array)
-
-        # Set the array for the components
-        for component in self.components:
-            component.time = time_array

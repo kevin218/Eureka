@@ -10,6 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
+from ...lib.split_channels import split
 
 
 class PolynomialModel(PyMC3Model):
@@ -39,7 +40,16 @@ class PolynomialModel(PyMC3Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time.mean()
+            if self.multwhite:
+                self.time_local = []
+                for chan in self.fitted_channels:
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    self.time_local.extend(time - time.mean())
+                self.time_local = np.array(self.time_local)
+            else:
+                self.time_local = self.time - self.time.mean()
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -60,8 +70,8 @@ class PolynomialModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -76,22 +86,36 @@ class PolynomialModel(PyMC3Model):
             model = self.model
         
         # Parse 'c#' keyword arguments as coefficients
-        for j in range(nchan):
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
             for i in range(10):
                 try:
-                    if channels[j] == 0:
-                        poly_coeffs[j][i] = getattr(model, f'c{i}')
+                    if chan == 0:
+                        poly_coeffs[c][i] = getattr(model, f'c{i}')
                     else:
-                        poly_coeffs[j][i] = getattr(model,
-                                                    f'c{i}_{channels[j]}')
+                        poly_coeffs[c][i] = getattr(model,
+                                                    f'c{i}_{chan}')
                 except AttributeError:
                     pass
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):
-            lcpiece = lib.zeros(len(self.time))
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
+            time = self.time_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
+            lcpiece = lib.zeros(len(time))
             for power in range(len(poly_coeffs[c])):
-                lcpiece += poly_coeffs[c][power] * self.time_local**power
+                lcpiece += poly_coeffs[c][power] * time**power
             poly_flux = lib.concatenate([poly_flux, lcpiece])
 
         return poly_flux
