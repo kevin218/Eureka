@@ -35,7 +35,7 @@ def do_correction(input_model, bias_model, meta, log):
     if not reffile_utils.ref_matches_sci(input_model, bias_model):
         bias_model = reffile_utils.get_subarray_model(input_model, bias_model)
 
-    if meta.bias_correction is not None:
+    if meta.bias_correction is not None and meta.masktrace:
         # Compute trace mask, where ones are good background regions
         input_model = mask_trace(input_model, log, meta)
         trace_mask = input_model.trace_mask

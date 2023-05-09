@@ -30,7 +30,7 @@ custom_linearity    False
 linearity_file      /path/to/custom/linearity/fits/file
 
 # Custom bias
-bias_correction     None    # Bias correction options: [mean, group_level, smooth, None]
+bias_correction     None    # Bias correction options: [mean, group_level, smooth, None], requires masktrace=True
 bias_group          1       # Group number options: [1, 2, ..., each]
 bias_smooth_length  201     # Window length when using 'smooth' bias correction
 custom_bias         False
