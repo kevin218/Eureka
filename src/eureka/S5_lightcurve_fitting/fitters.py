@@ -289,7 +289,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     ndim = len(freenames)
 
     if hasattr(meta, 'old_chain') and meta.old_chain is not None:
-        pos, nwalkers = start_from_oldchain_emcee(meta, log, ndim, lc.channel,
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        pos, nwalkers = start_from_oldchain_emcee(meta, log, ndim, ch_number,
                                                   freenames)
     else:
         if not hasattr(meta, 'lsq_first') or meta.lsq_first:
@@ -489,7 +490,7 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
         The open log in which notes from this step can be added.
     ndim : int
         The number of fitted parameters.
-    channel : int
+    channel : string
         The channel number.
     freenames : list
         The names of the fitted parameters.
