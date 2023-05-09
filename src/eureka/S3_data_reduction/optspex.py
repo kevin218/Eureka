@@ -4,6 +4,8 @@ import scipy.interpolate as spi
 import scipy.ndimage as spn
 from astropy.stats import sigma_clip
 from tqdm import tqdm
+import warnings
+
 from ..lib import gaussian as g
 from ..lib import smooth
 from . import plots_s3
@@ -200,7 +202,10 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
     # Enforce positivity
     profile[np.where(profile < 0)] = 0
     # Normalize along spatial direction
-    profile /= np.sum(profile, axis=0)
+    with warnings.catch_warnings():
+        # Ignore warnings about columns that are completely masked
+        warnings.filterwarnings("ignore", "invalid value encountered in")
+        profile /= np.nansum(profile, axis=0)
 
     return profile
 
@@ -521,19 +526,29 @@ def clean_median_flux(data, meta, log, m):
     for j in range(ny):
         x1 = xx[~np.ma.getmaskarray(medflux[j])]
         goodrow = medflux[j][~np.ma.getmaskarray(medflux[j])]
-        f = spi.interp1d(x1, goodrow, 'linear',
-                         fill_value='extrapolate')
-        # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
-        interp_med[j] = f(xx)
+        if len(goodrow) > 0:
+            f = spi.interp1d(x1, goodrow, 'linear',
+                             fill_value='extrapolate')
+            # f = spi.UnivariateSpline(x1, goodmed, k=1, s=None)
+            interp_med[j] = f(xx)
+        else:
+            log.writelog(f'    Row {j}: Interpolation failed. No good pixels.')
+            interp_med[j] = medflux[j]
 
     if meta.window_len > 1:
         # Apply smoothing filter along dispersion direction
         smoothflux = spn.median_filter(interp_med, size=(1, meta.window_len))
-
-        # Compute residuals
-        residuals = medflux - smoothflux
+        # Compute median error array
+        err_ma = np.ma.masked_where(data.mask.values == 0, data.err.values)
+        mederr = np.ma.median(err_ma, axis=0)
+        # Compute residuals in units of std dev
+        residuals = (medflux - smoothflux)/mederr
 
         # Flag outliers
+        if not hasattr(meta, 'median_thresh'):
+            log.writelog('  Using a default value of median_thresh=5',
+                         mute=(not meta.verbose))
+            meta.median_thresh = 5
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
                               axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
 
@@ -556,7 +571,7 @@ def clean_median_flux(data, meta, log, m):
         data['medflux'] = (['y', 'x'], medflux.data)
     data['medflux'].attrs['flux_units'] = data.flux.attrs['flux_units']
 
-    if meta.isplots_S3 >= 4:
+    if meta.isplots_S3 >= 3:
         plots_s3.median_frame(data, meta, m)
 
     return data
@@ -752,18 +767,8 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             variance = np.abs(expected + bg) / Q + v0
             # STEP 7: Mask cosmic ray hits
             stdevs = np.abs(subdata - expected)*submask / np.sqrt(variance)
-            if meta.isplots_S3 == 8:
-                try:
-                    plt.figure(3801)
-                    plt.clf()
-                    plt.plot(variance[20])
-                    plt.figure(3802)
-                    plt.clf()
-                    plt.plot(variance[:, 10])
-                    plt.pause(1)
-                except:
-                    # FINDME: Need to only catch the expected exception
-                    pass
+            if meta.isplots_S3 >= 5 and n < meta.int_end:
+                plots_s3.stddev_profile(meta, n, m, stdevs, p7thresh)
             isoutliers = False
             if len(stdevs) > 0:
                 # Find worst data point in each column
@@ -775,7 +780,9 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                             plt.figure(3803)
                             plt.clf()
                             plt.suptitle(str(i) + "/" + str(nx))
-                            plt.plot(subdata[:, i], 'bo')
+                            plt.errorbar(np.arange(ny), subdata[:, i],
+                                         yerr=np.sqrt(variance[:, i]),
+                                         fmt='.', color='b')
                             plt.plot(expected[:, i], 'g-')
                             plt.pause(0.01)
                         except:
@@ -788,7 +795,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                         # Generate plot
                         if meta.isplots_S3 >= 5 and n < meta.int_end:
                             plots_s3.subdata(meta, i, n, m, subdata, submask,
-                                             expected, loc)
+                                             expected, loc, variance)
                         # Check for insufficient number of good points
                         if sum(submask[:, i]) < ny/2.:
                             submask[:, i] = 0

@@ -13,19 +13,20 @@
 import os
 import shutil
 import time as time_pkg
+from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from functools import partial
 from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
+import jwst.assign_wcs.nirspec
+
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import plots
-
-import jwst.assign_wcs.nirspec
-from functools import partial
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -62,6 +63,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         Initial version
     '''
     t0 = time_pkg.time()
+
+    s1_meta = deepcopy(s1_meta)
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
@@ -120,6 +124,11 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     with fits.open(meta.segment_list[0]) as hdulist:
         # Figure out which observatory and observation mode we are using
         telescope = hdulist[0].header['TELESCOP']
+
+        # record instrument information in meta object for citations
+        if not hasattr(meta, 'inst'):
+            meta.inst = hdulist[0].header["INSTRUME"].lower()
+
     if telescope == 'JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
         if 'image' in exp_type.lower():
@@ -131,13 +140,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
             # (or someone is putting weird files into Eureka!)
             pipeline = EurekaSpec2Pipeline()
 
-            # By default pipeline can trim the dispersion axis,
-            # override the function that does this with specific 
-            # wavelength range that you want to trim to.
-            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
-                        wavelength_range=[meta.waverange_start,
-                                          meta.waverange_end])
+            if (meta.waverange_start is not None or
+                    meta.waverange_end is not None):
+                # By default pipeline can trim the dispersion axis,
+                # override the function that does this with specific 
+                # wavelength range that you want to trim to.
+                jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
+                    partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
+                            wavelength_range=[meta.waverange_start,
+                                              meta.waverange_end])
     elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
         # Clean up temporary folder
@@ -164,6 +175,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
                 hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
+    
+    # make citations for current stage
+    util.make_citations(meta, 2)
 
     # Save results
     if not meta.testing_S2:

@@ -1,17 +1,21 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from copy import copy
 
 from . import models as m
-from . import fitters as f
+from . import fitters
+from . import gradient_fitters
 from .utils import COLORS, color_gen
-from ..lib import plots
+from ..lib import plots, util
+from ..lib.split_channels import split
 
 
 class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, unc=None, time_units='BJD',
-                 name='My Light Curve', share=False, white=False):
+                 name='My Light Curve', share=False, white=False,
+                 multwhite=False, nints=[]):
         """
         A class to store the actual light curve
 
@@ -40,6 +44,11 @@ class LightCurve(m.Model):
             Whether the fit shares parameters between spectral channels.
         white : bool; optional
             Whether the current fit is for a white-light light curve
+        multwhite : bool; optional
+            Whether the current fit is for a multi white-light lightcurve fit.
+        nints : bool; optional
+            Number of exposures of each white lightcurve for splitting
+            up time array.
 
         Notes
         -----
@@ -50,6 +59,8 @@ class LightCurve(m.Model):
             Added a channel number.
         - Jan. 15, 2022 Megan Mansfield
             Added ability to share fit between all channels
+        - Oct. 2022 Erin May
+            Added ability to joint fit WLCs with different time arrays    
         """
         # Initialize the model
         super().__init__()
@@ -59,7 +70,9 @@ class LightCurve(m.Model):
         self.white = white
         self.channel = channel
         self.nchannel = nchannel
-        if self.share:
+        self.multwhite = multwhite
+        self.nints = nints
+        if self.share or self.multwhite:
             self.nchannel_fitted = self.nchannel
             self.fitted_channels = np.arange(self.nchannel)
         else:
@@ -67,7 +80,7 @@ class LightCurve(m.Model):
             self.fitted_channels = np.array([self.channel])
 
         # Check data
-        if len(time)*self.nchannel_fitted != len(flux):
+        if len(time)*self.nchannel_fitted != len(flux) and not self.multwhite:
             raise ValueError('Time and flux axes must be the same length.')
 
         # Set the time and flux axes
@@ -81,7 +94,8 @@ class LightCurve(m.Model):
             if type(unc) == float or type(unc) == np.float64:
                 log.writelog('Warning: Only one uncertainty input, assuming '
                              'constant uncertainty.')
-            elif len(time)*self.nchannel_fitted != len(unc):
+            elif (len(time)*self.nchannel_fitted != len(unc)
+                  and not self.multwhite):
                 raise ValueError('Time and unc axes must be the same length.')
 
             self.unc = unc
@@ -131,21 +145,28 @@ class LightCurve(m.Model):
         fit_model = None
 
         model.time = self.time
-        # Make sure the model is a CompositeModel
-        if not isinstance(model, m.CompositeModel):
-            model = m.CompositeModel([model])
-            model.time = self.time
+        model.multwhite = meta.multwhite
+
+        if fitter not in ['exoplanet', 'nuts']:
+            # Make sure the model is a CompositeModel
+            if not isinstance(model, m.CompositeModel):
+                model = m.CompositeModel([model])
+                model.time = self.time
 
         if fitter == 'lmfit':
-            self.fitter_func = f.lmfitter
+            self.fitter_func = fitters.lmfitter
         elif fitter == 'lsq':
-            self.fitter_func = f.lsqfitter
+            self.fitter_func = fitters.lsqfitter
         # elif fitter == 'demc':
-        #     self.fitter_func = f.demcfitter
+        #     self.fitter_func = fitters.demcfitter
         elif fitter == 'emcee':
-            self.fitter_func = f.emceefitter
+            self.fitter_func = fitters.emceefitter
         elif fitter == 'dynesty':
-            self.fitter_func = f.dynestyfitter
+            self.fitter_func = fitters.dynestyfitter
+        elif fitter == 'exoplanet':
+            self.fitter_func = gradient_fitters.exoplanetfitter
+        elif fitter == 'nuts':
+            self.fitter_func = gradient_fitters.nutsfitter
         else:
             raise ValueError("{} is not a valid fitter.".format(fitter))
 
@@ -154,10 +175,10 @@ class LightCurve(m.Model):
 
         # Store it
         if fit_model is not None:
-            self.results.append(fit_model)
+            self.results.append(copy(fit_model))
 
     def plot(self, meta, fits=True):
-        """Plot the light curve with all available fits. (Figs 5103)
+        """Plot the light curve with all available fits. (Figs 5103 and 5306)
 
         Parameters
         ----------
@@ -170,16 +191,32 @@ class LightCurve(m.Model):
         for i, channel in enumerate(self.fitted_channels):
             flux = self.flux
             unc = np.ma.copy(self.unc_fit)
-            if self.share:
-                flux = flux[channel*len(self.time):(channel+1)*len(self.time)]
-                unc = unc[channel*len(self.time):(channel+1)*len(self.time)]
+            time = self.time
+            
+            if self.share and not meta.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                flux, unc = split([flux, unc], meta.nints, channel)
+            elif meta.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time, flux, unc = split([time, flux, unc],
+                                        meta.nints, channel)
+
+            # Get binned data and times
+            if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
+               meta.nbin_plot > len(time):
+                nbin_plot = len(time)
+            else:
+                nbin_plot = meta.nbin_plot
+            binned_time = util.binData(time, nbin_plot)
+            binned_flux = util.binData(flux, nbin_plot)
+            binned_unc = util.binData(unc, nbin_plot, err=True)
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
             # Draw the data
             ax = fig.gca()
-            ax.errorbar(self.time, flux, unc, fmt='.', color=self.colors[i],
-                        zorder=0)
+            ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
+                        color=self.colors[i], zorder=0)
 
             # Make a new color generator for the models
             plot_COLORS = color_gen("Greys", 6)
@@ -187,7 +224,7 @@ class LightCurve(m.Model):
             # Draw best-fit model
             if fits and len(self.results) > 0:
                 for model in self.results:
-                    model.plot(self.time, ax=ax, color=next(plot_COLORS),
+                    model.plot(ax=ax, color=next(plot_COLORS),
                                zorder=np.inf, share=self.share, chan=channel)
 
             # Format axes
@@ -207,6 +244,45 @@ class LightCurve(m.Model):
             fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
             if not meta.hide_plots:
                 plt.pause(0.2)
+
+            # Show unbinned data as well if requested
+            if nbin_plot != len(time) and meta.isplots_S5 >= 3:
+                fig = plt.figure(5306, figsize=(8, 6))
+                fig.clf()
+                # Draw the data
+                ax = fig.gca()
+                ax.plot(time, flux, '.', color=self.colors[i], zorder=0,
+                        alpha=0.01)
+                ax.errorbar(binned_time, binned_flux, binned_unc, fmt='.',
+                            color=self.colors[i], zorder=1)
+
+                # Make a new color generator for the models
+                plot_COLORS = color_gen("Greys", 6)
+
+                # Draw best-fit model
+                if fits and len(self.results) > 0:
+                    for model in self.results:
+                        model.plot(ax=ax, color=next(plot_COLORS),
+                                   zorder=np.inf, share=self.share,
+                                   chan=channel)
+
+                # Format axes
+                ax.set_title(f'{meta.eventlabel} - Channel {channel}')
+                ax.set_xlabel(str(self.time_units))
+                ax.set_ylabel('Normalized Flux', size=14)
+                ax.legend(loc='best')
+                fig.tight_layout()
+
+                if self.white:
+                    fname_tag = 'white'
+                else:
+                    ch_number = str(channel).zfill(len(str(self.nchannel)))
+                    fname_tag = f'ch{ch_number}'
+                fname = (f'figs{os.sep}fig5306_{fname_tag}_all_fits' +
+                         plots.figure_filetype)
+                fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+                if not meta.hide_plots:
+                    plt.pause(0.2)
 
     def reset(self):
         """Reset the results"""

@@ -29,7 +29,7 @@ testing_S6      False
 hide_plots      False # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          /home/User/
+topdir          /home/User/Data/TargetName/WFC3/
 
 # Model to plot as well (path relative to project dir of a csv with col 1 as wavelength in microns, col 2 in the same units as the plotted spectrum, any headers preceded by a #)
 model_spectrum  None # Set to None if no model should be plotted
@@ -39,5 +39,5 @@ model_y_scalar  1 # Indicate whether model y-values have already been scaled (e.
 model_delimiter None #Delimiter between columns. Typical options: None (for space), ',' for comma
 
 # Directories relative to project dir
-inputdir        /Data/TargetName/WFC3/Stage5    # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
-outputdir       /Data/TargetName/WFC3/Stage6
+inputdir        Stage5    # The folder containing the outputs from Eureka!'s S5 pipeline (will be overwritten if calling S5 and S6 sequentially)
+outputdir       Stage6

@@ -17,10 +17,12 @@
 import os
 import time as time_pkg
 import numpy as np
+from copy import deepcopy
 import scipy.interpolate as spi
 import astraeus.xarrayIO as xrio
 from astropy.convolution import Box1DKernel
 from tqdm import tqdm
+
 from . import plots_s4, drift, generate_LD, wfc3
 from ..lib import logedit
 from ..lib import readECF
@@ -71,6 +73,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     - July 2022 Sebastian Zieba
          Added photometry S4
     '''
+    s3_meta = deepcopy(s3_meta)
+    input_meta = deepcopy(input_meta)
+
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S4_' + eventlabel + '.ecf'
@@ -134,7 +139,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             meta.copy_ecf()
 
             specData_savefile = (
-                meta.inputdir + 
+                meta.inputdir +
                 meta.filename_S3_SpecData.split(os.path.sep)[-1])
             log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
@@ -179,14 +184,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
                 # User wants unbinned spectra
                 dwav = np.ediff1d(wave_1d)/2
-                # Approximate the first dwav as the same as the second
-                dwav = np.append(dwav[0], dwav)
+                # Approximate the first neg_dwav as the same as the second
+                neg_dwav = np.append(dwav[0], dwav)
+                # Approximate the last pos_dwav as the same as the second last
+                pos_dwav = np.append(dwav, dwav[-1])
                 indices = np.logical_and(wave_1d >= meta.wave_min,
                                          wave_1d <= meta.wave_max)
-                dwav = dwav[indices]/2
+                neg_dwav = neg_dwav[indices]
+                pos_dwav = pos_dwav[indices]
                 meta.wave = wave_1d[indices]
-                meta.wave_low = meta.wave-dwav
-                meta.wave_hi = meta.wave+dwav
+                meta.wave_low = meta.wave-neg_dwav
+                meta.wave_hi = meta.wave+pos_dwav
                 meta.nspecchan = len(meta.wave)
             elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
@@ -244,6 +252,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if hasattr(spec, 'centroid_x'):
                 # centroid_x already measured in 2D in S3 - setup to add 1D fit
                 lc['centroid_x'] = spec.centroid_x
+            if hasattr(spec, 'centroid_sx'):
+                # centroid_x already measured in 2D in S3 - setup to add 1D fit
+                lc['centroid_sx'] = spec.centroid_sx
             elif meta.recordDrift or meta.correctDrift:
                 # Setup the centroid_x array
                 lc['centroid_x'] = (['time'], np.zeros(meta.n_int))
@@ -259,6 +270,13 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not hasattr(meta, 'boundary'):
                 # The default value before this was added as an option
                 meta.boundary = 'extend'
+
+            # Manually mask pixel columns by index number
+            if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
+                for w in meta.mask_columns:
+                    log.writelog(f"Masking absolute pixel column {w}.")
+                    offset = spec.optmask.x[0]
+                    spec.optmask[:, w-offset] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -493,7 +511,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                 ld_3para)
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
-                
+
                 if meta.compute_white:
                     ld_lin_w, ld_quad_w, ld_3para_w, ld_4para_w = \
                         generate_LD.exotic_ld(meta, spec, log, white=True)
@@ -522,6 +540,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             meta.filename_S4_LCData = (meta.outputdir + 'S4_' + event_ap_bg
                                        + "_LCData.h5")
             xrio.writeXR(meta.filename_S4_LCData, lc, verbose=True)
+
+            # make citations for current stage
+            util.make_citations(meta, 4)
 
             # Save results
             fname = meta.outputdir+'S4_'+meta.eventlabel+"_Meta_Save"
@@ -557,7 +578,11 @@ def load_specific_s3_meta_info(meta):
     meta.inputdir = inputdir
     s3_meta, meta.inputdir, meta.inputdir_raw = \
         me.findevent(meta, 'S3', allowFail=False)
+    filename_S3_SpecData = s3_meta.filename_S3_SpecData
     # Merge S4 meta into old S3 meta
     meta = me.mergeevents(meta, s3_meta)
+
+    # Make sure the filename_S3_SpecData is kept
+    meta.filename_S3_SpecData = filename_S3_SpecData
 
     return meta

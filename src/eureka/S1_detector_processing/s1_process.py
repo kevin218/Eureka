@@ -1,11 +1,13 @@
 import os
 import time as time_pkg
 import numpy as np
+from copy import deepcopy
 from astropy.io import fits
 
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
+from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
@@ -47,6 +49,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         Updated for JWST version 1.3.3, code restructure
     """
     t0 = time_pkg.time()
+
+    input_meta = deepcopy(input_meta)
 
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
@@ -92,18 +96,27 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                      filename.split(os.sep)[-1])
 
         with fits.open(filename, mode='update') as hdulist:
+            # record instrument information in meta object for citations
+            if not hasattr(meta, 'inst'):
+                meta.inst = hdulist[0].header["INSTRUME"].lower()
+
             # jwst 1.3.3 breaks unless NDITHPTS/NRIMDTPT are integers rather
             # than the strings that they are in the old simulated NIRCam data
             if hdulist[0].header['INSTRUME'] == 'NIRCAM':
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
 
+            meta.intstart = hdulist[0].header['INTSTART']-1
+            meta.intend = hdulist[0].header['INTEND']
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time
     total = (time_pkg.time() - t0) / 60.
     log.writelog('\nTotal time (min): ' + str(np.round(total, 2)))
 
+    # make citations for current stage
+    util.make_citations(meta, 1)
+    
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')
@@ -165,6 +178,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ipc.skip = meta.skip_ipc
         self.refpix.skip = meta.skip_refpix
         self.linearity.skip = meta.skip_linearity
+        if hasattr(meta, 'custom_linearity') and meta.custom_linearity:
+            self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
         if (hasattr(meta, 'jump_rejection_threshold') and
@@ -179,16 +194,25 @@ class EurekaS1Pipeline(Detector1Pipeline):
         if instrument in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
             self.persistence.skip = meta.skip_persistence
             self.superbias.skip = meta.skip_superbias
+            if hasattr(meta, 'custom_bias') and meta.custom_bias:
+                self.superbias.override_superbias = meta.superbias_file
         elif instrument in ['MIRI']:
             self.firstframe.skip = meta.skip_firstframe
             self.lastframe.skip = meta.skip_lastframe
             self.rscd.skip = meta.skip_rscd
 
+        # Define superbias offset procedure
+        self.superbias = Eureka_SuperBiasStep()
+        self.superbias.s1_meta = meta
+        self.superbias.s1_log = log
+        
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
         self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
+        self.ramp_fit.s1_meta = meta
+        self.ramp_fit.s1_log = log
 
         # Default ramp fitting settings
         if self.ramp_fit.algorithm == 'default':

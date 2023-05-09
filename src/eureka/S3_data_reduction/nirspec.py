@@ -117,15 +117,10 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
-    meta.bg_y2 = meta.src_ypos + meta.bg_hw
-    meta.bg_y1 = meta.src_ypos - meta.bg_hw
-
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
-    # Need to test performance with and without estsig on real data.
     if hasattr(meta, 'use_estsig') and meta.use_estsig:
         # This might not be necessary for real data
         bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.bg_y1], 0))
@@ -141,6 +136,28 @@ def flag_bg(data, meta, log):
                                                  bgmask2, estsig2)
 
     return data
+
+
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    return nircam.flag_ff(data, meta, log)
 
 
 def fit_bg(dataim, datamask, n, meta, isplots=0):

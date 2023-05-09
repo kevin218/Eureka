@@ -26,12 +26,27 @@ skip_gain_scale     False
 #Pipeline stages parameters
 jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
 
+# Custom linearity reference file
+custom_linearity    False
+linearity_file      /path/to/custom/linearity/fits/file
+
+# Custom bias frames
+custom_bias         False
+superbias_file      /path/to/custom/superbias/fits/file
+
+# Saturation
+update_sat_flags    False   # Wheter to update the saturation flags more aggressively
+expand_prev_group   False   # Expand saturation flags to previous group
+dq_sat_mode         percentile # Options: [percentile, min, defined]
+dq_sat_percentile   50      # Percentile of the entire time series to use to define the saturation mask (50=median)
+dq_sat_columns      [[0, 0], [0,0], [0,0], [0,0], [0,0]]  #for dq_sat_mode = defined, user defined saturated columns
+
 # Project directory
-topdir              /home/User
+topdir              /home/User/Data/JWST-Sim/MIRI/
 
 # Directories relative to topdir
-inputdir            /Data/JWST-Sim/MIRI/Uncalibrated
-outputdir           /Data/JWST-Sim/MIRI/Stage1
+inputdir            Uncalibrated
+outputdir           Stage1
 
 # Diagnostics
 testing_S1          False

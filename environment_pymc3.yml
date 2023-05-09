@@ -1,0 +1,48 @@
+name: eureka
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - python==3.9.7
+    - asdf
+    - astropy
+    - batman-package
+    - bokeh[version='<3.0']
+    - ccdproc
+    - celerite
+    - corner
+    - cython
+    - dynesty[version='>1.0']
+    - emcee[version='>3.0.0']
+    - george
+    - gwcs
+    - h5py[version='<3.2']
+    - ipython
+    - lmfit
+    - matplotlib
+    - mkl-service
+    - nbsphinx # Needed for documentation
+    - numpy[version='>=1.20.0,<=1.22']
+    - pandas
+    - photutils
+    - pip # required for the pip installs below
+    - pytest
+    - requests
+    - scipy[version='>=1.4.0'] # Needed for scipy.fft
+    - tqdm
+    - pip:
+        - astraeus @ git+https://github.com/kevin218/Astraeus@main#egg=astraeus
+        - crds
+        - exotic-ld
+        - exoplanet
+        - image_registration==0.2.6
+        - jwst==1.8.2
+        - myst-parser # Needed for documentation
+        - pymc3
+        - setuptools_scm # Needed for version number
+        - sphinx-rtd-theme # Needed for documentation
+        - starry>=1,<2
+        - stcal
+        - stdatamodels
+        - svo_filters
+        - theano-pymc

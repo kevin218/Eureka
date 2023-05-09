@@ -24,7 +24,7 @@ ld_file_white    None  # Fully qualified path to the location of a limb darkenin
 old_fitparams   None # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
 
 #lsq
-lsq_method      'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
 lsq_tol         1e-6    # The tolerance for the scipy.optimize.minimize optimization method
 lsq_maxiter     None    # Maximum number of iterations to perform. Depending on the method each iteration may use several function evaluations. Set to None to use the default value
 
@@ -57,8 +57,8 @@ testing_model   False   # Boolean, set True to only inject a model source of sys
 hide_plots      False   # If True, plots will automatically be closed rather than popping up
 
 # Project directory
-topdir          /home/User
+topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir        /Data/JWST-Sim/NIRSpec/Stage4/   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
-outputdir       /Data/JWST-Sim/NIRSpec/Stage5/
+inputdir        Stage4   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
+outputdir       Stage5

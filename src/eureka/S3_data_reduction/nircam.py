@@ -63,7 +63,29 @@ def read(filename, data, meta, log):
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
-        wave_2d = hdulist['WAVELENGTH', 1].data
+        if not hasattr(meta, 'poly_wavelength') or not meta.poly_wavelength:
+            # Use the FITS data
+            wave_2d = hdulist['WAVELENGTH', 1].data
+        elif hdulist[0].header['FILTER'] == 'F322W2':
+            # The new way, using the polynomial model Everett Schlawin computed
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            Xprime = (X - 1571)/1000
+            wave_2d = (3.9269369110332657
+                       + 0.9811653393151226*Xprime
+                       + 0.001666535535484272*Xprime**2
+                       - 0.002874123523765872*Xprime**3)
+            # Convert 1D array to 2D
+            wave_2d = np.repeat(wave_2d[np.newaxis],
+                                hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
+        elif hdulist[0].header['FILTER'] == 'F444W':
+            # The new way, using the polynomial model Everett Schlawin computed
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            Xprime = (X - 852.0756)/1000
+            wave_2d = (3.928041104137344
+                       + 0.979649332832983*Xprime)
+            # Convert 1D array to 2D
+            wave_2d = np.repeat(wave_2d[np.newaxis],
+                                hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
@@ -138,15 +160,10 @@ def flag_bg(data, meta, log):
     log.writelog('  Performing background outlier rejection...',
                  mute=(not meta.verbose))
 
-    meta.bg_y2 = meta.src_ypos + meta.bg_hw
-    meta.bg_y1 = meta.src_ypos - meta.bg_hw
-
     bgdata1 = data.flux[:, :meta.bg_y1]
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    # FINDME: KBS removed estsig from inputs to speed up outlier detection.
-    # Need to test performance with and without estsig on real data.
     if hasattr(meta, 'use_estsig') and meta.use_estsig:
         bgerr1 = np.median(data.err[:, :meta.bg_y1])
         bgerr2 = np.median(data.err[:, meta.bg_y2:])
@@ -159,6 +176,44 @@ def flag_bg(data, meta, log):
                                                  bgmask1, estsig1)
     data['mask'][:, meta.bg_y2:] = sigrej.sigrej(bgdata2, meta.bg_thresh,
                                                  bgmask2, estsig2)
+
+    return data
+
+
+def flag_ff(data, meta, log):
+    '''Outlier rejection of full frame along time axis.
+    For data with deep transits, there is a risk of masking good transit data.
+    Proceed with caution.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : Xarray Dataset
+        The updated Dataset object with outlier pixels flagged.
+    '''
+    log.writelog('  Performing full frame outlier rejection...',
+                 mute=(not meta.verbose))
+
+    size = data.mask.size
+    prev_count = data.mask.values.sum()
+
+    # Compute new pixel mask
+    data['mask'] = sigrej.sigrej(data.flux, meta.bg_thresh, data.mask, None)
+
+    # Count difference in number of good pixels
+    new_count = data.mask.values.sum()
+    diff_count = prev_count - new_count
+    perc_rej = 100*(diff_count/size)
+    log.writelog(f'    Flagged {perc_rej:.6f}% of pixels as bad.',
+                 mute=(not meta.verbose))
 
     return data
 
@@ -275,7 +330,7 @@ def flag_bg_phot(data, meta, log):
 
     nbadpix_total = 0
     for i in tqdm(range(flux.shape[1]),
-                  desc='Looping over Rows for outlier removal'):
+                  desc='  Looping over rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
             ngoodpix = np.sum(mask[:, i, j] == 1)
             data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j],
@@ -371,6 +426,16 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         err_all.append(data.err.values[i][:, use_cols_temp])
         mask_all.append(data.mask.values[i][:, use_cols_temp])
 
+    # Do odd even column subtraction
+    odd_cols = data.flux.values[i, :, ::2]
+    even_cols = data.flux.values[i, :, 1::2]
+    use_cols_odd = use_cols[::2]
+    use_cols_even = use_cols[1::2]
+    odd_median = np.nanmedian(odd_cols[:, use_cols_odd])
+    even_median = np.nanmedian(even_cols[:, use_cols_even])
+    data.flux.values[i, :, ::2] -= odd_median
+    data.flux.values[i, :, 1::2] -= even_median
+
     if meta.oneoverf_corr == 'meanerr':
         for j in range(128):
             for k in range(4):
@@ -384,7 +449,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             if ampl_used_bool[k]:
                 edges_temp = edges_all[k]
                 data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
-                    np.median(flux_all[k], axis=1)[:, None]
+                    np.nanmedian(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
                      ' Please choose between meanerr or median.',

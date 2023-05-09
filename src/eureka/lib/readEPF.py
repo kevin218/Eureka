@@ -277,6 +277,7 @@ class Parameters:
             raise TypeError("Cannot set {}={}.".format(item, value))
 
         # Set the attribute
+        self.params[item] = value
         self.__dict__[item] = Parameter(item, *value)
 
         # Add it to the list of parameters

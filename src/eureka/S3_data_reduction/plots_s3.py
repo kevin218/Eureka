@@ -7,6 +7,7 @@ import scipy.stats as stats
 from scipy.interpolate import interp1d
 from matplotlib.colors import LogNorm
 from mpl_toolkits import axes_grid1
+import imageio
 
 from .source_pos import gauss
 from ..lib import util, plots
@@ -53,8 +54,13 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     wmin = np.nanmin(wave_1d)
     wmax = np.nanmax(wave_1d)
     # Don't do min and max because MIRI is backwards
-    pmin = int(optspec.x[0].values)
-    pmax = int(optspec.x[-1].values)
+    # Correctly place label at center of pixel
+    if meta.inst == 'miri':
+        pmin = int(optspec.x[0].values+0.5)
+        pmax = int(optspec.x[-1].values-0.5)
+    else:
+        pmin = int(optspec.x[0].values-0.5)
+        pmax = int(optspec.x[-1].values+0.5)
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -137,12 +143,18 @@ def image_and_background(data, meta, log, m):
     log.writelog('  Creating figures for background subtraction...',
                  mute=(not meta.verbose))
 
+    # If need be, transpose array so that largest dimension is on x axis
+    if len(data.flux.x.values) < len(data.flux.y.values):
+        data = data.transpose('time', 'x', 'y')
+        ymin, ymax = data.flux.x.min().values, data.flux.x.max().values
+        xmin, xmax = data.flux.y.min().values, data.flux.y.max().values
+    else:
+        xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+        ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
-
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     # Commented out vmax calculation is sensitive to unflagged hot pixels
     # vmax = np.ma.max(np.ma.masked_invalid(subdata))/40
@@ -203,13 +215,13 @@ def drift_2D(data, meta):
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
         if len(iscans) > 0:
-            plt.plot(iscans, data.centroid_y, '.')
+            plt.plot(iscans, data.centroid_y[iscans], '.')
     plt.ylabel(f'Drift Along y ({data.centroid_y.units})')
     plt.subplot(212)
     for p in range(2):
         iscans = np.where(data.scandir.values == p)[0]
         if len(iscans) > 0:
-            plt.plot(iscans, data.centroid_x, '.')
+            plt.plot(iscans, data.centroid_x[iscans], '.')
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
     plt.tight_layout()
@@ -352,9 +364,9 @@ def profile(meta, profile, submask, n, m):
     vmin = np.ma.min(profile*submask)
     vmax = vmin + 0.05*np.ma.max(profile*submask)
     cmap = plt.cm.viridis.copy()
-    plt.figure(3303)
+    plt.figure(3303, figsize=(8, 4))
     plt.clf()
-    plt.suptitle(f"Profile - Integration {n}")
+    plt.title(f"Optimal Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
     plt.ylabel('Relative Pixel Position')
@@ -369,7 +381,7 @@ def profile(meta, profile, submask, n, m):
         plt.pause(0.2)
 
 
-def subdata(meta, i, n, m, subdata, submask, expected, loc):
+def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
     '''Show 1D view of profile for each column. (Figs 3501)
 
     Parameters
@@ -390,13 +402,17 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc):
         Expected profile
     loc : ndarray
         Location of worst outliers.
+    variance : ndarray
+        Variance of background subtracted data.
     '''
     ny, nx = subdata.shape
     plt.figure(3501)
     plt.clf()
     plt.suptitle(f'Integration {n}, Columns {i}/{nx}')
-    plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
-             subdata[np.where(submask[:, i])[0], i], 'bo')
+    plt.errorbar(np.arange(ny)[np.where(submask[:, i])[0]],
+                 subdata[np.where(submask[:, i])[0], i],
+                 np.sqrt(variance[np.where(submask[:, i])[0], i]),
+                 fmt='.', color='b')
     plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
              expected[np.where(submask[:, i])[0], i], 'g-')
     plt.plot((loc[i]), (subdata[loc[i], i]), 'ro')
@@ -492,7 +508,8 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     - 2022-07-29 KBS
         Initial version
     '''
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
+    xmin = int(data.flux.x.values[0])
+    xmax = int(data.flux.x.values[-1])
     ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
 
     # Median flux of segment
@@ -508,10 +525,11 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304, figsize=(8, 3.5))
+    plt.figure(3304)
     plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
+    
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
@@ -727,37 +745,50 @@ def phot_centroid(data, meta):
 
     - 2022-08-02 Sebastian Zieba
         Initial version
+    - 2023-02-24 Isaac Edelman
+        Enchanced graph layout, 
+        added sig display values for sy,sx,
+        and fixed issue with ax[2] displaying sy instead of sx.
     """
     plt.figure(3109)
     plt.clf()
-    fig, ax = plt.subplots(4, 1, sharex=True)
+    fig, ax = plt.subplots(4, 1, num=3019, figsize=(10, 6), sharex=True)
     plt.suptitle('Centroid positions over time')
 
     cx = data.centroid_x.values
-    cx_rms = np.sqrt(np.mean((cx - np.median(cx)) ** 2))
+    cx_rms = np.sqrt(np.nanmean((cx - np.nanmedian(cx)) ** 2))
     cy = data.centroid_y.values
-    cy_rms = np.sqrt(np.mean((cy - np.median(cy)) ** 2))
+    cy_rms = np.sqrt(np.nanmean((cy - np.nanmedian(cy)) ** 2))
+    csx = data.centroid_sx.values
+    csx_rms = np.sqrt(np.nanmean((csx - np.nanmedian(csx)) ** 2))
+    csy = data.centroid_sy.values
+    csy_rms = np.sqrt(np.nanmean((csy - np.nanmedian(csy)) ** 2))
 
-    ax[0].plot(data.time, data.centroid_x-np.mean(data.centroid_x),
+    ax[0].plot(data.time, data.centroid_x-np.nanmean(data.centroid_x),
                label=r'$\sigma$x = {0:.4f} pxls'.format(cx_rms))
     ax[0].set_ylabel('Delta x')
-    ax[0].legend()
+    ax[0].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
-    ax[1].plot(data.time, data.centroid_y-np.mean(data.centroid_y),
+    ax[1].plot(data.time, data.centroid_y-np.nanmean(data.centroid_y),
                label=r'$\sigma$y = {0:.4f} pxls'.format(cy_rms))
     ax[1].set_ylabel('Delta y')
-    ax[1].legend()
+    ax[1].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
-    ax[2].plot(data.time, data.centroid_sy-np.mean(data.centroid_sx))
+    ax[2].plot(data.time, data.centroid_sx-np.nanmean(data.centroid_sx),
+               label=r'$\sigma$sx = {0:.4f} pxls'.format(csx_rms))
     ax[2].set_ylabel('Delta sx')
+    ax[2].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
-    ax[3].plot(data.time, data.centroid_sy-np.mean(data.centroid_sy))
+    ax[3].plot(data.time, data.centroid_sy-np.nanmean(data.centroid_sy),
+               label=r'$\sigma$sy = {0:.4f} pxls'.format(csy_rms))
     ax[3].set_ylabel('Delta sy')
     ax[3].set_xlabel('Time')
+    ax[3].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
     fig.subplots_adjust(hspace=0.02)
 
     plt.tight_layout()
+    fig.align_ylabels()
     fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
@@ -833,10 +864,8 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     """
     plt.figure(3503)
     plt.clf()
-
-    fig, ax = plt.subplots(2, 2, figsize=(8, 8))
+    fig, ax = plt.subplots(2, 2, num=3503, figsize=(8, 8))
     plt.suptitle('Centroid gaussian fit')
-    fig.delaxes(ax[1, 1])
     ax[0, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
 
     ax[1, 0].plot(range(len(np.sum(img, axis=0))), np.sum(img, axis=0))
@@ -920,7 +949,10 @@ def phot_2d_frame(data, meta, m, i):
     ymin = data.flux.y.min().values-meta.ywindow[0]
     ymax = data.flux.y.max().values-meta.ywindow[0]
 
-    im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
+    vmax = np.nanmedian(flux)+8*np.nanstd(flux)
+    vmin = np.nanmedian(flux)-3*np.nanstd(flux)
+
+    im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower', aspect='equal',
                     extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                 label='centroid')
@@ -944,10 +976,10 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylabel('y pixels')
 
     plt.legend()
+    plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-
     fname = (f'figs{os.sep}fig3306_file{file_number}_int{int_number}_2D_Frame'
              + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -959,8 +991,8 @@ def phot_2d_frame(data, meta, m, i):
         plt.clf()
         plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
 
-        im = plt.imshow(flux, vmin=0, vmax=5e3, origin='lower', aspect='equal',
-                        extent=[xmin, xmax, ymin, ymax])
+        im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower',
+                        aspect='equal', extent=[xmin, xmax, ymin, ymax])
         plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                     label='centroid')
         plt.title('Zoom into 2D frame')
@@ -991,6 +1023,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylabel('y pixels')
 
         plt.legend()
+        plt.tight_layout()
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
                  f'_2D_Frame_Zoom' + plots.figure_filetype)
@@ -1029,7 +1062,7 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     """
     plt.figure(3307)
     plt.clf()
-    fig, ax = plt.subplots(2, 1, figsize=(8.2, 4.2))
+    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2))
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
@@ -1079,7 +1112,7 @@ def phot_2d_frame_diff(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    for i in range(len(data.aplev.values)-1):
+    for i in range(meta.nplots):
         plt.figure(3505)
         plt.clf()
         plt.suptitle('2D frame differences')
@@ -1099,3 +1132,199 @@ def phot_2d_frame_diff(data, meta):
         plt.savefig(meta.outputdir + fname, dpi=250)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def stddev_profile(meta, n, m, stdevs, p7thresh):
+    """
+    Plots the difference between the data and optimal profile in units
+    of standard deviations.  The scale goes from 0 to p7thresh. (Fig 3506)
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    n : int
+        The current integration number.
+    m : int
+        The file number.
+    stdevs : 2D array
+        Difference between data and profile in standard deviations
+    p7thresh : int
+        X-sigma threshold for outlier rejection during optimal spectral
+        extraction
+
+    Notes
+    -----
+    History:
+
+    - 2022-12-29 Kevin Stevenson
+        Initial version
+    """
+    plt.figure(3506, figsize=(8, 4))
+    plt.clf()
+    cmap = plt.cm.viridis.copy()
+    plt.title(f'Std. Dev. from Optimal Profile - Integration {n}')
+    plt.imshow(stdevs, origin='lower', aspect='auto',
+               vmax=p7thresh, vmin=0, cmap=cmap,
+               interpolation='nearest')
+    plt.ylabel('Relative Pixel Position')
+    plt.xlabel('Relative Pixel Position')
+    plt.colorbar()
+    plt.tight_layout()
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
+    fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
+             '_Std_Dev_Profile'+plots.figure_filetype)
+    plt.savefig(meta.outputdir + fname, dpi=200)
+    if not meta.hide_plots:
+        plt.pause(0.1)
+
+
+def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
+    """
+    Plots the mirror tilt events by divinding 
+    an integrations' flux values by a 
+    median frames' flux values. 
+    Creates .pngs and a .gif (Fig 3507a, Fig 3507b, Fig 3507c)
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    data : Xarray Dataset
+        The Dataset object.
+    log : logedit.Logedit
+        The current log.
+    m : int
+        The file number.
+    position : ndarray
+        The y, x position of the star.
+    saved_refrence_tilt_frame : ndarray
+        The median of the first 10 integrations.
+
+    Returns 
+    ------- 
+    ndarray 
+        A median frame of the first 10 integrations.
+
+    Notes
+    -----
+    History:
+
+    - 2023-03-22 Isaac Edelman
+        Initial implementation.
+    """
+    images = []
+    cmap = plt.cm.viridis.copy()
+
+    # Crop out noisy background pixels
+    delta_x = 70
+    delta_y = 80
+    minx = -delta_x+int(position[1])
+    maxx = delta_x+int(position[1])
+    miny = -delta_y+int(position[0])
+    maxy = delta_y+int(position[0])
+    maxy = np.min([maxy, np.argmax(data.y.values)])
+    miny = np.max([miny, np.argmin(data.y.values)])
+    maxx = np.min([maxx, np.argmax(data.x.values)])
+    minx = np.max([minx, np.argmin(data.x.values)])
+    asb_xpos_min = data.x.values[minx]
+    asb_xpos_max = data.x.values[maxx]
+    asb_ypos_min = data.y.values[miny]
+    asb_ypos_max = data.y.values[maxy]
+
+    # Create median frame
+    if saved_refrence_tilt_frame is None:
+        refrence_tilt_frame = ((np.nanmedian(data.flux.values[:10],
+                                             axis=0))[miny:maxy, minx:maxx])
+    else:
+        refrence_tilt_frame = saved_refrence_tilt_frame
+
+    # Plot each integration
+    for i in tqdm(range(len(data.time)), desc='  Creating tilt event figures'):
+
+        # Caluculate flux ratio
+        flux_tilt = (data.flux.values[i, miny:maxy,
+                                      minx:maxx] / refrence_tilt_frame)
+        
+        # Create plot
+        plt.figure(3507, figsize=(6, 6))
+        plt.clf()
+
+        # Plot figure
+        im = plt.imshow(flux_tilt, origin='lower', aspect='equal',
+                        vmin=0.98, vmax=1.02, cmap=cmap)
+        
+        # Figure settings
+        plt.title('Tilt Identification')
+        plt.xticks(np.arange(0, flux_tilt.shape[1], 1),
+                   (np.arange(asb_xpos_min, asb_xpos_max, 1)),
+                   rotation='vertical')
+        plt.yticks(np.arange(0, flux_tilt.shape[0], 1),
+                   (np.arange(asb_ypos_min, asb_ypos_max, 1)),
+                   rotation='horizontal')
+        add_colorbar(im, label='Flux Ratio')
+        plt.locator_params(nbins=11)
+        plt.tick_params(labelsize='small')
+        plt.xlabel('x pixels')
+        plt.ylabel('y pixels')
+
+        # Create file names
+        tilt_events = os.path.join(meta.outputdir + 'figs', 'tilt_events')
+        if not os.path.exists(tilt_events):
+            os.mkdir(tilt_events)
+        file_number = str(m).zfill(int(np.floor(np.log10(
+            meta.num_data_files))+1))
+        int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
+
+        # Define names of files and labels
+        plt.suptitle((f'Segment {file_number}, Integration {int_number}'),
+                     y=0.99)
+        fname = (f'figs{os.sep}tilt_events{os.sep}'
+                 f'fig3507a_file{file_number}_int{int_number}'
+                 f'_tilt_events' + plots.figure_filetype)
+        plt.tight_layout()
+
+        # Save figure
+        plt.savefig(meta.outputdir + fname, dpi=250, bbox_inches='tight')
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+        # Create list of figure names to pull from later to create .gif
+        images.append(imageio.v2.imread(meta.outputdir + fname))
+
+    # Figure fig3507b
+    # Create .gif per batch
+    log.writelog('  Creating batch tilt event GIF',
+                 mute=(not meta.verbose))
+    imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
+                    f'fig3507b_tilt_event_batch_{file_number}.gif', 
+                    images, fps=20)
+
+    # Figure fig3507c
+    # Create .gif of all tilt event segments combined
+    if not meta.testing_S3 and (m + 1 == meta.nbatch):
+        log.writelog('  Creating all segment tilt event GIF',
+                     mute=(not meta.verbose))
+
+        # Create list of all .png tilt images in tilt_event folder
+        all_images = []
+        in_filenames = []
+        for file in os.listdir(meta.outputdir +
+                               f'figs{os.sep}tilt_events{os.sep}'):
+            if file.endswith(".png"):
+                in_filenames.append(os.path.join(meta.outputdir +
+                                                 f'figs{os.sep}' +
+                                                 f'tilt_events{os.sep}', file))
+        in_filenames.sort()
+
+        # Create list of all figure names to pull from later to create .gif
+        for fname in in_filenames:
+            all_images.append(imageio.v2.imread(fname))
+
+        # Create .gif of all tilt event segments
+        imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
+                        'fig3507c_tilt_events_all_segments.gif',
+                        all_images, fps=60)
+
+    return refrence_tilt_frame

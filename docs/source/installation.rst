@@ -6,8 +6,8 @@ Installation methods
 --------------------
 
 In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
-the most recent stable release of ``Eureka!``, v0.5. The following installation instructions are written with this in mind,
-and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.5>`_.
+the most recent stable release of ``Eureka!``, v0.9. The following installation instructions are written with this in mind,
+and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.9>`_.
 Also note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
 installation instructions below as the pip dependencies fail to build on the M1 processor.
 
@@ -24,14 +24,14 @@ new environment by doing:
 	conda create -n eureka python==3.9.7
 	conda activate eureka
 
-a) With ``git`` and ``pip``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Option 1) With ``git`` and ``pip``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once in your new conda environment, you can install ``Eureka!`` directly from source on
 `GitHub <http://github.com/kevin218/Eureka>`_ using ``git`` and ``pip`` by running:
 
 .. code-block:: bash
 
-	git clone -b v0.5 https://github.com/kevin218/Eureka.git
+	git clone -b v0.9 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
@@ -42,14 +42,14 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 	git pull
 	pip install --upgrade '.[jwst]'
 
-b) With ``pip`` only
-~~~~~~~~~~~~~~~~~~~~
+Option 2) With ``pip`` only
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once in your new conda environment, you can install the ``Eureka!`` package with ``pip`` with the following command:
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@v0.5#egg=eureka[jwst]
+	pip install -e git+https://github.com/kevin218/Eureka.git@v0.9#egg=eureka[jwst]
 
 Other specific branches can be installed using:
 
@@ -60,15 +60,36 @@ Other specific branches can be installed using:
 In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
 
 
+Including optional dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+There are also several optional dependency collections that can be installed with Eureka! to increase the flexibility of the software. These include:
+
+- ``jwst`` which includes the necessary packages to run Stages 1-2 on JWST data.
+- ``hst`` which includes the necessary packages to run Stage 3 on HST/WFC3 data.
+- ``test`` which allows you to run our suite of pytest tests locally.
+- ``pymc3`` which allows you to use the NUTS Hamiltonian Monte Carlo sampler implemented in PyMC3 as well as a gradient based optimizer which benefits from differentiable models. This also allows you to use the starry astrophysical model for modelling exoplanet transits, eclipses (including eclipse mapping signals), and phase curves.
+- ``docs`` which allows you to build the documentation pages locally.
+- ``jupyter`` which includes jupyter and ipykernel for convenience.
+
+In the installation instructions above, the ``jwst`` optional dependency is used as we strongly recommend users run Stages 1 and 2 locally, but we wanted to give users the ability to opt-out of installing the dependencies installed with ``jwst`` if they didn't work on their system.
+
+To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``.
+
+.. warning::
+	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``.
+
+
 Installing with a ``conda`` environment.yml file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can also download ``Eureka!`` using ``git`` and set up a ``conda`` environment directly from the ``git`` repository if
-you'd prefer not to use ``pip`` to install dependencies. This can be done following:
+you'd prefer not to use ``pip`` to install dependencies. To use the ``pymc3`` optional dependencies, replace ``environment.yml`` with ``environmenmt_pymc3.yml`` in the steps below.
+
+To install using conda:
 
 .. code-block:: bash
 
-	git clone -b v0.5 https://github.com/kevin218/Eureka.git
+	git clone -b v0.9 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	conda env create --file environment.yml --force
 	conda activate eureka

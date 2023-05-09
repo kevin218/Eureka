@@ -1,7 +1,7 @@
 import numpy as np
 
 from .Model import Model
-from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class CentroidModel(Model):
@@ -23,35 +23,22 @@ class CentroidModel(Model):
             Can pass in the parameters, longparamlist, nchan,
             paramtitles, axis, and centroid arguments here.
         """
+        # Needed before setting centroid
+        self.multwhite = kwargs.get('multwhite')
+        self.nints = kwargs.get('nints')
+
         # Inherit from Model class
         super().__init__(**kwargs)
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Figure out if using xpos, ypos, xwidth, ywidth
         self.axis = kwargs.get('axis')
         self.centroid = kwargs.get('centroid')
 
-        if self.nchan == 1:
-            self.coeff_keys = [self.axis]
-        else:
-            self.coeff_keys = [f'{self.axis}_{i}' for i in range(self.nchan)]
-
-        # Update coefficients
-        self._parse_coeffs()
+        self.coeff_keys = [f'{self.axis}_{c}' if c > 0 else self.axis
+                           for c in range(self.nchannel_fitted)]
 
     @property
     def centroid(self):
@@ -60,33 +47,61 @@ class CentroidModel(Model):
 
     @centroid.setter
     def centroid(self, centroid_array):
-        """A setter for the time."""
-        self._centroid = centroid_array
+        """A setter for the centroid."""
+        self._centroid = np.ma.masked_invalid(centroid_array)
         if self.centroid is not None:
             # Convert to local centroid
-            self.centroid_local = self.centroid - self.centroid.mean()
+            if self.multwhite:
+                self.centroid_local = []
+                for chan in self.fitted_channels:
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    centroid = split([self.centroid, ], self.nints, chan)[0]
+                    self.centroid_local.extend(centroid - centroid.mean())
+                self.centroid_local = np.array(self.centroid_local)
+            else:
+                self.centroid_local = self.centroid - self.centroid.mean()
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
-            Must pass in the time array here if not already set.
+            Must pass in the centroid array here if not already set.
 
         Returns
         -------
         lcfinal : ndarray
-            The value of the model at the times self.time.
+            The value of the model at the centroid self.centroid.
         """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the centroids
         if self.centroid is None:
             self.centroid = kwargs.get('centroid')
 
         # Create the centroid model for each wavelength
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
-            coeff = getattr(self.parameters, self.coeff_keys[c]).value
-            lcpiece = 1 + self.centroid_local*coeff
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
+            centroid = self.centroid_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                centroid = split([centroid, ], self.nints, chan)[0]
+
+            coeff = getattr(self.parameters, self.coeff_keys[chan]).value
+            lcpiece = 1 + centroid*coeff
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal
