@@ -1256,7 +1256,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     asb_xpos_max = data.x.values[maxx]
     asb_ypos_min = data.y.values[miny]
     asb_ypos_max = data.y.values[maxy]
-    
+
     # Create median frame
     if saved_refrence_tilt_frame is None:
         refrence_tilt_frame = ((np.nanmedian(data.flux.values[:10],

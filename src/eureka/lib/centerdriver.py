@@ -10,40 +10,39 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
                  expand=5.0, psf=None, psfctr=None):
     """
-    method = fgc : Use the center method to find the center of a star in data,
-    starting from position guess.
-    method = mgmc : Use the specified centroiding method 1dg, 2dg, or com,
-    to create a centroid inital guess
-    then hone in on the centroid position using that guess.
+    Use the center method to find the center of a star in data, starting
+    from position guess.
 
     Parameters
     ----------
     method : string
-             Name of the centering method to use.
+        Name of the centering method to use.
     data : 2D ndarray
-           Array containing the star image.
+        Array containing the star image.
     guess : 2 elements 1D array
-            y, x initial guess position of the target.
+        y, x initial guess position of the target.
     trim : integer
-           Semi-lenght of the box around the target that will be trimmed.
+        Semi-lenght of the box around the target that will be trimmed.
     radius : float
-             least asymmetry parameter. See err_fasym_c.
+        least asymmetry parameter. See err_fasym_c.
     size : float
-           least asymmetry parameter. See err_fasym_c.
+        least asymmetry parameter. See err_fasym_c.
     mask : 2D ndarray
-           A mask array of bad pixels. Same shape of data.
+        A mask array of bad pixels. Same shape of data.
     uncd : 2D ndarray
-           An array containing the uncertainty values of data.
-           Same shape of data.
+        An array containing the uncertainty values of data.
+        Same shape of data.
     saved_ref_median_frame : ndarray
-                             Stored median frame of the first batch.
+        Stored median frame of the first batch.
 
     Returns
     -------
-    A y,x tuple (scalars) with the coordinates of center of the target
-    in data. refrence_median_frame an ndarray which is the median
-    of the first batch to be used as the refrence frame for the first
-    centroid location guess in the mgmc method. 
+    tuple
+        A (y,x) tuple (scalars) with the coordinates of center of the target
+        in data.
+    ndarray
+        The median of the first batch to be used as the refrence
+        frame for the first centroid location guess in the mgmc method.
 
     Notes
     -----
