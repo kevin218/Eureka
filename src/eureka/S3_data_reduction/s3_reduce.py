@@ -236,6 +236,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             datasets = []
             saved_refrence_tilt_frame = None
+            saved_ref_median_frame = None
 
             for m in range(meta.nbatch):
                 first_file = m*meta.files_per_batch
@@ -452,15 +453,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             meta.ctr_guess is not None):
                         guess = np.array(meta.ctr_guess)[::-1]
                         trim = np.array([meta.ywindow[0], meta.xwindow[0]])
-                        position = guess - trim
+                        position_pri = guess - trim
                     elif meta.centroid_method == 'mgmc':
-                        position, extra = \
-                            centerdriver.centerdriver('mgmc_pri',
-                                                      data.flux.values,
-                                                      guess=1, trim=0,
-                                                      radius=None, size=None,
-                                                      meta=meta, i=None,
-                                                      m=None)
+                        position_pri, extra, refrence_median_frame = \
+                            centerdriver.centerdriver(
+                                'mgmc_pri', data.flux.values, guess=1, trim=0,
+                                radius=None, size=None, meta=meta, i=None,
+                                m=None,
+                                saved_ref_median_frame=saved_ref_median_frame)
+                        
+                    if saved_ref_median_frame is None:
+                        saved_ref_median_frame = refrence_median_frame
 
                     # for loop for integrations
                     for i in tqdm(range(len(data.time)),
@@ -481,7 +484,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             centroid_guess = [data.flux.shape[1]//2,
                                               data.flux.shape[2]//2]
                             # Do a 2D gaussian fit to the whole frame
-                            position, extra = \
+                            position_pri, extra = \
                                 centerdriver.centerdriver('fgc',
                                                           data.flux.values[i],
                                                           centroid_guess,
@@ -497,7 +500,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             # Correct for 1/f
                             data = \
                                 inst.do_oneoverf_corr(data, meta, i,
-                                                      position[1], log)
+                                                      position_pri[1], log)
                             if meta.isplots_S3 >= 3 and i < meta.nplots:
                                 plots_s3.phot_2d_frame_oneoverf(
                                     data, meta, m, i, flux_w_oneoverf)
@@ -505,17 +508,18 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Use the determined centroid and
                         # cut out ctr_cutout_size pixels around it
                         # Then perform another 2D gaussian fit
-                        position, extra = \
+                        position, extra, refrence_median_frame = \
                             centerdriver.centerdriver(
                                 meta.centroid_method+'_sec',
                                 data.flux.values[i],
-                                guess=position,
+                                guess=position_pri,
                                 trim=meta.ctr_cutout_size,
                                 radius=0, size=0,
                                 mask=data.mask.values[i],
                                 uncd=None, fitbg=1,
                                 maskstar=True, expand=1, psf=None,
-                                psfctr=None, i=i, m=m, meta=meta)
+                                psfctr=None, i=i, m=m, meta=meta,
+                                saved_ref_median_frame=saved_ref_median_frame)
 
                         # Store centroid positions and
                         # the Gaussian 1-sigma half-widths
