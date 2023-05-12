@@ -72,21 +72,24 @@ def GLBS(input_model, log, meta):
         data['flux'].attrs['flux_units'] = 'n/a'
         data.attrs['intstart'] = meta.intstart
         meta.bg_dir = 'CxC'
+
+        # Only show plots for the last group
         if ngrp == all_data.shape[1]-1:
-            data = bkg.BGsubtraction(data, meta, log, meta.m,
-                                     meta.isplots_S1)
+            isplots_S1 = meta.isplots_S1
         else:
-            # do not show plots except for the last group
-            data = bkg.BGsubtraction(data, meta, log, meta.m, 0)
+            isplots_S1 = 0
+        data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+
         # Perform BG subtraction along dispersion direction
         # (only useful for NIRCam data)
         if hasattr(meta, 'bg_disp') and meta.bg_disp:
             meta.bg_dir = 'RxR'
             if ngrp == all_data.shape[1]-1:
-                data = bkg.BGsubtraction(data, meta, log, meta.m,
-                                         meta.isplots_S1)
+                isplots_S1 = meta.isplots_S1
             else:
-                data = bkg.BGsubtraction(data, meta, log, meta.m, 0)
+                isplots_S1 = 0
+            data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+
         # Overwrite values in all_data
         all_data[:, ngrp, :, :] = data['flux'].values
     input_model.data = all_data
@@ -137,15 +140,13 @@ def mask_trace(input_model, log, meta):
 
     # now create mask based on smooth_coms center.
     if meta.bg_x1 is not None and meta.bg_x2 is not None:
-        for nc in range(meta.bg_x1, meta.bg_x2):
-            mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
-            mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
-            trace_mask[mask_low:mask_hih, nc] = np.nan
+        range_cols = range(meta.bg_x1, meta.bg_x2):
     else:
-        for nc in range(ncol):
-            mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
-            mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
-            trace_mask[mask_low:mask_hih, nc] = np.nan
+        range_cols = range(ncol)
+    for nc in range_cols:
+        mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
+        mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
+        trace_mask[mask_low:mask_hih, nc] = np.nan
 
     input_model.trace_mask = trace_mask
 
