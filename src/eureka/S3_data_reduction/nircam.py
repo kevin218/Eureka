@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import sigrej, background
-from ..lib.util import read_time
+from ..lib.util import read_time, supersample
 from tqdm import tqdm
 from ..lib import meanerr as me
 
@@ -86,6 +86,14 @@ def read(filename, data, meta, log):
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
+        # Increase pixel resolution along cross-dispersion direction
+        if hasattr(meta, 'expand') and meta.expand > 1:
+            sci, err, dq = supersample(sci, meta.expand, err, dq, axis=1)
+            v0 = supersample(v0, meta.expand, axis=1)[0]
+            print("***EXPAND***")
+            print(sci.shape)
+            print(err.shape)
+            print(dq.shape)
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
@@ -93,7 +101,7 @@ def read(filename, data, meta, log):
         # data. Added it here so that code in other sections doesn't have to
         # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
-        
+
         # FINDME: make this better for all filters
         if hdulist[0].header['FILTER'] == 'F210M':
             # will be deleted at the end of S3
