@@ -164,6 +164,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val, bg=bg_hw_val)
 
+    # Increase relevant meta parameter values
+    if hasattr(meta, 'expand') and meta.expand > 1:
+        meta.ywindow[0] *= meta.expand
+        meta.ywindow[1] *= meta.expand
+        meta.spec_hw *= meta.expand
+        meta.bg_hw *= meta.expand
+
     # begin process
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -297,15 +304,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Trim data to subarray region of interest
                 # Dataset object no longer contains untrimmed data
-                print(meta.ywindow)
                 data, meta = util.trim(data, meta)
 
                 # Create bad pixel mask (1 = good, 0 = bad)
                 data['mask'] = (['time', 'y', 'x'],
                                 np.ones(data.flux.shape, dtype=bool))
 
-                print(data) #FINDME
-                print(data.wave_2d.shape)
                 # Check if arrays have NaNs/infs
                 log.writelog('  Masking NaNs/infs in data arrays...',
                              mute=(not meta.verbose))
