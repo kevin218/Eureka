@@ -93,7 +93,7 @@ def read(filename, data, meta, log):
                          mute=(not meta.verbose))
             sci = supersample(sci, meta.expand, 'flux', axis=1)
             err = supersample(err, meta.expand, 'err', axis=1)
-            dq = supersample(dq, meta.expand, 'dq', axis=1)
+            dq = supersample(dq, meta.expand, 'cal', axis=1)
             v0 = supersample(v0, meta.expand, 'flux', axis=1)
             wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 

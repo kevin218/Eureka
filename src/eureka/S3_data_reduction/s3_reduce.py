@@ -111,6 +111,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = me.mergeevents(meta, s2_meta)
 
+    # Increase relevant meta parameter values
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
+    if meta.expand > 1:
+        meta.ywindow[0] *= meta.expand
+        meta.ywindow[1] *= meta.expand
+        meta.spec_hw *= meta.expand
+        meta.bg_hw *= meta.expand
+    print(meta.ywindow)
+    print(meta.spec_hw)
+
     # check for range of spectral apertures
     if hasattr(meta, 'spec_hw') and isinstance(meta.spec_hw, list):
         meta.spec_hw_range = range(meta.spec_hw[0],
@@ -163,15 +174,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val, bg=bg_hw_val)
-
-    # Increase relevant meta parameter values
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
-    if meta.expand > 1:
-        meta.ywindow[0] *= meta.expand
-        meta.ywindow[1] *= meta.expand
-        meta.spec_hw *= meta.expand
-        meta.bg_hw *= meta.expand
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:

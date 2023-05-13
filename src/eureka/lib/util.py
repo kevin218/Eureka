@@ -831,13 +831,13 @@ def supersample(data, expand, type, axis=1):
     elif type == 'err':
         # Divide by 'sqrt(expand)'' to conserve uncertainty
         zdata = zoom(data, expand_seq, order=1, mode='nearest')/np.sqrt(expand)
-    elif type == 'dq':
-        # Apply same dq flag to all super-sampled pixels
+    elif type == 'cal':
+        # Apply same dq flag, gain values, etc to all super-sampled pixels
         zdata = np.repeat(data, expand, axis=axis)
     elif type == 'wave':
         zdata = zoom(data, expand_seq, order=1, mode='nearest')
     else:
-        print(f"Type {type} not supported.  Must be one of flux, err, dq, " +
+        print(f"Type {type} not supported.  Must be one of flux, err, cal, " +
               "or wave. No super-sampling applied.")
         zdata = data
     return zdata
