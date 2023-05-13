@@ -15,6 +15,7 @@ xwindow         [60,410]    # Horizontal axis as seen in DS9
 src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 dqmask          True        # Mask pixels with an odd entry in the DQ array
+expand          1           # Super-sampling factor along cross-dispersion direction
 
 # Background parameters
 bg_hw           7           # Half-width of exclusion region for BG subtraction (relative to source position)
