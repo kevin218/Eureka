@@ -5,6 +5,7 @@ from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
+from .naninterp1d import naninterp1d
 
 from .citations import CITATIONS
 
@@ -810,14 +811,18 @@ def supersample(data, expand, type, axis=1):
     """
     # Build array of expansion factors
     # e.g., [1, 5, 1] for axis=1 and expand=5
-    expand_seq = np.ones(np.ndim(data), dtype=int)
+    ndim = np.ndim(data)
+    expand_seq = np.ones(ndim, dtype=int)
     expand_seq[axis] = expand
 
     # SciPy's zoom can't handle NaNs, so let's replace them via interpolation
-    # for ii in range()
-    #
-    #     nans, x= nan_helper(y)
-    #     y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    if ndim == 3:
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                data[i, j] = naninterp1d(data[i, j])
+    if ndim == 2:
+        for i in range(data.shape[0]):
+            data[i] = naninterp1d(data[i])
 
     # Apply linear interpolation along axis
     if type == 'flux':
@@ -836,23 +841,3 @@ def supersample(data, expand, type, axis=1):
               "or wave. No super-sampling applied.")
         zdata = data
     return zdata
-
-
-def nan_helper(y):
-    """Helper to handle indices and logical indices of NaNs.
-
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-          to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    Source:
-        https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
-    """
-
-    return np.isnan(y), lambda z: z.nonzero()[0]
