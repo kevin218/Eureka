@@ -788,44 +788,71 @@ def make_citations(meta, stage=None):
     meta.bibliography = [CITATIONS[entry] for entry in meta.citations]
 
 
-def supersample(data, expand, err=None, dq=None, axis=1):
+def supersample(data, expand, type, axis=1):
     """Apply subpixel interpolation to the given arrays in the cross-disperion
     direction.
 
     Parameters
     ----------
-    data : 3D array
-        Either the flux or variance arrays.
-    expand: int
-        Zoom factor along the given axis.
-    err : 3D array
-        Uncertainty array.
-    dq : 3D array
-        Data quality array.
-    axis : int
-        Axis along which interpolation is performed.
+    data : ND array
+        Array of values to be super-sampled.
+    expand : int
+        Super-sampling factor along the given axis.
+    type : str
+        Options are: data, err, dq, or wave.
+    axis : int, Optional
+        Axis along which interpolation is performed (default is 1).
 
     Returns
     -------
-    data : 3D array
-        The updated array at higher resolution
-    err : 3D array
-        The updated array at higher resolution
-    dq : 3D array
+    zdata : ND array
         The updated array at higher resolution
     """
-
-    expand_seq = np.array([1, 1, 1])
+    # Build array of expansion factors
+    # e.g., [1, 5, 1] for axis=1 and expand=5
+    expand_seq = np.ones(np.ndim(data), dtype=int)
     expand_seq[axis] = expand
 
-    zdata = zoom(data, expand_seq, order=1, mode='nearest')/expand
-    returned = [zdata]
+    # SciPy's zoom can't handle NaNs, so let's replace them via interpolation
+    # for ii in range()
+    #
+    #     nans, x= nan_helper(y)
+    #     y[nans]= np.interp(x(nans), x(~nans), y[~nans])
 
-    if err is not None:
-        zerr = zoom(err, expand_seq, order=1, mode='nearest')/np.sqrt(expand)
-        returned.append(zerr)
+    # Apply linear interpolation along axis
+    if type == 'flux':
+        # Divide by 'expand' to conserve flux/variance
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')/expand
+    elif type == 'err':
+        # Divide by 'sqrt(expand)'' to conserve uncertainty
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')/np.sqrt(expand)
+    elif type == 'dq':
+        # Apply same dq flag to all super-sampled pixels
+        zdata = np.repeat(data, expand, axis=axis)
+    elif type == 'wave':
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')
+    else:
+        print(f"Type {type} not supported.  Must be one of flux, err, dq, " +
+              "or wave. No super-sampling applied.")
+        zdata = data
+    return zdata
 
-    if dq is not None:
-        returned.append(dq)
 
-    return returned
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    Source:
+        https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]

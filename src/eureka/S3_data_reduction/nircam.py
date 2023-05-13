@@ -88,12 +88,20 @@ def read(filename, data, meta, log):
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
         # Increase pixel resolution along cross-dispersion direction
         if hasattr(meta, 'expand') and meta.expand > 1:
-            sci, err, dq = supersample(sci, meta.expand, err, dq, axis=1)
-            v0 = supersample(v0, meta.expand, axis=1)[0]
-            print("***EXPAND***")
-            print(sci.shape)
-            print(err.shape)
-            print(dq.shape)
+            log.writelog(f'    Super-sampling arrays from {sci.shape[1]} ' +
+                         f'to {sci.shape[1]*meta.expand} pixels...',
+                         mute=(not meta.verbose))
+            sci = supersample(sci, meta.expand, 'flux', axis=1)
+            err = supersample(err, meta.expand, 'err', axis=1)
+            dq = supersample(dq, meta.expand, 'dq', axis=1)
+            v0 = supersample(v0, meta.expand, 'flux', axis=1)
+            wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
+            # Expand meta parameter values
+            meta.ywindow[0] *= meta.expand
+            meta.ywindow[1] *= meta.expand
+            meta.spec_hw *= meta.expand
+            meta.bg_hw *= meta.expand
+
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
