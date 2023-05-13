@@ -140,7 +140,7 @@ def mask_trace(input_model, log, meta):
 
     # now create mask based on smooth_coms center.
     if meta.bg_x1 is not None and meta.bg_x2 is not None:
-        range_cols = range(meta.bg_x1, meta.bg_x2):
+        range_cols = range(meta.bg_x1, meta.bg_x2)
     else:
         range_cols = range(ncol)
     for nc in range_cols:
