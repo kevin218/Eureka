@@ -165,7 +165,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                              ap=spec_hw_val, bg=bg_hw_val)
 
     # Increase relevant meta parameter values
-    if hasattr(meta, 'expand') and meta.expand > 1:
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
+    if meta.expand > 1:
         meta.ywindow[0] *= meta.expand
         meta.ywindow[1] *= meta.expand
         meta.spec_hw *= meta.expand
@@ -237,7 +239,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if not hasattr(meta, 'nfiles'):
                 meta.nfiles = 1
             system_RAM = psutil.virtual_memory().total
-            filesize = os.path.getsize(meta.segment_list[istart])
+            filesize = os.path.getsize(meta.segment_list[istart])*meta.expand
             maxfiles = max([1, int(system_RAM*meta.max_memory/filesize)])
             meta.files_per_batch = min([maxfiles, meta.nfiles])
             meta.nbatch = int(np.ceil((meta.num_data_files-istart) /
