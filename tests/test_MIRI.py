@@ -126,16 +126,16 @@ def test_MIRI(capsys):
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=4, bg=10)
+    name = pathdirectory(meta, 'S3', 1, ap=8, bg=20)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
-    
+
     assert np.array_equal(s3_meta.citations, s3_cites)
 
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', 1, ap=4, bg=10)
+    name = pathdirectory(meta, 'S4', 1, ap=8, bg=20)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
@@ -145,10 +145,10 @@ def test_MIRI(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=4, bg=10)
+    name = pathdirectory(meta, 'S5', 1, ap=8, bg=20)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
-    
+
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["dynesty", "batman"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
@@ -160,7 +160,7 @@ def test_MIRI(capsys):
     # run assertions for S6
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage6{os.sep}')
-    name = pathdirectory(meta, 'S6', 1, ap=4, bg=10)
+    name = pathdirectory(meta, 'S6', 1, ap=8, bg=20)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
