@@ -115,12 +115,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     if not hasattr(meta, 'expand'):
         meta.expand = 1
     if meta.expand > 1:
-        meta.ywindow[0] *= meta.expand
-        meta.ywindow[1] *= meta.expand
         meta.spec_hw *= meta.expand
         meta.bg_hw *= meta.expand
-    print(meta.ywindow)
-    print(meta.spec_hw)
+        if meta.inst == 'miri':
+            meta.xwindow[0] *= meta.expand
+            meta.xwindow[1] *= meta.expand
+        else:
+            meta.ywindow[0] *= meta.expand
+            meta.ywindow[1] *= meta.expand
 
     # check for range of spectral apertures
     if hasattr(meta, 'spec_hw') and isinstance(meta.spec_hw, list):
