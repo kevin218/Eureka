@@ -8,7 +8,7 @@ except ImportError:
     print('WARNING: Unable to load the jwst package. As a result, the MIRI '
           'wavelength solution will not be able to be calculated in Stage 3.')
 from . import nircam
-from ..lib.util import read_time
+from ..lib.util import read_time, supersample
 
 
 def read(filename, data, meta, log):
@@ -100,7 +100,7 @@ def read(filename, data, meta, log):
         elif (hdulist[0].header['FILTER'] == 'F2550W' or
               hdulist[0].header['FILTER'] == 'F2550WR'):
             meta.phot_wave = 25.50
-        
+
         wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
     else:
         meta.photometry = False
@@ -120,7 +120,18 @@ def read(filename, data, meta, log):
             wave_2d = wave_MIRI_jwst(filename, meta, log)
         else:
             wave_2d = hdulist['WAVELENGTH', 1].data
-    
+
+        # Increase pixel resolution along cross-dispersion direction
+        if hasattr(meta, 'expand') and meta.expand > 1:
+            log.writelog(f'    Super-sampling x axis from {sci.shape[2]} ' +
+                         f'to {sci.shape[2]*meta.expand} pixels...',
+                         mute=(not meta.verbose))
+            sci = supersample(sci, meta.expand, 'flux', axis=2)
+            err = supersample(err, meta.expand, 'err', axis=2)
+            dq = supersample(dq, meta.expand, 'cal', axis=2)
+            v0 = supersample(v0, meta.expand, 'flux', axis=2)
+            wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=1)
+
     # Record integration mid-times in BMJD_TDB
     int_times = hdulist['INT_TIMES', 1].data
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
@@ -212,7 +223,7 @@ def read(filename, data, meta, log):
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
-    
+
     if meta.photometry:
         x = None
     else:
