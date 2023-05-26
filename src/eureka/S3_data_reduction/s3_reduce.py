@@ -303,6 +303,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                             m, meta.isplots_S3)
                     meta.bg_disp = False
                     meta.bg_deg = None
+                # Specify direction = CxC to perform standard BG subtraction
+                # later on in Stage 3. This needs to be set independent of
+                # having performed RxR BG subtraction.
                 meta.bg_dir = 'CxC'
 
                 # Trim data to subarray region of interest
@@ -461,7 +464,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                 radius=None, size=None, meta=meta, i=None,
                                 m=None,
                                 saved_ref_median_frame=saved_ref_median_frame)
-                        
+
                     if saved_ref_median_frame is None:
                         saved_ref_median_frame = refrence_median_frame
 
