@@ -164,9 +164,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
                              f'wavelength ({np.max(wave_1d)})')
-            indices = np.logical_and(wave_1d >= meta.wave_min,
-                                     wave_1d <= meta.wave_max)
-            wave_1d_trimmed = wave_1d[indices]
 
             if meta.photometry:
                 meta.n_int, meta.subnx = spec.aplev.shape[0], 1
@@ -381,7 +378,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
             if not meta.photometry:
                 if meta.isplots_S4 >= 1:
-                    plots_s4.lc_driftcorr(meta, wave_1d_trimmed, spec.optspec,
+                    plots_s4.lc_driftcorr(meta, wave_1d, spec.optspec,
                                           optmask=spec.optmask)
 
             log.writelog("Generating light curves")
