@@ -5,8 +5,7 @@
 suffix                  rateints     # Data file suffix
 
 # Controls the cross-dispersion extraction
-slit_y_low              None    # Use None to rely on the default parameters
-slit_y_high             None    # Use None to rely on the default parameters
+tsgrism_extract_height  None    # Use None to rely on the default parameters
 
 # Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
 waverange_start         None    # Use None to rely on the default parameters

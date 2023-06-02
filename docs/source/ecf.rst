@@ -47,6 +47,8 @@ bias_correction
 '''''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
 
+Note that this routine requires masking the trace; therefore, ``masktrace`` must be set to True.
+
 bias_group
 '''''''''''''''''
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
@@ -112,16 +114,28 @@ verbose
 See Stage 3 inputs
 
 isplots_S1
-'''''''''''''''''
+''''''''''
 Sets how many plots should be saved when running Stage 1. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
 nplots
-'''''''''''''''''
+''''''
 See Stage 3 inputs
 
 hide_plots
 ''''''''''
 See Stage 3 inputs
+
+bg_disp
+'''''''
+Set True to perform row-by-row background subtraction (only useful for NIRCam).
+
+bg_x1
+'''''
+Left edge of exclusion region for row-by-row background subtraction.
+
+bg_x2
+'''''
+Right edge of exclusion region for row-by-row background subtraction.
 
 masktrace
 '''''''''
@@ -145,13 +159,13 @@ Columns above this index will not be used to create the mask
 
 refpix_corr
 '''''''''''
-Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray. 
+Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray.
 
-npix_top 
+npix_top
 ''''''''
 Number of rows to use for ROEBA routine along the top of the subarray
 
-npix_bot 
+npix_bot
 ''''''''
 Number of rows to use for ROEBA routine along the bottom of the subarray
 
@@ -208,12 +222,15 @@ Data file suffix (e.g. rateints).
 
 slit_y_low & slit_y_high
 ''''''''''''''''''''''''
-Controls the cross-dispersion extraction. Use None to rely on the default parameters.
+Controls the cross-dispersion extraction for NIRSpec. Use None to rely on the default parameters.
 
+tsgrism_extract_height
+''''''''''''''''''''''
+Controls the cross-dispersion extraction height for NIRCam (default is 64 pixels).
 
 waverange_start & waverange_end
 '''''''''''''''''''''''''''''''
-Modify the existing file to change the dispersion extraction (DOES NOT WORK). Use None to rely on the default parameters.
+Modify the existing file to change the dispersion extraction (DO NOT CHANGE).
 
 
 skip_*
@@ -406,7 +423,7 @@ If you want to try multiple values sequentially, you can provide a list in the f
 
 ff_outlier
 ''''''''''
-Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.  
+Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.
 
 bg_thresh
 '''''''''
@@ -434,6 +451,17 @@ Possible values:
 5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
+bg_disp
+'''''''
+Set True to perform row-by-row background subtraction (only useful for NIRCam).
+
+bg_x1
+'''''
+Left edge of exclusion region for row-by-row background subtraction.
+
+bg_x2
+'''''
+Right edge of exclusion region for row-by-row background subtraction.
 
 p3thresh
 ''''''''
@@ -997,19 +1025,19 @@ This file describes the transit/eclipse and systematics parameters and their pri
          The ``Y0_0`` term cannot be fit directly but is instead fit through the more observable ``fp`` term which is composed of the ``Y0_0`` term and the square of the ``rp`` term.
    - Limb Darkening Parameters
       - ``limb_dark`` - The limb darkening model to be used.
-      
+
          Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential', '4-parameter']``.
          ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``,
          ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``,
          and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
-      
+
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
          Polynomial fits should include at least ``c0`` for usable results.
       - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models.
-      
+
          The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``,
          where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset.
          If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
@@ -1017,7 +1045,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
          instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising)
          while fitting for the remaining coefficients.
       - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events).
-      
+
          For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
       - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
