@@ -291,7 +291,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     ndim = len(freenames)
 
     if hasattr(meta, 'old_chain') and meta.old_chain is not None:
-        pos, nwalkers = start_from_oldchain_emcee(meta, log, ndim, lc.channel,
+        pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
                                                   freenames)
     else:
         if not hasattr(meta, 'lsq_first') or meta.lsq_first:
@@ -477,19 +477,19 @@ def emceefitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
-def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
+def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     """Restart emcee using the ending point of an old chain.
 
     Parameters
     ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
     meta : eureka.lib.readECF.MetaClass
         The meta data object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     ndim : int
         The number of fitted parameters.
-    channel : int
-        The channel number.
     freenames : list
         The names of the fitted parameters.
 
@@ -511,7 +511,8 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
     if meta.sharedp:
         channel_key = 'shared'
     else:
-        channel_key = f'ch{channel}'
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_key = f'ch{ch_number}'
 
     foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
     fname = f'S5_emcee_fitparams_{channel_key}.csv'

@@ -93,7 +93,7 @@ def read(filename, data, meta, log):
         # data. Added it here so that code in other sections doesn't have to
         # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
-        
+
         # FINDME: make this better for all filters
         if hdulist[0].header['FILTER'] == 'F210M':
             # will be deleted at the end of S3
@@ -243,10 +243,16 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
-                                meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=2,
-                                isplots=isplots)
+    if hasattr(meta, 'bg_dir') and meta.bg_dir == 'RxR':
+        bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_x1,
+                                    meta.bg_x2, deg=meta.bg_deg,
+                                    threshold=meta.p3thresh, isrotate=0,
+                                    isplots=isplots)
+    else:
+        bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
+                                    meta.bg_y2, deg=meta.bg_deg,
+                                    threshold=meta.p3thresh, isrotate=2,
+                                    isplots=isplots)
 
     return bg, mask, n
 
