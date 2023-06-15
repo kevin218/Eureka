@@ -163,6 +163,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
         - February 2022 Aarynn Carter /  Eva-Maria Ahrer
             Updated for JWST version 1.3.3, code restructure
         '''
+        # Define superbias offset procedure
+        self.superbias = Eureka_SuperBiasStep()
+        self.superbias.s1_meta = meta
+        self.superbias.s1_log = log
+
         # Figure out which instrument we're working on
         with fits.open(filename) as f:
             instrument = f[0].header['INSTRUME']
@@ -201,11 +206,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
             self.firstframe.skip = meta.skip_firstframe
             self.lastframe.skip = meta.skip_lastframe
             self.rscd.skip = meta.skip_rscd
-
-        # Define superbias offset procedure
-        self.superbias = Eureka_SuperBiasStep()
-        self.superbias.s1_meta = meta
-        self.superbias.s1_log = log
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
