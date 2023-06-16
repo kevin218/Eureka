@@ -842,7 +842,7 @@ where starry replaces both the batman_tr and batman_ecl models and offers a more
 
 manual_clip
 '''''''''''
-Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
+Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]]. If you want to clip the 10th integration, this would be index 9 since python uses zero-indexing. And the manual_clip start and end values are used to slice a numpy array, so they follow the same convention of *inclusive* start index and *exclusive* end index. In other words, to trim the 10th integrations, you would set manual_clip to [[9,10]].
 
 
 Limb Darkening Parameters
