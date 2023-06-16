@@ -181,7 +181,9 @@ class MetaClass:
         for line in cleanlines:
             name = shlex.split(line)[0]
             # Split off the name and remove all spaces except quoted substrings
-            val = ''.join(shlex.split(line)[1:])
+            # Also keep quotation marks for things that need to be escaped
+            # (e.g. max is a built-in funciton)
+            val = ''.join(shlex.split(line, posix=False)[1:])
             try:
                 val = eval(val)
             except:
