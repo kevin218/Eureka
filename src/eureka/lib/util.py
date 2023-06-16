@@ -529,9 +529,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 for m in range(n_wav):
                     ediff[p, m] = get_mad_1d(normspec[iscans, m])
 
-            mad = np.ma.mean(ediff[p])
-            log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
-            setattr(meta, f'mad_scandir{p}', mad)
+                mad = np.ma.mean(ediff[p])
+                log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
+                setattr(meta, f'mad_scandir{p}', mad)
         
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
