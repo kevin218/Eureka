@@ -172,11 +172,11 @@ Number of rows to use for ROEBA routine along the bottom of the subarray
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 0 JWST data (uncal.fits).
+The path to the directory containing the Stage 0 JWST data (uncal.fits). Directories containing spaces should be enclosed in quotation marks.
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 1 JWST data and plots.
+The path to the directory in which to output the Stage 1 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 testing_S1
 ''''''''''
@@ -253,12 +253,12 @@ If True, plots will automatically be closed rather than popping up on the screen
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 1 JWST data.
+The path to the directory containing the Stage 1 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 2 JWST data and plots.
+The path to the directory in which to output the Stage 2 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 
 
@@ -594,23 +594,23 @@ If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 2 JWST data. For HST observations, the sci_dir and cal_dir folders will only be checked if this folder does not contain FITS files.
+The path to the directory containing the Stage 2 JWST data. For HST observations, the sci_dir and cal_dir folders will only be checked if this folder does not contain FITS files. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + inputdir + sci_dir
 '''''''''''''''''''''''''''
-Optional, only used for HST analyses. The path to the folder containing the science spectra. Defaults to 'sci'.
+Optional, only used for HST analyses. The path to the folder containing the science spectra. Defaults to 'sci'. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + inputdir + cal_dir
 '''''''''''''''''''''''''''
-Optional, only used for HST analyses. The path to the folder containing the wavelength calibration imaging mode observations. Defaults to 'cal'.
+Optional, only used for HST analyses. The path to the folder containing the wavelength calibration imaging mode observations. Defaults to 'cal'. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 3 JWST data and plots.
+The path to the directory in which to output the Stage 3 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + time_file
 ''''''''''''''''''
-Optional. The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
+Optional. The path to a file that contains the time array you want to use instead of the one contained in the FITS file. Directories containing spaces should be enclosed in quotation marks.
 
 
 
@@ -790,12 +790,12 @@ If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 3 JWST data.
+The path to the directory containing the Stage 3 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 4 JWST data and plots.
+The path to the directory in which to output the Stage 4 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 
 
@@ -965,12 +965,12 @@ If True, plots will automatically be closed rather than popping up on the screen
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 4 JWST data.
+The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 5 JWST data and plots.
+The path to the directory in which to output the Stage 5 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 
 Stage 5 Fit Parameters
@@ -1173,11 +1173,11 @@ If True, plots will automatically be closed rather than popping up on the screen
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 5 JWST data.
+The path to the directory containing the Stage 5 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 6 JWST data and plots.
+The path to the directory in which to output the Stage 6 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + model_spectrum
 '''''''''''''''''''''''
@@ -1185,7 +1185,7 @@ The path to a model spectrum to plot underneath the observations to show how the
 compare to the input model for simulated observations or how the fitted results compare to a
 retrieved model for real observations. Set to None if no model should be plotted.
 The file should have column 1 as the wavelength and column 2 should contain the transmission
-or emission spectrum. Any headers must be preceded by a #.
+or emission spectrum. Any headers must be preceded by a #. Directories containing spaces should be enclosed in quotation marks.
 
 model_x_unit
 ''''''''''''

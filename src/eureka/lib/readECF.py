@@ -1,5 +1,5 @@
 import os
-
+import shlex
 # Required in case user passes in a numpy object (e.g. np.inf)
 import numpy as np
 
@@ -179,8 +179,9 @@ class MetaClass:
                 cleanlines.append(line)
 
         for line in cleanlines:
-            name = line.split()[0]
-            val = ''.join(line.split()[1:])
+            name = shlex.split(line)[0]
+            # Split off the name and remove all spaces except quoted substrings
+            val = ''.join(shlex.split(line)[1:])
             try:
                 val = eval(val)
             except:
