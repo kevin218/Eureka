@@ -517,7 +517,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     if meta.inst == 'wfc3':
         # Setup 1D MAD arrays
         n_wav = normspec.shape[1]
-        ediff = np.ma.zeros(2, n_wav)
+        ediff = np.ma.zeros((2, n_wav))
 
         scandir = np.repeat(meta.scandir, meta.nreads)
 
