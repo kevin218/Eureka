@@ -154,7 +154,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             elif meta.wave_min < np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min '
                              f'({meta.wave_min}) is smaller than the shortest '
-                             f'wavelength ({np.min(wave_1d)})')
+                             f'wavelength ({np.min(wave_1d)})!!')
+                if meta.inst == 'miri':
+                    axis = 'ywindow'
+                else:
+                    axis = 'xwindow'
+                log.writelog('  If you want to use wavelengths shorter than '
+                             f'{np.min(wave_1d)}, you will need to decrease '
+                             f'your {axis} lower limit in Stage 3.')
             if meta.wave_max is None:
                 meta.wave_max = np.max(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
@@ -163,7 +170,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             elif meta.wave_max > np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
-                             f'wavelength ({np.max(wave_1d)})')
+                             f'wavelength ({np.max(wave_1d)})!!')
+                if meta.inst == 'miri':
+                    axis = 'ywindow'
+                else:
+                    axis = 'xwindow'
+                log.writelog('  If you want to use wavelengths longer than '
+                             f'{np.max(wave_1d)}, you will need to increase '
+                             f'your {axis} upper limit in Stage 3.')
 
             if meta.photometry:
                 meta.n_int, meta.subnx = spec.aplev.shape[0], 1
