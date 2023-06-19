@@ -43,16 +43,16 @@ class BatmanTransitModel(Model):
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
             self.ld_array = kwargs.get('ld_coeffs')
-            if self.ld_from_S4:
-                self.ld_array = self.ld_array[len_params-2]
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
+                if self.ld_from_S4:
+                    ld_array = self.ld_array[chan][len_params-2]
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
-                        ld_val = self.ld_array[chan][param-1]
+                        ld_val = ld_array[param-1]
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value
