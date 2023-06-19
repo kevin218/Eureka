@@ -287,15 +287,29 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.use_generate_ld:
                 # Load limb-darkening coefficients made in Stage 4
                 ld_str = meta.use_generate_ld
-                if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been " +
-                                    "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients " +
-                             f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values,
-                             lc[ld_str + '_quad'].values,
-                             lc[ld_str + '_nonlin_3para'].values,
-                             lc[ld_str + '_nonlin_4para'].values]
+                if meta.multwhite:
+                    ld_coeffs = []
+                    # Load LD coefficient from each lc
+                    for p in range(len(meta.inputdirlist)+1):
+                        if not hasattr(lc_whites[p], ld_str + '_lin'):
+                            raise Exception("Exotic-ld coefficients have not" +
+                                            " been calculated in Stage 4")
+                        log.writelog("\nUsing generated limb-darkening " +
+                                     f"coefficients with {ld_str} \n")
+                        ld_coeffs.append([lc_whites[p][ld_str + '_lin'].values[0],
+                                         lc_whites[p][ld_str + '_quad'].values[0],
+                                         lc_whites[p][ld_str + '_nonlin_3para'].values[0],
+                                         lc_whites[p][ld_str + '_nonlin_4para'].values[0]])
+                else:
+                    if not hasattr(lc, ld_str + '_lin'):
+                        raise Exception("Exotic-ld coefficients have not" +
+                                        " been calculated in Stage 4")
+                    log.writelog("\nUsing generated limb-darkening " +
+                                 f"coefficients with {ld_str} \n")
+                    ld_coeffs = [lc[ld_str + '_lin'].values,
+                                 lc[ld_str + '_quad'].values,
+                                 lc[ld_str + '_nonlin_3para'].values,
+                                 lc[ld_str + '_nonlin_4para'].values]
             elif meta.ld_file:
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
@@ -332,14 +346,23 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     flux_temp, err_temp = util.normalize_spectrum(
                         meta, flux_temp, err_temp)
                     time_temp = lc_whites[pi].time.values - offset
-                    xpos_temp = np.ma.masked_invalid(
-                        lc_whites[pi].centroid_x.values)
-                    xwidth_temp = np.ma.masked_invalid(
-                        lc_whites[pi].centroid_sx.values)
-                    ypos_temp = np.ma.masked_invalid(
-                        lc_whites[pi].centroid_y.values)
-                    ywidth_temp = np.ma.masked_invalid(
-                        lc_whites[pi].centroid_sy.values)
+                    
+                    if hasattr(lc_whites[pi], 'centroid_x'):
+                        xpos_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_x.values)
+                        xwidth_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_sx.values)
+                    else:
+                        xpos_temp = None
+                        xwidth_temp = None
+                    if hasattr(lc_whites[pi], 'centroid_y'):
+                        ypos_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_y.values)
+                        ywidth_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_sy.values)
+                    else:
+                        ypos_temp = None
+                        ywidth_temp = None
 
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
