@@ -288,7 +288,7 @@ def separate_direct(meta, log):
                 index = indices[-1]
             meta.direct_index[i] = index
 
-    meta.obstimes = obstimes
+    meta.obstimes = science_times
     meta.CRPIX1 = CRPIX1
     meta.CRPIX2 = CRPIX2
     meta.postarg1 = postarg1
