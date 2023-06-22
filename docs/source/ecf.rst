@@ -594,15 +594,7 @@ If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 2 JWST data. For HST observations, the sci_dir and cal_dir folders will only be checked if this folder does not contain FITS files.
-
-topdir + inputdir + sci_dir
-'''''''''''''''''''''''''''
-Optional, only used for HST analyses. The path to the folder containing the science spectra. Defaults to 'sci'.
-
-topdir + inputdir + cal_dir
-'''''''''''''''''''''''''''
-Optional, only used for HST analyses. The path to the folder containing the wavelength calibration imaging mode observations. Defaults to 'cal'.
+The path to the directory containing the Stage 2 JWST data, or, for HST observations, the _ima FITS files (including both direct images and spectra) downloaded from MAST.
 
 topdir + outputdir
 ''''''''''''''''''
