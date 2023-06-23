@@ -426,7 +426,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         plt.pause(0.1)
 
 
-def driftypos(data, meta):
+def driftypos(data, meta, m):
     '''Plot the spatial jitter. (Fig 3104)
 
     Parameters
@@ -435,6 +435,8 @@ def driftypos(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    m : int
+        The file number.
 
     Notes
     -----
@@ -449,13 +451,15 @@ def driftypos(data, meta):
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3104_DriftYPos'+plots.figure_filetype
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3104_file{file_number}_DriftYPos' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def driftywidth(data, meta):
+def driftywidth(data, meta, m):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
 
     Parameters
@@ -464,6 +468,8 @@ def driftywidth(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    m : int
+        The file number.
 
     Notes
     -----
@@ -478,7 +484,9 @@ def driftywidth(data, meta):
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3105_DriftYWidth'+plots.figure_filetype
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3105_file{file_number}_DriftYWidth' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
