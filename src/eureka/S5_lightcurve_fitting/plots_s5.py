@@ -66,8 +66,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
             # Split the arrays that have lengths of the original time axis
             flux, unc, model_lc, model_sys = split([flux, unc, model_lc, 
-                                                    model_sys],
-                                                    meta.nints, channel)
+                                                   model_sys],
+                                                   meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
             # interpolated) time axis
@@ -246,7 +246,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         # Set nice axis limits
         sigma = np.ma.mean(binned_unc)
         max_astro = np.ma.max((model_phys-1))
-        ax.set_ylim(-4*sigma, max_astro+6*sigma)
+        ax.set_ylim(-6*sigma, max_astro+6*sigma)
         ax.set_xlim(np.min(time), np.max(time))
 
         # Save/show the figure
@@ -279,7 +279,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
                         color=color, zorder=1)
             # Plot the physical model
-            ax.plot(new_time, model_phys, '.', ls='', ms=2, color='0.3',
+            ax.plot(new_timet, model_phys, '.', ls='', ms=2, color='0.3',
                     zorder=10)
 
             # Set nice axis limits
@@ -341,7 +341,7 @@ def plot_rms(lc, model, meta, fitter):
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
             time, flux, model_lc = split([lc.time, flux, model_lc],
-                                      meta.nints, channel)
+                                         meta.nints, channel)
         else:
             time = lc.time
 
@@ -648,7 +648,7 @@ def plot_res_distr(lc, model, meta, fitter):
         if lc.share or meta.multwhite:
             # Split the arrays that have lengths of the original time axis
             flux, unc, model_lc = split([flux, unc, model_lc],
-                                     meta.nints, channel)
+                                        meta.nints, channel)
 
         residuals = flux - model_lc
         hist_vals = residuals/unc
