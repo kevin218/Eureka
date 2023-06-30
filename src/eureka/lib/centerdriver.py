@@ -5,7 +5,8 @@ from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
+def centerdriver(method, data, guess, trim, radius, size, i, m, meta, 
+                 saved_ref_median_frame,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
                  expand=5.0, psf=None, psfctr=None):
     """
@@ -14,28 +15,34 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
 
     Parameters
     ----------
-    method: string
-            Name of the centering method to use.
-    data:   2D ndarray
-            Array containing the star image.
-    guess:  2 elements 1D array
-            y, x initial guess position of the target.
-    trim:   integer
-            Semi-lenght of the box around the target that will be trimmed.
-    radius: float
-            least asymmetry parameter. See err_fasym_c.
-    size:   float
-            least asymmetry parameter. See err_fasym_c.
-    mask:   2D ndarray
-            A mask array of bad pixels. Same shape of data.
-    uncd:   2D ndarray
-            An array containing the uncertainty values of data. Same
-            shape of data.
+    method : string
+        Name of the centering method to use.
+    data : 2D ndarray
+        Array containing the star image.
+    guess : 2 elements 1D array
+        y, x initial guess position of the target.
+    trim : integer
+        Semi-lenght of the box around the target that will be trimmed.
+    radius : float
+        least asymmetry parameter. See err_fasym_c.
+    size : float
+        least asymmetry parameter. See err_fasym_c.
+    mask : 2D ndarray
+        A mask array of bad pixels. Same shape of data.
+    uncd : 2D ndarray
+        An array containing the uncertainty values of data.
+        Same shape of data.
+    saved_ref_median_frame : ndarray
+        Stored median frame of the first batch.
 
     Returns
     -------
-    A y,x tuple (scalars) with the coordinates of center of the target
-    in data.
+    tuple
+        A (y,x) tuple (scalars) with the coordinates of center of the target
+        in data.
+    ndarray
+        The median of the first batch to be used as the refrence
+        frame for the first centroid location guess in the mgmc method.
 
     Notes
     -----
@@ -90,15 +97,17 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         extra = sy, sx  # Gaussian 1-sigma half-widths
     elif method == 'mgmc_pri':
         # Median frame creation + first centroid
-        x, y = gmin.pri_cent(img, meta)
+        x, y, refrence_median_frame = gmin.pri_cent(img, meta,
+                                                    saved_ref_median_frame)
     elif method == 'mgmc_sec': 
         # Second enhanced centroid position + gaussian widths
         sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths
+        refrence_median_frame = None
 
     # only plot when we do the second fit
     if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
         plots_s3.phot_centroid_fgc(img, x, y, sx, sy, i, m, meta)
 
     # Make trimming correction and return
-    return ((y, x) + cen - trim), extra
+    return ((y, x) + cen - trim), extra, refrence_median_frame
