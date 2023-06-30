@@ -96,10 +96,10 @@ class HSTRampModel(PyMC3Model):
             for i in range(6):
                 try:
                     if chan == 0:
-                        ramp_coeffs[c][i] = getattr(model, f'h{i}')
+                        hst_coeffs[c][i] = getattr(model, f'h{i}')
                     else:
-                        ramp_coeffs[c][i] = getattr(model,
-                                                    f'h{i}_{chan}')
+                        hst_coeffs[c][i] = getattr(model,
+                                                   f'h{i}_{chan}')
                 except AttributeError:
                     pass
 
