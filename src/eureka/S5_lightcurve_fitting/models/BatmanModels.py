@@ -42,17 +42,19 @@ class BatmanTransitModel(Model):
         
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
+            print("Using the following limb-darkening values:")
             self.ld_array = kwargs.get('ld_coeffs')
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
                 if self.ld_from_S4:
-                    ld_array = self.ld_array[chan][len_params-2]
+                    ld_array = self.ld_array[len_params-2]
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
-                        ld_val = ld_array[param-1]
+                        ld_val = ld_array[chan][param-1]
+                        print(item, ld_val)
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value
@@ -179,9 +181,12 @@ class BatmanEclipseModel(Model):
         self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
                             and 'Rs' in self.parameters.dict.keys())
         if self.compute_ltt:
+            if self.multwhite:
+                # Compute ltt correction for each white LC
+                self.compute_ltt_once = False
             # Check if we need to do ltt correction for each
             # wavelength or only one
-            if self.nchannel_fitted > 1:
+            elif self.nchannel_fitted > 1:
                 # Check whether the parameters are all either fixed or shared
                 once_type = ['shared', 'fixed']
                 self.compute_ltt_once = \

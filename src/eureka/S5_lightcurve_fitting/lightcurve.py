@@ -227,8 +227,14 @@ class LightCurve(m.Model):
                     model.plot(ax=ax, color=next(plot_COLORS),
                                zorder=np.inf, share=self.share, chan=channel)
 
+            # Determine wavelength
+            if meta.multwhite:
+                wave = meta.wave[0]
+            else:
+                wave = meta.wave[channel]
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {channel}')
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' + 
+                         f'- {wave} microns')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)
             ax.legend(loc='best')
