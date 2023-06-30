@@ -489,13 +489,25 @@ def fit_channel(meta, lc, time, flux, chan, flux_err, eventlabel, params,
             ExpRampModel = dm.ExpRampModel
         else:
             ExpRampModel = m.ExpRampModel
-        t_ramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                              log=log, time=time, time_units=time_units,
-                              freenames=freenames,
-                              longparamlist=lc_model.longparamlist,
-                              nchan=lc_model.nchannel_fitted,
-                              paramtitles=paramtitles)
-        modellist.append(t_ramp)
+        t_expramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchan=lc_model.nchannel_fitted,
+                                 paramtitles=paramtitles)
+        modellist.append(t_expramp)
+    if 'hstramp' in meta.run_myfuncs:
+        if 'starry' in meta.run_myfuncs:
+            HSTRampModel = dm.HSTRampModel
+        else:
+            HSTRampModel = m.HSTRampModel
+        t_hstramp = HSTRampModel(parameters=params, name='hstramp', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchan=lc_model.nchannel_fitted,
+                                 paramtitles=paramtitles)
+        modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
             CentroidModel = dm.CentroidModel
