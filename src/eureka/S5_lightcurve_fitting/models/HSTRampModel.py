@@ -33,13 +33,8 @@ class HSTRampModel(Model):
                       if hN.startswith('h') and hN[1:].isdigit()}
             self.parameters = Parameters(**params)
 
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Update coefficients
-        self.coeffs = np.zeros((self.nchan, 6))
+        self.coeffs = np.zeros((self.nchannel_fitted, 6))
         self._parse_coeffs()
 
     @property
@@ -53,7 +48,16 @@ class HSTRampModel(Model):
         self._time = time_array
         if self.time is not None:
             # Convert to local time
-            self.time_local = self.time - self.time[0]
+            if self.multwhite:
+                self.time_local = []
+                for chan in self.fitted_channels:
+                    # Split the arrays that have lengths
+                    # of the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+                    self.time_local.extend(time - time[0])
+                self.time_local = np.array(self.time_local)
+            else:
+                self.time_local = self.time - self.time[0]
 
     def _parse_coeffs(self):
         """Convert dict of 'h#' coefficients into a list
@@ -65,17 +69,23 @@ class HSTRampModel(Model):
             The sequence of coefficient values.
         """
         # Parse 'h#' keyword arguments as coefficients
-        for j in range(self.nchan):
+        for c in range(self.nchannel_fitted):
+            if self.nchannel_fitted > 1:
+                chan = self.fitted_channels[c]
+            else:
+                chan = 0
+
             for i in range(6):
                 try:
-                    if j == 0:
-                        self.coeffs[j, i] = self.parameters.dict[f'h{i}'][0]
+                    if chan == 0:
+                        self.coeffs[c, i] = self.parameters.dict[f'h{i}'][0]
                     else:
-                        self.coeffs[j, i] = self.parameters.dict[f'h{i}_j'][0]
+                        self.coeffs[c, i] = \
+                            self.parameters.dict[f'h{i}_{chan}'][0]
                 except KeyError:
                     pass
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
@@ -88,13 +98,30 @@ class HSTRampModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+        
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         # Create the ramp from the coeffs
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in np.arange(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
+            time = self.time_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+            
             h0, h1, h2, h3, h4, h5 = self.coeffs[c]
             # Batch time is relative to the start of each HST orbit
             # h5 is the orbital period of HST (~96 minutes)
