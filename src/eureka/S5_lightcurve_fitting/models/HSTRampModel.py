@@ -2,6 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class HSTRampModel(Model):
