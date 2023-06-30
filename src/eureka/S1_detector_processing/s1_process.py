@@ -106,6 +106,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
 
+            meta.m = m
             meta.intstart = hdulist[0].header['INTSTART']-1
             meta.intend = hdulist[0].header['INTEND']
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
@@ -116,7 +117,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
 
     # make citations for current stage
     util.make_citations(meta, 1)
-    
+
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')
@@ -162,7 +163,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
         - February 2022 Aarynn Carter /  Eva-Maria Ahrer
             Updated for JWST version 1.3.3, code restructure
         '''
-        # Run the pipeline
+        # Define superbias offset procedure
+        self.superbias = Eureka_SuperBiasStep()
+        self.superbias.s1_meta = meta
+        self.superbias.s1_log = log
+
+        # Figure out which instrument we're working on
         with fits.open(filename) as f:
             instrument = f[0].header['INSTRUME']
 
@@ -178,6 +184,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ipc.skip = meta.skip_ipc
         self.refpix.skip = meta.skip_refpix
         self.linearity.skip = meta.skip_linearity
+        if hasattr(meta, 'custom_linearity') and meta.custom_linearity:
+            self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
         if (hasattr(meta, 'jump_rejection_threshold') and
@@ -199,11 +207,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
             self.lastframe.skip = meta.skip_lastframe
             self.rscd.skip = meta.skip_rscd
 
-        # Define superbias offset procedure
-        self.superbias = Eureka_SuperBiasStep()
-        self.superbias.s1_meta = meta
-        self.superbias.s1_log = log
-        
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm

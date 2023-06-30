@@ -5,7 +5,7 @@ except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
-from ...lib.readEPF import Parameters
+from ...lib.split_channels import split
 
 
 class SinusoidPhaseCurveModel(Model):
@@ -44,18 +44,6 @@ class SinusoidPhaseCurveModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check for Parameters instance
-        self.parameters = kwargs.get('parameters')
-
-        # Generate parameters from kwargs if necessary
-        if self.parameters is None:
-            self.parameters = Parameters(**kwargs)
-
-        # Set parameters for multi-channel fits
-        self.longparamlist = kwargs.get('longparamlist')
-        self.nchan = kwargs.get('nchan')
-        self.paramtitles = kwargs.get('paramtitles')
-
         # Check if should enforce positivity
         if not hasattr(self, 'force_positivity'):
             self.force_positivity = False
@@ -91,11 +79,13 @@ class SinusoidPhaseCurveModel(Model):
         if self.eclipse_model is not None:
             self.eclipse_model.update(newparams, **kwargs)
 
-    def eval(self, **kwargs):
+    def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -104,6 +94,13 @@ class SinusoidPhaseCurveModel(Model):
         lcfinal : ndarray
             The value of the model at the times self.time.
         """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -115,9 +112,14 @@ class SinusoidPhaseCurveModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        for c in np.arange(self.nchan):
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             # Set all parameters
-            for index, item in enumerate(self.longparamlist[c]):
+            for index, item in enumerate(self.longparamlist[chan]):
                 if np.any([key in item for key in pc_params.keys()]):
                     pc_params[self.paramtitles[index]] = \
                         self.parameters.dict[item][0]
@@ -130,7 +132,7 @@ class SinusoidPhaseCurveModel(Model):
 
             m_transit = None
             if not np.any(['t_secondary' in key
-                           for key in self.longparamlist[c]]):
+                           for key in self.longparamlist[chan]]):
                 # If not explicitly fitting for the time of eclipse, get the
                 # time of eclipse from the time of transit, period,
                 # eccentricity, and argument of periastron
@@ -140,15 +142,20 @@ class SinusoidPhaseCurveModel(Model):
             else:
                 t_secondary = self.parameters.dict['t_secondary'][0]
 
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
             if self.parameters.dict['ecc'][0] == 0.:
                 # the planet is on a circular orbit
-                t = self.time - t_secondary
+                t = time - t_secondary
                 freq = 2.*np.pi/self.parameters.dict['per'][0]
                 phi = (freq*t)
             else:
                 if m_transit is None:
                     # Avoid overhead of making a new transit model if avoidable
-                    m_transit = batman.TransitModel(bm_params, self.time,
+                    m_transit = batman.TransitModel(bm_params, time,
                                                     transittype='primary')
                 anom = m_transit.get_true_anomaly()
                 w = self.parameters.dict['w'][0]
@@ -170,7 +177,7 @@ class SinusoidPhaseCurveModel(Model):
             if self.force_positivity and np.any(phaseVars < 0):
                 # Returning nans or infs breaks the fits, so this was
                 # the best I could think of
-                phaseVars = 1e12*np.ones_like(self.time)
+                phaseVars = 1e12*np.ones_like(time)
 
             lcfinal = np.append(lcfinal, phaseVars)
 

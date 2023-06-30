@@ -19,6 +19,7 @@ from dynesty.utils import resample_equal
 from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
 from . import plots_s5 as plots
 from ..lib import astropytable
+from ..lib.split_channels import get_trim
 
 from multiprocessing import Pool
 
@@ -123,17 +124,18 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                (fit_params[ind[chan]] *
-                 lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
+    else:
+        lc.unc_fit = lc.unc
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
@@ -153,9 +155,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]) * 1e6)
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
+            scatter_ppm = 1e6*fit_params[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
@@ -289,8 +291,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     ndim = len(freenames)
 
     if hasattr(meta, 'old_chain') and meta.old_chain is not None:
-        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        pos, nwalkers = start_from_oldchain_emcee(meta, log, ndim, ch_number,
+        pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
                                                   freenames)
     else:
         if not hasattr(meta, 'lsq_first') or meta.lsq_first:
@@ -382,15 +383,16 @@ def emceefitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -423,15 +425,11 @@ def emceefitter(lc, model, meta, log, **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (1e6 * fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]))
-            scatter_ppm_upper = (1e6 * upper_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
-            scatter_ppm_lower = (1e6 * lower_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
+            scatter_ppm = 1e6*fit_params[i]*unc
+            scatter_ppm_upper = 1e6*upper_errs[i]*unc
+            scatter_ppm_lower = 1e6*lower_errs[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]}); {scatter_ppm} '
                          f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm')
@@ -479,19 +477,19 @@ def emceefitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
-def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
+def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     """Restart emcee using the ending point of an old chain.
 
     Parameters
     ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
     meta : eureka.lib.readECF.MetaClass
         The meta data object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     ndim : int
         The number of fitted parameters.
-    channel : string
-        The channel number.
     freenames : list
         The names of the fitted parameters.
 
@@ -513,7 +511,8 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
     if meta.sharedp:
         channel_key = 'shared'
     else:
-        channel_key = f'ch{channel}'
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_key = f'ch{ch_number}'
 
     foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
     fname = f'S5_emcee_fitparams_{channel_key}.csv'
@@ -861,15 +860,16 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                (fit_params[ind[chan]] *
-                 lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -891,15 +891,11 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (1e6 * fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]))
-            scatter_ppm_upper = (1e6 * upper_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
-            scatter_ppm_lower = (1e6 * lower_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
+            scatter_ppm = 1e6*fit_params[i]*unc
+            scatter_ppm_upper = 1e6*upper_errs[i]*unc
+            scatter_ppm_lower = 1e6*lower_errs[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]}); {scatter_ppm} '
                          f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm')
@@ -1011,15 +1007,16 @@ def lmfitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                (fit_params[ind[chan]] *
-                 lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -1099,8 +1096,8 @@ def group_variables(model):
     """
     all_params = []
     alreadylist = []
-    for chan in np.arange(model.components[0].nchan):
-        temp = model.components[0].longparamlist[chan]
+    for c in range(model.components[0].nchannel_fitted):
+        temp = model.components[0].longparamlist[c]
         for par in list(model.components[0].parameters.dict.items()):
             if par[0] in temp:
                 if not all_params:
@@ -1146,6 +1143,8 @@ def group_variables(model):
     prior1 = np.array(prior1)
     prior2 = np.array(prior2)
     priortype = np.array(priortype)
+
+    model.freenames = freenames
 
     return freenames, freepars, prior1, prior2, priortype, indep_vars
 
@@ -1305,7 +1304,7 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                                   for comp in model.components], dtype=object)
     model_lc = model.eval()
     residuals = lc.flux-model_lc
-    astropytable.savetable_S5(meta.tab_filename_s5, lc.time,
+    astropytable.savetable_S5(meta.tab_filename_s5, meta, lc.time,
                               wavelengths[lc.fitted_channels],
                               wave_errs[lc.fitted_channels],
                               lc.flux, lc.unc_fit, individual_models, model_lc,

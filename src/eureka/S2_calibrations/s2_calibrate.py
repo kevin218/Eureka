@@ -140,13 +140,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
             # (or someone is putting weird files into Eureka!)
             pipeline = EurekaSpec2Pipeline()
 
-            # By default pipeline can trim the dispersion axis,
-            # override the function that does this with specific 
-            # wavelength range that you want to trim to.
-            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
-                        wavelength_range=[meta.waverange_start,
-                                          meta.waverange_end])
+            if (meta.waverange_start is not None or
+                    meta.waverange_end is not None):
+                # By default pipeline can trim the dispersion axis,
+                # override the function that does this with specific
+                # wavelength range that you want to trim to.
+                jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
+                    partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input,
+                            wavelength_range=[meta.waverange_start,
+                                              meta.waverange_end])
     elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
         # Clean up temporary folder
@@ -173,7 +175,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
                 hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
-    
+
     # make citations for current stage
     util.make_citations(meta, 2)
 
@@ -230,14 +232,20 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             Fragmented code to allow reuse of code between spectral and image
             analysis.
         '''
-        
-        if meta.slit_y_low is not None:
-            # Controls the cross-dispersion extraction
+
+        if hasattr(meta, 'slit_y_low') and meta.slit_y_low is not None:
+            #  NIRSpec subarray lower bound in cross-dispersion direction
             self.assign_wcs.slit_y_low = meta.slit_y_low
 
-        if meta.slit_y_high is not None:
-            # Controls the cross-dispersion extraction
+        if hasattr(meta, 'slit_y_high') and meta.slit_y_high is not None:
+            #  NIRSpec subarray upper bound in cross-dispersion direction
             self.assign_wcs.slit_y_high = meta.slit_y_high
+
+        if hasattr(meta, 'tsgrism_extract_height') and \
+           meta.tsgrism_extract_height is not None:
+            # NIRCam grism subarray height in cross-dispersion direction
+            self.extract_2d.tsgrism_extract_height = \
+                meta.tsgrism_extract_height
 
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract

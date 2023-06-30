@@ -93,7 +93,7 @@ def read(filename, data, meta, log):
         # data. Added it here so that code in other sections doesn't have to
         # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
-        
+
         # FINDME: make this better for all filters
         if hdulist[0].header['FILTER'] == 'F210M':
             # will be deleted at the end of S3
@@ -243,10 +243,16 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
-                                meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=2,
-                                isplots=isplots)
+    if hasattr(meta, 'bg_dir') and meta.bg_dir == 'RxR':
+        bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_x1,
+                                    meta.bg_x2, deg=meta.bg_deg,
+                                    threshold=meta.p3thresh, isrotate=0,
+                                    isplots=isplots)
+    else:
+        bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
+                                    meta.bg_y2, deg=meta.bg_deg,
+                                    threshold=meta.p3thresh, isrotate=2,
+                                    isplots=isplots)
 
     return bg, mask, n
 
@@ -330,7 +336,7 @@ def flag_bg_phot(data, meta, log):
 
     nbadpix_total = 0
     for i in tqdm(range(flux.shape[1]),
-                  desc='Looping over Rows for outlier removal'):
+                  desc='  Looping over rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
             ngoodpix = np.sum(mask[:, i, j] == 1)
             data['mask'][:, i, j] *= sigrej.sigrej(flux[:, i, j],
@@ -426,6 +432,16 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         err_all.append(data.err.values[i][:, use_cols_temp])
         mask_all.append(data.mask.values[i][:, use_cols_temp])
 
+    # Do odd even column subtraction
+    odd_cols = data.flux.values[i, :, ::2]
+    even_cols = data.flux.values[i, :, 1::2]
+    use_cols_odd = use_cols[::2]
+    use_cols_even = use_cols[1::2]
+    odd_median = np.nanmedian(odd_cols[:, use_cols_odd])
+    even_median = np.nanmedian(even_cols[:, use_cols_even])
+    data.flux.values[i, :, ::2] -= odd_median
+    data.flux.values[i, :, 1::2] -= even_median
+
     if meta.oneoverf_corr == 'meanerr':
         for j in range(128):
             for k in range(4):
@@ -439,7 +455,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             if ampl_used_bool[k]:
                 edges_temp = edges_all[k]
                 data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
-                    np.median(flux_all[k], axis=1)[:, None]
+                    np.nanmedian(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
                      ' Please choose between meanerr or median.',

@@ -7,6 +7,8 @@ nfiles          1           # The number of data files to analyze simultaneously
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 suffix          calints     # Data file suffix
 
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
 # Subarray region of interest
 ywindow         [5,64]      # Vertical axis as seen in DS9
 xwindow         [100,1700]  # Horizontal axis as seen in DS9
@@ -23,12 +25,15 @@ bg_thresh       [4,4]       # Double-iteration X-sigma threshold for outlier rej
 bg_hw           8           # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
+bg_disp         False       # Row-by-row BG subtraction (only useful for NIRCam)
+bg_x1           None        # Left edge of exclusion region for row-by-row BG subtraction
+bg_x2           None        # Right edge of exclusion region for row-by-row BG subtraction
 
 # Spectral extraction parameters
 spec_hw         8           # Half-width of aperture region for spectral extraction (relative to source position)
 fittype         meddata     # Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
-median_thresh   5           # X-sigma threshold when flagging outliers in median frame
-window_len      13          # Smoothing window length, for median frame or when fittype = smooth
+median_thresh   5           # Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
+window_len      13          # Smoothing window length, for median frame or when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
 prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        10          # X-sigma threshold for outlier rejection during optimal spectral extraction
@@ -51,5 +56,5 @@ verbose         True        # If True, more details will be printed about steps
 topdir          /home/User/Data/JWST-Sim/NIRCam/
 
 # Directories relative to topdir
-inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       Stage3
