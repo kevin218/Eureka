@@ -28,8 +28,8 @@ def standard_spectrum(data, apdata, aperr):
     data : Xarray Dataset
         The updated Dataset object in which the spectrum data will stored.
     """
-    data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
-    data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
+    data['stdspec'] = (['time', 'x'], np.ma.sum(apdata, axis=1))
+    data['stdvar'] = (['time', 'x'], np.ma.sum(aperr ** 2, axis=1))
     data['stdspec'].attrs['flux_units'] = \
         data.flux.attrs['flux_units']
     data['stdspec'].attrs['time_units'] = \
@@ -764,15 +764,15 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
         while isoutliers:
             # STEP 6: Revise variance estimates
             expected = profile*spectrum
-            variance = np.abs(expected + bg) / Q + v0
+            variance = np.ma.abs(expected + bg) / Q + v0
             # STEP 7: Mask cosmic ray hits
-            stdevs = np.abs(subdata - expected)*submask / np.sqrt(variance)
+            stdevs = np.ma.abs(subdata - expected)*submask/np.ma.sqrt(variance)
             if meta.isplots_S3 >= 5 and n < meta.int_end:
                 plots_s3.stddev_profile(meta, n, m, stdevs, p7thresh)
             isoutliers = False
             if len(stdevs) > 0:
                 # Find worst data point in each column
-                loc = np.argmax(stdevs, axis=0)
+                loc = np.ma.argmax(stdevs, axis=0)
                 # Mask data point if std is > p7thresh
                 for i in range(nx):
                     if meta.isplots_S3 == 8:
@@ -800,12 +800,13 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                         if sum(submask[:, i]) < ny/2.:
                             submask[:, i] = 0
             # STEP 8: Extract optimal spectrum
-            denom = np.sum(profile*profile*submask/variance, axis=0)
-            denom[np.where(denom == 0)] = np.inf
-            spectrum = np.sum(profile*submask*subdata/variance, axis=0) / denom
+            denom = np.ma.sum(profile*profile*submask/variance, axis=0)
+            denom[np.ma.where(denom == 0)] = np.inf
+            spectrum = np.ma.sum(profile*submask*subdata/variance,
+                                 axis=0)/denom
 
     # Calculate variance of optimal spectrum
-    specvar = np.sum(profile*submask, axis=0) / denom
+    specvar = np.ma.sum(profile*submask, axis=0) / denom
 
     # Return spectrum and uncertainties
     return spectrum, np.sqrt(specvar), submask

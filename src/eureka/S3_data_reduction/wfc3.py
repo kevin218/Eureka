@@ -996,4 +996,9 @@ def cut_aperture(data, meta, log):
             apbg[n] = data.bg.values[n, ap_y1:ap_y2]
             apv0[n] = data.v0.values[n, ap_y1:ap_y2]
 
+    apdata = np.ma.masked_where(~apmask, apdata)
+    aperr = np.ma.masked_where(~apmask, aperr)
+    apbg = np.ma.masked_where(~apmask, apbg)
+    apv0 = np.ma.masked_where(~apmask, apv0)
+
     return apdata, aperr, apmask, apbg, apv0
