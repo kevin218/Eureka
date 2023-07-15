@@ -345,14 +345,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Code used for generating a calibrated stellar spectrum
                 if meta.convert_to_e is False and meta.inst == 'nirspec':
                     cutoff = 1e-4
-                    log.writelog("  Masking manually identified bad pixels...",
+                    log.writelog("  Setting uncalibrated pixels to zero...",
                                  mute=(not meta.verbose))
                     boolmask = np.abs(data.flux.data) > cutoff
-                    log.writelog(f"    Masking {np.sum(boolmask.data)} " + 
-                                 "pixels.", mute=(not meta.verbose))
                     data['flux'].data = np.where(np.abs(data.flux.data) > 
                                                  cutoff, 0,
                                                  data.flux.data)
+                    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " + 
+                                 "pixels in total.", mute=(not meta.verbose))
 
                 if not meta.photometry:
                     # Locate source postion
