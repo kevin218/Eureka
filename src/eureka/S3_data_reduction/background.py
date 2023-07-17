@@ -86,7 +86,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
         return
 
     # Compute background for each integration
-    log.writelog('  Performing background subtraction...',
+    log.writelog('  Performing ' + meta.bg_dir + ' background subtraction...',
                  mute=(not meta.verbose))
     data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
     data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']

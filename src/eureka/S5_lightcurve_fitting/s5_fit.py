@@ -126,7 +126,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
             meta.nints = [len(lc.time.values), ]
-            
+
             if meta.multwhite:
                 # Need to normalize each one if doing a joint fit
                 lc_whites = [lc, ]
@@ -254,6 +254,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     except FileNotFoundError:
                         raise Exception("The limb-darkening file "
                                         f"{ld_fix_file} could not be found.")
+                    if len(ld_coeffs.shape) == 1:
+                        ld_coeffs = ld_coeffs[np.newaxis, :]
                 else:
                     ld_coeffs = None
 
@@ -325,6 +327,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 except FileNotFoundError:
                     raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
+                if len(ld_coeffs.shape) == 1:
+                    ld_coeffs = ld_coeffs[np.newaxis, :]
             else:
                 ld_coeffs = None
 
@@ -353,7 +357,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     flux_temp, err_temp = util.normalize_spectrum(
                         meta, flux_temp, err_temp)
                     time_temp = lc_whites[pi].time.values - offset
-                    
+                    flux = np.ma.append(flux, flux_temp)
+                    flux_err = np.ma.append(flux_err, err_temp)
+                    time = np.ma.append(time, time_temp)
+
                     if hasattr(lc_whites[pi], 'centroid_x'):
                         xpos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_x.values)
@@ -371,9 +378,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         ypos_temp = None
                         ywidth_temp = None
 
-                    flux = np.ma.append(flux, flux_temp)
-                    flux_err = np.ma.append(flux_err, err_temp)
-                    time = np.ma.append(time, time_temp)
                     xpos = np.ma.append(xpos, xpos_temp)
                     ypos = np.ma.append(ypos, ypos_temp)
                     xwidth = np.ma.append(xwidth, xwidth_temp)
@@ -390,7 +394,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 me.saveevent(meta, (meta.outputdir+'S5_'+meta.eventlabel +
                                     "_Meta_Save"), save=[])
 
-            # Now fit the multi-wavelength light curves    
+            # Now fit the multi-wavelength light curves
             elif meta.sharedp and not meta.multwhite:
                 # Get the number of exposures in this lightcurve so
                 # that we know how to split the flattened arrays
@@ -686,17 +690,33 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
             ExpRampModel = dm.ExpRampModel
         else:
             ExpRampModel = m.ExpRampModel
-        t_ramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                              log=log, time=time, time_units=time_units,
-                              freenames=freenames,
-                              longparamlist=lc_model.longparamlist,
-                              nchannel=chanrng,
-                              nchannel_fitted=nchannel_fitted,
-                              fitted_channels=fitted_channels,
-                              paramtitles=paramtitles,
-                              multwhite=lc_model.multwhite,
-                              nints=lc_model.nints)
-        modellist.append(t_ramp)
+        t_expramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchannel=chanrng,
+                                 nchannel_fitted=nchannel_fitted,
+                                 fitted_channels=fitted_channels,
+                                 paramtitles=paramtitles,
+                                 multwhite=lc_model.multwhite,
+                                 nints=lc_model.nints)
+        modellist.append(t_expramp)
+    if 'hstramp' in meta.run_myfuncs:
+        if 'starry' in meta.run_myfuncs:
+            HSTRampModel = dm.HSTRampModel
+        else:
+            HSTRampModel = m.HSTRampModel
+        t_hstramp = HSTRampModel(parameters=params, name='hstramp', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchannel=chanrng,
+                                 nchannel_fitted=nchannel_fitted,
+                                 fitted_channels=fitted_channels,
+                                 paramtitles=paramtitles,
+                                 multwhite=lc_model.multwhite,
+                                 nints=lc_model.nints)
+        modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
             CentroidModel = dm.CentroidModel
@@ -882,7 +902,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                     prior = 'N'
                 par = [value, ptype, priorpar1, priorpar2, prior]
                 setattr(params, key, par)
-        
+
     return meta, params
 
 
