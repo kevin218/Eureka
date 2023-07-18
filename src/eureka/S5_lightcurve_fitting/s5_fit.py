@@ -107,9 +107,12 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     meta.run_s5 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
                                              ap=spec_hw_val//meta.expand, 
-                                             bg=bg_hw_val//meta.expand)
+                                             bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -160,10 +163,15 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                     lc_whites.append(lc_hold)
 
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
-                                                ap=spec_hw_val//meta.expand, 
-                                                bg=bg_hw_val//meta.expand)
+                                                ap=spec_hw_val, 
+                                                bg=bg_hw_val)
 
             # Copy existing S4 log file and resume log
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
@@ -949,8 +957,12 @@ def load_specific_s4_meta_info(meta):
     """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S4 outputs for this aperture pair
-    inputdir += f'ap{meta.spec_hw//meta.expand}_' + \
-                f'bg{meta.bg_hw//meta.expand}'+os.sep
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

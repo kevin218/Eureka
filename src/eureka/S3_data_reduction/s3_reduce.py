@@ -172,14 +172,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     # each aperture/annulus pair
     meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
-
         for bg_hw_val in meta.bg_hw_range:
-
             meta.eventlabel = eventlabel
-
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
                                              ap=spec_hw_val//meta.expand,
-                                             bg=bg_hw_val//meta.expand)
+                                             bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -189,13 +189,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             meta.spec_hw = spec_hw_val
             meta.bg_hw = bg_hw_val
-
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
-                                                ap=spec_hw_val//meta.expand,
-                                                bg=bg_hw_val//meta.expand)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
-            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val//meta.expand)+
-                           '_bg' + str(bg_hw_val//meta.expand))
+            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val)+
+                           '_bg' + str(bg_hw_val))
 
             # Open new log file
             meta.s3_logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
@@ -206,8 +210,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
-            log.writelog(f"Using ap={spec_hw_val//meta.expand}, " +
-                         f"bg={bg_hw_val//meta.expand}, " +
+            log.writelog(f"Using ap={spec_hw_val}, " +
+                         f"bg={bg_hw_val}, " +
                          f"expand={meta.expand}")
 
             # Copy ecf
