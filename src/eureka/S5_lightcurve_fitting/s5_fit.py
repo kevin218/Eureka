@@ -949,7 +949,8 @@ def load_specific_s4_meta_info(meta):
     """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S4 outputs for this aperture pair
-    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    inputdir += f'ap{meta.spec_hw//meta.expand}_' + \
+                f'bg{meta.bg_hw//meta.expand}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

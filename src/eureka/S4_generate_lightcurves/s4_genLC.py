@@ -126,7 +126,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
-                                                ap=meta.spec_hw//meta.expand, 
+                                                ap=meta.spec_hw//meta.expand,
                                                 bg=meta.bg_hw//meta.expand)
 
             # Copy existing S3 log file and resume log
@@ -585,7 +585,8 @@ def load_specific_s3_meta_info(meta):
     """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    inputdir += f'ap{meta.spec_hw//meta.expand}_' + \
+                f'bg{meta.bg_hw//meta.expand}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir
