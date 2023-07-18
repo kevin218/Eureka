@@ -355,18 +355,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
                 
-                # Mask uncalibrated BG region for NIRSpec observations
-                # Code used for generating a calibrated stellar spectrum
-                if meta.convert_to_e is False and meta.inst == 'nirspec':
-                    cutoff = 1e-4
-                    log.writelog("  Setting uncalibrated pixels to zero...",
-                                 mute=(not meta.verbose))
-                    boolmask = np.abs(data.flux.data) > cutoff
-                    data['flux'].data = np.where(np.abs(data.flux.data) > 
-                                                 cutoff, 0,
-                                                 data.flux.data)
-                    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " + 
-                                 "pixels in total.", mute=(not meta.verbose))
+                # Instrument-specific steps for generating a 
+                # calibrated stellar spectrum
+                if meta.convert_to_e is False:
+                    data = inst.photom(data, meta, log)
 
                 if not meta.photometry:
                     # Locate source postion

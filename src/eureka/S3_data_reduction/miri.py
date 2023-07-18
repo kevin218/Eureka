@@ -436,3 +436,34 @@ def flag_bg_phot(data, meta, log):
         The updated Dataset object with outlier background pixels flagged.
     '''
     return nircam.flag_bg_phot(data, meta, log)
+
+
+def photom(data, meta, log):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+
+    Notes
+    -----
+    History:
+
+    - 2023-07-17, KBS
+        Initial version.
+    """
+    # Convert from MJy/sr to mJy
+    log.writelog("  Calibrated MIRI spectra not yet supported...",
+                 mute=(not meta.verbose))
+
+    return data

@@ -473,3 +473,35 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
                      mute=(not meta.verbose))
 
     return data
+
+
+def photom(data, meta, log):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+
+    Notes
+    -----
+    History:
+
+    - 2023-07-17, KBS
+        Initial version.
+    """
+    # Convert from MJy/sr to mJy
+    log.writelog("  Converting from MJy/sr to mJy...",
+                 mute=(not meta.verbose))
+    data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
+
+    return data

@@ -236,3 +236,47 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def photom(data, meta, log, cutoff=1e-4):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    cutoff : float
+        Flux values above the cutoff will be set to zero.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+
+    Notes
+    -----
+    History:
+
+    - 2023-07-17, KBS
+        Initial version.
+    """
+    # Mask uncalibrated BG region
+    log.writelog("  Setting uncalibrated pixels to zero...",
+                 mute=(not meta.verbose))
+    boolmask = np.abs(data.flux.data) > cutoff
+    data['flux'].data = np.where(np.abs(data.flux.data) >
+                                 cutoff, 0,
+                                 data.flux.data)
+    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
+                 "pixels in total.", mute=(not meta.verbose))
+    
+    # Convert from MJy to mJy
+    log.writelog("  Converting from MJy to mJy...",
+                 mute=(not meta.verbose))
+    data['flux'].data *= 1e9
+
+    return data
