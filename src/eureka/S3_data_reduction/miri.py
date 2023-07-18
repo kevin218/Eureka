@@ -223,6 +223,9 @@ def read(filename, data, meta, log):
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
+            # Only apply super-sampling expansion once
+            meta.ywindow[0] *= meta.expand
+            meta.ywindow[1] *= meta.expand
 
     if meta.photometry:
         x = None
