@@ -217,14 +217,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 from . import nircam as inst
             elif meta.inst == 'nirspec':
                 from . import nirspec as inst
-                log.writelog('WARNING: Are you using real JWST data? If so, '
-                             'you should edit the flag_bg() function in '
-                             'nirspec.py and look at Issue #193 on Github!')
             elif meta.inst == 'niriss':
                 raise ValueError('NIRISS observations are currently '
                                  'unsupported!')
             elif meta.inst == 'wfc3':
                 from . import wfc3 as inst
+                meta.bg_dir = 'CxC'
                 meta, log = inst.preparation_step(meta, log)
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
@@ -309,6 +307,22 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_end = meta.int_start+meta.nplots
 
+                # Perform BG subtraction along dispersion direction
+                # for untrimmed NIRCam spectroscopic data
+                if hasattr(meta, 'bg_disp') and meta.bg_disp:
+                    meta.bg_dir = 'RxR'
+                    # Create bad pixel mask (1 = good, 0 = bad)
+                    data['mask'] = (['time', 'y', 'x'],
+                                    np.ones(data.flux.shape, dtype=bool))
+                    data = bg.BGsubtraction(data, meta, log,
+                                            m, meta.isplots_S3)
+                    meta.bg_disp = False
+                    meta.bg_deg = None
+                # Specify direction = CxC to perform standard BG subtraction
+                # later on in Stage 3. This needs to be set independent of
+                # having performed RxR BG subtraction.
+                meta.bg_dir = 'CxC'
+
                 # Trim data to subarray region of interest
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
@@ -340,6 +354,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
+                
+                # Mask uncalibrated BG region for NIRSpec observations
+                # Code used for generating a calibrated stellar spectrum
+                if meta.convert_to_e is False and meta.inst == 'nirspec':
+                    cutoff = 1e-4
+                    log.writelog("  Setting uncalibrated pixels to zero...",
+                                 mute=(not meta.verbose))
+                    boolmask = np.abs(data.flux.data) > cutoff
+                    data['flux'].data = np.where(np.abs(data.flux.data) > 
+                                                 cutoff, 0,
+                                                 data.flux.data)
+                    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " + 
+                                 "pixels in total.", mute=(not meta.verbose))
 
                 if not meta.photometry:
                     # Locate source postion
@@ -402,8 +429,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                           m, integ=None)
                         if meta.isplots_S3 >= 1:
                             # make y position and width plots
-                            plots_s3.driftypos(data, meta)
-                            plots_s3.driftywidth(data, meta)
+                            plots_s3.driftypos(data, meta, m)
+                            plots_s3.driftywidth(data, meta, m)
 
                     # Select only aperture region
                     apdata, aperr, apmask, apbg, apv0 = inst.cut_aperture(data,
@@ -464,7 +491,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                 radius=None, size=None, meta=meta, i=None,
                                 m=None,
                                 saved_ref_median_frame=saved_ref_median_frame)
-                        
+
                     if saved_ref_median_frame is None:
                         saved_ref_median_frame = refrence_median_frame
 
@@ -564,7 +591,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.save_fluxdata = True
 
                 # plot tilt events
-                if (meta.isplots_S3 >= 5 and meta.inst == 'nircam'):
+                if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \
+                   meta.photometry:
                     refrence_tilt_frame = \
                         plots_s3.tilt_events(meta, data, log, m,
                                              position,

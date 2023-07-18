@@ -192,8 +192,8 @@ def image_and_background(data, meta, log, m):
         file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
                                        + 1))
         int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
-        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}' +
-                 '_ImageAndBackground'+plots.figure_filetype)
+        fname = (f'figs{os.sep}fig3301_file{file_number}_int{int_number}_' +
+                 meta.bg_dir + '_ImageAndBackground'+plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
@@ -426,7 +426,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         plt.pause(0.1)
 
 
-def driftypos(data, meta):
+def driftypos(data, meta, m):
     '''Plot the spatial jitter. (Fig 3104)
 
     Parameters
@@ -435,6 +435,8 @@ def driftypos(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    m : int
+        The file number.
 
     Notes
     -----
@@ -449,13 +451,15 @@ def driftypos(data, meta):
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3104_DriftYPos'+plots.figure_filetype
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3104_file{file_number}_DriftYPos' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
 
 
-def driftywidth(data, meta):
+def driftywidth(data, meta, m):
     '''Plot the spatial profile's fitted Gaussian width. (Fig 3105)
 
     Parameters
@@ -464,6 +468,8 @@ def driftywidth(data, meta):
         The Dataset object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    m : int
+        The file number.
 
     Notes
     -----
@@ -478,7 +484,9 @@ def driftywidth(data, meta):
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
     plt.tight_layout()
-    fname = 'figs'+os.sep+'fig3105_DriftYWidth'+plots.figure_filetype
+    file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
+    fname = (f'figs{os.sep}fig3105_file{file_number}_DriftYWidth' +
+             plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
         plt.pause(0.2)
@@ -529,7 +537,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
-    
+
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
@@ -746,7 +754,7 @@ def phot_centroid(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     - 2023-02-24 Isaac Edelman
-        Enchanced graph layout, 
+        Enchanced graph layout,
         added sig display values for sy,sx,
         and fixed issue with ax[2] displaying sy instead of sx.
     - 2023-04-21 Isaac Edelman
@@ -1206,9 +1214,9 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
 
 def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     """
-    Plots the mirror tilt events by divinding 
-    an integrations' flux values by a 
-    median frames' flux values. 
+    Plots the mirror tilt events by divinding
+    an integrations' flux values by a
+    median frames' flux values.
     Creates .pngs and a .gif (Fig 3507a, Fig 3507b, Fig 3507c)
 
     Parameters
@@ -1226,9 +1234,9 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     saved_refrence_tilt_frame : ndarray
         The median of the first 10 integrations.
 
-    Returns 
-    ------- 
-    ndarray 
+    Returns
+    -------
+    ndarray
         A median frame of the first 10 integrations.
 
     Notes
@@ -1270,7 +1278,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         # Caluculate flux ratio
         flux_tilt = (data.flux.values[i, miny:maxy,
                                       minx:maxx] / refrence_tilt_frame)
-        
+
         # Create plot
         plt.figure(3507, figsize=(6, 6))
         plt.clf()
@@ -1278,7 +1286,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         # Plot figure
         im = plt.imshow(flux_tilt, origin='lower', aspect='equal',
                         vmin=0.98, vmax=1.02, cmap=cmap)
-        
+
         # Figure settings
         plt.title('Tilt Identification')
         plt.xticks(np.arange(0, flux_tilt.shape[1], 1),
@@ -1322,7 +1330,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
     log.writelog('  Creating batch tilt event GIF',
                  mute=(not meta.verbose))
     imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
-                    f'fig3507b_tilt_event_batch_{file_number}.gif', 
+                    f'fig3507b_tilt_event_batch_{file_number}.gif',
                     images, fps=20)
 
     # Figure fig3507c

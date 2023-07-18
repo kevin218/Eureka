@@ -1,8 +1,6 @@
 from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
-import glob
-import os
 
 
 def exotic_ld(meta, spec, log, white=False):
@@ -36,18 +34,11 @@ def exotic_ld(meta, spec, log, white=False):
     log.writelog("...using exotic-ld package...",
                  mute=(not meta.verbose))
 
-    # Check if exotic-ld directory includes csv files
-    exotic_ld_files = glob.glob(meta.exotic_ld_direc + os.sep + '**' + os.sep +
-                                '*.flx', recursive=True)
-    if not exotic_ld_files:
-        raise AssertionError('Unable to find ancillary files.' +
-                             'Have you downloaded them? (see Zenodo link)')
-
     # Set the observing mode
     custom_wavelengths = None
     custom_throughput = None
 
-    if hasattr(meta, 'exotic_ld_file'):
+    if hasattr(meta, 'exotic_ld_file') and meta.exotic_ld_file is not None:
         mode = 'custom'
         log.writelog("Using custom throughput file " +
                      meta.exotic_ld_file,

@@ -33,11 +33,11 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         The updated metadata object.
     log : logedit.Logedit
         The updated log.
-        
+
     Notes
     -----
     History:
-    
+
     - 2022-07-18, Taylor J Bell
         Added source_pos_wrapper to allow multiple frames to get
         source positions in parallel.
@@ -116,7 +116,7 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
         The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    shdr : astropy.io.fits.header.Header    
+    shdr : astropy.io.fits.header.Header
         The science header of the file being processed.
     m : int
         The file number.
@@ -137,11 +137,11 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
     src_ypos_width : float
         If gaussian fit, the std of the Gaussian fitted to the image
         Otherwise, array of zeros.
-        
+
     Notes
     -----
     History:
-    
+
     - 2022-07-11 Caroline Piaulet
         Enable recording of the width if the source is fitted with a Gaussian
         + add an option to fit any integration (not hardcoded to be the first)
@@ -164,12 +164,55 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
         src_ypos = guess
     else:
         # brightest row for source location
-        src_ypos = source_pos_max(flux, meta, m, n, plot)
+        src_ypos = source_pos_median(flux, meta, m, n, plot)
 
     if meta.src_pos_type == 'gaussian':
         return int(round(src_ypos)), src_ypos, src_ywidth, n
     else:
         return int(round(src_ypos)), src_ypos, np.zeros_like(src_ypos), n
+
+
+def source_pos_median(flux, meta, m, n=0, plot=True):
+    '''A simple function to find the brightest row for source location
+
+    Parameters
+    ----------
+    flux : ndarray
+        The 2D array of flux values.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    m : int
+        The file number.
+    n : int; optional
+        The integration number. Default is 0 (first integration).
+    plot : bool; optional
+        If True, plot the source position determination.
+        Defaults to True.
+
+    Returns
+    -------
+    y_pos : int
+        The central position of the star.
+
+    Notes
+    -----
+    History:
+
+    - 4/27/23 Kevin Stevenson
+        Modified from source_pos_max
+    '''
+    x_dim = flux.shape[0]
+
+    med_row = np.ma.median(flux, axis=1)
+    pos_max = np.ma.argmax(med_row)
+
+    # Diagnostic plot
+    if meta.isplots_S3 >= 1 and plot:
+        y_pixels = np.arange(0, x_dim)
+        plots_s3.source_position(meta, x_dim, pos_max, m, n, y_pixels=y_pixels,
+                                 sum_row=med_row)
+
+    return pos_max
 
 
 def source_pos_max(flux, meta, m, n=0, plot=True):
@@ -255,7 +298,7 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
     '''
     x_dim = flux.shape[0]
 
-    pos_max = source_pos_max(flux, meta, m, n=n, plot=False)
+    pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
 
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
 
@@ -347,24 +390,24 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     x_dim = flux.shape[0]
 
     # Data cutout around the maximum row
-    pos_max = source_pos_max(flux, meta, m, n=n, plot=False)
+    pos_max = source_pos_median(flux, meta, m, n=n, plot=False)
     y_pixels = np.arange(0, x_dim)[pos_max-meta.spec_hw:pos_max+meta.spec_hw]
-    sum_row = np.ma.sum(flux, axis=1)[pos_max-meta.spec_hw:
-                                      pos_max+meta.spec_hw]
+    med_row = np.ma.median(flux, axis=1)[pos_max-meta.spec_hw:
+                                         pos_max+meta.spec_hw]
 
     # Initial Guesses
-    sigma0 = np.ma.sqrt(np.ma.sum(sum_row*(y_pixels-pos_max)**2) /
-                        np.ma.sum(sum_row))
+    sigma0 = np.ma.sqrt(np.ma.sum(med_row*(y_pixels-pos_max)**2) /
+                        np.ma.sum(med_row))
 
-    p0 = [np.ma.max(sum_row), pos_max, sigma0, np.ma.median(sum_row)]
+    p0 = [np.ma.max(med_row), pos_max, sigma0, np.ma.median(med_row)]
 
     # Fit
-    popt, pcov = curve_fit(gauss, y_pixels, sum_row, p0)
+    popt, pcov = curve_fit(gauss, y_pixels, med_row, p0)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 1 and plot:
         plots_s3.source_position(meta, x_dim, pos_max, m, n, isgauss=True,
-                                 y_pixels=y_pixels, sum_row=sum_row,
+                                 y_pixels=y_pixels, sum_row=med_row,
                                  popt=popt)
 
     return popt[1], popt[2]

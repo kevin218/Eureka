@@ -470,9 +470,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
-    The computed MAD is the average MAD along the wavelength direction. In
-    otherwords, the MAD is computed in the spectral direction for each
-    integration, and then the returned value is the average of those MAD
+    The computed MAD is the average MAD along the time axis. In
+    otherwords, the MAD is computed in the time direction for each
+    wavelength, and then the returned value is the average of those MAD
     values.
 
     Parameters
@@ -516,22 +516,39 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     # Normalize the spectrum
     normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
 
-    # Compute the MAD
-    n_int = normspec.shape[0]
-    ediff = np.ma.zeros(n_int)
-    for m in range(n_int):
-        ediff[m] = get_mad_1d(normspec[m])
-
     if meta.inst == 'wfc3':
+        # Setup 1D MAD arrays
+        n_wav = normspec.shape[1]
+        ediff = np.ma.zeros((2, n_wav))
+
         scandir = np.repeat(meta.scandir, meta.nreads)
 
         # Compute the MAD for each scan direction
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
-                mad = np.ma.mean(ediff[iscans])
+                # Compute the MAD
+                for m in range(n_wav):
+                    ediff[p, m] = get_mad_1d(normspec[iscans, m])
+
+                mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
+        
+        if np.all(scandir == scandir[0]):
+            # Only scanned in one direction, so get rid of the other
+            ediff = ediff[scandir[0]]
+        else:
+            # Collapse the MAD along the scan direction
+            ediff = np.mean(ediff, axis=0)
+    else:
+        # Setup 1D MAD array
+        n_wav = normspec.shape[1]
+        ediff = np.ma.zeros(n_wav)
+
+        # Compute the MAD
+        for m in range(n_wav):
+            ediff[m] = get_mad_1d(normspec[:, m])
 
     return np.ma.mean(ediff)
 
