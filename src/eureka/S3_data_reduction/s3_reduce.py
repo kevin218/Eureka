@@ -111,40 +111,43 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = me.mergeevents(meta, s2_meta)
 
-    # Increase relevant meta parameter values
+    # Do not super sample if expand isn't defined
     if not hasattr(meta, 'expand'):
         meta.expand = 1
-    if meta.expand > 1:
-        meta.spec_hw *= meta.expand
-        meta.bg_hw *= meta.expand
-        if meta.inst == 'miri':
-            meta.xwindow[0] *= meta.expand
-            meta.xwindow[1] *= meta.expand
-        else:
-            meta.ywindow[0] *= meta.expand
-            meta.ywindow[1] *= meta.expand
 
     # check for range of spectral apertures
-    if hasattr(meta, 'spec_hw') and isinstance(meta.spec_hw, list):
-        meta.spec_hw_range = range(meta.spec_hw[0],
-                                   meta.spec_hw[1]+meta.spec_hw[2],
-                                   meta.spec_hw[2])
-    elif hasattr(meta, 'spec_hw'):
-        meta.spec_hw_range = [meta.spec_hw]
-    elif hasattr(meta, 'photap') and isinstance(meta.photap, list):
-        meta.spec_hw_range = range(meta.photap[0],
-                                   meta.photap[1]+meta.photap[2],
-                                   meta.photap[2])
+    if hasattr(meta, 'spec_hw'):
+        if isinstance(meta.spec_hw, list):
+            meta.spec_hw_range = np.arange(meta.spec_hw[0],
+                                           meta.spec_hw[1]+meta.spec_hw[2],
+                                           meta.spec_hw[2])
+        else:
+            meta.spec_hw_range = np.arange([meta.spec_hw])
+        # Increase relevant meta parameter values
+        meta.spec_hw_range *= meta.expand
     elif hasattr(meta, 'photap'):
-        meta.spec_hw_range = [meta.photap]
+        if isinstance(meta.photap, list):
+            meta.spec_hw_range = np.arange(meta.photap[0],
+                                        meta.photap[1]+meta.photap[2],
+                                        meta.photap[2])
+        else:
+            meta.spec_hw_range = np.arange([meta.photap])
+        # Super sampling not supported for photometry
+        # This is here just in case someone tries to super sample
+        if meta.expand > 1:
+            print("Super sampling not supported for photometry.")
+            print("Setting meta.expand to 1.")
+            meta.expand = 1
 
     # check for range of background apertures
-    if hasattr(meta, 'bg_hw') and isinstance(meta.bg_hw, list):
-        meta.bg_hw_range = range(meta.bg_hw[0],
-                                 meta.bg_hw[1]+meta.bg_hw[2],
-                                 meta.bg_hw[2])
-    elif hasattr(meta, 'bg_hw'):
-        meta.bg_hw_range = [meta.bg_hw]
+    if hasattr(meta, 'bg_hw'):
+        if isinstance(meta.bg_hw, list):
+            meta.bg_hw_range = np.arange(meta.bg_hw[0],
+                                         meta.bg_hw[1]+meta.bg_hw[2],
+                                         meta.bg_hw[2])
+        else:
+            meta.bg_hw_range = np.arange([meta.bg_hw])
+        meta.bg_hw_range *= meta.expand
     elif hasattr(meta, 'skyin') and hasattr(meta, 'skywidth'):
         # E.g., if skyin = 90 and skywidth = 60, then the
         # directory will use "bg90_150"
@@ -175,7 +178,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.eventlabel = eventlabel
 
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val/meta.expand,
+                                             bg=bg_hw_val/meta.expand)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -187,10 +191,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             meta.bg_hw = bg_hw_val
 
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
-                                                ap=spec_hw_val, bg=bg_hw_val)
+                                                ap=spec_hw_val/meta.expand,
+                                                bg=bg_hw_val/meta.expand)
 
-            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg' +
-                           str(bg_hw_val))
+            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val/meta.expand)+
+                           '_bg' + str(bg_hw_val/meta.expand))
 
             # Open new log file
             meta.s3_logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
