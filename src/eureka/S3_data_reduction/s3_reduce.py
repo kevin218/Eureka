@@ -360,10 +360,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
                 
-                # Instrument-specific steps for generating a 
-                # calibrated stellar spectrum
+                # Instrument-specific steps for generating
+                # calibrated stellar spectra
                 if meta.convert_to_e is False:
-                    data = inst.photom(data, meta, log)
+                    data = inst.calibrated_spectra(data, meta, log)
 
                 if not meta.photometry:
                     # Locate source postion

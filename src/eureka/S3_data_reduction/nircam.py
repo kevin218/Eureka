@@ -481,7 +481,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
     return data
 
 
-def photom(data, meta, log):
+def calibrated_spectra(data, meta, log):
     """Modify data to compute calibrated spectra in units of mJy.
 
     Parameters
@@ -509,5 +509,11 @@ def photom(data, meta, log):
     log.writelog("  Converting from MJy/sr to mJy...",
                  mute=(not meta.verbose))
     data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
-
+    data['err'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['v0'].data *= 1e9*data.shdr['PIXAR_SR']
+    
+    # Update units
+    data['flux'].flux_units = 'mJy'
+    data['err'].flux_units = 'mJy'
+    data['v0'].flux_units = 'mJy'
     return data

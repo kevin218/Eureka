@@ -244,7 +244,7 @@ def cut_aperture(data, meta, log):
     return nircam.cut_aperture(data, meta, log)
 
 
-def photom(data, meta, log, cutoff=1e-4):
+def calibrated_spectra(data, meta, log, cutoff=1e-4):
     """Modify data to compute calibrated spectra in units of mJy.
 
     Parameters
@@ -284,5 +284,12 @@ def photom(data, meta, log, cutoff=1e-4):
     log.writelog("  Converting from MJy to mJy...",
                  mute=(not meta.verbose))
     data['flux'].data *= 1e9
+    data['err'].data *= 1e9
+    data['v0'].data *= 1e9
+    
+    # Update units
+    data['flux'].flux_units = 'mJy'
+    data['err'].flux_units = 'mJy'
+    data['v0'].flux_units = 'mJy'
 
     return data
