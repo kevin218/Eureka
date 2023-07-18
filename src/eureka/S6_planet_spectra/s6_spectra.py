@@ -93,7 +93,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand, 
+                                             bg=bg_hw_val//meta.expand)
 
     for meta.spec_hw_val in meta.spec_hw_range:
         for meta.bg_hw_val in meta.bg_hw_range:
@@ -105,8 +106,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
             # Get the directory for Stage 6 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S6', meta.run_s6,
-                                                ap=meta.spec_hw_val,
-                                                bg=meta.bg_hw_val)
+                                                ap=meta.spec_hw_val//
+                                                meta.expand,
+                                                bg=meta.bg_hw_val//meta.expand)
 
             # Copy existing S5 log file and resume log
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'

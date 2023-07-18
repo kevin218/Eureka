@@ -108,7 +108,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand, 
+                                             bg=bg_hw_val//meta.expand)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -161,7 +162,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
-                                                ap=spec_hw_val, bg=bg_hw_val)
+                                                ap=spec_hw_val//meta.expand, 
+                                                bg=bg_hw_val//meta.expand)
 
             # Copy existing S4 log file and resume log
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"

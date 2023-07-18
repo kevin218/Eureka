@@ -110,7 +110,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand, 
+                                             bg=bg_hw_val//meta.expand)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -125,7 +126,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
-                                                ap=meta.spec_hw, bg=meta.bg_hw)
+                                                ap=meta.spec_hw//meta.expand, 
+                                                bg=meta.bg_hw//meta.expand)
 
             # Copy existing S3 log file and resume log
             meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
