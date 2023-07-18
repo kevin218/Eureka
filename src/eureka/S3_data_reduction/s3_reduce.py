@@ -128,8 +128,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     elif hasattr(meta, 'photap'):
         if isinstance(meta.photap, list):
             meta.spec_hw_range = np.arange(meta.photap[0],
-                                        meta.photap[1]+meta.photap[2],
-                                        meta.photap[2])
+                                           meta.photap[1]+meta.photap[2],
+                                           meta.photap[2])
         else:
             meta.spec_hw_range = np.arange([meta.photap])
         # Super sampling not supported for photometry
@@ -194,7 +194,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                 ap=spec_hw_val/meta.expand,
                                                 bg=bg_hw_val/meta.expand)
 
-            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val/meta.expand)+
+            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val/meta.expand) +
                            '_bg' + str(bg_hw_val/meta.expand))
 
             # Open new log file

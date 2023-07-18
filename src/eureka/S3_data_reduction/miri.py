@@ -441,7 +441,7 @@ def flag_bg_phot(data, meta, log):
     return nircam.flag_bg_phot(data, meta, log)
 
 
-def photom(data, meta, log):
+def calibrated_spectra(data, meta, log):
     """Modify data to compute calibrated spectra in units of mJy.
 
     Parameters

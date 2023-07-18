@@ -95,10 +95,10 @@ def read(filename, data, meta, log):
     wave_units = 'microns'
 
     if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
-                meta.bg_hw == meta.bg_hw_range[0]):
-            # Only apply super-sampling expansion once
-            meta.ywindow[0] *= meta.expand
-            meta.ywindow[1] *= meta.expand
+            meta.bg_hw == meta.bg_hw_range[0]):
+        # Only apply super-sampling expansion once
+        meta.ywindow[0] *= meta.expand
+        meta.ywindow[1] *= meta.expand
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
                                        name='flux')
