@@ -192,7 +192,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 else:
                     # Just load the parameter
                     if meta.sharedp:
-                        meta = parse_s5_saves(meta, log, fit_methods, 'shared')
+                        meta.spectrum_median, meta.spectrum_err = \
+                            parse_s5_saves(meta, log, fit_methods, 'shared')
                     else:
                         meta = parse_unshared_saves(meta, log, fit_methods)
 
@@ -1197,6 +1198,10 @@ def save_table(meta, log):
                                     meta.wave_hi.reshape(1, -1),
                                     axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
+    # Trim repeated wavelengths for multwhite fits
+    if len(set(wavelengths)) == 1: 
+        wavelengths = wavelengths[0]
+        wave_errs = wave_errs[0]
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
                               wave_errs, meta.spectrum_median,
                               meta.spectrum_err)
