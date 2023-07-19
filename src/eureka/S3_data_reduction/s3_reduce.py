@@ -198,7 +198,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                 ap=spec_hw_val,
                                                 bg=bg_hw_val)
 
-            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val)+
+            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
                            '_bg' + str(bg_hw_val))
 
             # Open new log file
