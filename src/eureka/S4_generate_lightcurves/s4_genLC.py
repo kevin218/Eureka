@@ -286,8 +286,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
                 for w in meta.mask_columns:
                     log.writelog(f"Masking absolute pixel column {w}.")
-                    offset = spec.optmask.x[0]
-                    spec.optmask[:, w-offset] = True
+                    index = np.where(spec.optmask.x == w)[0][0]
+                    spec.optmask[:, index] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
