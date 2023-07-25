@@ -348,7 +348,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 
                 # Mask uncalibrated BG region for NIRSpec observations
                 # Code used for generating a calibrated stellar spectrum
-                if meta.convert_to_e is False and meta.inst == 'nirspec':
+                if not hasattr(meta, 'convert_to_e'):
+                    meta.convert_to_e = True
+                if not meta.convert_to_e and meta.inst == 'nirspec':
                     cutoff = 1e-4
                     log.writelog("  Setting uncalibrated pixels to zero...",
                                  mute=(not meta.verbose))
@@ -377,8 +379,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
-                if not hasattr(meta, 'convert_to_e'):
-                    meta.convert_to_e = True
                 if meta.convert_to_e:
                     data, meta = b2f.convert_to_e(data, meta, log)
 
