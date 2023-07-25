@@ -379,10 +379,21 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data = optspex.clean_median_flux(data, meta, log, m)
 
                     # correct spectral curvature
-                    if (hasattr(meta, 'curvature')
-                            and meta.curvature == 'correct'):
+                    if not hasattr(meta, 'curvature'):
+                        # By default, don't correct curvature
+                        meta.curvature = None
+                    if meta.curvature == 'correct':
                         data, meta = straighten.straighten_trace(data, meta,
                                                                  log, m)
+                    elif meta.inst == 'nirspec' and meta.grating != 'PRISM':
+                        log.writelog('WARNING: NIRSpec GRISM spectra is '
+                                     'significantly curved and will very '
+                                     'likely benefit from setting '
+                                     'meta.curvature to "correct".')
+                    elif meta.inst == 'nircam':
+                        log.writelog('WARNING: NIRCam spectra is slightly '
+                                     'curved and may benefit from setting '
+                                     'meta.curvature to "correct".')
 
                     # Perform outlier rejection of
                     # sky background along time axis
