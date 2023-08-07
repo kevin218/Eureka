@@ -189,6 +189,8 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
+            # If positive flux map is required
+
             # Instantiate the system
             system = starry.System(star, planet)
             self.systems.append(system)
