@@ -366,9 +366,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
                 
+                if not hasattr(meta, 'calibrated_spectra'):
+                    meta.calibrated_spectra = False
                 # Instrument-specific steps for generating
                 # calibrated stellar spectra
-                if meta.convert_to_e is False:
+                if meta.calibrated_spectra:
                     data = inst.calibrated_spectra(data, meta, log)
 
                 if not meta.photometry:
@@ -389,9 +391,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
-                if not hasattr(meta, 'convert_to_e'):
-                    meta.convert_to_e = True
-                if meta.convert_to_e:
+                if not meta.calibrated_spectra:
                     data, meta = b2f.convert_to_e(data, meta, log)
 
                 if not meta.photometry:
