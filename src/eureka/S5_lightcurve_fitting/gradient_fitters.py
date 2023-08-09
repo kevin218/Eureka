@@ -12,7 +12,7 @@ from .likelihood import computeRedChiSq
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
-
+import arviz as az
 
 def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                     **kwargs):
@@ -184,10 +184,17 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     log.writelog('Running PyMC3 NUTS sampler...')
     with model.model:
+        if "pixel_ydeg" in indep_vars:
+            start = pmx.optimize(start=start)
+
         trace = pmx.sample(tune=meta.tune, draws=meta.draws, start=start,
                            target_accept=meta.target_accept,
                            chains=meta.chains, cores=meta.ncpu)
         print()
+
+        if "pixel_ydeg" in indep_vars and meta.record_map == True:
+           trace_az = az.from_pymc3(trace, model=model.model)
+           trace_az.to_netcdf(meta.outputdir+"trace_map.nc")
 
         # Log detailed convergence and sampling statistics
         log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
@@ -211,6 +218,11 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
+
+    # If pixel sampling, append best fit pixels to fit_params
+    if "pixel_ydeg" in indep_vars:
+       fit_params = np.append(fit_params,
+                              np.percentile(np.swapaxes(np.hstack(np.transpose(trace_az['posterior']['p'][:],[0,2,1])),0,1),50,axis=0))
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))

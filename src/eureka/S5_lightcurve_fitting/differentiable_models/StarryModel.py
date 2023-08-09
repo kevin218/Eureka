@@ -62,6 +62,9 @@ class StarryModel(PyMC3Model):
             l_vals = [int(self.paramtitles[ind][1])
                       for ind in ylm_params]
             self.ydeg = max(l_vals)
+        elif 'pixel_ydeg' in self.paramtitles:
+            # read l order used for pixel sampling
+            self.ydeg = self.parameters.pixel_ydeg.value
         else:
             self.ydeg = 0
         
@@ -155,12 +158,16 @@ class StarryModel(PyMC3Model):
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
                 planet_map2 = starry.Map(ydeg=self.ydeg)
-                for ell in range(1, self.ydeg+1):
-                    for m in range(-ell, ell+1):
-                        if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
-                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
-                amp = temp.fp/planet_map2.flux(theta=0)[0]
+                # Set up amplitude differently if using pixel sampling
+                if 'pixel_ydeg' in self.paramtitles:
+                   amp = temp.fp
+                else:
+                    for ell in range(1, self.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            if hasattr(temp, f'Y{ell}{m}'):
+                                planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
+                                planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
+                    amp = temp.fp/planet_map2.flux(theta=0)[0]
                 planet_map.amp = amp
 
             # Initialize planet object
@@ -189,10 +196,39 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
-            # If positive flux map is required
+            # Pixel sampling setup
+            if 'pixel_ydeg' in self.paramtitles:
+               # Get pixel transform matrix and number of pixels
+               _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=3)
+               self.npix = A.shape[1]
+
+               # Set prior to either be positive Rice distribution or normal around zero
+               if self.force_positive_map == True:
+                  p = pm.Rice("p", nu = 0.0, sigma=0.2*amp, shape=(self.npix,))
+               else:
+                  p = pm.Normal("p", mu=0.2*amp, sd=0.2*amp, shape=(self.npix,))
+
+               # Transform pixels to spherical harmonics
+               self.starry_x = tt.dot(A, p)
+               # Record spherical harmonics
+               pm.Deterministic("y", self.starry_x)
 
             # Instantiate the system
             system = starry.System(star, planet)
+
+            if 'pixel_ydeg' in self.paramtitles:
+               # Calculate light curve by multiplying spherical harmonics by design matrix, then record
+               self.starry_X = system.design_matrix(self.time)
+               lcpiece = self.starry_X[:,0] + tt.dot(self.starry_X[:,1:],self.starry_x)
+
+               # Calculate and record map
+               map_plot = starry.Map(ydeg=self.ydeg)
+               map_plot.amp = self.starry_x[0]
+               map_plot[1:, :] = self.starry_x[1:]/self.starry_x[0]
+               if self.record_map == True:
+                  pm.Deterministic("flux_model", lcpiece)
+                  pm.Deterministic("map_grid", map_plot.render(projection="rect",res=100))
+
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -239,7 +275,11 @@ class StarryModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            lcpiece = systems[chan].flux(time)
+            if 'pixel_ydeg' in self.paramtitles:
+               lcpiece = self.starry_X[:,0] + tt.dot(self.starry_X[:,1:],self.starry_x)
+            else:
+               lcpiece = systems[chan].flux(time)
+
             if eval:
                 lcpiece = lcpiece.eval()
             phys_flux = lib.concatenate([phys_flux, lcpiece])
@@ -331,12 +371,16 @@ class StarryModel(PyMC3Model):
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
                 planet_map2 = starry.Map(ydeg=self.ydeg)
-                for ell in range(1, self.ydeg+1):
-                    for m in range(-ell, ell+1):
-                        if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
-                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
-                amp = temp.fp/planet_map2.flux(theta=0)[0]
+                # Set up amplitude differently if using pixel sampling
+                if 'pixel_ydeg' in self.paramtitles:
+                   amp = temp.fp
+                else:
+                    for ell in range(1, self.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            if hasattr(temp, f'Y{ell}{m}'):
+                                planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
+                                planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
+                    amp = temp.fp/planet_map2.flux(theta=0)[0]
                 planet_map.amp = amp
 
             # Initialize planet object
@@ -365,6 +409,15 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
-            # Instantiate the system
-            sys = starry.System(star, planet)
+            if 'pixel_ydeg' in self.paramtitles:
+               # import pixel values and convert to spherical harmonics
+               _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=3)
+               p_fit = newparams[-self.npix:]
+               self.starry_x = tt.dot(A, p_fit)
+               # Instantiate the system
+               sys = starry.System(star, planet)
+               self.starry_X = sys.design_matrix(self.time)
+            else:
+               sys = starry.System(star, planet)
+
             self.fit.systems.append(sys)
