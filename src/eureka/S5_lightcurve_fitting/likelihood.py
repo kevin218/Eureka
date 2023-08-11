@@ -45,7 +45,7 @@ def ln_like(theta, lc, model, freenames):
                 # Force scatter_ppm to be > 0
                 return -np.inf
 
-            trim1, trim2 = get_trim(model.nints, chan)
+            trim1, trim2 = get_trim(lc.nints, chan)
             lc.unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in range(len(freenames))
@@ -57,7 +57,7 @@ def ln_like(theta, lc, model, freenames):
                 # Force scatter_mult to be > 0
                 return -np.inf
 
-            trim1, trim2 = get_trim(model.nints, chan)
+            trim1, trim2 = get_trim(lc.nints, chan)
             lc.unc_fit[trim1:trim2] = theta[ind[chan]]*lc.unc[trim1:trim2]
 
     if model.GP:
