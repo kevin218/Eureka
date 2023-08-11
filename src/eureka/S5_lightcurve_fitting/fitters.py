@@ -75,6 +75,15 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter=calling_function+'StartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter=calling_function+'StartingPoint')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -316,6 +325,15 @@ def emceefitter(lc, model, meta, log, **kwargs):
     start_lnprob = lnprob(np.median(pos, axis=0), lc, model, prior1, prior2,
                           priortype, freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='emceeStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='emceeStartingPoint')
 
     # Initialize tread pool
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
@@ -792,6 +810,15 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='dynestyStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='dynestyStartingPoint')
 
     # START DYNESTY
     l_args = [lc, model, freenames]
@@ -1300,8 +1327,15 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                           axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     # Evaluate each individual model for easier access outside of Eureka!
-    individual_models = np.array([[comp.name, comp.eval()]
-                                  for comp in model.components], dtype=object)
+    individual_models = []
+    for comp in model.components:
+        if comp.name != 'GP':
+            individual_models.append([comp.name, comp.eval()])
+        else:
+            fit = model.eval(incl_GP=False)
+            individual_models.append([comp.name, comp.eval(fit)])
+    individual_models = np.array(individual_models, dtype=object)
+
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta, lc.time,
