@@ -220,7 +220,7 @@ class Model:
             channel = 0
         else:
             channel = chan
-        model = self.eval(channel=channel, **kwargs)
+        model = self.eval(channel=channel, incl_GP=True, **kwargs)
 
         time = self.time
         if self.multwhite:
@@ -329,17 +329,20 @@ class CompositeModel(Model):
                 flux *= component.eval(channel=channel, **kwargs)
 
         if incl_GP:
-            flux += self.GPeval(flux)
+            flux += self.GPeval(flux, channel=channel, **kwargs)
 
         return flux
 
-    def syseval(self, channel=None, **kwargs):
+    def syseval(self, channel=None, incl_GP=False, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        incl_GP : bool; optional
+            Whether or not to include the GP's predictions in the
+            evaluated model predictions.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -373,15 +376,20 @@ class CompositeModel(Model):
                     component.time = self.time
                 flux *= component.eval(channel=channel, **kwargs)
 
+        if incl_GP:
+            flux += self.GPeval(flux, channel=channel, **kwargs)
+
         return flux
 
-    def GPeval(self, fit, **kwargs):
+    def GPeval(self, fit, channel=None, **kwargs):
         """Evaluate the GP model components only.
 
         Parameters
         ----------
         fit : ndarray
             The model predictions (excluding the GP).
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -390,20 +398,11 @@ class CompositeModel(Model):
         flux : ndarray
             The evaluated GP model predictions at the times self.time.
         """
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Set the default value
-        if self.multwhite:
-            flux = np.zeros(len(self.time))
-        else:
-            flux = np.zeros(len(self.time)*self.nchannel_fitted)
-
         # Evaluate flux
         for component in self.components:
             if component.modeltype == 'GP':
-                flux = component.eval(fit, **kwargs)
+                flux = component.eval(fit, channel=channel,
+                                      **kwargs)
         return flux
 
     def physeval(self, interp=False, channel=None, **kwargs):

@@ -245,7 +245,7 @@ class PyMC3Model:
             channel = 0
         else:
             channel = chan
-        model = self.eval(channel=channel, **kwargs)
+        model = self.eval(channel=channel, incl_GP=True, **kwargs)
 
         time = self.time
         if self.multwhite:
@@ -496,7 +496,7 @@ class CompositePyMC3Model(PyMC3Model):
         
         self.issetup = True
 
-    def eval(self, eval=True, channel=None, **kwargs):
+    def eval(self, eval=True, channel=None, incl_GP=False, **kwargs):
         """Evaluate the model components.
 
         Parameters
@@ -506,6 +506,9 @@ class CompositePyMC3Model(PyMC3Model):
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        incl_GP : bool; optional
+            Whether or not to include the GP's predictions in the
+            evaluated model predictions.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -539,9 +542,12 @@ class CompositePyMC3Model(PyMC3Model):
             if component.modeltype != 'GP':
                 flux *= component.eval(eval=eval, channel=channel, **kwargs)
 
+        if incl_GP:
+            flux += self.GPeval(flux, eval=eval, channel=channel, **kwargs)
+
         return flux
 
-    def syseval(self, eval=True, channel=None, **kwargs):
+    def syseval(self, eval=True, channel=None, incl_GP=False, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
@@ -551,6 +557,9 @@ class CompositePyMC3Model(PyMC3Model):
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        incl_GP : bool; optional
+            Whether or not to include the GP's predictions in the
+            evaluated model predictions.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -584,6 +593,36 @@ class CompositePyMC3Model(PyMC3Model):
                     component.time = self.time
                 flux *= component.eval(eval=eval, channel=channel, **kwargs)
 
+        if incl_GP:
+            flux += self.GPeval(flux, eval=eval, channel=channel, **kwargs)
+
+        return flux
+
+    def GPeval(self, fit, eval=True, channel=None, **kwargs):
+        """Evaluate the GP model components only.
+
+        Parameters
+        ----------
+        fit : ndarray
+            The model predictions (excluding the GP).
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        flux : ndarray
+            The evaluated GP model predictions at the times self.time.
+        """
+        # Evaluate flux
+        for component in self.components:
+            if component.modeltype == 'GP':
+                flux = component.eval(fit, eval=eval, channel=channel,
+                                      **kwargs)
         return flux
 
     def physeval(self, eval=True, channel=None, interp=False, **kwargs):
