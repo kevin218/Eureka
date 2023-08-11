@@ -15,6 +15,32 @@ from ..lib import plots
 
 def computePixelTimes(integ, grp, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE,
                       TGROUP):
+    """Compute the time stamps for every pixel in the group.
+
+    Based on code sent to TJB by Michael E Ressler.
+
+    Parameters
+    ----------
+    integ : int
+        The current integration number.
+    grp : int
+        The current group number.
+    SUBSIZE2 : int
+        The subarray ysize.
+    SUBSIZE1 : int
+        The subarray xsize.
+    NGROUPS : int
+        The number of groups per integration.
+    TSAMPLE : float
+        The sample time.
+    TGROUP : float
+        The group time.
+
+    Returns
+    -------
+    pixel_times : np.array
+        The time stamp for every pixel in the group.
+    """
     # SLITLESSPRISM Subarray
     nrows = SUBSIZE2  # px
     ncols = SUBSIZE1  # px
@@ -54,7 +80,27 @@ def smoothData(tempdata, boundary='extend', box_width=100):
 
 
 def computeBG(cleaned, smooth=True):
-    bg = cleaned[:, 11:60]
+    """Compute the background in the group-level data.
+
+    This differs from the more general GLBS code written for other instruments
+    since there are several MIRI-specific oddities that need to be handled.
+
+    Parameters
+    ----------
+    cleaned : np.ma.MaskedArray
+        A masked array containing all data for a single integration.
+    smooth : bool; optional
+        Whether or not boxcar smoothing should be applied when computing the
+        background level. This is useful when trying to measure the 390Hz noise
+        component which is largely but not entirely removed by row-by-row
+        background subtraction. True by default.
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    bg = cleaned[:, 11:61]
     bg = sigma_clip(bg, sigma=3)
     bg = sigma_clip(bg, sigma=3, axis=1)
     bg = sigma_clip(bg, sigma=3, axis=0)
@@ -68,6 +114,20 @@ def computeBG(cleaned, smooth=True):
 
 
 def model390(p0, x):
+    """A function to model the 390Hz noise with an input phase.
+
+    Parameters
+    ----------
+    p0 : float
+        The phase offset of the 390Hz noise in units of revolutions (0--1).
+    x : np.array
+        The time stamps at which to compute the 390Hz noise signal.
+
+    Returns
+    -------
+    np.array
+        The predicted 390Hz noise signal as a function of time.
+    """
     Phase = p0
     Phase1 = 0.46983885+Phase
     Phase2 = 0.42408343+Phase
@@ -84,6 +144,23 @@ def model390(p0, x):
 
 
 def minfunc(p0, x, y):
+    """A cost function to use while fitting the 390Hz noise signal.
+
+    Parameters
+    ----------
+    p0 : float
+        The phase offset of the 390Hz noise in units of revolutions (0--1).
+    x : np.array
+        The time stamps at which to compute the 390Hz noise signal.
+    y : np.array
+        The observed DN for each of the pixels to compare the model against.
+
+    Returns
+    -------
+    float
+        The sum of the squares of the differences between the data and the
+        model.
+    """
     Phase = p0
     if -0.5 <= Phase < 0.5:
         return np.sum((y-model390(p0, x))**2)
@@ -97,6 +174,22 @@ def remove_390(p0, x, y):
 
 
 def get_pgram(data, time):
+    """Compute the Lomb-Scargle periodogram to visualize 390Hz noise signal.
+
+    Parameters
+    ----------
+    data : np.array
+        The DN counts for every pixel in the group.
+    time : np.array
+        The time stamps for every pixel in the group.
+
+    Returns
+    -------
+    pgram : np.array
+        The computed values of the periodogram.
+    freqs : np.array
+        The frequencies at which the periodogram were computed.
+    """
     freqs = np.linspace(1, 5e3, 1000)
     x = np.ma.copy(time.flatten())
     y = np.ma.copy(data.flatten())
@@ -112,6 +205,51 @@ def get_pgram(data, time):
 
 def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
               meta, returnp1=False, prnt=False, plot=False):
+    """Run the 390Hz noise removal on a single integration.
+
+    Parameters
+    ----------
+    images : np.array
+        The DN counts for every pixel in the integration.
+    dq : np.array
+        The DQ array from the FITS file.
+    integ : int
+        The current integration number (needed for computing the pixel time
+        stamps).
+    SUBSIZE2 : int
+        The subarray ysize.
+    SUBSIZE1 : int
+        The subarray xsize.
+    NGROUPS : int
+        The number of groups per integration.
+    TSAMPLE : float
+        The sample time.
+    TGROUP : float
+        The group time.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    returnp1 : bool; optional
+        If True, return the fitted phase of the 390Hz signal (useful when
+        debugging). False by default.
+    prnt : bool; optional
+        If True, print the fitted phase of the 390Hz signal (useful when
+        debugging). False by default.
+    plot : bool; optional
+        If True, plot some figures showing the fitting of the 390Hz noise
+        signal and the changes to the L-S periodogram (useful when
+        debugging). False by default.
+
+    Returns
+    -------
+    cleaned_no390 : np.array
+        The images data with the 390Hz signal removed. The background flux
+        will also have been removed if meta.grouplevel_bg is True.
+    p1 : float; optional
+        The fitted phase of the 390Hz signal. Only returned if returnp1 is
+        True.
+    integ : int
+        The current integration number (needed for updating the input array).
+    """
     # Mask known bad pixels
     images1 = np.ma.copy(np.ma.masked_invalid(images))
     images1 = np.ma.masked_where(dq, images1)
@@ -247,6 +385,23 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
 
 
 def run(input_model, log, meta):
+    """_summary_
+
+    Parameters
+    ----------
+    input_model : jwst.datamodels.RampModel
+        The input file segment to be processed.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
+
+    Returns
+    -------
+    input_model : jwst.datamodels.RampModel
+        The input file segment with the 390Hz noise removed. The background
+        flux will also have been removed if meta.grouplevel_bg is True.
+    """
     SUBSIZE2 = input_model.meta.subarray.ysize
     SUBSIZE1 = input_model.meta.subarray.xsize
     NGROUPS = input_model.meta.exposure.ngroups
