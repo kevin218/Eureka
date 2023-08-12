@@ -16,7 +16,8 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
+from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
+                         update_uncertainty)
 from . import plots_s5 as plots
 from ..lib import astropytable
 from ..lib.split_channels import get_trim
@@ -129,22 +130,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
@@ -397,22 +383,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
@@ -883,22 +854,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
@@ -1030,22 +986,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
