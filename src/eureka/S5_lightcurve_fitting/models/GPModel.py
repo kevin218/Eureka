@@ -61,11 +61,6 @@ class GPModel(Model):
         self.unc_fit = lc.unc_fit
         self.time = lc.time
 
-        # if self.nchannel_fitted > 1:
-        #     raise AssertionError('The GP model cannot currently be used '
-        #                          'when fitting multiple channels '
-        #                          'simultaneously!')
-
         if self.nkernels > 1 and self.gp_code_name == 'celerite':
             raise AssertionError('Celerite cannot compute multi-dimensional '
                                  'GPs, please choose a different GP code')
