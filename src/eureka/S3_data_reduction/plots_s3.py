@@ -887,10 +887,10 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+    ax[1, 0].imshow(img, origin='lower', aspect='auto')
 
     # X gaussian plot
-    norm_x_factor = np.sum(np.nansum(img, axis=0))
+    norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
                   np.nansum(img, axis=0)/norm_x_factor)
     x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
@@ -903,7 +903,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
-    norm_y_factor = np.sum(np.nansum(img, axis=0))
+    norm_y_factor = np.nansum(np.nansum(img, axis=0))
     ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))
     y_plot = np.linspace(0, len(np.nansum(img, axis=1)))
