@@ -756,3 +756,66 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def plot_eclipse_map(lc,flux_maps, meta):
+
+    for i, channel in enumerate(lc.fitted_channels):
+        fig,axs = plt.subplots(1, 3, figsize=(12,3.0), width_ratios=[1.4,1,1])
+        lons = np.linspace(-180,180,np.shape(flux_maps)[2])
+        lats = np.linspace(-90,90,np.shape(flux_maps)[1])
+
+        p1 = 0.841
+        p2 = 0.977
+        p3 = 0.998
+
+        ca = axs[0].contourf(lons,lats,np.pi*np.quantile(1e6*flux_maps[:],0.5,axis=0),cmap='RdBu_r')
+
+        axs[0].axhline(0,color='C0',ls='--')
+        axs[0].axvline(0,color='C3',ls='--')
+        axs[0].set_xticks([-180,-90,0,90,180])
+        axs[0].set_yticks([-90,-45,0,45,90])
+        axs[0].set_xlim([-180,180])
+        axs[0].set_ylim([-90,90])
+        plt.colorbar(ca,ax=axs[0],pad=0.02)
+
+        axs[1].fill_between(lons,np.pi*1e6*np.quantile(flux_maps[:,50],p1,axis=0),np.pi*1e6*np.quantile(flux_maps[:,50],1-p1,axis=0),color='C0',alpha=0.3,ls='None')
+        axs[1].fill_between(lons,np.pi*1e6*np.quantile(flux_maps[:,50],p2,axis=0),np.pi*1e6*np.quantile(flux_maps[:,50],1-p2,axis=0),color='C0',alpha=0.3,ls='None')
+        axs[1].fill_between(lons,np.pi*1e6*np.quantile(flux_maps[:,50],p3,axis=0),np.pi*1e6*np.quantile(flux_maps[:,50],1-p3,axis=0),color='C0',alpha=0.3,ls='None')
+        axs[1].set_xlim([-180,180])
+        axs[1].set_xticks([-180,-90,0,90,180])
+
+        axs[2].fill_between(lats,np.pi*1e6*np.quantile(flux_maps[:,:,50],p1,axis=0),np.pi*1e6*np.quantile(flux_maps[:,:,50],1-p1,axis=0),color='C3',alpha=0.3,ls='None')
+        axs[2].fill_between(lats,np.pi*1e6*np.quantile(flux_maps[:,:,50],p2,axis=0),np.pi*1e6*np.quantile(flux_maps[:,:,50],1-p2,axis=0),color='C3',alpha=0.3,ls='None')
+        axs[2].fill_between(lats,np.pi*1e6*np.quantile(flux_maps[:,:,50],p3,axis=0),np.pi*1e6*np.quantile(flux_maps[:,:,50],1-p3,axis=0),color='C3',alpha=0.3,ls='None')
+        axs[2].set_xlim([-90,90])
+        axs[2].set_xticks([-90,-45,0,45,90])
+
+        axs[0].set_title('Median Map',fontsize=12)
+        axs[1].set_title('Fit Along Equator',fontsize=12)
+        axs[2].set_title('Fit Along 0$^{\circ}$ Longitude',fontsize=12)
+
+        axs[0].set_ylabel('Latitude',labelpad=-10)
+        axs[0].set_xlabel('Longitude')
+        axs[1].set_xlabel('Longitude')
+        axs[2].set_xlabel('Latitude')
+        axs[1].set_ylabel('$F_{p}/F_{s}$ (ppm)',fontsize=11,labelpad=-4)
+        axs[2].set_ylabel('$F_{p}/F_{s}$ (ppm)',fontsize=11,labelpad=-4)
+
+        #plt.suptitle('$l=2$ Map, Orbit, and Systematics Fit, second eclipse only',fontsize=12,y=0.99)
+
+        plt.subplots_adjust(left=0.07,
+                            bottom=0.17,
+                            right=0.98,
+                            top=0.81,
+                            wspace=0.38,
+                            hspace=0.22)
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+
+        fname = (f'figs{os.sep}{fname_tag}_eclipse_map'+plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname)
+

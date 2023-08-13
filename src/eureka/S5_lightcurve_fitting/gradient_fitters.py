@@ -192,8 +192,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                            chains=meta.chains, cores=meta.ncpu)
         print()
 
-        if "pixel_ydeg" in indep_vars and meta.record_map == True:
+        if "pixel_ydeg" in indep_vars:
            trace_az = az.from_pymc3(trace, model=model.model)
+        if meta.record_map == True:
            trace_az.to_netcdf(meta.outputdir+"trace_map.nc")
 
         # Log detailed convergence and sampling statistics
@@ -222,7 +223,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # If pixel sampling, append best fit pixels to fit_params
     if "pixel_ydeg" in indep_vars:
        fit_params = np.append(fit_params,
-                              np.percentile(np.swapaxes(np.hstack(np.transpose(trace_az['posterior']['p'][:],[0,2,1])),0,1),50,axis=0))
+                              trace_az['posterior']['p'][0,0])
+                              #np.percentile(np.swapaxes(np.hstack(np.transpose(trace_az['posterior']['p'][:],[0,2,1])),0,1),50,axis=0))
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
@@ -296,6 +298,10 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')
+
+    if meta.record_map == True:
+        eclipse_maps = np.transpose(trace_az.posterior.stack(sample=("chain", "draw"))['map_grid'][:],[2,0,1])
+        plots.plot_eclipse_map(lc, eclipse_maps, meta)
 
     # Make a new model instance
     model.chi2red = chi2red

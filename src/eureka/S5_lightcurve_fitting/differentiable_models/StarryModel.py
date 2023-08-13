@@ -14,6 +14,7 @@ logger.setLevel(logging.ERROR)
 import starry
 starry.config.quiet = True
 starry.config.lazy = True
+import pymc3 as pm
 
 from . import PyMC3Model
 from ..limb_darkening_fit import ld_profile
@@ -199,7 +200,12 @@ class StarryModel(PyMC3Model):
             # Pixel sampling setup
             if 'pixel_ydeg' in self.paramtitles:
                # Get pixel transform matrix and number of pixels
-               _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=3)
+               if 'pixel_ydeg' == 2:
+                   self.oversample = 3
+               else:
+                   self.oversample = 2
+
+               _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=self.oversample)
                self.npix = A.shape[1]
 
                # Set prior to either be positive Rice distribution or normal around zero
@@ -411,7 +417,7 @@ class StarryModel(PyMC3Model):
 
             if 'pixel_ydeg' in self.paramtitles:
                # import pixel values and convert to spherical harmonics
-               _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=3)
+               _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=self.oversample)
                p_fit = newparams[-self.npix:]
                self.starry_x = tt.dot(A, p_fit)
                # Instantiate the system
