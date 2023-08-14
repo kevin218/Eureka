@@ -170,7 +170,7 @@ class StarryModel(PyMC3Model):
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
                 # Convert radius to R_star units
-                r=temp.rp*temp.Rs,
+                r=tt.abs_(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
                 # porb = temp.per,
@@ -220,9 +220,11 @@ class StarryModel(PyMC3Model):
 
         if eval:
             lib = np
+            lessthan = np.less
             systems = self.fit.systems
         else:
             lib = tt
+            lessthan = tt.lt
             systems = self.systems
 
         phys_flux = lib.zeros(0)
@@ -237,7 +239,13 @@ class StarryModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            lcpiece = systems[chan].flux(time)
+            # Combine the planet and stellar flux (allowing negative rp)
+            fstar, fp = systems[chan].flux(time, total=False)
+            if lessthan(systems[chan].secondaries[0].r, 0):
+                fstar = 2-fstar
+                fp *= -1
+            lcpiece = fstar+fp
+
             if eval:
                 lcpiece = lcpiece.eval()
             phys_flux = lib.concatenate([phys_flux, lcpiece])
@@ -344,7 +352,7 @@ class StarryModel(PyMC3Model):
                 # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
                 # Convert radius to R_star units
-                r=temp.rp*temp.Rs,
+                r=np.abs(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
                 # porb = temp.per,
