@@ -402,11 +402,19 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Set the default value
-        if self.multwhite:
-            flux = np.zeros(len(self.time))
+        if channel is None:
+            nchan = self.nchannel_fitted
         else:
-            flux = np.zeros(len(self.time)*self.nchannel_fitted)
+            nchan = 1
+
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.ones(len(time))
+        else:
+            flux = np.ones(len(self.time)*nchan)
 
         # Evaluate flux
         for component in self.components:
