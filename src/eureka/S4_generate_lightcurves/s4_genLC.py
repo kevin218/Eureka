@@ -113,7 +113,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val//meta.expand, 
+                                             ap=spec_hw_val//meta.expand,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
