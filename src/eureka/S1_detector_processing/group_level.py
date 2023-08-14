@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # File with functions to perform GLBS
-# trace masking, 
+# trace masking,
 # custom ref pixel correction for PRISM
 # EMMay, Nov 2022
 import numpy as np
@@ -32,7 +32,7 @@ def GLBS(input_model, log, meta):
         The input group-level data product with background removed.
     '''
 
-    log.writelog('  Running Group Level Background Subtraction.')
+    log.writelog('Running Group Level Background Subtraction.')
 
     all_data = input_model.data
     dq = input_model.groupdq
@@ -51,6 +51,8 @@ def GLBS(input_model, log, meta):
         meta.isrotate = False
 
     for ngrp in range(all_data.shape[1]):
+        log.writelog(f'  Starting group {ngrp}.')
+
         grp_data = all_data[:, ngrp, :, :]
         grp_mask = np.ones(grp_data.shape, dtype=bool)
         dqmask = np.where((dq[:, ngrp, :, :] % 2 == 1) |
@@ -66,19 +68,31 @@ def GLBS(input_model, log, meta):
             grp_mask *= trace_mask
 
         xrdata = (['time', 'y', 'x'], grp_data)
-        xrmask = (['time', 'y', 'x'], grp_mask)                
+        xrmask = (['time', 'y', 'x'], grp_mask)
         xrdict = dict(flux=xrdata, mask=xrmask)
         data = xrio.makeDataset(dictionary=xrdict)
         data['flux'].attrs['flux_units'] = 'n/a'
         data.attrs['intstart'] = meta.intstart
+        meta.bg_dir = 'CxC'
+
+        # Only show plots for the last group
         if ngrp == all_data.shape[1]-1:
-            data = bkg.BGsubtraction(data, meta, 
-                                     log, 0, 
-                                     meta.isplots_S1)
+            isplots_S1 = meta.isplots_S1
         else:
-            # do not show plots except for the last group
-            data = bkg.BGsubtraction(data, meta, 
-                                     log, 0, 0)
+            isplots_S1 = 0
+        data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+
+        # Perform BG subtraction along dispersion direction
+        # (only useful for NIRCam data)
+        if hasattr(meta, 'bg_disp') and meta.bg_disp:
+            meta.bg_dir = 'RxR'
+            if ngrp == all_data.shape[1]-1:
+                isplots_S1 = meta.isplots_S1
+            else:
+                isplots_S1 = 0
+            data = bkg.BGsubtraction(data, meta, log, meta.m, isplots_S1)
+
+        # Overwrite values in all_data
         all_data[:, ngrp, :, :] = data['flux'].values
     input_model.data = all_data
 
@@ -103,7 +117,7 @@ def mask_trace(input_model, log, meta):
     input_model : jwst.datamodels.QuadModel
         The input group-level data product with trace mask object
     '''
-    log.writelog('  Masking Curved Trace.')
+    log.writelog('  Masking curved trace.')
 
     all_data = input_model.data
 
@@ -112,7 +126,7 @@ def mask_trace(input_model, log, meta):
     nrow = all_data.shape[2]
     trace_mask = np.ones_like(all_data[0, 0, :, :])
 
-    # take a median across groups and smooth                                                                                                                                                                                                           
+    # take a median across groups and smooth
     med_data = np.nanmedian(all_data[:, ngrp-1, :, :], axis=0)
     smt_data = spn.median_filter(med_data, size=(1, meta.window_len))
 
@@ -125,19 +139,22 @@ def mask_trace(input_model, log, meta):
         smooth_coms[:meta.ignore_low] = smooth_coms[meta.ignore_low]
     if meta.ignore_hi is not None:
         smooth_coms[meta.ignore_hi:] = smooth_coms[meta.ignore_hi]
-    
-    # now create mask based on smooth_coms center.                                                                                                                                                                                                         
-    for nc in range(ncol):
+
+    # now create mask based on smooth_coms center.
+    if meta.bg_x1 is not None and meta.bg_x2 is not None:
+        range_cols = range(meta.bg_x1, meta.bg_x2)
+    else:
+        range_cols = range(ncol)
+    for nc in range_cols:
         mask_low = np.nanmax([0, smooth_coms[nc]-meta.expand_mask])
         mask_hih = np.nanmin([smooth_coms[nc]+meta.expand_mask, nrow-1])
-
         trace_mask[mask_low:mask_hih, nc] = np.nan
 
     input_model.trace_mask = trace_mask
 
     return input_model
 
-    
+
 def custom_ref_pixel(input_model, log, meta):
     '''Function that performs reference pixel
     correction for PRISM
@@ -161,7 +178,7 @@ def custom_ref_pixel(input_model, log, meta):
     dq = input_model.groupdq
 
     nrow = all_data.shape[2]
-    row_ind_ref = np.append(np.arange(nrow)[:meta.npix_top], 
+    row_ind_ref = np.append(np.arange(nrow)[:meta.npix_top],
                             np.arange(nrow)[nrow-meta.npix_bot:])
     evn_row_ref = row_ind_ref[np.where(row_ind_ref % 2 == 0)[0]]
     odd_row_ref = row_ind_ref[np.where(row_ind_ref % 2 == 1)[0]]
@@ -172,11 +189,11 @@ def custom_ref_pixel(input_model, log, meta):
 
     for nint in range(all_data.shape[0]):
         for ngrp in range(all_data.shape[1]):
-            intgrp_data = all_data[nint, ngrp, :, :]                                                                                                                                                                                                    
-            dqmask = np.where((dq[nint, ngrp, :, :] % 2 == 1) | 
+            intgrp_data = all_data[nint, ngrp, :, :]
+            dqmask = np.where((dq[nint, ngrp, :, :] % 2 == 1) |
                               (dq[nint, ngrp, :, :] == 2))
             intgrp_data[dqmask] = np.nan
-            
+
             if hasattr(meta, 'masktrace') and meta.masktrace:
                 intgrp_data *= meta.trace_mask
 
@@ -188,4 +205,3 @@ def custom_ref_pixel(input_model, log, meta):
     input_model.data = all_data
 
     return input_model
-

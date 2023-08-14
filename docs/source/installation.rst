@@ -49,13 +49,13 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@v0.9#egg=eureka[jwst]
+	pip install eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v0.9
 
 Other specific branches can be installed using:
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
+	pip install eureka[jwst]@git+https://github.com/kevin218/Eureka.git@mybranchname
 
 In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
 

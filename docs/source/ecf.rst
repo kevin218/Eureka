@@ -47,6 +47,8 @@ bias_correction
 '''''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
 
+Note that this routine requires masking the trace; therefore, ``masktrace`` must be set to True.
+
 bias_group
 '''''''''''''''''
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
@@ -112,16 +114,28 @@ verbose
 See Stage 3 inputs
 
 isplots_S1
-'''''''''''''''''
+''''''''''
 Sets how many plots should be saved when running Stage 1. A full description of these outputs is available here: :ref:`Stage 3 Output <s3-out>`
 
 nplots
-'''''''''''''''''
+''''''
 See Stage 3 inputs
 
 hide_plots
 ''''''''''
 See Stage 3 inputs
+
+bg_disp
+'''''''
+Set True to perform row-by-row background subtraction (only useful for NIRCam).
+
+bg_x1
+'''''
+Left edge of exclusion region for row-by-row background subtraction.
+
+bg_x2
+'''''
+Right edge of exclusion region for row-by-row background subtraction.
 
 masktrace
 '''''''''
@@ -145,24 +159,24 @@ Columns above this index will not be used to create the mask
 
 refpix_corr
 '''''''''''
-Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray. 
+Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray.
 
-npix_top 
+npix_top
 ''''''''
 Number of rows to use for ROEBA routine along the top of the subarray
 
-npix_bot 
+npix_bot
 ''''''''
 Number of rows to use for ROEBA routine along the bottom of the subarray
 
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 0 JWST data (uncal.fits).
+The path to the directory containing the Stage 0 JWST data (uncal.fits). Directories containing spaces should be enclosed in quotation marks.
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 1 JWST data and plots.
+The path to the directory in which to output the Stage 1 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 testing_S1
 ''''''''''
@@ -208,12 +222,15 @@ Data file suffix (e.g. rateints).
 
 slit_y_low & slit_y_high
 ''''''''''''''''''''''''
-Controls the cross-dispersion extraction. Use None to rely on the default parameters.
+Controls the cross-dispersion extraction for NIRSpec. Use None to rely on the default parameters.
 
+tsgrism_extract_height
+''''''''''''''''''''''
+Controls the cross-dispersion extraction height for NIRCam (default is 64 pixels).
 
 waverange_start & waverange_end
 '''''''''''''''''''''''''''''''
-Modify the existing file to change the dispersion extraction (DOES NOT WORK). Use None to rely on the default parameters.
+Modify the existing file to change the dispersion extraction (DO NOT CHANGE).
 
 
 skip_*
@@ -236,12 +253,12 @@ If True, plots will automatically be closed rather than popping up on the screen
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 1 JWST data.
+The path to the directory containing the Stage 1 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 2 JWST data and plots.
+The path to the directory in which to output the Stage 2 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 
 
@@ -406,7 +423,7 @@ If you want to try multiple values sequentially, you can provide a list in the f
 
 ff_outlier
 ''''''''''
-Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.  
+Set False to use only the background region when searching for outliers along the time axis (recommended for deep transits).  Set True to apply the outlier rejection routine to the full frame (works well for shallow transits/eclipses).  Be sure to check the percentage of pixels that were flagged while ``ff_outlier = True``; the value should be << 1% when ``bg_thresh = [5,5]``.
 
 bg_thresh
 '''''''''
@@ -434,6 +451,17 @@ Possible values:
 5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
+bg_disp
+'''''''
+Set True to perform row-by-row background subtraction (only useful for NIRCam).
+
+bg_x1
+'''''
+Left edge of exclusion region for row-by-row background subtraction.
+
+bg_x2
+'''''
+Right edge of exclusion region for row-by-row background subtraction.
 
 p3thresh
 ''''''''
@@ -566,23 +594,15 @@ If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 2 JWST data. For HST observations, the sci_dir and cal_dir folders will only be checked if this folder does not contain FITS files.
-
-topdir + inputdir + sci_dir
-'''''''''''''''''''''''''''
-Optional, only used for HST analyses. The path to the folder containing the science spectra. Defaults to 'sci'.
-
-topdir + inputdir + cal_dir
-'''''''''''''''''''''''''''
-Optional, only used for HST analyses. The path to the folder containing the wavelength calibration imaging mode observations. Defaults to 'cal'.
+The path to the directory containing the Stage 2 JWST data, or, for HST observations, the _ima FITS files (including both direct images and spectra) downloaded from MAST. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 3 JWST data and plots.
+The path to the directory in which to output the Stage 3 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + time_file
 ''''''''''''''''''
-Optional. The path to a file that contains the time array you want to use instead of the one contained in the FITS file.
+Optional. The path to a file that contains the time array you want to use instead of the one contained in the FITS file. Directories containing spaces should be enclosed in quotation marks.
 
 
 
@@ -762,12 +782,12 @@ If True, more details will be printed about steps.
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 3 JWST data.
+The path to the directory containing the Stage 3 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 4 JWST data and plots.
+The path to the directory in which to output the Stage 4 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 
 
@@ -807,14 +827,14 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
+[batman_tr, batman_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
 For theano-based differentiable functions, this can be one or more of the following:
-[starry, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+[starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 
 manual_clip
 '''''''''''
-Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]].
+Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]]. If you want to clip the 10th integration, this would be index 9 since python uses zero-indexing. And the manual_clip start and end values are used to slice a numpy array, so they follow the same convention of *inclusive* start index and *exclusive* end index. In other words, to trim the 10th integrations, you would set manual_clip to [[9,10]].
 
 
 Limb Darkening Parameters
@@ -937,12 +957,12 @@ If True, plots will automatically be closed rather than popping up on the screen
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 4 JWST data.
+The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 5 JWST data and plots.
+The path to the directory in which to output the Stage 5 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 
 Stage 5 Fit Parameters
@@ -997,28 +1017,35 @@ This file describes the transit/eclipse and systematics parameters and their pri
          The ``Y0_0`` term cannot be fit directly but is instead fit through the more observable ``fp`` term which is composed of the ``Y0_0`` term and the square of the ``rp`` term.
    - Limb Darkening Parameters
       - ``limb_dark`` - The limb darkening model to be used.
-      
+
          Options are: ``['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential', '4-parameter']``.
          ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``,
          ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``,
          and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
-      
+
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
          Polynomial fits should include at least ``c0`` for usable results.
       - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models.
-      
+
          The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``,
          where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset.
          If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
-         Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the three parameters;
-         instead, it is recommended to set ``r0`` (or ``r3`` for the second ramp) to the sign of the ramp (-1 for decaying, 1 for rising)
-         while fitting for the remaining coefficients.
-      - ``step0`` and ``steptime0`` - The step size and time for the first step-function (useful for removing mirror segment tilt events).
+         Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the ``r0`` and ``r2`` parameters (and ``r3`` and ``r5`` parameters).
+         One option is to set ``r0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``r0--r1`` and set ``r2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
+      - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
+
+         The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
+         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit, and ``h5`` is the orbital period of HST (in the same time units as the data, usually days).  A good starting point for ``h5`` is 0.066422 days.  ``time_batch = time_local % h5``.
+         If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
+         Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.  
+         One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
+
+      - ``step0`` and ``steptime0`` - The step size and time for the first step function (useful for removing mirror segment tilt events).
       
-         For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).
+         For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).  The change in flux is relative to the flux from the previous step.
       - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
@@ -1145,11 +1172,11 @@ If True, plots will automatically be closed rather than popping up on the screen
 
 topdir + inputdir
 '''''''''''''''''
-The path to the directory containing the Stage 5 JWST data.
+The path to the directory containing the Stage 5 JWST data. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + outputdir
 ''''''''''''''''''
-The path to the directory in which to output the Stage 6 JWST data and plots.
+The path to the directory in which to output the Stage 6 JWST data and plots. Directories containing spaces should be enclosed in quotation marks.
 
 topdir + model_spectrum
 '''''''''''''''''''''''
@@ -1157,7 +1184,7 @@ The path to a model spectrum to plot underneath the observations to show how the
 compare to the input model for simulated observations or how the fitted results compare to a
 retrieved model for real observations. Set to None if no model should be plotted.
 The file should have column 1 as the wavelength and column 2 should contain the transmission
-or emission spectrum. Any headers must be preceded by a #.
+or emission spectrum. Any headers must be preceded by a #. Directories containing spaces should be enclosed in quotation marks.
 
 model_x_unit
 ''''''''''''

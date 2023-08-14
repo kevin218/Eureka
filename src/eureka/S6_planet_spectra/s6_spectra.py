@@ -330,7 +330,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         scale_height, meta.planet_R0)
 
                 save_table(meta, log)
-                convert_s5_LC(meta, log)
+            
+            # Copy S5 text files to a single h5 file
+            convert_s5_LC(meta, log)
 
             # make citations for current stage
             util.make_citations(meta, 6)
