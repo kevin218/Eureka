@@ -208,9 +208,9 @@ class StarryModel(PyMC3Model):
                _, _, _, A, _, _ = planet.map.get_pixel_transforms(oversample=self.oversample)
                self.npix = A.shape[1]
 
-               # Set prior to either be positive Rice distribution or normal around zero
+               # Set prior to either be log normal, or normal around zero
                if self.force_positive_map == True:
-                  p = pm.Rice("p", nu = 0.0, sigma=0.2*amp, shape=(self.npix,))
+                  p = pm.LogNormal("p", mu = np.log(3*amp), tau=1.0, shape=(self.npix,))
                else:
                   p = pm.Normal("p", mu=0.2*amp, sd=0.2*amp, shape=(self.npix,))
 
