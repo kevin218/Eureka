@@ -493,9 +493,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                 radius=None, size=None, meta=meta, i=None,
                                 m=None,
                                 saved_ref_median_frame=saved_ref_median_frame)
-
-                    if saved_ref_median_frame is None:
-                        saved_ref_median_frame = refrence_median_frame
+                        if saved_ref_median_frame is None:
+                            saved_ref_median_frame = refrence_median_frame
 
                     # for loop for integrations
                     for i in tqdm(range(len(data.time)),

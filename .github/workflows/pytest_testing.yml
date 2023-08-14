@@ -23,8 +23,13 @@ jobs:
           python-version: 3.9
       - name: Setup Environment
         run: |
+          gcc --version
+          sudo apt update
+          sudo apt remove gcc
+          sudo apt install gcc-12
+          gcc --version
           python -m pip install --upgrade pip
-          pip install .[jwst,hst,pymc3,test]
+          pip install '.[jwst,hst,pymc3,test]'
           conda install mkl-service
           mkdir $HOME/crds_cache
           echo "CRDS_PATH=$HOME/crds_cache" >> $GITHUB_ENV
