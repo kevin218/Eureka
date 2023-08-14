@@ -532,7 +532,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
-              extent=[xmin, xmax, ymin, ymax])
+              extent=[xmin, xmax, ymin, ymax + 1])
     a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2-1], xmin, xmax, color='orange')
     a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
@@ -551,7 +551,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     a1.legend(loc='upper right', fontsize=8)
     a1.axes.set_xlabel("Flux [e-]")
     a1.axes.set_xlim(vmin, vmax)
-    a1.axes.set_ylim(ymin, ymax)
+    a1.axes.set_ylim(ymin, ymax + 1)
     a1.axes.set_yticklabels([])
     # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
