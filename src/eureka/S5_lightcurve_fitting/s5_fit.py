@@ -20,7 +20,7 @@ except:
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     '''Fits 1D spectra with various models and fitters.
-    
+
     Parameters
     ----------
     eventlabel : str
@@ -34,16 +34,16 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     input_meta : eureka.lib.readECF.MetaClass; optional
         An optional input metadata object, so you can manually edit the meta
         object without having to edit the ECF file.
-    
+
     Returns
     -------
     meta : eureka.lib.readECF.MetaClass
         The metadata object with attributes added by S5.
-    
+
     Notes
     -----
-    
     History:
+
     - November 12-December 15, 2021 Megan Mansfield
         Original version
     - December 17-20, 2021 Megan Mansfield
@@ -448,7 +448,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                 log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
                 xpos, ypos, xwidth, ywidth, white=False):
     """Run a fit for one channel or perform a shared fit.
-                
+
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
@@ -480,7 +480,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         Limb-darkening coefficients if used from Stage 4, otherwise None.
     white : bool; optional
         Is this a white-light fit? Defaults to False.
-                
+
     Returns
     -------
     meta : eureka.lib.readECF.MetaClass
@@ -887,7 +887,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
 
 def make_longparamlist(meta, params, chanrng):
     """Make a long list of all relevant parameters.
-    
+
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
@@ -897,7 +897,7 @@ def make_longparamlist(meta, params, chanrng):
         and their priors.
     chanrng : int
         The number of fitted channels.
-    
+
     Returns
     -------
     longparamlist : list
@@ -934,12 +934,12 @@ def make_longparamlist(meta, params, chanrng):
 
 def load_specific_s4_meta_info(meta):
     """Load the specific S4 MetaClass object used to make this aperture pair.
-    
+
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The current metadata object.
-    
+
     Returns
     -------
     eureka.lib.readECF.MetaClass
