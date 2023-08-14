@@ -233,7 +233,7 @@ class StarryModel(PyMC3Model):
                map_plot[1:, :] = self.starry_x[1:]/self.starry_x[0]
                if self.record_map == True:
                   pm.Deterministic("flux_model", lcpiece)
-                  pm.Deterministic("map_grid", map_plot.render(projection="rect",res=100))
+                  pm.Deterministic("map_grid", np.pi*map_plot.render(projection="rect",res=100))
 
             self.systems.append(system)
 

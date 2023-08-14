@@ -759,18 +759,37 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_eclipse_map(lc,flux_maps, meta):
+    """Plot a fitted eclipse map, showing the median map and lat-lon slices with uncertainty
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    flux_maps : array
+        The posterior distribution of the fitted maps
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - August 14, 2023 Mark Hammond
+        Initial version.
+    """
 
     for i, channel in enumerate(lc.fitted_channels):
         fig,axs = plt.subplots(1, 3, figsize=(12,3.0), width_ratios=[1.4,1,1])
         lons = np.linspace(-180,180,np.shape(flux_maps)[2])
         lats = np.linspace(-90,90,np.shape(flux_maps)[1])
 
+        # Quantiles
         p1 = 0.841
         p2 = 0.977
         p3 = 0.998
 
-        ca = axs[0].contourf(lons,lats,np.pi*np.quantile(1e6*flux_maps[:],0.5,axis=0),cmap='RdBu_r')
-
+        # Plot median map
+        ca = axs[0].contourf(lons,lats,np.quantile(1e6*flux_maps[:],0.5,axis=0),cmap='RdBu_r')
         axs[0].axhline(0,color='C0',ls='--')
         axs[0].axvline(0,color='C3',ls='--')
         axs[0].set_xticks([-180,-90,0,90,180])
@@ -779,30 +798,31 @@ def plot_eclipse_map(lc,flux_maps, meta):
         axs[0].set_ylim([-90,90])
         plt.colorbar(ca,ax=axs[0],pad=0.02)
 
-        axs[1].fill_between(lons,np.pi*1e6*np.quantile(flux_maps[:,50],p1,axis=0),np.pi*1e6*np.quantile(flux_maps[:,50],1-p1,axis=0),color='C0',alpha=0.3,ls='None')
-        axs[1].fill_between(lons,np.pi*1e6*np.quantile(flux_maps[:,50],p2,axis=0),np.pi*1e6*np.quantile(flux_maps[:,50],1-p2,axis=0),color='C0',alpha=0.3,ls='None')
-        axs[1].fill_between(lons,np.pi*1e6*np.quantile(flux_maps[:,50],p3,axis=0),np.pi*1e6*np.quantile(flux_maps[:,50],1-p3,axis=0),color='C0',alpha=0.3,ls='None')
+        # Plot slice along equator
+        lat0 = int(np.shape(flux_maps)[2]/2)
+        axs[1].fill_between(lons,1e6*np.quantile(flux_maps[:,lat0],p1,axis=0),1e6*np.quantile(flux_maps[:,lat0],1-p1,axis=0),color='C0',alpha=0.3,ls='None')
+        axs[1].fill_between(lons,1e6*np.quantile(flux_maps[:,lat0],p2,axis=0),1e6*np.quantile(flux_maps[:,lat0],1-p2,axis=0),color='C0',alpha=0.3,ls='None')
+        axs[1].fill_between(lons,1e6*np.quantile(flux_maps[:,lat0],p3,axis=0),1e6*np.quantile(flux_maps[:,lat0],1-p3,axis=0),color='C0',alpha=0.3,ls='None')
         axs[1].set_xlim([-180,180])
         axs[1].set_xticks([-180,-90,0,90,180])
 
-        axs[2].fill_between(lats,np.pi*1e6*np.quantile(flux_maps[:,:,50],p1,axis=0),np.pi*1e6*np.quantile(flux_maps[:,:,50],1-p1,axis=0),color='C3',alpha=0.3,ls='None')
-        axs[2].fill_between(lats,np.pi*1e6*np.quantile(flux_maps[:,:,50],p2,axis=0),np.pi*1e6*np.quantile(flux_maps[:,:,50],1-p2,axis=0),color='C3',alpha=0.3,ls='None')
-        axs[2].fill_between(lats,np.pi*1e6*np.quantile(flux_maps[:,:,50],p3,axis=0),np.pi*1e6*np.quantile(flux_maps[:,:,50],1-p3,axis=0),color='C3',alpha=0.3,ls='None')
+        # Plot slice along equator
+        lon0 = int(np.shape(flux_maps)[1]/2)
+        axs[2].fill_between(lats,1e6*np.quantile(flux_maps[:,:,lon0],p1,axis=0),1e6*np.quantile(flux_maps[:,:,lon0],1-p1,axis=0),color='C3',alpha=0.3,ls='None')
+        axs[2].fill_between(lats,1e6*np.quantile(flux_maps[:,:,lon0],p2,axis=0),1e6*np.quantile(flux_maps[:,:,lon0],1-p2,axis=0),color='C3',alpha=0.3,ls='None')
+        axs[2].fill_between(lats,1e6*np.quantile(flux_maps[:,:,lon0],p3,axis=0),1e6*np.quantile(flux_maps[:,:,lon0],1-p3,axis=0),color='C3',alpha=0.3,ls='None')
         axs[2].set_xlim([-90,90])
         axs[2].set_xticks([-90,-45,0,45,90])
 
         axs[0].set_title('Median Map',fontsize=12)
         axs[1].set_title('Fit Along Equator',fontsize=12)
         axs[2].set_title('Fit Along 0$^{\circ}$ Longitude',fontsize=12)
-
         axs[0].set_ylabel('Latitude',labelpad=-10)
         axs[0].set_xlabel('Longitude')
         axs[1].set_xlabel('Longitude')
         axs[2].set_xlabel('Latitude')
         axs[1].set_ylabel('$F_{p}/F_{s}$ (ppm)',fontsize=11,labelpad=-4)
         axs[2].set_ylabel('$F_{p}/F_{s}$ (ppm)',fontsize=11,labelpad=-4)
-
-        #plt.suptitle('$l=2$ Map, Orbit, and Systematics Fit, second eclipse only',fontsize=12,y=0.99)
 
         plt.subplots_adjust(left=0.07,
                             bottom=0.17,
