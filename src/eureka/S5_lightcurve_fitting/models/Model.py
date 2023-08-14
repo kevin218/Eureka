@@ -398,6 +398,16 @@ class CompositeModel(Model):
         flux : ndarray
             The evaluated GP model predictions at the times self.time.
         """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Set the default value
+        if self.multwhite:
+            flux = np.zeros(len(self.time))
+        else:
+            flux = np.zeros(len(self.time)*self.nchannel_fitted)
+
         # Evaluate flux
         for component in self.components:
             if component.modeltype == 'GP':
