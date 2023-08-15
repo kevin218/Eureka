@@ -412,9 +412,9 @@ class CompositeModel(Model):
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = np.zeros(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = np.zeros(len(self.time)*nchan)
 
         # Evaluate flux
         for component in self.components:
