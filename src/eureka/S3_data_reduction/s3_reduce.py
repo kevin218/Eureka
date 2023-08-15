@@ -111,27 +111,43 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = me.mergeevents(meta, s2_meta)
 
+    # Do not super sample if expand isn't defined
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
+
     # check for range of spectral apertures
-    if hasattr(meta, 'spec_hw') and isinstance(meta.spec_hw, list):
-        meta.spec_hw_range = range(meta.spec_hw[0],
-                                   meta.spec_hw[1]+meta.spec_hw[2],
-                                   meta.spec_hw[2])
-    elif hasattr(meta, 'spec_hw'):
-        meta.spec_hw_range = [meta.spec_hw]
-    elif hasattr(meta, 'photap') and isinstance(meta.photap, list):
-        meta.spec_hw_range = range(meta.photap[0],
-                                   meta.photap[1]+meta.photap[2],
-                                   meta.photap[2])
+    if hasattr(meta, 'spec_hw'):
+        if isinstance(meta.spec_hw, list):
+            meta.spec_hw_range = np.arange(meta.spec_hw[0],
+                                           meta.spec_hw[1]+meta.spec_hw[2],
+                                           meta.spec_hw[2])
+        else:
+            meta.spec_hw_range = np.array([meta.spec_hw])
+        # Increase relevant meta parameter values
+        meta.spec_hw_range *= meta.expand
     elif hasattr(meta, 'photap'):
-        meta.spec_hw_range = [meta.photap]
+        if isinstance(meta.photap, list):
+            meta.spec_hw_range = np.arange(meta.photap[0],
+                                           meta.photap[1]+meta.photap[2],
+                                           meta.photap[2])
+        else:
+            meta.spec_hw_range = np.array([meta.photap])
+        # Super sampling not supported for photometry
+        # This is here just in case someone tries to super sample
+        if meta.expand > 1:
+            print("Super sampling not supported for photometry.")
+            print("Setting meta.expand to 1.")
+            meta.expand = 1
 
     # check for range of background apertures
-    if hasattr(meta, 'bg_hw') and isinstance(meta.bg_hw, list):
-        meta.bg_hw_range = range(meta.bg_hw[0],
-                                 meta.bg_hw[1]+meta.bg_hw[2],
-                                 meta.bg_hw[2])
-    elif hasattr(meta, 'bg_hw'):
-        meta.bg_hw_range = [meta.bg_hw]
+    if hasattr(meta, 'bg_hw'):
+        if isinstance(meta.bg_hw, list):
+            meta.bg_hw_range = np.arange(meta.bg_hw[0],
+                                         meta.bg_hw[1]+meta.bg_hw[2],
+                                         meta.bg_hw[2])
+        else:
+            meta.bg_hw_range = np.array([meta.bg_hw])
+        meta.bg_hw_range *= meta.expand
     elif hasattr(meta, 'skyin') and hasattr(meta, 'skywidth'):
         # E.g., if skyin = 90 and skywidth = 60, then the
         # directory will use "bg90_150"
@@ -156,13 +172,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     # each aperture/annulus pair
     meta.run_s3 = None
     for spec_hw_val in meta.spec_hw_range:
-
         for bg_hw_val in meta.bg_hw_range:
-
             meta.eventlabel = eventlabel
-
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s3 = util.makedirectory(meta, 'S3', meta.run_s3,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand,
+                                             bg=bg_hw_val)
 
     # begin process
     for spec_hw_val in meta.spec_hw_range:
@@ -172,12 +189,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
             meta.spec_hw = spec_hw_val
             meta.bg_hw = bg_hw_val
-
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.outputdir = util.pathdirectory(meta, 'S3', meta.run_s3,
-                                                ap=spec_hw_val, bg=bg_hw_val)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
-            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg' +
-                           str(bg_hw_val))
+            event_ap_bg = (meta.eventlabel+"_ap"+str(spec_hw_val) +
+                           '_bg' + str(bg_hw_val))
 
             # Open new log file
             meta.s3_logname = meta.outputdir + 'S3_' + event_ap_bg + ".log"
@@ -188,7 +210,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
-            log.writelog(f"Using ap={spec_hw_val}, bg={bg_hw_val}")
+            log.writelog(f"Using ap={spec_hw_val}, " +
+                         f"bg={bg_hw_val}, " +
+                         f"expand={meta.expand}")
 
             # Copy ecf
             log.writelog('Copying S3 control file', mute=(not meta.verbose))
@@ -233,7 +257,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                              'load many/all of your Stage 2 files, it is '
                              'strongly recommended to increase nfiles.')
             system_RAM = psutil.virtual_memory().total
-            filesize = os.path.getsize(meta.segment_list[istart])
+            filesize = os.path.getsize(meta.segment_list[istart])*meta.expand
             maxfiles = max([1, int(system_RAM*meta.max_memory/filesize)])
             meta.files_per_batch = min([maxfiles, meta.nfiles])
             meta.nbatch = int(np.ceil((meta.num_data_files-istart) /
@@ -269,6 +293,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.firstInBatch = i == 0
                     # Initialize a new data object
                     data = xrio.makeDataset()
+                    log.writelog(f'  Reading file {i+1}...',
+                                 mute=(not meta.verbose))
                     data, meta, log = inst.read(meta.segment_list[i], data,
                                                 meta, log)
                     batch.append(data)
@@ -338,7 +364,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if hasattr(meta, 'dqmask') and meta.dqmask:
-                    # dqmask = np.where(data['dq'] > 0)
                     dqmask = np.where(data.dq.values % 2 == 1)
                     data.mask.values[dqmask] = 0
 
@@ -346,20 +371,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
                 
-                # Mask uncalibrated BG region for NIRSpec observations
-                # Code used for generating a calibrated stellar spectrum
-                if not hasattr(meta, 'convert_to_e'):
-                    meta.convert_to_e = True
-                if not meta.convert_to_e and meta.inst == 'nirspec':
-                    cutoff = 1e-4
-                    log.writelog("  Setting uncalibrated pixels to zero...",
-                                 mute=(not meta.verbose))
-                    boolmask = np.abs(data.flux.data) > cutoff
-                    data['flux'].data = np.where(np.abs(data.flux.data) > 
-                                                 cutoff, 0,
-                                                 data.flux.data)
-                    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " + 
-                                 "pixels in total.", mute=(not meta.verbose))
+                if not hasattr(meta, 'calibrated_spectra'):
+                    meta.calibrated_spectra = False
+                # Instrument-specific steps for generating
+                # calibrated stellar spectra
+                if meta.calibrated_spectra:
+                    data = inst.calibrated_spectra(data, meta, log)
 
                 if not meta.photometry:
                     # Locate source postion
@@ -379,7 +396,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Convert flux units to electrons
                 # (eg. MJy/sr -> DN -> Electrons)
-                if meta.convert_to_e:
+                if not meta.calibrated_spectra:
                     data, meta = b2f.convert_to_e(data, meta, log)
 
                 if not meta.photometry:

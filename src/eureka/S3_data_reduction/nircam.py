@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import sigrej, background
-from ..lib.util import read_time
+from ..lib.util import read_time, supersample
 from tqdm import tqdm
 from ..lib import meanerr as me
 
@@ -86,6 +86,17 @@ def read(filename, data, meta, log):
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
+        # Increase pixel resolution along cross-dispersion direction
+        if hasattr(meta, 'expand') and meta.expand > 1:
+            log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
+                         f'to {sci.shape[1]*meta.expand} pixels...',
+                         mute=(not meta.verbose))
+            sci = supersample(sci, meta.expand, 'flux', axis=1)
+            err = supersample(err, meta.expand, 'err', axis=1)
+            dq = supersample(dq, meta.expand, 'cal', axis=1)
+            v0 = supersample(v0, meta.expand, 'flux', axis=1)
+            wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
+
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
@@ -122,6 +133,12 @@ def read(filename, data, meta, log):
     flux_units = data.attrs['shdr']['BUNIT']
     time_units = 'BMJD_TDB'
     wave_units = 'microns'
+
+    if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
+            meta.bg_hw == meta.bg_hw_range[0]):
+        # Only apply super-sampling expansion once
+        meta.ywindow[0] *= meta.expand
+        meta.ywindow[1] *= meta.expand
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
                                        name='flux')
@@ -466,4 +483,42 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
                      ' Please choose between meanerr or median.',
                      mute=(not meta.verbose))
 
+    return data
+
+
+def calibrated_spectra(data, meta, log):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+
+    Notes
+    -----
+    History:
+
+    - 2023-07-17, KBS
+        Initial version.
+    """
+    # Convert from MJy/sr to mJy
+    log.writelog("  Converting from MJy/sr to mJy...",
+                 mute=(not meta.verbose))
+    data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['err'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['v0'].data *= 1e9*data.shdr['PIXAR_SR']
+    
+    # Update units
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
     return data
