@@ -218,10 +218,13 @@ class StarryModel(PyMC3Model):
             lib = np
             lessthan = np.less
             systems = self.fit.systems
+            rps = [systems[chan].secondaries[0].r.eval()
+                   for chan in range(nchan)]
         else:
             lib = tt
             lessthan = tt.lt
             systems = self.systems
+            rps = [systems[chan].secondaries[0].r for chan in range(nchan)]
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
@@ -237,7 +240,7 @@ class StarryModel(PyMC3Model):
 
             # Combine the planet and stellar flux (allowing negative rp)
             fstar, fp = systems[chan].flux(time, total=False)
-            if lessthan(systems[chan].secondaries[0].r, 0):
+            if lessthan(rps[chan], 0):
                 fstar = 2-fstar
                 fp *= -1
             lcpiece = fstar+fp
