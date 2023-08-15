@@ -970,11 +970,11 @@ def cut_aperture(data, meta, log):
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
 
-    apdata = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
-    aperr = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
-    apmask = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
-    apbg = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
-    apv0 = np.zeros((meta.n_int, meta.spec_hw*2, meta.subnx))
+    apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apmask = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apbg = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
+    apv0 = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
 
     for f in range(int(meta.n_int/meta.nreads)):
         # Get index of reference frame
@@ -987,7 +987,7 @@ def cut_aperture(data, meta, log):
             # Use the centroid from the relevant reference frame
             guess = meta.guess[p].values[r]
             ap_y1 = (guess-meta.spec_hw).astype(int)
-            ap_y2 = (guess+meta.spec_hw).astype(int)
+            ap_y2 = (guess+meta.spec_hw+1).astype(int)
 
             # Cut out this particular read
             apdata[n] = data.flux.values[n, ap_y1:ap_y2]

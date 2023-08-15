@@ -293,7 +293,7 @@ def cut_aperture(data, meta, log):
                  mute=(not meta.verbose))
 
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
     apdata = data.flux[:, ap_y1:ap_y2].values
     aperr = data.err[:, ap_y1:ap_y2].values
     apmask = data.mask[:, ap_y1:ap_y2].values
