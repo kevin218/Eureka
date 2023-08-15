@@ -8,7 +8,8 @@ max_memory      0.5         # The maximum fraction of memory you want utilized b
 suffix          calints     # Data file suffix
 photometry      True        # Set to True if the user wants to analyse a photometric dataset
 
-convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photometry in mJy
+                            # Set False to convert to electrons
 
 # Subarray region of interest
 ywindow         [400, 650]  # Vertical axis as seen in DS9
