@@ -116,8 +116,8 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
-    fig1.set_tight_layout(True)
-    fig2.set_tight_layout(True)
+    fig1.set_layout_engine('tight')
+    fig2.set_layout_engine('tight')
     fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
     fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
@@ -887,10 +887,10 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+    ax[1, 0].imshow(img, origin='lower', aspect='auto')
 
     # X gaussian plot
-    norm_x_factor = np.sum(np.nansum(img, axis=0))
+    norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
                   np.nansum(img, axis=0)/norm_x_factor)
     x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
@@ -903,7 +903,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
-    norm_y_factor = np.sum(np.nansum(img, axis=0))
+    norm_y_factor = np.nansum(np.nansum(img, axis=0))
     ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))
     y_plot = np.linspace(0, len(np.nansum(img, axis=1)))

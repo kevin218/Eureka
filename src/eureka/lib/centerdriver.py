@@ -90,6 +90,7 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         raise Exception('Bad Frame Exception!')
     
     # Get the center with one of the methods:
+    refrence_median_frame = None
     if method in ['fgc', 'fgc_sec']:
         sy, sx, y, x = g.fitgaussian(img, yxguess=loc, mask=msk,
                                      weights=weights,
@@ -103,7 +104,6 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         # Second enhanced centroid position + gaussian widths
         sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths
-        refrence_median_frame = None
 
     # only plot when we do the second fit
     if (meta.isplots_S3 >= 5 and method[-4:] == '_sec' and i < meta.nplots):
