@@ -4,6 +4,8 @@ import glob
 from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
+from scipy.ndimage import zoom
+from .naninterp1d import naninterp1d
 
 from .citations import CITATIONS
 
@@ -698,7 +700,7 @@ def phot_arrays(data):
     keys = ['centroid_x', 'centroid_y', 'centroid_sx', 'centroid_sy',
             'aplev', 'aperr', 'nappix', 'skylev', 'skyerr', 'nskypix',
             'nskyideal', 'status', 'betaper']
-    
+
     for key in keys:
         data[key] = (['time'], np.zeros_like(data.time))
 
@@ -713,10 +715,10 @@ def phot_arrays(data):
 def make_citations(meta, stage=None):
     """Store relevant citation information in the current meta file.
 
-        Searches through imported libraries and current ECF parameters for 
-        terms that match BibTeX entries in citations.py. Every entry that 
+        Searches through imported libraries and current ECF parameters for
+        terms that match BibTeX entries in citations.py. Every entry that
         matches gets added to a bibliography field in the meta file.
-    
+
         Parameters
         ----------
         meta : eureka.lib.readECF.MetaClass
@@ -732,7 +734,7 @@ def make_citations(meta, stage=None):
 
     # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
-    
+
     # check for nircam photometry in S3
     if stage == 3:
         if hasattr(meta, 'inst') and hasattr(meta, "photometry"):
@@ -757,9 +759,9 @@ def make_citations(meta, stage=None):
             other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
-                other_cites.append(meta.GP_package) 
+                other_cites.append(meta.GP_package)
 
-    # I set the instrument in the relevant bits of S1/2, so I don't think this 
+    # I set the instrument in the relevant bits of S1/2, so I don't think this
     # should really be necessary. Taylor's boilerplate for later
     if not hasattr(meta, 'inst'):
         valid = False
@@ -786,12 +788,12 @@ def make_citations(meta, stage=None):
     # get all new citations together
     current_cites = np.union1d(module_cites, other_cites)
 
-    # check if meta has existing list of citations/bibitems, if it does, make 
+    # check if meta has existing list of citations/bibitems, if it does, make
     # sure we include imports from previous stages in our citations
     prev_cites = []
     if hasattr(meta, 'citations'):
         prev_cites = meta.citations
-    
+
     all_cites = np.union1d(current_cites, prev_cites).tolist()
 
     # make sure everything in meta citation list can be added to bibliography
@@ -802,3 +804,57 @@ def make_citations(meta, stage=None):
     # store everything in the meta object
     meta.citations = all_cites
     meta.bibliography = [CITATIONS[entry] for entry in meta.citations]
+
+
+def supersample(data, expand, type, axis=1):
+    """Apply subpixel interpolation to the given arrays in the cross-disperion
+    direction.
+
+    Parameters
+    ----------
+    data : ND array
+        Array of values to be super-sampled.
+    expand : int
+        Super-sampling factor along the given axis.
+    type : str
+        Options are: data, err, dq, or wave.
+    axis : int, Optional
+        Axis along which interpolation is performed (default is 1).
+
+    Returns
+    -------
+    zdata : ND array
+        The updated array at higher resolution
+    """
+    # Build array of expansion factors
+    # e.g., [1, 5, 1] for axis=1 and expand=5
+    ndim = np.ndim(data)
+    expand_seq = np.ones(ndim, dtype=int)
+    expand_seq[axis] = expand
+
+    # SciPy's zoom can't handle NaNs, so let's replace them via interpolation
+    if ndim == 3:
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                data[i, j] = naninterp1d(data[i, j])
+    if ndim == 2:
+        for i in range(data.shape[0]):
+            data[i] = naninterp1d(data[i])
+
+    # Apply linear interpolation along axis
+    if type == 'flux':
+        # Divide by 'expand' to conserve flux/variance
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')/expand
+    elif type == 'err':
+        # Divide by 'sqrt(expand)'' to conserve uncertainty
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')/np.sqrt(expand)
+    elif type == 'cal':
+        # Apply same dq flag, gain values, etc to all super-sampled pixels
+        zdata = np.repeat(data, expand, axis=axis)
+    elif type == 'wave':
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')
+    else:
+        print(f"Type {type} not supported.  Must be one of flux, err, cal, " +
+              "or wave. No super-sampling applied.")
+        zdata = data
+    return zdata

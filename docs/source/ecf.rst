@@ -314,9 +314,9 @@ photometry
 ''''''''''
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
-convert_to_e
+calibrated_spectra
 ''''''''''''
-An optional input parameter. If True (default), convert the units of the images to electrons for easy noise estimation. If False (useful for flux-calibrated photometry), the units of the images will not be changed.
+An optional input parameter. If False (default), convert the units of the images to electrons for easy noise estimation. If True (useful for flux-calibrated spectroscopy/photometry), the units of the images will be converted to mJy.
 
 poly_wavelength
 '''''''''''''''
@@ -373,9 +373,13 @@ record_ypos
 '''''''''''
 Option to record the cross-dispersion trace position and width (if Gaussian fit) for each integration.
 
-use_dq
+dqmask
 ''''''
 Masks odd data quality (DQ) entries which indicate "Do not use" pixels following the jwst package documentation: https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags
+
+expand
+''''''
+Super-sampling factor along cross-dispersion direction.
 
 centroidtrim
 ''''''''''''
