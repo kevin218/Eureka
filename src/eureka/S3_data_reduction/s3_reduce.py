@@ -457,7 +457,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                                           log)
 
                     # Extract standard spectrum and its variance
-                    data = optspex.standard_spectrum(data, apdata, aperr)
+                    data = optspex.standard_spectrum(data, apdata, apmask,
+                                                     aperr)
 
                     # Perform optimal extraction
                     data, meta, log = optspex.optimize_wrapper(data, meta, log,
