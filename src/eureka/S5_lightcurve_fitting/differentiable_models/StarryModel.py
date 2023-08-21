@@ -200,7 +200,7 @@ class StarryModel(PyMC3Model):
             # Pixel sampling setup
             if 'pixel_ydeg' in self.paramtitles:
                # Get pixel transform matrix and number of pixels
-               if 'pixel_ydeg' == 2:
+               if self.ydeg == 2:
                    self.oversample = 3
                else:
                    self.oversample = 2
