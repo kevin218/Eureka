@@ -174,15 +174,11 @@ class StarryModel(PyMC3Model):
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                # Convert mass to M_sun units
-                # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
                 # Convert radius to R_star units
-                r=temp.rp*temp.Rs,
+                r=tt.abs_(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
-                # porb = temp.per,
-                # prot = temp.per,
                 # Another option to set inclination using impact parameter
                 # inc=tt.arccos(b/a)*180/np.pi
                 inc=temp.inc,
@@ -264,10 +260,15 @@ class StarryModel(PyMC3Model):
 
         if eval:
             lib = np
+            lessthan = np.less
             systems = self.fit.systems
+            rps = [systems[chan].secondaries[0].r.eval()
+                   for chan in range(nchan)]
         else:
             lib = tt
+            lessthan = tt.lt
             systems = self.systems
+            rps = [systems[chan].secondaries[0].r for chan in range(nchan)]
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
@@ -399,15 +400,11 @@ class StarryModel(PyMC3Model):
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                # Convert mass to M_sun units
-                # m=temp.Mp*const.M_jup.value/const.M_sun.value,
                 m=Mp,
                 # Convert radius to R_star units
-                r=temp.rp*temp.Rs,
+                r=np.abs(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
-                # porb = temp.per,
-                # prot = temp.per,
                 # Another option to set inclination using impact parameter
                 # inc=tt.arccos(b/a)*180/np.pi
                 inc=temp.inc,
