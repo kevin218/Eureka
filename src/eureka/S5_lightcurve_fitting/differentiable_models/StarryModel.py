@@ -281,10 +281,17 @@ class StarryModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
+            # Combine the planet and stellar flux (allowing negative rp)
             if 'pixel_ydeg' in self.paramtitles:
-               lcpiece = self.starry_X[:,0] + tt.dot(self.starry_X[:,1:],self.starry_x)
+                fstar = self.starry_X[:,0]
+                fp = tt.dot(self.starry_X[:,1:],self.starry_x)
             else:
-               lcpiece = systems[chan].flux(time)
+                fstar, fp = systems[chan].flux(time, total=False)
+
+            if lessthan(rps[chan], 0):
+                fstar = 2-fstar
+                fp *= -1
+            lcpiece = fstar+fp
 
             if eval:
                 lcpiece = lcpiece.eval()
