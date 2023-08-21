@@ -206,7 +206,7 @@ class StarryModel(PyMC3Model):
 
                # Set prior to either be log normal, or normal around zero
                if self.force_positive_map == True:
-                  p = pm.LogNormal("p", mu = np.log(3*amp), tau=1.0, shape=(self.npix,))
+                  p = pm.LogNormal("p", mu = np.log(0.3*amp), tau=1.0, shape=(self.npix,))
                else:
                   p = pm.Normal("p", mu=0.2*amp, sd=0.2*amp, shape=(self.npix,))
 
@@ -284,15 +284,13 @@ class StarryModel(PyMC3Model):
 
             # Combine the planet and stellar flux (allowing negative rp)
             if 'pixel_ydeg' in self.paramtitles:
-                fstar = self.starry_X[:,0]
-                fp = tt.dot(self.starry_X[:,1:],self.starry_x)
+                lcpiece = self.starry_X[:,0] + tt.dot(self.starry_X[:,1:],self.starry_x)
             else:
                 fstar, fp = systems[chan].flux(time, total=False)
-
-            if lessthan(rps[chan], 0):
-                fstar = 2-fstar
-                fp *= -1
-            lcpiece = fstar+fp
+                if lessthan(rps[chan], 0):
+                    fstar = 2-fstar
+                    fp *= -1
+                lcpiece = fstar+fp
 
             if eval:
                 lcpiece = lcpiece.eval()
