@@ -970,8 +970,8 @@ def cut_aperture(data, meta, log):
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
 
-    log.writelog(f'  {data.flux.shape}',
-                 mute=(not meta.verbose))
+    #log.writelog(f'  {data.flux.shape}',
+    #             mute=(not meta.verbose))
 
     apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
