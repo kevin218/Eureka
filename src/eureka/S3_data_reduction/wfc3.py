@@ -970,6 +970,9 @@ def cut_aperture(data, meta, log):
     log.writelog('  Extracting aperture region...',
                  mute=(not meta.verbose))
 
+    log.writelog(f'  {data.flux.shape}',
+                 mute=(not meta.verbose))
+
     apdata = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     aperr = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
     apmask = np.zeros((meta.n_int, meta.spec_hw*2+1, meta.subnx))
@@ -984,12 +987,29 @@ def cut_aperture(data, meta, log):
             # Figure out the index currently being cut out
             n = f*meta.nreads + r
 
+            #log.writelog(f'\t{f}\t{p}\t{r}\t{n}',
+            #     mute=(not meta.verbose))
+
             # Use the centroid from the relevant reference frame
             guess = meta.guess[p].values[r]
+
             ap_y1 = (guess-meta.spec_hw).astype(int)
             ap_y2 = (guess+meta.spec_hw+1).astype(int)
 
+            if ap_y1 < 0:
+                ap_y1 = 0
+                ap_y2 = 2*meta.spec_hw + 1
+        
+            if ap_y2 > len(data.flux.values[n]):
+                ap_y2 = len(data.flux.values[n])
+                ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
+
+            #log.writelog(f'\t\t{guess}\t{ap_y1}\t{ap_y2}',
+            #     mute=(not meta.verbose))
+
             # Cut out this particular read
+            #log.writelog(f'\t\t\t{data.flux.values[n, ap_y1:ap_y2].shape}',
+            #                mute=(not meta.verbose))
             apdata[n] = data.flux.values[n, ap_y1:ap_y2]
             aperr[n] = data.err.values[n, ap_y1:ap_y2]
             apmask[n] = data.mask.values[n, ap_y1:ap_y2]
