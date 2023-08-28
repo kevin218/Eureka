@@ -759,7 +759,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_eclipse_map(lc, flux_maps, meta):
-    """Plot fitted eclipse map, showing the median map and lat-lon slices
+    """Plot fitted eclipse map and lat-lon slices (Figs 5105)
 
     Parameters
     ----------
@@ -778,8 +778,10 @@ def plot_eclipse_map(lc, flux_maps, meta):
         Initial version.
     """
     for i, channel in enumerate(lc.fitted_channels):
-        fig, axs = plt.subplots(1, 3, figsize=(12, 3.0),
-                                width_ratios=[1.4, 1, 1])
+        fig = plt.figure(5105, figsize=(12, 3))
+        fig.clf()
+        axs = fig.subplots(1, 3, width_ratios=[1.4, 1, 1])
+
         lons = np.linspace(-180, 180, np.shape(flux_maps)[2])
         lats = np.linspace(-90, 90, np.shape(flux_maps)[1])
 
@@ -844,8 +846,10 @@ def plot_eclipse_map(lc, flux_maps, meta):
         axs[0].set_xlabel('Longitude')
         axs[1].set_xlabel('Longitude')
         axs[2].set_xlabel('Latitude')
-        axs[1].set_ylabel('$F_{p}/F_{s}$ (ppm)', fontsize=11, labelpad=-4)
-        axs[2].set_ylabel('$F_{p}/F_{s}$ (ppm)', fontsize=11, labelpad=-4)
+        axs[1].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)', fontsize=11,
+                          labelpad=-4)
+        axs[2].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)', fontsize=11,
+                          labelpad=-4)
 
         plt.subplots_adjust(left=0.07,
                             bottom=0.17,
@@ -853,11 +857,15 @@ def plot_eclipse_map(lc, flux_maps, meta):
                             top=0.81,
                             wspace=0.38,
                             hspace=0.22)
+
         if lc.white:
             fname_tag = 'white'
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
 
-        fname = (f'figs{os.sep}{fname_tag}_eclipse_map'+plots.figure_filetype)
-        fig.savefig(meta.outputdir+fname)
+        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipse_map' +
+                 plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
