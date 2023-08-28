@@ -14,6 +14,7 @@ from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
 import arviz as az
 
+
 def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                     **kwargs):
     """Perform sampling using exoplanet.
@@ -175,6 +176,17 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     model.setup(lc.time, lc.flux, lc.unc)
 
+    if hasattr(meta, 'exoplanet_first') and meta.exoplanet_first:
+        log.writelog('\nCalling exoplanet first...')
+        # RUN LEAST SQUARES
+        opt_sol = exoplanetfitter(lc, model, meta, log,
+                                  calling_function='nuts', **kwargs)
+        freepars = opt_sol.fit_params
+
+        if meta.rescale_err:
+            # Scale uncertainties with reduced chi-squared
+            lc.unc *= np.sqrt(opt_sol.chi2red)
+
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
@@ -184,18 +196,14 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     log.writelog('Running PyMC3 NUTS sampler...')
     with model.model:
-        if "pixel_ydeg" in indep_vars:
-            start = pmx.optimize(start=start)
-
         trace = pmx.sample(tune=meta.tune, draws=meta.draws, start=start,
                            target_accept=meta.target_accept,
                            chains=meta.chains, cores=meta.ncpu)
         print()
 
-        if "pixel_ydeg" in indep_vars:
-           trace_az = az.from_pymc3(trace, model=model.model)
-           if meta.record_map == True:
-              trace_az.to_netcdf(meta.outputdir+"trace_map.nc")
+        trace_fname = meta.outputdir+"trace.hdf5"
+        log.writelog(f'Saving trace to {trace_fname}...')
+        trace.save(trace_fname)
 
         # Log detailed convergence and sampling statistics
         log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
@@ -222,8 +230,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     # If pixel sampling, append best fit pixels to fit_params
     if "pixel_ydeg" in indep_vars:
-       fit_params = np.append(fit_params,
-                              trace_az['posterior']['p'][0,0])
+        trace_az = az.from_pymc3(trace, model=model.model)
+        fit_params = np.append(fit_params,
+                               trace_az['posterior']['p'][0, 0])
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
@@ -284,6 +293,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
+    # Show the inferred planetary brightness map
+    if meta.isplots_S5 >= 1 and "pixel_ydeg" in indep_vars:
+        eclipse_maps = np.transpose(trace_az.posterior.stack(
+            sample=("chain", "draw"))['map_grid'][:], [2, 0, 1])
+        plots.plot_eclipse_map(lc, eclipse_maps, meta)
+
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='nuts')
@@ -297,10 +312,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')
-
-    if "pixel_ydeg" in indep_vars and meta.record_map == True:
-        eclipse_maps = np.transpose(trace_az.posterior.stack(sample=("chain", "draw"))['map_grid'][:],[2,0,1])
-        plots.plot_eclipse_map(lc, eclipse_maps, meta)
 
     # Make a new model instance
     model.chi2red = chi2red
