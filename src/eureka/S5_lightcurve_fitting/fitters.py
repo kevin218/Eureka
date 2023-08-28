@@ -329,7 +329,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
                                     pool=pool)
-    log.writelog('Running emcee burn-in...')
+    log.writelog('Running emcee...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # state = sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # # Log some details about the burn-in phase
