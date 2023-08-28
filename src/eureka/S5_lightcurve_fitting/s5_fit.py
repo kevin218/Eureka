@@ -548,8 +548,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         # Check if should enforce positivity
         if not hasattr(meta, 'force_positivity'):
             meta.force_positivity = False
-        if not hasattr(meta, 'record_map'):
-            meta.record_map = False
         t_starry = dm.StarryModel(parameters=params, name='starry',
                                   fmt='r--', log=log,
                                   time=time, time_units=time_units,
@@ -565,8 +563,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   recenter_ld_prior=meta.recenter_ld_prior,
                                   multwhite=lc_model.multwhite,
                                   nints=lc_model.nints,
-                                  force_positivity=meta.force_positivity,
-                                  record_map=meta.record_map)
+                                  force_positivity=meta.force_positivity)
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
