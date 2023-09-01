@@ -1055,6 +1055,12 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
 
+      - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
+      
+         Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
+         That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
+         If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.
+
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 
 
