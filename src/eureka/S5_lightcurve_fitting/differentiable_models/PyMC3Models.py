@@ -350,7 +350,7 @@ class CompositePyMC3Model(PyMC3Model):
                                                 mu=param.priorpar1,
                                                 sigma=param.priorpar2,
                                                 testval=param.value))
-                                elif parname in ['rp', 'per', 'scatter_mult',
+                                elif parname in ['per', 'scatter_mult',
                                                  'scatter_ppm', 'c0', 'r1',
                                                  'r4', 'r7', 'r10']:
                                     setattr(self.model, parname_temp,

@@ -41,7 +41,7 @@ def find_column_median_shifts(data, meta, m):
         smooth_coms[~np.isnan(smooth_coms)][-1]
 
     # Convert to interget pixels
-    int_coms = np.around(smooth_coms).astype(int)
+    int_coms = np.around(smooth_coms - 0.5).astype(int)
 
     if meta.isplots_S3 >= 1:
         plots_s3.curvature(meta, column_coms, smooth_coms, int_coms, m)
