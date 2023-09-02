@@ -810,10 +810,12 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             if meta.isplots_S3 >= 5 and n < meta.int_end:
                 plots_s3.stddev_profile(meta, n, m, stdevs, p7thresh)
             isoutliers = False
-            if len(stdevs) > 0:
-                # Find worst data point in each column
-                loc = np.nanargmax(stdevs, axis=0)
-                # Mask data point if std is > p7thresh
+            for i in range(nx):
+                # Only continue if there are unmasked values
+                if np.sum(submask[:, i]) > 0:
+                    # Find worst data point in each column
+                    loc = np.nanargmax(stdevs[:, i])
+
                 for i in range(nx):
                     if meta.isplots_S3 == 8:
                         try:
@@ -828,10 +830,11 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                         except:
                             # FINDME: Need to only catch the expected exception
                             pass
-                    if stdevs[loc[i], i] > p7thresh:
+                    # Mask data point if std is > p7thresh
+                    if stdevs[loc, i] > p7thresh:
                         isnewprofile = True
                         isoutliers = True
-                        submask[loc[i], i] = 0
+                        submask[loc, i] = 0
                         # Generate plot
                         if meta.isplots_S3 >= 5 and n < meta.int_end:
                             plots_s3.subdata(meta, i, n, m, subdata, submask,
