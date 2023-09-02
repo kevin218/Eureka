@@ -30,14 +30,42 @@ def standard_spectrum(data, apdata, apmask, aperr):
     data : Xarray Dataset
         The updated Dataset object in which the spectrum data will stored.
     """
-    # Get numbers to account for missing pixels
-    npix = apmask.shape[1]
-    nmasked = np.sum(apmask == 0, axis=1)
-    correction = npix/(npix-nmasked)
+    # Replace masked pixels with spectral neighbors
+    apdata_cleaned = np.copy(apdata)
+    aperr_cleaned = np.copy(aperr)
+    for t, y, x in np.array(np.where(apmask == 0)).T:
+        # Do not extend to negative indices (short and long wavelengths
+        # do not have similar profiles)
+        lower = x-2
+        if lower < 0:
+            lower = 0
+        # Get mask for current neighbors
+        mask_temp = np.append(apmask[t, y, lower:x],
+                              apmask[t, y, x+1:x+3])
 
-    # Apply mask and missing pixel correction
-    stdspec = np.nansum((apdata*apmask), axis=1)*correction
-    stdvar = np.nansum((aperr*apmask)**2, axis=1)*correction
+        # Gather current data neighbors and apply mask
+        replacement_val = mask_temp*np.append(apdata_cleaned[t, y, lower:x],
+                                              apdata_cleaned[t, y, x+1:x+3])
+        # Figure out how many data neighbors are being used
+        denom = np.sum(mask_temp)
+        # Compute the mean of the unmasked data neighbors
+        replacement_val = np.nansum(replacement_val)/denom
+        # Replace masked value with the newly computed data value
+        apdata_cleaned[t, y, x] = replacement_val
+
+        # Gather current err neighbors and apply mask
+        replacement_val = mask_temp*np.append(aperr_cleaned[t, y, lower:x],
+                                              aperr_cleaned[t, y, x+1:x+3])
+        # Figure out how many err neighbors are being used
+        denom = np.sum(mask_temp)
+        # Compute the mean of the unmasked err neighbors
+        replacement_val = np.nansum(replacement_val)/denom
+        # Replace masked value with the newly computed err value
+        aperr_cleaned[t, y, x] = replacement_val
+
+    # Compute standard spectra
+    stdspec = np.nansum(apdata_cleaned, axis=1)
+    stdvar = np.nansum(aperr_cleaned**2, axis=1)
 
     # Store results in data xarray
     data['stdspec'] = (['time', 'x'], stdspec)
