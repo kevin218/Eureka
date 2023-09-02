@@ -400,8 +400,8 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         Outlier mask.
     expected : ndarray
         Expected profile
-    loc : ndarray
-        Location of worst outliers.
+    loc : int
+        Location of worst outlier.
     variance : ndarray
         Variance of background subtracted data.
     '''
@@ -415,7 +415,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
                  fmt='.', color='b')
     plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
              expected[np.where(submask[:, i])[0], i], 'g-')
-    plt.plot((loc[i]), (subdata[loc[i], i]), 'ro')
+    plt.plot((loc), (subdata[loc, i]), 'ro')
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
