@@ -109,8 +109,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta.run_s4 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand,
+                                             bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -122,10 +126,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Load in the S3 metadata used for this particular aperture pair
             meta = load_specific_s3_meta_info(meta)
-
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
+            
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
-                                                ap=meta.spec_hw, bg=meta.bg_hw)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
             # Copy existing S3 log file and resume log
             meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
@@ -154,7 +164,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             elif meta.wave_min < np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min '
                              f'({meta.wave_min}) is smaller than the shortest '
-                             f'wavelength ({np.min(wave_1d)})')
+                             f'wavelength ({np.min(wave_1d)})!!')
+                if meta.inst == 'miri':
+                    axis = 'ywindow'
+                else:
+                    axis = 'xwindow'
+                log.writelog('  If you want to use wavelengths shorter than '
+                             f'{np.min(wave_1d)}, you will need to decrease '
+                             f'your {axis} lower limit in Stage 3.')
             if meta.wave_max is None:
                 meta.wave_max = np.max(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
@@ -163,10 +180,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             elif meta.wave_max > np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
-                             f'wavelength ({np.max(wave_1d)})')
-            indices = np.logical_and(wave_1d >= meta.wave_min,
-                                     wave_1d <= meta.wave_max)
-            wave_1d_trimmed = wave_1d[indices]
+                             f'wavelength ({np.max(wave_1d)})!!')
+                if meta.inst == 'miri':
+                    axis = 'ywindow'
+                else:
+                    axis = 'xwindow'
+                log.writelog('  If you want to use wavelengths longer than '
+                             f'{np.max(wave_1d)}, you will need to increase '
+                             f'your {axis} upper limit in Stage 3.')
 
             if meta.photometry:
                 meta.n_int, meta.subnx = spec.aplev.shape[0], 1
@@ -381,7 +402,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
             if not meta.photometry:
                 if meta.isplots_S4 >= 1:
-                    plots_s4.lc_driftcorr(meta, wave_1d_trimmed, spec.optspec,
+                    plots_s4.lc_driftcorr(meta, wave_1d, spec.optspec,
                                           optmask=spec.optmask)
 
             log.writelog("Generating light curves")
@@ -572,7 +593,12 @@ def load_specific_s3_meta_info(meta):
     """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

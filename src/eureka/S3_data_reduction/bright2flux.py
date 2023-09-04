@@ -2,6 +2,7 @@ import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
+from ..lib.util import supersample
 import crds
 
 
@@ -105,6 +106,9 @@ def dn2electrons(data, meta):
         gain = np.swapaxes(gain, 0, 1)[:, ::-1]
 
     if gain.size > 1:
+        # Super-sample gain file
+        # Apply same gain values to all super-sampled pixels
+        gain = supersample(gain, meta.expand, 'cal', axis=0)
         # Get the gain subarray
         gain = gain[meta.ywindow[0]:meta.ywindow[1],
                     meta.xwindow[0]:meta.xwindow[1]]

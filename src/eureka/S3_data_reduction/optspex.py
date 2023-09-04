@@ -549,8 +549,8 @@ def clean_median_flux(data, meta, log, m):
             log.writelog('  Using a default value of median_thresh=5',
                          mute=(not meta.verbose))
             meta.median_thresh = 5
-        outliers = sigma_clip(residuals, sigma=meta.median_thresh,
-                              maxiters=None, axis=1, cenfunc='median')
+        outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
+                              axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
@@ -641,7 +641,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 
     # Select median frame over aperture region
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
     apmedflux = data.medflux[ap_y1:ap_y2].values
 
     # Perform optimal extraction on each of the frames

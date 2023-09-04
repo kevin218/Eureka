@@ -8,9 +8,7 @@
 
 **Welcome to Eureka!**
 
-**ALERT:** Project Eureka! is currently under heavy development. Please understand that you are
-likely to encounter bugs at this point and know that the code will become more stable with time.
-Use at your own risk.
+Please note that the package is continually being improved, so be sure to check back often for new updates.
 
 ## Installation
 

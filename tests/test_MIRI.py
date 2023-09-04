@@ -129,7 +129,7 @@ def test_MIRI(capsys):
     name = pathdirectory(meta, 'S3', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
-    
+
     assert np.array_equal(s3_meta.citations, s3_cites)
 
     # run assertions for S4
@@ -148,7 +148,7 @@ def test_MIRI(capsys):
     name = pathdirectory(meta, 'S5', 1, ap=4, bg=10)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
-    
+
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + ["dynesty", "batman"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 

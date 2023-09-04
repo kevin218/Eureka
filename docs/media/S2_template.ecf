@@ -4,9 +4,12 @@
 
 suffix                  rateints    # Data file suffix
 
-# Controls the cross-dispersion extraction
-slit_y_low              -1      # Use None to rely on the default parameters
-slit_y_high             50      # Use None to rely on the default parameters
+# Subarray height in cross-dispersion direction
+# NIRSpec
+slit_y_low              0       # Use None for default parameter (0)
+slit_y_high             32      # Use None for default parameter (16)
+# NIRCam grism
+tsgrism_extract_height  128     # Use None for default parameter (64)
 
 # Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
 waverange_start         6e-08   # Use None to rely on the default parameters

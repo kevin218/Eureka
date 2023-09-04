@@ -1292,7 +1292,8 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         xrio.writeXR(fname, ds)
 
     # Save the S5 outputs in a human readable ecsv file
-    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
+    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
+        '_bg'+str(meta.bg_hw//meta.expand)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),
