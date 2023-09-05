@@ -207,10 +207,10 @@ class StarryModel(PyMC3Model):
 
                 # Set prior to either be log normal, or normal around zero
                 if self.force_positivity:
-                    p = pm.LogNormal("p", mu=np.log(0.3), tau=1.0,
+                    p = pm.LogNormal("p", mu=np.log(amp/np.pi), tau=1.0,
                                      shape=(self.npix,))
                 else:
-                    p = pm.Normal("p", mu=0.2, sd=0.2,
+                    p = pm.Normal("p", mu=amp/np.pi, sd=amp/np.pi,
                                   shape=(self.npix, ))
 
                 # Transform pixels to spherical harmonics
