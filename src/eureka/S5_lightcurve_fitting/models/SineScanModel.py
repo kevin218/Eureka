@@ -16,10 +16,10 @@ class SineScanModel(Model):
 
         where T(t) is the transit model, Sys(t) are the non-spatial scan 
         systematics models (e.g. polynomial trends, orbit-level ramps), 
-        and S(t_orb) = sine_amp*cos(pi*t_orb / tau)
+        and S(t_orb) = scan_amp*cos(pi*t_orb / tau)
 
-        sine_amp is the orbit-dependent, wavelength dependent amplitude, 
-        tau is the exposure cadence, and t_orb is the local time in each HST
+        scan_amp is the orbit-dependent, wavelength dependent amplitude, 
+        tau is the exposure cadence, and t_orb is the local time in each HST 
         orbit.
     
     
@@ -43,22 +43,26 @@ class SineScanModel(Model):
 
         # Check for Parameters instance
         self.parameters = kwargs.get('parameters')
+
         # Generate parameters from kwargs if necessary
         if self.parameters is None:
             coeff_dict = kwargs.get('coeff_dict')
             try:
-                params = {
-                    "sine_amp": coeff_dict["sine_amp"],
-                    "t_orb": coeff_dict["t_orb"],
-                    "tau": coeff_dict["tau"],
-                }
+                params = {ampN: amp for ampN, amp in coeff_dict.items()
+                          if ampN.startswith('amp') and ampN[3:].isdigit()}
                 self.parameters = Parameters(**params)
             except KeyError:
                 # log error somehow?
                 pass
-            
+
+        # Get orbit numbers
+        self.orbits = kwargs.get('orbits')
+
+        num_orbits = np.max(np.unique(self.orbits))
+
         # Update coefficients
-        self._parse_coeffs()
+        self.amps = np.zeros((self.nchannel_fitted, num_orbits))
+        self._parse_amps()
 
     @property
     def time(self):
@@ -77,89 +81,40 @@ class SineScanModel(Model):
                     # Split the arrays that have lengths
                     # of the original time axis
                     time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time.mean())
+                    self.time_local.extend(time - time[0])
                 self.time_local = np.array(self.time_local)
             else:
-                self.time_local = self.time - self.time.mean()
+                self.time_local = self.time - self.time[0]
 
-    def _parse_coeffs(self):
-        """Convert dict of 'c#' coefficients into a list
-        of coefficients in decreasing order, i.e. ['c2','c1','c0'].
+    def _parse_amps(self):
+        """Convert dict of scan_amp into a list.
 
         Returns
         -------
         np.ndarray
-            The sequence of coefficient values
+            The sequence of scan parameter values.
         """
-        # Parse 'c#' keyword arguments as coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 10))
+        # Parse keyword arguments
         for c in range(self.nchannel_fitted):
             if self.nchannel_fitted > 1:
                 chan = self.fitted_channels[c]
             else:
                 chan = 0
 
-            for i in range(9, -1, -1):
-                try:
-                    if chan == 0:
-                        self.coeffs[c, 9-i] = \
-                            self.parameters.dict[f'c{i}'][0]
-                    else:
-                        self.coeffs[c, 9-i] = \
-                            self.parameters.dict[f'c{i}_{chan}'][0]
-                except KeyError:
-                    pass
-
-        # Trim zeros
-        self.coeffs = self.coeffs[:, ~np.all(self.coeffs == 0, axis=0)]
-
-        """Convert dict of coefficients into a list
-        of coefficients in increasing order.
-        """
-        # Parse keyword arguments as coefficients
-        self.coeffs = {}
-        for i in range(self.nkernels):
-            self.coeffs[self.kernel_types[i]] = []
-        for k, v in self.parameters.dict.items():
-            if k.startswith('A'):
-                remvisnum = k.split('_')
-                if len(remvisnum) > 1:
-                    self.coeffs['A_%i' % int(remvisnum[1])] = v[0]
-                elif self.nchan > 1:
-                    self.coeffs['A_0'] = v[0]
+            try:
+                if chan == 0:
+                    self.amps[c] = self.parameters.dict['scan_amp'][0]
                 else:
-                    self.coeffs['A'] = v[0]
-            if k.lower().startswith('m'):
-                remvisnum = k.split('_')
-                if len(remvisnum) > 1 or self.nchan > 1:
-                    no = int(remvisnum[0][1])-1
-                    if no < 0:
-                        raise AssertionError('Please start your metric '
-                                             'enumeration with m1.')
-                    self.coeffs[self.kernel_types[no]].append(v[0])
-                else:
-                    no = int(remvisnum[0][1])-1
-                    self.coeffs[self.kernel_types[no]].append(v[0])
-            if k.startswith('WN'):
-                remvisnum = k.split('_')
-                if len(remvisnum) > 1:
-                    self.coeffs['WN_%i' % int(remvisnum[1])] = v[0]
-                elif self.nchan > 1:
-                    self.coeffs['WN_0'] = v[0]
-                else:
-                    self.coeffs['WN'] = v[0]
-                if 'fixed' in v:
-                    self.fit_white_noise = False
-                else:
-                    self.fit_white_noise = True
-
+                    self.amps[c] = \
+                        self.parameters.dict[f'scan_amp_{chan}'][0]
+            except KeyError:
+                pass
+    
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -174,14 +129,23 @@ class SineScanModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
-
+        
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Create the polynomial from the coeffs
+        # Get exposure cadence tau
+        tau = np.mean(np.diff(self.time))  # self.time[1] - self.time[0]
+
+        # Get orbit-level times
+        orbits = kwargs.get('orbits')
+        
+        for i in rang
+
+
+        # Create the scan from the coeffs
         lcfinal = np.array([])
-        for c in range(nchan):
+        for c in np.arange(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
@@ -192,7 +156,11 @@ class SineScanModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
             
-            poly = np.poly1d(self.coeffs[chan])
-            lcpiece = np.polyval(poly, time)
+            h0, h1, h2, h3, h4, h5 = self.coeffs[c]
+            # Batch time is relative to the start of each HST orbit
+            # h5 is the orbital period of HST (~96 minutes)
+            self.time_batch = self.time_local % h5
+            lcpiece = (1+h0*np.exp(-h1*self.time_batch + h2)
+                       + h3*self.time_batch + h4*self.time_batch**2)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

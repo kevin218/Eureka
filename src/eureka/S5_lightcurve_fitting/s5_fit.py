@@ -706,6 +706,23 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  multwhite=lc_model.multwhite,
                                  nints=lc_model.nints)
         modellist.append(t_hstramp)
+    if 'hstscan' in meta.run_myfuncs:
+        if 'starry' in meta.run_myfuncs:
+            HSTScanModel = dm.HSTScanModel
+        else:
+            HSTScanModel = m.HSTScanModel
+        t_hstscan = HSTScanModel(parameters=params, name='hstramp', fmt='r--',
+                                 log=log, time=time, time_units=time_units,
+                                 orbits=meta.orbitnum,
+                                 freenames=freenames,
+                                 longparamlist=lc_model.longparamlist,
+                                 nchannel=chanrng,
+                                 nchannel_fitted=nchannel_fitted,
+                                 fitted_channels=fitted_channels,
+                                 paramtitles=paramtitles,
+                                 multwhite=lc_model.multwhite,
+                                 nints=lc_model.nints)
+        modellist.append(t_hstscan)
     if 'xpos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
             CentroidModel = dm.CentroidModel
