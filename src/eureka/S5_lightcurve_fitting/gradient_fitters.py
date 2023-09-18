@@ -201,10 +201,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                            chains=meta.chains, cores=meta.ncpu)
         print()
 
-        trace_fname = meta.outputdir+"trace.hdf5"
-        log.writelog(f'Saving trace to {trace_fname}...')
-        trace.save(trace_fname)
-
         # Log detailed convergence and sampling statistics
         log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
         log.writelog(pm.summary(trace, var_names=freenames),
@@ -231,6 +227,10 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # If pixel sampling, append best fit pixels to fit_params
     if "pixel_ydeg" in indep_vars:
         trace_az = az.from_pymc3(trace, model=model.model)
+        trace_fname = meta.outputdir+"S5_trace_map.nc"
+        log.writelog(f'Saving map trace to {trace_fname}...')
+        trace_az.to_netcdf(trace_fname)
+
         fit_params = np.append(fit_params,
                                trace_az['posterior']['p'][0, 0])
 
