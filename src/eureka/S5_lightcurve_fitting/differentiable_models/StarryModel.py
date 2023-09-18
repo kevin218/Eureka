@@ -200,6 +200,7 @@ class StarryModel(PyMC3Model):
                 A = planet.map.get_pixel_transforms(
                     oversample=self.oversample)[3]
                 self.npix = A.shape[1]
+
                 # Set prior to either be log normal, or normal around zero
                 pixel_prior_mean = self.parameters.pixel_prior_mean.value
                 pixel_prior_width = self.parameters.pixel_prior_width.value
