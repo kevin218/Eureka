@@ -986,8 +986,17 @@ def cut_aperture(data, meta, log):
 
             # Use the centroid from the relevant reference frame
             guess = meta.guess[p].values[r]
+
             ap_y1 = (guess-meta.spec_hw).astype(int)
             ap_y2 = (guess+meta.spec_hw+1).astype(int)
+
+            if ap_y1 < 0:
+                ap_y1 = 0
+                ap_y2 = 2*meta.spec_hw + 1
+        
+            if ap_y2 > len(data.flux.values[n]):
+                ap_y2 = len(data.flux.values[n])
+                ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
 
             # Cut out this particular read
             apdata[n] = data.flux.values[n, ap_y1:ap_y2]
