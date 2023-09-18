@@ -159,18 +159,14 @@ class StarryModel(PyMC3Model):
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
                 planet_map2 = starry.Map(ydeg=self.ydeg)
-                # Set up amplitude differently if using pixel sampling
-                if 'pixel_ydeg' in self.paramtitles:
-                    amp = temp.fp/planet_map2.flux(theta=0)[0]
-                else:
-                    for ell in range(1, self.ydeg+1):
-                        for m in range(-ell, ell+1):
-                            if hasattr(temp, f'Y{ell}{m}'):
-                                planet_map[ell, m] = getattr(temp,
-                                                             f'Y{ell}{m}')
-                                planet_map2[ell, m] = getattr(temp,
-                                                              f'Y{ell}{m}')
-                    amp = temp.fp/planet_map2.flux(theta=0)[0]
+                for ell in range(1, self.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        if hasattr(temp, f'Y{ell}{m}'):
+                            planet_map[ell, m] = getattr(temp,
+                                                         f'Y{ell}{m}')
+                            planet_map2[ell, m] = getattr(temp,
+                                                         f'Y{ell}{m}')
+                amp = temp.fp/planet_map2.flux(theta=0)[0]
                 planet_map.amp = amp
 
             # Initialize planet object
@@ -204,13 +200,14 @@ class StarryModel(PyMC3Model):
                 A = planet.map.get_pixel_transforms(
                     oversample=self.oversample)[3]
                 self.npix = A.shape[1]
-
                 # Set prior to either be log normal, or normal around zero
+                pixel_prior_mean = self.parameters.pixel_prior_mean.value
+                pixel_prior_width = self.parameters.pixel_prior_width.value
                 if self.force_positivity:
-                    p = pm.LogNormal("p", mu=np.log(amp/np.pi), tau=1.0,
+                    p = pm.LogNormal("p", mu=np.log(pixel_prior_mean/np.pi), sigma = pixel_prior_width/pixel_prior_mean,
                                      shape=(self.npix,))
                 else:
-                    p = pm.Normal("p", mu=amp/np.pi, sd=amp/np.pi,
+                    p = pm.Normal("p", mu=pixel_prior_mean/np.pi, sd=pixel_prior_width/np.pi,
                                   shape=(self.npix, ))
 
                 # Transform pixels to spherical harmonics
@@ -391,18 +388,14 @@ class StarryModel(PyMC3Model):
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
                 planet_map2 = starry.Map(ydeg=self.ydeg)
-                # Set up amplitude differently if using pixel sampling
-                if 'pixel_ydeg' in self.paramtitles:
-                    amp = temp.fp/planet_map2.flux(theta=0)[0]
-                else:
-                    for ell in range(1, self.ydeg+1):
-                        for m in range(-ell, ell+1):
-                            if hasattr(temp, f'Y{ell}{m}'):
-                                planet_map[ell, m] = getattr(temp,
-                                                             f'Y{ell}{m}')
-                                planet_map2[ell, m] = getattr(temp,
-                                                              f'Y{ell}{m}')
-                    amp = temp.fp/planet_map2.flux(theta=0)[0]
+                for ell in range(1, self.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        if hasattr(temp, f'Y{ell}{m}'):
+                            planet_map[ell, m] = getattr(temp,
+                                                        f'Y{ell}{m}')
+                            planet_map2[ell, m] = getattr(temp,
+                                                         f'Y{ell}{m}')
+                amp = temp.fp/planet_map2.flux(theta=0)[0]
                 planet_map.amp = amp
 
             # Initialize planet object
