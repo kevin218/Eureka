@@ -56,8 +56,6 @@ def standard_spectrum(data, apdata, apmask, aperr):
         # Gather current err neighbors and apply mask
         replacement_val = mask_temp*np.append(aperr_cleaned[t, y, lower:x],
                                               aperr_cleaned[t, y, x+1:x+3])
-        # Figure out how many err neighbors are being used
-        denom = np.sum(mask_temp)
         # Compute the mean of the unmasked err neighbors
         replacement_val = np.nansum(replacement_val)/denom
         # Replace masked value with the newly computed err value
