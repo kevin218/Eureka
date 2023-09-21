@@ -98,9 +98,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         binned_unc = util.binData(unc, nbin_plot, err=True)
         binned_normflux = util.binData(flux/model_sys, nbin_plot)
         binned_res = util.binData(residuals, nbin_plot)
+        binned_model_phys = util.binData(model_phys, nbin_plot)
 
         if hasattr(meta, 'record_plot_data'):
             if meta.record_plot_data == True:
+
                 np.savez_compressed(meta.outputdir+'time.npz', data=time.data, mask=time.mask)
                 np.savez_compressed(meta.outputdir+'flux.npz', data=flux.data, mask=flux.mask)
                 np.savez_compressed(meta.outputdir+'unc.npz', data=unc.data, mask=unc.mask)
@@ -112,6 +114,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
                 np.savez_compressed(meta.outputdir+'binned_unc.npz', data=binned_unc.data, mask=binned_unc.mask)
                 np.savez_compressed(meta.outputdir+'binned_normflux.npz', data=binned_normflux.data)
                 np.savez_compressed(meta.outputdir+'binned_res.npz', data=binned_res.data)
+                np.savez_compressed(meta.outputdir+'binned_model_phys.npz', data=binned_model_phys.data)
  
 
         fig = plt.figure(5101, figsize=(8, 6))
