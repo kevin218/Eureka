@@ -805,6 +805,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             variance = np.abs(expected + bg) / Q + v0
             # STEP 7: Mask cosmic ray hits
             stdevs = np.abs(subdata - expected)*submask/np.sqrt(variance)
+            submask[np.isnan(stdevs)] = 0
             if meta.isplots_S3 >= 5 and n < meta.int_end:
                 plots_s3.stddev_profile(meta, n, m, stdevs, p7thresh)
             isoutliers = False
@@ -814,7 +815,6 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                     # Find worst data point in each column
                     loc = np.nanargmax(stdevs[:, i])
 
-                for i in range(nx):
                     if meta.isplots_S3 == 8:
                         try:
                             plt.figure(3803)
