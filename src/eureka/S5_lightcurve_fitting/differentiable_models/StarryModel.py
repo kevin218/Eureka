@@ -193,8 +193,12 @@ class StarryModel(PyMC3Model):
 
             # Pixel sampling setup
             if 'pixel_ydeg' in self.paramtitles:
-                # Always set this to a factor 3 to ensure proper sampling (~ 4*L^2)
-                self.oversample = 3
+
+                # Oversample factor of 3 is a safe bet to achieve pixels ~ 4L^2, but not always necessary 
+                if 'pixel_oversample' in self.paramtitles:
+                    self.oversample = self.parameters.pixel_oversample.value
+                else:
+                    self.oversample = 3
 
                 # Get pixel transform matrix and number of pixels
                 A = planet.map.get_pixel_transforms(
