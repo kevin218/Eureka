@@ -220,6 +220,14 @@ def read(filename, data, meta, log):
         if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
                 meta.bg_hw == meta.bg_hw_range[0]):
             # If not, we've already done this and don't want to switch it back
+            if meta.ywindow[1] > 393:
+                log.writelog('WARNING: The MIRI/LRS wavelength solution is '
+                             'not defined for y-values > 393, while you '
+                             f'have set ywindow[1] to {meta.ywindow[1]}.\n'
+                             '          It is strongly recommended to set '
+                             'ywindow[1] to be <= 393, otherwise you will '
+                             'potentially end up with very strange results.')
+
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
