@@ -61,9 +61,14 @@ class GPModel(Model):
         self.unc_fit = lc.unc_fit
         self.time = lc.time
 
-        if self.nkernels > 1 and self.gp_code_name == 'celerite':
-            raise AssertionError('Celerite cannot compute multi-dimensional '
-                                 'GPs, please choose a different GP code')
+        if self.gp_code_name == 'celerite':
+            if self.nkernels > 1:
+                raise AssertionError('Celerite cannot compute multi-'
+                                     'dimensional GPs. Please choose a '
+                                     'different GP code')
+            elif self.kernel_types[0] != 'Matern32':
+                raise AssertionError('Our celerite implementation currently '
+                                     'only supports a Matern32 kernel.')
 
         # Update coefficients
         self.coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2))
@@ -108,8 +113,8 @@ class GPModel(Model):
 
         Parameters
         ----------
-        fit : eureka.S5_lightcurve_fitting.models.Model
-            Current model (i.e. transit model)
+        fit : ndarray
+            The rest of the current model evaluated.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         gp : celerite.GP, george.GP, or tinygp.GaussianProcess; optional
@@ -162,15 +167,15 @@ class GPModel(Model):
 
             # Create the GP object with current parameters
             if gp is None:
-                gp = self.setup_GP(chan)
+                gp = self.setup_GP(c)
 
             if self.gp_code_name == 'george':
                 gp.compute(self.kernel_inputs[chan].T, unc_fit)
                 mu = gp.predict(residuals, self.kernel_inputs[chan].T,
                                 return_cov=False)
             elif self.gp_code_name == 'celerite':
-                gp.compute(self.kernel_inputs[chan][0], unc_fit)
-                mu = gp.predict(residuals, self.kernel_inputs[chan][0])
+                gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
+                mu = gp.predict(residuals, return_cov=False)
             elif self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(residuals, noise=unc_fit).gp
                 mu = cond_gp.loc
@@ -235,7 +240,7 @@ class GPModel(Model):
 
         # get the kernel which is the sum of the individual kernel functions
         kernel = self.get_kernel(self.kernel_types[0], 0, c)
-        for k in range(self.nkernels):
+        for k in range(1, self.nkernels):
             kernel += self.get_kernel(self.kernel_types[k], k, c)
 
         # Make the gp object
@@ -276,60 +281,54 @@ class GPModel(Model):
         AssertionError
             Celerite currently only supports a Matern32 kernel.
         """
-        # get metric and amplitude for the current kernel and channel
-        amp = self.coeffs[c, k, 0]
-        metric = (1./np.exp(self.coeffs[c, k, 1]))**2
-
         if self.gp_code_name == 'george':
+            # get metric and amplitude for the current kernel and channel
+            amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
+            metric = (1./np.exp(self.coeffs[c, k, 1]))**2
+
             if kernel_name == 'Matern32':
-                kernel = kernels.Matern32Kernel(metric, ndim=self.nkernels,
-                                                axes=k)
+                kernel = amp*kernels.Matern32Kernel(
+                    metric, ndim=self.nkernels, axes=k)
             elif kernel_name == 'ExpSquared':
-                kernel = kernels.ExpSquaredKernel(metric, ndim=self.nkernels,
-                                                  axes=k)
+                kernel = amp*kernels.ExpSquaredKernel(
+                    metric, ndim=self.nkernels, axes=k)
             elif kernel_name == 'RationalQuadratic':
-                kernel = kernels.RationalQuadraticKernel(log_alpha=1,
-                                                         metric=metric,
-                                                         ndim=self.nkernels,
-                                                         axes=k)
+                kernel = amp*kernels.RationalQuadraticKernel(
+                    log_alpha=1, metric=metric, ndim=self.nkernels, axes=k)
             elif kernel_name == 'Exp':
-                kernel = kernels.ExpKernel(metric, ndim=self.nkernels, axes=k)
+                kernel = amp*kernels.ExpKernel(
+                    metric, ndim=self.nkernels, axes=k)
             else:
                 raise AssertionError(f'The kernel {kernel_name} is not in the '
                                      'currently supported list of kernels for '
                                      'george which includes:\nMatern32, '
                                      'ExpSquared, RationalQuadratic, Exp.')
-
-            # Setting the amplitude
-            kernel *= kernels.ConstantKernel(amp, ndim=self.nkernels, axes=k)
         elif self.gp_code_name == 'celerite':
-            if kernel_name == 'Matern32':
-                kernel = celerite.terms.Matern32Term(log_sigma=1,
-                                                     log_rho=metric)
-            else:
-                raise AssertionError('Celerite currently only supports a '
-                                     'Matern32 kernel')
+            # get metric and amplitude for the current kernel and channel
+            amp = self.coeffs[c, k, 0]
+            metric = self.coeffs[c, k, 1]
 
-            # Setting the amplitude
-            kernel *= celerite.terms.RealTerm(log_a=amp, log_c=0)
+            kernel = celerite.terms.Matern32Term(log_sigma=amp,
+                                                 log_rho=metric)
         elif self.gp_code_name == 'tinygp':
+            # get metric and amplitude for the current kernel and channel
+            amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
+            metric = (1./np.exp(self.coeffs[c, k, 1]))**2
+
             if kernel_name == 'Matern32':
-                kernel = tinygp.kernels.Matern32(metric)
+                kernel = amp*tinygp.kernels.Matern32(metric)
             elif kernel_name == 'ExpSquared':
-                kernel = tinygp.kernels.ExpSquared(metric)
+                kernel = amp*tinygp.kernels.ExpSquared(metric)
             elif kernel_name == 'RationalQuadratic':
-                kernel = tinygp.kernels.RationalQuadratic(alpha=1,
-                                                          scale=metric)
+                kernel = amp*tinygp.kernels.RationalQuadratic(alpha=1,
+                                                              scale=metric)
             elif kernel_name == 'Exp':
-                kernel = tinygp.kernels.Exp(metric)
+                kernel = amp*tinygp.kernels.Exp(metric)
             else:
                 raise AssertionError(f'The kernel {kernel_name} is not in the '
                                      'currently supported list of kernels for '
                                      'tinygp which includes:\nMatern32, '
                                      'ExpSquared, RationalQuadratic, Exp.')
-
-            # Setting the amplitude
-            kernel *= tinygp.kernels.Constant(amp)
 
         return kernel
 
@@ -374,13 +373,13 @@ class GPModel(Model):
             residuals = flux-fit
 
             # set up GP with current parameters
-            gp = self.setup_GP(chan)
+            gp = self.setup_GP(c)
 
             if self.gp_code_name == 'george':
                 gp.compute(self.kernel_inputs[chan].T, unc_fit)
                 logL_temp = gp.lnlikelihood(residuals, quiet=True)
             elif self.gp_code_name == 'celerite':
-                gp.compute(self.kernel_inputs[chan][0], unc_fit)
+                gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
                 logL_temp = gp.log_likelihood(residuals)
             elif self.gp_code_name == 'tinygp':
                 cond = gp.condition(residuals, diag=unc_fit)
