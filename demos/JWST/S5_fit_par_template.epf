@@ -48,8 +48,8 @@ u2           0.84           'free'         0            1            U
 # --------------------
 c0           1.015          'free'         1            0.05         N
 c1           0              'free'         0            0.01         N
-# A            -5             'free'         -40          0            U
-# m            1              'free'         -10          10           U
+# A            -7             'free'         -15          0            U
+# m            -4             'free'         -6           0            U
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)

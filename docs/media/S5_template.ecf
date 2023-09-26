@@ -44,8 +44,9 @@ run_tol         0.1
 
 #GP inputs
 kernel_inputs   ['time'] #options: time
-kernel_class    ['ExpSquared'] #options: ExpSquared, Matern32, Exp, RationalQuadratic for george, Matern32 for celerite (sums of kernels possible for george separated by commas)
-GP_package      'george' #options: george, celerite
+kernel_class    ['Matern32'] #options: ExpSquared, Matern32, Exp, RationalQuadratic for george, Matern32 for celerite (sums of kernels possible for george separated by commas)
+GP_package      'celerite' #options: george, celerite
+useHODLR        False  # Set to True to use the HODLRSolver when using the george GP
 
 # Plotting controls
 interp          False   # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
