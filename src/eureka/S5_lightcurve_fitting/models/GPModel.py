@@ -19,7 +19,7 @@ except ModuleNotFoundError:
 class GPModel(Model):
     """Model for Gaussian Process (GP)"""
     def __init__(self, kernel_classes, kernel_inputs, lc, gp_code='george',
-                 normalize=False, **kwargs):
+                 normalize=False, useHODLR=False, **kwargs):
         """Initialize the GP model.
 
         Parameters
@@ -36,6 +36,9 @@ class GPModel(Model):
         normalize : bool; optional
             If True, normalize the covariate by mean subtracting it and
             dividing by the standard deviation. By default, False.
+        useHODLR : bool; optional
+            If True, use george's HODLRSolver instead of the default solver.
+            Only relevant if gp_code is 'george'. By default, False.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
@@ -54,6 +57,7 @@ class GPModel(Model):
         self.kernel_types = kernel_classes
         self.kernel_input_names = kernel_inputs
         self.kernel_inputs = None
+        self.useHODLR = useHODLR
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
         self.fit = np.ones_like(self.flux)
@@ -245,8 +249,11 @@ class GPModel(Model):
 
         # Make the gp object
         if self.gp_code_name == 'george':
-            gp = george.GP(kernel, mean=0, fit_mean=False)
-            #                solver=george.solvers.HODLRSolver)
+            if self.useHODLR:
+                solver = george.solvers.HODLRSolver
+            else:
+                solver = None
+            gp = george.GP(kernel, mean=0, fit_mean=False, solver=solver)
         elif self.gp_code_name == 'celerite':
             gp = celerite.GP(kernel, mean=0, fit_mean=False)
         elif self.gp_code_name == 'tinygp':
@@ -284,7 +291,7 @@ class GPModel(Model):
         if self.gp_code_name == 'george':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
-            metric = (1./np.exp(self.coeffs[c, k, 1]))**2
+            metric = np.exp(self.coeffs[c, k, 1]*2)
 
             if kernel_name == 'Matern32':
                 kernel = amp*kernels.Matern32Kernel(
@@ -313,7 +320,7 @@ class GPModel(Model):
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
-            metric = (1./np.exp(self.coeffs[c, k, 1]))**2
+            metric = np.exp(self.coeffs[c, k, 1]*2)
 
             if kernel_name == 'Matern32':
                 kernel = amp*tinygp.kernels.Matern32(metric)
