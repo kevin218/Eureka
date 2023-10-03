@@ -861,6 +861,26 @@ ld_file_white
 ^^^^^^^^^^^^^
 The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
 
+GP parameters
+'''''''''''''
+The following parameters control part of the GP model (if listed in run_myfuncs).
+
+kernel_inputs
+^^^^^^^^^^^^^
+Only used for fits with a GP. A list of the covariates to be used when fitting a GP to the model. At present, only GPs as a function of time are allowed, so this must be ['time']
+
+kernel_class
+^^^^^^^^^^^^
+Only used for fits with a GP. A list of the types of GP kernels to use. For the george GP package, this includes ExpSquared, Matern32, Exp, and RationalQuadratic. For the celerite package, this only includes Matern32. It is possible to sum multiple kernels possible for george by listing multiple kernels.
+
+GP_package
+^^^^^^^^^^
+Only used for fits with a GP. The Python GP package to use, with the options of 'george' or 'celerite'.
+
+useHODLR
+^^^^^^^^
+Only used for fits with a GP. If True and GP_package is set to 'george', use the (potentially faster) HODLRSolver instead of the (more robust) BasicSolver.
+
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''
@@ -1058,6 +1078,12 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
       - ``ypos`` - Coefficient for linear decorrelation against drift/jitter in the y direction (spatial direction for spectroscopy data).
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
+
+      - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
+      
+         Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
+         That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
+         If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.
 
    - White Noise Parameters - options are ``scatter_mult`` for a multiplier to the expected noise from Stage 3 (recommended), or ``scatter_ppm`` to directly fit the noise level in ppm.
 
