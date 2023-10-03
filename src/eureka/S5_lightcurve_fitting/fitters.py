@@ -1259,9 +1259,15 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         ds = xrio.makeDataset(ds)
         xrio.writeXR(fname, ds)
 
+    # Directory structure should not use expanded HW values
+    spec_hw_val = meta.spec_hw
+    bg_hw_val = meta.bg_hw
+    spec_hw_val //= meta.expand
+    if not isinstance(bg_hw_val, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw_val //= meta.expand
     # Save the S5 outputs in a human readable ecsv file
-    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
-        '_bg'+str(meta.bg_hw//meta.expand)
+    event_ap_bg = meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg'+str(bg_hw_val)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),
