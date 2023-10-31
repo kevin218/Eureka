@@ -50,12 +50,15 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     model_sys_full = model.syseval()
     model_phys_full, new_time, nints_interp = \
         model.physeval(interp=meta.interp)
-    model_lc = model.eval()
+    model_noGP = model.eval(incl_GP=False)
+    model_gp = model.GPeval(model_noGP)
+    model_lc = model_noGP+model_gp
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_lc)
+        gp = np.ma.copy(model_gp)
         model_sys = model_sys_full
         model_phys = model_phys_full
         color = lc.colors[i]
@@ -65,16 +68,17 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model, model_sys = split([flux, unc, model, model_sys],
-                                                meta.nints, channel)
+            flux, unc, model, model_sys, gp = \
+                split([flux, unc, model, model_sys, gp],
+                      meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
             # interpolated) time axis
             model_phys = split([model_phys, ], nints_interp, channel)[0]
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, unc, model, model_sys = \
-                split([lc.time, flux, unc, model, model_sys],
+            time, flux, unc, model, model_sys, gp = \
+                split([lc.time, flux, unc, model, model_sys, gp],
                       meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
@@ -96,7 +100,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         binned_time = util.binData(time, nbin_plot)
         binned_flux = util.binData(flux, nbin_plot)
         binned_unc = util.binData(unc, nbin_plot, err=True)
-        binned_normflux = util.binData(flux/model_sys, nbin_plot)
+        binned_normflux = util.binData(flux/model_sys-gp, nbin_plot)
         binned_res = util.binData(residuals, nbin_plot)
 
         fig = plt.figure(5101, figsize=(8, 6))
@@ -166,16 +170,29 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_sys_full = model.syseval()
+    model_sys = model.syseval()
+    model_noGP = model.eval(incl_GP=False)
+    model_gp = model.GPeval(model_noGP)
     model_phys_full, new_time, nints_interp = \
         model.physeval(interp=meta.interp)
 
+    flux_full = np.ma.copy(lc.flux)
+    unc_full = np.ma.copy(lc.unc_fit)
+    flux_full = flux_full/model_sys-model_gp
+
+    # Normalize to zero flux at eclipse
+    flux_full -= 1
+    model_phys_full -= 1
+
+    # Convert to ppm
+    model_phys_full *= 1e6
+    flux_full *= 1e6
+    unc_full *= 1e6
+
     for i, channel in enumerate(lc.fitted_channels):
-        flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(lc.unc_fit)
-        model_sys = model_sys_full
-        model_phys = model_phys_full
-        flux /= model_sys
+        flux = np.ma.copy(flux_full)
+        unc = np.ma.copy(unc_full)
+        model_phys = np.ma.copy(model_phys_full)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
@@ -183,8 +200,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model, model_sys = split([flux, unc, model, model_sys],
-                                                meta.nints, channel)
+            flux, unc, model = split([flux, unc], meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
             # interpolated) time axis
@@ -192,9 +208,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                                nints_interp, channel)[0]
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, unc, model, model_sys = \
-                split([lc.time, flux, unc, model, model_sys],
-                      meta.nints, channel)
+            time, flux, unc, model = split([lc.time, flux, unc],
+                                           meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
             # interpolated) time axis
@@ -203,15 +218,6 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         else:
             time = lc.time
             new_timet = new_time
-
-        # Normalize to zero flux at eclipse
-        flux -= 1
-        model_phys -= 1
-
-        # Convert to ppm
-        model_phys *= 1e6
-        flux *= 1e6
-        unc *= 1e6
 
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None:
@@ -326,7 +332,7 @@ def plot_rms(lc, model, meta, fitter):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval()
+    model_lc = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
@@ -634,7 +640,7 @@ def plot_res_distr(lc, model, meta, fitter):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval()
+    model_lc = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
         plt.figure(5302, figsize=(8, 6))
@@ -700,30 +706,30 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_with_GP = model.eval(incl_GP=True)
-    model_sys_full = model.syseval()
     model_lc = model.eval()
     model_GP = model.GPeval(model_lc)
+    model_with_GP = model_lc + model_GP
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(lc.unc_fit)
         model = np.ma.copy(model_with_GP)
-        model_sys = model_sys_full
-        model_GP_component = model_GP
+        model_GP_component = np.ma.copy(model_GP)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
             time = lc.time
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model, model_sys, model_GP_component = \
-                split([flux, unc, model, model_sys, model_GP_component],
+            flux, unc, model, model_GP_component = \
+                split([flux, unc, model, model_GP_component],
                       meta.nints, channel)
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, unc, model, model_sys, model_GP_component = \
-                split([lc.time, flux, unc, model, model_sys,
-                       model_GP_component], meta.nints, channel)
+            time, flux, unc, model, model_GP_component = \
+                split([lc.time, flux, unc, model, model_GP_component],
+                      meta.nints, channel)
+        else:
+            time = lc.time
 
         residuals = flux - model
         fig = plt.figure(5102, figsize=(8, 6))

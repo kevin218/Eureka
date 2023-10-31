@@ -16,7 +16,8 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
+from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
+                         update_uncertainty)
 from . import plots_s5 as plots
 from ..lib import astropytable
 from ..lib.split_channels import get_trim
@@ -75,6 +76,15 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter=calling_function+'StartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter=calling_function+'StartingPoint')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -120,22 +130,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
@@ -317,6 +312,15 @@ def emceefitter(lc, model, meta, log, **kwargs):
                           priortype, freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='emceeStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='emceeStartingPoint')
+
     # Initialize tread pool
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
         pool = Pool(meta.ncpu)
@@ -379,22 +383,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
@@ -793,6 +782,15 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='dynestyStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='dynestyStartingPoint')
+
     # START DYNESTY
     l_args = [lc, model, freenames]
 
@@ -856,22 +854,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
@@ -1003,22 +986,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
@@ -1307,8 +1275,15 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                           axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     # Evaluate each individual model for easier access outside of Eureka!
-    individual_models = np.array([[comp.name, comp.eval()]
-                                  for comp in model.components], dtype=object)
+    individual_models = []
+    for comp in model.components:
+        if comp.name != 'GP':
+            individual_models.append([comp.name, comp.eval()])
+        else:
+            fit = model.eval(incl_GP=False)
+            individual_models.append([comp.name, comp.eval(fit)])
+    individual_models = np.array(individual_models, dtype=object)
+
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta, lc.time,
