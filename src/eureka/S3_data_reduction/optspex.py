@@ -11,7 +11,7 @@ from ..lib import smooth
 from . import plots_s3
 
 
-def standard_spectrum(data, apdata, aperr):
+def standard_spectrum(data, apdata, apmask, aperr):
     """Compute the standard box spectrum.
 
     Parameters
@@ -20,6 +20,8 @@ def standard_spectrum(data, apdata, aperr):
         The Dataset object.
     apdata : ndarray
         The pixel values in the aperture region.
+    apmask : ndarray
+        The outlier mask in the aperture region.
     aperr : ndarray
         The noise values in the aperture region.
 
@@ -28,8 +30,44 @@ def standard_spectrum(data, apdata, aperr):
     data : Xarray Dataset
         The updated Dataset object in which the spectrum data will stored.
     """
-    data['stdspec'] = (['time', 'x'], np.sum(apdata, axis=1))
-    data['stdvar'] = (['time', 'x'], np.sum(aperr ** 2, axis=1))
+    # Replace masked pixels with spectral neighbors
+    apdata_cleaned = np.copy(apdata)
+    aperr_cleaned = np.copy(aperr)
+    for t, y, x in np.array(np.where(apmask == 0)).T:
+        # Do not extend to negative indices (short and long wavelengths
+        # do not have similar profiles)
+        lower = x-2
+        if lower < 0:
+            lower = 0
+        # Get mask for current neighbors
+        mask_temp = np.append(apmask[t, y, lower:x],
+                              apmask[t, y, x+1:x+3])
+
+        # Gather current data neighbors and apply mask
+        replacement_val = mask_temp*np.append(apdata_cleaned[t, y, lower:x],
+                                              apdata_cleaned[t, y, x+1:x+3])
+        # Figure out how many data neighbors are being used
+        denom = np.sum(mask_temp)
+        # Compute the mean of the unmasked data neighbors
+        replacement_val = np.nansum(replacement_val)/denom
+        # Replace masked value with the newly computed data value
+        apdata_cleaned[t, y, x] = replacement_val
+
+        # Gather current err neighbors and apply mask
+        replacement_val = mask_temp*np.append(aperr_cleaned[t, y, lower:x],
+                                              aperr_cleaned[t, y, x+1:x+3])
+        # Compute the mean of the unmasked err neighbors
+        replacement_val = np.nansum(replacement_val)/denom
+        # Replace masked value with the newly computed err value
+        aperr_cleaned[t, y, x] = replacement_val
+
+    # Compute standard spectra
+    stdspec = np.nansum(apdata_cleaned, axis=1)
+    stdvar = np.nansum(aperr_cleaned**2, axis=1)
+
+    # Store results in data xarray
+    data['stdspec'] = (['time', 'x'], stdspec)
+    data['stdvar'] = (['time', 'x'], stdvar)
     data['stdspec'].attrs['flux_units'] = \
         data.flux.attrs['flux_units']
     data['stdspec'].attrs['time_units'] = \
@@ -549,8 +587,8 @@ def clean_median_flux(data, meta, log, m):
             log.writelog('  Using a default value of median_thresh=5',
                          mute=(not meta.verbose))
             meta.median_thresh = 5
-        outliers = sigma_clip(residuals, sigma=meta.median_thresh,
-                              maxiters=None, axis=1, cenfunc='median')
+        outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
+                              axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
 
         # Interpolate over bad pixels
         clean_med = np.zeros((ny, nx))
@@ -641,7 +679,7 @@ def optimize_wrapper(data, meta, log, apdata, apmask, apbg, apv0, gain=1,
 
     # Select median frame over aperture region
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
     apmedflux = data.medflux[ap_y1:ap_y2].values
 
     # Perform optimal extraction on each of the frames
@@ -766,15 +804,17 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
             expected = profile*spectrum
             variance = np.abs(expected + bg) / Q + v0
             # STEP 7: Mask cosmic ray hits
-            stdevs = np.abs(subdata - expected)*submask / np.sqrt(variance)
+            stdevs = np.abs(subdata - expected)*submask/np.sqrt(variance)
+            submask[np.isnan(stdevs)] = 0
             if meta.isplots_S3 >= 5 and n < meta.int_end:
                 plots_s3.stddev_profile(meta, n, m, stdevs, p7thresh)
             isoutliers = False
-            if len(stdevs) > 0:
-                # Find worst data point in each column
-                loc = np.argmax(stdevs, axis=0)
-                # Mask data point if std is > p7thresh
-                for i in range(nx):
+            for i in range(nx):
+                # Only continue if there are unmasked values
+                if np.sum(submask[:, i]) > 0:
+                    # Find worst data point in each column
+                    loc = np.nanargmax(stdevs[:, i])
+
                     if meta.isplots_S3 == 8:
                         try:
                             plt.figure(3803)
@@ -788,10 +828,11 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                         except:
                             # FINDME: Need to only catch the expected exception
                             pass
-                    if stdevs[loc[i], i] > p7thresh:
+                    # Mask data point if std is > p7thresh
+                    if stdevs[loc, i] > p7thresh:
                         isnewprofile = True
                         isoutliers = True
-                        submask[loc[i], i] = 0
+                        submask[loc, i] = 0
                         # Generate plot
                         if meta.isplots_S3 >= 5 and n < meta.int_end:
                             plots_s3.subdata(meta, i, n, m, subdata, submask,
@@ -800,9 +841,14 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                         if sum(submask[:, i]) < ny/2.:
                             submask[:, i] = 0
             # STEP 8: Extract optimal spectrum
-            denom = np.sum(profile*profile*submask/variance, axis=0)
+            with warnings.catch_warnings():
+                # Ignore warnings about columns that are completely masked
+                warnings.filterwarnings(
+                    "ignore", "invalid value encountered in")
+                denom = np.nansum(profile*profile*submask/variance, axis=0)
             denom[np.where(denom == 0)] = np.inf
-            spectrum = np.sum(profile*submask*subdata/variance, axis=0) / denom
+            spectrum = np.nansum(profile*submask*subdata/variance,
+                                 axis=0)/denom
 
     # Calculate variance of optimal spectrum
     specvar = np.sum(profile*submask, axis=0) / denom

@@ -109,8 +109,12 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta.run_s4 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand,
+                                             bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -122,10 +126,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Load in the S3 metadata used for this particular aperture pair
             meta = load_specific_s3_meta_info(meta)
-
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
+            
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
-                                                ap=meta.spec_hw, bg=meta.bg_hw)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
             # Copy existing S3 log file and resume log
             meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
@@ -286,8 +296,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
                 for w in meta.mask_columns:
                     log.writelog(f"Masking absolute pixel column {w}.")
-                    offset = spec.optmask.x[0]
-                    spec.optmask[:, w-offset] = True
+                    index = np.where(spec.optmask.x == w)[0][0]
+                    spec.optmask[:, index] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -583,7 +593,12 @@ def load_specific_s3_meta_info(meta):
     """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

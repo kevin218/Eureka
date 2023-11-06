@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import nircam, sigrej
-from ..lib.util import read_time
+from ..lib.util import read_time, supersample
 
 
 def read(filename, data, meta, log):
@@ -54,6 +54,7 @@ def read(filename, data, meta, log):
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
         data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
+    meta.grating = data.attrs['mhdr']['GRATING']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
@@ -63,6 +64,17 @@ def read(filename, data, meta, log):
     int_times = hdulist['INT_TIMES', 1].data
 
     meta.photometry = False  # Photometry for NIRSpec not implemented yet.
+
+    # Increase pixel resolution along cross-dispersion direction
+    if hasattr(meta, 'expand') and meta.expand > 1:
+        log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
+                     f'to {sci.shape[1]*meta.expand} pixels...',
+                     mute=(not meta.verbose))
+        sci = supersample(sci, meta.expand, 'flux', axis=1)
+        err = supersample(err, meta.expand, 'err', axis=1)
+        dq = supersample(dq, meta.expand, 'cal', axis=1)
+        v0 = supersample(v0, meta.expand, 'flux', axis=1)
+        wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
     # Record integration mid-times in BMJD_TDB
     if (hasattr(meta, 'time_file') and meta.time_file is not None):
@@ -82,6 +94,12 @@ def read(filename, data, meta, log):
     flux_units = data.attrs['shdr']['BUNIT']
     time_units = 'BMJD_TDB'
     wave_units = 'microns'
+
+    if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
+            meta.bg_hw == meta.bg_hw_range[0]):
+        # Only apply super-sampling expansion once
+        meta.ywindow[0] *= meta.expand
+        meta.ywindow[1] *= meta.expand
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
                                        name='flux')
@@ -225,3 +243,54 @@ def cut_aperture(data, meta, log):
         Initial version based on the code in s3_reduce.py
     """
     return nircam.cut_aperture(data, meta, log)
+
+
+def calibrated_spectra(data, meta, log, cutoff=1e-4):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+    cutoff : float
+        Flux values above the cutoff will be set to zero.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+
+    Notes
+    -----
+    History:
+
+    - 2023-07-17, KBS
+        Initial version.
+    """
+    # Mask uncalibrated BG region
+    log.writelog("  Setting uncalibrated pixels to zero...",
+                 mute=(not meta.verbose))
+    boolmask = np.abs(data.flux.data) > cutoff
+    data['flux'].data = np.where(np.abs(data.flux.data) >
+                                 cutoff, 0,
+                                 data.flux.data)
+    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
+                 "pixels in total.", mute=(not meta.verbose))
+    
+    # Convert from MJy to mJy
+    log.writelog("  Converting from MJy to mJy...",
+                 mute=(not meta.verbose))
+    data['flux'].data *= 1e9
+    data['err'].data *= 1e9
+    data['v0'].data *= 1e9
+    
+    # Update units
+    data['flux'].flux_units = 'mJy'
+    data['err'].flux_units = 'mJy'
+    data['v0'].flux_units = 'mJy'
+
+    return data

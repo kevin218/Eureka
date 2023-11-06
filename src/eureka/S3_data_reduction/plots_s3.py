@@ -116,8 +116,8 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
-    fig1.set_tight_layout(True)
-    fig2.set_tight_layout(True)
+    fig1.set_layout_engine('tight')
+    fig2.set_layout_engine('tight')
     fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
     fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
@@ -400,8 +400,8 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         Outlier mask.
     expected : ndarray
         Expected profile
-    loc : ndarray
-        Location of worst outliers.
+    loc : int
+        Location of worst outlier.
     variance : ndarray
         Variance of background subtracted data.
     '''
@@ -415,7 +415,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
                  fmt='.', color='b')
     plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
              expected[np.where(submask[:, i])[0], i], 'g-')
-    plt.plot((loc[i]), (subdata[loc[i], i]), 'ro')
+    plt.plot((loc), (subdata[loc, i]), 'ro')
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
@@ -540,9 +540,9 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
 
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
-              extent=[xmin, xmax, ymin, ymax])
-    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
-    a0.hlines([ymin+meta.src_ypos+meta.spec_hw,
+              extent=[xmin, xmax, ymin, ymax + 1])
+    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2-1], xmin, xmax, color='orange')
+    a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
@@ -550,16 +550,16 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap=cmap,
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
-    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
+    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2-1], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
-    a1.hlines([ymin+meta.src_ypos+meta.spec_hw,
+    a1.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
     a1.legend(loc='upper right', fontsize=8)
     a1.axes.set_xlabel("Flux [e-]")
     a1.axes.set_xlim(vmin, vmax)
-    a1.axes.set_ylim(ymin, ymax)
+    a1.axes.set_ylim(ymin, ymax + 1)
     a1.axes.set_yticklabels([])
     # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
@@ -887,10 +887,10 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+    ax[1, 0].imshow(img, origin='lower', aspect='auto')
 
     # X gaussian plot
-    norm_x_factor = np.sum(np.nansum(img, axis=0))
+    norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
                   np.nansum(img, axis=0)/norm_x_factor)
     x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
@@ -903,7 +903,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
-    norm_y_factor = np.sum(np.nansum(img, axis=0))
+    norm_y_factor = np.nansum(np.nansum(img, axis=0))
     ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))
     y_plot = np.linspace(0, len(np.nansum(img, axis=1)))

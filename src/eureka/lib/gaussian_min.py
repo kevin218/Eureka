@@ -202,7 +202,7 @@ def mingauss(img, yxguess, meta):
     # Fit the gaussian width by minimizing minfunc with the Nelder-Mead method.
     results = minimize(minfunc, initial_guess,
                        args=(frame, x_mesh, y_mesh, x, y),
-                       method='Nelder-Mead',
+                       method='Powell',
                        bounds=[(1e-9, None), (1e-9, None), (1e-9, None)])
     sy = results.x[2]
     sx = results.x[1]

@@ -49,13 +49,13 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@v0.10#egg=eureka[jwst]
+	pip install -e 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v0.10'
 
 Other specific branches can be installed using:
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
+	pip install 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@mybranchname'
 
 In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
 
@@ -110,7 +110,7 @@ CRDS Environment Variables
 
 ``Eureka!`` installs the JWST Calibration Pipeline as part of its requirements, and this also requires users to set the proper environment
 variables so that it can download the proper reference files needed to run the pipeline. For users not on the internal STScI network,
-two environment variables need to be set to enable this functionality. In your ``~/.zshrc`` (for Mac users) or ``~/.bashrc`` file (for bash
+two environment variables need to be set to enable this functionality. In your ``~/.zshrc`` (for zsh users) or ``~/.bashrc`` or ``~/.bash_profile`` file (for bash
 users), or other shell initialization file, add these two lines (specifying your desired location to cache the CRDS files,
 e.g. ``/Users/your_name/crds_cache`` for Mac users or ``/home/your_name/crds_cache`` for Linux users):
 
