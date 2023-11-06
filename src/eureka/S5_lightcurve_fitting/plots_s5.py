@@ -332,7 +332,7 @@ def plot_rms(lc, model, meta, fitter):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval(incl_GP=True)
+    model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
@@ -640,7 +640,7 @@ def plot_res_distr(lc, model, meta, fitter):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval(incl_GP=True)
+    model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
         plt.figure(5302, figsize=(8, 6))
