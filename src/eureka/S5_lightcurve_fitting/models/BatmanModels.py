@@ -25,11 +25,13 @@ class BatmanTransitModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
+
+        log = kwargs.get('log')
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
@@ -42,7 +44,7 @@ class BatmanTransitModel(Model):
         
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
-            print("Using the following limb-darkening values:")
+            log.writelog("Using the following limb-darkening values:")
             self.ld_array = kwargs.get('ld_coeffs')
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
@@ -54,7 +56,7 @@ class BatmanTransitModel(Model):
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
                         ld_val = ld_array[chan][param-1]
-                        print(item, ld_val)
+                        log.writelog(f"{item}, {ld_val}")
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value
@@ -181,12 +183,9 @@ class BatmanEclipseModel(Model):
         self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
                             and 'Rs' in self.parameters.dict.keys())
         if self.compute_ltt:
-            if self.multwhite:
-                # Compute ltt correction for each white LC
-                self.compute_ltt_once = False
             # Check if we need to do ltt correction for each
             # wavelength or only one
-            elif self.nchannel_fitted > 1:
+            if self.nchannel_fitted > 1:
                 # Check whether the parameters are all either fixed or shared
                 once_type = ['shared', 'fixed']
                 self.compute_ltt_once = \
