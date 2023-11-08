@@ -9,7 +9,7 @@ dependencies:
     - batman-package
     - bokeh[version='<3.0']
     - ccdproc
-    - celerite # Needed for GP
+    - celerite2 # Needed for GP
     - corner
     - cython
     - dynesty[version='>1.0'] # Lower limit needed for specific arguments
