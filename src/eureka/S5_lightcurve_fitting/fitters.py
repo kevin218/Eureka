@@ -526,7 +526,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         with h5py.File(full_fname, 'r') as hf:
             samples = hf['samples'][:]
     else:
-        samples = ds.to_array().T
+        samples = ds.to_array().T.values
     log.writelog(f'Old chain path: {full_fname}')
 
     # Initialize the walkers using samples from the old chain
@@ -1267,7 +1267,13 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         # Only divide if value is not a string (spectroscopic modes)
         bg_hw_val //= meta.expand
     # Save the S5 outputs in a human readable ecsv file
-    event_ap_bg = meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg'+str(bg_hw_val)
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
+        '_bg'+str(bg_hw)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),
