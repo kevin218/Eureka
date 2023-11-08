@@ -1,7 +1,7 @@
 import numpy as np
 import george
 from george import kernels
-import celerite
+import celerite2 as celerite
 
 from .Model import Model
 from ..likelihood import update_uncertainty
@@ -179,7 +179,7 @@ class GPModel(Model):
                                 return_cov=False)
             elif self.gp_code_name == 'celerite':
                 gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
-                mu = gp.predict(residuals, return_cov=False)
+                mu = gp.predict(residuals)
             elif self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(residuals, noise=unc_fit).gp
                 mu = cond_gp.loc
@@ -255,7 +255,7 @@ class GPModel(Model):
                 solver = None
             gp = george.GP(kernel, mean=0, fit_mean=False, solver=solver)
         elif self.gp_code_name == 'celerite':
-            gp = celerite.GP(kernel, mean=0, fit_mean=False)
+            gp = celerite.GaussianProcess(kernel, mean=0, fit_mean=False)
         elif self.gp_code_name == 'tinygp':
             if self.nchannel_fitted > 1:
                 chan = self.fitted_channels[c]
@@ -312,11 +312,12 @@ class GPModel(Model):
                                      'ExpSquared, RationalQuadratic, Exp.')
         elif self.gp_code_name == 'celerite':
             # get metric and amplitude for the current kernel and channel
-            amp = self.coeffs[c, k, 0]
-            metric = self.coeffs[c, k, 1]
+            amp = np.exp(self.coeffs[c, k, 0])
+            metric = np.exp(self.coeffs[c, k, 1])
 
-            kernel = celerite.terms.Matern32Term(log_sigma=amp,
-                                                 log_rho=metric)
+            kernel = celerite.terms.Matern32Term(sigma=1, rho=metric)
+            # Setting the amplitude
+            kernel *= celerite.terms.RealTerm(a=amp, c=0)
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
