@@ -857,6 +857,26 @@ ld_file_white
 ^^^^^^^^^^^^^
 The same type of parameter as ld_file, but for the limb-darkening coefficients to be used for the white-light fit. This parameter is required if ld_file is not None and any of your EPF parameters are set to white_free or white_fixed. If no parameter is set to white_free or white_fixed, then this parameter is ignored.
 
+GP parameters
+'''''''''''''
+The following parameters control part of the GP model (if listed in run_myfuncs).
+
+kernel_inputs
+^^^^^^^^^^^^^
+Only used for fits with a GP. A list of the covariates to be used when fitting a GP to the model. At present, only GPs as a function of time are allowed, so this must be ['time']
+
+kernel_class
+^^^^^^^^^^^^
+Only used for fits with a GP. A list of the types of GP kernels to use. For the george GP package, this includes ExpSquared, Matern32, Exp, and RationalQuadratic. For the celerite package, this only includes Matern32. It is possible to sum multiple kernels possible for george by listing multiple kernels.
+
+GP_package
+^^^^^^^^^^
+Only used for fits with a GP. The Python GP package to use, with the options of 'george' or 'celerite'.
+
+useHODLR
+^^^^^^^^
+Only used for fits with a GP. If True and GP_package is set to 'george', use the (potentially faster) HODLRSolver instead of the (more robust) BasicSolver.
+
 
 Least-Squares Fitting Parameters
 ''''''''''''''''''''''''''''''''
