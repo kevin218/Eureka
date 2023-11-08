@@ -281,7 +281,7 @@ class BatmanEclipseModel(Model):
             bm_params.u = []
 
             if self.compute_ltt:
-                if c == 0 or not self.compute_ltt_once or self.multwhite:
+                if c == 0 or not self.compute_ltt_once:
                     self.adjusted_time = correct_light_travel_time(time,
                                                                    bm_params)
             else:

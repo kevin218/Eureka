@@ -682,7 +682,8 @@ def load_s5_saves(meta, log, fit_methods):
     else:
         # No samples for lsq, so just shape it as a single value
         if meta.sharedp:
-            meta = parse_s5_saves(meta, log, fit_methods, 'shared')
+            meta.spectrum_median, meta.spectrum_err = \
+                            parse_s5_saves(meta, log, fit_methods, 'shared')
         else:
             meta = parse_unshared_saves(meta, log, fit_methods)
         samples = np.array(meta.spectrum_median)

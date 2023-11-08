@@ -439,7 +439,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                     "_Meta_Save"), save=[])
             else:
                 for channel in range(chanrng):
-                    log.writelog(f"\nStarting Channel {channel+1} of "
+                    log.writelog(f"\nStarting Channel {channel} of "
                                  f"{chanrng}\n")
 
                     # Get the flux and error measurements for
