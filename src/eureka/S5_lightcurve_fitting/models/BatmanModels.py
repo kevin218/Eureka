@@ -25,11 +25,13 @@ class BatmanTransitModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
+
+        log = kwargs.get('log')
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
@@ -42,17 +44,19 @@ class BatmanTransitModel(Model):
         
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
+            log.writelog("Using the following limb-darkening values:")
             self.ld_array = kwargs.get('ld_coeffs')
-            if self.ld_from_S4:
-                self.ld_array = self.ld_array[len_params-2]
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
+                if self.ld_from_S4:
+                    ld_array = self.ld_array[len_params-2]
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
-                        ld_val = self.ld_array[chan][param-1]
+                        ld_val = ld_array[chan][param-1]
+                        log.writelog(f"{item}, {ld_val}")
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value
@@ -277,7 +281,7 @@ class BatmanEclipseModel(Model):
             bm_params.u = []
 
             if self.compute_ltt:
-                if c == 0 or not self.compute_ltt_once or self.multwhite:
+                if c == 0 or not self.compute_ltt_once:
                     self.adjusted_time = correct_light_travel_time(time,
                                                                    bm_params)
             else:

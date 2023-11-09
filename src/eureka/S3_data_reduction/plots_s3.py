@@ -533,7 +533,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304)
+    plt.figure(3304, figsize=(8, 4))
     plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))

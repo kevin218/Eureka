@@ -179,7 +179,7 @@ class GPModel(Model):
                                 return_cov=False)
             elif self.gp_code_name == 'celerite':
                 gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
-                mu = gp.predict(residuals, return_cov=False)
+                mu = gp.predict(residuals)
             elif self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(residuals, noise=unc_fit).gp
                 mu = cond_gp.loc
@@ -315,8 +315,9 @@ class GPModel(Model):
             amp = self.coeffs[c, k, 0]
             metric = self.coeffs[c, k, 1]
 
-            kernel = celerite.terms.Matern32Term(log_sigma=amp,
-                                                 log_rho=metric)
+            kernel = celerite.terms.Matern32Term(log_sigma=0, log_rho=metric)
+            # Setting the amplitude
+            kernel *= celerite.terms.RealTerm(log_a=amp, log_c=-10)
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
