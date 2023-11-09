@@ -105,6 +105,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -299,15 +301,36 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.use_generate_ld:
                 # Load limb-darkening coefficients made in Stage 4
                 ld_str = meta.use_generate_ld
-                if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been " +
-                                    "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients " +
-                             f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values,
-                             lc[ld_str + '_quad'].values,
-                             lc[ld_str + '_nonlin_3para'].values,
-                             lc[ld_str + '_nonlin_4para'].values]
+                if meta.multwhite:
+                    nwhitechan = len(meta.inputdirlist) + 1
+                    lin_c1 = np.zeros((nwhitechan, 1))
+                    quad = np.zeros((nwhitechan, 2))
+                    nonlin_3 = np.zeros((nwhitechan, 3))
+                    nonlin_4 = np.zeros((nwhitechan, 4))
+                    # Load LD coefficient from each lc
+                    for p in range(nwhitechan):
+                        if not hasattr(lc_whites[p], ld_str + '_lin'):
+                            raise Exception("Exotic-ld coefficients have not" +
+                                            " been calculated in Stage 4")
+                        log.writelog("\nUsing generated limb-darkening " +
+                                     f"coefficients with {ld_str} \n")
+                        lin_c1[p] = lc_whites[p][ld_str + '_lin'].values[0]
+                        quad[p] = lc_whites[p][ld_str + '_quad'].values[0]
+                        nonlin_3[p] = lc_whites[p][ld_str + '_nonlin_3para'] \
+                            .values[0]
+                        nonlin_4[p] = lc_whites[p][ld_str + '_nonlin_4para'] \
+                            .values[0]
+                    ld_coeffs = [lin_c1, quad, nonlin_3, nonlin_4]
+                else:
+                    if not hasattr(lc, ld_str + '_lin'):
+                        raise Exception("Exotic-ld coefficients have not" +
+                                        " been calculated in Stage 4")
+                    log.writelog("\nUsing generated limb-darkening " +
+                                 f"coefficients with {ld_str} \n")
+                    ld_coeffs = [lc[ld_str + '_lin'].values,
+                                 lc[ld_str + '_quad'].values,
+                                 lc[ld_str + '_nonlin_3para'].values,
+                                 lc[ld_str + '_nonlin_4para'].values]
             elif meta.ld_file:
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
@@ -418,7 +441,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                     "_Meta_Save"), save=[])
             else:
                 for channel in range(chanrng):
-                    log.writelog(f"\nStarting Channel {channel+1} of "
+                    log.writelog(f"\nStarting Channel {channel} of "
                                  f"{chanrng}\n")
 
                     # Get the flux and error measurements for

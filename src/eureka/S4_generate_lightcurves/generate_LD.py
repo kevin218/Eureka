@@ -64,16 +64,17 @@ def exotic_ld(meta, spec, log, white=False):
 
     # Compute wavelength ranges
     if white:
-        wavelength_range = np.array([meta.wave_min, meta.wave_max])
+        wavelength_range = np.array([meta.wave_min, meta.wave_max],
+                                    dtype=float)
         wavelength_range = np.repeat(wavelength_range[np.newaxis],
                                      meta.nspecchan, axis=0)
     else:
-        wsdata = np.array(meta.wave_low)
+        wsdata = np.array(meta.wave_low, dtype=float)
         wsdata = np.append(wsdata, meta.wave_hi[-1])
         wavelength_range = []
         for i in range(meta.nspecchan):
             wavelength_range.append([wsdata[i], wsdata[i+1]])
-        wavelength_range = np.array(wavelength_range)
+        wavelength_range = np.array(wavelength_range, dtype=float)
 
     # wavelength range needs to be in Angstrom
     if spec.wave_1d.attrs['wave_units'] == 'microns':
