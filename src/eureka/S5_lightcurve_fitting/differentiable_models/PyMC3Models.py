@@ -298,6 +298,11 @@ class CompositePyMC3Model(PyMC3Model):
             # Add the PyMC3 model to each component
             component.model = self.model
 
+        self.GP = False
+        for component in self.components:
+            if component.modeltype == 'GP':
+                self.GP = True
+
         # Setup PyMC3 model parameters
         with self.model:
 

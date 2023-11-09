@@ -297,7 +297,7 @@ class Parameters:
             The combined model
         """
         # Make sure it is the right type
-        if not type(self) == type(other):
+        if not isinstance(self, type(other)):
             raise TypeError('Only another Parameters instance may be added.')
 
         # Combine the model parameters too
