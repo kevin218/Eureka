@@ -96,7 +96,7 @@ class LightCurve(m.Model):
 
         # Set the data arrays
         if unc is not None:
-            if type(unc) == float or type(unc) == np.float64:
+            if isinstance(unc, (float, np.float64)):
                 log.writelog('Warning: Only one uncertainty input, assuming '
                              'constant uncertainty.')
             elif (len(time)*self.nchannel_fitted != len(unc)
