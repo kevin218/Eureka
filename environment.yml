@@ -1,4 +1,4 @@
-name: eureka
+name: eureka2
 channels:
     - conda-forge
     - defaults
@@ -10,7 +10,6 @@ dependencies:
     - ccdproc
     - celerite # Needed for GP
     - corner
-    - cython
     - dynesty[version='>1.0'] # Lower limit needed for specific arguments
     - emcee[version='>3.0.0'] # Lower limit needed for specific arguments
     - flake8 # Needed for testing
@@ -40,7 +39,7 @@ dependencies:
         - crds
         - exotic-ld
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.10.2
+        - jwst==1.11.4
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
