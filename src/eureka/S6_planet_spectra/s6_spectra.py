@@ -187,8 +187,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 log.writelog(f'Plotting {meta.y_param}...')
 
-                meta.spectrum_median = []
-                meta.spectrum_err = []
+                meta.spectrum_median = None
+                meta.spectrum_err = None
 
                 # Read in S5 fitted values
                 if meta.y_param == 'fn':
@@ -207,7 +207,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     else:
                         meta = parse_unshared_saves(meta, log, fit_methods)
 
-                if (len(meta.spectrum_median) == 0
+                if ((meta.spectrum_median is None)
                         or all(x is None for x in meta.spectrum_median)):
                     # The parameter could not be found - skip it
                     continue
@@ -424,7 +424,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n  ['
                          + ', '.join(full_keys)+']')
             log.writelog(f'  Skipping {y_param}')
-            return None
+            return meta
 
         for i, key in enumerate(keys):
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
@@ -445,7 +445,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n['
                          + ', '.join(full_keys)+']')
             log.writelog(f'Skipping {y_param}')
-            return None
+            return meta
 
         medians = []
         for i, key in enumerate(keys):
