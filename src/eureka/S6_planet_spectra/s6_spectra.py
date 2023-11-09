@@ -424,7 +424,6 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n  ['
                          + ', '.join(full_keys)+']')
             log.writelog(f'  Skipping {y_param}')
-            meta.spectrum_median, meta.spectrum_err = None, None
             return meta
 
         for i, key in enumerate(keys):
@@ -446,7 +445,6 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n['
                          + ', '.join(full_keys)+']')
             log.writelog(f'Skipping {y_param}')
-            meta.spectrum_median, meta.spectrum_err = None, None
             return meta
 
         medians = []
