@@ -887,29 +887,32 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, origin='lower', aspect='auto')
+    vmin, vmax = np.percentile(img, 1), np.percentile(img, 99)
+    ax[1, 0].imshow(img, origin='lower', aspect='auto', vmin=vmin, vmax=vmax)
 
     # X gaussian plot
+    med_x = np.median(np.nansum(img, axis=0))
     norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
-                  np.nansum(img, axis=0)/norm_x_factor)
+                  (np.nansum(img, axis=0)-med_x)/norm_x_factor)
     x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
     norm_distr_x = stats.norm.pdf(x_plot, x, sx)
     norm_distr_x_scaled = \
-        norm_distr_x/np.nanmax(norm_distr_x)*np.nanmax(np.nansum(img, axis=0))
+        norm_distr_x/np.nanmax(norm_distr_x)*np.nanmax(np.nansum(img, axis=0)-med_x)
     ax[0, 0].plot(x_plot, norm_distr_x_scaled/norm_x_factor,
                   linestyle='dashed')
     ax[0, 0].set_xlabel('x position')
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
+    med_y = np.median(np.nansum(img, axis=1))
     norm_y_factor = np.nansum(np.nansum(img, axis=0))
-    ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
+    ax[1, 1].plot((np.nansum(img, axis=1)-med_y)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))
     y_plot = np.linspace(0, len(np.nansum(img, axis=1)))
     norm_distr_y = stats.norm.pdf(y_plot, y, sy)
     norm_distr_y_scaled = \
-        norm_distr_y/np.nanmax(norm_distr_y)*np.nanmax(np.nansum(img, axis=1))
+        norm_distr_y/np.nanmax(norm_distr_y)*np.nanmax(np.nansum(img, axis=1)-med_y)
     ax[1, 1].plot(norm_distr_y_scaled/norm_y_factor, y_plot,
                   linestyle='dashed')
     ax[1, 1].set_ylabel('y position')
@@ -1021,7 +1024,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.pause(0.2)
 
     if meta.isplots_S3 >= 5:
-        plt.figure(3504, figsize=(6, 5))
+        plt.figure(3504, figsize=(8, 8))
         plt.clf()
         plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
 
