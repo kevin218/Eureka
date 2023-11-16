@@ -886,12 +886,19 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     # Title
     plt.suptitle('Centroid gaussian fit')
 
+    #print("TEST!! x, sx", x, sx)
+    #print("TEST!! y, sy", y, sy)
+
     # Image of source
-    vmin, vmax = np.percentile(img, 1), np.percentile(img, 99)
+    vmin, vmax = np.percentile(img[~np.isnan(img)], 3), np.percentile(img[~np.isnan(img)], 97)
     ax[1, 0].imshow(img, origin='lower', aspect='auto', vmin=vmin, vmax=vmax)
 
+    ax[1, 0].axhline(y, color='C3', alpha=0.7)
+    ax[1, 0].axvline(x, color='C3', alpha=0.7)
+
+
     # X gaussian plot
-    med_x = np.median(np.nansum(img, axis=0))
+    med_x = np.nanmedian(np.nansum(img, axis=0))
     norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
                   (np.nansum(img, axis=0)-med_x)/norm_x_factor)
@@ -905,7 +912,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
-    med_y = np.median(np.nansum(img, axis=1))
+    med_y = np.nanmedian(np.nansum(img, axis=1))
     norm_y_factor = np.nansum(np.nansum(img, axis=0))
     ax[1, 1].plot((np.nansum(img, axis=1)-med_y)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))

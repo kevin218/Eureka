@@ -181,14 +181,17 @@ def mingauss(img, yxguess, meta):
     minx = -int(meta.gauss_frame)+int(x)
     maxx = int(meta.gauss_frame)+int(x)
 
+    miny = -int(meta.gauss_frame)+int(y)
+    maxy = int(meta.gauss_frame)+int(y)
+
     # Set Frame size based off of frame crop
     # HDL: added subtraction of median of image in order to do rough background removal;
     #      allows Gaussian to go to ~0 outside of main function
-    frame = img[:, minx:maxx] - np.median(img)
+    frame = img[miny:maxy, minx:maxx] - np.nanmedian(img)
 
     # Create meshgrid
     x_shape = np.arange(img.shape[1])[minx:maxx]
-    y_shape = np.arange(img.shape[0])
+    y_shape = np.arange(img.shape[0])[miny:maxy]
     x_mesh, y_mesh = np.meshgrid(x_shape, y_shape)
 
     # The initial guess for [Gaussian amplitude, xsigma, ysigma]
