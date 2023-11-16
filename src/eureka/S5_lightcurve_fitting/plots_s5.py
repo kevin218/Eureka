@@ -43,7 +43,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
@@ -166,7 +166,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     - September 12, 2022 Taylor Bell
         Initial version.
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
@@ -328,7 +328,7 @@ def plot_rms(lc, model, meta, fitter):
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
@@ -636,7 +636,7 @@ def plot_res_distr(lc, model, meta, fitter):
     - February 18, 2022 Caroline Piaulet
         Created function
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
@@ -702,7 +702,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     - March 9, 2022 Eva-Maria Ahrer
         Adapted with shared parameters
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 

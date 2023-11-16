@@ -92,6 +92,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
     # Create directories for Stage 6 outputs
     meta.run_s6 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -188,8 +190,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 log.writelog(f'Plotting {meta.y_param}...')
 
-                meta.spectrum_median = []
-                meta.spectrum_err = []
+                meta.spectrum_median = None
+                meta.spectrum_err = None
 
                 # Read in S5 fitted values
                 if meta.y_param == 'fn':
@@ -204,12 +206,11 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 else:
                     # Just load the parameter
                     if meta.sharedp:
-                        meta.spectrum_median, meta.spectrum_err = \
-                            parse_s5_saves(meta, log, fit_methods, 'shared')
+                        meta = parse_s5_saves(meta, log, fit_methods, 'shared')
                     else:
                         meta = parse_unshared_saves(meta, log, fit_methods)
 
-                if (len(meta.spectrum_median) == 0
+                if ((meta.spectrum_median is None)
                         or all(x is None for x in meta.spectrum_median)):
                     # The parameter could not be found - skip it
                     continue
@@ -426,7 +427,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n  ['
                          + ', '.join(full_keys)+']')
             log.writelog(f'  Skipping {y_param}')
-            return None, None
+            return meta
 
         for i, key in enumerate(keys):
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
@@ -447,7 +448,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n['
                          + ', '.join(full_keys)+']')
             log.writelog(f'Skipping {y_param}')
-            return None, None
+            return meta
 
         medians = []
         for i, key in enumerate(keys):
@@ -463,7 +464,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
     meta.spectrum_median, meta.spectrum_err = medians, errs
 
-    return medians, errs
+    return meta
 
 
 def parse_unshared_saves(meta, log, fit_methods):
@@ -488,15 +489,15 @@ def parse_unshared_saves(meta, log, fit_methods):
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
-        median, err = parse_s5_saves(meta, log, fit_methods, channel_key)
-        if median is None:
+        meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+        if meta.spectrum_median is None:
             # Parameter was found, so don't keep looking for it
             meta.spectrum_median = np.array([None for _ in
                                              range(meta.nspecchan)])
             meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
             return meta
-        spectrum_median.extend(median)
-        spectrum_err.extend(err.T)
+        spectrum_median.extend(meta.spectrum_median)
+        spectrum_err.extend(meta.spectrum_err.T)
 
     meta.spectrum_median = np.array(spectrum_median)
     meta.spectrum_err = np.array(spectrum_err).T
@@ -518,13 +519,16 @@ def compute_transit_depth(meta):
         The updated meta data object.
     """
     if not np.all(np.isnan(meta.spectrum_err)):
-        lower = np.abs((meta.spectrum_median-meta.spectrum_err[0, :])**2 -
-                       meta.spectrum_median**2)
-        upper = np.abs((meta.spectrum_median+meta.spectrum_err[1, :])**2 -
-                       meta.spectrum_median**2)
+        lower = meta.spectrum_median - meta.spectrum_err[0, :]
+        upper = meta.spectrum_median + meta.spectrum_err[1, :]
+
+    meta.spectrum_median *= np.abs(meta.spectrum_median)
+
+    if not np.all(np.isnan(meta.spectrum_err)):
+        lower = meta.spectrum_median - lower*np.abs(lower)
+        upper = upper*np.abs(upper) - meta.spectrum_median
         meta.spectrum_err = np.append(lower.reshape(1, -1),
                                       upper.reshape(1, -1), axis=0)
-    meta.spectrum_median *= meta.spectrum_median
 
     return meta
 
