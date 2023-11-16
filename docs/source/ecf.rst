@@ -18,6 +18,12 @@ suffix
 ''''''
 Data file suffix (e.g. uncal).
 
+
+pmap
+''''
+Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce someone else's work), you can specify the pmap number here. For example, to use ``jwst_1089.pmap``, set this ``pmap`` parameter to ``1089``.
+
+
 ramp_fit_algorithm
 ''''''''''''''''''
 Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
@@ -219,6 +225,9 @@ Data file suffix (e.g. rateints).
 .. note::
 	Note that other Instruments might used different suffixes!
 
+pmap
+''''
+Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce someone else's work), you can specify the pmap number here. For example, to use ``jwst_1089.pmap``, set this ``pmap`` parameter to ``1089``.
 
 slit_y_low & slit_y_high
 ''''''''''''''''''''''''
@@ -317,6 +326,10 @@ An optional input parameter. If False (default), convert the units of the images
 poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
+
+pmap
+''''
+Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce someone else's work), you can specify the pmap number here. For example, to use ``jwst_1089.pmap``, set this ``pmap`` parameter to ``1089``.
 
 gain
 ''''

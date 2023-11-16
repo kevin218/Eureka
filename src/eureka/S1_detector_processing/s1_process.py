@@ -59,6 +59,10 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     else:
         meta = input_meta
 
+    # If a specific CRDS context is entered in the ECF, apply it
+    if hasattr(meta, 'pmap') and meta.pmap is not None:
+        os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
