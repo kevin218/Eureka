@@ -27,6 +27,7 @@ from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import plots
+from ..version import version
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -78,6 +79,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     if hasattr(meta, 'pmap') and meta.pmap is not None:
         os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -108,6 +110,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
+    log.writelog(f"Eureka! Version: {meta.version}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f"Output directory: {meta.outputdir}")
 
