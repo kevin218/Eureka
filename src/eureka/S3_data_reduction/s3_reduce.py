@@ -405,8 +405,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     if hasattr(meta, 'ff_outlier') and meta.ff_outlier:
                         data = inst.flag_ff(data, meta, log)
 
-                    # Compute clean median frame
-                    data = optspex.clean_median_flux(data, meta, log, m)
+                    if saved_ref_median_frame is None:
+                        # Compute clean median frame
+                        data = optspex.clean_median_flux(data, meta, log, m)
+                        # Save the original median frame
+                        saved_ref_median_frame = data.medflux
+                    else:
+                        # Load the original median frame
+                        data.medflux = saved_ref_median_frame
 
                     # correct spectral curvature
                     if not hasattr(meta, 'curvature'):
