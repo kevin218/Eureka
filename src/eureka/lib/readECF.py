@@ -141,6 +141,12 @@ class MetaClass:
                   f' but is now set to {value} in this stage. This may cause '
                   'unexpected or undesireable behaviors.')
 
+        if ((item == 'version') and hasattr(self, 'version') and
+                (self.version is not None) and (self.version != value)):
+            print(f'WARNING: The Eureka! version was {self.version} in the '
+                  f'previous stage but is now {value} in this stage. This may '
+                  'cause unexpected or undesireable behaviors.')
+
         # Set the attribute
         self.__dict__[item] = value
 
