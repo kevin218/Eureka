@@ -29,6 +29,7 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
+import crds
 
 from . import optspex
 from . import plots_s3, source_pos, straighten
@@ -92,9 +93,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = input_meta
 
-    # If a specific CRDS context is entered in the ECF, apply it
-    if hasattr(meta, 'pmap') and meta.pmap is not None:
-        os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+    # If a specific CRDS context is entered in the ECF, apply it.
+    # Otherwise, log and fix the default CRDS context to make sure it doesn't
+    # change between different segments.
+    if not hasattr(meta, 'pmap') or meta.pmap is None:
+        meta.pmap = crds.get_default_context()
+    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -215,6 +219,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log = logedit.Logedit(meta.s3_logname)
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+            log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
             log.writelog(f"Using ap={spec_hw_val}, " +
