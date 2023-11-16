@@ -373,33 +373,33 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 
                 if not hasattr(meta, 'calibrated_spectra'):
                     meta.calibrated_spectra = False
-                # Instrument-specific steps for generating
-                # calibrated stellar spectra
                 if meta.calibrated_spectra:
+                    # Instrument-specific steps for generating
+                    # calibrated stellar spectra
                     data = inst.calibrated_spectra(data, meta, log)
-
-                if not meta.photometry:
-                    # Locate source postion
-                    data, meta, log = \
-                        source_pos.source_pos_wrapper(data, meta, log, m)
-
-                # Compute 1D wavelength solution
-                if 'wave_2d' in data:
-                    data['wave_1d'] = (['x'],
-                                       data.wave_2d[meta.src_ypos].values)
-                    data['wave_1d'].attrs['wave_units'] = \
-                        data.wave_2d.attrs['wave_units']
-
-                # Check for bad wavelength pixels (beyond wavelength solution)
-                util.check_nans(data.wave_1d.values, np.ones(meta.subnx), log,
-                                name='wavelength')
-
-                # Convert flux units to electrons
-                # (eg. MJy/sr -> DN -> Electrons)
-                if not meta.calibrated_spectra:
+                else:
+                    # Convert flux units to electrons
+                    # (eg. MJy/sr -> DN -> Electrons)
                     data, meta = b2f.convert_to_e(data, meta, log)
 
                 if not meta.photometry:
+                    # Locate source postion for the first integration of
+                    # the first batch
+                    if not hasattr(meta, 'src_ypos'):
+                        data, meta, log = \
+                            source_pos.source_pos_wrapper(data, meta, log, m)
+
+                    # Compute 1D wavelength solution
+                    if 'wave_2d' in data:
+                        data['wave_1d'] = (['x'],
+                                           data.wave_2d[meta.src_ypos].values)
+                        data['wave_1d'].attrs['wave_units'] = \
+                            data.wave_2d.attrs['wave_units']
+
+                    # Check for bad wavelengths (beyond wavelength solution)
+                    util.check_nans(data.wave_1d.values, np.ones(meta.subnx),
+                                    log, name='wavelength')
+
                     # Perform outlier rejection of
                     # full frame along time axis
                     if hasattr(meta, 'ff_outlier') and meta.ff_outlier:
