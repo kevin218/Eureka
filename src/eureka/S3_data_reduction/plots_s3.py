@@ -146,11 +146,11 @@ def image_and_background(data, meta, log, m):
     # If need be, transpose array so that largest dimension is on x axis
     if len(data.flux.x.values) < len(data.flux.y.values):
         data = data.transpose('time', 'x', 'y')
-        ymin, ymax = data.flux.x.min().values, data.flux.x.max().values
-        xmin, xmax = data.flux.y.min().values, data.flux.y.max().values
+        ymin, ymax = data.flux.x.values[0], data.flux.x.values[-1]
+        xmin, xmax = data.flux.y.values[0], data.flux.y.values[-1]
     else:
-        xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-        ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+        xmin, xmax = data.flux.x.values[0], data.flux.x.values[-1]
+        ymin, ymax = data.flux.y.values[0], data.flux.y.values[-1]
 
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
@@ -257,6 +257,12 @@ def optimal_spectrum(data, meta, n, m):
                  label='Standard Spec')
     plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
                  color='C2', ecolor='C2', label='Optimal Spec')
+    
+    if data.stdspec.x.values[-1] < data.stdspec.x.values[0]:
+        # We're dealing with flipped MIRI, so let's mirror x to have wavelength
+        # increase to the right
+        plt.gca().invert_xaxis()
+
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
