@@ -210,18 +210,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log = logedit.Logedit(meta.s3_logname, read=s2_meta.s2_logname)
             else:
                 log = logedit.Logedit(meta.s3_logname)
-            log.writelog("\nStarting Stage 3 Reduction\n")
-            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
-            log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
-            log.writelog(f"Input directory: {meta.inputdir}")
-            log.writelog(f"Output directory: {meta.outputdir}")
-            log.writelog(f"Using ap={spec_hw_val}, " +
-                         f"bg={bg_hw_val}, " +
-                         f"expand={meta.expand}")
-
-            # Copy ecf
-            log.writelog('Copying S3 control file', mute=(not meta.verbose))
-            meta.copy_ecf()
 
             # Create list of file segments
             meta = util.readfiles(meta, log)
@@ -259,6 +247,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # Get just the numerical value
                     meta.pmap = crds.get_context_name('jwst')[5:-5]
                 os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
+            log.writelog("\nStarting Stage 3 Reduction\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+            log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
+            log.writelog(f"Input directory: {meta.inputdir}")
+            log.writelog(f"Output directory: {meta.outputdir}")
+            log.writelog(f"Using ap={spec_hw_val}, " +
+                         f"bg={bg_hw_val}, " +
+                         f"expand={meta.expand}")
+
+            # Copy ecf
+            log.writelog('Copying S3 control file', mute=(not meta.verbose))
+            meta.copy_ecf()
 
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to
