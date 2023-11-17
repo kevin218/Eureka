@@ -225,6 +225,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 raise ValueError('NIRISS observations are currently '
                                  'unsupported!')
             elif meta.inst == 'wfc3':
+                if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                    log.writelog('CRDS_SERVER_URL is set for JWST and not HST.'
+                                 ' Automatically adjusting it to hst.')
+                    crds.client.api.set_crds_server(
+                        'https://hst-crds.stsci.edu/')
+                    os.environ['CRDS_SERVER_URL'] = \
+                        'https://hst-crds.stsci.edu/'
+
                 # If a specific CRDS context is entered in the ECF, apply it.
                 # Otherwise, log and fix the default CRDS context to make sure
                 # it doesn't change between different segments.
