@@ -5,6 +5,7 @@ from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
+from scipy.stats import binned_statistic
 from .naninterp1d import naninterp1d
 
 from .citations import CITATIONS
@@ -411,6 +412,45 @@ def binData(data, nbin=100, err=False):
         binned /= np.sqrt(int(len(data)/nbin))
     return binned
 
+def binData_time(data, time, nbin=100, err=False):
+    """Temporally bin data for easier visualization.
+
+    Parameters
+    ----------
+    data : ndarray (1D)
+        The data to temporally bin.
+    time : ndarray (1D)
+        The time axis along which to bin
+    nbin : int, optional
+        The number of bins there should be. By default 100.
+    err : bool, optional
+        If True, divide the binned data by sqrt(N) to get the error on the
+        mean. By default False.
+
+    Returns
+    -------
+    binned : ndarray
+        The binned data.
+    """
+    # Make a copy for good measure
+    data = np.ma.copy(data)
+    data = np.ma.masked_invalid(data)
+    # Make a copy of time also
+    time = np.ma.copy(time)
+    time = np.ma.masked_invalid(time)
+  
+    binned, bin_edges, bincount = binned_statistic(time, data, 
+                                                   statistic='mean', 
+                                                   bins=nbin)
+
+    if err:
+        binned_count, _, _ = binned_statistic(time, data,
+                                               statistic='count',
+                                               bins=nbin)
+
+        binned /= np.sqrt(binned_count)
+
+    return binned
 
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     """Normalize a spectrum by its temporal mean.
