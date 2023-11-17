@@ -80,7 +80,8 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     # Otherwise, log and fix the default CRDS context to make sure it doesn't
     # change between different segments.
     if not hasattr(meta, 'pmap') or meta.pmap is None:
-        meta.pmap = crds.get_default_context()
+        # Get just the numerical value
+        meta.pmap = crds.get_context_name('jwst')[5:-5]
     os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
 
     meta.version = version

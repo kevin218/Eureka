@@ -93,13 +93,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = input_meta
 
-    # If a specific CRDS context is entered in the ECF, apply it.
-    # Otherwise, log and fix the default CRDS context to make sure it doesn't
-    # change between different segments.
-    if not hasattr(meta, 'pmap') or meta.pmap is None:
-        meta.pmap = crds.get_default_context()
-    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
-
     meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
@@ -244,11 +237,28 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 raise ValueError('NIRISS observations are currently '
                                  'unsupported!')
             elif meta.inst == 'wfc3':
+                # If a specific CRDS context is entered in the ECF, apply it.
+                # Otherwise, log and fix the default CRDS context to make sure
+                # it doesn't change between different segments.
+                if not hasattr(meta, 'pmap') or meta.pmap is None:
+                    # Get just the numerical value
+                    meta.pmap = crds.get_context_name('hst')[4:-5]
+                os.environ['CRDS_CONTEXT'] = f'hst_{meta.pmap}.pmap'
+
                 from . import wfc3 as inst
                 meta.bg_dir = 'CxC'
                 meta, log = inst.preparation_step(meta, log)
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
+
+            if meta.inst != 'wfc3':
+                # If a specific CRDS context is entered in the ECF, apply it.
+                # Otherwise, log and fix the default CRDS context to make sure
+                # it doesn't change between different segments.
+                if not hasattr(meta, 'pmap') or meta.pmap is None:
+                    # Get just the numerical value
+                    meta.pmap = crds.get_context_name('jwst')[5:-5]
+                os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
 
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to
