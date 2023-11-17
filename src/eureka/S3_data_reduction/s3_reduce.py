@@ -264,10 +264,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                       meta.files_per_batch))
 
             datasets = []
+
+            if (not hasattr(meta, 'indep_batches') or
+                    meta.indep_batches is None):
+                meta.indep_batches = False
             saved_refrence_tilt_frame = None
             saved_ref_median_frame = None
 
             for m in range(meta.nbatch):
+                # Reset saved median frame if meta.indep_batches
+                if meta.indep_batches:
+                    saved_ref_median_frame = None
+                    saved_refrence_tilt_frame = None
+
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
                                  (m+1)*meta.files_per_batch])
@@ -385,7 +394,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 if not meta.photometry:
                     # Locate source postion for the first integration of
                     # the first batch
-                    if not hasattr(meta, 'src_ypos'):
+                    if (meta.indep_batches or
+                            (not hasattr(meta, 'src_ypos'))):
                         data, meta, log = \
                             source_pos.source_pos_wrapper(data, meta, log, m)
 
