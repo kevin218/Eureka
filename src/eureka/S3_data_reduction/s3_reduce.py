@@ -382,14 +382,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 
                 if not hasattr(meta, 'calibrated_spectra'):
                     meta.calibrated_spectra = False
-                if meta.calibrated_spectra:
-                    # Instrument-specific steps for generating
-                    # calibrated stellar spectra
-                    data = inst.calibrated_spectra(data, meta, log)
-                else:
-                    # Convert flux units to electrons
-                    # (eg. MJy/sr -> DN -> Electrons)
-                    data, meta = b2f.convert_to_e(data, meta, log)
 
                 if not meta.photometry:
                     # Locate source postion for the first integration of
@@ -409,6 +401,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # Check for bad wavelengths (beyond wavelength solution)
                     util.check_nans(data.wave_1d.values, np.ones(meta.subnx),
                                     log, name='wavelength')
+
+                    if meta.calibrated_spectra:
+                        # Instrument-specific steps for generating
+                        # calibrated stellar spectra
+                        data = inst.calibrated_spectra(data, meta, log)
+                    else:
+                        # Convert flux units to electrons
+                        # (eg. MJy/sr -> DN -> Electrons)
+                        data, meta = b2f.convert_to_e(data, meta, log)
 
                     # Perform outlier rejection of
                     # full frame along time axis
@@ -498,6 +499,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.photap = meta.spec_hw
                     meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
                                                        ).astype(int)
+
+                    if meta.calibrated_spectra:
+                        # Instrument-specific steps for generating
+                        # calibrated stellar spectra
+                        data = inst.calibrated_spectra(data, meta, log)
+                    else:
+                        # Convert flux units to electrons
+                        # (eg. MJy/sr -> DN -> Electrons)
+                        data, meta = b2f.convert_to_e(data, meta, log)
 
                     # Do outlier reduction along time axis for
                     # each individual pixel
