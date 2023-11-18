@@ -99,7 +99,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             nbin_plot = meta.nbin_plot
         binned_time     = util.binData_time(time, time, nbin_plot)
         binned_flux     = util.binData_time(flux, time, nbin_plot)
-        binned_unc      = util.binData_time(unc, time, nbin_plot, err=True)
+        binned_unc      = util.binData_time(unc,  time, nbin_plot, err=True)
         binned_normflux = util.binData_time(flux/model_sys-gp, time, nbin_plot)
         binned_res      = util.binData_time(residuals, time, nbin_plot)
 
@@ -226,9 +226,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             nbin_plot = len(time)
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData(time, nbin_plot)
-        binned_flux = util.binData(flux, nbin_plot)
-        binned_unc = util.binData(unc, nbin_plot, err=True)
+        binned_time = util.binData_time(time, time, nbin_plot)
+        binned_flux = util.binData_time(flux, time, nbin_plot)
+        binned_unc  = util.binData_time(unc,  time, nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
