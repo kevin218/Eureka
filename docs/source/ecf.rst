@@ -289,7 +289,7 @@ Sets the maximum memory fraction (0--1) that should be used by the loaded in dat
 
 indep_batches
 '''''''''''''
-Do you want to independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True. If set to True, you may end up with jump discontinuities between batches.
+Do you want to independently treat each batch of files? When False, the median spectrum from the first batch is applied too all batches. Strongly recommended to leave this as False unless you have a clear reason to set it to True. If set to True, you may end up with jump discontinuities between batches.
 
 suffix
 ''''''
