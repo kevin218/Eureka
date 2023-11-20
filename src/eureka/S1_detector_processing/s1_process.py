@@ -5,6 +5,7 @@ from copy import deepcopy
 from astropy.io import fits
 
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
+import crds
 
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
@@ -12,6 +13,7 @@ from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
+from ..version import version
 
 
 def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
@@ -59,6 +61,15 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     else:
         meta = input_meta
 
+    # If a specific CRDS context is entered in the ECF, apply it.
+    # Otherwise, log and fix the default CRDS context to make sure it doesn't
+    # change between different segments.
+    if not hasattr(meta, 'pmap') or meta.pmap is None:
+        # Get just the numerical value
+        meta.pmap = crds.get_context_name('jwst')[5:-5]
+    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -73,6 +84,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     meta.s1_logname = meta.outputdir + 'S1_' + meta.eventlabel + ".log"
     log = logedit.Logedit(meta.s1_logname)
     log.writelog("\nStarting Stage 1 Processing")
+    log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f"Output directory: {meta.outputdir}")
 

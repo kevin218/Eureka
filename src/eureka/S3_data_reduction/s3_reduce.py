@@ -29,6 +29,7 @@ from copy import deepcopy
 import astraeus.xarrayIO as xrio
 from tqdm import tqdm
 import psutil
+import crds
 
 from . import optspex
 from . import plots_s3, source_pos, straighten
@@ -40,6 +41,7 @@ from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
 from ..lib import centerdriver, apphot
+from ..version import version
 
 
 def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
@@ -91,6 +93,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -207,16 +210,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log = logedit.Logedit(meta.s3_logname, read=s2_meta.s2_logname)
             else:
                 log = logedit.Logedit(meta.s3_logname)
-            log.writelog("\nStarting Stage 3 Reduction\n")
-            log.writelog(f"Input directory: {meta.inputdir}")
-            log.writelog(f"Output directory: {meta.outputdir}")
-            log.writelog(f"Using ap={spec_hw_val}, " +
-                         f"bg={bg_hw_val}, " +
-                         f"expand={meta.expand}")
-
-            # Copy ecf
-            log.writelog('Copying S3 control file', mute=(not meta.verbose))
-            meta.copy_ecf()
 
             # Create list of file segments
             meta = util.readfiles(meta, log)
@@ -232,11 +225,59 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 raise ValueError('NIRISS observations are currently '
                                  'unsupported!')
             elif meta.inst == 'wfc3':
+                # Fix issues with CRDS server set for JWST
+                if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                    log.writelog('CRDS_SERVER_URL is set for JWST and not HST.'
+                                 ' Automatically adjusting it up for HST.')
+                    url = 'https://hst-crds.stsci.edu'
+                    os.environ['CRDS_SERVER_URL'] = url
+                    crds.client.api.set_crds_server(url)
+                    crds.client.api.get_server_info.cache.clear()
+
+                # If a specific CRDS context is entered in the ECF, apply it.
+                # Otherwise, log and fix the default CRDS context to make sure
+                # it doesn't change between different segments.
+                if not hasattr(meta, 'pmap') or meta.pmap is None:
+                    # Get just the numerical value
+                    meta.pmap = crds.get_context_name('hst')[4:-5]
+                os.environ['CRDS_CONTEXT'] = f'hst_{meta.pmap}.pmap'
+
                 from . import wfc3 as inst
                 meta.bg_dir = 'CxC'
                 meta, log = inst.preparation_step(meta, log)
             else:
                 raise ValueError('Unknown instrument {}'.format(meta.inst))
+
+            if meta.inst != 'wfc3':
+                # Fix issues with CRDS server set for HST
+                if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                    log.writelog('CRDS_SERVER_URL is set for HST and not JWST.'
+                                 ' Automatically adjusting it up for JWST.')
+                    url = 'https://jwst-crds.stsci.edu'
+                    os.environ['CRDS_SERVER_URL'] = url
+                    crds.client.api.set_crds_server(url)
+                    crds.client.api.get_server_info.cache.clear()
+
+                # If a specific CRDS context is entered in the ECF, apply it.
+                # Otherwise, log and fix the default CRDS context to make sure
+                # it doesn't change between different segments.
+                if not hasattr(meta, 'pmap') or meta.pmap is None:
+                    # Get just the numerical value
+                    meta.pmap = crds.get_context_name('jwst')[5:-5]
+                os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
+            log.writelog("\nStarting Stage 3 Reduction\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+            log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
+            log.writelog(f"Input directory: {meta.inputdir}")
+            log.writelog(f"Output directory: {meta.outputdir}")
+            log.writelog(f"Using ap={spec_hw_val}, " +
+                         f"bg={bg_hw_val}, " +
+                         f"expand={meta.expand}")
+
+            # Copy ecf
+            log.writelog('Copying S3 control file', mute=(not meta.verbose))
+            meta.copy_ecf()
 
             # Loop over each segment
             # Only reduce the last segment/file if testing_S3 is set to
