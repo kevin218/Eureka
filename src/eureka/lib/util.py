@@ -435,17 +435,19 @@ def binData_time(data, time, nbin=100, err=False):
     # Make a copy for good measure
     data = np.ma.copy(data)
     data = np.ma.masked_invalid(data)
-    # Make a copy of time also
-    time = np.ma.copy(time)
-    time = np.ma.masked_invalid(time)
-  
-    binned, bin_edges, bincount = binned_statistic(time, data, 
-                                                   statistic=np.nanmean, 
-                                                   bins=nbin)
+    # Mask out invalid values for data and time;
+    # binned_statistic does not do a good job of handling these itself
+    mask = data.mask
+    data = data[~mask]
+    time = time[~mask]
+
+    binned, _, _ = binned_statistic(time, data, 
+                                    statistic='mean', 
+                                    bins=nbin)
     if err:
         binned_count, _, _ = binned_statistic(time, data,
-                                               statistic='count',
-                                               bins=nbin)
+                                              statistic='count',
+                                              bins=nbin)
         binned /= np.sqrt(binned_count)
 
     return binned
