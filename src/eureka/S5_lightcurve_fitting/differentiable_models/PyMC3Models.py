@@ -496,8 +496,35 @@ class CompositePyMC3Model(PyMC3Model):
             # we are assuming they are normally distributed about
             # the true model. This line effectively defines our
             # likelihood function.
-            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
-                      observed=self.flux)
+            if self.GP:
+                for component in self.components:
+                    if component.modeltype == 'GP':
+                        gps = component.gps
+                        gp_component = component
+                
+                full_fit = self.eval(eval=False)
+                for c in range(self.nchannel_fitted):
+                    if self.nchannel_fitted > 1:
+                        chan = self.fitted_channels[c]
+                        # get flux and uncertainties for current channel
+                        flux, unc_fit = split([self.flux, self.scatter_array],
+                                              self.nints, chan)
+                        fit = split([full_fit, ], self.nints, chan)[0]
+                    else:
+                        chan = 0
+                        # get flux and uncertainties for current channel
+                        flux = self.flux
+                        unc_fit = self.scatter_array
+                        fit = full_fit
+                    residuals = flux-fit
+
+                    gps[c].compute(gp_component.kernel_inputs[chan][0],
+                                   yerr=unc_fit)
+                    gps[c].marginal(f"obs_{c}", observed=residuals)
+            else:
+                pm.Normal("obs", mu=self.eval(eval=False),
+                          sd=self.scatter_array,
+                          observed=self.flux)
         
         self.issetup = True
 

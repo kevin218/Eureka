@@ -57,6 +57,16 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+    model.update(freepars)
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter=calling_function+'StartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter=calling_function+'StartingPoint')
 
     model.update(freepars)
     # Plot starting point
@@ -123,8 +133,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
-    # if model.GP and meta.isplots_S5 >= 1:
-    #     plots.plot_GP_components(lc, model, meta, fitter=calling_function)
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
     if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
@@ -188,6 +198,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+    model.update(freepars)
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='nutsStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='nutsStartingPoint')
 
     model.update(freepars)
     # Plot starting point
@@ -283,8 +303,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='nuts')
 
     # Plot GP fit + components
-    # if model.GP and meta.isplots_S5 >= 1:
-    #     plots.plot_GP_components(lc, model, meta, fitter='nuts')
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
     if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
