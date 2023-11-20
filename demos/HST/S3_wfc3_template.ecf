@@ -5,6 +5,7 @@
 ncpu            4           # Number of CPUs
 nfiles          1000        # The max number of data files to analyze simultaneously. Strongly recommended to be >>1 for HST data.
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+indep_batches   False       # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
 suffix          ima         # Data file suffix
 
 # Calibration files
