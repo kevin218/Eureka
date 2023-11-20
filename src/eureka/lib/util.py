@@ -440,14 +440,12 @@ def binData_time(data, time, nbin=100, err=False):
     time = np.ma.masked_invalid(time)
   
     binned, bin_edges, bincount = binned_statistic(time, data, 
-                                                   statistic='mean', 
+                                                   statistic=np.nanmean, 
                                                    bins=nbin)
-
     if err:
         binned_count, _, _ = binned_statistic(time, data,
                                                statistic='count',
                                                bins=nbin)
-
         binned /= np.sqrt(binned_count)
 
     return binned
