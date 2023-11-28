@@ -15,7 +15,7 @@ class LightCurve(m.Model):
     def __init__(self, time, flux, channel, nchannel, log, longparamlist,
                  parameters, unc=None, time_units='BJD',
                  name='My Light Curve', share=False, white=False,
-                 multwhite=False, nints=[]):
+                 multwhite=False, nints=[], **kwargs):
         """
         A class to store the actual light curve
 
@@ -49,6 +49,11 @@ class LightCurve(m.Model):
         nints : bool; optional
             Number of exposures of each white lightcurve for splitting
             up time array.
+        **kwargs : dict
+            Parameters to set in the LightCurve object.
+            Any parameter named log will not be loaded into the
+            LightCurve object as Logedit objects cannot be pickled
+            which is required for multiprocessing.
 
         Notes
         -----
@@ -63,7 +68,7 @@ class LightCurve(m.Model):
             Added ability to joint fit WLCs with different time arrays    
         """
         # Initialize the model
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.name = name
         self.share = share
@@ -91,7 +96,7 @@ class LightCurve(m.Model):
 
         # Set the data arrays
         if unc is not None:
-            if type(unc) == float or type(unc) == np.float64:
+            if isinstance(unc, (float, np.float64)):
                 log.writelog('Warning: Only one uncertainty input, assuming '
                              'constant uncertainty.')
             elif (len(time)*self.nchannel_fitted != len(unc)
@@ -227,8 +232,14 @@ class LightCurve(m.Model):
                     model.plot(ax=ax, color=next(plot_COLORS),
                                zorder=np.inf, share=self.share, chan=channel)
 
+            # Determine wavelength
+            if meta.multwhite:
+                wave = meta.wave[0]
+            else:
+                wave = meta.wave[channel]
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {channel}')
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' + 
+                         f'- {wave} microns')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)
             ax.legend(loc='best')

@@ -25,11 +25,13 @@ class BatmanTransitModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
+
+        log = kwargs.get('log')
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
@@ -42,17 +44,19 @@ class BatmanTransitModel(Model):
         
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
+            log.writelog("Using the following limb-darkening values:")
             self.ld_array = kwargs.get('ld_coeffs')
-            if self.ld_from_S4:
-                self.ld_array = self.ld_array[len_params-2]
             for c in range(self.nchannel_fitted):
                 chan = self.fitted_channels[c]
+                if self.ld_from_S4:
+                    ld_array = self.ld_array[len_params-2]
                 for u in self.coeffs:
                     index = np.where(np.array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
-                        ld_val = self.ld_array[chan][param-1]
+                        ld_val = ld_array[chan][param-1]
+                        log.writelog(f"{item}, {ld_val}")
                         # Use the file value as the starting guess
                         self.parameters.dict[item][0] = ld_val
                         # In a normal prior, center at the file value
@@ -121,9 +125,9 @@ class BatmanTransitModel(Model):
 
             # Enforce physicality to avoid crashes from batman by returning
             # something that should be a horrible fit
-            if not ((0 < bm_params.rp) and (0 < bm_params.per) and
-                    (0 < bm_params.inc < 90) and (1 < bm_params.a) and
-                    (0 <= bm_params.ecc < 1) and (0 <= bm_params.w <= 360)):
+            if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
+                    (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and
+                    (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was the
                 # best I could think of
                 lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
@@ -265,8 +269,7 @@ class BatmanEclipseModel(Model):
 
             # Enforce physicality to avoid crashes from batman by
             # returning something that should be a horrible fit
-            if not ((bm_params.fp < 1) and (0 < bm_params.rp) and
-                    (0 < bm_params.per) and (0 < bm_params.inc < 90) and
+            if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
                     (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and
                     (0 <= bm_params.w <= 360)):
                 # Returning nans or infs breaks the fits, so this was

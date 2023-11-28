@@ -251,6 +251,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 meta.max_memory = 0.5
             if not hasattr(meta, 'nfiles'):
                 meta.nfiles = 1
+            if meta.nfiles == 1 and meta.nfiles > 1:
+                log.writelog('WARNING: Strange behaviors can occur if you set '
+                             'nfiles to 1. If your computer has enough RAM to '
+                             'load many/all of your Stage 2 files, it is '
+                             'strongly recommended to increase nfiles.')
             system_RAM = psutil.virtual_memory().total
             filesize = os.path.getsize(meta.segment_list[istart])*meta.expand
             maxfiles = max([1, int(system_RAM*meta.max_memory/filesize)])
@@ -404,14 +409,25 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     data = optspex.clean_median_flux(data, meta, log, m)
 
                     # correct spectral curvature
-                    if (hasattr(meta, 'curvature')
-                            and meta.curvature == 'correct'):
+                    if not hasattr(meta, 'curvature'):
+                        # By default, don't correct curvature
+                        meta.curvature = None
+                    if meta.curvature == 'correct':
                         data, meta = straighten.straighten_trace(data, meta,
                                                                  log, m)
+                    elif meta.inst == 'nirspec' and meta.grating != 'PRISM':
+                        log.writelog('WARNING: NIRSpec GRISM spectra is '
+                                     'significantly curved and will very '
+                                     'likely benefit from setting '
+                                     'meta.curvature to "correct".')
+                    elif meta.inst == 'nircam':
+                        log.writelog('WARNING: NIRCam spectra is slightly '
+                                     'curved and may benefit from setting '
+                                     'meta.curvature to "correct".')
 
                     # Perform outlier rejection of
                     # sky background along time axis
-                    meta.bg_y2 = meta.src_ypos + meta.bg_hw
+                    meta.bg_y2 = meta.src_ypos + meta.bg_hw + 1
                     meta.bg_y1 = meta.src_ypos - meta.bg_hw
                     if (not hasattr(meta, 'ff_outlier')
                             or not meta.ff_outlier):
@@ -441,7 +457,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                                                           log)
 
                     # Extract standard spectrum and its variance
-                    data = optspex.standard_spectrum(data, apdata, aperr)
+                    data = optspex.standard_spectrum(data, apdata, apmask,
+                                                     aperr)
 
                     # Perform optimal extraction
                     data, meta, log = optspex.optimize_wrapper(data, meta, log,
@@ -494,9 +511,8 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                 radius=None, size=None, meta=meta, i=None,
                                 m=None,
                                 saved_ref_median_frame=saved_ref_median_frame)
-
-                    if saved_ref_median_frame is None:
-                        saved_ref_median_frame = refrence_median_frame
+                        if saved_ref_median_frame is None:
+                            saved_ref_median_frame = refrence_median_frame
 
                     # for loop for integrations
                     for i in tqdm(range(len(data.time)),

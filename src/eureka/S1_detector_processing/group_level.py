@@ -195,7 +195,7 @@ def custom_ref_pixel(input_model, log, meta):
             intgrp_data[dqmask] = np.nan
 
             if hasattr(meta, 'masktrace') and meta.masktrace:
-                intgrp_data *= meta.trace_mask
+                intgrp_data *= input_model.trace_mask
 
             odd_med = np.nanmedian(intgrp_data[odd_row_ref, :])
             evn_med = np.nanmedian(intgrp_data[evn_row_ref, :])

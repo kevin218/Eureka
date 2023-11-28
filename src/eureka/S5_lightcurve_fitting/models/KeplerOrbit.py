@@ -342,7 +342,7 @@ class KeplerOrbit(object):
         ndarray
             The eccentric anomaly in radians.
         """
-        if type(t) != np.ndarray:
+        if not isinstance(t, np.ndarray):
             t = np.array([t])
         tShape = t.shape
         t = t.flatten()
@@ -600,7 +600,7 @@ class KeplerOrbit(object):
             and latitude. Each ndarray is in the same shape as t.
         """
         if self.e == 0. and self.Prot == self.Porb:
-            if type(t) != np.ndarray:
+            if not isinstance(t, np.ndarray):
                 sspLon = np.zeros_like([t])
             else:
                 sspLon = np.zeros_like(t)
@@ -614,7 +614,7 @@ class KeplerOrbit(object):
                       (-180.)*(np.rint(np.floor(sspLon % 360./180.) > 0)))
 
         if self.obliq == 0.:
-            if type(t) != np.ndarray:
+            if not isinstance(t, np.ndarray):
                 sspLat = np.zeros_like([t])
             else:
                 sspLat = np.zeros_like(t)

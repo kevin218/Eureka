@@ -6,8 +6,8 @@ Installation methods
 --------------------
 
 In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
-the most recent stable release of ``Eureka!``, v0.9. The following installation instructions are written with this in mind,
-and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.9>`_.
+the most recent stable release of ``Eureka!``, v0.10. The following installation instructions are written with this in mind,
+and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.10>`_.
 Also note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
 installation instructions below as the pip dependencies fail to build on the M1 processor.
 
@@ -31,7 +31,7 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 .. code-block:: bash
 
-	git clone -b v0.9 https://github.com/kevin218/Eureka.git
+	git clone -b v0.10 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
@@ -49,13 +49,13 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@v0.9#egg=eureka[jwst]
+	pip install -e 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v0.10'
 
 Other specific branches can be installed using:
 
 .. code-block:: bash
 
-	pip install -e git+https://github.com/kevin218/Eureka.git@mybranchname#egg=eureka[jwst]
+	pip install 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@mybranchname'
 
 In order to use any of the demo ECF files, follow the instructions in the :ref:`Demos <demos>` section of the :ref:`Quickstart <quickstart>` page.
 
@@ -89,7 +89,7 @@ To install using conda:
 
 .. code-block:: bash
 
-	git clone -b v0.9 https://github.com/kevin218/Eureka.git
+	git clone -b v0.10 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	conda env create --file environment.yml --force
 	conda activate eureka
@@ -110,7 +110,7 @@ CRDS Environment Variables
 
 ``Eureka!`` installs the JWST Calibration Pipeline as part of its requirements, and this also requires users to set the proper environment
 variables so that it can download the proper reference files needed to run the pipeline. For users not on the internal STScI network,
-two environment variables need to be set to enable this functionality. In your ``~/.zshrc`` (for Mac users) or ``~/.bashrc`` file (for bash
+two environment variables need to be set to enable this functionality. In your ``~/.zshrc`` (for zsh users) or ``~/.bashrc`` or ``~/.bash_profile`` file (for bash
 users), or other shell initialization file, add these two lines (specifying your desired location to cache the CRDS files,
 e.g. ``/Users/your_name/crds_cache`` for Mac users or ``/home/your_name/crds_cache`` for Linux users):
 
