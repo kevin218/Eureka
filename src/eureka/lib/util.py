@@ -412,6 +412,7 @@ def binData(data, nbin=100, err=False):
         binned /= np.sqrt(int(len(data)/nbin))
     return binned
 
+
 def binData_time(data, time, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
@@ -451,6 +452,7 @@ def binData_time(data, time, nbin=100, err=False):
         binned /= np.sqrt(binned_count)
 
     return binned
+
 
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     """Normalize a spectrum by its temporal mean.
