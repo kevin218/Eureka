@@ -188,7 +188,7 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            system = starry.System(star, planet)
+            system = starry.System(star, planet, light_delay=True)
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -370,5 +370,5 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            sys = starry.System(star, planet)
+            sys = starry.System(star, planet, light_delay=True)
             self.fit.systems.append(sys)
