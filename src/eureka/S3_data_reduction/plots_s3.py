@@ -971,7 +971,7 @@ def phot_2d_frame(data, meta, m, i):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3306, figsize=(8, 3))
+    plt.figure(3306, figsize=(8, 8))
     plt.clf()
     plt.suptitle('2D frame with centroid and apertures')
 
