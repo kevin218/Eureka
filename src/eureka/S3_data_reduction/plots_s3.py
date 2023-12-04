@@ -56,11 +56,11 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     # Don't do min and max because MIRI is backwards
     # Correctly place label at center of pixel
     if meta.inst == 'miri':
-        pmin = int(optspec.x[0].values+0.5)
-        pmax = int(optspec.x[-1].values-0.5)
+        pmin = optspec.x[0].values+0.5
+        pmax = optspec.x[-1].values-0.5
     else:
-        pmin = int(optspec.x[0].values-0.5)
-        pmax = int(optspec.x[-1].values+0.5)
+        pmin = optspec.x[0].values-0.5
+        pmax = optspec.x[-1].values+0.5
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -362,13 +362,14 @@ def profile(meta, profile, submask, n, m):
     profile = np.ma.masked_where(mask, profile)
     submask = np.ma.masked_where(mask, submask)
     vmin = np.ma.min(profile*submask)
-    vmax = vmin + 0.05*np.ma.max(profile*submask)
+    vmax = vmin + 0.3*np.ma.max(profile*submask)
     cmap = plt.cm.viridis.copy()
     plt.figure(3303, figsize=(8, 4))
     plt.clf()
     plt.title(f"Optimal Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
+    plt.colorbar()
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
@@ -492,7 +493,7 @@ def driftywidth(data, meta, m):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m, vmin=-200, vmax=1000):
+def residualBackground(data, meta, m, vmin=-200, vmax=1800):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
 
@@ -507,7 +508,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     vmin : int; optional
         Minimum value of colormap. Default is -200.
     vmax : int; optional
-        Maximum value of colormap. Default is 1000.
+        Maximum value of colormap. Default is 1800.
 
     Notes
     -----
