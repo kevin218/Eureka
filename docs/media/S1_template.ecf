@@ -29,7 +29,7 @@ jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection thresho
 custom_linearity    False
 linearity_file      /path/to/custom/linearity/fits/file
 
-# Custom bias
+# Custom bias when using NIRSpec G395H
 bias_correction     None    # Bias correction options: [mean, group_level, smooth, None]
 bias_group          1       # Group number options: [1, 2, ..., each]
 bias_smooth_length  201     # Window length when using 'smooth' bias correction
