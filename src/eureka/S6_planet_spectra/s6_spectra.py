@@ -22,6 +22,7 @@ from ..lib import readECF
 from ..lib import util, logedit
 from . import plots_s6 as plots
 from ..lib import astropytable
+from ..version import version
 
 
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
@@ -64,6 +65,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -123,6 +125,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
             log = logedit.Logedit(meta.s6_logname, read=meta.s5_logname)
             log.writelog("\nStarting Stage 6: Light Curve Fitting\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 

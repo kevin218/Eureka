@@ -29,6 +29,7 @@ from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
 from ..lib import clipping
+from ..version import version
 
 
 def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
@@ -83,6 +84,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -143,6 +145,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s4_logname, read=meta.s3_logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 

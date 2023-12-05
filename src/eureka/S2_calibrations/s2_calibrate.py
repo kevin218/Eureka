@@ -22,11 +22,13 @@ from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
 import jwst.assign_wcs.nirspec
+import crds
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import plots
+from ..version import version
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -74,6 +76,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    # If a specific CRDS context is entered in the ECF, apply it.
+    # Otherwise, log and fix the default CRDS context to make sure it doesn't
+    # change between different segments.
+    if not hasattr(meta, 'pmap') or meta.pmap is None:
+        # Get just the numerical value
+        meta.pmap = crds.get_context_name('jwst')[5:-5]
+    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -104,6 +115,8 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
+    log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f"Output directory: {meta.outputdir}")
 
