@@ -296,6 +296,10 @@ max_memory
 ''''''''''
 Sets the maximum memory fraction (0--1) that should be used by the loaded in data files. This will reduce nfiles if needed. Note that more RAM than this may be used during operations like sigma clipping, so you're best off setting max_memory <= 0.5.
 
+indep_batches
+'''''''''''''
+Do you want to independently treat each batch of files? When False, the median spectrum from the first batch is applied too all batches. Strongly recommended to leave this as False unless you have a clear reason to set it to True. If set to True, you may end up with jump discontinuities between batches.
+
 suffix
 ''''''
 If your data directory (``topdir + inputdir``, see below) contains files with different data formats, you want to consider setting this variable.

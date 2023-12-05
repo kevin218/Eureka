@@ -305,10 +305,19 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                       meta.files_per_batch))
 
             datasets = []
+
+            if (not hasattr(meta, 'indep_batches') or
+                    meta.indep_batches is None):
+                meta.indep_batches = False
             saved_refrence_tilt_frame = None
             saved_ref_median_frame = None
 
             for m in range(meta.nbatch):
+                # Reset saved median frame if meta.indep_batches
+                if meta.indep_batches:
+                    saved_ref_median_frame = None
+                    saved_refrence_tilt_frame = None
+
                 first_file = m*meta.files_per_batch
                 last_file = min([meta.num_data_files,
                                  (m+1)*meta.files_per_batch])
@@ -414,40 +423,48 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 
                 if not hasattr(meta, 'calibrated_spectra'):
                     meta.calibrated_spectra = False
-                # Instrument-specific steps for generating
-                # calibrated stellar spectra
-                if meta.calibrated_spectra:
-                    data = inst.calibrated_spectra(data, meta, log)
 
                 if not meta.photometry:
-                    # Locate source postion
-                    data, meta, log = \
-                        source_pos.source_pos_wrapper(data, meta, log, m)
+                    # Locate source postion for the first integration of
+                    # the first batch
+                    if (meta.indep_batches or
+                            (not hasattr(meta, 'src_ypos'))):
+                        data, meta, log = \
+                            source_pos.source_pos_wrapper(data, meta, log, m)
 
-                # Compute 1D wavelength solution
-                if 'wave_2d' in data:
-                    data['wave_1d'] = (['x'],
-                                       data.wave_2d[meta.src_ypos].values)
-                    data['wave_1d'].attrs['wave_units'] = \
-                        data.wave_2d.attrs['wave_units']
+                    # Compute 1D wavelength solution
+                    if 'wave_2d' in data:
+                        data['wave_1d'] = (['x'],
+                                           data.wave_2d[meta.src_ypos].values)
+                        data['wave_1d'].attrs['wave_units'] = \
+                            data.wave_2d.attrs['wave_units']
 
-                # Check for bad wavelength pixels (beyond wavelength solution)
-                util.check_nans(data.wave_1d.values, np.ones(meta.subnx), log,
-                                name='wavelength')
+                    # Check for bad wavelengths (beyond wavelength solution)
+                    util.check_nans(data.wave_1d.values, np.ones(meta.subnx),
+                                    log, name='wavelength')
 
-                # Convert flux units to electrons
-                # (eg. MJy/sr -> DN -> Electrons)
-                if not meta.calibrated_spectra:
-                    data, meta = b2f.convert_to_e(data, meta, log)
+                    if meta.calibrated_spectra:
+                        # Instrument-specific steps for generating
+                        # calibrated stellar spectra
+                        data = inst.calibrated_spectra(data, meta, log)
+                    else:
+                        # Convert flux units to electrons
+                        # (eg. MJy/sr -> DN -> Electrons)
+                        data, meta = b2f.convert_to_e(data, meta, log)
 
-                if not meta.photometry:
                     # Perform outlier rejection of
                     # full frame along time axis
                     if hasattr(meta, 'ff_outlier') and meta.ff_outlier:
                         data = inst.flag_ff(data, meta, log)
 
-                    # Compute clean median frame
-                    data = optspex.clean_median_flux(data, meta, log, m)
+                    if saved_ref_median_frame is None:
+                        # Compute clean median frame
+                        data = optspex.clean_median_flux(data, meta, log, m)
+                        # Save the original median frame
+                        saved_ref_median_frame = data.medflux
+                    else:
+                        # Load the original median frame
+                        data.medflux = saved_ref_median_frame
 
                     # correct spectral curvature
                     if not hasattr(meta, 'curvature'):
@@ -523,6 +540,15 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     meta.photap = meta.spec_hw
                     meta.skyin, meta.skyout = np.array(meta.bg_hw.split('_')
                                                        ).astype(int)
+
+                    if meta.calibrated_spectra:
+                        # Instrument-specific steps for generating
+                        # calibrated stellar spectra
+                        data = inst.calibrated_spectra(data, meta, log)
+                    else:
+                        # Convert flux units to electrons
+                        # (eg. MJy/sr -> DN -> Electrons)
+                        data, meta = b2f.convert_to_e(data, meta, log)
 
                     # Do outlier reduction along time axis for
                     # each individual pixel
