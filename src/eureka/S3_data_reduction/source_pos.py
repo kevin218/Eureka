@@ -71,14 +71,14 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
                 iterfn = tqdm(iterfn)
             for n in iterfn:
                 writePos(source_pos(flux[n], meta, data.attrs['shdr'],
-                                    m, n, False, guess))
+                                    m, n, log, False, guess))
         else:
             # Multiple CPUs
             pool = mp.Pool(meta.ncpu)
             jobs = [pool.apply_async(func=source_pos,
                                      args=(flux[n], meta,
                                            data.attrs['shdr'], m,
-                                           n, False, guess),
+                                           n, log, False, guess),
                                      callback=writePos)
                     for n in range(meta.int_start, meta.n_int)]
             pool.close()
@@ -99,7 +99,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         log.writelog('  Locating source position...', mute=(not meta.verbose))
 
         meta.src_ypos = source_pos(flux[integ], meta, data.attrs['shdr'],
-                                   m, integ, True, guess)[0]
+                                   m, integ, log, True, guess)[0]
 
         log.writelog('    Source position on detector is row '
                      f'{meta.src_ypos}.', mute=(not meta.verbose))
@@ -107,7 +107,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         return data, meta, log
 
 
-def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
+def source_pos(flux, meta, shdr, m, n, log, plot=True, guess=None):
     '''Determine the source position for one frames.
 
     Parameters
@@ -122,6 +122,8 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
         The file number.
     n : int
         The integration number.
+    log : logedit.Logedit
+        The current log.
     plot : bool; optional
         If True, plot the source position determination.
         Defaults to True.
@@ -165,9 +167,17 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
     elif meta.src_pos_type == 'max':
         # brightest row for source location
         src_ypos = source_pos_median(flux, meta, m, n, plot)
-    else:
+    elif not isinstance(meta.src_pos_type, str):
         # manually specify source location
         src_ypos = float(meta.src_pos_type)
+    else:
+        # Some unrecognized string
+        log.writelog(f'WARNING: {meta.src_pos_type} is not a recognized ' +
+                     'source position type. Options: header, gaussian, ' +
+                     'weighted, max, hst, or a numeric value.')
+        raise Exception(f'{meta.src_pos_type} is not a recognized source ' +
+                        'position type. Options: header, gaussian, weighted,' +
+                        ' max, hst, or a numeric value.')
 
     if meta.src_pos_type == 'gaussian':
         return int(round(src_ypos)), src_ypos, src_ywidth, n
