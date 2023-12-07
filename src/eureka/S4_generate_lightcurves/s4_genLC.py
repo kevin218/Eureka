@@ -300,7 +300,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             # Manually mask pixel columns by index number
             if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
                 for w in meta.mask_columns:
-                    log.writelog(f"Masking absolute pixel column {w}.")
+                    log.writelog(f"Masking detector pixel column {w}.")
                     index = np.where(spec.optmask.x == w)[0][0]
                     spec.optmask[:, index] = True
 

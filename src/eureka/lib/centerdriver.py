@@ -84,6 +84,9 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         img, msk, err = data, mask, uncd
         loc = guess
         cen = np.array([0, 0])
+        # Subtract median BG because photutils sometimes has a hard time 
+        # fitting for a constant offset
+        img -= np.nanmedian(img)
 
     # If all data is bad:
     if not np.any(msk):

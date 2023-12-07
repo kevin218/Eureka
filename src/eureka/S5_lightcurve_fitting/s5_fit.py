@@ -265,7 +265,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Load limb-darkening coefficients from a custom file
                     ld_fix_file = str(meta.ld_file_white)
                     try:
-                        ld_coeffs = np.loadtxt(ld_fix_file)
+                        ld_coeffs = np.genfromtxt(ld_fix_file)
                     except FileNotFoundError:
                         raise Exception("The limb-darkening file "
                                         f"{ld_fix_file} could not be found.")
@@ -338,7 +338,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
                 try:
-                    ld_coeffs = np.loadtxt(ld_fix_file)
+                    ld_coeffs = np.genfromtxt(ld_fix_file)
                 except FileNotFoundError:
                     raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
