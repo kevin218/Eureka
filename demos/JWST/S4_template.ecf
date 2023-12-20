@@ -41,7 +41,7 @@ teff            6000    # Effective temperature of the star in K
 logg            4.0     # Surface gravity in log g
 exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/record/6344946
 exotic_ld_grid  3D      # 1D or 3D model grid, or custom file
-custom_si_grid  /home/User/path/to/custom/stellar/intensity/profile  #Custom Stellar Intensity profile. rows: intensity, columns: wavelength in micron. 
+custom_si_grid  /home/User/path/to/custom/stellar/intensity/profile  #Custom Stellar Intensity profile. rows: wavelength in micron, columns: intensity
 exotic_ld_file  /home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
 
 # Diagnostics
