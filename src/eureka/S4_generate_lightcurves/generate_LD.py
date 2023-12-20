@@ -81,7 +81,18 @@ def exotic_ld(meta, spec, log, white=False):
         wavelength_range *= 1e4
 
     # compute stellar limb darkening model
-    sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
+    if hasattr(meta, "custom_si_grid") and meta.exotic_ld_grid == 'custom':
+        s_wvs = (np.genfromtxt(meta.custom_si_grid, skip_header = 2, usecols = [0]).T)*1e4
+        s_mus = np.flip(np.genfromtxt(meta.custom_si_grid, skip_header = 1, max_rows = 1))
+        stellar_intensity = np.flip(np.genfromtxt(meta.custom_si_grid, skip_header = 2)[:,1:],axis = 1)
+        
+        sld = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
+                                   ld_model="custom",
+                                   custom_wavelengths=s_wvs,
+                                   custom_mus=s_mus,
+                                   custom_stellar_model=stellar_intensity)
+    else:
+        sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                meta.exotic_ld_grid, meta.exotic_ld_direc)
 
     lin_c1 = np.zeros((meta.nspecchan, 1))
