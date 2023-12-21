@@ -224,6 +224,8 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
         degs = np.ones(ny)*deg
         # Initiate background image with zeros
         bg = np.zeros((ny, nx))
+        
+            
         # Fit polynomial to each column
         for j in range(ny):
             nobadpixels = False
@@ -259,13 +261,17 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     model = np.polyval(coeffs, goodxvals)
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
-                    # Simple standard deviation (faster but prone to missing
-                    # scanned background stars)
-                    stdres = np.std(residuals)
-                    # Median Absolute Deviation (slower but more robust)
-                    # stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    # Mean Absolute Deviation (good compromise)
-                    # stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    #Choose method for finding bad pixels
+                    if meta.bg_method=='std':
+                        # Simple standard deviation (faster but prone to missing
+                        # scanned background stars)
+                        stdres = np.std(residuals)
+                    elif meta.bg_method=='med':
+                        # Median Absolute Deviation (slower but more robust)
+                        stdres  = np.median(np.abs(np.ediff1d(residuals)))
+                    elif meta.bg_method=='mean':
+                        # Mean Absolute Deviation (good compromise)
+                        stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     if stdres == 0:
                         stdres = np.inf
                     stdevs = np.abs(residuals) / stdres
@@ -276,7 +282,6 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                         mask[j, goodxvals[loc]] = 0
                     else:
                         nobadpixels = True  # exit while loop
-
             # Evaluate background model at all points, write model to
             # background image
             if len(goodxvals) != 0:
