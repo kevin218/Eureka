@@ -262,14 +262,14 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
                     #Choose method for finding bad pixels
-                    if meta.bg_method=='std':
+                    if hasattr(meta, 'bg_method') and meta.bg_method=='std':
                         # Simple standard deviation (faster but prone to missing
                         # scanned background stars)
                         stdres = np.std(residuals)
-                    elif meta.bg_method=='med':
+                    elif hasattr(meta, 'bg_method') and meta.bg_method=='med':
                         # Median Absolute Deviation (slower but more robust)
                         stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    elif meta.bg_method=='mean':
+                    elif hasattr(meta, 'bg_method') and meta.bg_method=='mean':
                         # Mean Absolute Deviation (good compromise)
                         stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     if stdres == 0:
