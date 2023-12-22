@@ -35,7 +35,7 @@ class HSTRampModel(Model):
             self.parameters = Parameters(**params)
 
         # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 6))
+        self.coeffs = np.zeros((self.nchannel_fitted, 7))
         self._parse_coeffs()
 
     @property
@@ -76,7 +76,7 @@ class HSTRampModel(Model):
             else:
                 chan = 0
 
-            for i in range(6):
+            for i in range(7):
                 try:
                     if chan == 0:
                         self.coeffs[c, i] = self.parameters.dict[f'h{i}'][0]
