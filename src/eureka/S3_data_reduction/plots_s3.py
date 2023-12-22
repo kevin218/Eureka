@@ -146,20 +146,17 @@ def image_and_background(data, meta, log, m):
     # If need be, transpose array so that largest dimension is on x axis
     if len(data.flux.x.values) < len(data.flux.y.values):
         data = data.transpose('time', 'x', 'y')
-        ymin, ymax = data.flux.x.min().values, data.flux.x.max().values
-        xmin, xmax = data.flux.y.min().values, data.flux.y.max().values
-    else:
-        xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-        ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
 
-    # Commented out vmax calculation is sensitive to unflagged hot pixels
-    # vmax = np.ma.max(np.ma.masked_invalid(subdata))/40
-    vmin = -200
-    vmax = 1000
+    # Determine bounds for subdata
+    stddev = np.std(subdata)
+    vmin = -3*stddev
+    vmax = 5*stddev
+    # Determine bounds for BG frame
     median = np.ma.median(subbg)
     std = np.ma.std(subbg)
     # Set bad pixels to plot as black
@@ -493,7 +490,7 @@ def driftywidth(data, meta, m):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m, vmin=-200, vmax=1800):
+def residualBackground(data, meta, m, vmin=None, vmax=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
 
@@ -506,9 +503,9 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1800):
     m : int
         The file number.
     vmin : int; optional
-        Minimum value of colormap. Default is -200.
+        Minimum value of colormap. Default is None.
     vmax : int; optional
-        Maximum value of colormap. Default is 1800.
+        Maximum value of colormap. Default is None.
 
     Notes
     -----
@@ -517,19 +514,25 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1800):
     - 2022-07-29 KBS
         Initial version
     '''
-    xmin = int(data.flux.x.values[0])
-    xmax = int(data.flux.x.values[-1])
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     # Median flux of segment
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     flux = np.ma.median(subdata, axis=0)
-    # Compute vertical slice of with 10 columns
-    slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
+    # Compute vertical slice of width 10 columns
+    flux_slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
+    # Replace NaNs with zeros to enable interpolation
+    flux_slice = np.nan_to_num(flux_slice, copy=False, nan=0.0)
     # Interpolate to 0.01-pixel resolution
-    f = spi.interp1d(np.arange(ymin, ymax+1), slice, 'cubic')
+    f = spi.interp1d(np.arange(ymin+0.5, ymax), flux_slice, 'cubic',
+                     fill_value="extrapolate")
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
+    # Set vmin and vmax
+    if vmin is None:
+        vmin = np.min((0,np.nanmin(flux_hr)))
+    if vmax is None:
+        vmax = np.nanmax(flux_hr)/3
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
@@ -541,7 +544,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1800):
 
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
-              extent=[xmin, xmax, ymin, ymax + 1])
+              extent=[xmin, xmax, ymin, ymax])
     a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2-1], xmin, xmax, color='orange')
     a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
@@ -560,7 +563,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1800):
     a1.legend(loc='upper right', fontsize=8)
     a1.axes.set_xlabel("Flux [e-]")
     a1.axes.set_xlim(vmin, vmax)
-    a1.axes.set_ylim(ymin, ymax + 1)
+    a1.axes.set_ylim(ymin, ymax)
     a1.axes.set_yticklabels([])
     # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
@@ -644,10 +647,9 @@ def median_frame(data, meta, m):
     - 2022-08-06 KBS
         Initial version
     '''
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
     vmin = data.medflux.min().values
-    vmax = np.max([2000, vmin+2000])
+    vmax = data.medflux.max().values/3
     cmap = plt.cm.plasma.copy()
 
     plt.figure(3308, figsize=(8, 4))
@@ -1361,3 +1363,51 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                         all_images, fps=60)
 
     return refrence_tilt_frame
+
+def get_bounds(x, y):
+    """
+    Define bounds by adding half pixel to all edges
+
+    Parameters
+    ----------
+    x : 1D array
+        Pixel indeces along x axis.
+    y : 1D array
+        Pixel indeces along y axis.
+
+    Returns
+    -------
+    xmin
+        Minimum x bound
+    xmax
+        Maximum x bound
+    ymin
+        Minimum y bound
+    ymax
+        Maximum y bound
+
+    Notes
+    -----
+    History:
+    - 2023-12-22 Kevin Stevenson
+        Initial implementation.
+    """
+    xmin, xmax = x[0], x[-1]
+    ymin, ymax = y[0], y[-1]
+    if xmin < xmax:
+        # NIR instruments
+        xmin -= 0.5
+        xmax += 0.5
+    else:
+        # MIRI
+        xmin += 0.5
+        xmax -= 0.05
+    if ymin < ymax:
+        # All instruments
+        ymin -= 0.5
+        ymax += 0.5
+    else:
+        # Possible future use
+        ymin += 0.5
+        ymax -= 0.05
+    return xmin, xmax, ymin, ymax
