@@ -242,6 +242,7 @@ def optimal_spectrum(data, meta, n, m):
     m : int
         The file number.
     '''
+    xmin, xmax = get_bounds(data.stdspec.x.values)
     intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
                                           data.stdspec.values,
                                           data.optspec.values,
@@ -254,6 +255,7 @@ def optimal_spectrum(data, meta, n, m):
                  label='Standard Spec')
     plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
                  color='C2', ecolor='C2', label='Optimal Spec')
+    plt.xlim(xmin, xmax)
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
@@ -545,7 +547,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     a0.imshow(flux, origin='lower', aspect='auto', vmax=vmax, vmin=vmin,
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
-    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2-1], xmin, xmax, color='orange')
+    a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
     a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
@@ -554,14 +556,14 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     a1.scatter(flux_hr, ny_hr, 5, flux_hr, cmap=cmap,
                norm=plt.Normalize(vmin, vmax))
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
-    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2-1], vmin, vmax, color='orange',
+    a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
     a1.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
     a1.legend(loc='upper right', fontsize=8)
-    a1.axes.set_xlabel("Flux [e-]")
+    a1.axes.set_xlabel("Flux")
     a1.axes.set_xlim(vmin, vmax)
     a1.axes.set_ylim(ymin, ymax)
     a1.axes.set_yticklabels([])
@@ -1364,7 +1366,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
 
     return refrence_tilt_frame
 
-def get_bounds(x, y):
+def get_bounds(x, y=None):
     """
     Define bounds by adding half pixel to all edges
 
@@ -1372,7 +1374,7 @@ def get_bounds(x, y):
     ----------
     x : 1D array
         Pixel indeces along x axis.
-    y : 1D array
+    y : 1D array, optional
         Pixel indeces along y axis.
 
     Returns
@@ -1381,9 +1383,9 @@ def get_bounds(x, y):
         Minimum x bound
     xmax
         Maximum x bound
-    ymin
+    ymin, optional
         Minimum y bound
-    ymax
+    ymax, optional
         Maximum y bound
 
     Notes
@@ -1393,7 +1395,6 @@ def get_bounds(x, y):
         Initial implementation.
     """
     xmin, xmax = x[0], x[-1]
-    ymin, ymax = y[0], y[-1]
     if xmin < xmax:
         # NIR instruments
         xmin -= 0.5
@@ -1402,12 +1403,16 @@ def get_bounds(x, y):
         # MIRI
         xmin += 0.5
         xmax -= 0.05
-    if ymin < ymax:
-        # All instruments
-        ymin -= 0.5
-        ymax += 0.5
+    if y is not None:
+        ymin, ymax = y[0], y[-1]
+        if ymin < ymax:
+            # All instruments
+            ymin -= 0.5
+            ymax += 0.5
+        else:
+            # Possible future use
+            ymin += 0.5
+            ymax -= 0.05
+        return xmin, xmax, ymin, ymax
     else:
-        # Possible future use
-        ymin += 0.5
-        ymax -= 0.05
-    return xmin, xmax, ymin, ymax
+        return xmin, xmax
