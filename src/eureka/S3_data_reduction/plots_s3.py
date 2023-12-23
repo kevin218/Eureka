@@ -532,7 +532,7 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     flux_hr = f(ny_hr)
     # Set vmin and vmax
     if vmin is None:
-        vmin = np.min((0,np.nanmin(flux_hr)))
+        vmin = np.min((0, np.nanmin(flux_hr)))
     if vmax is None:
         vmax = np.nanmax(flux_hr)/3
     # Set bad pixels to plot as black
@@ -1365,6 +1365,7 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                         all_images, fps=60)
 
     return refrence_tilt_frame
+
 
 def get_bounds(x, y=None):
     """
