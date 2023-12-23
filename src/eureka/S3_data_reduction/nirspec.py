@@ -272,14 +272,14 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
         Initial version.
     """
     # Mask uncalibrated BG region
-    # log.writelog("  Setting uncalibrated pixels to zero...",
-    #              mute=(not meta.verbose))
-    # boolmask = np.abs(data.flux.data) > cutoff
-    # data['flux'].data = np.where(np.abs(data.flux.data) >
-    #                              cutoff, 0,
-    #                              data.flux.data)
-    # log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
-    #              "pixels in total.", mute=(not meta.verbose))
+    log.writelog("  Setting uncalibrated pixels to zero...",
+                 mute=(not meta.verbose))
+    boolmask = np.abs(data.flux.data) > cutoff
+    data['flux'].data = np.where(np.abs(data.flux.data) >
+                                 cutoff, 0,
+                                 data.flux.data)
+    log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
+                 "pixels in total.", mute=(not meta.verbose))
     
     # Convert from MJy to mJy
     log.writelog("  Converting from MJy to mJy...",
