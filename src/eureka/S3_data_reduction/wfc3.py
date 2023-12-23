@@ -632,8 +632,8 @@ def difference_frames(data, meta, log):
         # Guess spectrum position only using subarray region
         masked_data = diffflux[n, meta.ywindow[0]:meta.ywindow[1],
                                meta.xwindow[0]:meta.xwindow[1]] * \
-                diffmask[n, meta.ywindow[0]:meta.ywindow[1],
-                         meta.xwindow[0]:meta.xwindow[1]]
+            diffmask[n, meta.ywindow[0]:meta.ywindow[1],
+                     meta.xwindow[0]:meta.xwindow[1]]
         guess[n] = (np.median(np.where(masked_data > np.mean(masked_data))[0]) 
                     + meta.ywindow[0]).astype(int)
     # Guess may be skewed if first read is zeros
