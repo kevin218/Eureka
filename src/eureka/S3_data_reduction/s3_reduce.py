@@ -464,7 +464,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         saved_ref_median_frame = data.medflux
                     else:
                         # Load the original median frame
-                        data.medflux = saved_ref_median_frame
+                        data['medflux'] = saved_ref_median_frame
 
                     # correct spectral curvature
                     if not hasattr(meta, 'curvature'):
