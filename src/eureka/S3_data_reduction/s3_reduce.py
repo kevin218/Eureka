@@ -674,7 +674,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             data['betaper'][i]) = aphot
 
                 if not hasattr(meta, 'save_fluxdata'):
-                    meta.save_fluxdata = True
+                    meta.save_fluxdata = False
 
                 # plot tilt events
                 if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \
