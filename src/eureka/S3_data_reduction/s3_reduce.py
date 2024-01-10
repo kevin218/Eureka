@@ -752,6 +752,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if meta.save_output:
                 meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                              "_SpecData.h5")
+                
+                # Save Meta information to attributes of Xarray
+                util.add_meta_to_xarray(meta, spec)
+
                 success = xrio.writeXR(meta.filename_S3_SpecData, spec,
                                        verbose=True)
 

@@ -858,3 +858,33 @@ def supersample(data, expand, type, axis=1):
               "or wave. No super-sampling applied.")
         zdata = data
     return zdata
+
+
+def add_meta_to_xarray(meta, data):
+    """Add meta information to the attributes of an xarray.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in 
+        data.attrs.
+    """
+    all_attrs = meta.params
+    # # Skip dunder attributes
+    # attrs_to_save = [s for s in all_attrs 
+    #                  if not (s.startswith("__") or s.endswith("__"))]
+    # # Skip callable attributes
+    # attrs_to_save = [attr for attr in attrs_to_save 
+    #                  if not callable(getattr(meta, attr))]
+    for attr in all_attrs.keys():
+        attr_value = all_attrs[attr]
+        # None values cannot be saved, convert to string
+        if attr_value is None: attr_value = 'None'
+        # Need to convert numpy arrays of strings to lists
+        if isinstance(attr_value, np.ndarray):
+            if '<U' in str(attr_value.dtype):
+                attr_value = attr_value.tolist()
+        # Save value to xarray attributes
+        data.attrs[attr] = attr_value
