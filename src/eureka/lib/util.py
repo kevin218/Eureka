@@ -872,19 +872,51 @@ def add_meta_to_xarray(meta, data):
         data.attrs.
     """
     all_attrs = meta.params
-    # # Skip dunder attributes
-    # attrs_to_save = [s for s in all_attrs 
-    #                  if not (s.startswith("__") or s.endswith("__"))]
-    # # Skip callable attributes
-    # attrs_to_save = [attr for attr in attrs_to_save 
-    #                  if not callable(getattr(meta, attr))]
     for attr in all_attrs.keys():
         attr_value = all_attrs[attr]
         # None values cannot be saved, convert to string
         if attr_value is None: attr_value = 'None'
+        # Bibliography needs special handling
+        if attr == 'bibliography':
+            # Can't have different sized lists, must collapse
+            # citations for each citation flag.
+            attr_value = ['_ENDOFCITATION_'.join(citations)
+                          for citations in attr_value]
         # Need to convert numpy arrays of strings to lists
         if isinstance(attr_value, np.ndarray):
             if '<U' in str(attr_value.dtype):
                 attr_value = attr_value.tolist()
         # Save value to xarray attributes
+        print(attr, attr_value)
         data.attrs[attr] = attr_value
+
+
+def load_attrs_from_xarray(data):
+    """Function to load attrs from xarray file, ensuring
+    that potential conversions performed in add_meta_to_xarray()
+    are reversed.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in 
+        data.attrs.
+
+    Returns
+    -------
+    attrs : dict
+        Dictionary of attributes saved to the Xarray.
+    """
+    attrs = data.attrs
+    for attr in attrs.keys():
+        attr_value = attrs[attr]
+        #Convert None strings back to None
+        if attr_value == 'None': attr_value = None
+        # Restructure bibliography correctly
+        if attr == 'bibliography':
+            attr_value = [citations.split('_ENDOFCITATION_') 
+                          for citations in attr_value]
+        # Ensure array is updated
+        attrs[attr] = attr_value
+
+    return attrs

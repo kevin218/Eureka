@@ -2,7 +2,10 @@ import h5py as h5
 import pickle
 import os
 import glob
+import astraeus.xarrayIO as xrio
 
+from . import readECF
+from . import util
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):
     """Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
@@ -87,8 +90,17 @@ def loadevent(filename, load=[], loadfilename=None):
     - 2010-11-12  patricio
         reimplemented using exec()
     """
-    with open(filename + '.dat', 'rb') as handle:
-        event = pickle.load(handle, encoding='latin1')
+
+    if '_Meta_Save' in filename:
+        # This is a standard Meta_Save.dat file. 
+        with open(filename + '.dat', 'rb') as handle:
+            event = pickle.load(handle, encoding='latin1')
+    elif 'SpecData' in filename:
+        # This is a Stage 3 SpecData.h5 file. 
+        with xrio.readXR(filename +'.h5') as handle:
+            meta_attrs = util.load_attrs_from_xarray(handle)
+        # Now create the Meta class and assign attrs
+        event = readECF.MetaClass(**meta_attrs)
 
     if loadfilename is None:
         loadfilename = filename
@@ -105,7 +117,6 @@ def loadevent(filename, load=[], loadfilename=None):
                          '"][:]')
 
     return event
-
 
 def updateevent(event, filename, add):
     """Adds parameters given by add from filename to event.
@@ -188,13 +199,20 @@ def findevent(meta, stage, allowFail=False):
     """
     # Search for the output metadata in the inputdir provided
     # First just check the specific inputdir folder
+    if stage == 'S3':
+        # This is stage 3 data, not looking for _Save.dat file
+        file_suffix = '*SpecData.h5'
+        ext_strip = 3
+    else:
+        file_suffix = '*_Meta_Save.dat'
+        ext_strip = 4
     fnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
-                       '*_Meta_Save.dat')
+                       file_suffix)
     if len(fnames) == 0:
         # There were no metadata files in that folder, so let's see if there
         # are in children folders
         fnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
-                           meta.eventlabel+'*_Meta_Save.dat', recursive=True)
+                           meta.eventlabel+file_suffix, recursive=True)
 
     if len(fnames) >= 1:
         # get the folder with the latest modified time
@@ -212,8 +230,8 @@ def findevent(meta, stage, allowFail=False):
         # There may be no metafiles in the inputdir - raise an error and give
         # a helpful message
         raise AssertionError(f'WARNING: Unable to find an output metadata file'
-                             f' from Eureka!\'s {stage} in the folder:'
-                             f'\n"{meta.inputdir}"')
+                             f' of kind {file_suffix }from Eureka!\'s {stage}'
+                             f' in the folder:\n"{meta.inputdir}"')
     elif len(fnames) > 1:
         # There may be multiple runs - use the most recent but warn the user
         print(f'WARNING: There are multiple metadata save files in the folder:'
@@ -224,7 +242,7 @@ def findevent(meta, stage, allowFail=False):
               f'of the run you intended, please provide a more precise folder '
               f'for the metadata file.')
 
-    fname = fname[:-4]  # Strip off the .dat ending
+    fname = fname[:-ext_strip]  # Strip off the .dat ending
 
     # Load old savefile
     old_meta = loadevent(fname)
@@ -233,7 +251,6 @@ def findevent(meta, stage, allowFail=False):
     old_meta.filename = fname.split(os.sep)[-1]
 
     return old_meta, old_meta.folder, old_meta.folder[len(meta.topdir):]
-
 
 def mergeevents(new_meta, old_meta):
     """Merge the current MetaClass data into the MetaClass object from a

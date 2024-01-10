@@ -77,6 +77,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     s3_meta = deepcopy(s3_meta)
     input_meta = deepcopy(input_meta)
 
+    # Load Stage 4 meta information
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S4_' + eventlabel + '.ecf'
@@ -88,9 +89,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
+    # Load Stage 3 meta information
     if s3_meta is None:
-        # Locate the old MetaClass savefile, and load new ECF into
-        # that old MetaClass
+        # Not running sequentially, or not passing meta
+        # between function calls. Read from SpecData file instead. 
         s3_meta, meta.inputdir, meta.inputdir_raw = \
             me.findevent(meta, 'S3', allowFail=False)
     else:

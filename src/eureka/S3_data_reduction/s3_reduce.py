@@ -748,6 +748,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # arrays before saving
                 spec, meta, log = inst.conclusion_step(spec, meta, log)
 
+            # make citations for current stage
+            util.make_citations(meta, 3)
+
             # Save Dataset object containing time-series of 1D spectra
             if meta.save_output:
                 meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
@@ -778,15 +781,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
                                         optmask=spec.optmask)
-
-            # make citations for current stage
-            util.make_citations(meta, 3)
-
-            # Save results
-            if meta.save_output:
-                log.writelog('Saving Metadata')
-                fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
-                me.saveevent(meta, fname, save=[])
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
