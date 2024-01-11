@@ -875,7 +875,8 @@ def add_meta_to_xarray(meta, data):
     for attr in all_attrs.keys():
         attr_value = all_attrs[attr]
         # None values cannot be saved, convert to string
-        if attr_value is None: attr_value = 'None'
+        if attr_value is None:
+            attr_value = 'None'
         # Bibliography needs special handling
         if attr == 'bibliography':
             # Can't have different sized lists, must collapse
@@ -910,8 +911,9 @@ def load_attrs_from_xarray(data):
     attrs = data.attrs
     for attr in attrs.keys():
         attr_value = attrs[attr]
-        #Convert None strings back to None
-        if attr_value == 'None': attr_value = None
+        # Convert None strings back to None
+        if attr_value == 'None':
+            attr_value = None
         # Restructure bibliography correctly
         if attr == 'bibliography':
             attr_value = [citations.split('_ENDOFCITATION_') 

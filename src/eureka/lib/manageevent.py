@@ -7,6 +7,7 @@ import astraeus.xarrayIO as xrio
 from . import readECF
 from . import util
 
+
 def saveevent(event, filename, save=[], delete=[], protocol=3):
     """Saves an event in .dat (using cpickle) and .h5 (using h5py) files.
 
@@ -97,7 +98,7 @@ def loadevent(filename, load=[], loadfilename=None):
             event = pickle.load(handle, encoding='latin1')
     elif 'SpecData' in filename:
         # This is a Stage 3 SpecData.h5 file. 
-        with xrio.readXR(filename +'.h5') as handle:
+        with xrio.readXR(filename + '.h5') as handle:
             meta_attrs = util.load_attrs_from_xarray(handle)
         # Now create the Meta class and assign attrs
         event = readECF.MetaClass(**meta_attrs)
@@ -117,6 +118,7 @@ def loadevent(filename, load=[], loadfilename=None):
                          '"][:]')
 
     return event
+
 
 def updateevent(event, filename, add):
     """Adds parameters given by add from filename to event.
@@ -208,7 +210,7 @@ def findevent(meta, stage, allowFail=False):
         ext_strip = 4
     fnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
                        file_suffix)
-    
+
     if len(fnames) == 0:
         # There were no metadata files in that folder, so let's see if there
         # are in children folders
@@ -252,6 +254,7 @@ def findevent(meta, stage, allowFail=False):
     old_meta.filename = fname.split(os.sep)[-1]
 
     return old_meta, old_meta.folder, old_meta.folder[len(meta.topdir):]
+
 
 def mergeevents(new_meta, old_meta):
     """Merge the current MetaClass data into the MetaClass object from a

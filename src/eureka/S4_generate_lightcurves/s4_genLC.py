@@ -14,7 +14,8 @@
 # 8.  Save Stage 4 data products
 # 9.  Produce plots
 
-import glob, os
+import glob
+import os
 import time as time_pkg
 import numpy as np
 from copy import deepcopy
@@ -110,17 +111,17 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     # Assign some variables if not using eureka output
     if meta.data_format != 'eureka':
         if not hasattr(meta, 'spec_hw'):
-            meta.spec_hw = 0 #Spec half-width not specified
+            meta.spec_hw = 0  # Spec half-width not specified
         if not hasattr(meta, 'bg_hw'):
-            meta.bg_hw = 0   #BG half-width not specified
+            meta.bg_hw = 0   # BG half-width not specified
         if not hasattr(meta, 's3_logname'):
-            meta.s3_logname = None #No log file
+            meta.s3_logname = None  # No log file
         if not hasattr(meta, 'filename_S3_SpecData'):
-            #Get filename, due to Eureka! default behaviours
-            #only one non-eureka can be included in the
-            #specified input directory if this is unassigned. 
+            # Get filename, due to Eureka! default behaviours
+            # only one non-eureka can be included in the
+            # specified input directory if this is unassigned. 
             fnames = glob.glob(meta.inputdir+'S3_'+meta.eventlabel +
-                       '*SpecData.h5')
+                               '*SpecData.h5')
             if len(fnames) != 1:
                 raise AssertionError(f'WARNING: Unable to execute Stage 4'
                                      f' processing as there is more than'
@@ -192,7 +193,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                          mute=(not meta.verbose))
             spec = xrio.readXR(specData_savefile)
 
-            #Assign an empty mask for custom datasets
+            # Assign an empty mask for custom datasets
             if meta.data_format == 'custom':
                 if not hasattr(spec, 'optmask'):
                     spec['optmask'] = spec.optspec * 0
