@@ -208,6 +208,7 @@ def findevent(meta, stage, allowFail=False):
         ext_strip = 4
     fnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
                        file_suffix)
+    
     if len(fnames) == 0:
         # There were no metadata files in that folder, so let's see if there
         # are in children folders

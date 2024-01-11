@@ -36,7 +36,8 @@ version = __version__
 # ones.
 extensions = ['sphinx_rtd_theme', 'sphinx.ext.todo', 'sphinx.ext.viewcode',
               'sphinx.ext.autodoc', 'numpydoc', 'nbsphinx', 'myst_parser',
-              'sphinx.ext.autosectionlabel', 'sphinx.ext.napoleon']
+              'sphinx.ext.autosectionlabel', 'sphinx.ext.napoleon',
+              'nbsphinx']
 
 master_doc = 'index'
 # Add any paths that contain templates here, relative to this directory.
@@ -48,13 +49,21 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 pygments_style = 'sphinx'
+
+# nbsphinx settings
+nbsphinx_allow_errors = True
+nbsphinx_execute = 'never'
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+.. note::  `Download the full notebook for this tutorial here <https://github.com/kammerje/spaceKLIP/tree/develop/docs/source/{{ docname }}>`_
+"""
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-
 
 import sphinx_rtd_theme
 # Add any paths that contain custom themes here, relative to this directory.

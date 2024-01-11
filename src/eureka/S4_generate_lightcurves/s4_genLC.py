@@ -14,7 +14,7 @@
 # 8.  Save Stage 4 data products
 # 9.  Produce plots
 
-import os
+import glob, os
 import time as time_pkg
 import numpy as np
 from copy import deepcopy
@@ -103,6 +103,35 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     meta = me.mergeevents(meta, s3_meta)
 
+    # If the data format hasn't been set, must be eureka output
+    if not hasattr(meta, 'data_format'):
+        meta.data_format = 'eureka'
+
+    # Assign some variables if not using eureka output
+    if meta.data_format != 'eureka':
+        if not hasattr(meta, 'spec_hw'):
+            meta.spec_hw = 0 #Spec half-width not specified
+        if not hasattr(meta, 'bg_hw'):
+            meta.bg_hw = 0   #BG half-width not specified
+        if not hasattr(meta, 's3_logname'):
+            meta.s3_logname = None #No log file
+        if not hasattr(meta, 'filename_S3_SpecData'):
+            #Get filename, due to Eureka! default behaviours
+            #only one non-eureka can be included in the
+            #specified input directory if this is unassigned. 
+            fnames = glob.glob(meta.inputdir+'S3_'+meta.eventlabel +
+                       '*SpecData.h5')
+            if len(fnames) != 1:
+                raise AssertionError(f'WARNING: Unable to execute Stage 4'
+                                     f' processing as there is more than'
+                                     f' one SpecData.h5 file in the folder'
+                                     f':\n"{meta.inputdir}"')
+            else:
+                meta.filename_S3_SpecData = fnames[0]
+        if not hasattr(meta, 'photometry'):
+            # Assume spectroscopy unless manually set. 
+            meta.photometry = False
+
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider
         # one aperture
@@ -131,7 +160,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             meta.bg_hw = bg_hw_val
 
             # Load in the S3 metadata used for this particular aperture pair
-            meta = load_specific_s3_meta_info(meta)
+            if meta.data_format == 'eureka':
+                meta = load_specific_s3_meta_info(meta)
             # Directory structure should not use expanded HW values
             spec_hw_val //= meta.expand
             if not isinstance(bg_hw_val, str):
@@ -161,6 +191,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
             spec = xrio.readXR(specData_savefile)
+
+            #Assign an empty mask for custom datasets
+            if meta.data_format == 'custom':
+                if not hasattr(spec, 'optmask'):
+                    spec['optmask'] = spec.optspec * 0
 
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
