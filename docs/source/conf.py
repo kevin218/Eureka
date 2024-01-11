@@ -55,7 +55,7 @@ nbsphinx_allow_errors = True
 nbsphinx_execute = 'never'
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
-.. note::  `Download the full notebook for this tutorial here <https://github.com/kammerje/spaceKLIP/tree/develop/docs/source/{{ docname }}>`_
+.. note::  `Download the full notebook for this tutorial here <https://github.com/kevin218/Eureka/tree/main/docs/source/{{ docname }}>`_
 """
 
 # -- Options for HTML output -------------------------------------------------
