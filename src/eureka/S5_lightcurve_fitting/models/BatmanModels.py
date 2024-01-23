@@ -33,6 +33,31 @@ class BatmanTransitModel(Model):
 
         log = kwargs.get('log')
 
+        # Set default to ignore light-travel correction if not specified
+        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+            self.compute_ltt = False
+        
+        # Get the parameters relevant to light travel time correction
+        ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
+        # Check if able to do ltt correction
+        ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
+                              and 'Rs' in self.parameters.dict.keys())
+        if self.compute_ltt and not ltt_params_present:
+            missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
+                                                np.array(self.paramtitles),
+                                                axis=1)]
+            if 'Rs' not in self.parameters.dict.keys():
+                missing_params = np.append('Rs', missing_params)
+
+            log.writelog(f"WARNING: Missing parameters ["
+                         f"{', '.join(missing_params)}] in your EPF which "
+                         "are required to account for light-travel time.\n"
+                         "         You should either add these "
+                         "parameters, or you should set compute_ltt to "
+                         "False in your ECF.\n"
+                         "         Setting compute_ltt to False for now!")
+            self.compute_ltt = False
+
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         ld_func = ld_profile(self.parameters.limb_dark.value, 
@@ -151,8 +176,13 @@ class BatmanTransitModel(Model):
                 u2 = np.sqrt(bm_params.u[0])*(1-2*bm_params.u[1])
                 bm_params.u = np.array([u1, u2])
 
+            if self.compute_ltt:
+                self.adjusted_time = correct_light_travel_time(time, bm_params)
+            else:
+                self.adjusted_time = time
+
             # Make the transit model
-            m_transit = batman.TransitModel(bm_params, time,
+            m_transit = batman.TransitModel(bm_params, self.adjusted_time,
                                             transittype='primary')
 
             lcfinal = np.append(lcfinal, m_transit.light_curve(bm_params))
@@ -179,48 +209,43 @@ class BatmanEclipseModel(Model):
 
         log = kwargs.get('log')
 
+        # Set default to turn light-travel correction on if not specified
+        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+            self.compute_ltt = True
+
         # Get the parameters relevant to light travel time correction
         ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
         # Check if able to do ltt correction
-        self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
-                            and 'Rs' in self.parameters.dict.keys())
-        if self.compute_ltt:
-            # Check if we need to do ltt correction for each
-            # wavelength or only one
-            if self.nchannel_fitted > 1:
-                # Check whether the parameters are all either fixed or shared
-                once_type = ['shared', 'fixed']
-                self.compute_ltt_once = \
-                    all([self.parameters.dict.get(name)[1] in once_type
-                         for name in ltt_params])
-            else:
-                self.compute_ltt_once = True
-        else:
+        ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
+                              and 'Rs' in self.parameters.dict.keys())
+        if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
                                                 np.array(self.paramtitles),
                                                 axis=1)]
             if 'Rs' not in self.parameters.dict.keys():
                 missing_params = np.append('Rs', missing_params)
+
+            log.writelog("WARNING: Missing parameters ["
+                         f"{', '.join(missing_params)}] in your EPF which "
+                         "are required to account for light-travel time.\n")
+
             if 't_secondary' not in self.parameters.dict.keys():
-                log.writelog(f"WARNING: Missing parameters ["
-                             f"{', '.join(missing_params)}] in your EPF which "
-                             f"are required to account for light-travel time."
-                             f"\n"
-                             f"         You should either add these "
-                             f"parameters, or you should be fitting for "
-                             f"t_secondary\n"
-                             f"         (but note that the fitted t_secondary "
-                             f"will not be accounting for light-travel time).")
+                log.writelog("         You should either add these parameters,"
+                             " fit for t_secondary (but note that the\n"
+                             "         fitted t_secondary value will not have "
+                             "accounted for light-travel time), or you\n"
+                             "         should set compute_ltt to False in your"
+                             " ECF.")
             else:
-                log.writelog(f"WARNING: Missing parameters "
-                             f"{', '.join(missing_params)} in your EPF which "
-                             f"are required to account for light-travel time."
-                             f"\n"
-                             f"         While you are fitting for t_secondary"
-                             f" which will help, note that the fitted "
-                             f"t_secondary\n"
-                             f"         will not be accounting for "
-                             f"light-travel time).")
+                log.writelog("         While you are fitting for t_secondary "
+                             "which will help, note that the fitted\n"
+                             "         t_secondary value will not have "
+                             "accounted for light-travel time. You should\n"
+                             "         either add the missing parameters or "
+                             "set compute_ltt to False in your ECF.")
+
+            log.writelog("         Setting compute_ltt to False for now!")
+            self.compute_ltt = False
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -283,9 +308,7 @@ class BatmanEclipseModel(Model):
             bm_params.u = []
 
             if self.compute_ltt:
-                if c == 0 or not self.compute_ltt_once:
-                    self.adjusted_time = correct_light_travel_time(time,
-                                                                   bm_params)
+                self.adjusted_time = correct_light_travel_time(time, bm_params)
             else:
                 self.adjusted_time = time
 
