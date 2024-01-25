@@ -16,6 +16,7 @@ logger.setLevel(logging.ERROR)
 import pymc3 as pm
 BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
 BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
+BoundedNormal_n1_1 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
 from ..utils import COLORS
@@ -203,6 +204,15 @@ class PyMC3Model:
         for val, key in zip(newparams, self.freenames):
             setattr(self.fit, key, val)
 
+        # The following code should work but doesn't see to work well
+        # self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
+        # self.fit.ecc2 = np.sqrt(self.fit.ecosw2**2 + self.fit.esinw2**2)
+        # self.fit.ecc3 = np.sqrt(self.fit.ecosw3**2 + self.fit.esinw3**2)
+        # longitude of periastron needs to be in degrees for batman!
+        # self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180./np.pi
+        # self.fit.w2 = np.arctan2(self.fit.esinw2, self.fit.ecosw2)*180./np.pi
+        # self.fit.w3 = np.arctan2(self.fit.esinw3, self.fit.ecosw3)*180./np.pi
+
     def setup(self, **kwargs):
         """A placeholder function to do any additional setup.
         """
@@ -343,7 +353,7 @@ class CompositePyMC3Model(PyMC3Model):
                                                    upper=param.priorpar2,
                                                    testval=param.value))
                             elif param.prior == 'N':
-                                if (parname == 'ecc' or
+                                if ('ecc' in parname or
                                         (parname in ['u1', 'u2'] and
                                          self.parameters.limb_dark.value ==
                                          'kipping2013')):
@@ -351,6 +361,14 @@ class CompositePyMC3Model(PyMC3Model):
                                     # Eccentricity is only [0,1]
                                     setattr(self.model, parname_temp,
                                             BoundedNormal_0_1(
+                                                parname_temp,
+                                                mu=param.priorpar1,
+                                                sigma=param.priorpar2,
+                                                testval=param.value))
+                                elif 'ecosw' in parname or 'esinw' in parname:
+                                    # e*cos(w) and e*sin(w) are only on [-1,1]
+                                    setattr(self.model, parname_temp,
+                                            BoundedNormal_n1_1(
                                                 parname_temp,
                                                 mu=param.priorpar1,
                                                 sigma=param.priorpar2,

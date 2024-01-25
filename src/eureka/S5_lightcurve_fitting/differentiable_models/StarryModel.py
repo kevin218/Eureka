@@ -105,6 +105,8 @@ class StarryModel(PyMC3Model):
         """
         self.systems = []
         self.rps = []
+        self.rps_2 = []
+        self.rps_3 = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
@@ -151,6 +153,18 @@ class StarryModel(PyMC3Model):
             Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
                   - temp.Ms)
 
+            a_2 = temp.a2*temp.Rs*const.R_sun.value
+            p_2 = temp.per2*(24.*3600.)
+            Mp_2 = (((2.*np.pi*a_2**(3./2.))/p_2)**2
+                    / const.G.value/const.M_sun.value
+                    - temp.Ms)
+            
+            a_3 = temp.a3*temp.Rs*const.R_sun.value
+            p_3 = temp.per3*(24.*3600.)
+            Mp_3 = (((2.*np.pi*a_3**(3./2.))/p_3)**2
+                    / const.G.value/const.M_sun.value
+                    - temp.Ms)
+
             if not hasattr(temp, 'fp'):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
             else:
@@ -164,6 +178,30 @@ class StarryModel(PyMC3Model):
                 amp = temp.fp/tt.abs_(planet_map2.flux(theta=0)[0])
                 planet_map.amp = amp
             self.rps.append(temp.rp)
+
+            if not hasattr(temp, 'fp2'):
+                planet_map_2 = starry.Map(ydeg=0, amp=0)
+            else:
+                planet_map_2 = starry.Map(ydeg=self.ydeg)
+                planet_map2_2 = starry.Map(ydeg=self.ydeg)
+                for ell in range(1, self.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        if hasattr(temp, f'Y{ell}{m}'):
+                            planet_map_2[ell, m] = getattr(temp,
+                                                           f'Y{ell}{m}2')
+                            planet_map2_2[ell, m] = getattr(temp,
+                                                            f'Y{ell}{m}2')
+                amp_2 = temp.fp2/tt.abs_(planet_map2_2.flux(theta=0)[0])
+                planet_map_2.amp = amp_2
+            self.rps_2.append(temp.rp2)
+
+            planet_map_3 = starry.Map(ydeg=0, amp=0)
+            self.rps_3.append(temp.rp3)
+
+            # The following code should work but doesn't see to work well
+            # self.model.ecc = tt.sqrt(temp.ecosw**2 + temp.esinw**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # self.model.w = tt.arctan2(temp.esinw, temp.ecosw)*180./np.pi
 
             # Initialize planet object
             planet = starry.Secondary(
@@ -187,8 +225,63 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
+            # The following code should work but doesn't see to work well
+            # self.model.ecc2 = tt.sqrt(temp.ecosw2**2 + temp.esinw2**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # self.model.w2 = tt.arctan2(temp.esinw2, temp.ecosw2)*180./np.pi
+
+            # Initialize planet object
+            planet_2 = starry.Secondary(
+                planet_map_2,
+                m=Mp_2,
+                # Convert radius to R_star units
+                r=tt.abs_(temp.rp2)*temp.Rs,
+                # Setting porb here overwrites a
+                a=temp.a2,
+                # Another option to set inclination using impact parameter
+                # inc=tt.arccos(b/a)*180/np.pi
+                inc=temp.inc2,
+                ecc=temp.ecc2,
+                w=temp.w2
+            )
+            # Setting porb here may not override a
+            planet_2.porb = temp.per2
+            # Setting prot here may not override a
+            planet_2.prot = temp.per2
+            # Offset is controlled by Y11
+            planet_2.theta0 = 180.0
+            planet_2.t0 = temp.t02
+
+            # The following code should work but doesn't see to work well
+            # self.model.ecc3 = tt.sqrt(temp.ecosw3**2 + temp.esinw3**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # self.model.w3 = tt.arctan2(temp.esinw3, temp.ecosw3)*180./np.pi
+
+            # Initialize planet object
+            planet_3 = starry.Secondary(
+                planet_map_3,
+                m=Mp_3,
+                # Convert radius to R_star units
+                r=tt.abs_(temp.rp3)*temp.Rs,
+                # Setting porb here overwrites a
+                a=temp.a3,
+                # Another option to set inclination using impact parameter
+                # inc=tt.arccos(b/a)*180/np.pi
+                inc=temp.inc3,
+                ecc=temp.ecc3,
+                w=temp.w3
+            )
+            # Setting porb here may not override a
+            planet_3.porb = temp.per3
+            # Setting prot here may not override a
+            planet_3.prot = temp.per3
+            # Offset is controlled by Y11
+            planet_3.theta0 = 180.0
+            planet_3.t0 = temp.t03
+
             # Instantiate the system
-            system = starry.System(star, planet, light_delay=True)
+            system = starry.System(star, planet, planet_2, planet_3,
+                                   light_delay=True)
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -219,11 +312,9 @@ class StarryModel(PyMC3Model):
         if eval:
             lib = np
             systems = self.fit.systems
-            rps = self.fit_rps
         else:
             lib = tt
             systems = self.systems
-            rps = self.rps
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
@@ -237,14 +328,8 @@ class StarryModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Combine the planet and stellar flux (allowing negative rp)
-            fstar, fp = systems[chan].flux(time, total=False)
-            # Do some annoying math to allow theano functions to compile
-            # (correctly defined for -1 < rp < 1)
-            sign = (lib.ceil(rps[chan])+lib.floor(rps[chan]))
-            fstar = (fstar-1)*sign + 1
-            fp = fp*sign
-            lcpiece = fstar+fp
+            # Combine the planet and stellar flux
+            lcpiece = systems[chan].flux(time)
 
             if eval:
                 lcpiece = lcpiece.eval()
@@ -252,7 +337,7 @@ class StarryModel(PyMC3Model):
 
         return phys_flux
 
-    def compute_fp(self, theta=0):
+    def compute_fp(self, theta=0, planet=0):
         """Compute the planetary flux at an arbitrary orbital position.
 
         Parameters
@@ -269,7 +354,7 @@ class StarryModel(PyMC3Model):
         with self.model:
             fps = []
             for system in self.fit.systems:
-                planet_map = system.secondaries[0].map
+                planet_map = system.secondaries[planet].map
                 fps.append(planet_map.flux(theta=theta).eval())
             return np.array(fps)
 
@@ -288,6 +373,8 @@ class StarryModel(PyMC3Model):
 
         self.fit.systems = []
         self.fit_rps = []
+        self.fit_rps_2 = []
+        self.fit_rps_3 = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
@@ -332,6 +419,22 @@ class StarryModel(PyMC3Model):
             p = temp.per*(24.*3600.)
             Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
                   - temp.Ms)
+            
+            # Solve Keplerian orbital period equation for Mp
+            # (otherwise starry is going to mess with P or a...)
+            a_2 = temp.a2*temp.Rs*const.R_sun.value
+            p_2 = temp.per2*(24.*3600.)
+            Mp_2 = (((2.*np.pi*a_2**(3./2.))/p_2)**2
+                    / const.G.value/const.M_sun.value
+                    - temp.Ms)
+            
+            # Solve Keplerian orbital period equation for Mp
+            # (otherwise starry is going to mess with P or a...)
+            a_3 = temp.a3*temp.Rs*const.R_sun.value
+            p_3 = temp.per3*(24.*3600.)
+            Mp_3 = (((2.*np.pi*a_3**(3./2.))/p_3)**2
+                    / const.G.value/const.M_sun.value
+                    - temp.Ms)
 
             if not hasattr(temp, 'fp'):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
@@ -346,6 +449,30 @@ class StarryModel(PyMC3Model):
                 amp = temp.fp/np.abs(planet_map2.flux(theta=0)[0])
                 planet_map.amp = amp
             self.fit_rps.append(temp.rp)
+
+            if not hasattr(temp, 'fp2'):
+                planet_map_2 = starry.Map(ydeg=self.ydeg, amp=0)
+            else:
+                planet_map_2 = starry.Map(ydeg=self.ydeg)
+                planet_map2_2 = starry.Map(ydeg=self.ydeg)
+                for ell in range(1, self.ydeg+1):
+                    for m in range(-ell, ell+1):
+                        if hasattr(temp, f'Y{ell}{m}'):
+                            planet_map_2[ell, m] = getattr(temp,
+                                                           f'Y{ell}{m}2')
+                            planet_map2_2[ell, m] = getattr(temp,
+                                                            f'Y{ell}{m}2')
+                amp_2 = temp.fp2/np.abs(planet_map2_2.flux(theta=0)[0])
+                planet_map_2.amp = amp_2
+            self.fit_rps_2.append(temp.rp2)
+
+            planet_map_3 = starry.Map(ydeg=0, amp=0)
+            self.fit_rps_3.append(temp.rp3)
+
+            # The following code should work but doesn't see to work well
+            # ecc = np.sqrt(temp.ecosw**2 + temp.esinw**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # w = np.arctan2(temp.esinw, temp.ecosw)*180./np.pi
 
             # Initialize planet object
             planet = starry.Secondary(
@@ -369,6 +496,61 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
+            # The following code should work but doesn't see to work well
+            # ecc2 = np.sqrt(temp.ecosw2**2 + temp.esinw2**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # w2 = np.arctan2(temp.esinw2, temp.ecosw2)*180./np.pi
+
+            # Initialize planet object
+            planet_2 = starry.Secondary(
+                planet_map_2,
+                m=Mp_2,
+                # Convert radius to R_star units
+                r=np.abs(temp.rp2)*temp.Rs,
+                # Setting porb here overwrites a
+                a=temp.a2,
+                # Another option to set inclination using impact parameter
+                # inc=tt.arccos(b/a)*180/np.pi
+                inc=temp.inc2,
+                ecc=temp.ecc2,
+                w=temp.w2
+            )
+            # Setting porb here may not override a
+            planet_2.porb = temp.per2
+            # Setting prot here may not override a
+            planet_2.prot = temp.per2
+            # Offset is controlled by Y11
+            planet_2.theta0 = 180.0
+            planet_2.t0 = temp.t02
+
+            # The following code should work but doesn't see to work well
+            # ecc3 = np.sqrt(temp.ecosw3**2 + temp.esinw3**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # w3 = np.arctan2(temp.esinw3, temp.ecosw3)*180./np.pi
+
+            # Initialize planet object
+            planet_3 = starry.Secondary(
+                planet_map_3,
+                m=Mp_3,
+                # Convert radius to R_star units
+                r=np.abs(temp.rp3)*temp.Rs,
+                # Setting porb here overwrites a
+                a=temp.a3,
+                # Another option to set inclination using impact parameter
+                # inc=tt.arccos(b/a)*180/np.pi
+                inc=temp.inc3,
+                ecc=temp.ecc3,
+                w=temp.w3
+            )
+            # Setting porb here may not override a
+            planet_3.porb = temp.per3
+            # Setting prot here may not override a
+            planet_3.prot = temp.per3
+            # Offset is controlled by Y11
+            planet_3.theta0 = 180.0
+            planet_3.t0 = temp.t03
+
             # Instantiate the system
-            sys = starry.System(star, planet, light_delay=True)
+            sys = starry.System(star, planet, planet_2, planet_3,
+                                light_delay=True)
             self.fit.systems.append(sys)

@@ -38,14 +38,14 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         if self.starry_model is not None:
             self.components.append(self.starry_model)
 
-        orders = [int(key[6:]) for key in self.paramtitles
-                  if 'AmpCos' in key or 'AmpSin' in key]
-        if len(orders) > 0:
-            self.maxOrder = np.max(orders)
-        else:
-            raise AssertionError('There are no AmpCos or AmpSin parameters to'
-                                 'fit. Either remove sinusoid_pc or add some'
-                                 'AmpCos or AmpSin terms to fit.')
+        # orders = [int(key[6:]) for key in self.paramtitles
+        #           if 'AmpCos' in key or 'AmpSin' in key]
+        # if len(orders) > 0:
+        #     self.maxOrder = np.max(orders)
+        # else:
+        #     raise AssertionError('There are no AmpCos or AmpSin parameters to'
+        #                          'fit. Either remove sinusoid_pc or add some'
+        #                          'AmpCos or AmpSin terms to fit.')
 
     @property
     def time(self):
@@ -140,16 +140,17 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 time = split([time, ], self.nints, chan)[0]
 
             phaseVars = lib.ones(len(time))
+            phaseVars_2 = lib.ones(len(time))
             
-            # Compute orbital phase
-            if model.ecc == 0.:
-                # the planet is on a circular orbit
-                t = self.time - model.t0 - model.per/2.
-                phi = 2.*np.pi/model.per*t
-            else:
-                # the planet is on an eccentric orbit
-                anom = true_anomaly(model, lib, self.time)
-                phi = anom + model.w*np.pi/180. + np.pi/2.
+            # Compute orbital phase in the case where the planet is on
+            # an eccentric orbit
+            anom = true_anomaly([model.per, model.t0, model.ecc, model.w],
+                                lib, self.time)
+            phi = anom + model.w*np.pi/180. + np.pi/2.
+
+            anom_2 = true_anomaly([model.per2, model.t02, model.ecc2,
+                                   model.w2], lib, self.time)
+            phi_2 = anom_2 + model.w2*np.pi/180. + np.pi/2.
 
             for order in range(1, self.maxOrder+1):
                 if self.nchannel_fitted == 1 or chan == 0:
@@ -160,24 +161,30 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 AmpSin = getattr(model, f'AmpSin{order}{suffix}', 0)
                 phaseVars += (AmpCos*(lib.cos(order*phi)-1.) +
                               AmpSin*lib.sin(order*phi))
+                
+                AmpCos_2 = getattr(model, f'AmpCos(2){order}{suffix}', 0)
+                AmpSin_2 = getattr(model, f'AmpSin(2){order}{suffix}', 0)
+                phaseVars_2 += (AmpCos_2*(lib.cos(order*phi_2)-1.) +
+                                AmpSin_2*lib.sin(order*phi_2))
 
             if self.starry_model is not None:
                 # Combine with the starry model
-                flux_star, flux_planet = systems[chan].flux(time,
-                                                            total=False)
-                lcpiece = flux_star + flux_planet*phaseVars
+                flux_star, flux_planet, flux_planet_2, flux_planet_3 = \
+                    systems[chan].flux(time, total=False)
+                lcpiece = (flux_star + flux_planet*phaseVars +
+                           flux_planet_2*phaseVars_2 + flux_planet_3)
                 if eval:
                     # Evaluate if needed
                     lcpiece = lcpiece.eval()
             else:
-                lcpiece = phaseVars
+                lcpiece = phaseVars+phaseVars_2
 
             lcfinal = lib.concatenate([lcfinal, lcpiece])
 
         return lcfinal
 
 
-def true_anomaly(model, lib, t, xtol=1e-10):
+def true_anomaly(p0, lib, t, xtol=1e-10):
     """Convert time to true anomaly, numerically.
 
     Parameters
@@ -205,12 +212,13 @@ def true_anomaly(model, lib, t, xtol=1e-10):
     - March 2023 Taylor Bell
         Based on Bell_EBM code, but modified to enable theano code.
     """
-    return 2.*lib.arctan(lib.sqrt((1.+model.ecc)/(1.-model.ecc)) *
-                         lib.tan(eccentric_anomaly(model, lib, t,
+    per, t0, ecc, w = p0
+    return 2.*lib.arctan(lib.sqrt((1.+ecc)/(1.-ecc)) *
+                         lib.tan(eccentric_anomaly(p0, lib, t,
                                                    xtol=xtol)/2.))
 
 
-def eccentric_anomaly(model, lib, t, xtol=1e-10):
+def eccentric_anomaly(p0, lib, t, xtol=1e-10):
     """Convert time to eccentric anomaly, numerically.
 
     Parameters
@@ -237,24 +245,25 @@ def eccentric_anomaly(model, lib, t, xtol=1e-10):
     - March 2023 Taylor Bell
         Based on Bell_EBM code, but modified to enable theano code.
     """
-    ta_peri = np.pi/2.-model.w*np.pi/180.
-    ea_peri = 2.*lib.arctan(lib.sqrt((1.-model.ecc)/(1.+model.ecc)) *
+    per, t0, ecc, w = p0
+    ta_peri = np.pi/2.-w*np.pi/180.
+    ea_peri = 2.*lib.arctan(lib.sqrt((1.-ecc)/(1.+ecc)) *
                             lib.tan(ta_peri/2.))
-    ma_peri = ea_peri - model.ecc*np.sin(ea_peri)
-    t_peri = (model.t0 - (ma_peri/(2.*np.pi)*model.per))
+    ma_peri = ea_peri - ecc*np.sin(ea_peri)
+    t_peri = (t0 - (ma_peri/(2.*np.pi)*per))
 
     if ((lib == tt and tt.lt(t_peri, 0)) or 
             (t_peri < 0)):
-        t_peri = t_peri + model.per
+        t_peri = t_peri + per
 
-    M = ((t-t_peri) * 2.*np.pi/model.per) % (2.*np.pi)
+    M = ((t-t_peri) * 2.*np.pi/per) % (2.*np.pi)
 
-    E = FSSI_Eccentric_Inverse(model, lib, M, xtol)
+    E = FSSI_Eccentric_Inverse(p0, lib, M, xtol)
 
     return E
 
 
-def FSSI_Eccentric_Inverse(model, lib, M, xtol=1e-10):
+def FSSI_Eccentric_Inverse(p0, lib, M, xtol=1e-10):
     """Convert mean anomaly to eccentric anomaly using FSSI algorithm.
     
     Algorithm based on that from Tommasini+2018.
@@ -283,16 +292,17 @@ def FSSI_Eccentric_Inverse(model, lib, M, xtol=1e-10):
     - March 2023 Taylor Bell
         Based on Bell_EBM code, but modified to enable theano code.
     """
+    per, t0, ecc, w = p0
     xtol = np.max([1e-15, xtol])
     nGrid = (xtol/100.)**(-1./4.)
 
     xGrid = lib.arange(0, 2.*np.pi, 2*np.pi/int(nGrid))
 
     def f(ea):
-        return ea - model.ecc*lib.sin(ea)
+        return ea - ecc*lib.sin(ea)
 
     def fP(ea):
-        return 1. - model.ecc*lib.cos(ea)
+        return 1. - ecc*lib.cos(ea)
 
     return FSSI(lib, M, x=xGrid, f=f, fP=fP)
 
