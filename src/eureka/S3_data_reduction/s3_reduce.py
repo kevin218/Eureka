@@ -763,7 +763,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             else:
                 normspec = util.normalize_spectrum(meta, data.aplev.values)
                 meta.mad_s3 = util.get_mad_1d(normspec)
-            log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
+            try:
+                log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
+            except:
+                log.writelog("Could not compute Stage 3 MAD")
+                meta.mad_s3 = 0
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
                 log.writelog('Generating figure')
