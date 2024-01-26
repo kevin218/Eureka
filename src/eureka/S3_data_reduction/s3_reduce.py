@@ -292,8 +292,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 meta.max_memory = 0.5
             if not hasattr(meta, 'nfiles'):
                 meta.nfiles = 1
-            if meta.nfiles == 1 and meta.nfiles > 1 and \
-                    meta.indep_batches == True:
+            if meta.nfiles == 1 and meta.nfiles > 1 and meta.indep_batches:
                 log.writelog('WARNING: You have selected non-ideal settings '
                              'with indep_batches = True and nfiles = 1.'
                              'If your computer has enough RAM to '
