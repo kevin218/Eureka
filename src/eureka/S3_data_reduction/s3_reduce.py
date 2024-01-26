@@ -292,6 +292,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 meta.max_memory = 0.5
             if not hasattr(meta, 'nfiles'):
                 meta.nfiles = 1
+            if meta.nfiles == 1 and meta.nfiles > 1 and \
+                    meta.indep_batches == True:
+                log.writelog('WARNING: You have selected non-ideal settings '
+                             'with indep_batches = True and nfiles = 1.'
+                             'If your computer has enough RAM to '
+                             'load many/all of your Stage 2 files, it is '
+                             'strongly recommended to increase nfiles.')
             system_RAM = psutil.virtual_memory().total
             filesize = os.path.getsize(meta.segment_list[istart])*meta.expand
             maxfiles = max([1, int(system_RAM*meta.max_memory/filesize)])
