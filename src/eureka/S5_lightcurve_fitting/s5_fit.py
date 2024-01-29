@@ -618,6 +618,23 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          multwhite=lc_model.multwhite,
                                          nints=lc_model.nints)
         modellist.append(t_eclipse)
+    if 'poet_tr' in meta.run_myfuncs:
+        t_poet_tr = m.PoetTransitModel(parameters=params, name='transit',
+                                       fmt='r--', log=log, time=time,
+                                       time_units=time_units,
+                                       freenames=freenames,
+                                       longparamlist=lc_model.longparamlist,
+                                       nchannel=chanrng,
+                                       nchannel_fitted=nchannel_fitted,
+                                       fitted_channels=fitted_channels,
+                                       paramtitles=paramtitles,
+                                       ld_from_S4=meta.use_generate_ld,
+                                       ld_from_file=meta.ld_file,
+                                       ld_coeffs=ldcoeffs,
+                                       recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                       multwhite=lc_model.multwhite,
+                                       nints=lc_model.nints)
+        modellist.append(t_poet_tr)
     if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
         # Nest the starry model inside of the phase curve model
