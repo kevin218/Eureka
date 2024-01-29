@@ -1,7 +1,9 @@
 from numpy import append, array, size, zeros, where, abs, arccos, sqrt, \
-    pi, log, sin, cos, bitwise_and, ones_like
+    arctan, pi, log, sin, cos, tan, bitwise_and, ones_like, all, in1d, \
+    ones, any
 import astropy.constants as const
 import inspect
+import batman as bm
 
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
@@ -21,10 +23,10 @@ class TransitParams():
         self.period = None
         self.u = None
         self.limb_dark = None
-        # self.ecc = None
-        # self.w = None
-        # self.fp = None
-        # self.t_secondary = None
+        self.e = None
+        self.omega = None
+        self.fpfs = None
+        self.ecl_midpt = None
 
 
 class PoetTransitModel(Model):
@@ -176,12 +178,159 @@ class PoetTransitModel(Model):
         return lcfinal
 
 
+class PoetEclipseModel(Model):
+    """Eclipse Model"""
+    def __init__(self, **kwargs):
+        """Initialize the eclipse model
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
+        """
+        # Inherit from Model class
+        super().__init__(**kwargs)
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'physical'
+
+        log = kwargs.get('log')
+
+        # Get the parameters relevant to light travel time correction
+        ltt_params = array(['midpt', 'ars', 'i', 'period', 'e', 'omega'])
+        # Check if able to do ltt correction
+        self.compute_ltt = (all(in1d(ltt_params, self.paramtitles))
+                            and 'Rs' in self.parameters.dict.keys())
+        if self.compute_ltt:
+            # Check if we need to do ltt correction for each
+            # wavelength or only one
+            if self.nchannel_fitted > 1:
+                # Check whether the parameters are all either fixed or shared
+                once_type = ['shared', 'fixed']
+                self.compute_ltt_once = \
+                    all([self.parameters.dict.get(name)[1] in once_type
+                         for name in ltt_params])
+            else:
+                self.compute_ltt_once = True
+        else:
+            missing_params = ltt_params[~any(ltt_params.reshape(-1, 1) == 
+                                             array(self.paramtitles), axis=1)]
+            if 'Rs' not in self.parameters.dict.keys():
+                missing_params = append('Rs', missing_params)
+            if 'ecl_midpt' not in self.parameters.dict.keys():
+                log.writelog(f"WARNING: Missing parameters ["
+                             f"{', '.join(missing_params)}] in your EPF which "
+                             f"are required to account for light-travel time."
+                             f"\n"
+                             f"         You should either add these "
+                             f"parameters, or you should be fitting for "
+                             f"ecl_midpt\n"
+                             f"         (but note that the fitted ecl_midpt "
+                             f"will not be accounting for light-travel time).")
+            else:
+                log.writelog(f"WARNING: Missing parameters "
+                             f"{', '.join(missing_params)} in your EPF which "
+                             f"are required to account for light-travel time."
+                             f"\n"
+                             f"         While you are fitting for ecl_midpt"
+                             f" which will help, note that the fitted "
+                             f"ecl_midpt\n"
+                             f"         will not be accounting for "
+                             f"light-travel time).")
+
+    def eval(self, channel=None, **kwargs):
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Initialize model
+        poet_params = TransitParams()
+
+        # Set all parameters
+        lcfinal = array([])
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
+            # Set all parameters
+            for index, item in enumerate(self.longparamlist[chan]):
+                setattr(poet_params, self.paramtitles[index],
+                        self.parameters.dict[item][0])
+
+            # Enforce physicality to avoid crashes by returning
+            # something that should be a horrible fit
+            if not ((0 < poet_params.period) and (0 < poet_params.i < 90) and
+                    (1 < poet_params.ars) and (0 <= poet_params.e < 1) and
+                    (0 <= poet_params.omega <= 360)):
+                # Returning nans or infs breaks the fits, so this was the
+                # best I could think of
+                lcfinal = append(lcfinal, 1e12*ones_like(time))
+                continue
+
+            poet_params.limb_dark = 'uniform'
+            poet_params.u = []
+
+            # Compute light travel time
+            if self.compute_ltt:
+                if c == 0 or not self.compute_ltt_once:
+                    self.adjusted_time = correct_light_travel_time(time,
+                                                                   poet_params)
+            else:
+                self.adjusted_time = time
+
+            if not any(['ecl_midpt' in key
+                        for key in self.longparamlist[chan]]):
+                # If not explicitly fitting for the time of eclipse, get
+                # the time of eclipse from the time of transit, period,
+                # eccentricity, and argument of periastron
+                poet_params.ecl_midpt = get_ecl_midpt(poet_params)
+
+            # Make the eclipse model
+            m_eclipse = TransitModel(poet_params, self.adjusted_time,
+                                     transittype='secondary')
+
+            lcfinal = append(lcfinal, m_eclipse.light_curve(poet_params))
+
+        return lcfinal
+   
+
 class TransitModel():
     """
     Class for generating model transit light curves.
     """
-    def __init__(self, params, t, transittype = "primary"):
-        #initializes model parameters
+    def __init__(self, params, t, transittype="primary"):
+        # Initializes model parameters
         self.t = t
         self.midpt = params.midpt
         self.rprs = params.rprs
@@ -191,44 +340,29 @@ class TransitModel():
         self.u = params.u
         self.limb_dark = params.limb_dark
         self.transittype = transittype
+        self.nthreads = 4
 
-        #handles the case of inverse transits (rp < 0)
+        # Handles the case of inverse transits (rp < 0)
         self.inverse = False
-        if params.rprs < 0.: 
+        if params.rprs < 0.:
             self.inverse = True
-        
-        # if transittype == "primary": 
-        #     self.transittype = 1
-        # else: 
-        #     self.transittype = 2
-        #     params.t0 = self.get_t_conjunction(params)        
-        
-        # self.ds = _rsky._rsky(self.t_supersample, params.t0, params.per, params.a, params.inc*pi/180., params.ecc, params.w*pi/180., self.transittype, self.nthreads)
-        
-        # Compute distance, z, of planet and star midpoints
-        self.z = self.ars*sqrt(sin(2*pi*(t-self.midpt)/
-                                         self.period)**2 + 
-                             (cos(self.i*pi/180)*
-                              cos(2*pi*(t-self.midpt)/self.period))**2)
-        # Ignore close approach near secondary eclipse
-        self.z[where(bitwise_and(
-            (t-self.midpt)%self.period > self.period/4.,
-            (t-self.midpt)%self.period < self.period*3./4))] = self.ars
 
-    
+        # Compute distance, z, of planet and star midpoints
+        self.z = self.ars \
+            * sqrt(sin(2 * pi * (t - self.midpt) / self.period) ** 2 
+                   + (cos(self.i * pi / 180) * cos(2 * pi * (t - self.midpt)
+                      / self.period)) ** 2)
+
+        # Ignore close approach near secondary eclipse
+        self.z[where(bitwise_and((t - self.midpt) % self.period
+               > self.period / 4., (t - self.midpt) % self.period
+               < self.period * 3. / 4))] = self.ars
+
     def light_curve(self, params):
         """
         Calculate a model light curve.
         """
-        #recalculates rsky and fac if necessary
-        # if params.t0 != self.t0 or params.per != self.per or params.a != self.a or params.inc != self.inc or params.ecc != self.ecc or params.w != self.w or params.t_secondary != self.t_secondary:
-        #     if self.transittype == 2 and params.t_secondary != self.t_secondary:
-        #         params.t0 = self.get_t_conjunction(params)
-        #     self.ds= _rsky._rsky(self.t_supersample, params.t0, params.per, params.a, params.inc*pi/180., params.ecc, params.w*pi/180., self.transittype, self.nthreads)
-        # if params.limb_dark != self.limb_dark: 
-        #     self.fac = self._get_fac()
-
-        #updates transit params
+        # Update transit params
         self.midpt = params.midpt
         self.rprs = params.rprs
         self.i = params.i
@@ -237,12 +371,13 @@ class TransitModel():
         self.u = params.u
         self.limb_dark = params.limb_dark
 
-        #handles the case of inverse transits (rp < 0)
+        # Handle the case of inverse transits (rp < 0)
         self.inverse = False
         if params.rprs < 0.: 
             self.inverse = True
         
         if self.transittype == 'primary':
+            # Primary transit
             if self.limb_dark == "quadratic": 
                 lc = trquad(self.z, params.rprs, params.u[0], params.u[1])
             elif self.limb_dark == "linear":
@@ -252,16 +387,38 @@ class TransitModel():
             elif self.limb_dark == "uniform": 
                 lc = uniform(self.z, params.rprs)
             else: 
-                raise Exception("Invalid limb darkening option.  " + \
-                                "POET supports linear, quadratic, " + \
-                                "4-parameter, and uniform.")
+                raise Exception('Invalid limb darkening option.  '
+                                + 'POET supports linear, quadratic, '
+                                + '4-parameter, and uniform.')
             if self.inverse:
                 lc = 2. - lc
-        else:
+        elif self.transittype == 'secondary':
             # Secondary eclipse
-            lc = 0
-            # lc = eclipse(self.z, params.rprs) #FINDME: Update
+            lc = bm._eclipse._eclipse(self.z, abs(params.rprs), 
+                                      params.fpfs, self.nthreads)
         return lc
+    
+
+def get_ecl_midpt(params):
+    """
+    Return the time of secondary eclipse center.
+    """
+
+    # Start with primary transit
+    TA = pi / 2. - params.omega * pi / 180.
+    E = 2. * arctan(sqrt((1. - params.e) / (1. + params.e)) * tan(TA
+                    / 2.))
+    M = E - params.e * sin(E)
+    phase_tr = M / 2. / pi
+
+    # Now do secondary eclipse
+    TA = 3. * pi / 2. - params.omega * pi / 180.
+    E = 2. * arctan(sqrt((1. - params.e) / (1. + params.e)) * tan(TA
+                    / 2.))
+    M = E - params.e * sin(E)
+    phase_ecl = M / 2. / pi
+
+    return params.midpt + params.period * (phase_ecl - phase_tr)
 
 
 def uniform(z, rprs):
@@ -300,8 +457,8 @@ def uniform(z, rprs):
     # Full transit
     y[where(z <= (1-rprs))] = 1.-rprs**2
     # Ingress/egress
-    y[iingress] = 1. - 1./pi*(k0*rprs**2 + k1 - sqrt((4*z[iingress]**2 - \
-                  (1 + z[iingress]**2 - rprs**2)**2)/4))
+    y[iingress] = 1. - 1./pi*(k0*rprs**2 + k1 - sqrt((4*z[iingress]**2
+                              - (1 + z[iingress]**2 - rprs**2)**2)/4))
 
     return y
 
@@ -335,42 +492,68 @@ def trnlldsp(z, rprs, u):
     """
 
     # DEFINE PARAMETERS
-    u1, u2, u3, u4 = u
-
-    Sigma4 =(1.-u1/5.-u2/3.-3.*u3/7.-u4/2.)
+    (u1, u2, u3, u4) = u
+    Sigma4 = 1. - u1 / 5. - u2 / 3. - 3. * u3 / 7. - u4 / 2.
 
     # CALCULATE TRANSIT SHAPE WITH LIMB-DARKENING
     y = ones(len(z), dtype=float)
     if rprs == 0:
         return y
+
     # INGRESS/EGRESS
-    iingress = where(bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
-    x = 1.- (z[iingress]-rprs)**2
-    I1star = 1.- u1*(1.-4./5.*sqrt(sqrt(x))) \
-            - u2*(1.-2./3.*sqrt(x)) \
-            - u3*(1.-4./7.*sqrt(sqrt(x*x*x))) \
-            - u4*(1.-4./8.*x)
-    y[iingress] = 1.- I1star*(rprs**2*arccos((z[iingress]-1.)/rprs) \
-            - (z[iingress]-1.)*sqrt(rprs**2-(z[iingress]-1.)**2)) \
-            /pi/Sigma4
+    iingress = where(bitwise_and(1 - rprs < z, z <= 1 + rprs))[0]
+    x = 1. - (z[iingress] - rprs) ** 2
+    I1star = 1. - u1 * (1. - 4. / 5. * sqrt(sqrt(x))) \
+                - u2 * (1. - 2. / 3. * sqrt(x)) \
+                - u3 * (1. - 4. / 7. * sqrt(sqrt(x * x * x))) \
+                - u4 * (1. - 4. / 8. * x)
+    y[iingress] = 1. - I1star \
+        * (rprs ** 2 * arccos((z[iingress] - 1.) / rprs) - (z[iingress] - 1.)
+           * sqrt(rprs ** 2 - (z[iingress] - 1.) ** 2)) / pi / Sigma4
+
     # Full transit (except @ z=0)
-    itrans = where(bitwise_and(z <= (1-rprs), z != 0.))
-    sig1 = sqrt(sqrt(1.-(z[itrans]-rprs)**2))
-    sig2 = sqrt(sqrt(1.-(z[itrans]+rprs)**2))
-    I2star = 1.- u1*(1.+(sig2**5-sig1**5)/5./rprs/z[itrans]) \
-            - u2*(1.+(sig2**6-sig1**6)/6./rprs/z[itrans]) \
-            - u3*(1.+(sig2**7-sig1**7)/7./rprs/z[itrans]) \
-            - u4*(rprs**2+(z[itrans])**2)
-    y[itrans] = 1.- rprs**2*I2star/Sigma4
+    itrans = where(bitwise_and(z <= 1 - rprs, z != 0.))
+    sig1 = sqrt(sqrt(1. - (z[itrans] - rprs) ** 2))
+    sig2 = sqrt(sqrt(1. - (z[itrans] + rprs) ** 2))
+    I2star = 1. \
+        - u1 * (1. + (sig2 ** 5 - sig1 ** 5) / 5. / rprs / z[itrans]) \
+        - u2 * (1. + (sig2 ** 6 - sig1 ** 6) / 6. / rprs / z[itrans]) \
+        - u3 * (1. + (sig2 ** 7 - sig1 ** 7) / 7. / rprs / z[itrans]) \
+        - u4 * (rprs ** 2 + z[itrans] ** 2)
+    y[itrans] = 1. - rprs ** 2 * I2star / Sigma4
+
     # z=0 (midpoint)
-    y[where(z == 0.)] = 1.-rprs**2/Sigma4
+    y[where(z == 0.)] = 1. - rprs ** 2 / Sigma4
 
     return y
 
 
 def trquad(z, rprs, u1, u2):
     '''
-    
+    Transit model with quadratic (or linear) limb darkening.
+
+    Parameters
+    ----------
+    z : ndarray
+        Distance between planet and star midpoints
+    rprs : float
+        Planet-to-star radius ratio
+    u1 : ndarray
+        Linear imb darkening parameter
+    u2 : ndarray
+        Quadratic limb darkening parameter
+
+    Returns
+    -------
+    y : ndarray
+        The flux for each point in time.
+
+    Revisions
+    ---------
+    2012-08-13	    Kevin Stevenson, UChicago
+                    Modified from Jason Eastman's version
+    2024-01-28      Kevin Stevenson, APL
+                    Updated for Eureka!
     '''
 
     nz = size(z)
@@ -399,7 +582,6 @@ def trquad(z, rprs, u1, u2):
 
     if rprs <= 0.:
         muo1 = zeros(nz) + 1.
-        mu0 = zeros(nz) + 1.
         return muo1
 
     # # Case 1 - the star is unocculted:
@@ -411,7 +593,6 @@ def trquad(z, rprs, u1, u2):
         muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                      * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad) \
             / omega
-        mu0 = 1. - lambdae
         return muo1
 
     # Case 11 - the source is completely occulted:
@@ -430,7 +611,6 @@ def trquad(z, rprs, u1, u2):
                 muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2.
                              * u2) * (lambdad + 2. / 3. * (rprs > z))
                              + u2 * etad) / omega
-                mu0 = 1. - lambdae
                 return muo1
             notusedyet = notusedyet[notused2]
 
@@ -456,15 +636,14 @@ def trquad(z, rprs, u1, u2):
 
         # eta_1
 
-        etad[ndxuse] = 1. / 2. / pi * (kap1 + rprs ** 2 * (rprs ** 2
-                + 2. * z[ndxuse] ** 2) * kap0 - (1. + 5. * rprs ** 2
-                + z[ndxuse] ** 2) / 4. * sqrt((1. - x1[ndxuse])
-                * (x2[ndxuse] - 1.)))
+        etad[ndxuse] = 1. / 2. / pi \
+            * (kap1 + rprs ** 2 * (rprs ** 2 + 2. * z[ndxuse] ** 2) 
+               * kap0 - (1. + 5. * rprs ** 2 + z[ndxuse] ** 2) 
+               / 4. * sqrt((1. - x1[ndxuse]) * (x2[ndxuse] - 1.)))
 
     # Case 5, 6, 7 - the edge of planet lies at origin of star
 
-    ocltor = where(z[notusedyet] == rprs)  # , complement=notused3)
-    t = where(z[notusedyet] == rprs)
+    ocltor = where(z[notusedyet] == rprs)
     if size(ocltor) != 0:
         ndxuse = notusedyet[ocltor]
         if rprs < 0.5:
@@ -476,13 +655,14 @@ def trquad(z, rprs, u1, u2):
 
             # lambda_4
 
-            lambdad[ndxuse] = 1. / 3. + 2. / 9. / pi * (4. * (2. * rprs
-                    ** 2 - 1.) * Ek + (1. - 4. * rprs ** 2) * Kk)
+            lambdad[ndxuse] = 1. / 3. + 2. / 9. / pi \
+                * (4. * (2. * rprs ** 2 - 1.) * Ek
+                   + (1. - 4. * rprs ** 2) * Kk)
 
             # eta_2
 
-            etad[ndxuse] = rprs ** 2 / 2. * (rprs ** 2 + 2. * z[ndxuse]
-                    ** 2)
+            etad[ndxuse] = rprs ** 2 / 2. \
+                * (rprs ** 2 + 2. * z[ndxuse] ** 2)
             lambdae[ndxuse] = rprs ** 2  # uniform disk
         elif rprs > 0.5:
 
@@ -493,11 +673,12 @@ def trquad(z, rprs, u1, u2):
 
             # lambda_3
 
-            lambdad[ndxuse] = 1. / 3. + 16. * rprs / 9. / pi * (2.
-                    * rprs ** 2 - 1.) * Ek - (32. * rprs ** 4 - 20.
-                    * rprs ** 2 + 3.) / 9. / pi / rprs * Kk
-        else:
+            lambdad[ndxuse] = 1. / 3. + 16. * rprs / 9. / pi \
+                * (2. * rprs ** 2 - 1.) * Ek \
+                - (32. * rprs ** 4 - 20. * rprs ** 2 + 3.) \
+                / 9. / pi / rprs * Kk
 
+        else:
             # etad = eta_1 already
             # Case 6
 
@@ -508,7 +689,6 @@ def trquad(z, rprs, u1, u2):
             muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                          * (lambdad + 2. / 3. * (rprs > z)) + u2
                          * etad) / omega
-            mu0 = 1. - lambdae
             return muo1
         notusedyet = notusedyet[notused3]
 
@@ -532,15 +712,16 @@ def trquad(z, rprs, u1, u2):
                + (x2[ndxuse] - x1[ndxuse]) * (z[ndxuse] ** 2 + 7.
                * rprs ** 2 - 4.) * Ek - 3. * x3[ndxuse] / x1[ndxuse]
                * ellpic_bulirsch(n, q))
-        notused4 = where(((z[notusedyet] <= 0.5 + abs(rprs - 0.5))
-                         | (z[notusedyet] >= 1. + rprs)) & ((rprs
-                         <= 0.5) | (z[notusedyet] <= abs(1. - rprs))
-                         | (z[notusedyet] >= rprs)))
+        notused4 = where(
+            ((z[notusedyet] <= 0.5 + abs(rprs - 0.5)) | 
+             (z[notusedyet] >= 1.0 + rprs))
+            & ((rprs <= 0.5) | (z[notusedyet] <= abs(1.0 - rprs)) | 
+               (z[notusedyet] >= rprs)))
+
         if size(notused4) == 0:
             muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                          * (lambdad + 2. / 3. * (rprs > z)) + u2
                          * etad) / omega
-            mu0 = 1. - lambdae
             return muo1
         notusedyet = notusedyet[notused4]
 
@@ -553,8 +734,7 @@ def trquad(z, rprs, u1, u2):
 
             # # eta_2
 
-            etad[ndxuse] = rprs ** 2 / 2. * (rprs ** 2 + 2. * z[ndxuse]
-                    ** 2)
+            etad[ndxuse] = rprs ** 2 / 2. * (rprs ** 2 + 2. * z[ndxuse] ** 2)
 
             # # uniform disk
 
@@ -567,9 +747,10 @@ def trquad(z, rprs, u1, u2):
 
                 # # lambda_5
 
-                lambdad[ndxuse[edge]] = 2. / 3. / pi * arccos(1. - 2.
-                        * rprs) - 4. / 9. / pi * sqrt(rprs * (1.
-                        - rprs)) * (3. + 2. * rprs - 8. * rprs ** 2)
+                lambdad[ndxuse[edge]] = 2. / 3. / pi \
+                    * arccos(1. - 2. * rprs) \
+                    - 4. / 9. / pi * sqrt(rprs * (1. - rprs)) \
+                    * (3. + 2. * rprs - 8. * rprs ** 2)
                 if rprs > 0.5:
                     lambdad[ndxuse[edge]] -= 2. / 3.
                 notused6 = where(z[ndxuse] != 1. - rprs)
@@ -577,7 +758,6 @@ def trquad(z, rprs, u1, u2):
                     muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1
                                  + 2. * u2) * (lambdad + 2. / 3.
                                  * (rprs > z)) + u2 * etad) / omega
-                    mu0 = 1. - lambdae
                     return muo1
                 ndxuse = ndxuse[notused6[0]]
 
@@ -595,7 +775,6 @@ def trquad(z, rprs, u1, u2):
                     muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1
                                  + 2. * u2) * (lambdad + 2. / 3.
                                  * (rprs > z)) + u2 * etad) / omega
-                    mu0 = 1. - lambdae
                     return muo1
                 ndxuse = ndxuse[notused7[0]]
 
@@ -615,7 +794,6 @@ def trquad(z, rprs, u1, u2):
         muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                      * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad) \
             / omega
-        mu0 = 1. - lambdae
     return muo1
 
 
@@ -673,3 +851,64 @@ def ellpic_bulirsch(n, k):
             e = kc * m0
         else:
             return 0.5 * pi * (c * m0 + d) / (m0 * (m0 + p))
+
+
+def correct_light_travel_time(time, poet_params):
+    '''Correct for the finite light travel speed.
+
+    This function uses the KeplerOrbit.py file from the Bell_EBM package
+    as that code includes a newer, faster method of solving Kepler's equation
+    based on Tommasini+2018.
+
+    Parameters
+    ----------
+    time : ndarray
+        The times at which observations were collected
+    poet_params : poet.TransitParams
+        The POET TransitParams object that contains information on the orbit.
+
+    Returns
+    -------
+    time : ndarray
+        Updated times that can be put into POET transit and eclipse functions
+        that will give the expected results assuming a finite light travel
+        speed.
+
+    Notes
+    -----
+    History:
+
+    - 2022-03-31 Taylor J Bell
+        Initial version based on the Bell_EMB KeplerOrbit.py file by
+        Taylor J Bell and the light travel time calculations of SPIDERMAN's
+        web.c file by Tom Louden
+    - 2024-01-29 Kevin B Stevenson
+        Modified for POET eclipses
+    '''
+    # Need to convert from a/Rs to a in meters
+    a = poet_params.ars * (poet_params.Rs*const.R_sun.value)
+
+    if poet_params.e > 0:
+        # Need to solve Kepler's equation, so use the KeplerOrbit class
+        # for rapid computation. In the SPIDERMAN notation z is the radial
+        # coordinate, while for Bell_EBM the radial coordinate is x
+        orbit = KeplerOrbit(a=a, Porb=poet_params.period, inc=poet_params.i,
+                            t0=poet_params.midpt, e=poet_params.e, 
+                            argp=poet_params.omega)
+        old_x, _, _ = orbit.xyz(time)
+        transit_x, _, _ = orbit.xyz(poet_params.midpt)
+    else:
+        # No need to solve Kepler's equation for circular orbits, so save
+        # some computation time
+        transit_x = a*sin(poet_params.i)
+        old_x = transit_x*cos(2*pi*(time-poet_params.midpt)/poet_params.period)
+
+    # Get the radial distance variations of the planet
+    delta_x = transit_x - old_x
+
+    # Compute for light travel time (and convert to days)
+    delta_t = (delta_x/const.c.value)/(3600.*24.)
+
+    # Subtract light travel time as a first-order correction
+    # POET will then calculate the model at a slightly earlier time
+    return time-delta_t.flatten()
