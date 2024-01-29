@@ -282,6 +282,7 @@ class BatmanEclipseModel(Model):
             bm_params.limb_dark = 'uniform'
             bm_params.u = []
 
+            # Compute light travel time
             if self.compute_ltt:
                 if c == 0 or not self.compute_ltt_once:
                     self.adjusted_time = correct_light_travel_time(time,
