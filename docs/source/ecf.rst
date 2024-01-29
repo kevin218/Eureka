@@ -848,10 +848,11 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
+[batman_tr, batman_ecl, poet_tr, poet_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
+The POET transit and eclipse models are best-suited for planets with small eccentricities.  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
 
 manual_clip
 '''''''''''
@@ -1017,10 +1018,10 @@ This file describes the transit/eclipse and systematics parameters and their pri
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
 ``Name`` defines the specific parameter being fit for. Available options are:
-   - Transit and Eclipse Parameters
+   - BATMAN Transit and Eclipse Parameters
       - ``rp`` - planet-to-star radius ratio, for the transit models.
       - ``fp`` - planet-to-star flux ratio, for the eclipse models.
-   - Orbital Parameters
+   - BATMAN/Starry Orbital Parameters
       - ``per`` - orbital period (in days)
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
@@ -1028,6 +1029,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``a`` - a/R*, the ratio of the semimajor axis to the stellar radius
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
+      = ``t_secondary`` - (optional) time of secondary eclipse
       - ``Rs`` - the host star's radius in units of solar radii.
 
          This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
@@ -1039,6 +1041,18 @@ This file describes the transit/eclipse and systematics parameters and their pri
          This parameter is **required** for fits with the starry model as starry currently requires the parameter to be provided. In practice, the stellar mass is not
          actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Ms``.
+   - POET Transit and Eclipse Parameters
+      - ``rprs`` - planet-to-star radius ratio, for the transit models.
+      - ``fprs`` - planet-to-star flux ratio, for the eclipse models.
+   - POET Orbital Parameters
+      - ``midpt`` - transit time (in the same units as your input data - most likely BMJD_TDB).
+      - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days).
+      - ``i`` - orbital inclination (in degrees).
+      - ``ars`` - a/R*, the ratio of the semimajor axis to the stellar radius.
+      - ``period`` - orbital period (in days).
+      - ``e`` - orbital eccentricity.
+      - ``omega`` - argument of periapsis (degrees).
+      - ``Rs`` - the host star's radius in units of solar radii.
    - Sinusoidal Phase Curve Parameters
       The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
