@@ -1,5 +1,5 @@
-import numpy as np
-from numpy import size,zeros,where,arccos,sqrt,pi,log,sin,cos,bitwise_and
+from numpy import append, array, size, zeros, where, abs, arccos, sqrt, \
+    pi, log, sin, cos, bitwise_and, ones_like
 import astropy.constants as const
 import inspect
 
@@ -11,7 +11,7 @@ from ...lib.split_channels import split
 
 class TransitParams():
     """
-    
+    Define transit parameters.
     """
     def __init__(self):
         self.midpt = None
@@ -68,7 +68,7 @@ class PoetTransitModel(Model):
                 else:
                     ld_array = self.ld_array
                 for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    index = where(array(self.paramtitles) == u)[0]
                     if len(index) != 0:
                         item = self.longparamlist[c][index[0]]
                         param = int(item.split('_')[0][-1])
@@ -114,7 +114,7 @@ class PoetTransitModel(Model):
         poet_params = TransitParams()
 
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -134,7 +134,7 @@ class PoetTransitModel(Model):
             # Set limb darkening parameters
             uarray = []
             for u in self.coeffs:
-                index = np.where(np.array(self.paramtitles) == u)[0]
+                index = where(array(self.paramtitles) == u)[0]
                 if len(index) != 0:
                     item = self.longparamlist[chan][index[0]]
                     uarray.append(self.parameters.dict[item][0])
@@ -146,32 +146,32 @@ class PoetTransitModel(Model):
                     (1 < poet_params.ars)):
                 # Returning nans or infs breaks the fits, so this was the
                 # best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                lcfinal = append(lcfinal, 1e12*ones_like(time))
                 continue
 
             # Check for out-of-bound values
-            if self.parameters.limb_dark.value == '4par_sp':
+            if self.parameters.limb_dark.value == '4-parameter':
                 # Enforce small planet approximation
                 if poet_params.rprs > 0.1:
                     # Return poor fit
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                    lcfinal = append(lcfinal, 1e12*ones_like(time))
                     continue
             elif self.parameters.limb_dark.value == 'kipping2013':
                 # Enforce physicality to avoid crashes
                 if poet_params.u[0] <= 0:
                     # Return poor fit
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                    lcfinal = append(lcfinal, 1e12*ones_like(time))
                     continue
                 poet_params.limb_dark = 'quadratic'
                 u1 = 2*sqrt(poet_params.u[0])*poet_params.u[1]
                 u2 = sqrt(poet_params.u[0])*(1-2*poet_params.u[1])
-                poet_params.u = np.array([u1, u2])
+                poet_params.u = array([u1, u2])
 
             # Make the transit model
             m_transit = TransitModel(poet_params, time,
                                      transittype='primary')
 
-            lcfinal = np.append(lcfinal, m_transit.light_curve(poet_params))
+            lcfinal = append(lcfinal, m_transit.light_curve(poet_params))
 
         return lcfinal
 
@@ -206,14 +206,15 @@ class TransitModel():
         # self.ds = _rsky._rsky(self.t_supersample, params.t0, params.per, params.a, params.inc*pi/180., params.ecc, params.w*pi/180., self.transittype, self.nthreads)
         
         # Compute distance, z, of planet and star midpoints
-        self.z = self.ars*np.sqrt(np.sin(2*np.pi*(t-self.midpt)/
+        self.z = self.ars*sqrt(sin(2*pi*(t-self.midpt)/
                                          self.period)**2 + 
-                             (np.cos(self.i*np.pi/180)*
-                              np.cos(2*np.pi*(t-self.midpt)/self.period))**2)
-        # self.z[np.where(np.bitwise_and(
-        #     (t-self.midpt)%self.period > self.period/4.,
-        #     (t-self.midpt)%self.period < self.period*3./4))] = ars
-    
+                             (cos(self.i*pi/180)*
+                              cos(2*pi*(t-self.midpt)/self.period))**2)
+        # Ignore close approach near secondary eclipse
+        self.z[where(bitwise_and(
+            (t-self.midpt)%self.period > self.period/4.,
+            (t-self.midpt)%self.period < self.period*3./4))] = self.ars
+
     
     def light_curve(self, params):
         """
@@ -244,16 +245,17 @@ class TransitModel():
         if self.transittype == 'primary':
             if self.limb_dark == "quadratic": 
                 lc = trquad(self.z, params.rprs, params.u[0], params.u[1])
-            elif self.limb_dark == "linear": 
+            elif self.limb_dark == "linear":
                 lc = trquad(self.z, params.rprs, params.u[0], 0)
-            elif self.limb_dark == "4par_sp":
+            elif self.limb_dark == "4-parameter":
                 lc = trnlldsp(self.z, params.rprs, params.u)
             elif self.limb_dark == "uniform": 
                 lc = uniform(self.z, params.rprs)
             else: 
-                raise Exception("Invalid limb darkening option")
-
-            if self.inverse == True: 
+                raise Exception("Invalid limb darkening option.  " + \
+                                "POET supports linear, quadratic, " + \
+                                "4-parameter, and uniform.")
+            if self.inverse:
                 lc = 2. - lc
         else:
             # Secondary eclipse
@@ -287,18 +289,18 @@ def uniform(z, rprs):
                     Updated for Eureka!
     """
     # INGRESS/EGRESS INDICES
-    iingress = np.where(np.bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
+    iingress = where(bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
     # COMPUTE k0 & k1
-    k0 = np.arccos((rprs**2 + z[iingress]**2 - 1) / 2 / rprs / z[iingress])
-    k1 = np.arccos((1 - rprs**2 + z[iingress]**2) / 2 / z[iingress])
+    k0 = arccos((rprs**2 + z[iingress]**2 - 1) / 2 / rprs / z[iingress])
+    k1 = arccos((1 - rprs**2 + z[iingress]**2) / 2 / z[iingress])
 
     # CALCULATE TRANSIT SHAPE
     # Baseline
-    y = np.ones(len(z))
+    y = ones(len(z))
     # Full transit
-    y[np.where(z <= (1-rprs))] = 1.-rprs**2
+    y[where(z <= (1-rprs))] = 1.-rprs**2
     # Ingress/egress
-    y[iingress] = 1. - 1./np.pi*(k0*rprs**2 + k1 - np.sqrt((4*z[iingress]**2 - \
+    y[iingress] = 1. - 1./pi*(k0*rprs**2 + k1 - sqrt((4*z[iingress]**2 - \
                   (1 + z[iingress]**2 - rprs**2)**2)/4))
 
     return y
@@ -338,285 +340,336 @@ def trnlldsp(z, rprs, u):
     Sigma4 =(1.-u1/5.-u2/3.-3.*u3/7.-u4/2.)
 
     # CALCULATE TRANSIT SHAPE WITH LIMB-DARKENING
-    y = np.ones(len(z))
+    y = ones(len(z), dtype=float)
     if rprs == 0:
         return y
     # INGRESS/EGRESS
-    iingress = np.where(np.bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
+    iingress = where(bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
     x = 1.- (z[iingress]-rprs)**2
-    I1star = 1.- u1*(1.-4./5.*np.sqrt(np.sqrt(x))) \
-            - u2*(1.-2./3.*np.sqrt(x)) \
-            - u3*(1.-4./7.*np.sqrt(np.sqrt(x*x*x))) \
+    I1star = 1.- u1*(1.-4./5.*sqrt(sqrt(x))) \
+            - u2*(1.-2./3.*sqrt(x)) \
+            - u3*(1.-4./7.*sqrt(sqrt(x*x*x))) \
             - u4*(1.-4./8.*x)
-    y[iingress] = 1.- I1star*(rprs**2*np.arccos((z[iingress]-1.)/rprs) \
-            - (z[iingress]-1.)*np.sqrt(rprs**2-(z[iingress]-1.)**2)) \
-            /np.pi/Sigma4
+    y[iingress] = 1.- I1star*(rprs**2*arccos((z[iingress]-1.)/rprs) \
+            - (z[iingress]-1.)*sqrt(rprs**2-(z[iingress]-1.)**2)) \
+            /pi/Sigma4
     # Full transit (except @ z=0)
-    itrans = np.where(np.bitwise_and(z <= (1-rprs), z != 0.))
-    sig1 = np.sqrt(np.sqrt(1.-(z[itrans]-rprs)**2))
-    sig2 = np.sqrt(np.sqrt(1.-(z[itrans]+rprs)**2))
+    itrans = where(bitwise_and(z <= (1-rprs), z != 0.))
+    sig1 = sqrt(sqrt(1.-(z[itrans]-rprs)**2))
+    sig2 = sqrt(sqrt(1.-(z[itrans]+rprs)**2))
     I2star = 1.- u1*(1.+(sig2**5-sig1**5)/5./rprs/z[itrans]) \
             - u2*(1.+(sig2**6-sig1**6)/6./rprs/z[itrans]) \
             - u3*(1.+(sig2**7-sig1**7)/7./rprs/z[itrans]) \
             - u4*(rprs**2+(z[itrans])**2)
     y[itrans] = 1.- rprs**2*I2star/Sigma4
     # z=0 (midpoint)
-    y[np.where(z == 0.)] = 1.-rprs**2/Sigma4
+    y[where(z == 0.)] = 1.-rprs**2/Sigma4
 
     return y
+
 
 def trquad(z, rprs, u1, u2):
     '''
     
     '''
+
     nz = size(z)
     lambdad = zeros(nz)
     etad = zeros(nz)
     lambdae = zeros(nz)
-    omega = 1.-u1/3.-u2/6.
+    omega = 1. - u1 / 3. - u2 / 6.
 
-    ## tolerance for double precision equalities
-    ## special case integrations
+    # # tolerance for double precision equalities
+    # # special case integrations
+
     tol = 1e-14
 
-    rprs = np.abs(rprs)
-    
-    z = where(abs(rprs-z) < tol,rprs,z)
-    z = where(abs((rprs-1)-z) < tol,rprs-1.,z)
-    z = where(abs((1-rprs)-z) < tol,1.-rprs,z)
-    z = where(z < tol,0.,z)
-               
-    x1=(rprs-z)**2.
-    x2=(rprs+z)**2.
-    x3=rprs**2.-z**2.
-    
-    ## trivial case of no planet
+    rprs = abs(rprs)
+
+    z = where(abs(rprs - z) < tol, rprs, z)
+    z = where(abs(rprs - 1 - z) < tol, rprs - 1., z)
+    z = where(abs(1 - rprs - z) < tol, 1. - rprs, z)
+    z = where(z < tol, 0., z)
+
+    x1 = (rprs - z) ** 2.
+    x2 = (rprs + z) ** 2.
+    x3 = rprs ** 2. - z ** 2.
+
+    # # trivial case of no planet
+
     if rprs <= 0.:
-        muo1 = zeros(nz) + 1. 
-        mu0  = zeros(nz) + 1.
+        muo1 = zeros(nz) + 1.
+        mu0 = zeros(nz) + 1.
         return muo1
 
-    ## Case 1 - the star is unocculted:
-    ## only consider points with z lt 1+rprs
-    notusedyet = where( z < (1. + rprs) )
+    # # Case 1 - the star is unocculted:
+    # # only consider points with z < 1+rprs
+
+    notusedyet = where(z < 1. + rprs)
     notusedyet = notusedyet[0]
     if size(notusedyet) == 0:
-        muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*
-                  (lambdad+2./3.*(rprs > z))+ \
-                  u2*etad)/omega
-        mu0=1.-lambdae
+        muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
+                     * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad) \
+            / omega
+        mu0 = 1. - lambdae
         return muo1
 
-    # Case 11 - the  source is completely occulted:
+    # Case 11 - the source is completely occulted:
+
     if rprs >= 1.:
-        occulted = where(z[notusedyet] <= rprs-1.)#,complement=notused2)
+        occulted = where(z[notusedyet] <= rprs - 1.)  # ,complement=notused2)
         if size(occulted) != 0:
             ndxuse = notusedyet[occulted]
-            etad[ndxuse] = 0.5 # corrected typo in paper
+            etad[ndxuse] = 0.5  # corrected typo in paper
             lambdae[ndxuse] = 1.
+
             # lambdad = 0 already
-            notused2 = where(z[notusedyet] > rprs-1)
+
+            notused2 = where(z[notusedyet] > rprs - 1)
             if size(notused2) == 0:
-                muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.* \
-                                                 (rprs > z))+u2*etad)/omega
-                mu0=1.-lambdae
+                muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2.
+                             * u2) * (lambdad + 2. / 3. * (rprs > z))
+                             + u2 * etad) / omega
+                mu0 = 1. - lambdae
                 return muo1
             notusedyet = notusedyet[notused2]
-                
+
     # Case 2, 7, 8 - ingress/egress (uniform disk only)
-    inegressuni = where((z[notusedyet] >= abs(1.-rprs)) & (z[notusedyet] < 1.+rprs))
+
+    inegressuni = where((z[notusedyet] >= abs(1. - rprs))
+                        & (z[notusedyet] < 1. + rprs))
     if size(inegressuni) != 0:
         ndxuse = notusedyet[inegressuni]
-        tmp = (1.-rprs**2.+z[ndxuse]**2.)/2./z[ndxuse]
-        tmp = where(tmp > 1.,1.,tmp)
-        tmp = where(tmp < -1.,-1.,tmp)
+        tmp = (1. - rprs ** 2. + z[ndxuse] ** 2.) / 2. / z[ndxuse]
+        tmp = where(tmp > 1., 1., tmp)
+        tmp = where(tmp < -1., -1., tmp)
         kap1 = arccos(tmp)
-        tmp = (rprs**2.+z[ndxuse]**2-1.)/2./rprs/z[ndxuse]
-        tmp = where(tmp > 1.,1.,tmp)
-        tmp = where(tmp < -1.,-1.,tmp)
+        tmp = (rprs ** 2. + z[ndxuse] ** 2 - 1.) / 2. / rprs / z[ndxuse]
+        tmp = where(tmp > 1., 1., tmp)
+        tmp = where(tmp < -1., -1., tmp)
         kap0 = arccos(tmp)
-        tmp = 4.*z[ndxuse]**2-(1.+z[ndxuse]**2-rprs**2)**2
-        tmp = where(tmp < 0,0,tmp)
-        lambdae[ndxuse] = (rprs**2*kap0+kap1 - 0.5*sqrt(tmp))/pi
+        tmp = 4. * z[ndxuse] ** 2 - (1. + z[ndxuse] ** 2 - rprs ** 2) \
+            ** 2
+        tmp = where(tmp < 0, 0, tmp)
+        lambdae[ndxuse] = (rprs ** 2 * kap0 + kap1 - 0.5 * sqrt(tmp)) \
+            / pi
+
         # eta_1
-        etad[ndxuse] = 1./2./pi*(kap1+rprs**2*(rprs**2+2.*z[ndxuse]**2)*kap0 \
-           -(1.+5.*rprs**2+z[ndxuse]**2)/4.
-           *sqrt((1.-x1[ndxuse])*(x2[ndxuse]-1.)))
-    
+
+        etad[ndxuse] = 1. / 2. / pi * (kap1 + rprs ** 2 * (rprs ** 2
+                + 2. * z[ndxuse] ** 2) * kap0 - (1. + 5. * rprs ** 2
+                + z[ndxuse] ** 2) / 4. * sqrt((1. - x1[ndxuse])
+                * (x2[ndxuse] - 1.)))
+
     # Case 5, 6, 7 - the edge of planet lies at origin of star
-    ocltor = where(z[notusedyet] == rprs)#, complement=notused3)
+
+    ocltor = where(z[notusedyet] == rprs)  # , complement=notused3)
     t = where(z[notusedyet] == rprs)
     if size(ocltor) != 0:
-        ndxuse = notusedyet[ocltor] 
+        ndxuse = notusedyet[ocltor]
         if rprs < 0.5:
+
             # Case 5
-            q=2.*rprs  # corrected typo in paper (2k -> 2rprs)
-            Ek,Kk = ellke(q)
+
+            q = 2. * rprs  # corrected typo in paper (2k -> 2rprs)
+            (Ek, Kk) = ellke(q)
+
             # lambda_4
-            lambdad[ndxuse] = 1./3.+2./9./pi*(4.*(2.*rprs**2-1.)*Ek+\
-                                              (1.-4.*rprs**2)*Kk)
+
+            lambdad[ndxuse] = 1. / 3. + 2. / 9. / pi * (4. * (2. * rprs
+                    ** 2 - 1.) * Ek + (1. - 4. * rprs ** 2) * Kk)
+
             # eta_2
-            etad[ndxuse] = rprs**2/2.*(rprs**2+2.*z[ndxuse]**2)        
-            lambdae[ndxuse] = rprs**2 # uniform disk
+
+            etad[ndxuse] = rprs ** 2 / 2. * (rprs ** 2 + 2. * z[ndxuse]
+                    ** 2)
+            lambdae[ndxuse] = rprs ** 2  # uniform disk
         elif rprs > 0.5:
+
             # Case 7
-            q=0.5/rprs # corrected typo in paper (1/2k -> 1/2rprs)
-            Ek,Kk = ellke(q)
+
+            q = 0.5 / rprs  # corrected typo in paper (1/2k -> 1/2rprs)
+            (Ek, Kk) = ellke(q)
+
             # lambda_3
-            lambdad[ndxuse] = 1./3.+16.*rprs/9./pi*(2.*rprs**2-1.)*Ek-\
-                              (32.*rprs**4-20.*rprs**2+3.)/9./pi/rprs*Kk
-            # etad = eta_1 already
+
+            lambdad[ndxuse] = 1. / 3. + 16. * rprs / 9. / pi * (2.
+                    * rprs ** 2 - 1.) * Ek - (32. * rprs ** 4 - 20.
+                    * rprs ** 2 + 3.) / 9. / pi / rprs * Kk
         else:
+
+            # etad = eta_1 already
             # Case 6
-            lambdad[ndxuse] = 1./3.-4./pi/9.
-            etad[ndxuse] = 3./32.
+
+            lambdad[ndxuse] = 1. / 3. - 4. / pi / 9.
+            etad[ndxuse] = 3. / 32.
         notused3 = where(z[notusedyet] != rprs)
         if size(notused3) == 0:
-            muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*\
-                      (lambdad+2./3.*(rprs > z))+u2*etad)/omega
-            mu0=1.-lambdae
+            muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
+                         * (lambdad + 2. / 3. * (rprs > z)) + u2
+                         * etad) / omega
+            mu0 = 1. - lambdae
             return muo1
         notusedyet = notusedyet[notused3]
 
     # Case 2, Case 8 - ingress/egress (with limb darkening)
-    inegress = where( ((z[notusedyet] > 0.5+abs(rprs-0.5)) & \
-                       (z[notusedyet] < 1.+rprs))  | \
-                      ( (rprs > 0.5) & (z[notusedyet] > abs(1.-rprs)) & \
-                        (z[notusedyet] < rprs)) )#, complement=notused4)
-    if size(inegress) != 0:
 
+    inegress = where((z[notusedyet] > 0.5 + abs(rprs - 0.5))
+                     & (z[notusedyet] < 1. + rprs) | (rprs > 0.5)
+                     & (z[notusedyet] > abs(1. - rprs))
+                     & (z[notusedyet] < rprs))  # , complement=notused4)
+    if size(inegress) != 0:
         ndxuse = notusedyet[inegress]
-        q=sqrt((1.-x1[ndxuse])/(x2[ndxuse]-x1[ndxuse]))
-        Ek,Kk = ellke(q)
-        n=1./x1[ndxuse]-1.
+        q = sqrt((1. - x1[ndxuse]) / (x2[ndxuse] - x1[ndxuse]))
+        (Ek, Kk) = ellke(q)
+        n = 1. / x1[ndxuse] - 1.
 
         # lambda_1:
-        lambdad[ndxuse]=2./9./pi/sqrt(x2[ndxuse]-x1[ndxuse])*\
-                         (((1.-x2[ndxuse])*(2.*x2[ndxuse]+x1[ndxuse]-3.)-\
-                           3.*x3[ndxuse]*(x2[ndxuse]-2.))*Kk+(x2[ndxuse]-\
-                           x1[ndxuse])*(z[ndxuse]**2+7.*rprs**2-4.)*Ek-\
-                          3.*x3[ndxuse]/x1[ndxuse]*ellpic_bulirsch(n,q))
-        notused4 = where( ( (z[notusedyet] <= 0.5+abs(rprs-0.5)) | \
-                            (z[notusedyet] >= 1.+rprs) ) & ( (rprs <= 0.5) | \
-                            (z[notusedyet] <= abs(1.-rprs)) | \
-                            (z[notusedyet] >= rprs) ))
+
+        lambdad[ndxuse] = 2. / 9. / pi / sqrt(x2[ndxuse] - x1[ndxuse]) \
+            * (((1. - x2[ndxuse]) * (2. * x2[ndxuse] + x1[ndxuse] - 3.)
+               - 3. * x3[ndxuse] * (x2[ndxuse] - 2.)) * Kk
+               + (x2[ndxuse] - x1[ndxuse]) * (z[ndxuse] ** 2 + 7.
+               * rprs ** 2 - 4.) * Ek - 3. * x3[ndxuse] / x1[ndxuse]
+               * ellpic_bulirsch(n, q))
+        notused4 = where(((z[notusedyet] <= 0.5 + abs(rprs - 0.5))
+                         | (z[notusedyet] >= 1. + rprs)) & ((rprs
+                         <= 0.5) | (z[notusedyet] <= abs(1. - rprs))
+                         | (z[notusedyet] >= rprs)))
         if size(notused4) == 0:
-            muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*\
-                                                     (rprs > z))+u2*etad)/omega
-            mu0=1.-lambdae
+            muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
+                         * (lambdad + 2. / 3. * (rprs > z)) + u2
+                         * etad) / omega
+            mu0 = 1. - lambdae
             return muo1
         notusedyet = notusedyet[notused4]
 
     # Case 3, 4, 9, 10 - planet completely inside star
+
     if rprs < 1.:
-        inside = where(z[notusedyet] <= (1.-rprs))#, complement=notused5)
+        inside = where(z[notusedyet] <= 1. - rprs)  # , complement=notused5)
         if size(inside) != 0:
             ndxuse = notusedyet[inside]
 
-            ## eta_2
-            etad[ndxuse] = rprs**2/2.*(rprs**2+2.*z[ndxuse]**2)
+            # # eta_2
 
-            ## uniform disk
-            lambdae[ndxuse] = rprs**2
+            etad[ndxuse] = rprs ** 2 / 2. * (rprs ** 2 + 2. * z[ndxuse]
+                    ** 2)
 
-            ## Case 4 - edge of planet hits edge of star
-            edge = where(z[ndxuse] == 1.-rprs)#, complement=notused6)
+            # # uniform disk
+
+            lambdae[ndxuse] = rprs ** 2
+
+            # # Case 4 - edge of planet hits edge of star
+
+            edge = where(z[ndxuse] == 1. - rprs)  # , complement=notused6)
             if size(edge[0]) != 0:
-                ## lambda_5
-                lambdad[ndxuse[edge]] = 2./3./pi*arccos(1.-2.*rprs)-\
-                        4./9./pi*sqrt(rprs*(1.-rprs))*(3.+2.*rprs-8.*rprs**2)
+
+                # # lambda_5
+
+                lambdad[ndxuse[edge]] = 2. / 3. / pi * arccos(1. - 2.
+                        * rprs) - 4. / 9. / pi * sqrt(rprs * (1.
+                        - rprs)) * (3. + 2. * rprs - 8. * rprs ** 2)
                 if rprs > 0.5:
-                    lambdad[ndxuse[edge]] -= 2./3.
-                notused6 = where(z[ndxuse] != 1.-rprs)
+                    lambdad[ndxuse[edge]] -= 2. / 3.
+                notused6 = where(z[ndxuse] != 1. - rprs)
                 if size(notused6) == 0:
-                    muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*\
-                              (lambdad+2./3.*(rprs > z))+u2*etad)/omega
-                    mu0=1.-lambdae
+                    muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1
+                                 + 2. * u2) * (lambdad + 2. / 3.
+                                 * (rprs > z)) + u2 * etad) / omega
+                    mu0 = 1. - lambdae
                     return muo1
                 ndxuse = ndxuse[notused6[0]]
 
-            ## Case 10 - origin of planet hits origin of star
-            origin = where(z[ndxuse] == 0)#, complement=notused7)
+            # # Case 10 - origin of planet hits origin of star
+
+            origin = where(z[ndxuse] == 0)  # , complement=notused7)
             if size(origin) != 0:
-                ## lambda_6
-                lambdad[ndxuse[origin]] = -2./3.*(1.-rprs**2)**1.5
+
+                # # lambda_6
+
+                lambdad[ndxuse[origin]] = -2. / 3. * (1. - rprs ** 2) \
+                    ** 1.5
                 notused7 = where(z[ndxuse] != 0)
                 if size(notused7) == 0:
-                    muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*\
-                              (lambdad+2./3.*(rprs > z))+u2*etad)/omega
-                    mu0=1.-lambdae
+                    muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1
+                                 + 2. * u2) * (lambdad + 2. / 3.
+                                 * (rprs > z)) + u2 * etad) / omega
+                    mu0 = 1. - lambdae
                     return muo1
                 ndxuse = ndxuse[notused7[0]]
-   
-            q=sqrt((x2[ndxuse]-x1[ndxuse])/(1.-x1[ndxuse]))
-            n=x2[ndxuse]/x1[ndxuse]-1.
-            Ek,Kk = ellke(q)    
 
-            ## Case 3, Case 9 - anywhere in between
-            ## lambda_2
-            lambdad[ndxuse] = 2./9./pi/sqrt(1.-x1[ndxuse])*\
-                              ((1.-5.*z[ndxuse]**2+rprs**2+x3[ndxuse]**2)*Kk+\
-                               (1.-x1[ndxuse])*(z[ndxuse]**2+7.*rprs**2-4.)*Ek-\
-                               3.*x3[ndxuse]/x1[ndxuse]*ellpic_bulirsch(n,q))
+            q = sqrt((x2[ndxuse] - x1[ndxuse]) / (1. - x1[ndxuse]))
+            n = x2[ndxuse] / x1[ndxuse] - 1.
+            (Ek, Kk) = ellke(q)
 
-        ## if there are still unused elements, there's a bug in the code
-        ## (please report it)
-        # notused5 = where(z[notusedyet] > (1.-rprs))
-        # if notused5[0] != 0:
-        #     print("ERROR: the following values of z didn't fit into a case:")
-        #     return [-1,-1]
+            # # Case 3, Case 9 - anywhere in between
+            # # lambda_2
 
-        muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(rprs > z))+\
-                  u2*etad)/omega
-        mu0=1.-lambdae
+            lambdad[ndxuse] = 2. / 9. / pi / sqrt(1. - x1[ndxuse]) \
+                * ((1. - 5. * z[ndxuse] ** 2 + rprs ** 2 + x3[ndxuse]
+                   ** 2) * Kk + (1. - x1[ndxuse]) * (z[ndxuse] ** 2
+                   + 7. * rprs ** 2 - 4.) * Ek - 3. * x3[ndxuse]
+                   / x1[ndxuse] * ellpic_bulirsch(n, q))
+
+        muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
+                     * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad) \
+            / omega
+        mu0 = 1. - lambdae
     return muo1
 
 
 def ellke(k):
-    m1=1.-k**2
+    m1 = 1. - k ** 2
     logm1 = log(m1)
 
-    a1=0.44325141463
-    a2=0.06260601220
-    a3=0.04757383546
-    a4=0.01736506451
-    b1=0.24998368310
-    b2=0.09200180037
-    b3=0.04069697526
-    b4=0.00526449639
-    ee1=1.+m1*(a1+m1*(a2+m1*(a3+m1*a4)))
-    ee2=m1*(b1+m1*(b2+m1*(b3+m1*b4)))*(-logm1)
-    ek = ee1+ee2
-        
-    a0=1.38629436112
-    a1=0.09666344259
-    a2=0.03590092383
-    a3=0.03742563713
-    a4=0.01451196212
-    b0=0.5
-    b1=0.12498593597
-    b2=0.06880248576
-    b3=0.03328355346
-    b4=0.00441787012
-    ek1=a0+m1*(a1+m1*(a2+m1*(a3+m1*a4)))
-    ek2=(b0+m1*(b1+m1*(b2+m1*(b3+m1*b4))))*logm1
-    kk = ek1-ek2
-    
-    return [ek,kk]
+    a1 = 0.44325141463
+    a2 = 0.06260601220
+    a3 = 0.04757383546
+    a4 = 0.01736506451
+    b1 = 0.24998368310
+    b2 = 0.09200180037
+    b3 = 0.04069697526
+    b4 = 0.00526449639
+    ee1 = 1. + m1 * (a1 + m1 * (a2 + m1 * (a3 + m1 * a4)))
+    ee2 = m1 * (b1 + m1 * (b2 + m1 * (b3 + m1 * b4))) * -logm1
+    ek = ee1 + ee2
+
+    a0 = 1.38629436112
+    a1 = 0.09666344259
+    a2 = 0.03590092383
+    a3 = 0.03742563713
+    a4 = 0.01451196212
+    b0 = 0.5
+    b1 = 0.12498593597
+    b2 = 0.06880248576
+    b3 = 0.03328355346
+    b4 = 0.00441787012
+    ek1 = a0 + m1 * (a1 + m1 * (a2 + m1 * (a3 + m1 * a4)))
+    ek2 = (b0 + m1 * (b1 + m1 * (b2 + m1 * (b3 + m1 * b4)))) * logm1
+    kk = ek1 - ek2
+
+    return [ek, kk]
 
 
-def ellpic_bulirsch(n,k):
-    kc = sqrt(1.-k**2)
-    p = n+1.
+def ellpic_bulirsch(n, k):
+    kc = sqrt(1. - k ** 2)
+    p = n + 1.
     m0 = 1.
     c = 1.
     p = sqrt(p)
-    d = 1./p
+    d = 1. / p
     e = kc
     while 1:
-        f = c; c = d/p+c; g = e/p; d = 2.*(f*g+d)
-        p = g + p; g = m0; m0 = kc + m0
-        if max(abs(1.-kc/g)) > 1.e-8:
-            kc = 2*sqrt(e); e=kc*m0
+        f = c
+        c = d / p + c
+        g = e / p
+        d = 2. * (f * g + d)
+        p = g + p
+        g = m0
+        m0 = kc + m0
+        if max(abs(1. - kc / g)) > 1.e-8:
+            kc = 2 * sqrt(e)
+            e = kc * m0
         else:
-            return 0.5*pi*(c*m0+d)/(m0*(m0+p))
+            return 0.5 * pi * (c * m0 + d) / (m0 * (m0 + p))
