@@ -41,6 +41,10 @@ class StarryModel(PyMC3Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
+        # Set default to turn light-travel correction on if not specified
+        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+            self.compute_ltt = True
+
         required = np.array(['Ms', 'Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
@@ -281,7 +285,7 @@ class StarryModel(PyMC3Model):
 
             # Instantiate the system
             system = starry.System(star, planet, planet_2, planet_3,
-                                   light_delay=True)
+                                   light_delay=self.compute_ltt)
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -552,5 +556,5 @@ class StarryModel(PyMC3Model):
 
             # Instantiate the system
             sys = starry.System(star, planet, planet_2, planet_3,
-                                light_delay=True)
+                                light_delay=self.compute_ltt)
             self.fit.systems.append(sys)

@@ -421,7 +421,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
         fname = f'S5_{fitter}_samples_{channel_key}'
 
-        keys = [key for key in full_keys if y_param in key]
+        keys = [key for key in full_keys if y_param == key[:len(y_param)]]
         if len(keys) == 0:
             log.writelog(f'  Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n  ['
@@ -429,10 +429,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
             log.writelog(f'  Skipping {y_param}')
             return meta
 
-        for i, key in enumerate(keys):
+        for key in keys:
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
-            lowers.append(np.abs(fitted_values["-1sigma"][ind]))
-            uppers.append(fitted_values["+1sigma"][ind])
+            lowers.append(fitted_values["50th"][ind]-fitted_values["16th"][ind])
+            uppers.append(fitted_values["84th"][ind]-fitted_values["50th"][ind])
             medians.append(fitted_values["50th"][ind])
 
         errs = np.array([lowers, uppers])
@@ -451,7 +451,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
             return meta
 
         medians = []
-        for i, key in enumerate(keys):
+        for key in keys:
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
             if "50th" in fitted_values.keys():
                 medians.append(fitted_values["50th"][ind])
@@ -462,7 +462,8 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         # if lsq or exoplanet, no uncertainties
         errs = np.ones((2, len(medians)))*np.nan
 
-    meta.spectrum_median, meta.spectrum_err = medians, errs
+    meta.spectrum_median = medians
+    meta.spectrum_err = errs
 
     return meta
 
@@ -491,7 +492,7 @@ def parse_unshared_saves(meta, log, fit_methods):
         channel_key = f'ch{ch_number}'
         meta = parse_s5_saves(meta, log, fit_methods, channel_key)
         if meta.spectrum_median is None:
-            # Parameter was found, so don't keep looking for it
+            # Parameter wasn't found, so don't keep looking for it
             meta.spectrum_median = np.array([None for _ in
                                              range(meta.nspecchan)])
             meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
