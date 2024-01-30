@@ -142,7 +142,7 @@ def test_MIRI(capsys):
     s4_cites = np.union1d(s3_cites, COMMON_IMPORTS[3])
     assert np.array_equal(s4_meta.citations, s4_cites)
 
-    run assertions for S5
+    # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}MIRI{os.sep}'
                           f'Stage5{os.sep}')
     name = pathdirectory(meta, 'S5', 1, ap=4, bg=10)
