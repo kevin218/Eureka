@@ -1,5 +1,5 @@
 from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
-from .PoetModels import PoetTransitModel, PoetEclipseModel
+from .PoetModels import PoetTransitModel, PoetEclipseModel, PoetPCModel
 from .CentroidModel import CentroidModel
 from .ExpRampModel import ExpRampModel
 from .GPModel import GPModel

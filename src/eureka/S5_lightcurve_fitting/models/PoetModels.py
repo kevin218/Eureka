@@ -323,6 +323,164 @@ class PoetEclipseModel(Model):
             lcfinal = append(lcfinal, m_eclipse.light_curve(poet_params))
 
         return lcfinal
+
+
+class PoetPCModel(Model):
+    """Phase Curve Model"""
+    def __init__(self, transit_model=None, eclipse_model=None, **kwargs):
+        """Initialize the phase curve model
+
+        Parameters
+        ----------
+        transit_model : eureka.S5_lightcurve_fitting.models.Model; optional
+            The transit model to use for this phase curve model.
+            Defaults to None.
+        eclipse_model : eureka.S5_lightcurve_fitting.models.Model; optional
+            The eclipse model to use for this phase curve model.
+            Defaults to None.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
+        """
+        self.components = None
+        self.transit_model = transit_model
+        self.eclipse_model = eclipse_model
+        if transit_model is not None:
+            self.components = [self.transit_model, ]
+        if eclipse_model is not None:
+            if self.components is None:
+                self.components = [self.eclipse_model, ]
+            else:
+                self.components.append(self.eclipse_model)
+
+        # Inherit from Model class
+        super().__init__(**kwargs)
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'physical'
+
+    @property
+    def time(self):
+        """A getter for the time."""
+        return self._time
+
+    @time.setter
+    def time(self, time_array):
+        """A setter for the time."""
+        self._time = time_array
+        if self.transit_model is not None:
+            self.transit_model.time = time_array
+        if self.eclipse_model is not None:
+            self.eclipse_model.time = time_array
+
+    def update(self, newparams, **kwargs):
+        """Update the model with new parameter values.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.update().
+        """
+        super().update(newparams, **kwargs)
+        if self.transit_model is not None:
+            self.transit_model.update(newparams, **kwargs)
+        if self.eclipse_model is not None:
+            self.eclipse_model.update(newparams, **kwargs)
+
+    def eval(self, channel=None, **kwargs):
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Initialize model
+        poet_params = TransitParams()
+        pc_params = {'cos1_amp': 0., 'cos1_off': 0.,
+                     'cos2_amp': 0., 'cos2_off': 0.}                     
+        
+        # Set all parameters
+        lcfinal = array([])
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
+            # Set all parameters
+            for index, item in enumerate(self.longparamlist[chan]):
+                if any([key in item for key in pc_params.keys()]):
+                    pc_params[self.paramtitles[index]] = \
+                        self.parameters.dict[item][0]
+                else:
+                    setattr(poet_params, self.paramtitles[index],
+                            self.parameters.dict[item][0])
+
+            if not any(['ecl_midpt' in key
+                           for key in self.longparamlist[chan]]):
+                # If not explicitly fitting for the time of eclipse, get the
+                # time of eclipse from the time of transit, period,
+                # eccentricity, and argument of periastron
+                ecl_midpt = get_ecl_midpt(poet_params)
+            else:
+                ecl_midpt = self.parameters.dict['ecl_midpt'][0]
+
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
+            # calculate the phase variations
+            p = poet_params.period
+            phaseVars = (1. + pc_params['cos1_amp'] 
+                         * cos(2*pi*(time-pc_params['cos1_off'])/p) 
+                         + pc_params['cos2_amp']
+                         * cos(4*pi*(time-pc_params['cos2_off'])/p))
+            
+            # Fltten phase curve during eclipse
+            # iecl = where(bitwise_or((time-ecl_midpt)%p >= p-(t14-t12)/2.,
+            #                         (time-ecl_midpt)%p <= (t14-t12)/2.))
+            # phaseVars[iecl] = (1. + pc_params['cos1_amp'] 
+            #                    * cos(2*pi*(ecl_midpt-pc_params['cos1_off'])/p) 
+            #                    + pc_params['cos2_amp']
+            #                    * cos(4*pi*(ecl_midpt-pc_params['cos2_off'])/p))
+
+            lcfinal = append(lcfinal, phaseVars)
+
+        if self.transit_model is None:
+            transit = 1
+        else:
+            transit = self.transit_model.eval(channel=channel)
+        if self.eclipse_model is None:
+            eclipse = 1
+        else:
+            eclipse = self.eclipse_model.eval(channel=channel)
+
+        return transit + lcfinal*(eclipse-1)
    
 
 class TransitModel():
