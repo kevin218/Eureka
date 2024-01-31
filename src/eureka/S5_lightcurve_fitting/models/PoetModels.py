@@ -441,7 +441,7 @@ class PoetPCModel(Model):
                             self.parameters.dict[item][0])
 
             if not any(['ecl_midpt' in key
-                           for key in self.longparamlist[chan]]):
+                        for key in self.longparamlist[chan]]):
                 # If not explicitly fitting for the time of eclipse, get the
                 # time of eclipse from the time of transit, period,
                 # eccentricity, and argument of periastron
@@ -461,7 +461,7 @@ class PoetPCModel(Model):
                          + pc_params['cos2_amp']
                          * cos(4*pi*(time-pc_params['cos2_off'])/p))
             
-            # Fltten phase curve during eclipse
+            # Flatten phase curve during eclipse
             # iecl = where(bitwise_or((time-ecl_midpt)%p >= p-(t14-t12)/2.,
             #                         (time-ecl_midpt)%p <= (t14-t12)/2.))
             # phaseVars[iecl] = (1. + pc_params['cos1_amp'] 
