@@ -289,8 +289,8 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     data['v0'].data *= 1e9
     
     # Update units
-    data['flux'].flux_units = 'mJy'
-    data['err'].flux_units = 'mJy'
-    data['v0'].flux_units = 'mJy'
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
 
     return data
