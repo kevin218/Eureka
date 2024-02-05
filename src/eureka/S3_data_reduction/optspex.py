@@ -579,8 +579,11 @@ def clean_median_flux(data, meta, log, m):
         # Compute median error array
         err_ma = np.ma.masked_where(data.mask.values == 0, data.err.values)
         mederr = np.ma.median(err_ma, axis=0)
+        # Smooth error array along dispersion direction
+        # to enable flagging bad points with large uncertainties
+        smooth_mederr = spn.median_filter(mederr, size=(1, meta.window_len))
         # Compute residuals in units of std dev
-        residuals = (medflux - smoothflux)/mederr
+        residuals = (medflux - smoothflux)/smooth_mederr
 
         # Flag outliers
         if not hasattr(meta, 'median_thresh'):

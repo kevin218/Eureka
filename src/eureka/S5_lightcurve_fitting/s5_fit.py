@@ -9,6 +9,7 @@ from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
+from ..version import version
 from . import lightcurve
 from . import models as m
 try:
@@ -67,6 +68,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -179,6 +181,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
             log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -262,7 +265,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Load limb-darkening coefficients from a custom file
                     ld_fix_file = str(meta.ld_file_white)
                     try:
-                        ld_coeffs = np.loadtxt(ld_fix_file)
+                        ld_coeffs = np.genfromtxt(ld_fix_file)
                     except FileNotFoundError:
                         raise Exception("The limb-darkening file "
                                         f"{ld_fix_file} could not be found.")
@@ -335,7 +338,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
                 try:
-                    ld_coeffs = np.loadtxt(ld_fix_file)
+                    ld_coeffs = np.genfromtxt(ld_fix_file)
                 except FileNotFoundError:
                     raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")

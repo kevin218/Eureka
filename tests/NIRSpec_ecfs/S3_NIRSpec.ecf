@@ -9,7 +9,7 @@ convert_to_e    True        # Whether or not a conversion to electrons should be
 
 # Subarray region of interest
 ywindow         [0,31]      # Vertical axis as seen in DS9
-xwindow         [65,400]    # Horizontal axis as seen in DS9
+xwindow         [85,410]    # Horizontal axis as seen in DS9
 src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 dqmask          True        # Mask pixels with an odd entry in the DQ array

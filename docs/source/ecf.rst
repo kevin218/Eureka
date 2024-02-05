@@ -18,6 +18,12 @@ suffix
 ''''''
 Data file suffix (e.g. uncal).
 
+
+pmap
+''''
+Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce someone else's work), you can specify the pmap number here. For example, to use ``jwst_1089.pmap``, set this ``pmap`` parameter to ``1089``.
+
+
 ramp_fit_algorithm
 ''''''''''''''''''
 Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
@@ -219,6 +225,9 @@ Data file suffix (e.g. rateints).
 .. note::
 	Note that other Instruments might used different suffixes!
 
+pmap
+''''
+Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce someone else's work), you can specify the pmap number here. For example, to use ``jwst_1089.pmap``, set this ``pmap`` parameter to ``1089``.
 
 slit_y_low & slit_y_high
 ''''''''''''''''''''''''
@@ -287,6 +296,10 @@ max_memory
 ''''''''''
 Sets the maximum memory fraction (0--1) that should be used by the loaded in data files. This will reduce nfiles if needed. Note that more RAM than this may be used during operations like sigma clipping, so you're best off setting max_memory <= 0.5.
 
+indep_batches
+'''''''''''''
+Do you want to independently treat each batch of files? When False, the median spectrum from the first batch is applied too all batches. Strongly recommended to leave this as False unless you have a clear reason to set it to True. If set to True, you may end up with jump discontinuities between batches.
+
 suffix
 ''''''
 If your data directory (``topdir + inputdir``, see below) contains files with different data formats, you want to consider setting this variable.
@@ -317,6 +330,10 @@ An optional input parameter. If False (default), convert the units of the images
 poly_wavelength
 '''''''''''''''
 If True, use an updated polynomial wavelength solution for NIRCam longwave spectroscopy instead of the linear wavelength solution currently assumed by STScI.
+
+pmap
+''''
+Optional. If you want to use a specific CRDS context pmap (e.g. to reproduce someone else's work), you can specify the pmap number here. For example, to use ``jwst_1089.pmap``, set this ``pmap`` parameter to ``1089``.
 
 gain
 ''''
@@ -836,6 +853,12 @@ For theano-based differentiable functions, this can be one or more of the follow
 [starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 
+compute_ltt
+'''''''''''
+Optional. Determines whether to correct the astrophysical model for the light travel time effect (True) or to ignore the effect (False).
+The light travel time effect is caused by the finite speed of light which means that the signal from a secondary eclipse (which occurs on the far side of the orbit) arrive later than would be expected if the speed of light were infinite.
+Unless specified, compute_ltt is set to True for batman_ecl and starry models but set to False for batman_tr models (since the light travel time is insignificant during transit).
+
 manual_clip
 '''''''''''
 Optional. A list of lists specifying the start and end integration numbers for manual removal. E.g., to remove the first 20 data points specify [[0,20]], and to also remove the last 20 data points specify [[0,20],[-20,None]]. If you want to clip the 10th integration, this would be index 9 since python uses zero-indexing. And the manual_clip start and end values are used to slice a numpy array, so they follow the same convention of *inclusive* start index and *exclusive* end index. In other words, to trim the 10th integrations, you would set manual_clip to [[9,10]].
@@ -1062,7 +1085,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
-         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit, and ``h5`` is the orbital period of HST (in the same time units as the data, usually days).  A good starting point for ``h5`` is 0.066422 days.  ``time_batch = time_local % h5``.
+         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.
          If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
          Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.  
          One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
