@@ -5,10 +5,12 @@
 ncpu            1           # Number of CPUs
 nfiles          1           # The number of data files to analyze simultaneously
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+indep_batches   False       # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
 suffix          calints     # Data file suffix
 photometry      True        # Set to True if the user wants to analyse a photometric dataset
 
-convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photometry in mJy
+                            # Set False to convert to electrons
 
 # Subarray region of interest
 ywindow         [400, 650]  # Vertical axis as seen in DS9

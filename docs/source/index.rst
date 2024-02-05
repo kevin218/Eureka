@@ -10,9 +10,9 @@
 Welcome to Eureka!'s documentation!
 ===================================
 
-``Eureka!`` is a data reduction and analysis pipeline for exoplanet time-series observations, with a particular focus on James Webb Space Telescope (JWST) data.
-``Eureka!`` is capable of of reducing JWST time-series data (starting from raw, uncalibrated FITS files) and turning it into precise exoplanet transmission and emission spectra.
-At the moment, the package is still under development. The code is not officially associated with JWST or the ERS team.
+``Eureka!`` is a data reduction and analysis pipeline for exoplanet time-series observations, with a particular focus on JWST data.
+``Eureka!`` is capable of reducing JWST time-series data (starting from raw, uncalibrated FITS files) and turning it into precise exoplanet transmission and emission spectra.
+The package is continually being improved, so be sure to check back often for new updates. The code is not officially associated with JWST or the ERS team.
 
 
 The code is broken down into six parts or "Stages", which are as follows (see also :ref:`Eureka!'s Stages <stages>`):

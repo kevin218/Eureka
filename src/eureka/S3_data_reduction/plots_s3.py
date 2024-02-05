@@ -56,11 +56,11 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     # Don't do min and max because MIRI is backwards
     # Correctly place label at center of pixel
     if meta.inst == 'miri':
-        pmin = int(optspec.x[0].values+0.5)
-        pmax = int(optspec.x[-1].values-0.5)
+        pmin = optspec.x[0].values+0.5
+        pmax = optspec.x[-1].values-0.5
     else:
-        pmin = int(optspec.x[0].values-0.5)
-        pmax = int(optspec.x[-1].values+0.5)
+        pmin = optspec.x[0].values-0.5
+        pmax = optspec.x[-1].values+0.5
     if not hasattr(meta, 'vmin') or meta.vmin is None:
         meta.vmin = 0.97
     if not hasattr(meta, 'vmax') or meta.vmin is None:
@@ -116,8 +116,8 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
-    fig1.set_tight_layout(True)
-    fig2.set_tight_layout(True)
+    fig1.set_layout_engine('tight')
+    fig2.set_layout_engine('tight')
     fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
     fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
@@ -146,20 +146,17 @@ def image_and_background(data, meta, log, m):
     # If need be, transpose array so that largest dimension is on x axis
     if len(data.flux.x.values) < len(data.flux.y.values):
         data = data.transpose('time', 'x', 'y')
-        ymin, ymax = data.flux.x.min().values, data.flux.x.max().values
-        xmin, xmax = data.flux.y.min().values, data.flux.y.max().values
-    else:
-        xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-        ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     intstart = data.attrs['intstart']
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
 
-    # Commented out vmax calculation is sensitive to unflagged hot pixels
-    # vmax = np.ma.max(np.ma.masked_invalid(subdata))/40
-    vmin = -200
-    vmax = 1000
+    # Determine bounds for subdata
+    stddev = np.std(subdata)
+    vmin = -3*stddev
+    vmax = 5*stddev
+    # Determine bounds for BG frame
     median = np.ma.median(subbg)
     std = np.ma.std(subbg)
     # Set bad pixels to plot as black
@@ -245,6 +242,7 @@ def optimal_spectrum(data, meta, n, m):
     m : int
         The file number.
     '''
+    xmin, xmax = get_bounds(data.stdspec.x.values)
     intstart, stdspec, optspec, opterr = (data.attrs['intstart'],
                                           data.stdspec.values,
                                           data.optspec.values,
@@ -257,6 +255,7 @@ def optimal_spectrum(data, meta, n, m):
                  label='Standard Spec')
     plt.errorbar(data.stdspec.x.values, optspec[n], yerr=opterr[n], fmt='-',
                  color='C2', ecolor='C2', label='Optimal Spec')
+    plt.xlim(xmin, xmax)
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
@@ -362,13 +361,14 @@ def profile(meta, profile, submask, n, m):
     profile = np.ma.masked_where(mask, profile)
     submask = np.ma.masked_where(mask, submask)
     vmin = np.ma.min(profile*submask)
-    vmax = vmin + 0.05*np.ma.max(profile*submask)
+    vmax = vmin + 0.3*np.ma.max(profile*submask)
     cmap = plt.cm.viridis.copy()
     plt.figure(3303, figsize=(8, 4))
     plt.clf()
     plt.title(f"Optimal Profile - Integration {n}")
     plt.imshow(profile*submask, aspect='auto', origin='lower',
                vmax=vmax, vmin=vmin, interpolation='nearest', cmap=cmap)
+    plt.colorbar()
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.tight_layout()
@@ -400,8 +400,8 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
         Outlier mask.
     expected : ndarray
         Expected profile
-    loc : ndarray
-        Location of worst outliers.
+    loc : int
+        Location of worst outlier.
     variance : ndarray
         Variance of background subtracted data.
     '''
@@ -415,7 +415,7 @@ def subdata(meta, i, n, m, subdata, submask, expected, loc, variance):
                  fmt='.', color='b')
     plt.plot(np.arange(ny)[np.where(submask[:, i])[0]],
              expected[np.where(submask[:, i])[0], i], 'g-')
-    plt.plot((loc[i]), (subdata[loc[i], i]), 'ro')
+    plt.plot((loc), (subdata[loc, i]), 'ro')
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     col_number = str(i).zfill(int(np.floor(np.log10(nx))+1))
@@ -492,7 +492,7 @@ def driftywidth(data, meta, m):
         plt.pause(0.2)
 
 
-def residualBackground(data, meta, m, vmin=-200, vmax=1000):
+def residualBackground(data, meta, m, vmin=None, vmax=None):
     '''Plot the median, BG-subtracted frame to study the residual BG region and
     aperture/BG sizes. (Fig 3304)
 
@@ -505,9 +505,9 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     m : int
         The file number.
     vmin : int; optional
-        Minimum value of colormap. Default is -200.
+        Minimum value of colormap. Default is None.
     vmax : int; optional
-        Maximum value of colormap. Default is 1000.
+        Maximum value of colormap. Default is None.
 
     Notes
     -----
@@ -516,24 +516,30 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     - 2022-07-29 KBS
         Initial version
     '''
-    xmin = int(data.flux.x.values[0])
-    xmax = int(data.flux.x.values[-1])
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     # Median flux of segment
     subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
     flux = np.ma.median(subdata, axis=0)
-    # Compute vertical slice of with 10 columns
-    slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
+    # Compute vertical slice of width 10 columns
+    flux_slice = np.nanmedian(flux[:, meta.subnx//2-5:meta.subnx//2+5], axis=1)
+    # Replace NaNs with zeros to enable interpolation
+    flux_slice = np.nan_to_num(flux_slice, copy=False, nan=0.0)
     # Interpolate to 0.01-pixel resolution
-    f = spi.interp1d(np.arange(ymin, ymax+1), slice, 'cubic')
+    f = spi.interp1d(np.arange(ymin+0.5, ymax), flux_slice, 'cubic',
+                     fill_value="extrapolate")
     ny_hr = np.arange(ymin, ymax, 0.01)
     flux_hr = f(ny_hr)
+    # Set vmin and vmax
+    if vmin is None:
+        vmin = np.min((0, np.nanmin(flux_hr)))
+    if vmax is None:
+        vmax = np.nanmax(flux_hr)/3
     # Set bad pixels to plot as black
     cmap = plt.cm.plasma.copy()
     cmap.set_bad('k', 1.)
 
-    plt.figure(3304)
+    plt.figure(3304, figsize=(8, 4))
     plt.clf()
     fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]},
                                  num=3304, figsize=(8, 3.5))
@@ -542,7 +548,7 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
               cmap=cmap, interpolation='nearest',
               extent=[xmin, xmax, ymin, ymax])
     a0.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], xmin, xmax, color='orange')
-    a0.hlines([ymin+meta.src_ypos+meta.spec_hw,
+    a0.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], xmin,
               xmax, color='mediumseagreen', linestyle='dashed')
     a0.axes.set_ylabel("Detector Pixel Position")
@@ -552,12 +558,12 @@ def residualBackground(data, meta, m, vmin=-200, vmax=1000):
     a1.vlines([0], ymin, ymax, color='0.5', linestyle='dotted')
     a1.hlines([ymin+meta.bg_y1, ymin+meta.bg_y2], vmin, vmax, color='orange',
               linestyle='solid', label='bg'+str(meta.bg_hw))
-    a1.hlines([ymin+meta.src_ypos+meta.spec_hw,
+    a1.hlines([ymin+meta.src_ypos+meta.spec_hw+1,
               ymin+meta.src_ypos-meta.spec_hw], vmin,
               vmax, color='mediumseagreen', linestyle='dashed',
               label='ap'+str(meta.spec_hw))
     a1.legend(loc='upper right', fontsize=8)
-    a1.axes.set_xlabel("Flux [e-]")
+    a1.axes.set_xlabel("Flux")
     a1.axes.set_xlim(vmin, vmax)
     a1.axes.set_ylim(ymin, ymax)
     a1.axes.set_yticklabels([])
@@ -643,10 +649,9 @@ def median_frame(data, meta, m):
     - 2022-08-06 KBS
         Initial version
     '''
-    xmin, xmax = data.flux.x.min().values, data.flux.x.max().values
-    ymin, ymax = data.flux.y.min().values, data.flux.y.max().values
+    xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
     vmin = data.medflux.min().values
-    vmax = np.max([2000, vmin+2000])
+    vmax = data.medflux.max().values/3
     cmap = plt.cm.plasma.copy()
 
     plt.figure(3308, figsize=(8, 4))
@@ -887,10 +892,10 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     plt.suptitle('Centroid gaussian fit')
 
     # Image of source
-    ax[1, 0].imshow(img, vmax=5e3, origin='lower', aspect='auto')
+    ax[1, 0].imshow(img, origin='lower', aspect='auto')
 
     # X gaussian plot
-    norm_x_factor = np.sum(np.nansum(img, axis=0))
+    norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
                   np.nansum(img, axis=0)/norm_x_factor)
     x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
@@ -903,7 +908,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     ax[0, 0].set_ylabel('Normalized Flux')
 
     # Y gaussian plot
-    norm_y_factor = np.sum(np.nansum(img, axis=0))
+    norm_y_factor = np.nansum(np.nansum(img, axis=0))
     ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))
     y_plot = np.linspace(0, len(np.nansum(img, axis=1)))
@@ -971,7 +976,7 @@ def phot_2d_frame(data, meta, m, i):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    plt.figure(3306, figsize=(8, 3))
+    plt.figure(3306, figsize=(8, 8))
     plt.clf()
     plt.suptitle('2D frame with centroid and apertures')
 
@@ -1360,3 +1365,55 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                         all_images, fps=60)
 
     return refrence_tilt_frame
+
+
+def get_bounds(x, y=None):
+    """
+    Define bounds by adding half pixel to all edges
+
+    Parameters
+    ----------
+    x : 1D array
+        Pixel indeces along x axis.
+    y : 1D array, optional
+        Pixel indeces along y axis.
+
+    Returns
+    -------
+    xmin
+        Minimum x bound
+    xmax
+        Maximum x bound
+    ymin, optional
+        Minimum y bound
+    ymax, optional
+        Maximum y bound
+
+    Notes
+    -----
+    History:
+    - 2023-12-22 Kevin Stevenson
+        Initial implementation.
+    """
+    xmin, xmax = x[0], x[-1]
+    if xmin < xmax:
+        # NIR instruments
+        xmin -= 0.5
+        xmax += 0.5
+    else:
+        # MIRI
+        xmin += 0.5
+        xmax -= 0.05
+    if y is not None:
+        ymin, ymax = y[0], y[-1]
+        if ymin < ymax:
+            # All instruments
+            ymin -= 0.5
+            ymax += 0.5
+        else:
+            # Possible future use
+            ymin += 0.5
+            ymax -= 0.05
+        return xmin, xmax, ymin, ymax
+    else:
+        return xmin, xmax

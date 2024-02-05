@@ -2,13 +2,15 @@
 
 # Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
 
-ncpu                 1           # Number of CPUs
+ncpu                 1                # Number of CPUs
 nfiles               1                # The number of data files to analyze simultaneously
 max_memory           0.5              # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+indep_batches        False            # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
 suffix               calints          # Data file suffix
 photometry           True             # Set to True if the user wants to analyse a photometric dataset
 
-convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+calibrated_spectra  False             # Set True to generate flux-calibrated spectra/photometry in mJy
+                                      # Set False to convert to electrons
 
 # Subarray region of interest
 ywindow              [4, 256]         # Vertical axis as seen in DS9
@@ -33,16 +35,16 @@ centroid_tech        com              # (mgmc method param) Technique used for c
 gauss_frame          100              # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Recommend ~100 for defocused NIRCam photometry.
 
 # Diagnostics
-isplots_S3           3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-nplots               5           # How many of each type of figure do you want to make per file?
-testing_S3           False       # Boolean, set True to only use last file and generate select figures
-hide_plots           False       # If True, plots will automatically be closed rather than popping up
-save_output          True        # Save outputs for use in S4
-verbose              True        # If True, more details will be printed about steps
+isplots_S3           3                # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+nplots               5                # How many of each type of figure do you want to make per file?
+testing_S3           False            # Boolean, set True to only use last file and generate select figures
+hide_plots           False            # If True, plots will automatically be closed rather than popping up
+save_output          True             # Save outputs for use in S4
+verbose              True             # If True, more details will be printed about steps
 
 # Project directory
 topdir          /home/User/Data/JWST-Sim/NIRCam/
 
 # Directories relative to topdir
-inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+inputdir        Stage2                # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       Stage3

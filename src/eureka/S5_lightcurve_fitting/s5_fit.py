@@ -9,6 +9,7 @@ from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
+from ..version import version
 from . import lightcurve
 from . import models as m
 try:
@@ -67,6 +68,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -105,10 +107,16 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand, 
+                                             bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -159,14 +167,21 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                     lc_whites.append(lc_hold)
 
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
-                                                ap=spec_hw_val, bg=bg_hw_val)
+                                                ap=spec_hw_val, 
+                                                bg=bg_hw_val)
 
             # Copy existing S4 log file and resume log
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
             log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -250,7 +265,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Load limb-darkening coefficients from a custom file
                     ld_fix_file = str(meta.ld_file_white)
                     try:
-                        ld_coeffs = np.loadtxt(ld_fix_file)
+                        ld_coeffs = np.genfromtxt(ld_fix_file)
                     except FileNotFoundError:
                         raise Exception("The limb-darkening file "
                                         f"{ld_fix_file} could not be found.")
@@ -289,20 +304,41 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.use_generate_ld:
                 # Load limb-darkening coefficients made in Stage 4
                 ld_str = meta.use_generate_ld
-                if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been " +
-                                    "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients " +
-                             f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values,
-                             lc[ld_str + '_quad'].values,
-                             lc[ld_str + '_nonlin_3para'].values,
-                             lc[ld_str + '_nonlin_4para'].values]
+                if meta.multwhite:
+                    nwhitechan = len(meta.inputdirlist) + 1
+                    lin_c1 = np.zeros((nwhitechan, 1))
+                    quad = np.zeros((nwhitechan, 2))
+                    nonlin_3 = np.zeros((nwhitechan, 3))
+                    nonlin_4 = np.zeros((nwhitechan, 4))
+                    # Load LD coefficient from each lc
+                    for p in range(nwhitechan):
+                        if not hasattr(lc_whites[p], ld_str + '_lin'):
+                            raise Exception("Exotic-ld coefficients have not" +
+                                            " been calculated in Stage 4")
+                        log.writelog("\nUsing generated limb-darkening " +
+                                     f"coefficients with {ld_str} \n")
+                        lin_c1[p] = lc_whites[p][ld_str + '_lin'].values[0]
+                        quad[p] = lc_whites[p][ld_str + '_quad'].values[0]
+                        nonlin_3[p] = lc_whites[p][ld_str + '_nonlin_3para'] \
+                            .values[0]
+                        nonlin_4[p] = lc_whites[p][ld_str + '_nonlin_4para'] \
+                            .values[0]
+                    ld_coeffs = [lin_c1, quad, nonlin_3, nonlin_4]
+                else:
+                    if not hasattr(lc, ld_str + '_lin'):
+                        raise Exception("Exotic-ld coefficients have not" +
+                                        " been calculated in Stage 4")
+                    log.writelog("\nUsing generated limb-darkening " +
+                                 f"coefficients with {ld_str} \n")
+                    ld_coeffs = [lc[ld_str + '_lin'].values,
+                                 lc[ld_str + '_quad'].values,
+                                 lc[ld_str + '_nonlin_3para'].values,
+                                 lc[ld_str + '_nonlin_4para'].values]
             elif meta.ld_file:
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
                 try:
-                    ld_coeffs = np.loadtxt(ld_fix_file)
+                    ld_coeffs = np.genfromtxt(ld_fix_file)
                 except FileNotFoundError:
                     raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
@@ -408,7 +444,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                     "_Meta_Save"), save=[])
             else:
                 for channel in range(chanrng):
-                    log.writelog(f"\nStarting Channel {channel+1} of "
+                    log.writelog(f"\nStarting Channel {channel} of "
                                  f"{chanrng}\n")
 
                     # Get the flux and error measurements for
@@ -765,10 +801,13 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
+        if not hasattr(meta, 'useHODLR'):
+            meta.useHODLR = False
         t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                          parameters=params, name='GP', fmt='r--', log=log,
                          time=time, time_units=time_units,
                          gp_code=meta.GP_package,
+                         useHODLR=meta.useHODLR,
                          freenames=freenames,
                          longparamlist=lc_model.longparamlist,
                          nchannel=chanrng,
@@ -947,7 +986,12 @@ def load_specific_s4_meta_info(meta):
     """
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
     # Get directory containing S4 outputs for this aperture pair
-    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

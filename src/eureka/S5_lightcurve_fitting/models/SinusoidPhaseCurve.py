@@ -184,10 +184,10 @@ class SinusoidPhaseCurveModel(Model):
         if self.transit_model is None:
             transit = 1
         else:
-            transit = self.transit_model.eval()
+            transit = self.transit_model.eval(channel=channel)
         if self.eclipse_model is None:
             eclipse = 1
         else:
-            eclipse = self.eclipse_model.eval()
+            eclipse = self.eclipse_model.eval(channel=channel)
 
         return transit + lcfinal*(eclipse-1)

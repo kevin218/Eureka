@@ -131,11 +131,11 @@ def gaussian(x, width=1.0, center=0.0, height=None, bgpars=[0.0, 0.0, 0.0]):
         x.shape = (1, x.shape[0])
 
     # Make center a ndarray:
-    if type(center) != np.ndarray:
+    if not isinstance(center, np.ndarray):
         center += np.zeros(ndim)
 
     # Make width a ndarray:
-    if type(width) != np.ndarray:
+    if not isinstance(width, np.ndarray):
         width += np.zeros(ndim)
     r2pi = np.sqrt(2. * np.pi)
 
@@ -591,9 +591,9 @@ def gaussians(x, param):
         width = param[k][:pdim]
         center = param[k][pdim:2*pdim]
 
-        if type(center) != np.ndarray:
+        if not isinstance(center, np.ndarray):
             center += np.zeros(ndim)
-        if type(width) != np.ndarray:
+        if not isinstance(width, np.ndarray):
             width += np.zeros(ndim)
         if height is None:
             height = np.product(1.0 / (width * np.sqrt(2.0 * np.pi)))
