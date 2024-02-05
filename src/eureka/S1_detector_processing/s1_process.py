@@ -138,6 +138,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
 
+    log.closelog()
+
     return meta
 
 
