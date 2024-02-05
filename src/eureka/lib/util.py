@@ -438,7 +438,7 @@ def binData_time(data, time, nbin=100, err=False):
     data = np.ma.masked_invalid(data)
     # Mask out invalid values for data and time;
     # binned_statistic does not do a good job of handling these itself
-    mask = data.mask
+    mask = np.ma.getmaskarray(data)
     data = data[~mask]
     time = time[~mask]
 
@@ -451,7 +451,9 @@ def binData_time(data, time, nbin=100, err=False):
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
 
-    return binned
+    # Need to mask invalid data in case there is an empty bin 
+    # (leading to divide by zero)
+    return np.ma.masked_invalid(binned)
 
 
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
