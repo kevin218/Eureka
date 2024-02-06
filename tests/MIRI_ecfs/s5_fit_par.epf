@@ -42,7 +42,6 @@ AmpSin1		0.0119516726947867	'free'			-1				1			U
 c0			0.998133337177571	'free'			1				0.05		N
 r0			-0.124315778343348	'free' 			-0.12			0.05		N
 r1			35.5170488452062	'free' 			35 				20			N
-r2			-0.603176745805961	'free' 			-0.5 			0.4			N
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
@@ -55,3 +54,4 @@ scatter_mult	1				'free'			0.5				2			U
 # Light travel time correction parameters
 # ---------------------------------------
 Rs			0.697				'independent'
+Ms			0.66				'independent'

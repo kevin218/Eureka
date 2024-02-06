@@ -97,7 +97,7 @@ def test_MIRI(capsys):
         s5_meta2.tune = 100
         s5_meta2.draws = 100
         s5_meta2.chains = 2
-        s5_meta2.target_accept = 0.85
+        s5_meta2.target_accept = 0.65
         s5_meta2.isplots_S5 = 3
         # Reset the citations list
         s5_meta2.citations = s4_meta.citations
