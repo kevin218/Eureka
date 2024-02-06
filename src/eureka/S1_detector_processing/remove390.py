@@ -288,6 +288,8 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         ymax = np.ma.max(sigma_clip(y, sigma=5))
         plt.ylim(ymin*0.99, ymax*1.1)
         plt.legend(loc='best')
+        plt.ylabel('Mean-Subtracted Pixel Counts (DN)')
+        plt.xlabel('Pixel Time Stamp (s)')
 
         file_number = str(meta.m).zfill(
             int(np.floor(np.log10(meta.num_data_files))+1))
