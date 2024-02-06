@@ -897,7 +897,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
     # X gaussian plot
     norm_x_factor = np.nansum(np.nansum(img, axis=0))
     ax[0, 0].plot(range(len(np.nansum(img, axis=0))),
-                  (np.nansum(img, axis=0))/norm_x_factor)
+                  np.nansum(img, axis=0)/norm_x_factor)
     x_plot = np.linspace(0, len(np.nansum(img, axis=0)))
     norm_distr_x = stats.norm.pdf(x_plot, x, sx)
     norm_distr_x_scaled = \
@@ -909,7 +909,7 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
 
     # Y gaussian plot
     norm_y_factor = np.nansum(np.nansum(img, axis=0))
-    ax[1, 1].plot((np.nansum(img, axis=1))/norm_y_factor,
+    ax[1, 1].plot(np.nansum(img, axis=1)/norm_y_factor,
                   range(len(np.nansum(img, axis=1))))
     y_plot = np.linspace(0, len(np.nansum(img, axis=1)))
     norm_distr_y = stats.norm.pdf(y_plot, y, sy)
