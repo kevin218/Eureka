@@ -2,7 +2,7 @@
 
 suffix 						uncal
 
-maximum_cores				'all'		#Options are 'none', quarter', 'half','all'
+maximum_cores				'half'		#Options are 'none', quarter', 'half', 'all'
 
 # Control ramp fitting method
 ramp_fit_algorithm			'default' 	#Options are 'default', 'mean', or 'differenced'
