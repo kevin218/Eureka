@@ -1,6 +1,11 @@
 name: "Build JOSS Paper Draft"
-on: [push]
-
+on:
+  pull_request:
+    types: [opened,reopened,synchronize]
+  push:
+    branches:    
+      - 'main'
+      - 'releases/**'
 jobs:
   paper:
     runs-on: ubuntu-latest
