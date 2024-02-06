@@ -1,4 +1,4 @@
-# Last Updated: 2022-04-05
+# Last Updated: 2024-02-05
 
 import sys
 import os
@@ -94,10 +94,10 @@ def test_MIRI(capsys):
         s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
             'batman_tr,batman_ecl,sinusoid_pc', 'starry')
         s5_meta2.fit_par = './s5_fit_par_starry.epf'
-        s5_meta2.tune = 10
+        s5_meta2.tune = 100
         s5_meta2.draws = 100
-        s5_meta2.chains = 1
-        s5_meta2.target_accept = 0.5
+        s5_meta2.chains = 2
+        s5_meta2.target_accept = 0.85
         s5_meta2.isplots_S5 = 3
         # Reset the citations list
         s5_meta2.citations = s4_meta.citations
