@@ -353,7 +353,9 @@ def plot_rms(lc, model, meta, fitter):
         residuals = flux - model_lc
         residuals = residuals[np.argsort(time)]
 
-        maxbins = residuals.size/10.
+        maxbins = residuals.size//10
+        if maxbins < 2:
+            maxbins = residuals.size//2
         rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
