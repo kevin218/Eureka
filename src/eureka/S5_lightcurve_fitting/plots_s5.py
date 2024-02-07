@@ -128,7 +128,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fig.subplots_adjust(hspace=0)
+        fig.get_layout_engine().set(hspace=0, h_pad=0)
         fig.align_ylabels(ax)
 
         if lc.white:
@@ -425,16 +425,19 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
-    fig.clf()
-
+    
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
     old_ytick_labelsize = rcParams['ytick.labelsize']
+    old_constrained_layout = rcParams['figure.constrained_layout.use']
     rcParams['axes.formatter.useoffset'] = False
     rcParams['xtick.labelsize'] = 10
     rcParams['ytick.labelsize'] = 10
+    rcParams['figure.constrained_layout.use'] = False
+
+    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
+    fig.clf()
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84],
                         max_n_ticks=3, labels=freenames, show_titles=True,
                         title_fmt='.3', title_kwargs={"fontsize": 10},
@@ -456,6 +459,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['axes.formatter.useoffset'] = old_useOffset
     rcParams['xtick.labelsize'] = old_xtick_labelsize
     rcParams['ytick.labelsize'] = old_ytick_labelsize
+    rcParams['figure.constrained_layout.use'] = old_constrained_layout
 
 
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
@@ -743,14 +747,20 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
-        ax[1].plot(time, model_GP_component, '.', color=color)
-        ax[1].set_ylabel('GP component', size=14)
-        ax[1].set_xlabel(str(lc.time_units), size=14)
+        ax[0].set_xticks([])
+
+        ax[1].plot(time, model_GP_component*1e6, '.', color=color)
+        ax[1].set_ylabel('GP Term (ppm)', size=14)
+        ax[1].set_xticks([])
+
         ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
         ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
+
+        fig.get_layout_engine().set(hspace=0, h_pad=0)
+        fig.align_ylabels(ax)
 
         if lc.white:
             fname_tag = 'white'
