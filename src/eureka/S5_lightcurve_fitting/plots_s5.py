@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+from mc3.stats import time_avg
 import corner
 from scipy import stats
 try:
@@ -11,7 +12,6 @@ except:
     # PyMC3 hasn't been installed
     pass
 
-from .likelihood import computeRMS
 from ..lib import plots, util
 from ..lib.split_channels import split
 
@@ -353,20 +353,27 @@ def plot_rms(lc, model, meta, fitter):
         residuals = flux - model_lc
         residuals = residuals[np.argsort(time)]
 
-        rms, stderr, binsz = computeRMS(residuals, binstep=1)
+        maxbins = residuals.size/10.
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, maxbins=maxbins,
+                                                    binstep=1)
         normfactor = 1e-6
         fig = plt.figure(
             int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))),
             figsize=(8, 6))
         fig.clf()
         ax = fig.gca()
+        ax.set_xscale('log')
+        ax.set_yscale('log')
         ax.set_title(' Correlated Noise', size=16, pad=20)
         # our noise
-        ax.loglog(binsz, rms / normfactor, color='black', lw=1.5,
-                  label='Fit RMS', zorder=3)
+        ax.plot(binsz, rms/normfactor, color='black', lw=1.5,
+                label='Fit RMS', zorder=4)
+        ax.fill_between(binsz, (rms-rmslo)/normfactor, (rms+rmshi)/normfactor,
+                        facecolor='k', alpha=0.3, label='Fit RMS Uncertainty',
+                        zorder=3)
         # expected noise
-        ax.loglog(binsz, stderr / normfactor, color='red', ls='-', lw=2,
-                  label=r'Std. Err. ($1/\sqrt{N}$)', zorder=1)
+        ax.plot(binsz, stderr/normfactor, color='red', ls='-', lw=2,
+                label='Gaussian Std. Err.', zorder=1)
 
         # Format the main axes
         ax.set_xlim(0.95, binsz[-1] * 2)
