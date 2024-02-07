@@ -40,7 +40,7 @@ metallicity     0.1     # Metallicity of the star
 teff            6000    # Effective temperature of the star in K
 logg            4.0     # Surface gravity in log g
 exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/record/6344946
-exotic_ld_grid  3D      # 1D or 3D model grid
+exotic_ld_grid  stagger # You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids
 exotic_ld_file  #/home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
 
 # Temporal Binning
