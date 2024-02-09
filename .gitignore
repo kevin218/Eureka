@@ -146,7 +146,7 @@ dmypy.json
 niriss_cython.c
 
 # Dockerfiles
-Dockerfile
+Dockerfile*
 docker-compose.yml
 docker-setup.sh
 

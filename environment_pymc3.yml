@@ -44,7 +44,6 @@ dependencies:
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.11.4
         - myst-parser # Needed for documentation
-        - opencv-python<4.8 # Upper limit needed for numpy<1.22
         - opencv-python-headless<4.8 # Upper limit needed for numpy<1.22
         - pymc3
         - setuptools_scm # Needed for version number
