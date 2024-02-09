@@ -13,7 +13,7 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
     Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
@@ -31,9 +31,14 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     optmask : Xarray Dataset; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
     '''
     normspec = util.normalize_spectrum(meta, optspec.values,
-                                       optmask=optmask.values)
+                                       optmask=optmask.values,
+                                       scandir=scandir)
 
     # Save the wavelength units as the copy below will erase them
     wave_units = wave_1d.wave_units

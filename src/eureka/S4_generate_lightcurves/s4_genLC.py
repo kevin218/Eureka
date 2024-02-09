@@ -399,16 +399,22 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.mad_s4 = util.get_mad(meta, log, spec.wave_1d.values,
                                            spec.optspec.values,
                                            spec.optmask.values,
-                                           meta.wave_min, meta.wave_max)
+                                           meta.wave_min, meta.wave_max,
+                                           scandir=getattr(spec, 'scandir',
+                                                           None))
             else:
                 # Compute MAD value for Photometry
-                normspec = util.normalize_spectrum(meta, spec.aplev.values)
+                normspec = util.normalize_spectrum(
+                    meta, spec.aplev.values,
+                    scandir=getattr(spec, 'scandir', None))
                 meta.mad_s4 = util.get_mad_1d(normspec)
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
             if not meta.photometry:
                 if meta.isplots_S4 >= 1:
                     plots_s4.lc_driftcorr(meta, wave_1d, spec.optspec,
-                                          optmask=spec.optmask)
+                                          optmask=spec.optmask,
+                                          scandir=getattr(spec, 'scandir',
+                                                          None))
 
             log.writelog("Generating light curves")
 
