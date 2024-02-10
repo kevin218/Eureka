@@ -8,9 +8,8 @@ dependencies:
     - batman-package
     - bokeh[version='<3.0']
     - ccdproc
-    - celerite # Needed for GP
+    - celerite2 # Needed for GP
     - corner
-    - cython
     - dynesty[version='>1.0'] # Lower limit needed for specific arguments
     - emcee[version='>3.0.0'] # Lower limit needed for specific arguments
     - flake8 # Needed for testing
@@ -21,6 +20,7 @@ dependencies:
     - jupyter
     - lmfit
     - matplotlib[version='>=3.6'] # Lower limit needed for set_layout_engine()
+    - mc3 # Needed for uncertainties in the Allan variance plots in S5
     - nbsphinx # Needed for documentation
     - numpy[version='>=1.20.0,<=1.23'] # Upper limit needed for Apple silicon
     - numpydoc # Needed for documentation
@@ -40,7 +40,7 @@ dependencies:
         - crds
         - exotic-ld
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.10.2
+        - jwst==1.11.4
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation

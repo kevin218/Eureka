@@ -371,7 +371,7 @@ def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
 
     # Return 'empty' sums if there is no more data to fit
     if data_masked.size == 0:
-        return np.array([]), np.array([]), np.array([]), np.array([]),\
+        return np.array([]), np.array([]), np.array([]), np.array([]), \
             np.array([]), np.array([])
 
     # get initial group for each good pixel for this semiramp

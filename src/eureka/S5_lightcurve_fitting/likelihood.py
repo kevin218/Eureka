@@ -5,6 +5,44 @@ from scipy.stats import norm
 from ..lib.split_channels import get_trim
 
 
+def update_uncertainty(theta, nints, unc, freenames):
+    """Compute updated uncertainty array when inflating errors during fitting.
+
+    Parameters
+    ----------
+    theta : np.array
+        The 
+    nints : list
+        The number of integrations for each channel being fit at once.
+    unc : np.array
+        The initial guessed uncertainty array.
+    freenames : list
+        The names of the fitted parameters.
+
+    Returns
+    -------
+    unc_fit : np.array
+        The updated values for the uncertainty array.
+    """
+    # Make a copy so we don't edit in place
+    unc_fit = copy.deepcopy(unc)
+
+    if "scatter_ppm" in freenames:
+        ind = [i for i in np.arange(len(freenames))
+               if freenames[i][0:11] == "scatter_ppm"]
+        for chan in range(len(ind)):
+            trim1, trim2 = get_trim(nints, chan)
+            unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
+    elif "scatter_mult" in freenames:
+        ind = [i for i in range(len(freenames))
+               if freenames[i][0:12] == "scatter_mult"]
+        for chan in range(len(ind)):
+            trim1, trim2 = get_trim(nints, chan)
+            unc_fit[trim1:trim2] = theta[ind[chan]]*unc[trim1:trim2]
+
+    return unc_fit
+
+
 def ln_like(theta, lc, model, freenames):
     """Compute the log-likelihood.
 
@@ -37,31 +75,13 @@ def ln_like(theta, lc, model, freenames):
     """
     model.update(theta)
     model_lc = model.eval()
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            if theta[ind[chan]] <= 0:
-                # Force scatter_ppm to be > 0
-                return -np.inf
-
-            trim1, trim2 = get_trim(model.nints, chan)
-            lc.unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in range(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            if theta[ind[chan]] <= 0:
-                # Force scatter_mult to be > 0
-                return -np.inf
-
-            trim1, trim2 = get_trim(model.nints, chan)
-            lc.unc_fit[trim1:trim2] = theta[ind[chan]]*lc.unc[trim1:trim2]
+    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames)
 
     if model.GP:
-        ln_like_val = GP_loglikelihood(model, model_lc, lc.unc_fit)
+        ln_like_val = 0
+        for m in model.components:
+            if m.modeltype == 'GP':
+                ln_like_val += m.loglikelihood(model_lc)
     else:
         residuals = (lc.flux - model_lc)
         ln_like_val = (-0.5*(np.ma.sum((residuals/lc.unc_fit)**2
@@ -69,7 +89,7 @@ def ln_like(theta, lc, model, freenames):
     return ln_like_val
 
 
-def lnprior(theta, prior1, prior2, priortype):
+def lnprior(theta, prior1, prior2, priortype, freenames):
     """Compute the log-prior.
 
     Parameters
@@ -84,6 +104,8 @@ def lnprior(theta, prior1, prior2, priortype):
         normal priors.
     priortype : ndarray
         Keywords indicating the type of prior for each free parameter.
+    freenames : iterable
+        The names of the fitted parameters.
 
     Returns
     -------
@@ -107,12 +129,29 @@ def lnprior(theta, prior1, prior2, priortype):
         elif (priortype[i] == 'LU' and
               np.logical_or(np.log(theta[i]) < prior1[i],
                             np.log(theta[i]) > prior2[i])):
-            return - np.inf
+            return -np.inf
         elif priortype[i] == 'N':
             lnprior_prob -= (0.5*(np.sum(((theta[i]-prior1[i])/prior2[i])**2
                              + np.log(2.0*np.pi*(prior2[i])**2))))
         elif priortype[i] not in ['U', 'LU', 'N']:
             raise ValueError("PriorType must be 'U', 'LU', or 'N'")
+
+        # Force scatter_ppm and scatter_mult to be positive
+        if "scatter_ppm" in freenames:
+            ind = [i for i in np.arange(len(freenames))
+                   if freenames[i][0:11] == "scatter_ppm"]
+            for chan in range(len(ind)):
+                if theta[ind[chan]] <= 0:
+                    # Force scatter_ppm to be > 0
+                    return -np.inf
+        elif "scatter_mult" in freenames:
+            ind = [i for i in np.arange(len(freenames))
+                   if freenames[i][0:12] == "scatter_mult"]
+            for chan in range(len(ind)):
+                if theta[ind[chan]] <= 0:
+                    # Force scatter_ppm to be > 0
+                    return -np.inf
+
     return lnprior_prob
 
 
@@ -152,7 +191,7 @@ def lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
-    lp = lnprior(theta, prior1, prior2, priortype)
+    lp = lnprior(theta, prior1, prior2, priortype, freenames)
     if not np.isfinite(lp):
         return -np.inf
     ln_like_val = ln_like(theta, lc, model, freenames)
@@ -363,33 +402,3 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         return rms, stderr, binsz, rmserr
     else:
         return rms, stderr, binsz
-
-
-def GP_loglikelihood(model, fit, unc_fit):
-    """Compute likelihood, when model fit includes GP
-
-    Parameters
-    ----------
-    model : eureka.S5_lightcurve_fitting.models.CompositeModel
-        The model including the GP model
-    fit : ndarray
-        The evaluated model without the GP
-    unc_fit : ndarray
-        The fitted (or initially provided) uncertainty on each data point.
-
-    Returns
-    -------
-    loglikelihood : float
-        The likelihood of the model.
-
-    Notes
-    -----
-    History:
-
-    - March 11, 2022 Eva-Maria Ahrer
-        moved code from Model.py
-    """
-    for m in model.components:
-        if m.modeltype == 'GP':
-            return m.loglikelihood(fit, unc_fit)
-    return 0

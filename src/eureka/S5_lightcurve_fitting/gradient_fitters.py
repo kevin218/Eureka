@@ -59,6 +59,16 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     for name, val in zip(freenames, freepars):
         start[name] = val
 
+    model.update(freepars)
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter=calling_function+'StartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter=calling_function+'StartingPoint')
+
     log.writelog('Running exoplanet optimizer...')
     with model.model:
         map_soln = pmx.optimize(start=start)
@@ -190,6 +200,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+
+    model.update(freepars)
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='nutsStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='nutsStartingPoint')
 
     if not hasattr(meta, 'target_accept'):
         meta.target_accept = 0.85

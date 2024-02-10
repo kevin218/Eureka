@@ -220,6 +220,14 @@ def read(filename, data, meta, log):
         if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
                 meta.bg_hw == meta.bg_hw_range[0]):
             # If not, we've already done this and don't want to switch it back
+            if meta.ywindow[1] > 393:
+                log.writelog('WARNING: The MIRI/LRS wavelength solution is '
+                             'not defined for y-values > 393, while you '
+                             f'have set ywindow[1] to {meta.ywindow[1]}.\n'
+                             '          It is strongly recommended to set '
+                             'ywindow[1] to be <= 393, otherwise you will '
+                             'potentially end up with very strange results.')
+
             temp = np.copy(meta.ywindow)
             meta.ywindow = meta.xwindow
             meta.xwindow = sci.shape[2] - temp[::-1]
@@ -466,7 +474,14 @@ def calibrated_spectra(data, meta, log):
         Initial version.
     """
     # Convert from MJy/sr to mJy
-    log.writelog("  Calibrated MIRI spectra not yet supported...",
+    log.writelog("  Converting from MJy/sr to mJy...",
                  mute=(not meta.verbose))
+    data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['err'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['v0'].data *= 1e9*data.shdr['PIXAR_SR']
 
+    # Update units
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
     return data

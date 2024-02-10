@@ -42,6 +42,10 @@ class StarryModel(PyMC3Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
+        # Set default to turn light-travel correction on if not specified
+        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+            self.compute_ltt = True
+
         required = np.array(['Ms', 'Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
@@ -108,6 +112,7 @@ class StarryModel(PyMC3Model):
         """Setup a model for evaluation and fitting.
         """
         self.systems = []
+        self.rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
@@ -162,12 +167,11 @@ class StarryModel(PyMC3Model):
                 for ell in range(1, self.ydeg+1):
                     for m in range(-ell, ell+1):
                         if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp,
-                                                         f'Y{ell}{m}')
-                            planet_map2[ell, m] = getattr(temp,
-                                                         f'Y{ell}{m}')
-                amp = temp.fp/planet_map2.flux(theta=0)[0]
+                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
+                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
+                amp = temp.fp/tt.abs_(planet_map2.flux(theta=0)[0])
                 planet_map.amp = amp
+            self.rps.append(temp.rp)
 
             # Initialize planet object
             planet = starry.Secondary(
@@ -221,7 +225,7 @@ class StarryModel(PyMC3Model):
                 pm.Deterministic("y", self.starry_x)
 
             # Instantiate the system
-            system = starry.System(star, planet)
+            system = starry.System(star, planet, light_delay=self.compute_ltt)
 
             if 'pixel_ydeg' in self.paramtitles:
                 # Calculate light curve by multiplying spherical harmonics by
@@ -269,15 +273,12 @@ class StarryModel(PyMC3Model):
 
         if eval:
             lib = np
-            lessthan = np.less
             systems = self.fit.systems
-            rps = [systems[chan].secondaries[0].r.eval()
-                   for chan in range(nchan)]
+            rps = self.fit_rps
         else:
             lib = tt
-            lessthan = tt.lt
             systems = self.systems
-            rps = [systems[chan].secondaries[0].r for chan in range(nchan)]
+            rps = self.rps
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
@@ -297,9 +298,11 @@ class StarryModel(PyMC3Model):
                                                        self.starry_x)
             else:
                 fstar, fp = systems[chan].flux(time, total=False)
-                if lessthan(rps[chan], 0):
-                    fstar = 2-fstar
-                    fp *= -1
+                # Do some annoying math to allow theano functions to compile
+                # (correctly defined for -1 < rp < 1)
+                sign = (lib.ceil(rps[chan])+lib.floor(rps[chan]))
+                fstar = (fstar-1)*sign + 1
+                fp = fp*sign
                 lcpiece = fstar+fp
 
             if eval:
@@ -343,6 +346,7 @@ class StarryModel(PyMC3Model):
         super().update(newparams, **kwargs)
 
         self.fit.systems = []
+        self.fit_rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
@@ -396,12 +400,11 @@ class StarryModel(PyMC3Model):
                 for ell in range(1, self.ydeg+1):
                     for m in range(-ell, ell+1):
                         if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp,
-                                                        f'Y{ell}{m}')
-                            planet_map2[ell, m] = getattr(temp,
-                                                         f'Y{ell}{m}')
-                amp = temp.fp/planet_map2.flux(theta=0)[0]
+                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
+                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
+                amp = temp.fp/np.abs(planet_map2.flux(theta=0)[0])
                 planet_map.amp = amp
+            self.fit_rps.append(temp.rp)
 
             # Initialize planet object
             planet = starry.Secondary(
@@ -425,16 +428,15 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
+            # Instantiate the system
+            sys = starry.System(star, planet, light_delay=self.compute_ltt)
+
             if 'pixel_ydeg' in self.paramtitles:
                 # import pixel values and convert to spherical harmonics
                 A = planet.map.get_pixel_transforms(
                     oversample=self.oversample)[3]
                 p_fit = newparams[-self.npix:]
                 self.starry_x = tt.dot(A, p_fit)
-                # Instantiate the system
-                sys = starry.System(star, planet)
                 self.starry_X = sys.design_matrix(self.time)
-            else:
-                sys = starry.System(star, planet)
 
             self.fit.systems.append(sys)

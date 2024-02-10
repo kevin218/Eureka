@@ -22,6 +22,7 @@ from ..lib import readECF
 from ..lib import util, logedit
 from . import plots_s6 as plots
 from ..lib import astropytable
+from ..version import version
 
 
 def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
@@ -64,6 +65,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -90,6 +92,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
     # Create directories for Stage 6 outputs
     meta.run_s6 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -121,6 +125,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
             meta.s6_logname = meta.outputdir+'S6_'+meta.eventlabel+'.log'
             log = logedit.Logedit(meta.s6_logname, read=meta.s5_logname)
             log.writelog("\nStarting Stage 6: Light Curve Fitting\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -185,8 +190,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
                 log.writelog(f'Plotting {meta.y_param}...')
 
-                meta.spectrum_median = []
-                meta.spectrum_err = []
+                meta.spectrum_median = None
+                meta.spectrum_err = None
 
                 # Read in S5 fitted values
                 if meta.y_param == 'fn':
@@ -205,7 +210,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     else:
                         meta = parse_unshared_saves(meta, log, fit_methods)
 
-                if (len(meta.spectrum_median) == 0
+                if ((meta.spectrum_median is None)
                         or all(x is None for x in meta.spectrum_median)):
                     # The parameter could not be found - skip it
                     continue
@@ -416,18 +421,20 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
         fname = f'S5_{fitter}_samples_{channel_key}'
 
-        keys = [key for key in full_keys if y_param in key]
+        keys = [key for key in full_keys if y_param == key[:len(y_param)]]
         if len(keys) == 0:
             log.writelog(f'  Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n  ['
                          + ', '.join(full_keys)+']')
             log.writelog(f'  Skipping {y_param}')
-            return None, None
+            return meta
 
-        for i, key in enumerate(keys):
+        for key in keys:
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
-            lowers.append(np.abs(fitted_values["-1sigma"][ind]))
-            uppers.append(fitted_values["+1sigma"][ind])
+            lowers.append(fitted_values["50th"][ind]
+                          - fitted_values["16th"][ind])
+            uppers.append(fitted_values["84th"][ind]
+                          - fitted_values["50th"][ind])
             medians.append(fitted_values["50th"][ind])
 
         errs = np.array([lowers, uppers])
@@ -443,10 +450,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
                          'fitted parameters which includes:\n['
                          + ', '.join(full_keys)+']')
             log.writelog(f'Skipping {y_param}')
-            return None, None
+            return meta
 
         medians = []
-        for i, key in enumerate(keys):
+        for key in keys:
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
             if "50th" in fitted_values.keys():
                 medians.append(fitted_values["50th"][ind])
@@ -457,9 +464,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         # if lsq or exoplanet, no uncertainties
         errs = np.ones((2, len(medians)))*np.nan
 
-    meta.spectrum_median, meta.spectrum_err = medians, errs
+    meta.spectrum_median = medians
+    meta.spectrum_err = errs
 
-    return medians, errs
+    return meta
 
 
 def parse_unshared_saves(meta, log, fit_methods):
@@ -484,15 +492,15 @@ def parse_unshared_saves(meta, log, fit_methods):
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
-        median, err = parse_s5_saves(meta, log, fit_methods, channel_key)
-        if median is None:
-            # Parameter was found, so don't keep looking for it
+        meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+        if meta.spectrum_median is None:
+            # Parameter wasn't found, so don't keep looking for it
             meta.spectrum_median = np.array([None for _ in
                                              range(meta.nspecchan)])
             meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
             return meta
-        spectrum_median.extend(median)
-        spectrum_err.extend(err.T)
+        spectrum_median.extend(meta.spectrum_median)
+        spectrum_err.extend(meta.spectrum_err.T)
 
     meta.spectrum_median = np.array(spectrum_median)
     meta.spectrum_err = np.array(spectrum_err).T
@@ -514,13 +522,16 @@ def compute_transit_depth(meta):
         The updated meta data object.
     """
     if not np.all(np.isnan(meta.spectrum_err)):
-        lower = np.abs((meta.spectrum_median-meta.spectrum_err[0, :])**2 -
-                       meta.spectrum_median**2)
-        upper = np.abs((meta.spectrum_median+meta.spectrum_err[1, :])**2 -
-                       meta.spectrum_median**2)
+        lower = meta.spectrum_median - meta.spectrum_err[0, :]
+        upper = meta.spectrum_median + meta.spectrum_err[1, :]
+
+    meta.spectrum_median *= np.abs(meta.spectrum_median)
+
+    if not np.all(np.isnan(meta.spectrum_err)):
+        lower = meta.spectrum_median - lower*np.abs(lower)
+        upper = upper*np.abs(upper) - meta.spectrum_median
         meta.spectrum_err = np.append(lower.reshape(1, -1),
                                       upper.reshape(1, -1), axis=0)
-    meta.spectrum_median *= meta.spectrum_median
 
     return meta
 
@@ -1211,6 +1222,10 @@ def save_table(meta, log):
                                     meta.wave_hi.reshape(1, -1),
                                     axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
+    # Trim repeated wavelengths for multwhite fits
+    if len(set(wavelengths)) == 1: 
+        wavelengths = wavelengths[0]
+        wave_errs = wave_errs[0]
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
                               wave_errs, meta.spectrum_median,
                               meta.spectrum_err)

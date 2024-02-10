@@ -54,6 +54,7 @@ def read(filename, data, meta, log):
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
         data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
+    meta.grating = data.attrs['mhdr']['GRATING']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
@@ -288,8 +289,8 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
     data['v0'].data *= 1e9
     
     # Update units
-    data['flux'].flux_units = 'mJy'
-    data['err'].flux_units = 'mJy'
-    data['v0'].flux_units = 'mJy'
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
 
     return data

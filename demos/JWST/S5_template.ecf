@@ -10,6 +10,7 @@ fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to us
 verbose         True                    # If True, more details will be printed about steps
 fit_method      [dynesty]               #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
 run_myfuncs     [batman_tr,polynomial]  # options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, and GP (can list multiple types separated by commas)
+compute_ltt     False                   # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
 
 # Manual clipping in time
 manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
@@ -45,6 +46,7 @@ run_tol         0.1
 kernel_inputs   ['time'] #options: time
 kernel_class    ['Matern32'] #options: ExpSquared, Matern32, Exp, RationalQuadratic for george, Matern32 for celerite (sums of kernels possible for george separated by commas)
 GP_package      'celerite' #options: george, celerite
+useHODLR        False
 
 # Plotting controls
 interp          False   # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
