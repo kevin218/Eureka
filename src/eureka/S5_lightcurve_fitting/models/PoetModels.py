@@ -1,6 +1,6 @@
-from numpy import append, array, size, zeros, where, abs, arccos, sqrt, \
+from numpy import append, array, size, zeros, where, abs, arccos, arcsin, \
     arctan, pi, log, sin, cos, tan, bitwise_and, ones_like, all, in1d, \
-    ones, any
+    ones, any, sqrt, bitwise_or
 import astropy.constants as const
 import inspect
 import batman as bm
@@ -344,17 +344,6 @@ class PoetPCModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        self.components = None
-        self.transit_model = transit_model
-        self.eclipse_model = eclipse_model
-        if transit_model is not None:
-            self.components = [self.transit_model, ]
-        if eclipse_model is not None:
-            if self.components is None:
-                self.components = [self.eclipse_model, ]
-            else:
-                self.components.append(self.eclipse_model)
-
         # Inherit from Model class
         super().__init__(**kwargs)
 
@@ -370,27 +359,6 @@ class PoetPCModel(Model):
     def time(self, time_array):
         """A setter for the time."""
         self._time = time_array
-        if self.transit_model is not None:
-            self.transit_model.time = time_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.time = time_array
-
-    def update(self, newparams, **kwargs):
-        """Update the model with new parameter values.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        super().update(newparams, **kwargs)
-        if self.transit_model is not None:
-            self.transit_model.update(newparams, **kwargs)
-        if self.eclipse_model is not None:
-            self.eclipse_model.update(newparams, **kwargs)
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -440,14 +408,13 @@ class PoetPCModel(Model):
                     setattr(poet_params, self.paramtitles[index],
                             self.parameters.dict[item][0])
 
-            if not any(['ecl_midpt' in key
-                        for key in self.longparamlist[chan]]):
+            if hasattr(poet_params, 'ecl_midpt'):
+                ecl_midpt = poet_params.ecl_midpt
+            else:
                 # If not explicitly fitting for the time of eclipse, get the
                 # time of eclipse from the time of transit, period,
                 # eccentricity, and argument of periastron
                 ecl_midpt = get_ecl_midpt(poet_params)
-            else:
-                ecl_midpt = self.parameters.dict['ecl_midpt'][0]
 
             time = self.time
             if self.multwhite:
@@ -462,6 +429,12 @@ class PoetPCModel(Model):
                          * cos(4*pi*(time-pc_params['cos2_off'])/p))
             
             # Flatten phase curve during eclipse
+            # rprs = poet_params.rprs
+            # ars = poet_params.ars
+            # cosi = cos(poet_params.i*pi/180)
+            # t14 = p/pi*arcsin(1/ars*sqrt(((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
+            # t23 = p/pi*arcsin(1/ars*sqrt(((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
+            # t12 = 0.5*(t14 - t23) 
             # iecl = where(bitwise_or((time-ecl_midpt)%p >= p-(t14-t12)/2.,
             #                         (time-ecl_midpt)%p <= (t14-t12)/2.))
             # phaseVars[iecl] = (1. + pc_params['cos1_amp'] 
@@ -471,16 +444,7 @@ class PoetPCModel(Model):
 
             lcfinal = append(lcfinal, phaseVars)
 
-        if self.transit_model is None:
-            transit = 1
-        else:
-            transit = self.transit_model.eval(channel=channel)
-        if self.eclipse_model is None:
-            eclipse = 1
-        else:
-            eclipse = self.eclipse_model.eval(channel=channel)
-
-        return transit + lcfinal*(eclipse-1)
+        return lcfinal
    
 
 class TransitModel():
@@ -498,6 +462,7 @@ class TransitModel():
         self.u = params.u
         self.limb_dark = params.limb_dark
         self.transittype = transittype
+        self.ecl_midpt = params.ecl_midpt
         self.nthreads = 4
 
         # Handles the case of inverse transits (rp < 0)
@@ -508,13 +473,19 @@ class TransitModel():
         # Compute distance, z, of planet and star midpoints
         self.z = self.ars \
             * sqrt(sin(2 * pi * (t - self.midpt) / self.period) ** 2 
-                   + (cos(self.i * pi / 180) * cos(2 * pi * (t - self.midpt)
-                      / self.period)) ** 2)
-
-        # Ignore close approach near secondary eclipse
-        self.z[where(bitwise_and((t - self.midpt) % self.period
-               > self.period / 4., (t - self.midpt) % self.period
-               < self.period * 3. / 4))] = self.ars
+                + (cos(self.i * pi / 180) * cos(2 * pi * (t - self.midpt)
+                    / self.period)) ** 2)
+        
+        if self.transittype == 'primary':
+            # Ignore close approach near secondary eclipse
+            self.z[where(bitwise_and((t - self.midpt) % self.period
+                > self.period / 4., (t - self.midpt) % self.period
+                < self.period * 3. / 4))] = self.ars
+        elif self.transittype == 'secondary':
+            # Ignore close approach near primary transit
+            self.z[where(bitwise_and((t - self.ecl_midpt) % self.period
+                > self.period / 4., (t - self.ecl_midpt) % self.period
+                < self.period * 3. / 4))] = self.ars
 
     def light_curve(self, params):
         """
