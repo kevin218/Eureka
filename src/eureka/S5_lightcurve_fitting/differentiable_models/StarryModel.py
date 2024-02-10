@@ -198,7 +198,8 @@ class StarryModel(PyMC3Model):
             # Pixel sampling setup
             if 'pixel_ydeg' in self.paramtitles:
 
-                # Oversample factor of 3 is a safe bet to achieve pixels ~ 4L^2, but not always necessary 
+                # Oversample factor of 3 is a safe bet to achieve pixels
+                # ~4L^2, but not always necessary 
                 if 'pixel_oversample' in self.paramtitles:
                     self.oversample = self.parameters.pixel_oversample.value
                 else:
@@ -213,10 +214,12 @@ class StarryModel(PyMC3Model):
                 pixel_prior_mean = self.parameters.pixel_prior_mean.value
                 pixel_prior_width = self.parameters.pixel_prior_width.value
                 if self.force_positivity:
-                    p = pm.LogNormal("p", mu=np.log(pixel_prior_mean/np.pi), sigma = pixel_prior_width/pixel_prior_mean,
+                    p = pm.LogNormal("p", mu=np.log(pixel_prior_mean/np.pi),
+                                     sigma=pixel_prior_width/pixel_prior_mean,
                                      shape=(self.npix,))
                 else:
-                    p = pm.Normal("p", mu=pixel_prior_mean/np.pi, sd=pixel_prior_width/np.pi,
+                    p = pm.Normal("p", mu=pixel_prior_mean/np.pi,
+                                  sd=pixel_prior_width/np.pi,
                                   shape=(self.npix, ))
 
                 # Transform pixels to spherical harmonics
