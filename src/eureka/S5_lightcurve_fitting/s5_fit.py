@@ -589,7 +589,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
-        t_transit = m.BatmanTransitModel(parameters=params, name='transit',
+        t_transit = m.BatmanTransitModel(parameters=params, name='batman_tr',
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,
                                          freenames=freenames,
@@ -606,7 +606,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nints=lc_model.nints)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
-        t_eclipse = m.BatmanEclipseModel(parameters=params, name='eclipse',
+        t_eclipse = m.BatmanEclipseModel(parameters=params, name='batman_ecl',
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,
                                          freenames=freenames,
@@ -619,7 +619,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nints=lc_model.nints)
         modellist.append(t_eclipse)
     if 'poet_tr' in meta.run_myfuncs:
-        t_poet_tr = m.PoetTransitModel(parameters=params, name='transit',
+        t_poet_tr = m.PoetTransitModel(parameters=params, name='poet_tr',
                                        fmt='r--', log=log, time=time,
                                        time_units=time_units,
                                        freenames=freenames,
@@ -636,7 +636,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nints=lc_model.nints)
         modellist.append(t_poet_tr)
     if 'poet_ecl' in meta.run_myfuncs:
-        t_poet_ecl = m.PoetEclipseModel(parameters=params, name='eclipse',
+        t_poet_ecl = m.PoetEclipseModel(parameters=params, name='poet_ecl',
                                         fmt='r--', log=log, time=time,
                                         time_units=time_units,
                                         freenames=freenames,
