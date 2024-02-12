@@ -40,7 +40,7 @@ dependencies:
         - astraeus@git+https://github.com/kevin218/Astraeus@main
         - crds
         - exoplanet
-        - exotic-ld>=3.1.2 # Lower limit needed for updated JWST sensitivity files
+        - exotic-ld==3 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.11.4
         - myst-parser # Needed for documentation

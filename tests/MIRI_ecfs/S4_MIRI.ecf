@@ -34,7 +34,7 @@ inst_filter     LRS     # filter of JWST/HST instrument, supported list see http
 metallicity     0.1     # metallicity of the star 
 teff            6000    # effective temperature of the star in K
 logg            4.0     # surface gravity in log g
-exotic_ld_direc /home/User/exotic-ld_data/ # directory for ancillary files for exotic-ld, download from: https://zenodo.org/record/6344946
+exotic_ld_direc /home/User/exotic-ld_data/ # directory for ancillary files for exotic-ld, download from: https://zenodo.org/doi/10.5281/zenodo.6047317
 exotic_ld_grid  stagger # You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids
 exotic_ld_file  #/home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
 

@@ -767,7 +767,7 @@ Used by exotic-ld if compute_ld=True. The fully qualified path to the directory 
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, if you're using exotic-ld v3.1.2. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+Used by exotic-ld if compute_ld=True. You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
 
 exotic_ld_file
 ''''''''''''''
