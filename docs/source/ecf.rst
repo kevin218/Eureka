@@ -767,11 +767,15 @@ Used by exotic-ld if compute_ld=True. The fully qualified path to the directory 
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
+Used by exotic-ld if compute_ld=True. 1D or 3D model grid, or "custom" for a custom stellar intensity grid.
 
 exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
+custom_si_grid
+''''''''''''''
+if exotic_ld_grid = custom, supply the path to your stellar intensity grid here
 
 isplots_S4
 ''''''''''
