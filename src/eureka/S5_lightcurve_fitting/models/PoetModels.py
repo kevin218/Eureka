@@ -247,24 +247,24 @@ class PoetEclipseModel(Model):
                                         np.array(self.paramtitles), axis=1)]
             if 'Rs' not in self.parameters.dict.keys():
                 missing_params = np.append('Rs', missing_params)
-            if 'ecl_midpt' not in self.parameters.dict.keys():
+            if 't_secondary' not in self.parameters.dict.keys():
                 log.writelog(f"WARNING: Missing parameters ["
                              f"{', '.join(missing_params)}] in your EPF which "
                              f"are required to account for light-travel time."
                              f"\n"
                              f"         You should either add these "
                              f"parameters, or you should be fitting for "
-                             f"ecl_midpt\n"
-                             f"         (but note that the fitted ecl_midpt "
+                             f"t_secondary\n"
+                             f"         (but note that the fitted t_secondary "
                              f"will not be accounting for light-travel time).")
             else:
                 log.writelog(f"WARNING: Missing parameters "
                              f"{', '.join(missing_params)} in your EPF which "
                              f"are required to account for light-travel time."
                              f"\n"
-                             f"         While you are fitting for ecl_midpt"
+                             f"         While you are fitting for t_secondary"
                              f" which will help, note that the fitted "
-                             f"ecl_midpt\n"
+                             f"t_secondary\n"
                              f"         will not be accounting for "
                              f"light-travel time).")
 
@@ -330,8 +330,8 @@ class PoetEclipseModel(Model):
                 self.adjusted_time = []
                 if self.compute_ltt:
                     if c == 0 or not self.compute_ltt_once:
-                        self.adjusted_time = correct_light_travel_time \
-                            (time, poet_params)
+                        self.adjusted_time = \
+                            correct_light_travel_time(time, poet_params)
                 else:
                     self.adjusted_time = time
 
@@ -499,16 +499,16 @@ class TransitModel():
 
         # Compute distance, z, of planet and star midpoints
         self.z = self.ars \
-                * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
-                + (np.cos(self.inc * np.pi / 180) 
-                * np.cos(2 * np.pi * (t - self.t0)
-                / self.per)) ** 2)
+                 * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
+                 + (np.cos(self.inc * np.pi / 180) 
+                 * np.cos(2 * np.pi * (t - self.t0)
+                 / self.per)) ** 2)
         
         if self.transittype == 'primary':
             # Ignore close approach near secondary eclipse
             self.z[np.where(np.bitwise_and((t - self.t0) % self.per
-                > self.per / 4., (t - self.t0) % self.per
-                < self.per * 3. / 4))] = self.ars
+                   > self.per / 4., (t - self.t0) % self.per
+                   < self.per * 3. / 4))] = self.ars
         elif self.transittype == 'secondary':
             # Ignore close approach near primary transit
             self.z[np.where(np.bitwise_and((t - self.t_secondary) % self.per
@@ -615,7 +615,7 @@ def uniform(z, rprs):
     y[np.where(z <= (1-rprs))] = 1.-rprs**2
     # Ingress/egress
     y[iingress] = 1. - 1./np.pi*(k0*rprs**2 + k1 - np.sqrt((4*z[iingress]**2
-                              - (1 + z[iingress]**2 - rprs**2)**2)/4))
+                                 - (1 + z[iingress]**2 - rprs**2)**2)/4))
 
     return y
 
