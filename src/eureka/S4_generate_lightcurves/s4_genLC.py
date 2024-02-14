@@ -562,7 +562,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 lc['spam_lin'] = (['wavelength', 'spam_1'], ld_coeffs[0])
                 lc['spam_quad'] = (['wavelength', 'spam_2'], ld_coeffs[1])
                 lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'], 
-                                            ld_coeffs[2])
+                                           ld_coeffs[2])
                 lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'], 
                                            ld_coeffs[3])
                 if meta.compute_white:

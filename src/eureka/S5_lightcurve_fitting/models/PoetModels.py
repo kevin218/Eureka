@@ -35,9 +35,31 @@ class PlanetParams():
                 setattr(self, item, model.parameters.dict[item0][0])
             except:
                 pass
+        # Allow for rp or rprs
+        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
+            if pid > 0:
+                item0 = 'rp' + str(pid)
+            else:
+                item0 = 'rp'
+            setattr(self, 'rprs', model.parameters.dict[item0][0])
+        # Allow for a or ars
+        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
+            if pid > 0:
+                item0 = 'a' + str(pid)
+            else:
+                item0 = 'a'
+            setattr(self, 'ars', model.parameters.dict[item0][0])
+        # Allow for fp or fpfs
+        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
+            if pid > 0:
+                item0 = 'fp' + str(pid)
+            else:
+                item0 = 'fp'
+            setattr(self, 'fpfs', model.parameters.dict[item0][0])
         # Set stellar radius
         if 'Rs' in model.parameters.dict.keys():
             setattr(self, 'Rs', model.parameters.dict['Rs'][0])
+
 
 class PoetTransitModel(Model):
     """Transit Model"""
@@ -205,7 +227,7 @@ class PoetEclipseModel(Model):
         log = kwargs.get('log')
 
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['midpt', 'ars', 'i', 'period', 'e', 'omega'])
+        ltt_params = np.array(['t0', 'ars', 'i', 'per', 'ecc', 'w'])
         # Check if able to do ltt correction
         self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
                             and 'Rs' in self.parameters.dict.keys())
@@ -305,6 +327,7 @@ class PoetEclipseModel(Model):
                     continue
 
                 # Compute light travel time
+                self.adjusted_time = []
                 if self.compute_ltt:
                     if c == 0 or not self.compute_ltt_once:
                         self.adjusted_time = correct_light_travel_time(time,

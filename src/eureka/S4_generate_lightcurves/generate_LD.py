@@ -132,30 +132,12 @@ def spam_ld(meta, white=False):
     - February 2024, Kevin Stevenson
         Initial version based on exotic_ld above.
     '''
-    # from eureka.lib import readECF
-    # ecf_path = '/Users/stevekb1/Documents/Analyses/JWST/trappist1e/Shelby/White'
-    # ecffile = 'S5_nirspec_Trappist1e-v1.ecf'
-    # meta = readECF.MetaClass(ecf_path, ecffile)
-    # meta.spam_file = '/Users/stevekb1/Documents/Analyses/JWST/trappist1e/Nestor/prism-ldcoeff-u1-u2-TRAPPIST1.txt'
-    # white = False
-    # meta.wave_min = 0.6
-    # meta.wave_max = 5.2
-    # meta.nspecchan = 20
-    # binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
-    # meta.wave_low = np.round(np.linspace(meta.wave_min,
-    #                                         meta.wave_max-binsize,
-    #                                         meta.nspecchan), 3)
-    # meta.wave_hi = np.round(np.linspace(meta.wave_min+binsize,
-    #                                     meta.wave_max,
-    #                                     meta.nspecchan), 3)
-    # meta.wave = (meta.wave_low + meta.wave_hi)/2
-
     # Compute wavelength ranges
     if white:
         wavelength_range = np.array([meta.wave_min, meta.wave_max],
                                     dtype=float)
         wavelength_range = np.repeat(wavelength_range[np.newaxis],
-                                        meta.nspecchan, axis=0)
+                                     meta.nspecchan, axis=0)
     else:
         wsdata = np.array(meta.wave_low, dtype=float)
         wsdata = np.append(wsdata, meta.wave_hi[-1])
@@ -179,7 +161,7 @@ def spam_ld(meta, white=False):
                                      sld_wave <= wl_bin[1]))[0]
         # Average limb-darkening coefficients for each bin
         for j in range(num_ld_coef):
-            ld_coeffs[i,j] = np.mean(sld[j+1,ii])
+            ld_coeffs[i, j] = np.mean(sld[j+1, ii])
     
     # Create list of NaNs
     nan1 = np.empty([meta.nspecchan, 1])*np.nan

@@ -167,7 +167,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs \
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
                                  or 'poet_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 

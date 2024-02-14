@@ -63,6 +63,7 @@ class PlanetParams():
         if 'Rs' in model.parameters.dict.keys():
             setattr(self, 'Rs', model.parameters.dict['Rs'][0])
 
+
 class BatmanTransitModel(Model):
     """Transit Model"""
     def __init__(self, **kwargs):
@@ -356,13 +357,13 @@ class BatmanEclipseModel(Model):
                 # Compute light travel time
                 if self.compute_ltt:
                     if c == 0 or not self.compute_ltt_once:
-                        self.adjusted_time = correct_light_travel_time(time,    
-                                bm_params)
+                        self.adjusted_time = correct_light_travel_time(time,
+                            bm_params)
                 else:
                     self.adjusted_time = time
 
                 if not np.any(['t_secondary' in key
-                            for key in self.longparamlist[chan]]):
+                              for key in self.longparamlist[chan]]):
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
