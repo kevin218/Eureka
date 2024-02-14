@@ -312,7 +312,7 @@ class PoetEclipseModel(Model):
                 else:
                     self.adjusted_time = time
 
-                if not np.any(['ecl_midpt' in key
+                if not np.any(['t_secondary' in key
                             for key in self.longparamlist[chan]]):
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
