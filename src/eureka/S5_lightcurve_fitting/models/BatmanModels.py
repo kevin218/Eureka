@@ -12,6 +12,57 @@ from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
+class PlanetParams():
+    """
+    Define planet parameters.
+    """
+    def __init__(self, model, pid):
+        # Planet ID
+        self.pid = pid       
+        # Set transit/eclipse parameters
+        self.t0 = None
+        self.rp = None
+        self.inc = None
+        self.a = None
+        self.per = None
+        self.ecc = None
+        self.w = None
+        self.fp = None
+        self.t_secondary = None
+        for item in self.__dict__.keys():
+            if pid > 0:
+                item0 = item + str(pid)
+            else:
+                item0 = item
+            try:
+                setattr(self, item, model.parameters.dict[item0][0])
+            except:
+                pass
+        # Allow for rp or rprs
+        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
+            if pid > 0:
+                item0 = 'rprs' + str(pid)
+            else:
+                item0 = 'rprs'
+            setattr(self, 'rp', model.parameters.dict[item0][0])
+        # Allow for a or ars
+        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
+            if pid > 0:
+                item0 = 'ars' + str(pid)
+            else:
+                item0 = 'ars'
+            setattr(self, 'a', model.parameters.dict[item0][0])
+        # Allow for fp or fpfs
+        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
+            if pid > 0:
+                item0 = 'fpfs' + str(pid)
+            else:
+                item0 = 'fpfs'
+            setattr(self, 'fp', model.parameters.dict[item0][0])
+        # Set stellar radius
+        if 'Rs' in model.parameters.dict.keys():
+            setattr(self, 'Rs', model.parameters.dict['Rs'][0])
+
 class BatmanTransitModel(Model):
     """Transit Model"""
     def __init__(self, **kwargs):
@@ -59,14 +110,11 @@ class BatmanTransitModel(Model):
             self.compute_ltt = False
 
         # Store the ld_profile
-        self.ld_from_S4 = kwargs.get('ld_from_S4')
         ld_func = ld_profile(self.parameters.limb_dark.value, 
                              use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
-        self.ld_from_file = kwargs.get('ld_from_file')
-        
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
             log.writelog("Using the following limb-darkening values:")
@@ -120,9 +168,6 @@ class BatmanTransitModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Initialize model
-        bm_params = batman.TransitParams()
-
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
@@ -136,56 +181,59 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                setattr(bm_params, self.paramtitles[index],
-                        self.parameters.dict[item][0])
+            light_curve = np.ones_like(time)
+            for pid in range(self.num_planets):
+                # Initialize planet
+                bm_params = PlanetParams(self, pid)
 
-            # Set limb darkening parameters
-            uarray = []
-            for u in self.coeffs:
-                index = np.where(np.array(self.paramtitles) == u)[0]
-                if len(index) != 0:
-                    item = self.longparamlist[chan][index[0]]
-                    uarray.append(self.parameters.dict[item][0])
-            bm_params.u = uarray
+                # Set limb darkening parameters
+                uarray = []
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[chan][index[0]]
+                        uarray.append(self.parameters.dict[item][0])
+                bm_params.u = uarray
+                bm_params.limb_dark = self.parameters.dict['limb_dark'][0]
 
-            # Enforce physicality to avoid crashes from batman by returning
-            # something that should be a horrible fit
-            if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
-                    (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and
-                    (0 <= bm_params.w <= 360)):
-                # Returning nans or infs breaks the fits, so this was the
-                # best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
-                continue
-
-            # Use batman ld_profile name
-            if self.parameters.limb_dark.value == '4-parameter':
-                bm_params.limb_dark = 'nonlinear'
-            elif self.parameters.limb_dark.value == 'kipping2013':
-                # Enforce physicality to avoid crashes from batman by
-                # returning something that should be a horrible fit
-                if bm_params.u[0] <= 0:
-                    # Returning nans or infs breaks the fits, so this was
-                    # the best I could think of
+                # Enforce physicality to avoid crashes from batman by returning
+                # something that should be a horrible fit
+                if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
+                        (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and
+                        (0 <= bm_params.w <= 360)):
+                    # Returning nans or infs breaks the fits, so this was the
+                    # best I could think of
                     lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                     continue
-                bm_params.limb_dark = 'quadratic'
-                u1 = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
-                u2 = np.sqrt(bm_params.u[0])*(1-2*bm_params.u[1])
-                bm_params.u = np.array([u1, u2])
 
-            if self.compute_ltt:
-                self.adjusted_time = correct_light_travel_time(time, bm_params)
-            else:
-                self.adjusted_time = time
+                # Use batman ld_profile name
+                if self.parameters.limb_dark.value == '4-parameter':
+                    bm_params.limb_dark = 'nonlinear'
+                elif self.parameters.limb_dark.value == 'kipping2013':
+                    # Enforce physicality to avoid crashes from batman by
+                    # returning something that should be a horrible fit
+                    if bm_params.u[0] <= 0:
+                        # Returning nans or infs breaks the fits, so this was
+                        # the best I could think of
+                        lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                        continue
+                    bm_params.limb_dark = 'quadratic'
+                    u1 = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
+                    u2 = np.sqrt(bm_params.u[0])*(1-2*bm_params.u[1])
+                    bm_params.u = np.array([u1, u2])
 
-            # Make the transit model
-            m_transit = batman.TransitModel(bm_params, self.adjusted_time,
-                                            transittype='primary')
+                if self.compute_ltt:
+                    self.adjusted_time = correct_light_travel_time(time, 
+                                                                   bm_params)
+                else:
+                    self.adjusted_time = time
 
-            lcfinal = np.append(lcfinal, m_transit.light_curve(bm_params))
+                # Make the transit model
+                m_transit = batman.TransitModel(bm_params, self.adjusted_time,
+                                                transittype='primary')
+                light_curve *= m_transit.light_curve(bm_params)
+
+            lcfinal = np.append(lcfinal, light_curve)
 
         return lcfinal
 
@@ -273,9 +321,6 @@ class BatmanEclipseModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Initialize model
-        bm_params = batman.TransitParams()
-
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
@@ -289,44 +334,49 @@ class BatmanEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                setattr(bm_params, self.paramtitles[index],
-                        self.parameters.dict[item][0])
+            light_curve = np.ones_like(time)
+            for pid in range(self.num_planets):
+                # Initialize planet
+                bm_params = PlanetParams(self, pid)
 
-            # Enforce physicality to avoid crashes from batman by
-            # returning something that should be a horrible fit
-            if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
-                    (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and
-                    (0 <= bm_params.w <= 360)):
-                # Returning nans or infs breaks the fits, so this was
-                # the best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
-                continue
+                # Set limb darkening parameters
+                bm_params.u = []
+                bm_params.limb_dark = 'uniform'
 
-            bm_params.limb_dark = 'uniform'
-            bm_params.u = []
+                # Enforce physicality to avoid crashes from batman by
+                # returning something that should be a horrible fit
+                if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
+                        (1 < bm_params.a) and (0 <= bm_params.ecc < 1) and
+                        (0 <= bm_params.w <= 360)):
+                    # Returning nans or infs breaks the fits, so this was
+                    # the best I could think of
+                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                    continue
 
-            # Compute light travel time
-            if self.compute_ltt:
-                self.adjusted_time = correct_light_travel_time(time, bm_params)
-            else:
-                self.adjusted_time = time
+                # Compute light travel time
+                if self.compute_ltt:
+                    if c == 0 or not self.compute_ltt_once:
+                        self.adjusted_time = correct_light_travel_time(time,    
+                                bm_params)
+                else:
+                    self.adjusted_time = time
 
-            if not np.any(['t_secondary' in key
-                           for key in self.longparamlist[chan]]):
-                # If not explicitly fitting for the time of eclipse, get
-                # the time of eclipse from the time of transit, period,
-                # eccentricity, and argument of periastron
-                m_transit = batman.TransitModel(bm_params, self.adjusted_time,
-                                                transittype='primary')
-                bm_params.t_secondary = m_transit.get_t_secondary(bm_params)
+                if not np.any(['t_secondary' in key
+                            for key in self.longparamlist[chan]]):
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
+                    # eccentricity, and argument of periastron
+                    m_transit = batman.TransitModel(bm_params, 
+                                                    self.adjusted_time,
+                                                    transittype='primary')
+                    bm_params.t_secondary = m_transit.get_t_secondary(bm_params)
 
-            # Make the eclipse model
-            m_eclipse = batman.TransitModel(bm_params, self.adjusted_time,
-                                            transittype='secondary')
+                # Make the eclipse model
+                m_eclipse = batman.TransitModel(bm_params, self.adjusted_time,
+                                                transittype='secondary')
+                light_curve *= m_eclipse.light_curve(bm_params)
 
-            lcfinal = np.append(lcfinal, m_eclipse.light_curve(bm_params))
+            lcfinal = np.append(lcfinal, light_curve)
 
         return lcfinal
 

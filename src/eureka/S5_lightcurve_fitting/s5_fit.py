@@ -605,7 +605,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          ld_coeffs=ldcoeffs,
                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints)
+                                         nints=lc_model.nints,
+                                         num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
         t_eclipse = m.BatmanEclipseModel(parameters=params, name='batman_ecl',
@@ -618,7 +619,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          fitted_channels=fitted_channels,
                                          paramtitles=paramtitles,
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints)
+                                         nints=lc_model.nints,
+                                         num_planets=meta.num_planets)
         modellist.append(t_eclipse)
     if 'poet_tr' in meta.run_myfuncs:
         t_poet_tr = m.PoetTransitModel(parameters=params, name='poet_tr',
