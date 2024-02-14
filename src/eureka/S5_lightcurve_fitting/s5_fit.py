@@ -16,7 +16,7 @@ try:
     from . import differentiable_models as dm
 except:
     # PyMC3 hasn't been installed
-    pass
+    dm = None
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -87,6 +87,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
     meta = me.mergeevents(meta, s4_meta)
+
+    # Check to make sure that dm is accessible if using dm models/fitters
+    if (dm is None and ('starry' in meta.fit_method or
+                        'exoplanet' in meta.fit_method)):
+        raise AssertionError(f"fit_method is set to {meta.fit_method}, but "
+                             "could not import starry and/or pymc3 related "
+                             "packages. Ensure that you have installed the "
+                             "pymc3-related packages when installing Eureka!.")
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one

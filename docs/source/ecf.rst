@@ -29,9 +29,9 @@ ramp_fit_algorithm
 Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
-ramp_fit_max_cores
+maximum_cores
 ''''''''''''''''''
-Fraction of processor cores to use to compute the ramp fits, options are ``none``, ``quarter``, ``half``, ``all``.
+Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
 
 skip_*
@@ -853,6 +853,12 @@ For theano-based differentiable functions, this can be one or more of the follow
 [starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 The POET transit and eclipse models are best-suited for planets with small eccentricities.  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
+
+compute_ltt
+'''''''''''
+Optional. Determines whether to correct the astrophysical model for the light travel time effect (True) or to ignore the effect (False).
+The light travel time effect is caused by the finite speed of light which means that the signal from a secondary eclipse (which occurs on the far side of the orbit) arrive later than would be expected if the speed of light were infinite.
+Unless specified, compute_ltt is set to True for batman_ecl and starry models but set to False for batman_tr models (since the light travel time is insignificant during transit).
 
 compute_ltt
 '''''''''''

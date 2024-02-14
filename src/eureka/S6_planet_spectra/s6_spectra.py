@@ -431,8 +431,10 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
         for key in keys:
             ind = np.where(fitted_values["Parameter"] == key)[0][0]
-            lowers.append(fitted_values["50th"][ind]-fitted_values["16th"][ind])
-            uppers.append(fitted_values["84th"][ind]-fitted_values["50th"][ind])
+            lowers.append(fitted_values["50th"][ind]
+                          - fitted_values["16th"][ind])
+            uppers.append(fitted_values["84th"][ind]
+                          - fitted_values["50th"][ind])
             medians.append(fitted_values["50th"][ind])
 
         errs = np.array([lowers, uppers])
