@@ -559,6 +559,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
 
     if not hasattr(meta, 'recenter_ld_prior'):
         meta.recenter_ld_prior = True
+    if not hasattr(meta, 'num_planets'):
+        meta.num_planets = 1
 
     # Make the astrophysical and detector models
     modellist = []
@@ -633,7 +635,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        ld_coeffs=ldcoeffs,
                                        recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints)
+                                       nints=lc_model.nints,
+                                       num_planets=meta.num_planets)
         modellist.append(t_poet_tr)
     if 'poet_ecl' in meta.run_myfuncs:
         t_poet_ecl = m.PoetEclipseModel(parameters=params, name='poet_ecl',
@@ -646,7 +649,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         fitted_channels=fitted_channels,
                                         paramtitles=paramtitles,
                                         multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints)
+                                        nints=lc_model.nints,
+                                        num_planets=meta.num_planets)
         modellist.append(t_poet_ecl)
     if 'poet_pc' in meta.run_myfuncs:
         t_poet_pc = m.PoetPCModel(parameters=params, name='phasecurve',
@@ -685,11 +689,11 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         e_model = None
         # Nest any transit and/or eclipse models inside of the
         # phase curve model
-        if 'transit' in model_names:
-            t_model = modellist.pop(np.where(model_names == 'transit')[0][0])
+        if 'batman_tr' in model_names:
+            t_model = modellist.pop(np.where(model_names == 'batman_tr')[0][0])
             model_names = np.array([model.name for model in modellist])
-        if 'eclipse' in model_names:
-            e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
+        if 'batman_ecl' in model_names:
+            e_model = modellist.pop(np.where(model_names == 'batman_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
         # Check if should enforce positivity
         if not hasattr(meta, 'force_positivity'):

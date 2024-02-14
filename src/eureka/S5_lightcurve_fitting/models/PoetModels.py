@@ -1,3 +1,4 @@
+import numpy as np
 from numpy import append, array, size, zeros, where, abs, arccos, arcsin, \
     arctan, pi, log, sin, cos, tan, bitwise_and, ones_like, all, in1d, \
     ones, any, sqrt, bitwise_or
@@ -11,23 +12,32 @@ from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
-class TransitParams():
+class PlanetParams():
     """
-    Define transit parameters.
+    Define planet parameters.
     """
-    def __init__(self):
+    def __init__(self, model, ii):
+        # Planet ID
+        self.pid = ii       
+        # Set transit/eclipse parameters
         self.midpt = None
         self.rprs = None
         self.i = None
         self.ars = None
         self.period = None
-        self.u = None
-        self.limb_dark = None
         self.e = None
         self.omega = None
         self.fpfs = None
         self.ecl_midpt = None
-
+        for item in self.__dict__.keys():
+            if ii > 0:
+                item0 = item + str(ii)
+            else:
+                item0 = item
+            try:
+                setattr(self, item, model.parameters.dict[item0][0])
+            except:
+                pass
 
 class PoetTransitModel(Model):
     """Transit Model"""
@@ -58,6 +68,8 @@ class PoetTransitModel(Model):
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
         self.ld_from_file = kwargs.get('ld_from_file')
+
+        self.num_planets = kwargs.get('num_planets')
         
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
@@ -112,9 +124,6 @@ class PoetTransitModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Initialize model
-        poet_params = TransitParams()
-
         # Set all parameters
         lcfinal = array([])
         for c in range(nchan):
@@ -128,52 +137,53 @@ class PoetTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                setattr(poet_params, self.paramtitles[index],
-                        self.parameters.dict[item][0])
+            light_curve = ones_like(time)
+            for ii in range(self.num_planets):
+                # Initialize planet
+                poet_params = PlanetParams(self, ii)
 
-            # Set limb darkening parameters
-            uarray = []
-            for u in self.coeffs:
-                index = where(array(self.paramtitles) == u)[0]
-                if len(index) != 0:
-                    item = self.longparamlist[chan][index[0]]
-                    uarray.append(self.parameters.dict[item][0])
-            poet_params.u = uarray
+                # Set limb darkening parameters
+                uarray = []
+                for u in self.coeffs:
+                    index = where(array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[chan][index[0]]
+                        uarray.append(self.parameters.dict[item][0])
+                poet_params.u = uarray
+                poet_params.limb_dark = self.parameters.dict['limb_dark'][0]
 
-            # Enforce physicality to avoid crashes by returning
-            # something that should be a horrible fit
-            if not ((0 < poet_params.period) and (0 < poet_params.i < 90) and
-                    (1 < poet_params.ars)):
-                # Returning nans or infs breaks the fits, so this was the
-                # best I could think of
-                lcfinal = append(lcfinal, 1e12*ones_like(time))
-                continue
-
-            # Check for out-of-bound values
-            if self.parameters.limb_dark.value == '4-parameter':
-                # Enforce small planet approximation
-                if poet_params.rprs > 0.1:
-                    # Return poor fit
-                    lcfinal = append(lcfinal, 1e12*ones_like(time))
-                    continue
-            elif self.parameters.limb_dark.value == 'kipping2013':
                 # Enforce physicality to avoid crashes
-                if poet_params.u[0] <= 0:
+                if not ((0 < poet_params.period) and 
+                        (0 < poet_params.i < 90) and
+                        (1 < poet_params.ars)):
                     # Return poor fit
                     lcfinal = append(lcfinal, 1e12*ones_like(time))
                     continue
-                poet_params.limb_dark = 'quadratic'
-                u1 = 2*sqrt(poet_params.u[0])*poet_params.u[1]
-                u2 = sqrt(poet_params.u[0])*(1-2*poet_params.u[1])
-                poet_params.u = array([u1, u2])
 
-            # Make the transit model
-            m_transit = TransitModel(poet_params, time,
-                                     transittype='primary')
+                # Check for out-of-bound values
+                if self.parameters.limb_dark.value == '4-parameter':
+                    # Enforce small planet approximation
+                    if poet_params.rprs > 0.1:
+                        # Return poor fit
+                        lcfinal = append(lcfinal, 1e12*ones_like(time))
+                        continue
+                elif self.parameters.limb_dark.value == 'kipping2013':
+                    # Enforce physicality to avoid crashes
+                    if poet_params.u[0] <= 0:
+                        # Return poor fit
+                        lcfinal = append(lcfinal, 1e12*ones_like(time))
+                        continue
+                    poet_params.limb_dark = 'quadratic'
+                    u1 = 2*sqrt(poet_params.u[0])*poet_params.u[1]
+                    u2 = sqrt(poet_params.u[0])*(1-2*poet_params.u[1])
+                    poet_params.u = array([u1, u2])
 
-            lcfinal = append(lcfinal, m_transit.light_curve(poet_params))
+                # Make the transit model
+                m_transit = TransitModel(poet_params, time,
+                                         transittype='primary')
+                light_curve *= m_transit.light_curve(poet_params)
+
+            lcfinal = append(lcfinal, light_curve)
 
         return lcfinal
 
@@ -267,9 +277,6 @@ class PoetEclipseModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Initialize model
-        poet_params = TransitParams()
-
         # Set all parameters
         lcfinal = array([])
         for c in range(nchan):
@@ -283,44 +290,46 @@ class PoetEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                setattr(poet_params, self.paramtitles[index],
-                        self.parameters.dict[item][0])
+            light_curve = ones_like(time)
+            for ii in range(self.num_planets):
+                # Initialize planet
+                poet_params = PlanetParams(self, ii)
 
-            # Enforce physicality to avoid crashes by returning
-            # something that should be a horrible fit
-            if not ((0 < poet_params.period) and (0 < poet_params.i < 90) and
-                    (1 < poet_params.ars) and (0 <= poet_params.e < 1) and
-                    (0 <= poet_params.omega <= 360)):
-                # Returning nans or infs breaks the fits, so this was the
-                # best I could think of
-                lcfinal = append(lcfinal, 1e12*ones_like(time))
-                continue
+                # Set limb darkening parameters
+                poet_params.u = []
+                poet_params.limb_dark = 'uniform'
 
-            poet_params.limb_dark = 'uniform'
-            poet_params.u = []
+                # Enforce physicality to avoid crashes
+                if not ((0 < poet_params.period) and 
+                        (0 < poet_params.i < 90) and
+                        (1 < poet_params.ars) and 
+                        (0 <= poet_params.e < 1) and
+                        (0 <= poet_params.omega <= 360)):
+                    # Return poor fit
+                    lcfinal = append(lcfinal, 1e12*ones_like(time))
+                    continue
 
-            # Compute light travel time
-            if self.compute_ltt:
-                if c == 0 or not self.compute_ltt_once:
-                    self.adjusted_time = correct_light_travel_time(time,
-                                                                   poet_params)
-            else:
-                self.adjusted_time = time
+                # Compute light travel time
+                if self.compute_ltt:
+                    if c == 0 or not self.compute_ltt_once:
+                        self.adjusted_time = correct_light_travel_time(time,
+                                poet_params)
+                else:
+                    self.adjusted_time = time
 
-            if not any(['ecl_midpt' in key
-                        for key in self.longparamlist[chan]]):
-                # If not explicitly fitting for the time of eclipse, get
-                # the time of eclipse from the time of transit, period,
-                # eccentricity, and argument of periastron
-                poet_params.ecl_midpt = get_ecl_midpt(poet_params)
+                if not any(['ecl_midpt' in key
+                            for key in self.longparamlist[chan]]):
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
+                    # eccentricity, and argument of periastron
+                    poet_params.ecl_midpt = get_ecl_midpt(poet_params)
 
-            # Make the eclipse model
-            m_eclipse = TransitModel(poet_params, self.adjusted_time,
-                                     transittype='secondary')
+                # Make the eclipse model
+                m_eclipse = TransitModel(poet_params, self.adjusted_time,
+                                         transittype='secondary')
+                light_curve *= m_eclipse.light_curve(poet_params)
 
-            lcfinal = append(lcfinal, m_eclipse.light_curve(poet_params))
+            lcfinal = append(lcfinal, light_curve)
 
         return lcfinal
 
@@ -387,7 +396,7 @@ class PoetPCModel(Model):
             self.time = kwargs.get('time')
 
         # Initialize model
-        poet_params = TransitParams()
+        poet_params = PlanetParams()
         pc_params = {'cos1_amp': 0., 'cos1_off': 0.,
                      'cos2_amp': 0., 'cos2_off': 0.}                     
         
@@ -993,8 +1002,8 @@ def correct_light_travel_time(time, poet_params):
     ----------
     time : ndarray
         The times at which observations were collected
-    poet_params : poet.TransitParams
-        The POET TransitParams object that contains information on the orbit.
+    poet_params : poet.PlanetParams
+        The POET PlanetParams object that contains information on the orbit.
 
     Returns
     -------
