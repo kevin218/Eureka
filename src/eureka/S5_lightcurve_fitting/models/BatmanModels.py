@@ -357,8 +357,8 @@ class BatmanEclipseModel(Model):
                 # Compute light travel time
                 if self.compute_ltt:
                     if c == 0 or not self.compute_ltt_once:
-                        self.adjusted_time = correct_light_travel_time(time,
-                            bm_params)
+                        self.adjusted_time = correct_light_travel_time \
+                            (time, bm_params)
                 else:
                     self.adjusted_time = time
 

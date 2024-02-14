@@ -239,7 +239,7 @@ class PoetEclipseModel(Model):
                 once_type = ['shared', 'fixed']
                 self.compute_ltt_once = \
                     np.all([self.parameters.dict.get(name)[1] in once_type
-                         for name in ltt_params])
+                           for name in ltt_params])
             else:
                 self.compute_ltt_once = True
         else:
@@ -330,13 +330,13 @@ class PoetEclipseModel(Model):
                 self.adjusted_time = []
                 if self.compute_ltt:
                     if c == 0 or not self.compute_ltt_once:
-                        self.adjusted_time = correct_light_travel_time(time,
-                                poet_params)
+                        self.adjusted_time = correct_light_travel_time \
+                            (time, poet_params)
                 else:
                     self.adjusted_time = time
 
                 if not np.any(['t_secondary' in key
-                            for key in self.longparamlist[chan]]):
+                              for key in self.longparamlist[chan]]):
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
@@ -435,13 +435,13 @@ class PoetPCModel(Model):
                     setattr(poet_params, self.paramtitles[index],
                             self.parameters.dict[item][0])
 
-            if hasattr(poet_params, 'ecl_midpt'):
-                ecl_midpt = poet_params.t_secondary
+            if hasattr(poet_params, 't_secondary'):
+                t_secondary = poet_params.t_secondary
             else:
                 # If not explicitly fitting for the time of eclipse, get the
                 # time of eclipse from the time of transit, period,
                 # eccentricity, and argument of periastron
-                ecl_midpt = get_ecl_midpt(poet_params)
+                t_secondary = get_ecl_midpt(poet_params)
 
             time = self.time
             if self.multwhite:
@@ -462,12 +462,12 @@ class PoetPCModel(Model):
             # t14 = p/np.pi*np.arcsin(1/ars*np.sqrt(((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
             # t23 = p/np.pi*np.arcsin(1/ars*np.sqrt(((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
             # t12 = 0.5*(t14 - t23) 
-            # iecl = np.where(np.bitwise_or((time-ecl_midpt)%p >= p-(t14-t12)/2.,
-            #                         (time-ecl_midpt)%p <= (t14-t12)/2.))
+            # iecl = np.where(np.bitwise_or((time-t_secondary)%p >= p-(t14-t12)/2.,
+            #                         (time-t_secondary)%p <= (t14-t12)/2.))
             # phaseVars[iecl] = (1. + pc_params['cos1_amp'] 
-            #                    * np.cos(2*np.pi*(ecl_midpt-pc_params['cos1_off'])/p) 
+            #                    * np.cos(2*np.pi*(t_secondary-pc_params['cos1_off'])/p) 
             #                    + pc_params['cos2_amp']
-            #                    * np.cos(4*np.pi*(ecl_midpt-pc_params['cos2_off'])/p))
+            #                    * np.cos(4*np.pi*(t_secondary-pc_params['cos2_off'])/p))
 
             lcfinal = np.append(lcfinal, phaseVars)
 
@@ -499,10 +499,10 @@ class TransitModel():
 
         # Compute distance, z, of planet and star midpoints
         self.z = self.ars \
-            * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
-            + (np.cos(self.inc * np.pi / 180) 
-            * np.cos(2 * np.pi * (t - self.t0)
-            / self.per)) ** 2)
+                * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
+                + (np.cos(self.inc * np.pi / 180) 
+                * np.cos(2 * np.pi * (t - self.t0)
+                / self.per)) ** 2)
         
         if self.transittype == 'primary':
             # Ignore close approach near secondary eclipse
@@ -512,8 +512,8 @@ class TransitModel():
         elif self.transittype == 'secondary':
             # Ignore close approach near primary transit
             self.z[np.where(np.bitwise_and((t - self.t_secondary) % self.per
-                > self.per / 4., (t - self.t_secondary) % self.per
-                < self.per * 3. / 4))] = self.ars
+                   > self.per / 4., (t - self.t_secondary) % self.per
+                   < self.per * 3. / 4))] = self.ars
 
     def light_curve(self, params):
         """
@@ -774,7 +774,7 @@ def trquad(z, rprs, u1, u2):
     # Case 2, 7, 8 - ingress/egress (uniform disk only)
 
     inegressuni = np.where((z[notusedyet] >= np.abs(1. - rprs))
-                        & (z[notusedyet] < 1. + rprs))
+                           & (z[notusedyet] < 1. + rprs))
     if np.size(inegressuni) != 0:
         ndxuse = notusedyet[inegressuni]
         tmp = (1. - rprs ** 2. + z[ndxuse] ** 2.) / 2. / z[ndxuse]
@@ -852,9 +852,9 @@ def trquad(z, rprs, u1, u2):
     # Case 2, Case 8 - ingress/egress (with limb darkening)
 
     inegress = np.where((z[notusedyet] > 0.5 + np.abs(rprs - 0.5))
-                     & (z[notusedyet] < 1. + rprs) | (rprs > 0.5)
-                     & (z[notusedyet] > np.abs(1. - rprs))
-                     & (z[notusedyet] < rprs))  # , complement=notused4)
+                        & (z[notusedyet] < 1. + rprs) | (rprs > 0.5)
+                        & (z[notusedyet] > np.abs(1. - rprs))
+                        & (z[notusedyet] < rprs))  # , complement=notused4)
     if np.size(inegress) != 0:
         ndxuse = notusedyet[inegress]
         q = np.sqrt((1. - x1[ndxuse]) / (x2[ndxuse] - x1[ndxuse]))
