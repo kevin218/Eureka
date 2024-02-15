@@ -40,7 +40,7 @@ dependencies:
         - crds
         - exotic-ld
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.11.4
+        - jwst==1.13.4
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
