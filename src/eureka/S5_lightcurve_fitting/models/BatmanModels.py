@@ -29,6 +29,10 @@ class PlanetParams():
         self.w = None
         self.fp = None
         self.t_secondary = None
+        self.AmpCos1 = 0.
+        self.AmpSin1 = 0.
+        self.AmpCos2 = 0.
+        self.AmpSin2 = 0.
         for item in self.__dict__.keys():
             if pid > 0:
                 item0 = item + str(pid)

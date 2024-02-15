@@ -439,9 +439,7 @@ class PoetPCModel(Model):
             light_curve = np.ones_like(time)
             for pid in range(self.num_planets):
                 # Initialize planet
-                poet_params = PlanetParams(self, pid)
-                # pc_params = {'cos1_amp': 0., 'cos1_off': 0.,
-                #             'cos2_amp': 0., 'cos2_off': 0.}  
+                poet_params = PlanetParams(self, pid) 
 
                 if not np.any(['t_secondary' in key
                               for key in self.longparamlist[chan]]):
