@@ -90,16 +90,21 @@ class BatmanTransitModel(Model):
             self.compute_ltt = False
         
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
+        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
+        ltt_par2 = np.array(['a', 'ars'])
         # Check if able to do ltt correction
         ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
-                              and 'Rs' in self.parameters.dict.keys())
+                              and 'Rs' in self.parameters.dict.keys()
+                              and np.any(np.in1d(ltt_par2, self.paramtitles)))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
                                                 np.array(self.paramtitles),
                                                 axis=1)]
             if 'Rs' not in self.parameters.dict.keys():
                 missing_params = np.append('Rs', missing_params)
+            if ('a' not in self.parameters.dict.keys()) and \
+                    ('ars' not in self.parameters.dict.keys()):
+                missing_params = np.append('a', missing_params)
 
             log.writelog(f"WARNING: Missing parameters ["
                          f"{', '.join(missing_params)}] in your EPF which "
@@ -265,17 +270,23 @@ class BatmanEclipseModel(Model):
         if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
             self.compute_ltt = True
 
+
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
+        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
+        ltt_par2 = np.array(['a', 'ars'])
         # Check if able to do ltt correction
         ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
-                              and 'Rs' in self.parameters.dict.keys())
+                              and 'Rs' in self.parameters.dict.keys()
+                              and np.any(np.in1d(ltt_par2, self.paramtitles)))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
                                                 np.array(self.paramtitles),
                                                 axis=1)]
             if 'Rs' not in self.parameters.dict.keys():
                 missing_params = np.append('Rs', missing_params)
+            if ('a' not in self.parameters.dict.keys()) and \
+                    ('ars' not in self.parameters.dict.keys()):
+                missing_params = np.append('a', missing_params)
 
             log.writelog("WARNING: Missing parameters ["
                          f"{', '.join(missing_params)}] in your EPF which "

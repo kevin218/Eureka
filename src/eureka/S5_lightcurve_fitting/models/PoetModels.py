@@ -231,10 +231,12 @@ class PoetEclipseModel(Model):
         log = kwargs.get('log')
 
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['t0', 'ars', 'i', 'per', 'ecc', 'w'])
+        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
+        ltt_par2 = np.array(['a', 'ars'])
         # Check if able to do ltt correction
         self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
-                            and 'Rs' in self.parameters.dict.keys())
+                            and 'Rs' in self.parameters.dict.keys()
+                            and np.any(np.in1d(ltt_par2, self.paramtitles)))
         if self.compute_ltt:
             # Check if we need to do ltt correction for each
             # wavelength or only one
@@ -243,7 +245,9 @@ class PoetEclipseModel(Model):
                 once_type = ['shared', 'fixed']
                 self.compute_ltt_once = \
                     np.all([self.parameters.dict.get(name)[1] in once_type
-                           for name in ltt_params])
+                           for name in ltt_params]) and \
+                           np.any([self.parameters.dict.get(name)[1] in \
+                                   once_type for name in ltt_par2])
             else:
                 self.compute_ltt_once = True
         else:
@@ -251,6 +255,9 @@ class PoetEclipseModel(Model):
                                         np.array(self.paramtitles), axis=1)]
             if 'Rs' not in self.parameters.dict.keys():
                 missing_params = np.append('Rs', missing_params)
+            if ('a' not in self.parameters.dict.keys()) and \
+                    ('ars' not in self.parameters.dict.keys()):
+                missing_params = np.append('ars', missing_params)
             if 't_secondary' not in self.parameters.dict.keys():
                 log.writelog(f"WARNING: Missing parameters ["
                              f"{', '.join(missing_params)}] in your EPF which "
@@ -436,13 +443,13 @@ class PoetPCModel(Model):
                 # pc_params = {'cos1_amp': 0., 'cos1_off': 0.,
                 #             'cos2_amp': 0., 'cos2_off': 0.}  
 
-                if hasattr(poet_params, 't_secondary'):
-                    t_secondary = poet_params.t_secondary
-                else:
-                    # If not explicitly fitting for the time of eclipse, get the
-                    # time of eclipse from the time of transit, period,
+                if not np.any(['t_secondary' in key
+                              for key in self.longparamlist[chan]]):
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
-                    t_secondary = get_ecl_midpt(poet_params)
+                    poet_params.t_secondary = get_ecl_midpt(poet_params)
+                t_sec = poet_params.t_secondary
 
                 # calculate the phase variations
                 p = poet_params.per
@@ -461,13 +468,13 @@ class PoetPCModel(Model):
                     ((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
                 t12 = 0.5*(t14 - t23) 
                 iecl = np.where(np.bitwise_or(
-                    (time-t_secondary)%p >= p-(t14-t12)/2.,
-                    (time-t_secondary)%p <= (t14-t12)/2.))
+                    (time-t_sec)%p >= p-(t14-t12)/2.,
+                    (time-t_sec)%p <= (t14-t12)/2.))
                 phaseVars[iecl] = (1. + poet_params.cos1_amp 
-                                   * np.cos(2*np.pi*(t_secondary
+                                   * np.cos(2*np.pi*(t_sec
                                                      -poet_params.cos1_off)/p) 
                                    + poet_params.cos2_amp
-                                   * np.cos(4*np.pi*(t_secondary
+                                   * np.cos(4*np.pi*(t_sec
                                                      -poet_params.cos2_off)/p))
                 light_curve *= phaseVars
 

@@ -5,6 +5,7 @@ except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
+from .BatmanModels import PlanetParams
 from ...lib.split_channels import split
 
 
@@ -106,7 +107,7 @@ class SinusoidPhaseCurveModel(Model):
             self.time = kwargs.get('time')
 
         # Initialize model
-        bm_params = batman.TransitParams()
+        bm_params = PlanetParams(self, 0)
         pc_params = {'AmpCos1': 0., 'AmpSin1': 0.,
                      'AmpCos2': 0., 'AmpSin2': 0.}
 

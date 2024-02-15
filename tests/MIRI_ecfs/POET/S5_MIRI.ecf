@@ -1,6 +1,6 @@
 # Eureka! Control File for Stage 5: Lightcurve Fitting
 
-ncpu            6 # The number of CPU threads to use when running emcee or dynesty in parallel
+ncpu            1 # The number of CPU threads to use when running emcee or dynesty in parallel
 
 allapers        False # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 rescale_err     False    # Rescale uncertainties to have reduced chi-squared of unity
@@ -20,6 +20,11 @@ ld_file_white    None  # Fully qualified path to the location of a limb darkenin
 
 # General fitter
 old_fitparams   None # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
+
+#lsq
+lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
+lsq_tol         1e-7    # The tolerance for the scipy.optimize.minimize optimization method
+lsq_maxiter     None    # Maximum number of iterations to perform. Depending on the method each iteration may use several function evaluations. Set to None to use the default value
 
 #dynesty
 run_nlive       64 # Must be > ndim * (ndim + 1) // 2
