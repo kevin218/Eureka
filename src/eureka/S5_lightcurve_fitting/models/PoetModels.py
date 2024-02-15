@@ -328,7 +328,7 @@ class PoetEclipseModel(Model):
                         (0 <= poet_params.ecc < 1) and
                         (0 <= poet_params.w <= 360)):
                     # Return poor fit
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                    light_curve = 1e12*np.ones_like(time)
                     continue
 
                 # Compute light travel time for current planet
