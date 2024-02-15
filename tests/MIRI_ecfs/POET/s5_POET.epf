@@ -12,13 +12,13 @@ fpfs		0.00721333946967835	'free'			0.008000		0.006000	N
 # ------------------
 # Orbital parameters
 # ------------------
-period		0.766894378762		'white_fixed'	0.7668944		0.0000003	N	
-midpt  		0.520935022161196	'white_free'	0.5209350221611 0.0001		N
+per  		0.766894378762		'white_fixed'	0.7668944		0.0000003	N	
+t0  		0.520935022161196	'white_free'	0.5209350221611 0.0001		N
 time_offset	0					'independent'
-i   		79.0448701805676	'white_fixed'	79.044870180567	1			N	# Exoplanet Archive value for b is seemingly not helpful
+inc   		79.0448701805676	'white_fixed'	79.044870180567	1			N	# Exoplanet Archive value for b is seemingly not helpful
 ars    		4.42519793519358	'white_free'	4.447	 		0.132		N
-e   		0.0	 				'fixed' 		0 				1			U
-omega  		90.					'fixed' 		0 				180			U
+ecc   		0.0	 				'fixed' 		0 				1			U
+w    		90.					'fixed' 		0 				180			U
 # -------------------------
 # Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential','3-parameter', '4-parameter']
 # When using generated limb-darkening coefficients from exotic-ld choose from ['linear', 'quadratic', '3-parameter', '4-parameter']

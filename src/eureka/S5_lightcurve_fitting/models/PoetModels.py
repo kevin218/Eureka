@@ -26,6 +26,10 @@ class PlanetParams():
         self.w = None
         self.fpfs = None
         self.t_secondary = None
+        self.cos1_amp = 0.
+        self.cos1_off = 0.
+        self.cos2_amp = 0.
+        self.cos2_off = 0.
         for item in self.__dict__.keys():
             if pid > 0:
                 item0 = item + str(pid)
@@ -174,7 +178,7 @@ class PoetTransitModel(Model):
                         (0 < poet_params.inc < 90) and
                         (1 < poet_params.ars)):
                     # Return poor fit
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                    light_curve = 1e12*np.ones_like(time)
                     continue
 
                 # Check for out-of-bound values
@@ -182,13 +186,13 @@ class PoetTransitModel(Model):
                     # Enforce small planet approximation
                     if poet_params.rprs > 0.1:
                         # Return poor fit
-                        lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                        light_curve = 1e12*np.ones_like(time)
                         continue
                 elif self.parameters.limb_dark.value == 'kipping2013':
                     # Enforce physicality to avoid crashes
                     if poet_params.u[0] <= 0:
                         # Return poor fit
-                        lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                        light_curve = 1e12*np.ones_like(time)
                         continue
                     poet_params.limb_dark = 'quadratic'
                     u1 = 2*np.sqrt(poet_params.u[0])*poet_params.u[1]
@@ -296,6 +300,7 @@ class PoetEclipseModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
+        self.adjusted_time = []
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -326,14 +331,12 @@ class PoetEclipseModel(Model):
                     lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
                     continue
 
-                # Compute light travel time
-                self.adjusted_time = []
-                if self.compute_ltt:
-                    if c == 0 or not self.compute_ltt_once:
-                        self.adjusted_time = \
-                            correct_light_travel_time(time, poet_params)
-                else:
-                    self.adjusted_time = time
+                # Compute light travel time for current planet
+                if self.compute_ltt and (c == 0):
+                    self.adjusted_time.append(
+                        correct_light_travel_time(time, poet_params))
+                elif c == 0:
+                    self.adjusted_time.append(time)
 
                 if not np.any(['t_secondary' in key
                               for key in self.longparamlist[chan]]):
@@ -343,7 +346,7 @@ class PoetEclipseModel(Model):
                     poet_params.t_secondary = get_ecl_midpt(poet_params)
 
                 # Make the eclipse model
-                m_eclipse = TransitModel(poet_params, self.adjusted_time,
+                m_eclipse = TransitModel(poet_params, self.adjusted_time[pid],
                                          transittype='secondary')
                 light_curve *= m_eclipse.light_curve(poet_params)
 
@@ -411,12 +414,7 @@ class PoetPCModel(Model):
 
         # Get the time
         if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Initialize model
-        poet_params = PlanetParams()
-        pc_params = {'cos1_amp': 0., 'cos1_off': 0.,
-                     'cos2_amp': 0., 'cos2_off': 0.}                     
+            self.time = kwargs.get('time')                   
         
         # Set all parameters
         lcfinal = np.array([])
@@ -426,50 +424,54 @@ class PoetPCModel(Model):
             else:
                 chan = 0
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                if np.any([key in item for key in pc_params.keys()]):
-                    pc_params[self.paramtitles[index]] = \
-                        self.parameters.dict[item][0]
-                else:
-                    setattr(poet_params, self.paramtitles[index],
-                            self.parameters.dict[item][0])
-
-            if hasattr(poet_params, 't_secondary'):
-                t_secondary = poet_params.t_secondary
-            else:
-                # If not explicitly fitting for the time of eclipse, get the
-                # time of eclipse from the time of transit, period,
-                # eccentricity, and argument of periastron
-                t_secondary = get_ecl_midpt(poet_params)
-
             time = self.time
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # calculate the phase variations
-            p = poet_params.per
-            phaseVars = (1. + pc_params['cos1_amp'] 
-                         * np.cos(2*np.pi*(time-pc_params['cos1_off'])/p) 
-                         + pc_params['cos2_amp']
-                         * np.cos(4*np.pi*(time-pc_params['cos2_off'])/p))
-            
-            # Flatten phase curve during eclipse
-            # rprs = poet_params.rprs
-            # ars = poet_params.ars
-            # cosi = np.cos(poet_params.inc*np.pi/180)
-            # t14 = p/np.pi*np.arcsin(1/ars*np.sqrt(((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
-            # t23 = p/np.pi*np.arcsin(1/ars*np.sqrt(((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
-            # t12 = 0.5*(t14 - t23) 
-            # iecl = np.where(np.bitwise_or((time-t_secondary)%p >= p-(t14-t12)/2.,
-            #                         (time-t_secondary)%p <= (t14-t12)/2.))
-            # phaseVars[iecl] = (1. + pc_params['cos1_amp'] 
-            #                    * np.cos(2*np.pi*(t_secondary-pc_params['cos1_off'])/p) 
-            #                    + pc_params['cos2_amp']
-            #                    * np.cos(4*np.pi*(t_secondary-pc_params['cos2_off'])/p))
+            light_curve = np.ones_like(time)
+            for pid in range(self.num_planets):
+                # Initialize planet
+                poet_params = PlanetParams(self, pid)
+                # pc_params = {'cos1_amp': 0., 'cos1_off': 0.,
+                #             'cos2_amp': 0., 'cos2_off': 0.}  
 
-            lcfinal = np.append(lcfinal, phaseVars)
+                if hasattr(poet_params, 't_secondary'):
+                    t_secondary = poet_params.t_secondary
+                else:
+                    # If not explicitly fitting for the time of eclipse, get the
+                    # time of eclipse from the time of transit, period,
+                    # eccentricity, and argument of periastron
+                    t_secondary = get_ecl_midpt(poet_params)
+
+                # calculate the phase variations
+                p = poet_params.per
+                phaseVars = (1. + poet_params.cos1_amp 
+                             * np.cos(2*np.pi*(time-poet_params.cos1_off)/p) 
+                             + poet_params.cos2_amp
+                             * np.cos(4*np.pi*(time-poet_params.cos2_off)/p))
+                
+                # Flatten phase curve during eclipse
+                rprs = poet_params.rprs
+                ars = poet_params.ars
+                cosi = np.cos(poet_params.inc*np.pi/180)
+                t14 = p/np.pi*np.arcsin(1/ars*np.sqrt(
+                    ((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
+                t23 = p/np.pi*np.arcsin(1/ars*np.sqrt(
+                    ((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
+                t12 = 0.5*(t14 - t23) 
+                iecl = np.where(np.bitwise_or(
+                    (time-t_secondary)%p >= p-(t14-t12)/2.,
+                    (time-t_secondary)%p <= (t14-t12)/2.))
+                phaseVars[iecl] = (1. + poet_params.cos1_amp 
+                                   * np.cos(2*np.pi*(t_secondary
+                                                     -poet_params.cos1_off)/p) 
+                                   + poet_params.cos2_amp
+                                   * np.cos(4*np.pi*(t_secondary
+                                                     -poet_params.cos2_off)/p))
+                light_curve *= phaseVars
+
+            lcfinal = np.append(lcfinal, light_curve)
 
         return lcfinal
    
@@ -499,10 +501,10 @@ class TransitModel():
 
         # Compute distance, z, of planet and star midpoints
         self.z = self.ars \
-                 * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
-                 + (np.cos(self.inc * np.pi / 180) 
-                 * np.cos(2 * np.pi * (t - self.t0)
-                 / self.per)) ** 2)
+            * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
+                      + (np.cos(self.inc * np.pi / 180) 
+                      * np.cos(2 * np.pi * (t - self.t0)
+                      / self.per)) ** 2)
         
         if self.transittype == 'primary':
             # Ignore close approach near secondary eclipse

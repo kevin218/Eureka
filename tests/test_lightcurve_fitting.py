@@ -77,6 +77,9 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         meta.multwhite = False
+        meta.num_planets = 1
+        meta.ld_from_S4 = False
+        meta.ld_file = None
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -88,7 +91,10 @@ class TestModels(unittest.TestCase):
                                                  freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
-                                                 paramtitles=paramtitles)
+                                                 paramtitles=paramtitles,
+                                                 ld_from_S4=meta.ld_from_S4,
+                                                 ld_from_file=meta.ld_file,
+                                                 num_planets=meta.num_planets)
 
         # Evaluate and test output
         self.t_model.time = self.time
@@ -113,6 +119,7 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         meta.multwhite = False
+        meta.num_planets = 1
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -126,7 +133,8 @@ class TestModels(unittest.TestCase):
                                                  freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
-                                                 paramtitles=paramtitles)
+                                                 paramtitles=paramtitles,
+                                                 num_planets=meta.num_planets)
 
         # Remove the temporary log file
         os.system(f"rm .{os.sep}data{os.sep}test.log")
@@ -163,6 +171,9 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         meta.multwhite = False
+        meta.num_planets = 1
+        meta.ld_from_S4 = False
+        meta.ld_file = None
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
@@ -175,14 +186,18 @@ class TestModels(unittest.TestCase):
                                                  freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
-                                                 paramtitles=paramtitles)
+                                                 paramtitles=paramtitles,
+                                                 ld_from_S4=meta.ld_from_S4,
+                                                 ld_from_file=meta.ld_file,
+                                                 num_planets=meta.num_planets)
         self.e_model = models.BatmanEclipseModel(parameters=params,
                                                  name='transit', fmt='r--',
                                                  log=log,
                                                  freenames=freenames,
                                                  longparamlist=longparamlist,
                                                  nchan=1,
-                                                 paramtitles=paramtitles)
+                                                 paramtitles=paramtitles,
+                                                 num_planets=meta.num_planets)
         self.phasecurve = \
             models.SinusoidPhaseCurveModel(parameters=params,
                                            name='phasecurve', fmt='r--',

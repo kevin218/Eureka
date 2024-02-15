@@ -14,13 +14,13 @@ rprs 	    0.16			'free'			0.05			0.3				U
 # ------------------
 # Orbital parameters
 # ------------------
-period		0.813473978		'free'			0.813473978		0.000000035		N
-midpt 		0.353027    	'free'			55528.34		55528.36		U
+per	    	0.813473978		'free'			0.813473978		0.000000035		N
+t0  		0.353027    	'free'			55528.34		55528.36		U
 time_offset	55528.			'independent'
-i    		82.109	 		'free'			82.109			0.088			N
+inc    		82.109	 		'free'			82.109			0.088			N
 ars    		4.97			'free'			4.97			0.14			N
-e   		0.0	 			'fixed' 		0 				1				U
-omega  		90.				'fixed' 		0 				180				U
+ecc   		0.0	 			'fixed' 		0 				1				U
+w   		90.				'fixed' 		0 				180				U
 
 # -------------------------
 # ** Limb darkening parameters **
