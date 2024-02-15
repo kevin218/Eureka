@@ -36,6 +36,18 @@ Be sure that you are installing (or have installed) batman-package (not batman) 
 installed the wrong package you can try pip uninstalling it, but you may just need to make a whole new environment.
 In general, we strongly recommend you closely follow the instructions on the :ref:`installation` page.
 
+Issues running starry/theano code
+'''''''''''''''''''''''''''''''''
+
+Be sure that you have installed the ``pymc3`` optional dependencies when installing Eureka! as described on the
+:ref:`installation` page. If you're getting an error that includes ``theano/tensor/elemwise.py:264: TypeError``,
+you most likely need to make sure that you have the g++ compiler installed (i.e., do ``sudo apt install g++`` if you're
+on Ubuntu). If you're getting issues stating something like numpy was compiled for a different version, then you likely
+need to make sure you're starting with a new conda environment and use the ``pymc3`` optional dependencies which set a
+more strict upper-limit on the numpy version permitted. If you're getting an error that includes ``ImportError: libGL.so.1``,
+then you either need to start with a new conda environment and make sure that you only install ``opencv-python-headless``
+and not ``opencv-python``, or you need to install libgl1 by doing ``sudo apt install libgl1``.
+
 
 .. _faq-install:
 

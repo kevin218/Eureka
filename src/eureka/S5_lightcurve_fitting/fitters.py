@@ -102,9 +102,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                              freenames)
 
     if not hasattr(meta, 'lsq_method'):
-        log.writelog('No lsq optimization method specified - using Nelder-Mead'
+        log.writelog('No lsq optimization method specified - using Powell'
                      ' by default.')
-        meta.lsq_method = 'Nelder-Mead'
+        meta.lsq_method = 'Powell'
     if not hasattr(meta, 'lsq_tol'):
         log.writelog('No lsq tolerance specified - using 1e-6 by default.')
         meta.lsq_tol = 1e-6

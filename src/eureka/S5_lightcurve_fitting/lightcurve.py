@@ -243,7 +243,6 @@ class LightCurve(m.Model):
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)
             ax.legend(loc='best')
-            fig.tight_layout()
 
             if self.white:
                 fname_tag = 'white'
@@ -282,7 +281,6 @@ class LightCurve(m.Model):
                 ax.set_xlabel(str(self.time_units))
                 ax.set_ylabel('Normalized Flux', size=14)
                 ax.legend(loc='best')
-                fig.tight_layout()
 
                 if self.white:
                     fname_tag = 'white'

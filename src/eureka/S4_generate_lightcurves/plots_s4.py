@@ -80,8 +80,6 @@ def binned_lightcurve(meta, log, lc, i, white=False):
     time_units = lc.data.attrs['time_units']
     plt.xlabel(f'Time [{time_units} - {time_modifier}]')
 
-    fig.subplots_adjust(left=0.12, right=0.95, bottom=0.10, top=0.90,
-                        hspace=0.20, wspace=0.3)
     fname = f'figs{os.sep}fig4102_{fname_tag}_1D_LC'+plots.figure_filetype
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
@@ -116,7 +114,7 @@ def driftxpos(meta, lc):
     plt.ylabel('Spectrum Drift Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
-    plt.tight_layout()
+
     fname = 'figs'+os.sep+'fig4103_DriftXPos'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
@@ -151,7 +149,7 @@ def driftxwidth(meta, lc):
     plt.ylabel('Spectrum Drift CC Width Along x')
     plt.xlabel('Frame Number')
     plt.legend(loc='best')
-    plt.tight_layout()
+
     fname = 'figs'+os.sep+'fig4104_DriftXWidth'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
@@ -244,7 +242,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     plt.minorticks_on()
 
     plt.title(f"MAD = {np.round(meta.mad_s4).astype(int)} ppm")
-    plt.tight_layout()
+
     fname = 'figs'+os.sep+'fig4101_2D_LC'+plots.figure_filetype
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if meta.hide_plots:
@@ -278,7 +276,7 @@ def cc_spec(meta, ref_spec, fit_spec, n):
     plt.plot(np.arange(meta.drift_range, nx-meta.drift_range), fit_spec, '-',
              label='Current Spectrum')
     plt.legend(loc='best')
-    plt.tight_layout()
+
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = ('figs'+os.sep+f'fig4301_int{int_number}_CC_Spec' +
              plots.figure_filetype)
@@ -303,7 +301,7 @@ def cc_vals(meta, vals, n):
     plt.clf()
     plt.title(f'Cross Correlation - Values {n}')
     plt.plot(np.arange(-meta.drift_range, meta.drift_range+1), vals, '.')
-    plt.tight_layout()
+
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = ('figs'+os.sep+f'fig4302_int{int_number}_CC_Vals' +
              plots.figure_filetype)

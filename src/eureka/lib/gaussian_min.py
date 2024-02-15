@@ -199,7 +199,7 @@ def mingauss(img, yxguess, meta):
               f"while meta.inst is set to {meta.inst}")
         initial_guess = [400, 20, 20]
 
-    # Fit the gaussian width by minimizing minfunc with the Nelder-Mead method.
+    # Fit the gaussian width by minimizing minfunc with the Powell method.
     results = minimize(minfunc, initial_guess,
                        args=(frame, x_mesh, y_mesh, x, y),
                        method='Powell',

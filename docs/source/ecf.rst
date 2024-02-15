@@ -29,9 +29,9 @@ ramp_fit_algorithm
 Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
-ramp_fit_max_cores
+maximum_cores
 ''''''''''''''''''
-Fraction of processor cores to use to compute the ramp fits, options are ``none``, ``quarter``, ``half``, ``all``.
+Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
 
 skip_*
