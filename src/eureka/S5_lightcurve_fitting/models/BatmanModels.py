@@ -274,7 +274,6 @@ class BatmanEclipseModel(Model):
         if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
             self.compute_ltt = True
 
-
         # Get the parameters relevant to light travel time correction
         ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
         ltt_par2 = np.array(['a', 'ars'])

@@ -938,8 +938,8 @@ def compute_fn(meta, log, fit_methods):
         meta.y_param = 'fpfs'
         fp = load_s5_saves(meta, log, fit_methods)
         if fp.shape[-1] == 0:
-            log.writelog(f'  Planet flux (fp or fpfs) was not in the list of '
-                        'fitted parameters')
+            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
+                         'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
 
@@ -1000,8 +1000,8 @@ def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
         meta.y_param = 'fpfs'
         fp = load_s5_saves(meta, log, fit_methods)
         if fp.shape[-1] == 0:
-            log.writelog(f'  Planet flux (fp or fpfs) was not in the list of '
-                        'fitted parameters')
+            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
+                         'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
 

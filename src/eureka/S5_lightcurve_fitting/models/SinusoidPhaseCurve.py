@@ -147,7 +147,8 @@ class SinusoidPhaseCurveModel(Model):
                 else:
                     # the planet is on an eccentric orbit
                     if m_transit is None:
-                        # Avoid overhead of making a new transit model if avoidable
+                        # Avoid overhead of making a new transit model,
+                        # if avoidable
                         m_transit = batman.TransitModel(bm_params, time,
                                                         transittype='primary')
                     anom = m_transit.get_true_anomaly()
@@ -158,12 +159,12 @@ class SinusoidPhaseCurveModel(Model):
                 if bm_params.AmpCos2 == 0. and bm_params.AmpSin2 == 0.:
                     # Skip multiplying by a bunch of zeros to speed up fitting
                     phaseVars = (1. + bm_params.AmpCos1*(np.cos(phi)-1.) +
-                                bm_params.AmpSin1*np.sin(phi))
+                                 bm_params.AmpSin1*np.sin(phi))
                 else:
                     phaseVars = (1. + bm_params.AmpCos1*(np.cos(phi)-1.) +
-                                bm_params.AmpSin1*np.sin(phi) +
-                                bm_params.AmpCos2*(np.cos(2.*phi)-1.) +
-                                bm_params.AmpSin2*np.sin(2.*phi))
+                                 bm_params.AmpSin1*np.sin(phi) +
+                                 bm_params.AmpCos2*(np.cos(2.*phi)-1.) +
+                                 bm_params.AmpSin2*np.sin(2.*phi))
 
                 # If requested, force positive phase variations
                 if self.force_positivity and np.any(phaseVars < 0):
