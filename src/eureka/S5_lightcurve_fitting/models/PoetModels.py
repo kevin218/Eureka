@@ -246,8 +246,8 @@ class PoetEclipseModel(Model):
                 self.compute_ltt_once = \
                     np.all([self.parameters.dict.get(name)[1] in once_type
                            for name in ltt_params]) and \
-                        np.any([self.parameters.dict.get(name)[1] in
-                                   once_type for name in ltt_par2])
+                    np.any([self.parameters.dict.get(name)[1] in
+                            once_type for name in ltt_par2])
             else:
                 self.compute_ltt_once = True
         else:
