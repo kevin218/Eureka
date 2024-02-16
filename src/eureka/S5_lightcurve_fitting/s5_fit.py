@@ -692,7 +692,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        fitted_channels=fitted_channels,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints)
+                                       nints=lc_model.nints,
+                                       num_planets=meta.num_planets)
         modellist.append(t_phase)
     elif 'sinusoid_pc' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
@@ -723,7 +724,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       transit_model=t_model,
                                       eclipse_model=e_model,
                                       multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints)
+                                      nints=lc_model.nints,
+                                      num_planets=meta.num_planets)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:

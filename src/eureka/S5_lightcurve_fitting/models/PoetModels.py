@@ -457,23 +457,23 @@ class PoetPCModel(Model):
                              * np.cos(4*np.pi*(time-poet_params.cos2_off)/p))
                 
                 # Flatten phase curve during eclipse
-                rprs = poet_params.rprs
-                ars = poet_params.ars
-                cosi = np.cos(poet_params.inc*np.pi/180)
-                t14 = p/np.pi*np.arcsin(1/ars*np.sqrt(
-                    ((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
-                t23 = p/np.pi*np.arcsin(1/ars*np.sqrt(
-                    ((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
-                t12 = 0.5*(t14 - t23) 
-                iecl = np.where(np.bitwise_or(
-                    (time-t_sec)%p >= p-(t14-t12)/2.,
-                    (time-t_sec)%p <= (t14-t12)/2.))
-                phaseVars[iecl] = (1. + poet_params.cos1_amp 
-                                   * np.cos(2*np.pi*(t_sec
-                                                     -poet_params.cos1_off)/p) 
-                                   + poet_params.cos2_amp
-                                   * np.cos(4*np.pi*(t_sec
-                                                     -poet_params.cos2_off)/p))
+                # rprs = poet_params.rprs
+                # ars = poet_params.ars
+                # cosi = np.cos(poet_params.inc*np.pi/180)
+                # t14 = p/np.pi*np.arcsin(1/ars*np.sqrt(
+                #     ((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
+                # t23 = p/np.pi*np.arcsin(1/ars*np.sqrt(
+                #     ((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
+                # t12 = 0.5*(t14 - t23) 
+                # iecl = np.where(np.bitwise_or(
+                #     (time-t_sec)%p >= p-(t14-t12)/2.,
+                #     (time-t_sec)%p <= (t14-t12)/2.))
+                # phaseVars[iecl] = (1. + poet_params.cos1_amp 
+                #                    * np.cos(2*np.pi*(t_sec
+                #                                      -poet_params.cos1_off)/p) 
+                #                    + poet_params.cos2_amp
+                #                    * np.cos(4*np.pi*(t_sec
+                #                                      -poet_params.cos2_off)/p))
                 light_curve *= phaseVars
 
             lcfinal = np.append(lcfinal, light_curve)

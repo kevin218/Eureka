@@ -205,7 +205,8 @@ class TestModels(unittest.TestCase):
                                            freenames=freenames,
                                            nchan=1, paramtitles=paramtitles,
                                            transit_model=self.t_model,
-                                           eclipse_model=self.e_model)
+                                           eclipse_model=self.e_model,
+                                           num_planets=meta.num_planets)
 
         # Remove the temporary log file
         os.system(f"rm .{os.sep}data{os.sep}test.log")
