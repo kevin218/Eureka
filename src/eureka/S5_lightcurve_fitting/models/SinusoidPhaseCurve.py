@@ -127,11 +127,11 @@ class SinusoidPhaseCurveModel(Model):
                 bm_params.limb_dark = 'uniform'
                 bm_params.u = []
 
-                m_transit = None    #FINDME
+                m_transit = None
                 if not np.any(['t_secondary' in key
                               for key in self.longparamlist[chan]]):
-                    # If not explicitly fitting for the time of eclipse, get the
-                    # time of eclipse from the time of transit, period,
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
                     m_transit = batman.TransitModel(bm_params, self.time,
                                                     transittype='primary')
@@ -181,6 +181,6 @@ class SinusoidPhaseCurveModel(Model):
         if self.eclipse_model is None:
             eclipse = 1
         else:
-            eclipse = self.eclipse_model.eval(channel=channel)
+            eclipse = self.eclipse_model.eval(channel=channel) - 1
 
-        return transit + lcfinal*(eclipse-1)
+        return transit + lcfinal*eclipse

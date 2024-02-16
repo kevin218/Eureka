@@ -663,6 +663,20 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         num_planets=meta.num_planets)
         modellist.append(t_poet_ecl)
     if 'poet_pc' in meta.run_myfuncs:
+        model_names = np.array([model.name for model in modellist])
+        t_model = None
+        e_model = None
+        # Nest any transit and/or eclipse models inside of the
+        # phase curve model
+        if 'poet_tr' in model_names:
+            t_model = modellist.pop(np.where(model_names == 'poet_tr')[0][0])
+            model_names = np.array([model.name for model in modellist])
+        if 'poet_ecl' in model_names:
+            e_model = modellist.pop(np.where(model_names == 'poet_ecl')[0][0])
+            model_names = np.array([model.name for model in modellist])
+        # Check if should enforce positivity
+        if not hasattr(meta, 'force_positivity'):
+            meta.force_positivity = False
         t_poet_pc = m.PoetPCModel(parameters=params, name='phasecurve',
                                   fmt='r--', log=log, time=time,
                                   time_units=time_units,
@@ -672,6 +686,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   nchannel_fitted=nchannel_fitted,
                                   fitted_channels=fitted_channels,
                                   paramtitles=paramtitles,
+                                  force_positivity=meta.force_positivity,
+                                  transit_model=t_model,
+                                  eclipse_model=e_model,
                                   multwhite=lc_model.multwhite,
                                   nints=lc_model.nints,
                                   num_planets=meta.num_planets)

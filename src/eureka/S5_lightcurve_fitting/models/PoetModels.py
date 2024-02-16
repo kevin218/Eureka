@@ -246,7 +246,7 @@ class PoetEclipseModel(Model):
                 self.compute_ltt_once = \
                     np.all([self.parameters.dict.get(name)[1] in once_type
                            for name in ltt_params]) and \
-                           np.any([self.parameters.dict.get(name)[1] in \
+                           np.any([self.parameters.dict.get(name)[1] in
                                    once_type for name in ltt_par2])
             else:
                 self.compute_ltt_once = True
@@ -381,11 +381,23 @@ class PoetPCModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
+        self.components = []
+        self.transit_model = transit_model
+        self.eclipse_model = eclipse_model
+        if transit_model is not None:
+            self.components.append(self.transit_model)
+        if eclipse_model is not None:
+            self.components.append(self.eclipse_model)
+        
         # Inherit from Model class
         super().__init__(**kwargs)
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
+
+        # Check if should enforce positivity
+        if not hasattr(self, 'force_positivity'):
+            self.force_positivity = False
 
     @property
     def time(self):
@@ -396,6 +408,27 @@ class PoetPCModel(Model):
     def time(self, time_array):
         """A setter for the time."""
         self._time = time_array
+        if self.transit_model is not None:
+            self.transit_model.time = time_array
+        if self.eclipse_model is not None:
+            self.eclipse_model.time = time_array
+
+    def update(self, newparams, **kwargs):
+        """Update the model with new parameter values.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.update().
+        """
+        super().update(newparams, **kwargs)
+        if self.transit_model is not None:
+            self.transit_model.update(newparams, **kwargs)
+        if self.eclipse_model is not None:
+            self.eclipse_model.update(newparams, **kwargs)
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -436,18 +469,21 @@ class PoetPCModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ones_like(time)
+            light_curve = np.zeros_like(time)
             for pid in range(self.num_planets):
                 # Initialize planet
                 poet_params = PlanetParams(self, pid) 
 
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
-                    # If not explicitly fitting for the time of eclipse, get
-                    # the time of eclipse from the time of transit, period,
-                    # eccentricity, and argument of periastron
-                    poet_params.t_secondary = get_ecl_midpt(poet_params)
-                t_sec = poet_params.t_secondary
+                poet_params.limb_dark = 'uniform'
+                poet_params.u = []
+
+                # if not np.any(['t_secondary' in key
+                #               for key in self.longparamlist[chan]]):
+                #     # If not explicitly fitting for the time of eclipse, get
+                #     # the time of eclipse from the time of transit, period,
+                #     # eccentricity, and argument of periastron
+                #     poet_params.t_secondary = get_ecl_midpt(poet_params)
+                # t_sec = poet_params.t_secondary
 
                 # calculate the phase variations
                 p = poet_params.per
@@ -456,29 +492,25 @@ class PoetPCModel(Model):
                              + poet_params.cos2_amp
                              * np.cos(4*np.pi*(time-poet_params.cos2_off)/p))
                 
-                # Flatten phase curve during eclipse
-                # rprs = poet_params.rprs
-                # ars = poet_params.ars
-                # cosi = np.cos(poet_params.inc*np.pi/180)
-                # t14 = p/np.pi*np.arcsin(1/ars*np.sqrt(
-                #     ((1+rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
-                # t23 = p/np.pi*np.arcsin(1/ars*np.sqrt(
-                #     ((1-rprs)**2-(ars*cosi)**2)/(1-cosi**2)))
-                # t12 = 0.5*(t14 - t23) 
-                # iecl = np.where(np.bitwise_or(
-                #     (time-t_sec)%p >= p-(t14-t12)/2.,
-                #     (time-t_sec)%p <= (t14-t12)/2.))
-                # phaseVars[iecl] = (1. + poet_params.cos1_amp 
-                #                    * np.cos(2*np.pi*(t_sec
-                #                                      -poet_params.cos1_off)/p) 
-                #                    + poet_params.cos2_amp
-                #                    * np.cos(4*np.pi*(t_sec
-                #                                      -poet_params.cos2_off)/p))
-                light_curve *= phaseVars
+                # If requested, force positive phase variations
+                if self.force_positivity and np.any(phaseVars < 0):
+                    # Returning nans or infs breaks the fits, so this was
+                    # the best I could think of
+                    phaseVars = 1e12*np.ones_like(time)
+                
+                light_curve += phaseVars
 
             lcfinal = np.append(lcfinal, light_curve)
 
-        return lcfinal
+        if self.transit_model is None:
+            transit = 1
+        else:
+            transit = self.transit_model.eval(channel=channel)
+        if self.eclipse_model is None:
+            eclipse = 1
+        else:
+            eclipse = self.eclipse_model.eval(channel=channel) - 1
+        return transit + lcfinal*eclipse
    
 
 class TransitModel():
@@ -509,7 +541,7 @@ class TransitModel():
             * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
                       + (np.cos(self.inc * np.pi / 180) 
                       * np.cos(2 * np.pi * (t - self.t0)
-                      / self.per)) ** 2)
+                               / self.per)) ** 2)
         
         if self.transittype == 'primary':
             # Ignore close approach near secondary eclipse
