@@ -477,14 +477,6 @@ class PoetPCModel(Model):
                 poet_params.limb_dark = 'uniform'
                 poet_params.u = []
 
-                # if not np.any(['t_secondary' in key
-                #               for key in self.longparamlist[chan]]):
-                #     # If not explicitly fitting for the time of eclipse, get
-                #     # the time of eclipse from the time of transit, period,
-                #     # eccentricity, and argument of periastron
-                #     poet_params.t_secondary = get_ecl_midpt(poet_params)
-                # t_sec = poet_params.t_secondary
-
                 # calculate the phase variations
                 p = poet_params.per
                 phaseVars = (1. + poet_params.cos1_amp 
