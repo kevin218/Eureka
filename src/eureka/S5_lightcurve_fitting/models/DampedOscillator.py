@@ -112,9 +112,9 @@ class DampedOscillatorModel(Model):
 
             # Compute damped oscillator
             amp = params.osc_amp * np.exp(-params.osc_amp_decay * 
-                                          (time - params.osc_t0) )
+                                          (time - params.osc_t0))
             per = params.osc_per * np.exp(-params.osc_per_decay * 
-                                          (time - params.osc_t0) )
+                                          (time - params.osc_t0))
             osc = 1 + amp * np.sin(2 * np.pi * (time - params.osc_t1) / per)
             osc[time < params.osc_t0] = 1
 

@@ -56,6 +56,25 @@ limb_dark   'kipping2013'   'independent'
 u1          0.59            'free'          0           1           U
 u2          0.84            'free'          0           1           U
 
+# -------------------------
+# ** Stellar variability parameters **
+# A modified Lorentzian model can be used to fit stellar flares
+# A damped oscillator model can be used to fit quasi-periodic pulsations
+# -------------------------
+# lor_amp_lhs     0.03    'free'          0            0.1            U
+# lor_amp_rhs     0.03    'free'          0            0.1            U
+# lor_hwhm_lhs    0       'fixed'         0            0.1            U
+# lor_hwhm_rhs    1e-5    'free'          0            0.1            U
+# lor_t0          0.3163  'free'          0.3160       0.3166         U
+# lor_power       0.7     'free'          0.1          2              U
+
+# osc_amp         0.0003  'free'          0            0.01           U
+# osc_amp_decay   1       'free'          0            20             U
+# osc_per         0.03    'free'          0            0.1            U
+# osc_per_decay   0.      'fixed'         0            10             U
+# osc_t0          0.3163  'fixed'         0            1              U
+# osc_t1          0.3163  'free'          0.3          0.4            U
+
 # --------------------
 # ** Systematic variables **
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
