@@ -23,9 +23,9 @@ class Params():
 
 
 class DampedOscillatorModel(Model):
-    """A sinusoidal phase curve model"""
+    """A damped oscillator model"""
     def __init__(self, **kwargs):
-        """Initialize the phase curve model.
+        """Initialize the damped oscillator model.
 
         Parameters
         ----------

@@ -761,6 +761,24 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       multwhite=lc_model.multwhite,
                                       nints=lc_model.nints)
         modellist.append(t_osc)
+    if 'lorentzian' in meta.run_myfuncs:
+        if 'starry' in meta.run_myfuncs:
+            LorentzianModel = dm.LorentzianModel
+        else:
+            LorentzianModel = m.LorentzianModel
+        t_lorentzian = LorentzianModel(parameters=params, 
+                                       name='lorentzian',
+                                       fmt='r--', log=log, time=time,
+                                       time_units=time_units,
+                                       freenames=freenames,
+                                       longparamlist=lc_model.longparamlist,
+                                       nchannel=chanrng,
+                                       nchannel_fitted=nchannel_fitted,
+                                       fitted_channels=fitted_channels,
+                                       paramtitles=paramtitles,
+                                       multwhite=lc_model.multwhite,
+                                       nints=lc_model.nints)
+        modellist.append(t_lorentzian)
     if 'polynomial' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
             PolynomialModel = dm.PolynomialModel
