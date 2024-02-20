@@ -8,4 +8,5 @@ from .KeplerOrbit import KeplerOrbit
 from .Model import Model, CompositeModel
 from .PolynomialModel import PolynomialModel
 from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
+from .DampedOscillator import DampedOscillatorModel
 from .StepModel import StepModel

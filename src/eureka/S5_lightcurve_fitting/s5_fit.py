@@ -744,6 +744,23 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nints=lc_model.nints,
                                       num_planets=meta.num_planets)
         modellist.append(t_phase)
+    if 'damped_osc' in meta.run_myfuncs:
+        if 'starry' in meta.run_myfuncs:
+            DampedOscillatorModel = dm.DampedOscillatorModel
+        else:
+            DampedOscillatorModel = m.DampedOscillatorModel
+        t_osc = DampedOscillatorModel(parameters=params, name='damped_osc',
+                                      fmt='r--', log=log, time=time,
+                                      time_units=time_units,
+                                      freenames=freenames,
+                                      longparamlist=lc_model.longparamlist,
+                                      nchannel=chanrng,
+                                      nchannel_fitted=nchannel_fitted,
+                                      fitted_channels=fitted_channels,
+                                      paramtitles=paramtitles,
+                                      multwhite=lc_model.multwhite,
+                                      nints=lc_model.nints)
+        modellist.append(t_osc)
     if 'polynomial' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
             PolynomialModel = dm.PolynomialModel
