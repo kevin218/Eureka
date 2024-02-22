@@ -223,9 +223,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     else:
         degs = np.ones(ny)*deg
         # Initiate background image with zeros
-        bg = np.zeros((ny, nx))
-        
-            
+        bg = np.zeros((ny, nx))            
         # Fit polynomial to each column
         for j in range(ny):
             nobadpixels = False
@@ -266,12 +264,15 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                         # Simple standard deviation (faster but prone to missing
                         # scanned background stars)
                         stdres = np.std(residuals)
-                    elif hasattr(meta, 'bg_method') and meta.bg_method=='med':
+                    elif hasattr(meta, 'bg_method') and meta.bg_method=='median':
                         # Median Absolute Deviation (slower but more robust)
                         stdres  = np.median(np.abs(np.ediff1d(residuals)))
                     elif hasattr(meta, 'bg_method') and meta.bg_method=='mean':
                         # Mean Absolute Deviation (good compromise)
                         stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    else:
+                        #Default to standard deviation with no input
+                        stdres = np.std(residuals)
                     if stdres == 0:
                         stdres = np.inf
                     stdevs = np.abs(residuals) / stdres
