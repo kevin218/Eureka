@@ -3,7 +3,7 @@ import numpy as np
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
 import theano.tensor as tt
-import celerite2.pymc3 as celerite
+import celerite2.pymc3 as celerite2
 
 # Avoid tonnes of "Cannot construct a scalar test value" messages
 import logging
@@ -16,7 +16,7 @@ from ...lib.split_channels import split
 
 class GPModel(PyMC3Model):
     """Model for Gaussian Process (GP)"""
-    def __init__(self, kernel_classes, kernel_inputs, lc, gp_code='celerite2',
+    def __init__(self, kernel_classes, kernel_inputs, lc, gp_code='celerite',
                  normalize=False, **kwargs):
         """Initialize the GP model.
 
@@ -29,8 +29,8 @@ class GPModel(PyMC3Model):
         lc : eureka.S5_lightcurve_fitting.lightcurve
             The current lightcurve object.
         gp_code : str; optional
-            Type GP package to use from ('celerite2'),
-            by default 'celerite2'.
+            Type GP package to use from ('celerite'),
+            by default 'celerite'.
         normalize : bool; optional
             If True, normalize the covariate by mean subtracting it and
             dividing by the standard deviation. By default, False.
@@ -57,7 +57,7 @@ class GPModel(PyMC3Model):
         self.unc_fit = lc.unc_fit
         self.time = lc.time
 
-        if self.gp_code_name != 'celerite2':
+        if self.gp_code_name != 'celerite':
             raise AssertionError('Currently celerite2 is the only GP package '
                                  'that can be used with the exoplanet and '
                                  'nuts fitting methods.')
@@ -105,7 +105,7 @@ class GPModel(PyMC3Model):
                                           k, c)
 
             # Make the gp object
-            gp = celerite.GaussianProcess(kernel, mean=0.)
+            gp = celerite2.GaussianProcess(kernel, mean=0.)
             self.gps.append(gp)
 
     def eval(self, fit_lc, channel=None, **kwargs):
@@ -189,7 +189,7 @@ class GPModel(PyMC3Model):
                                           k, c)
 
             # Make the gp object
-            gp = celerite.GaussianProcess(kernel, mean=0.)
+            gp = celerite2.GaussianProcess(kernel, mean=0.)
             gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
 
             # Predict values
@@ -267,12 +267,12 @@ class GPModel(PyMC3Model):
         ls = lib.exp(coeffs[c][k][1])
 
         if kernel_name == 'Matern32':
-            kernel = celerite.terms.Matern32Term(sigma=1, rho=ls)
+            kernel = celerite2.terms.Matern32Term(sigma=1, rho=ls)
         else:
             raise AssertionError('Our celerite2 implementation currently only '
                                  'supports a Matern32 kernel.')
 
         # Setting the amplitude
-        kernel *= celerite.terms.RealTerm(a=amp, c=0)
+        kernel *= celerite2.terms.RealTerm(a=amp, c=0)
 
         return kernel
