@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+from mc3.stats import time_avg
 import corner
 from scipy import stats
 try:
@@ -11,7 +12,6 @@ except:
     # PyMC3 hasn't been installed
     pass
 
-from .likelihood import computeRMS
 from ..lib import plots, util
 from ..lib.split_channels import split
 
@@ -43,7 +43,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
     - February 28-March 1, 2022 Caroline Piaulet
         Adding scatter_ppm parameter
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
@@ -52,12 +52,12 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         model.physeval(interp=meta.interp)
     model_noGP = model.eval(incl_GP=False)
     model_gp = model.GPeval(model_noGP)
-    model_lc = model_noGP+model_gp
+    model_eval = model_noGP+model_gp
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(lc.unc_fit)
-        model = np.ma.copy(model_lc)
+        model_lc = np.ma.copy(model_eval)
         gp = np.ma.copy(model_gp)
         model_sys = model_sys_full
         model_phys = model_phys_full
@@ -68,8 +68,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model, model_sys, gp = \
-                split([flux, unc, model, model_sys, gp],
+            flux, unc, model_lc, model_sys, gp = \
+                split([flux, unc, model_lc, model_sys, gp],
                       meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
@@ -77,8 +77,8 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             model_phys = split([model_phys, ], nints_interp, channel)[0]
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, unc, model, model_sys, gp = \
-                split([lc.time, flux, unc, model, model_sys, gp],
+            time, flux, unc, model_lc, model_sys, gp = \
+                split([lc.time, flux, unc, model_lc, model_sys, gp],
                       meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
@@ -89,7 +89,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             time = lc.time
             new_timet = new_time
 
-        residuals = flux - model
+        residuals = flux - model_lc
 
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
@@ -97,11 +97,11 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             nbin_plot = len(time)
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData(time, nbin_plot)
-        binned_flux = util.binData(flux, nbin_plot)
-        binned_unc = util.binData(unc, nbin_plot, err=True)
-        binned_normflux = util.binData(flux/model_sys-gp, nbin_plot)
-        binned_res = util.binData(residuals, nbin_plot)
+        binned_time = util.binData_time(time, time, nbin_plot)
+        binned_flux = util.binData_time(flux, time, nbin_plot)
+        binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+        binned_normflux = util.binData_time(flux/model_sys-gp, time, nbin_plot)
+        binned_res = util.binData_time(residuals, time, nbin_plot)
 
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
@@ -109,7 +109,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         ax = fig.subplots(3, 1)
         ax[0].errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
                        color='w', ecolor=color, mec=color)
-        ax[0].plot(time, model, '.', ls='', ms=1, color='0.3', zorder=10)
+        ax[0].plot(time, model_lc, '.', ls='', ms=1, color='0.3', zorder=10)
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
@@ -128,7 +128,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
-        fig.subplots_adjust(hspace=0)
+        fig.get_layout_engine().set(hspace=0, h_pad=0)
         fig.align_ylabels(ax)
 
         if lc.white:
@@ -166,7 +166,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
     - September 12, 2022 Taylor Bell
         Initial version.
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
@@ -200,7 +200,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model = split([flux, unc], meta.nints, channel)
+            flux, unc = split([flux, unc], meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
             # interpolated) time axis
@@ -208,8 +208,8 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                                nints_interp, channel)[0]
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, unc, model = split([lc.time, flux, unc],
-                                           meta.nints, channel)
+            time, flux, unc = split([lc.time, flux, unc],
+                                    meta.nints, channel)
 
             # Split the arrays that have lengths of the new (potentially
             # interpolated) time axis
@@ -226,9 +226,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             nbin_plot = len(time)
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData(time, nbin_plot)
-        binned_flux = util.binData(flux, nbin_plot)
-        binned_unc = util.binData(unc, nbin_plot, err=True)
+        binned_time = util.binData_time(time, time, nbin_plot)
+        binned_flux = util.binData_time(flux, time, nbin_plot)
+        binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
@@ -251,7 +251,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         # Set nice axis limits
         sigma = np.ma.mean(binned_unc)
         max_astro = np.ma.max((model_phys-1))
-        ax.set_ylim(-4*sigma, max_astro+6*sigma)
+        ax.set_ylim(-6*sigma, max_astro+6*sigma)
         ax.set_xlim(np.min(time), np.max(time))
 
         # Save/show the figure
@@ -284,7 +284,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             ax.errorbar(binned_time, binned_flux, yerr=binned_unc, fmt='.',
                         color=color, zorder=1)
             # Plot the physical model
-            ax.plot(new_time, model_phys, '.', ls='', ms=2, color='0.3',
+            ax.plot(new_timet, model_phys, '.', ls='', ms=2, color='0.3',
                     zorder=10)
 
             # Set nice axis limits
@@ -328,45 +328,54 @@ def plot_rms(lc, model, meta, fitter):
     - January 7-22, 2022 Megan Mansfield
         Adding ability to do a single shared fit across all channels
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval(incl_GP=True)
+    model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
         flux = np.ma.copy(lc.flux)
-        model = np.ma.copy(model_lc)
+        model_lc = np.ma.copy(model_eval)
 
         if lc.share and not meta.multwhite:
             time = lc.time
 
             # Split the arrays that have lengths of the original time axis
-            flux, model = split([flux, model], meta.nints, channel)
+            flux, model_lc = split([flux, model_lc], meta.nints, channel)
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, model = split([lc.time, flux, model],
-                                      meta.nints, channel)
+            time, flux, model_lc = split([lc.time, flux, model_lc],
+                                         meta.nints, channel)
         else:
             time = lc.time
 
-        residuals = flux - model
+        residuals = flux - model_lc
         residuals = residuals[np.argsort(time)]
 
-        rms, stderr, binsz = computeRMS(residuals, binstep=1)
+        maxbins = residuals.size//10
+        if maxbins < 2:
+            maxbins = residuals.size//2
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, maxbins=maxbins,
+                                                    binstep=1)
         normfactor = 1e-6
         fig = plt.figure(
             int('52{}'.format(str(0).zfill(len(str(lc.nchannel))))),
             figsize=(8, 6))
         fig.clf()
         ax = fig.gca()
+        ax.set_xscale('log')
+        ax.set_yscale('log')
         ax.set_title(' Correlated Noise', size=16, pad=20)
         # our noise
-        ax.loglog(binsz, rms / normfactor, color='black', lw=1.5,
-                  label='Fit RMS', zorder=3)
+        ax.plot(binsz, rms/normfactor, color='black', lw=1.5,
+                label='Fit RMS', zorder=4)
+        ax.fill_between(binsz, (rms-rmslo)/normfactor, (rms+rmshi)/normfactor,
+                        facecolor='k', alpha=0.3, label='Fit RMS Uncertainty',
+                        zorder=3)
         # expected noise
-        ax.loglog(binsz, stderr / normfactor, color='red', ls='-', lw=2,
-                  label=r'Std. Err. ($1/\sqrt{N}$)', zorder=1)
+        ax.plot(binsz, stderr/normfactor, color='red', ls='-', lw=2,
+                label='Gaussian Std. Err.', zorder=1)
 
         # Format the main axes
         ax.set_xlim(0.95, binsz[-1] * 2)
@@ -425,16 +434,19 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
-    fig.clf()
-
+    
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
     old_ytick_labelsize = rcParams['ytick.labelsize']
+    old_constrained_layout = rcParams['figure.constrained_layout.use']
     rcParams['axes.formatter.useoffset'] = False
     rcParams['xtick.labelsize'] = 10
     rcParams['ytick.labelsize'] = 10
+    rcParams['figure.constrained_layout.use'] = False
+
+    fig = plt.figure(5501, figsize=(ndim*1.4, ndim*1.4))
+    fig.clf()
     fig = corner.corner(samples, fig=fig, quantiles=[0.16, 0.5, 0.84],
                         max_n_ticks=3, labels=freenames, show_titles=True,
                         title_fmt='.3', title_kwargs={"fontsize": 10},
@@ -456,6 +468,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
     rcParams['axes.formatter.useoffset'] = old_useOffset
     rcParams['xtick.labelsize'] = old_xtick_labelsize
     rcParams['ytick.labelsize'] = old_ytick_labelsize
+    rcParams['figure.constrained_layout.use'] = old_constrained_layout
 
 
 def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
@@ -636,11 +649,11 @@ def plot_res_distr(lc, model, meta, fitter):
     - February 18, 2022 Caroline Piaulet
         Created function
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval(incl_GP=True)
+    model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
         plt.figure(5302, figsize=(8, 6))
@@ -648,14 +661,14 @@ def plot_res_distr(lc, model, meta, fitter):
 
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(np.array(lc.unc_fit))
-        model = np.ma.copy(model_lc)
+        model_lc = np.ma.copy(model_eval)
 
         if lc.share or meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model = split([flux, unc, model],
-                                     meta.nints, channel)
+            flux, unc, model_lc = split([flux, unc, model_lc],
+                                        meta.nints, channel)
 
-        residuals = flux - model
+        residuals = flux - model_lc
         hist_vals = residuals/unc
         hist_vals[~np.isfinite(hist_vals)] = np.nan  # Mask out any infinities
 
@@ -702,55 +715,61 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
     - March 9, 2022 Eva-Maria Ahrer
         Adapted with shared parameters
     """
-    if type(fitter) != str:
+    if not isinstance(fitter, str):
         raise ValueError(f'Expected type str for fitter, instead received a '
                          f'{type(fitter)}')
 
-    model_lc = model.eval()
-    model_GP = model.GPeval(model_lc)
-    model_with_GP = model_lc + model_GP
+    model_eval = model.eval()
+    model_GP = model.GPeval(model_eval)
+    model_with_GP = model_eval + model_GP
 
     for i, channel in enumerate(lc.fitted_channels):
         flux = np.ma.copy(lc.flux)
         unc = np.ma.copy(lc.unc_fit)
-        model = np.ma.copy(model_with_GP)
+        model_lc = np.ma.copy(model_with_GP)
         model_GP_component = np.ma.copy(model_GP)
         color = lc.colors[i]
 
         if lc.share and not meta.multwhite:
             time = lc.time
             # Split the arrays that have lengths of the original time axis
-            flux, unc, model, model_GP_component = \
-                split([flux, unc, model, model_GP_component],
+            flux, unc, model_lc, model_GP_component = \
+                split([flux, unc, model_lc, model_GP_component],
                       meta.nints, channel)
         elif meta.multwhite:
             # Split the arrays that have lengths of the original time axis
-            time, flux, unc, model, model_GP_component = \
-                split([lc.time, flux, unc, model, model_GP_component],
+            time, flux, unc, model_lc, model_GP_component = \
+                split([lc.time, flux, unc, model_lc, model_GP_component],
                       meta.nints, channel)
         else:
             time = lc.time
 
-        residuals = flux - model
+        residuals = flux - model_lc
         fig = plt.figure(5102, figsize=(8, 6))
         plt.clf()
         ax = fig.subplots(3, 1)
         ax[0].errorbar(time, flux, yerr=unc, fmt='.', color='w',
                        ecolor=color, mec=color)
-        ax[0].plot(time, model, '.', ls='', ms=2, color='0.3',
+        ax[0].plot(time, model_lc, '.', ls='', ms=2, color='0.3',
                    zorder=10)
         if isTitle:
             ax[0].set_title(f'{meta.eventlabel} - Channel {channel} - '
                             f'{fitter}')
         ax[0].set_ylabel('Normalized Flux', size=14)
-        ax[1].plot(time, model_GP_component, '.', color=color)
-        ax[1].set_ylabel('GP component', size=14)
-        ax[1].set_xlabel(str(lc.time_units), size=14)
+        ax[0].set_xticks([])
+
+        ax[1].plot(time, model_GP_component*1e6, '.', color=color)
+        ax[1].set_ylabel('GP Term (ppm)', size=14)
+        ax[1].set_xticks([])
+
         ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
         ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
+
+        fig.get_layout_engine().set(hspace=0, h_pad=0)
+        fig.align_ylabels(ax)
 
         if lc.white:
             fname_tag = 'white'

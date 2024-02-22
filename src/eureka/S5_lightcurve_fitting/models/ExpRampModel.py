@@ -124,7 +124,7 @@ class ExpRampModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            r0, r1, r2, r3, r4, r5 = self.coeffs[c]
+            r0, r1, r2, r3, r4, r5 = self.coeffs[chan]
             lcpiece = (1+r0*np.exp(-r1*time + r2)
                        + r3*np.exp(-r4*time + r5))
             lcfinal = np.append(lcfinal, lcpiece)

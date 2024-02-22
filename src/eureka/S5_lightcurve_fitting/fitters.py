@@ -102,9 +102,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                              freenames)
 
     if not hasattr(meta, 'lsq_method'):
-        log.writelog('No lsq optimization method specified - using Nelder-Mead'
+        log.writelog('No lsq optimization method specified - using Powell'
                      ' by default.')
-        meta.lsq_method = 'Nelder-Mead'
+        meta.lsq_method = 'Powell'
     if not hasattr(meta, 'lsq_tol'):
         log.writelog('No lsq tolerance specified - using 1e-6 by default.')
         meta.lsq_tol = 1e-6
@@ -497,14 +497,16 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     AssertionError
         Unable to get enough walkers within the prior range.
     """
-    if meta.sharedp:
-        channel_key = 'shared'
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
     else:
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        channel_key = f'ch{ch_number}'
+        channel_tag = f'_ch{ch_number}'
 
     foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
-    fname = f'S5_emcee_fitparams_{channel_key}.csv'
+    fname = f'S5_emcee_fitparams{channel_tag}.csv'
     fitted_values = pd.read_csv(os.path.join(foldername, fname),
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
@@ -517,7 +519,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         log.writelog(message, mute=True)
         raise AssertionError(message)
 
-    fname = f'S5_emcee_samples_{channel_key}'
+    fname = f'S5_emcee_samples{channel_tag}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
     ds = xrio.readXR(full_fname, verbose=False)
@@ -526,7 +528,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         with h5py.File(full_fname, 'r') as hf:
             samples = hf['samples'][:]
     else:
-        samples = ds.to_array().T
+        samples = ds.to_array().T.values
     log.writelog(f'Old chain path: {full_fname}')
 
     # Initialize the walkers using samples from the old chain
@@ -1267,7 +1269,13 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         # Only divide if value is not a string (spectroscopic modes)
         bg_hw_val //= meta.expand
     # Save the S5 outputs in a human readable ecsv file
-    event_ap_bg = meta.eventlabel+"_ap"+str(spec_hw_val)+'_bg'+str(bg_hw_val)
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
+        '_bg'+str(bg_hw)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),

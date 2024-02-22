@@ -162,9 +162,17 @@ def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
         src_ypos, src_ywidth = source_pos_gauss(flux, meta, m, n, plot)
     elif meta.src_pos_type == 'hst':
         src_ypos = guess
-    else:
+    elif meta.src_pos_type == 'max':
         # brightest row for source location
         src_ypos = source_pos_median(flux, meta, m, n, plot)
+    elif not isinstance(meta.src_pos_type, str):
+        # manually specify source location
+        src_ypos = float(meta.src_pos_type)
+    else:
+        # Some unrecognized string
+        raise Exception(f'{meta.src_pos_type} is not a recognized source ' +
+                        'position type. Options: header, gaussian, weighted,' +
+                        ' max, hst, or a numeric value.')
 
     if meta.src_pos_type == 'gaussian':
         return int(round(src_ypos)), src_ypos, src_ywidth, n

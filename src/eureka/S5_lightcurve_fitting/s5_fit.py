@@ -9,13 +9,14 @@ from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import util, logedit
 from ..lib.readEPF import Parameters
+from ..version import version
 from . import lightcurve
 from . import models as m
 try:
     from . import differentiable_models as dm
 except:
     # PyMC3 hasn't been installed
-    pass
+    dm = None
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -67,6 +68,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -85,6 +87,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
     meta = me.mergeevents(meta, s4_meta)
+
+    # Check to make sure that dm is accessible if using dm models/fitters
+    if (dm is None and ('starry' in meta.fit_method or
+                        'exoplanet' in meta.fit_method)):
+        raise AssertionError(f"fit_method is set to {meta.fit_method}, but "
+                             "could not import starry and/or pymc3 related "
+                             "packages. Ensure that you have installed the "
+                             "pymc3-related packages when installing Eureka!.")
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one
@@ -105,6 +115,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -177,6 +189,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             meta.s5_logname = meta.outputdir + 'S5_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s5_logname, read=meta.s4_logname)
             log.writelog("\nStarting Stage 5: Light Curve Fitting\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -260,7 +273,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     # Load limb-darkening coefficients from a custom file
                     ld_fix_file = str(meta.ld_file_white)
                     try:
-                        ld_coeffs = np.loadtxt(ld_fix_file)
+                        ld_coeffs = np.genfromtxt(ld_fix_file)
                     except FileNotFoundError:
                         raise Exception("The limb-darkening file "
                                         f"{ld_fix_file} could not be found.")
@@ -299,20 +312,41 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.use_generate_ld:
                 # Load limb-darkening coefficients made in Stage 4
                 ld_str = meta.use_generate_ld
-                if not hasattr(lc, ld_str + '_lin'):
-                    raise Exception("Exotic-ld coefficients have not been " +
-                                    "calculated in Stage 4")
-                log.writelog("\nUsing generated limb-darkening coefficients " +
-                             f"with {ld_str} \n")
-                ld_coeffs = [lc[ld_str + '_lin'].values,
-                             lc[ld_str + '_quad'].values,
-                             lc[ld_str + '_nonlin_3para'].values,
-                             lc[ld_str + '_nonlin_4para'].values]
+                if meta.multwhite:
+                    nwhitechan = len(meta.inputdirlist) + 1
+                    lin_c1 = np.zeros((nwhitechan, 1))
+                    quad = np.zeros((nwhitechan, 2))
+                    nonlin_3 = np.zeros((nwhitechan, 3))
+                    nonlin_4 = np.zeros((nwhitechan, 4))
+                    # Load LD coefficient from each lc
+                    for p in range(nwhitechan):
+                        if not hasattr(lc_whites[p], ld_str + '_lin'):
+                            raise Exception("Exotic-ld coefficients have not" +
+                                            " been calculated in Stage 4")
+                        log.writelog("\nUsing generated limb-darkening " +
+                                     f"coefficients with {ld_str} \n")
+                        lin_c1[p] = lc_whites[p][ld_str + '_lin'].values[0]
+                        quad[p] = lc_whites[p][ld_str + '_quad'].values[0]
+                        nonlin_3[p] = lc_whites[p][ld_str + '_nonlin_3para'] \
+                            .values[0]
+                        nonlin_4[p] = lc_whites[p][ld_str + '_nonlin_4para'] \
+                            .values[0]
+                    ld_coeffs = [lin_c1, quad, nonlin_3, nonlin_4]
+                else:
+                    if not hasattr(lc, ld_str + '_lin'):
+                        raise Exception("Exotic-ld coefficients have not" +
+                                        " been calculated in Stage 4")
+                    log.writelog("\nUsing generated limb-darkening " +
+                                 f"coefficients with {ld_str} \n")
+                    ld_coeffs = [lc[ld_str + '_lin'].values,
+                                 lc[ld_str + '_quad'].values,
+                                 lc[ld_str + '_nonlin_3para'].values,
+                                 lc[ld_str + '_nonlin_4para'].values]
             elif meta.ld_file:
                 # Load limb-darkening coefficients from a custom file
                 ld_fix_file = str(meta.ld_file)
                 try:
-                    ld_coeffs = np.loadtxt(ld_fix_file)
+                    ld_coeffs = np.genfromtxt(ld_fix_file)
                 except FileNotFoundError:
                     raise Exception("The limb-darkening file " + ld_fix_file +
                                     " could not be found.")
@@ -418,7 +452,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                     "_Meta_Save"), save=[])
             else:
                 for channel in range(chanrng):
-                    log.writelog(f"\nStarting Channel {channel+1} of "
+                    log.writelog(f"\nStarting Channel {channel} of "
                                  f"{chanrng}\n")
 
                     # Get the flux and error measurements for

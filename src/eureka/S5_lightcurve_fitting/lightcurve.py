@@ -96,7 +96,7 @@ class LightCurve(m.Model):
 
         # Set the data arrays
         if unc is not None:
-            if type(unc) == float or type(unc) == np.float64:
+            if isinstance(unc, (float, np.float64)):
                 log.writelog('Warning: Only one uncertainty input, assuming '
                              'constant uncertainty.')
             elif (len(time)*self.nchannel_fitted != len(unc)
@@ -212,9 +212,9 @@ class LightCurve(m.Model):
                 nbin_plot = len(time)
             else:
                 nbin_plot = meta.nbin_plot
-            binned_time = util.binData(time, nbin_plot)
-            binned_flux = util.binData(flux, nbin_plot)
-            binned_unc = util.binData(unc, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()
@@ -232,12 +232,17 @@ class LightCurve(m.Model):
                     model.plot(ax=ax, color=next(plot_COLORS),
                                zorder=np.inf, share=self.share, chan=channel)
 
+            # Determine wavelength
+            if meta.multwhite:
+                wave = meta.wave[0]
+            else:
+                wave = meta.wave[channel]
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {channel}')
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' + 
+                         f'- {wave} microns')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)
             ax.legend(loc='best')
-            fig.tight_layout()
 
             if self.white:
                 fname_tag = 'white'
@@ -276,7 +281,6 @@ class LightCurve(m.Model):
                 ax.set_xlabel(str(self.time_units))
                 ax.set_ylabel('Normalized Flux', size=14)
                 ax.legend(loc='best')
-                fig.tight_layout()
 
                 if self.white:
                     fname_tag = 'white'

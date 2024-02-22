@@ -6,8 +6,8 @@ Installation methods
 --------------------
 
 In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
-the most recent stable release of ``Eureka!``, v0.9. The following installation instructions are written with this in mind,
-and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.9>`_.
+the most recent stable release of ``Eureka!``, v0.10. The following installation instructions are written with this in mind,
+and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.10>`_.
 Also note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
 installation instructions below as the pip dependencies fail to build on the M1 processor.
 
@@ -31,7 +31,7 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 .. code-block:: bash
 
-	git clone -b v0.9 https://github.com/kevin218/Eureka.git
+	git clone -b v0.10 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
@@ -49,7 +49,7 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v0.9'
+	pip install -e 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v0.10'
 
 Other specific branches can be installed using:
 
@@ -89,7 +89,7 @@ To install using conda:
 
 .. code-block:: bash
 
-	git clone -b v0.9 https://github.com/kevin218/Eureka.git
+	git clone -b v0.10 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	conda env create --file environment.yml --force
 	conda activate eureka
@@ -103,6 +103,14 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 	conda env update --file environment.yml --prune
 	pip install --no-deps --upgrade .
 
+
+Additional ExoTiC-LD Downloads
+------------------------------
+
+If you wish to use the ExoTiC-LD package to compute model stellar limb-darkening profile coefficients (computed in Eureka!'s Stage 4 and used in Stage 5),
+you will need to download the ExoTiC-LD stellar models and instrument throughputs. For details on how to do that, please visit ExoTiC-LD's
+`installation instructions <https://exotic-ld.readthedocs.io/en/latest/views/installation.html>`_, making sure to download the files corresponding to your
+installed ExoTiC-LD version (make sure the first number in the version number is the same, e.g. you can use the v3.1.2 files with the v3.0.0 ExoTiC-LD package version).
 
 
 CRDS Environment Variables
