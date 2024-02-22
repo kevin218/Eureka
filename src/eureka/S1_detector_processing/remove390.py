@@ -373,7 +373,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
 
 
 def run(input_model, log, meta):
-    """_summary_
+    """Run the 390 Hz noise removal step for every integration in a file.
 
     Parameters
     ----------
