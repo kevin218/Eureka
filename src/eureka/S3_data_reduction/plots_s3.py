@@ -116,8 +116,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     ax2.set_title(f"MAD = {np.round(meta.mad_s3, 0).astype(int)} ppm")
     fig1.colorbar(im1, ax=ax1, label='Normalized Flux')
     fig2.colorbar(im2, ax=ax2, label='Normalized Flux')
-    fig1.set_layout_engine('tight')
-    fig2.set_layout_engine('tight')
+
     fname1 = f'figs{os.sep}fig3101-2D_LC'+plots.figure_filetype
     fname2 = f'figs{os.sep}fig3102-2D_LC'+plots.figure_filetype
     fig1.savefig(meta.outputdir+fname1, dpi=300)
@@ -185,7 +184,7 @@ def image_and_background(data, meta, log, m):
         plt.colorbar()
         plt.ylabel('Detector Pixel Position')
         plt.xlabel('Detector Pixel Position')
-        plt.tight_layout()
+
         file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))
                                        + 1))
         int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
@@ -221,7 +220,7 @@ def drift_2D(data, meta):
             plt.plot(iscans, data.centroid_x[iscans], '.')
     plt.ylabel(f'Drift Along x ({data.centroid_x.units})')
     plt.xlabel('Integration Number')
-    plt.tight_layout()
+
     fname = f'figs{os.sep}fig3106_Drift2D{plots.figure_filetype}'
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
@@ -259,7 +258,7 @@ def optimal_spectrum(data, meta, n, m):
     plt.ylabel('Flux')
     plt.xlabel('Detector Pixel Position')
     plt.legend(loc='best')
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3302_file{file_number}_int{int_number}' +
@@ -327,7 +326,7 @@ def source_position(meta, x_dim, pos_max, m, n,
     plt.ylabel('Row Flux')
     plt.xlabel('Row Pixel Position')
     plt.legend()
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3103_file{file_number}_int{int_number}' +
@@ -371,7 +370,7 @@ def profile(meta, profile, submask, n, m):
     plt.colorbar()
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3303_file{file_number}_int{int_number}_Profile' +
@@ -450,7 +449,7 @@ def driftypos(data, meta, m):
     plt.plot(np.arange(meta.n_int), data["centroid_y"].values, '.')
     plt.ylabel('Spectrum spatial profile center')
     plt.xlabel('Integration Number')
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3104_file{file_number}_DriftYPos' +
              plots.figure_filetype)
@@ -483,7 +482,7 @@ def driftywidth(data, meta, m):
     plt.plot(np.arange(meta.n_int), data["centroid_sy"].values, '.')
     plt.ylabel('Spectrum spatial profile width')
     plt.xlabel('Integration Number')
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3105_file{file_number}_DriftYWidth' +
              plots.figure_filetype)
@@ -567,16 +566,10 @@ def residualBackground(data, meta, m, vmin=None, vmax=None):
     a1.axes.set_xlim(vmin, vmax)
     a1.axes.set_ylim(ymin, ymax)
     a1.axes.set_yticklabels([])
-    # a1.yaxis.set_visible(False)
     a1.axes.set_xticks(np.linspace(vmin, vmax, 3))
     fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(vmin, vmax),
                  cmap=cmap), ax=a1)
-    fig.subplots_adjust(top=0.97,
-                        bottom=0.155,
-                        left=0.08,
-                        right=0.925,
-                        hspace=0.2,
-                        wspace=0.08)
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3304_file{file_number}' +
              '_ResidualBG'+plots.figure_filetype)
@@ -620,7 +613,6 @@ def curvature(meta, column_coms, smooth_coms, int_coms, m):
     plt.legend()
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
-    plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3107_file{file_number}_Curvature' +
@@ -663,7 +655,6 @@ def median_frame(data, meta, m):
     plt.colorbar()
     plt.ylabel('Detector Pixel Position')
     plt.xlabel('Detector Pixel Position')
-    plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     fname = (f'figs{os.sep}fig3308_file{file_number}_MedianFrame' +
@@ -699,7 +690,7 @@ def phot_lc(data, meta):
     plt.errorbar(data.time, data['aplev'], yerr=data['aperr'], c='k', fmt='.')
     plt.ylabel('Flux')
     plt.xlabel('Time')
-    plt.tight_layout()
+
     fname = (f'figs{os.sep}fig3108-1D_LC' + plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, dpi=300)
     if not meta.hide_plots:
@@ -733,7 +724,7 @@ def phot_bg(data, meta):
                      c='k', fmt='.')
         plt.ylabel('Flux')
         plt.xlabel('Time')
-        plt.tight_layout()
+
         fname = (f'figs{os.sep}fig3305-1D_LC_BG' + plots.figure_filetype)
         plt.savefig(meta.outputdir+fname, dpi=300)
         if not meta.hide_plots:
@@ -804,10 +795,9 @@ def phot_centroid(data, meta):
     ax[3].set_xlabel('Time')
     ax[3].legend(bbox_to_anchor=(1.03, 0.5), loc=6)
 
-    fig.subplots_adjust(hspace=0.02)
-
-    plt.tight_layout()
+    fig.get_layout_engine().set(hspace=0.02)
     fig.align_ylabels()
+
     fname = (f'figs{os.sep}fig3109-Centroid' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
@@ -843,7 +833,7 @@ def phot_npix(data, meta):
     plt.plot(range(len(data.nskypix)), data.nskypix)
     plt.ylabel('nskypix')
     plt.xlabel('Time')
-    plt.tight_layout()
+
     fname = (f'figs{os.sep}fig3502_aperture_size' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
     if not meta.hide_plots:
@@ -922,8 +912,6 @@ def phot_centroid_fgc(img, x, y, sx, sy, i, m, meta):
 
     # Last plot in (0,1) not used
     ax[0, 1].set_axis_off()
-
-    plt.tight_layout()
 
     # Naming figure
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
@@ -1013,9 +1001,7 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylim(0, flux.shape[0])
     plt.xlabel('x pixels')
     plt.ylabel('y pixels')
-
     plt.legend()
-    plt.tight_layout()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
@@ -1060,9 +1046,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylim(ylim_min, ylim_max)
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
-
         plt.legend()
-        plt.tight_layout()
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
                  f'_2D_Frame_Zoom' + plots.figure_filetype)
@@ -1116,14 +1100,13 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     ax[1].set_xlabel('x pixels')
     ax[1].set_ylabel('y pixels')
 
-    plt.subplots_adjust(hspace=0.3)
-
+    fig.get_layout_engine().set(hspace=0.3)
     cbar = fig.colorbar(im1, ax=ax)
     cbar.ax.set_ylabel('Flux (electrons)')
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fig.suptitle((f'Segment {file_number}, Integration {int_number}'), y=0.99)
-
     fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}'
              f'_2D_Frame_OneOverF' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -1161,7 +1144,7 @@ def phot_2d_frame_diff(data, meta):
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
         plt.colorbar(label='Delta Flux (electrons)')
-        plt.tight_layout()
+
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int)) + 1))
         plt.suptitle((f'Integration {int_number}'), y=0.99)
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff'
@@ -1207,7 +1190,7 @@ def stddev_profile(meta, n, m, stdevs, p7thresh):
     plt.ylabel('Relative Pixel Position')
     plt.xlabel('Relative Pixel Position')
     plt.colorbar()
-    plt.tight_layout()
+
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = (f'figs{os.sep}fig3506_file{file_number}_int{int_number}' +
@@ -1313,15 +1296,11 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         file_number = str(m).zfill(int(np.floor(np.log10(
             meta.num_data_files))+1))
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-
-        # Define names of files and labels
         plt.suptitle((f'Batch {file_number}, Integration {int_number}'),
                      y=0.99)
         fname = (f'figs{os.sep}tilt_events{os.sep}'
                  f'fig3507a_file{file_number}_int{int_number}'
                  f'_tilt_events' + plots.figure_filetype)
-        plt.tight_layout()
-
         # Save figure
         plt.savefig(meta.outputdir + fname, dpi=250, bbox_inches='tight')
         if not meta.hide_plots:

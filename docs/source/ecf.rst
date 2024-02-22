@@ -29,9 +29,9 @@ ramp_fit_algorithm
 Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
-ramp_fit_max_cores
+maximum_cores
 ''''''''''''''''''
-Fraction of processor cores to use to compute the ramp fits, options are ``none``, ``quarter``, ``half``, ``all``.
+Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
 
 skip_*
@@ -767,11 +767,11 @@ Used by exotic-ld if compute_ld=True. The surface gravity in log g.
 
 exotic_ld_direc
 '''''''''''''''
-Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, download at https://zenodo.org/record/6344946.
+Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, available for download at https://zenodo.org/doi/10.5281/zenodo.6047317.
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
+Used by exotic-ld if compute_ld=True. You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
 
 exotic_ld_file
 ''''''''''''''
