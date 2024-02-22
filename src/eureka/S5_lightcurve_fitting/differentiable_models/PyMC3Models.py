@@ -305,20 +305,6 @@ class CompositePyMC3Model(PyMC3Model):
 
         # Setup PyMC3 model parameters
         with self.model:
-
-            # Check that Ms, per, and a are compatible
-            a = (self.parameters.a.value*self.parameters.Rs.value
-                 * const.R_sun.value)
-            p = self.parameters.per.value*(24.*3600.)
-            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
-                  - self.parameters.Ms.value)
-            if Mp <= 0:
-                raise AssertionError('The input Ms, per, and a values are '
-                                     'incompatible and imply a negative '
-                                     'planetary mass. As a result, the '
-                                     'starry model is going to crash. '
-                                     'You should likely reduce your Ms value.')
-
             for parname in self.paramtitles:
                 param = getattr(self.parameters, parname)
                 if param.ptype in ['independent', 'fixed']:
