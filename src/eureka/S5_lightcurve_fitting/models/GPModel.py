@@ -1,7 +1,7 @@
 import numpy as np
 import george
 from george import kernels
-import celerite2 as celerite
+import celerite2
 
 from .Model import Model
 from ..likelihood import update_uncertainty
@@ -67,11 +67,11 @@ class GPModel(Model):
 
         if self.gp_code_name == 'celerite':
             if self.nkernels > 1:
-                raise AssertionError('Celerite cannot compute multi-'
+                raise AssertionError('Celerite2 cannot compute multi-'
                                      'dimensional GPs. Please choose a '
                                      'different GP code')
             elif self.kernel_types[0] != 'Matern32':
-                raise AssertionError('Our celerite implementation currently '
+                raise AssertionError('Our celerite2 implementation currently '
                                      'only supports a Matern32 kernel.')
 
         # Update coefficients
@@ -121,7 +121,7 @@ class GPModel(Model):
             The rest of the current model evaluated.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
-        gp : celerite.GP, george.GP, or tinygp.GaussianProcess; optional
+        gp : celerite2.GP, george.GP, or tinygp.GaussianProcess; optional
             The current GP object.
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -236,7 +236,7 @@ class GPModel(Model):
 
         Returns
         -------
-        celerite.GP, george.GP, or tinygp.GaussianProcess
+        celerite2.GP, george.GP, or tinygp.GaussianProcess
             The GP object to use for this fit.
         """
         if self.kernel_inputs is None:
@@ -255,7 +255,7 @@ class GPModel(Model):
                 solver = None
             gp = george.GP(kernel, mean=0, fit_mean=False, solver=solver)
         elif self.gp_code_name == 'celerite':
-            gp = celerite.GaussianProcess(kernel, mean=0, fit_mean=False)
+            gp = celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
         elif self.gp_code_name == 'tinygp':
             if self.nchannel_fitted > 1:
                 chan = self.fitted_channels[c]
@@ -281,12 +281,13 @@ class GPModel(Model):
         Returns
         -------
         kernel
-            The requested george, celerite, or tinygp kernel.
+            The requested george, celerite2, or tinygp kernel.
 
         Raises
         ------
         AssertionError
-            Celerite currently only supports a Matern32 kernel.
+            george and tinygp currently only support the Matern32, ExpSquared,
+            RationalQuadratic, and Exp kernels.
         """
         if self.gp_code_name == 'george':
             # get metric and amplitude for the current kernel and channel
@@ -315,9 +316,9 @@ class GPModel(Model):
             amp = np.exp(self.coeffs[c, k, 0])
             metric = np.exp(self.coeffs[c, k, 1])
 
-            kernel = celerite.terms.Matern32Term(sigma=1, rho=metric)
+            kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
             # Setting the amplitude
-            kernel *= celerite.terms.RealTerm(a=amp, c=0)
+            kernel *= celerite2.terms.RealTerm(a=amp, c=0)
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
@@ -353,7 +354,7 @@ class GPModel(Model):
         Returns
         -------
         float
-            log likelihood of the GP evaluated by george/tinygp/celerite
+            log likelihood of the GP evaluated by george/tinygp/celerite2
         """
         if channel is None:
             nchan = self.nchannel_fitted

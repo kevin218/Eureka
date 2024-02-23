@@ -701,6 +701,6 @@ class KeplerOrbit(object):
         axes[2].set_xlim(-lim, lim)
         axes[2].set_ylim(-lim, lim)
 
-        fig.subplots_adjust(hspace=0.35)
+        fig.get_layout_engine().set(hspace=0.35)
 
         return fig

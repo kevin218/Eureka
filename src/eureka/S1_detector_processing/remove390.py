@@ -5,12 +5,12 @@ from tqdm import tqdm
 import multiprocessing as mp
 
 from astropy.stats import sigma_clip
-from astropy.convolution import Box1DKernel, convolve
 
 from scipy.signal import lombscargle
 from scipy.optimize import minimize
 
 from ..lib import plots
+from ..lib.smooth import medfilt
 
 
 def computePixelTimes(integ, grp, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE,
@@ -68,17 +68,6 @@ def computePixelTimes(integ, grp, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE,
     return pixel_times
 
 
-def smoothData(tempdata, boundary='extend', box_width=100):
-    kernel = Box1DKernel(box_width)
-
-    # Compute the moving mean
-    bound_val = np.ma.median(tempdata)  # Only used if boundary=='fill'
-    smoothed_data = convolve(tempdata, kernel, boundary=boundary,
-                             fill_value=bound_val)
-    
-    return smoothed_data
-
-
 def computeBG(cleaned, smooth=True):
     """Compute the background in the group-level data.
 
@@ -97,8 +86,9 @@ def computeBG(cleaned, smooth=True):
 
     Returns
     -------
-    _type_
-        _description_
+    bg : np.ma.MaskedArray
+        A masked array containing the computed background of shape
+        (cleaned.shape[0], 1).
     """
     bg = cleaned[:, 11:61]
     bg = sigma_clip(bg, sigma=3)
@@ -106,8 +96,7 @@ def computeBG(cleaned, smooth=True):
     bg = sigma_clip(bg, sigma=3, axis=0)
     bg = np.ma.median(bg, axis=1)
     if smooth:
-        bg = smoothData(bg, box_width=10, boundary='wrap')
-        bg = smoothData(bg, box_width=50, boundary='extend')
+        bg = medfilt(bg, 51)
     bg = bg.reshape((-1, 1))
     
     return bg
@@ -128,7 +117,7 @@ def model390(p0, x):
     np.array
         The predicted 390Hz noise signal as a function of time.
     """
-    Phase = p0
+    Phase = p0[0]
     Phase1 = 0.46983885+Phase
     Phase2 = 0.42408343+Phase
     Phase4 = 0.24882948+Phase
@@ -161,16 +150,11 @@ def minfunc(p0, x, y):
         The sum of the squares of the differences between the data and the
         model.
     """
-    Phase = p0
+    Phase = p0[0]
     if -0.5 <= Phase < 0.5:
         return np.sum((y-model390(p0, x))**2)
     else:
         return 1e50
-
-
-def remove_390(p0, x, y):
-    res = minimize(minfunc, p0, args=(x, y), method='Powell')
-    return res.x
 
 
 def get_pgram(data, time):
@@ -204,7 +188,7 @@ def get_pgram(data, time):
 
 
 def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
-              meta, returnp1=False, prnt=False, plot=False):
+              meta, returnp1=False, prnt=False, isplots_S1=1):
     """Run the 390Hz noise removal on a single integration.
 
     Parameters
@@ -234,10 +218,11 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
     prnt : bool; optional
         If True, print the fitted phase of the 390Hz signal (useful when
         debugging). False by default.
-    plot : bool; optional
-        If True, plot some figures showing the fitting of the 390Hz noise
-        signal and the changes to the L-S periodogram (useful when
-        debugging). False by default.
+    isplots_S1 : int; optional
+        Sets the plotting verbosity of the function. If >=3, plot some figures
+        showing the fitting of the 390Hz noise signal and the changes to the
+        L-S periodogram (useful when debugging). If <3, no plots are made.
+        By default, set to 1.
 
     Returns
     -------
@@ -276,7 +261,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         bg = computeBG(cleaned[grp], smooth=True)
         cleaned[grp] -= bg
     
-        if plot:
+        if isplots_S1 >= 3:
             pgram, freqs = get_pgram(cleaned[grp], pixel_times[grp])
             pgrams.append(pgram)
     
@@ -284,15 +269,16 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
     x = pixel_times.flatten()
     y = cleaned.flatten()
 
-    p0 = [0, ]
+    p0 = [0., ]
     # Fit the 390 Hz noise
-    p1 = remove_390(p0, x, y)
+    res = minimize(minfunc, p0, args=(x, y), method='Powell')
+    p1 = res.x
     if prnt:
         print(p1)
 
-    if plot and meta.m == 0 and integ < meta.nplots:
+    if isplots_S1 >= 3 and meta.m == 0 and integ < meta.nplots:
         # Show the fit to a small chunk of data
-        plt.figure(1501)
+        plt.figure(1301)
         plt.clf()
         
         plt.plot(x, y, '.', label='Raw Data')
@@ -302,12 +288,14 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         ymax = np.ma.max(sigma_clip(y, sigma=5))
         plt.ylim(ymin*0.99, ymax*1.1)
         plt.legend(loc='best')
+        plt.ylabel('Mean-Subtracted Pixel Counts (DN)')
+        plt.xlabel('Pixel Time Stamp (s)')
 
         file_number = str(meta.m).zfill(
             int(np.floor(np.log10(meta.num_data_files))+1))
         int_number = str(integ).zfill(
             int(np.floor(np.log10(meta.n_int))+1))
-        fname = f'figs{os.sep}fig1501_file{file_number}_int{int_number}'
+        fname = f'figs{os.sep}fig1301_file{file_number}_int{int_number}'
         fname += '_390HzFit'
         fname += plots.figure_filetype
         plt.savefig(meta.outputdir+fname, dpi=300, bbox_inches='tight')
@@ -336,7 +324,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         if meta.grouplevel_bg:
             cleaned_no390[grp+1:] -= bg
     
-        if (plot and meta.m == 0 and integ < meta.nplots and
+        if (isplots_S1 >= 3 and meta.m == 0 and integ < meta.nplots and
                 grp < meta.nplots):
             # Demonstrate the improvement in the noise power spectrum
             if meta.grouplevel_bg:
@@ -344,7 +332,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
             pgram2, freqs = get_pgram(cleaned_no390_nostar[grp],
                                       pixel_times[grp])
 
-            plt.figure(1502)
+            plt.figure(1302)
             plt.clf()
 
             plt.semilogy(freqs, pgrams[grp], c='r', label='Raw')
@@ -372,7 +360,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
                 int(np.floor(np.log10(meta.n_int))+1))
             grp_number = str(grp+1).zfill(
                 int(np.floor(np.log10(images2.shape[0]-1))+1))
-            fname = f'figs{os.sep}fig1502_file{file_number}_int{int_number}'
+            fname = f'figs{os.sep}fig1302_file{file_number}_int{int_number}'
             fname += f'_grp{grp_number}_LS_Periodogram'+plots.figure_filetype
             plt.savefig(meta.outputdir+fname, dpi=300, bbox_inches='tight')
             if not meta.hide_plots:
@@ -385,7 +373,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
 
 
 def run(input_model, log, meta):
-    """_summary_
+    """Run the 390 Hz noise removal step for every integration in a file.
 
     Parameters
     ----------
@@ -426,7 +414,7 @@ def run(input_model, log, meta):
                 input_model.data[integ],
                 input_model.groupdq[integ] % 2 == 1,
                 integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
-                meta, plot=(meta.isplots_S1 >= 5)))
+                meta, isplots_S1=meta.isplots_S1))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
@@ -435,7 +423,7 @@ def run(input_model, log, meta):
                                        input_model.groupdq[integ] % 2 == 1,
                                        integ, SUBSIZE2, SUBSIZE1, NGROUPS,
                                        TSAMPLE, TGROUP, meta),
-                                 kwds={'plot': (meta.isplots_S1 >= 5)},
+                                 kwds={'isplots_S1': meta.isplots_S1},
                                  callback=writeImage)
                 for integ in range(input_model.data.shape[0])]
         pool.close()

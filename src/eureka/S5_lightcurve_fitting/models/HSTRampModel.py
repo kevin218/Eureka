@@ -35,7 +35,7 @@ class HSTRampModel(Model):
             self.parameters = Parameters(**params)
 
         # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 6))
+        self.coeffs = np.zeros((self.nchannel_fitted, 7))
         self._parse_coeffs()
 
     @property
@@ -76,7 +76,7 @@ class HSTRampModel(Model):
             else:
                 chan = 0
 
-            for i in range(6):
+            for i in range(7):
                 try:
                     if chan == 0:
                         self.coeffs[c, i] = self.parameters.dict[f'h{i}'][0]
@@ -123,10 +123,10 @@ class HSTRampModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
             
-            h0, h1, h2, h3, h4, h5 = self.coeffs[c]
+            h0, h1, h2, h3, h4, h5, h6 = self.coeffs[c]
             # Batch time is relative to the start of each HST orbit
             # h5 is the orbital period of HST (~96 minutes)
-            self.time_batch = self.time_local % h5
+            self.time_batch = (self.time_local-h6) % h5
             lcpiece = (1+h0*np.exp(-h1*self.time_batch + h2)
                        + h3*self.time_batch + h4*self.time_batch**2)
             lcfinal = np.append(lcfinal, lcpiece)

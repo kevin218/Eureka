@@ -4,17 +4,18 @@
 
 suffix              uncal
 
+maximum_cores       'half'  #Options are 'none', quarter', 'half','all'
+
 # Control ramp fitting method
 ramp_fit_algorithm  'default'   #Options are 'default', 'mean', or 'differenced'
-ramp_fit_max_cores  'none'  #Options are 'none', quarter', 'half','all'
 
 # Pipeline stages
 skip_group_scale    False
 skip_dq_init        False
 skip_saturation     False
 skip_ipc            True    #Skipped by default for all instruments
-skip_firstframe     True    #Skipped by default for MIRI TSO
-skip_lastframe      True
+skip_firstframe     False   #Typically best to set False for MIRI TSO, but you should experiment
+skip_lastframe      False   #Typically best to set False for MIRI TSO, but you should experiment
 skip_refpix         False
 skip_linearity      False
 skip_rscd           True    #Skipped by default for MIRI TSO

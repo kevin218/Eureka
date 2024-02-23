@@ -138,6 +138,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
 
+    log.closelog()
+
     return meta
 
 
@@ -202,6 +204,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
             self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
+        self.jump.maximum_cores = meta.maximum_cores
         if (hasattr(meta, 'jump_rejection_threshold') and
                 isinstance(meta.jump_rejection_threshold, float)):
             self.jump.rejection_threshold = meta.jump_rejection_threshold
@@ -233,7 +236,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
-        self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
+        self.ramp_fit.maximum_cores = meta.maximum_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
         self.ramp_fit.s1_meta = meta
         self.ramp_fit.s1_log = log

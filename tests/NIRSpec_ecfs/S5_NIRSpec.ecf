@@ -7,19 +7,19 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./S5_fit_par.epf # What fitting ecf do you want to use?
 verbose         False # If True, more details will be printed about steps
 fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr, polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr, polynomial, GP] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
 manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
-use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None. For exotic-ld, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
-ld_file          None  # Fully qualified path to the location of a limb darkening file that you want to use
-ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
+use_generate_ld None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None. For exotic-ld, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
+ld_file         None  # Fully qualified path to the location of a limb darkening file that you want to use
+ld_file_white   None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
 
 #lsq
-lsq_method      'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
+lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
 lsq_tol         1e-6 # The tolerance for the scipy.optimize.minimize optimization method
 
 #mcmc

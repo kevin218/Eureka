@@ -38,6 +38,9 @@ u2			0.1				'fixed'			0				1				U
 # Drift model variables (xpos, ypos, xwidth, ywidth)
 # --------------------
 c0			1.009			'free'			0.95			1.05			U
+# GP Parameters
+A			-15				'free'			-25				-5			U
+m			-4				'free'			-8				0			U
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
