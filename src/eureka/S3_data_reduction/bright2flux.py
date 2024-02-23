@@ -97,8 +97,8 @@ def dn2electrons(data, meta, log):
                          mute=(not meta.verbose))
         else:
             # Retrieve the required reference files if not manually specified
-            log.writelog('  Automatically getting reference files to reverse the '
-                         'PHOTOM step...', mute=(not meta.verbose))
+            log.writelog('  Automatically getting reference files to reverse'
+                         ' the PHOTOM step...', mute=(not meta.verbose))
             if data.attrs['mhdr']['TELESCOP'] != 'JWST':
                 message = ('Error: Currently unable to automatically download '
                            'reference files for non-JWST observations!')
