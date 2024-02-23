@@ -91,6 +91,10 @@ dq_sat_columns
 ''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
+remove_390hz
+''''''''''''
+Boolean, an experimental step which removes the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM group-level data. This step can be quite time consuming, and early testing suggests that it has little impact on the final spectra when also doing row-by-row background subtraction per group in Stage 1 or per integration in Stage 3.
+
 grouplevel_bg
 '''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
