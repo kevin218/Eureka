@@ -410,7 +410,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     p0 = [np.ma.max(med_row), pos_max, sigma0, np.ma.median(med_row)]
 
     # Fit
-    popt, pcov = curve_fit(gauss, y_pixels, med_row, p0)
+    popt, pcov = curve_fit(gauss, y_pixels, med_row, p0, maxfev=10000)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 1 and plot:

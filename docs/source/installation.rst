@@ -104,6 +104,14 @@ To update your ``Eureka!`` installation to the most recent version, you can do t
 	pip install --no-deps --upgrade .
 
 
+Additional ExoTiC-LD Downloads
+------------------------------
+
+If you wish to use the ExoTiC-LD package to compute model stellar limb-darkening profile coefficients (computed in Eureka!'s Stage 4 and used in Stage 5),
+you will need to download the ExoTiC-LD stellar models and instrument throughputs. For details on how to do that, please visit ExoTiC-LD's
+`installation instructions <https://exotic-ld.readthedocs.io/en/latest/views/installation.html>`_, making sure to download the files corresponding to your
+installed ExoTiC-LD version (make sure the first number in the version number is the same, e.g. you can use the v3.1.2 files with the v3.0.0 ExoTiC-LD package version).
+
 
 CRDS Environment Variables
 --------------------------
