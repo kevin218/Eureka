@@ -497,14 +497,16 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     AssertionError
         Unable to get enough walkers within the prior range.
     """
-    if meta.sharedp:
-        channel_key = 'shared'
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
     else:
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        channel_key = f'ch{ch_number}'
+        channel_tag = f'_ch{ch_number}'
 
     foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
-    fname = f'S5_emcee_fitparams_{channel_key}.csv'
+    fname = f'S5_emcee_fitparams{channel_tag}.csv'
     fitted_values = pd.read_csv(os.path.join(foldername, fname),
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
@@ -517,7 +519,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         log.writelog(message, mute=True)
         raise AssertionError(message)
 
-    fname = f'S5_emcee_samples_{channel_key}'
+    fname = f'S5_emcee_samples{channel_tag}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
     ds = xrio.readXR(full_fname, verbose=False)

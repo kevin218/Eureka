@@ -91,6 +91,10 @@ dq_sat_columns
 ''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
+remove_390hz
+''''''''''''
+Boolean, an experimental step which removes the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM group-level data. This step can be quite time consuming, and early testing suggests that it has little impact on the final spectra when also doing row-by-row background subtraction per group in Stage 1 or per integration in Stage 3.
+
 grouplevel_bg
 '''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
@@ -108,6 +112,10 @@ bg_y2
 The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
 
 bg_deg
+''''''
+See Stage 3 inputs
+
+bg_method
 ''''''
 See Stage 3 inputs
 
@@ -472,6 +480,10 @@ Possible values:
 5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
+bg_method
+''''''
+Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
+
 bg_disp
 '''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
@@ -763,11 +775,11 @@ Used by exotic-ld if compute_ld=True. The surface gravity in log g.
 
 exotic_ld_direc
 '''''''''''''''
-Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, download at https://zenodo.org/record/6344946.
+Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, available for download at https://zenodo.org/doi/10.5281/zenodo.6047317.
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. 1D or 3D model grid.
+Used by exotic-ld if compute_ld=True. You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
 
 exotic_ld_file
 ''''''''''''''
@@ -1038,13 +1050,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
          This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
          If not provided for batman_ecl fits, the finite speed of light will not be accounted for.
-         Fits with the starry model **require** that ``Rs`` be provided as starry always accounts for light travel time. This parameter should be set to ``fixed``
+         Fits with the starry model **require** that ``Rs`` be provided as starry always uses physical units. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Rs``.
-      - ``Ms`` - the host star's mass in units of solar masses.
-
-         This parameter is **required** for fits with the starry model as starry currently requires the parameter to be provided. In practice, the stellar mass is not
-         actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
-         unless you really want to marginalize over ``Ms``.
    - Sinusoidal Phase Curve Parameters
       The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
