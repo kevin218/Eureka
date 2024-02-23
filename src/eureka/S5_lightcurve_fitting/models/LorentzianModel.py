@@ -131,10 +131,10 @@ class LorentzianModel(Model):
                 # Unresolvable situation
                 raise Exception("Cannot determine the type of Lorentzian model "
                                 "to fit.  Use one of the following options: "
-                                "1. lor_amp, lor_hwhf; "
-                                "2. lor_amp, lor_hwhf_lhs, lor_hwhf_rhs; "
-                                "3. lor_amp_lhs, lor_amp_rhs, lor_hwhf_lhs, "
-                                "lor_hwhf_rhs.")
+                                "1. lor_amp, lor_hwhm; "
+                                "2. lor_amp, lor_hwhm_lhs, lor_hwhm_rhs; "
+                                "3. lor_amp_lhs, lor_amp_rhs, lor_hwhm_lhs, "
+                                "lor_hwhm_rhs.")
 
             lcfinal = np.append(lcfinal, lorentzian)
 

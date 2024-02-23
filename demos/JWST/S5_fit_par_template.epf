@@ -9,7 +9,7 @@
 #-------------------------------------------------------------------------------------------------------
 
 # ------------------
-# ** BATMAN/Starry Planet Parameters **
+# ** BATMAN/POET/Starry Planet Parameters **
 # ------------------
 rp          0.148           'free'          0.15        0.1         N
 per         4.055259        'free'          4.055259     1e-5       N
@@ -23,34 +23,25 @@ w           90.             'fixed'         0            180        U
 # t_secondary 0.25            'free'          0.25         0.05       N  
 # Rs          0.12            'independent'
 
-# ------------------
-# ** POET Planet parameters **
-# ------------------
-# rprs        0.058           'free'          0.058       0.02        N
-# fpfs        0.008           'free'          0           0.5         U
-# midpt       0.2500          'free'          0.25         0.05       N
-# time_offset 60139           'independent'
-# i           89.8            'free'          89.81        0.25       N
-# ars         111.57          'free'          110.903      10         N
-# period      18.772866       'fixed'         
-# Rs          0.12            'independent'
-# e           0               'fixed'
-# omega       0               'fixed'
-# ecl_midpt   0.25            'free'          0.25         0.05       N
-
 # ----------------------
 # ** Phase Curve Parameters **
 # ----------------------
+# sinusoid_pc
 # AmpCos1      0.4           'free'         0            1            U
 # AmpSin1      0.01          'free'         -1           1            U
 # AmpCos2      0.01          'free'         -1           1            U
 # AmpSin2      0.01          'free'         -1           1            U
+# poet_pc
+# cos1_amp     0.4           'free'         0            1            U
+# cos1_off     0.00          'free'         -1           1            U
+# cos2_amp     0.1           'free'         0            1            U
+# cos2_off     0.00          'free'         -1           1            U
 
 # -------------------------
 # ** Limb darkening parameters **
 # For BATMAN, choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential','3-parameter', '4-parameter']
 # For POET, choose limb_dark from ['uniform', 'linear', 'quadratic', '4-parameter']
-# When using generated limb-darkening coefficients from exotic-ld choose from ['linear', 'quadratic', '3-parameter', '4-parameter']
+# When using generated limb-darkening coefficients from exotic-ld or spam choose from ['linear', 'quadratic', '3-parameter', '4-parameter']
 # -------------------------
 limb_dark   'kipping2013'   'independent'
 u1          0.59            'free'          0           1           U

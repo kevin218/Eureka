@@ -26,7 +26,7 @@ old_fitparams   None # filename relative to topdir that points to a fitparams cs
 
 #lsq
 lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
-lsq_tol         1e-6    # The tolerance for the scipy.optimize.minimize optimization method
+lsq_tol         1e-7    # The tolerance for the scipy.optimize.minimize optimization method
 lsq_maxiter     None    # Maximum number of iterations to perform. Depending on the method each iteration may use several function evaluations. Set to None to use the default value
 
 #mcmc
