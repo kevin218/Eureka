@@ -2,7 +2,6 @@ import os
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import astropy.constants as const
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
