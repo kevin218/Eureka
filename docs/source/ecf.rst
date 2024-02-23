@@ -115,6 +115,10 @@ bg_deg
 ''''''
 See Stage 3 inputs
 
+bg_method
+''''''
+See Stage 3 inputs
+
 p3thresh
 ''''''''
 See Stage 3 inputs
@@ -475,6 +479,10 @@ Possible values:
 4. Calculate the MAD (Mean Absolute Deviation) of the greatest background outlier.
 5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
+
+bg_method
+''''''
+Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
 bg_disp
 '''''''

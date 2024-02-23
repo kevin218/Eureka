@@ -50,6 +50,7 @@ ncpu                6
 bg_y1               6
 bg_y2               26
 bg_deg              0
+bg_method           std     #Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
 p3thresh            5
 bg_disp             False   # Row-by-row BG subtraction (only useful for NIRCam)
 bg_x1               None    # Left edge of exclusion region for row-by-row BG subtraction
