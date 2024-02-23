@@ -91,6 +91,10 @@ dq_sat_columns
 ''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
+remove_390hz
+''''''''''''
+Boolean, an experimental step which removes the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM group-level data. This step can be quite time consuming, and early testing suggests that it has little impact on the final spectra when also doing row-by-row background subtraction per group in Stage 1 or per integration in Stage 3.
+
 grouplevel_bg
 '''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
@@ -1046,13 +1050,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
          This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
          If not provided for batman_ecl fits, the finite speed of light will not be accounted for.
-         Fits with the starry model **require** that ``Rs`` be provided as starry always accounts for light travel time. This parameter should be set to ``fixed``
+         Fits with the starry model **require** that ``Rs`` be provided as starry always uses physical units. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Rs``.
-      - ``Ms`` - the host star's mass in units of solar masses.
-
-         This parameter is **required** for fits with the starry model as starry currently requires the parameter to be provided. In practice, the stellar mass is not
-         actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
-         unless you really want to marginalize over ``Ms``.
    - POET Transit and Eclipse Parameters
       - ``rprs`` - planet-to-star radius ratio, for the transit models.
       - ``fprs`` - planet-to-star flux ratio, for the eclipse models.
