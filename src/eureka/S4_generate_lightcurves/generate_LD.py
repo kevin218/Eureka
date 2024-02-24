@@ -81,8 +81,29 @@ def exotic_ld(meta, spec, log, white=False):
         wavelength_range *= 1e4
 
     # compute stellar limb darkening model
-    sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
-                               meta.exotic_ld_grid, meta.exotic_ld_direc)
+    if hasattr(meta, "custom_si_grid") and meta.exotic_ld_grid == 'custom':
+        # read the wavelengths, Mus, and intensity grid from file
+        # 1st column is the wavelengths. Skip the header and row of Mus
+        # also convert to angstrom! 
+        s_wvs = (np.genfromtxt(meta.custom_si_grid, 
+                               skip_header=2, usecols=[0]).T)*1e4
+        # 1st row after the header is the Mus. Skip header, read 1 line
+        # file has increasing Mus, Exotic requires decreasing, so flip
+        s_mus = np.flip(np.genfromtxt(meta.custom_si_grid, 
+                                      skip_header=1, max_rows=1))
+        # Now get the rest of the file. Skip header and row of Mus.
+        # file has increasing Mus, Exotic requires decreasing, so flip
+        custom_si = np.flip(np.genfromtxt(meta.custom_si_grid, 
+                                          skip_header=2)[:, 1:], axis=1)
+        
+        sld = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
+                                   ld_model="custom",
+                                   custom_wavelengths=s_wvs,
+                                   custom_mus=s_mus,
+                                   custom_stellar_model=custom_si)
+    else:
+        sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
+                                   meta.exotic_ld_grid, meta.exotic_ld_direc)
 
     lin_c1 = np.zeros((meta.nspecchan, 1))
     quad = np.zeros((meta.nspecchan, 2))
