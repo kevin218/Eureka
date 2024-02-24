@@ -788,7 +788,7 @@ Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput f
 
 custom_si_grid
 ''''''''''''''
-if exotic_ld_grid = custom, supply the path to your stellar intensity grid here
+If exotic_ld_grid = custom, supply the fully qualified path to your stellar intensity grid file here.
 
 isplots_S4
 ''''''''''
