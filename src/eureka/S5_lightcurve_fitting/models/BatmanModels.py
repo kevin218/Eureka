@@ -16,7 +16,18 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid):
+    def __init__(self, model, pid=0):
+        """ 
+        Set attributes to PlanetParams object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names 
+            and their current values.
+        pid : int; optional
+            Planet ID, default is 0.
+        """
         # Planet ID
         self.pid = pid       
         # Set transit/eclipse parameters
@@ -25,7 +36,7 @@ class PlanetParams():
         self.inc = None
         self.a = None
         self.per = None
-        self.ecc = None
+        self.ecc = 0.
         self.w = None
         self.fp = None
         self.t_secondary = None
@@ -40,7 +51,7 @@ class PlanetParams():
                 item0 = item
             try:
                 setattr(self, item, model.parameters.dict[item0][0])
-            except:
+            except KeyError:
                 pass
         # Allow for rp or rprs
         if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
@@ -371,10 +382,10 @@ class BatmanEclipseModel(Model):
                     continue
 
                 # Compute light travel time
-                if self.compute_ltt:
+                if self.compute_ltt and (c == 0):
                     self.adjusted_time.append(
                         correct_light_travel_time(time, bm_params))
-                else:
+                elif c == 0:
                     self.adjusted_time.append(time)
 
                 if not np.any(['t_secondary' in key

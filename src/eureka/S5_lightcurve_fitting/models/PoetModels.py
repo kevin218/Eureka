@@ -13,7 +13,18 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid):
+    def __init__(self, model, pid=0):
+        """ 
+        Set attributes to PlanetParams object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names 
+            and their current values.
+        pid : int; optional
+            Planet ID, default is 0.
+        """
         # Planet ID
         self.pid = pid       
         # Set transit/eclipse parameters
@@ -22,7 +33,7 @@ class PlanetParams():
         self.inc = None
         self.ars = None
         self.per = None
-        self.ecc = None
+        self.ecc = 0.
         self.w = None
         self.fpfs = None
         self.t_secondary = None
@@ -37,7 +48,7 @@ class PlanetParams():
                 item0 = item
             try:
                 setattr(self, item, model.parameters.dict[item0][0])
-            except:
+            except KeyError:
                 pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
@@ -489,7 +500,6 @@ class PoetPCModel(Model):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
                     phaseVars = 1e12*np.ones_like(time)
-                
                 light_curve += phaseVars
 
             lcfinal = np.append(lcfinal, light_curve)

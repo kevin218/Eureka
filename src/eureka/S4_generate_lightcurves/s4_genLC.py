@@ -555,7 +555,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                           ld_4para_w)
 
             # Generate SPAM limb-darkening coefficients
-            if meta.compute_ld == 'spam':
+            elif meta.compute_ld == 'spam':
                 log.writelog("Computing SPAM limb-darkening coefficients...",
                              mute=(not meta.verbose))
                 ld_coeffs = generate_LD.spam_ld(meta, white=False)

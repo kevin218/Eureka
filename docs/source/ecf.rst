@@ -1056,17 +1056,17 @@ This file describes the transit/eclipse and systematics parameters and their pri
    - Sinusoidal Phase Curve Parameters
       The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
-      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5)
-      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75
-      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0)
-      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75
+      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5). The units are in fractions of the eclipse depth.
+      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75. The units are in fractions of the eclipse depth.
+      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0). The units are in fractions of the eclipse depth.
+      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75. The units are in fractions of the eclipse depth.
    - POET Phase Curve Parameters
       The poet_pc phase curve model allows for the inclusion of up to two sinusoids into a single phase curve, but allows for the inclusion of offsets, thus making it functionally identical to sinusoid_pc.
 
-      - ``cos1_amp`` - Amplitude of the first cosine with period, per.
-      - ``cos1_off`` - Offset of the first cosine, indicating the time of maximum flux.
-      - ``cos2_amp`` - Amplitude of the second cosine with period, per/2.
-      - ``cos2_off`` - Offset of the second cosine, indicating the time of maximum flux.
+      - ``cos1_amp`` - Amplitude of the first cosine with period, per. The units are in fractions of the eclipse depth.
+      - ``cos1_off`` - Offset of the first cosine, indicating the time of maximum flux. The units are in days.
+      - ``cos2_amp`` - Amplitude of the second cosine with period, per/2. The units are in fractions of the eclipse depth.
+      - ``cos2_off`` - Offset of the second cosine, indicating the time of maximum flux. The units are in days.
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 

@@ -7,7 +7,16 @@ class Params():
     """
     Define asymetric Lorentzian parameters.
     """
-    def __init__(self, model):      
+    def __init__(self, model):
+        """ 
+        Set attributes to Params object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names 
+            and their current values.
+        """  
         # Set parameters
         self.lor_amp = None
         self.lor_amp_lhs = None
@@ -20,7 +29,7 @@ class Params():
         for item in self.__dict__.keys():
             try:
                 setattr(self, item, model.parameters.dict[item][0])
-            except:
+            except KeyError:
                 pass
 
 
