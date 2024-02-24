@@ -907,19 +907,23 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'GP' in meta.run_myfuncs:
         if not hasattr(meta, 'useHODLR'):
             meta.useHODLR = False
-        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
-                         parameters=params, name='GP', fmt='r--', log=log,
-                         time=time, time_units=time_units,
-                         gp_code=meta.GP_package,
-                         useHODLR=meta.useHODLR,
-                         freenames=freenames,
-                         longparamlist=lc_model.longparamlist,
-                         nchannel=chanrng,
-                         nchannel_fitted=nchannel_fitted,
-                         fitted_channels=fitted_channels,
-                         paramtitles=paramtitles,
-                         multwhite=lc_model.multwhite,
-                         nints=lc_model.nints)
+        if 'starry' in meta.run_myfuncs:
+            GPModel = dm.GPModel
+        else:
+            GPModel = m.GPModel
+        t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
+                       parameters=params, name='GP', fmt='r--', log=log,
+                       time=time, time_units=time_units,
+                       gp_code=meta.GP_package,
+                       useHODLR=meta.useHODLR,
+                       freenames=freenames,
+                       longparamlist=lc_model.longparamlist,
+                       nchannel=chanrng,
+                       nchannel_fitted=nchannel_fitted,
+                       fitted_channels=fitted_channels,
+                       paramtitles=paramtitles,
+                       multwhite=lc_model.multwhite,
+                       nints=lc_model.nints)
         modellist.append(t_GP)
 
     if 'starry' in meta.run_myfuncs:
