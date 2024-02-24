@@ -251,14 +251,14 @@ class TestModels(unittest.TestCase):
                                        'white_fixed']:
                 freenames.append(key)
         self.t_poet_tr = models.PoetTransitModel(parameters=params,
-                                               name='poet_tr', fmt='r--',
-                                               freenames=freenames,
-                                               longparamlist=longparamlist,
-                                               nchan=1,
-                                               paramtitles=paramtitles,
-                                               ld_from_S4=meta.ld_from_S4,
-                                               ld_from_file=meta.ld_file,
-                                               num_planets=meta.num_planets)
+                                                 name='poet_tr', fmt='r--',
+                                                 freenames=freenames,
+                                                 longparamlist=longparamlist,
+                                                 nchan=1,
+                                                 paramtitles=paramtitles,
+                                                 ld_from_S4=meta.ld_from_S4,
+                                                 ld_from_file=meta.ld_file,
+                                                 num_planets=meta.num_planets)
 
         # Evaluate and test output
         self.t_poet_tr.time = self.time
