@@ -568,6 +568,28 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if not hasattr(meta, 'recenter_ld_prior'):
         meta.recenter_ld_prior = True
 
+    # Check if should enforce positivity
+    if not hasattr(meta, 'force_positivity'):
+        meta.force_positivity = False
+
+    if not hasattr(meta, 'useHODLR'):
+        meta.useHODLR = False
+
+    if 'starry' in meta.run_myfuncs:
+        PolynomialModel = dm.PolynomialModel
+        StepModel = dm.StepModel
+        ExpRampModel = dm.ExpRampModel
+        HSTRampModel = dm.HSTRampModel
+        CentroidModel = dm.CentroidModel
+        GPModel = dm.GPModel
+    else:
+        PolynomialModel = m.PolynomialModel
+        StepModel = m.StepModel
+        ExpRampModel = m.ExpRampModel
+        HSTRampModel = m.HSTRampModel
+        CentroidModel = m.CentroidModel
+        GPModel = m.GPModel
+
     # Make the astrophysical and detector models
     modellist = []
     if 'starry' in meta.run_myfuncs:
@@ -593,7 +615,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   ld_coeffs=ldcoeffs,
                                   recenter_ld_prior=meta.recenter_ld_prior,
                                   multwhite=lc_model.multwhite,
-                                  nints=lc_model.nints)
+                                  nints=lc_model.nints,
+                                  force_positivity=meta.force_positivity)
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
@@ -656,9 +679,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         if 'eclipse' in model_names:
             e_model = modellist.pop(np.where(model_names == 'eclipse')[0][0])
             model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log, time=time,
@@ -676,10 +696,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       nints=lc_model.nints)
         modellist.append(t_phase)
     if 'polynomial' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            PolynomialModel = dm.PolynomialModel
-        else:
-            PolynomialModel = m.PolynomialModel
         t_polynom = PolynomialModel(parameters=params, name='polynom',
                                     fmt='r--', log=log, time=time,
                                     time_units=time_units,
@@ -693,10 +709,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     nints=lc_model.nints)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            StepModel = dm.StepModel
-        else:
-            StepModel = m.StepModel
         t_step = StepModel(parameters=params, name='step', fmt='r--',
                            log=log, time=time, time_units=time_units,
                            freenames=freenames,
@@ -709,10 +721,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            nints=lc_model.nints)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            ExpRampModel = dm.ExpRampModel
-        else:
-            ExpRampModel = m.ExpRampModel
         t_expramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
                                  log=log, time=time, time_units=time_units,
                                  freenames=freenames,
@@ -725,10 +733,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  nints=lc_model.nints)
         modellist.append(t_expramp)
     if 'hstramp' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            HSTRampModel = dm.HSTRampModel
-        else:
-            HSTRampModel = m.HSTRampModel
         t_hstramp = HSTRampModel(parameters=params, name='hstramp', fmt='r--',
                                  log=log, time=time, time_units=time_units,
                                  freenames=freenames,
@@ -741,10 +745,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  nints=lc_model.nints)
         modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
         t_cent = CentroidModel(parameters=params, name='xpos', fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
@@ -758,10 +758,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
         t_cent = CentroidModel(parameters=params, name='xwidth', fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
@@ -775,10 +771,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
         t_cent = CentroidModel(parameters=params, name='ypos', fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
@@ -792,10 +784,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
         t_cent = CentroidModel(parameters=params, name='ywidth', fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
@@ -809,12 +797,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
-        if not hasattr(meta, 'useHODLR'):
-            meta.useHODLR = False
-        if 'starry' in meta.run_myfuncs:
-            GPModel = dm.GPModel
-        else:
-            GPModel = m.GPModel
         t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
                        parameters=params, name='GP', fmt='r--', log=log,
                        time=time, time_units=time_units,

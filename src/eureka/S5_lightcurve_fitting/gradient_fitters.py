@@ -12,6 +12,7 @@ from .likelihood import computeRedChiSq
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
+import arviz as az
 
 
 def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
@@ -185,6 +186,17 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     model.setup(lc.time, lc.flux, lc.unc)
 
+    if hasattr(meta, 'exoplanet_first') and meta.exoplanet_first:
+        log.writelog('\nCalling exoplanet first...')
+        # RUN LEAST SQUARES
+        opt_sol = exoplanetfitter(lc, model, meta, log,
+                                  calling_function='nuts', **kwargs)
+        freepars = opt_sol.fit_params
+
+        if meta.rescale_err:
+            # Scale uncertainties with reduced chi-squared
+            lc.unc *= np.sqrt(opt_sol.chi2red)
+
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
@@ -231,6 +243,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     upper_errs = q[2]-q[1]
     lower_errs = q[1]-q[0]
+
+    # If pixel sampling, append best fit pixels to fit_params
+    if "pixel_ydeg" in indep_vars:
+        trace_az = az.from_pymc3(trace, model=model.model)
+        trace_fname = meta.outputdir+"S5_trace_map.nc"
+        log.writelog(f'Saving map trace to {trace_fname}...')
+        trace_az.to_netcdf(trace_fname)
+
+        fit_params = np.append(fit_params,
+                               trace_az['posterior']['p'][0, 0])
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
@@ -290,6 +312,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
+
+    # Show the inferred planetary brightness map
+    if meta.isplots_S5 >= 1 and "pixel_ydeg" in indep_vars:
+        eclipse_maps = np.transpose(trace_az.posterior.stack(
+            sample=("chain", "draw"))['map_grid'][:], [2, 0, 1])
+        plots.plot_eclipse_map(lc, eclipse_maps, meta)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:

@@ -14,6 +14,7 @@ logger.setLevel(logging.ERROR)
 import starry
 starry.config.quiet = True
 starry.config.lazy = True
+import pymc3 as pm
 
 from . import PyMC3Model
 from ..limb_darkening_fit import ld_profile
@@ -66,6 +67,9 @@ class StarryModel(PyMC3Model):
             l_vals = [int(self.paramtitles[ind][1])
                       for ind in ylm_params]
             self.ydeg = max(l_vals)
+        elif 'pixel_ydeg' in self.paramtitles:
+            # read l order used for pixel sampling
+            self.ydeg = self.parameters.pixel_ydeg.value
         else:
             self.ydeg = 0
         
@@ -190,8 +194,58 @@ class StarryModel(PyMC3Model):
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
+            # Pixel sampling setup
+            if 'pixel_ydeg' in self.paramtitles:
+
+                # Oversample factor of 3 is a safe bet to achieve pixels
+                # ~4L^2, but not always necessary 
+                if 'pixel_oversample' in self.paramtitles:
+                    self.oversample = self.parameters.pixel_oversample.value
+                else:
+                    self.oversample = 3
+
+                # Get pixel transform matrix and number of pixels
+                A = planet.map.get_pixel_transforms(
+                    oversample=self.oversample)[3]
+                self.npix = A.shape[1]
+
+                # Set prior to either be log normal, or normal around zero
+                pixel_prior_mean = self.parameters.pixel_prior_mean.value
+                pixel_prior_width = self.parameters.pixel_prior_width.value
+                if self.force_positivity:
+                    p = pm.LogNormal("p", mu=np.log(pixel_prior_mean/np.pi),
+                                     sigma=pixel_prior_width/pixel_prior_mean,
+                                     shape=(self.npix,))
+                else:
+                    p = pm.Normal("p", mu=pixel_prior_mean/np.pi,
+                                  sd=pixel_prior_width/np.pi,
+                                  shape=(self.npix, ))
+
+                # Transform pixels to spherical harmonics
+                self.starry_x = tt.dot(A, p)
+                # Record spherical harmonics
+                pm.Deterministic("y", self.starry_x)
+
             # Instantiate the system
             system = starry.System(star, planet, light_delay=self.compute_ltt)
+
+            if 'pixel_ydeg' in self.paramtitles:
+                # Calculate light curve by multiplying spherical harmonics by
+                # design matrix, then record
+                self.starry_X = system.design_matrix(self.time)
+                lcpiece = self.starry_X[:, 0] + tt.dot(self.starry_X[:, 1:],
+                                                       self.starry_x)
+
+                # Calculate and record map
+                map_plot = starry.Map(ydeg=self.ydeg)
+                map_plot.amp = self.starry_x[0]
+                map_plot[1:, :] = self.starry_x[1:]/self.starry_x[0]
+
+                pm.Deterministic("flux_model", lcpiece)
+                pm.Deterministic("map_grid",
+                                 np.pi*map_plot.render(projection="rect",
+                                                       res=100))
+
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -241,13 +295,17 @@ class StarryModel(PyMC3Model):
                 time = split([time, ], self.nints, chan)[0]
 
             # Combine the planet and stellar flux (allowing negative rp)
-            fstar, fp = systems[chan].flux(time, total=False)
-            # Do some annoying math to allow theano functions to compile
-            # (correctly defined for -1 < rp < 1)
-            sign = (lib.ceil(rps[chan])+lib.floor(rps[chan]))
-            fstar = (fstar-1)*sign + 1
-            fp = fp*sign
-            lcpiece = fstar+fp
+            if 'pixel_ydeg' in self.paramtitles:
+                lcpiece = self.starry_X[:, 0] + tt.dot(self.starry_X[:, 1:],
+                                                       self.starry_x)
+            else:
+                fstar, fp = systems[chan].flux(time, total=False)
+                # Do some annoying math to allow theano functions to compile
+                # (correctly defined for -1 < rp < 1)
+                sign = (lib.ceil(rps[chan])+lib.floor(rps[chan]))
+                fstar = (fstar-1)*sign + 1
+                fp = fp*sign
+                lcpiece = fstar+fp
 
             if eval:
                 lcpiece = lcpiece.eval()
@@ -373,4 +431,13 @@ class StarryModel(PyMC3Model):
 
             # Instantiate the system
             sys = starry.System(star, planet, light_delay=self.compute_ltt)
+
+            if 'pixel_ydeg' in self.paramtitles:
+                # import pixel values and convert to spherical harmonics
+                A = planet.map.get_pixel_transforms(
+                    oversample=self.oversample)[3]
+                p_fit = newparams[-self.npix:]
+                self.starry_x = tt.dot(A, p_fit)
+                self.starry_X = sys.design_matrix(self.time)
+
             self.fit.systems.append(sys)

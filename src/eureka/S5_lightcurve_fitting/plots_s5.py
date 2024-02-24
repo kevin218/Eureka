@@ -97,11 +97,42 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
             nbin_plot = len(time)
         else:
             nbin_plot = meta.nbin_plot
+
         binned_time = util.binData_time(time, time, nbin_plot)
         binned_flux = util.binData_time(flux, time, nbin_plot)
         binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
         binned_normflux = util.binData_time(flux/model_sys-gp, time, nbin_plot)
         binned_res = util.binData_time(residuals, time, nbin_plot)
+        binned_model_phys = util.binData_time(model_phys, time, nbin_plot)
+
+        if hasattr(meta, 'record_plot_data'):
+            if meta.record_plot_data:
+                np.savez_compressed(meta.outputdir+'time.npz',
+                                    data=time.data, mask=time.mask)
+                np.savez_compressed(meta.outputdir+'flux.npz',
+                                    data=flux.data, mask=flux.mask)
+                np.savez_compressed(meta.outputdir+'unc.npz',
+                                    data=unc.data, mask=unc.mask)
+                np.savez_compressed(meta.outputdir+'model_phys.npz',
+                                    data=model_phys.data)
+                np.savez_compressed(meta.outputdir+'model_sys.npz',
+                                    data=model_sys.data)
+        
+                np.savez_compressed(meta.outputdir+'binned_time.npz',
+                                    data=binned_time.data,
+                                    mask=binned_time.mask)
+                np.savez_compressed(meta.outputdir+'binned_flux.npz',
+                                    data=binned_flux.data,
+                                    mask=binned_flux.mask)
+                np.savez_compressed(meta.outputdir+'binned_unc.npz',
+                                    data=binned_unc.data,
+                                    mask=binned_unc.mask)
+                np.savez_compressed(meta.outputdir+'binned_normflux.npz',
+                                    data=binned_normflux.data)
+                np.savez_compressed(meta.outputdir+'binned_res.npz',
+                                    data=binned_res.data)
+                np.savez_compressed(meta.outputdir+'binned_model_phys.npz',
+                                    data=binned_model_phys.data)
 
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
@@ -778,6 +809,119 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
             fname_tag = f'ch{ch_number}'
         fname = (f'figs{os.sep}fig5102_{fname_tag}_lc_GP_{fitter}'
                  + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
+
+def plot_eclipse_map(lc, flux_maps, meta):
+    """Plot fitted eclipse map and lat-lon slices (Figs 5105)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    flux_maps : array
+        The posterior distribution of the fitted maps
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+
+    Notes
+    -----
+    History:
+
+    - August 14, 2023 Mark Hammond
+        Initial version.
+    """
+    for i, channel in enumerate(lc.fitted_channels):
+        fig = plt.figure(5105, figsize=(12, 3))
+        fig.clf()
+        axs = fig.subplots(1, 3, width_ratios=[1.4, 1, 1])
+
+        lons = np.linspace(-180, 180, np.shape(flux_maps)[2])
+        lats = np.linspace(-90, 90, np.shape(flux_maps)[1])
+
+        # Quantiles
+        p1 = 0.841
+        p2 = 0.977
+        p3 = 0.998
+
+        # Plot median map
+        ca = axs[0].contourf(lons, lats,
+                             np.quantile(1e6*flux_maps[:], 0.5, axis=0),
+                             cmap='RdBu_r')
+        axs[0].axhline(0, color='C0', ls='--')
+        axs[0].axvline(0, color='C3', ls='--')
+        axs[0].set_xticks([-180, -90, 0, 90, 180])
+        axs[0].set_yticks([-90, -45, 0, 45, 90])
+        axs[0].set_xlim([-180, 180])
+        axs[0].set_ylim([-90, 90])
+        plt.colorbar(ca, ax=axs[0], pad=0.02)
+
+        # Plot slice along equator
+        lat0 = int(np.shape(flux_maps)[2]/2)
+        axs[1].fill_between(lons,
+                            1e6*np.quantile(flux_maps[:, lat0], p1, axis=0),
+                            1e6*np.quantile(flux_maps[:, lat0], 1-p1, axis=0),
+                            color='C0', alpha=0.3, ls='None')
+        axs[1].fill_between(lons,
+                            1e6*np.quantile(flux_maps[:, lat0], p2, axis=0),
+                            1e6*np.quantile(flux_maps[:, lat0], 1-p2, axis=0),
+                            color='C0', alpha=0.3, ls='None')
+        axs[1].fill_between(lons,
+                            1e6*np.quantile(flux_maps[:, lat0], p3, axis=0),
+                            1e6*np.quantile(flux_maps[:, lat0], 1-p3, axis=0),
+                            color='C0', alpha=0.3, ls='None')
+        axs[1].set_xlim([-180, 180])
+        axs[1].set_xticks([-180, -90, 0, 90, 180])
+
+        # Plot slice along equator
+        lon0 = int(np.shape(flux_maps)[1]/2)
+        axs[2].fill_between(
+            lats,
+            1e6*np.quantile(flux_maps[:, :, lon0], p1, axis=0),
+            1e6*np.quantile(flux_maps[:, :, lon0], 1-p1, axis=0),
+            color='C3', alpha=0.3, ls='None')
+        axs[2].fill_between(
+            lats,
+            1e6*np.quantile(flux_maps[:, :, lon0], p2, axis=0),
+            1e6*np.quantile(flux_maps[:, :, lon0], 1-p2, axis=0),
+            color='C3', alpha=0.3, ls='None')
+        axs[2].fill_between(
+            lats,
+            1e6*np.quantile(flux_maps[:, :, lon0], p3, axis=0),
+            1e6*np.quantile(flux_maps[:, :, lon0], 1-p3, axis=0),
+            color='C3', alpha=0.3, ls='None')
+        axs[2].set_xlim([-90, 90])
+        axs[2].set_xticks([-90, -45, 0, 45, 90])
+
+        axs[0].set_title('Median Map', fontsize=12)
+        axs[1].set_title('Fit Along Equator', fontsize=12)
+        axs[2].set_title(r'Fit Along 0$^{\circ}$ Longitude', fontsize=12)
+        axs[0].set_ylabel('Latitude', labelpad=-10)
+        axs[0].set_xlabel('Longitude')
+        axs[1].set_xlabel('Longitude')
+        axs[2].set_xlabel('Latitude')
+        axs[1].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)', fontsize=11,
+                          labelpad=-4)
+        axs[2].set_ylabel(r'$F_{\rm p}/F_{\rm s}$ (ppm)', fontsize=11,
+                          labelpad=-4)
+
+        plt.subplots_adjust(left=0.07,
+                            bottom=0.17,
+                            right=0.98,
+                            top=0.81,
+                            wspace=0.38,
+                            hspace=0.22)
+
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+
+        fname = (f'figs{os.sep}fig5105_{fname_tag}_eclipse_map' +
+                 plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
