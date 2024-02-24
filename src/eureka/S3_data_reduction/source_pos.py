@@ -71,14 +71,14 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
                 iterfn = tqdm(iterfn)
             for n in iterfn:
                 writePos(source_pos(flux[n], meta, data.attrs['shdr'],
-                                    m, n, log, False, guess))
+                                    m, n, False, guess))
         else:
             # Multiple CPUs
             pool = mp.Pool(meta.ncpu)
             jobs = [pool.apply_async(func=source_pos,
                                      args=(flux[n], meta,
                                            data.attrs['shdr'], m,
-                                           n, log, False, guess),
+                                           n, False, guess),
                                      callback=writePos)
                     for n in range(meta.int_start, meta.n_int)]
             pool.close()
@@ -99,7 +99,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         log.writelog('  Locating source position...', mute=(not meta.verbose))
 
         meta.src_ypos = source_pos(flux[integ], meta, data.attrs['shdr'],
-                                   m, integ, log, True, guess)[0]
+                                   m, integ, True, guess)[0]
 
         log.writelog('    Source position on detector is row '
                      f'{meta.src_ypos}.', mute=(not meta.verbose))
@@ -107,7 +107,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         return data, meta, log
 
 
-def source_pos(flux, meta, shdr, m, n, log, plot=True, guess=None):
+def source_pos(flux, meta, shdr, m, n, plot=True, guess=None):
     '''Determine the source position for one frames.
 
     Parameters
@@ -122,8 +122,6 @@ def source_pos(flux, meta, shdr, m, n, log, plot=True, guess=None):
         The file number.
     n : int
         The integration number.
-    log : logedit.Logedit
-        The current log.
     plot : bool; optional
         If True, plot the source position determination.
         Defaults to True.
@@ -172,9 +170,6 @@ def source_pos(flux, meta, shdr, m, n, log, plot=True, guess=None):
         src_ypos = float(meta.src_pos_type)
     else:
         # Some unrecognized string
-        log.writelog(f'WARNING: {meta.src_pos_type} is not a recognized ' +
-                     'source position type. Options: header, gaussian, ' +
-                     'weighted, max, hst, or a numeric value.')
         raise Exception(f'{meta.src_pos_type} is not a recognized source ' +
                         'position type. Options: header, gaussian, weighted,' +
                         ' max, hst, or a numeric value.')
@@ -415,7 +410,7 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
     p0 = [np.ma.max(med_row), pos_max, sigma0, np.ma.median(med_row)]
 
     # Fit
-    popt, pcov = curve_fit(gauss, y_pixels, med_row, p0)
+    popt, pcov = curve_fit(gauss, y_pixels, med_row, p0, maxfev=10000)
 
     # Diagnostic plot
     if meta.isplots_S3 >= 1 and plot:

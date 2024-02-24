@@ -16,7 +16,7 @@ try:
     from . import differentiable_models as dm
 except:
     # PyMC3 hasn't been installed
-    pass
+    dm = None
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -87,6 +87,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
     meta = me.mergeevents(meta, s4_meta)
+
+    # Check to make sure that dm is accessible if using dm models/fitters
+    if (dm is None and ('starry' in meta.fit_method or
+                        'exoplanet' in meta.fit_method)):
+        raise AssertionError(f"fit_method is set to {meta.fit_method}, but "
+                             "could not import starry and/or pymc3 related "
+                             "packages. Ensure that you have installed the "
+                             "pymc3-related packages when installing Eureka!.")
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one
@@ -803,19 +811,23 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if 'GP' in meta.run_myfuncs:
         if not hasattr(meta, 'useHODLR'):
             meta.useHODLR = False
-        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
-                         parameters=params, name='GP', fmt='r--', log=log,
-                         time=time, time_units=time_units,
-                         gp_code=meta.GP_package,
-                         useHODLR=meta.useHODLR,
-                         freenames=freenames,
-                         longparamlist=lc_model.longparamlist,
-                         nchannel=chanrng,
-                         nchannel_fitted=nchannel_fitted,
-                         fitted_channels=fitted_channels,
-                         paramtitles=paramtitles,
-                         multwhite=lc_model.multwhite,
-                         nints=lc_model.nints)
+        if 'starry' in meta.run_myfuncs:
+            GPModel = dm.GPModel
+        else:
+            GPModel = m.GPModel
+        t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
+                       parameters=params, name='GP', fmt='r--', log=log,
+                       time=time, time_units=time_units,
+                       gp_code=meta.GP_package,
+                       useHODLR=meta.useHODLR,
+                       freenames=freenames,
+                       longparamlist=lc_model.longparamlist,
+                       nchannel=chanrng,
+                       nchannel_fitted=nchannel_fitted,
+                       fitted_channels=fitted_channels,
+                       paramtitles=paramtitles,
+                       multwhite=lc_model.multwhite,
+                       nints=lc_model.nints)
         modellist.append(t_GP)
 
     if 'starry' in meta.run_myfuncs:

@@ -29,9 +29,9 @@ ramp_fit_algorithm
 Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
 
 
-ramp_fit_max_cores
+maximum_cores
 ''''''''''''''''''
-Fraction of processor cores to use to compute the ramp fits, options are ``none``, ``quarter``, ``half``, ``all``.
+Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
 
 skip_*
@@ -91,6 +91,10 @@ dq_sat_columns
 ''''''''''''''
 If dq_sat_mode = defined, list of columns. Should have length Ngroups, each element containing a list of the start and end column to mark as saturated
 
+remove_390hz
+''''''''''''
+Boolean, an experimental step which removes the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM group-level data. This step can be quite time consuming, and early testing suggests that it has little impact on the final spectra when also doing row-by-row background subtraction per group in Stage 1 or per integration in Stage 3.
+
 grouplevel_bg
 '''''''''''''
 Boolean, runs background subtraction at the group level (GLBS) prior to ramp fitting.
@@ -108,6 +112,10 @@ bg_y2
 The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
 
 bg_deg
+''''''
+See Stage 3 inputs
+
+bg_method
 ''''''
 See Stage 3 inputs
 
@@ -472,6 +480,10 @@ Possible values:
 5. If MAD of the greatest background outlier is greater than 5, remove this background pixel from the background value calculation. Repeat from Step 2. and repeat as long as there is no 5*MAD outlier in the background column.
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
+bg_method
+''''''
+Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
+
 bg_disp
 '''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
@@ -763,11 +775,12 @@ Used by exotic-ld if compute_ld=True. The surface gravity in log g.
 
 exotic_ld_direc
 '''''''''''''''
-Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, download at https://zenodo.org/record/6344946.
+Used by exotic-ld if compute_ld=True. The fully qualified path to the directory for ancillary files for exotic-ld, available for download at https://zenodo.org/doi/10.5281/zenodo.6047317.
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. 1D or 3D model grid, or "custom" for a custom stellar intensity grid.
+Used by exotic-ld if compute_ld=True. You can choose from "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+You can also use "custom" for a custom stellar intensity grid specified through the ``custom_si_grid`` parameter.
 
 exotic_ld_file
 ''''''''''''''
@@ -856,6 +869,12 @@ For standard numpy functions, this can be one or more (separated by commas) of t
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
+
+compute_ltt
+'''''''''''
+Optional. Determines whether to correct the astrophysical model for the light travel time effect (True) or to ignore the effect (False).
+The light travel time effect is caused by the finite speed of light which means that the signal from a secondary eclipse (which occurs on the far side of the orbit) arrive later than would be expected if the speed of light were infinite.
+Unless specified, compute_ltt is set to True for batman_ecl and starry models but set to False for batman_tr models (since the light travel time is insignificant during transit).
 
 manual_clip
 '''''''''''
@@ -1036,13 +1055,8 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
          This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
          If not provided for batman_ecl fits, the finite speed of light will not be accounted for.
-         Fits with the starry model **require** that ``Rs`` be provided as starry always accounts for light travel time. This parameter should be set to ``fixed``
+         Fits with the starry model **require** that ``Rs`` be provided as starry always uses physical units. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Rs``.
-      - ``Ms`` - the host star's mass in units of solar masses.
-
-         This parameter is **required** for fits with the starry model as starry currently requires the parameter to be provided. In practice, the stellar mass is not
-         actually used in Eureka! though as we allow for ``a`` and ``per`` to be provided directly. This parameter should be set to ``fixed``
-         unless you really want to marginalize over ``Ms``.
    - Sinusoidal Phase Curve Parameters
       The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
@@ -1083,7 +1097,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
-         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit, and ``h5`` is the orbital period of HST (in the same time units as the data, usually days).  A good starting point for ``h5`` is 0.066422 days.  ``time_batch = time_local % h5``.
+         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.
          If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
          Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.  
          One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
