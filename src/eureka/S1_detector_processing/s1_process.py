@@ -122,6 +122,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
             meta.m = m
             meta.intstart = hdulist[0].header['INTSTART']-1
             meta.intend = hdulist[0].header['INTEND']
+            meta.n_int = meta.intend-meta.intstart
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time
@@ -136,6 +137,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
+
+    log.closelog()
 
     return meta
 
@@ -217,9 +220,18 @@ class EurekaS1Pipeline(Detector1Pipeline):
             if hasattr(meta, 'custom_bias') and meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
         elif instrument in ['MIRI']:
-            self.firstframe.skip = meta.skip_firstframe
-            self.lastframe.skip = meta.skip_lastframe
-            self.rscd.skip = meta.skip_rscd
+            if (hasattr(meta, 'remove_390hz')
+                    and meta.remove_390hz):
+                # Need to apply these steps later to be able to remove 390 Hz
+                self.firstframe.skip = True
+                self.lastframe.skip = True
+            else:
+                self.firstframe.skip = meta.skip_firstframe
+                self.lastframe.skip = meta.skip_lastframe
+            if hasattr(meta, 'skip_reset'):
+                self.reset.skip = meta.skip_reset
+            if hasattr(meta, 'skip_rscd'):
+                self.rscd.skip = meta.skip_rscd
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()

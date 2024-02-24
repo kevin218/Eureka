@@ -581,12 +581,14 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         ExpRampModel = dm.ExpRampModel
         HSTRampModel = dm.HSTRampModel
         CentroidModel = dm.CentroidModel
+        GPModel = dm.GPModel
     else:
         PolynomialModel = m.PolynomialModel
         StepModel = m.StepModel
         ExpRampModel = m.ExpRampModel
         HSTRampModel = m.HSTRampModel
         CentroidModel = m.CentroidModel
+        GPModel = m.GPModel
 
     # Make the astrophysical and detector models
     modellist = []
@@ -795,19 +797,19 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
-        t_GP = m.GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
-                         parameters=params, name='GP', fmt='r--', log=log,
-                         time=time, time_units=time_units,
-                         gp_code=meta.GP_package,
-                         useHODLR=meta.useHODLR,
-                         freenames=freenames,
-                         longparamlist=lc_model.longparamlist,
-                         nchannel=chanrng,
-                         nchannel_fitted=nchannel_fitted,
-                         fitted_channels=fitted_channels,
-                         paramtitles=paramtitles,
-                         multwhite=lc_model.multwhite,
-                         nints=lc_model.nints)
+        t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
+                       parameters=params, name='GP', fmt='r--', log=log,
+                       time=time, time_units=time_units,
+                       gp_code=meta.GP_package,
+                       useHODLR=meta.useHODLR,
+                       freenames=freenames,
+                       longparamlist=lc_model.longparamlist,
+                       nchannel=chanrng,
+                       nchannel_fitted=nchannel_fitted,
+                       fitted_channels=fitted_channels,
+                       paramtitles=paramtitles,
+                       multwhite=lc_model.multwhite,
+                       nints=lc_model.nints)
         modellist.append(t_GP)
 
     if 'starry' in meta.run_myfuncs:
