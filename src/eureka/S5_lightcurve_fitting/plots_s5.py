@@ -287,8 +287,6 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                     zorder=10)
 
             # Set nice axis limits
-            sigma = np.ma.std(flux-model_phys)
-            max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
             ax.set_xlim(np.min(time), np.max(time))
             # Save/show the figure
