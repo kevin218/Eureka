@@ -70,7 +70,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
 
     log.writelog('Running exoplanet optimizer...')
     with model.model:
-        map_soln = pm.find_MAP(method="powell", start=start)
+        map_soln = pm.find_MAP(start=start)
 
     # Get the best fit params
     fit_params = np.array([map_soln[name] for name in freenames])
