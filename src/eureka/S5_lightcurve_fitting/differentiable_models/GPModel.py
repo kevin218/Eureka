@@ -60,7 +60,8 @@ class GPModel(PyMC3Model):
         if self.gp_code_name != 'celerite':
             raise AssertionError('Currently celerite2 is the only GP package '
                                  'that can be used with the exoplanet and '
-                                 'nuts fitting methods.')
+                                 'nuts fitting methods, but you have chosen '
+                                 f'{self.gp_code_name}.')
         elif self.nkernels > 1:
             raise AssertionError('Our celerite2 implementation cannot compute '
                                  'multi-dimensional GPs, please choose a '
