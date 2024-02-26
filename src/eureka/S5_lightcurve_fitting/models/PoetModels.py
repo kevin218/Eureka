@@ -35,7 +35,7 @@ class PlanetParams():
         self.per = None
         self.ecc = 0.
         self.w = None
-        self.fpfs = None
+        self.fpfs = 0.
         self.t_secondary = None
         self.cos1_amp = 0.
         self.cos1_off = 0.
@@ -350,10 +350,10 @@ class PoetEclipseModel(Model):
                     continue
 
                 # Compute light travel time for current planet
-                if self.compute_ltt and (c == 0):
+                if self.compute_ltt:
                     self.adjusted_time.append(
                         correct_light_travel_time(time, poet_params))
-                elif c == 0:
+                else:
                     self.adjusted_time.append(time)
 
                 if not np.any(['t_secondary' in key

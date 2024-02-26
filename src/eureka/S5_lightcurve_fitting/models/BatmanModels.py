@@ -38,7 +38,7 @@ class PlanetParams():
         self.per = None
         self.ecc = 0.
         self.w = None
-        self.fp = None
+        self.fp = 0.
         self.t_secondary = None
         self.AmpCos1 = 0.
         self.AmpSin1 = 0.
@@ -382,10 +382,10 @@ class BatmanEclipseModel(Model):
                     continue
 
                 # Compute light travel time
-                if self.compute_ltt and (c == 0):
+                if self.compute_ltt:
                     self.adjusted_time.append(
                         correct_light_travel_time(time, bm_params))
-                elif c == 0:
+                else:
                     self.adjusted_time.append(time)
 
                 if not np.any(['t_secondary' in key
