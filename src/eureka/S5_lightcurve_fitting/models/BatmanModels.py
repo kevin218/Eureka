@@ -166,13 +166,16 @@ class BatmanTransitModel(Model):
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -187,6 +190,11 @@ class BatmanTransitModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+        
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
@@ -206,7 +214,7 @@ class BatmanTransitModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             light_curve = np.ones_like(time)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize planet
                 bm_params = PlanetParams(self, pid)
 
@@ -323,13 +331,16 @@ class BatmanEclipseModel(Model):
             log.writelog("         Setting compute_ltt to False for now!")
             self.compute_ltt = False
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -344,6 +355,11 @@ class BatmanEclipseModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+        
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
@@ -351,7 +367,6 @@ class BatmanEclipseModel(Model):
 
         # Set all parameters
         lcfinal = np.array([])
-        self.adjusted_time = []
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -364,7 +379,7 @@ class BatmanEclipseModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             light_curve = np.ones_like(time)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize planet
                 bm_params = PlanetParams(self, pid)
 
@@ -383,10 +398,10 @@ class BatmanEclipseModel(Model):
 
                 # Compute light travel time
                 if self.compute_ltt:
-                    self.adjusted_time.append(
-                        correct_light_travel_time(time, bm_params))
+                    self.adjusted_time = correct_light_travel_time(time,
+                                                                   bm_params)
                 else:
-                    self.adjusted_time.append(time)
+                    self.adjusted_time = time
 
                 if not np.any(['t_secondary' in key
                               for key in self.longparamlist[chan]]):
@@ -394,15 +409,15 @@ class BatmanEclipseModel(Model):
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
                     m_transit = batman.TransitModel(bm_params, 
-                                                    self.adjusted_time[pid],
+                                                    self.adjusted_time,
                                                     transittype='primary')
                     bm_params.t_secondary = m_transit.get_t_secondary(bm_params)
 
                 # Make the eclipse model
                 m_eclipse = batman.TransitModel(bm_params, 
-                                                self.adjusted_time[pid],
+                                                self.adjusted_time,
                                                 transittype='secondary')
-                light_curve *= m_eclipse.light_curve(bm_params)
+                light_curve += m_eclipse.light_curve(bm_params)-1
 
             lcfinal = np.append(lcfinal, light_curve)
 
