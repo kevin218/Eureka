@@ -113,7 +113,7 @@ class LorentzianModel(Model):
                 # Compute asymmetric Lorentzian with baseline offset
                 ut = np.zeros_like(time)
                 lorentzian = np.zeros_like(time)
-                ut[lhs] = (time[lhs]-t0)/params.lor_hwhm_lhs
+                ut[lhs] = (t0-time[lhs])/params.lor_hwhm_lhs
                 ut[rhs] = (time[rhs]-t0)/params.lor_hwhm_rhs
                 lorentzian[lhs] = 1 + params.lor_amp_lhs/(1 + ut[lhs]**p)
                 baseline = 1 + params.lor_amp_lhs - params.lor_amp_rhs
