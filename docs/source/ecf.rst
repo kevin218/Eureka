@@ -779,11 +779,16 @@ Used by exotic-ld if compute_ld=True. The fully qualified path to the directory 
 
 exotic_ld_grid
 ''''''''''''''
-Used by exotic-ld if compute_ld=True. You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+Used by exotic-ld if compute_ld=True. You can choose from "kurucz" (or "1D"), "stagger" (or "3D"), "mps1", or "mps2" model grids, if you're using exotic-ld v3. For more details about these grids, see https://exotic-ld.readthedocs.io/en/latest/views/supported_stellar_grids.html.
+You can also use "custom" for a custom stellar intensity grid specified through the ``custom_si_grid`` parameter.
 
 exotic_ld_file
 ''''''''''''''
 Used by exotic-ld as throughput input file. If none, exotic-ld uses throughput from ancillary files. Make sure that wavelength is given in Angstrom!
+
+custom_si_grid
+''''''''''''''
+If exotic_ld_grid = custom, supply the fully qualified path to your stellar intensity grid file here.
 
 isplots_S4
 ''''''''''
