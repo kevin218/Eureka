@@ -18,7 +18,7 @@ starry.config.lazy = True
 from . import PyMC3Model
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
- 
+
 
 class temp_class:
     def __init__(self):
@@ -40,6 +40,10 @@ class StarryModel(PyMC3Model):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
+
+        # Set default to turn light-travel correction on if not specified
+        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+            self.compute_ltt = True
 
         required = np.array(['Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
@@ -121,7 +125,7 @@ class StarryModel(PyMC3Model):
                                                key+'_'+str(c)))
                 else:
                     setattr(temp, key, getattr(self.model, key))
-            
+
             # Solve Keplerian orbital period equation for system mass
             # (otherwise starry is going to mess with P or a...)
             a = temp.a*temp.Rs*const.R_sun.value
@@ -228,7 +232,7 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            system = starry.System(star, planet, light_delay=self.comput_ltt)
+            system = starry.System(star, planet, light_delay=self.compute_ltt)
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
