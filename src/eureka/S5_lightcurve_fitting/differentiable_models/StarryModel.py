@@ -41,7 +41,7 @@ class StarryModel(PyMC3Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        required = np.array(['Ms', 'Rs'])
+        required = np.array(['Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
             message = (f'Missing required params {required[missing]} in your '
@@ -122,6 +122,12 @@ class StarryModel(PyMC3Model):
                 else:
                     setattr(temp, key, getattr(self.model, key))
             
+            # Solve Keplerian orbital period equation for system mass
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Ms = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+
             # check for spots and set parameters
             if hasattr(self.parameters, 'spotrad0'):
                 spotrad = np.array([])
@@ -202,7 +208,7 @@ class StarryModel(PyMC3Model):
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                m=Mp,
+                m=0,
                 # Convert radius to R_star units
                 r=tt.abs_(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
@@ -222,7 +228,7 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            system = starry.System(star, planet, light_delay=True)
+            system = starry.System(star, planet, light_delay=self.comput_ltt)
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -338,6 +344,12 @@ class StarryModel(PyMC3Model):
                 else:
                     setattr(temp, key, getattr(self.fit, key))
 
+            # Solve Keplerian orbital period equation for system mass
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Ms = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+
             # check for spots and set parameters
             if hasattr(self.parameters, 'spotrad0'):
                 spotrad = np.array([])
@@ -418,7 +430,7 @@ class StarryModel(PyMC3Model):
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                m=Mp,
+                m=0,
                 # Convert radius to R_star units
                 r=np.abs(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
@@ -438,5 +450,5 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            sys = starry.System(star, planet, light_delay=True)
+            sys = starry.System(star, planet, light_delay=self.compute_ltt)
             self.fit.systems.append(sys)
