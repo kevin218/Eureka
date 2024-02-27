@@ -1077,9 +1077,9 @@ This file describes the transit/eclipse and systematics parameters and their pri
       The poet_pc phase curve model allows for the inclusion of up to two sinusoids into a single phase curve, but allows for the inclusion of offsets, thus making it functionally identical to sinusoid_pc.
 
       - ``cos1_amp`` - Amplitude of the first cosine with period, per. The units are in fractions of the eclipse depth.
-      - ``cos1_off`` - Offset of the first cosine, indicating the time of maximum flux. The units are in days.
+      - ``cos1_off`` - Offset (in degrees) of the first cosine, relative to the time of secondary eclipse.
       - ``cos2_amp`` - Amplitude of the second cosine with period, per/2. The units are in fractions of the eclipse depth.
-      - ``cos2_off`` - Offset of the second cosine, indicating the time of maximum flux. The units are in days.
+      - ``cos2_off`` - Offset (in degrees) of the second cosine, relative to the time of secondary eclipse.
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
