@@ -569,6 +569,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         meta.recenter_ld_prior = True
     if not hasattr(meta, 'num_planets'):
         meta.num_planets = 1
+    if not hasattr(meta, 'compute_ltt'):
+        # Let each model have its own default
+        meta.compute_ltt = None
 
     # Make the astrophysical and detector models
     modellist = []
@@ -594,6 +597,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   ld_from_file=meta.ld_file,
                                   ld_coeffs=ldcoeffs,
                                   recenter_ld_prior=meta.recenter_ld_prior,
+                                  compute_ltt=meta.compute_ltt,
                                   multwhite=lc_model.multwhite,
                                   nints=lc_model.nints)
         modellist.append(t_starry)
@@ -612,6 +616,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          ld_from_file=meta.ld_file,
                                          ld_coeffs=ldcoeffs,
                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                         compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
                                          nints=lc_model.nints,
                                          num_planets=meta.num_planets)
@@ -626,6 +631,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nchannel_fitted=nchannel_fitted,
                                          fitted_channels=fitted_channels,
                                          paramtitles=paramtitles,
+                                         compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
                                          nints=lc_model.nints,
                                          num_planets=meta.num_planets)
@@ -644,6 +650,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        ld_from_file=meta.ld_file,
                                        ld_coeffs=ldcoeffs,
                                        recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                       compute_ltt=meta.compute_ltt,
                                        multwhite=lc_model.multwhite,
                                        nints=lc_model.nints,
                                        num_planets=meta.num_planets)
@@ -658,6 +665,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         nchannel_fitted=nchannel_fitted,
                                         fitted_channels=fitted_channels,
                                         paramtitles=paramtitles,
+                                        compute_ltt=meta.compute_ltt,
                                         multwhite=lc_model.multwhite,
                                         nints=lc_model.nints,
                                         num_planets=meta.num_planets)
