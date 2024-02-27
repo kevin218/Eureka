@@ -188,13 +188,6 @@ class StarryModel(PyMC3Model):
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
 
-            # Solve Keplerian orbital period equation for Mp
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
-                  - temp.Ms)
-
             if not hasattr(temp, 'fp'):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
             else:
@@ -409,13 +402,6 @@ class StarryModel(PyMC3Model):
                                f'       limb_dark must be one of uniform, '
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
-            
-            # Solve Keplerian orbital period equation for Mp
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
-                  - temp.Ms)
 
             if not hasattr(temp, 'fp'):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
