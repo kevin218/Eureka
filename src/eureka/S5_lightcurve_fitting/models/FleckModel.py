@@ -204,7 +204,7 @@ class FleckTransitModel(Model):
                 planet=bm_params, times=fleck_times).flatten()
             m_transit = np.interp(time, fleck_times, fleck_transit)
 
-            lcfinal = np.append(lcfinal, m_transit)
+            lcfinal = np.append(lcfinal, m_transit/m_transit[0])
 
         return lcfinal
 
