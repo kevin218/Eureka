@@ -126,7 +126,7 @@ class HSTRampModel(Model):
             h0, h1, h2, h3, h4, h5, h6 = self.coeffs[c]
             # Batch time is relative to the start of each HST orbit
             # h5 is the orbital period of HST (~96 minutes)
-            self.time_batch = (self.time_local-h6) % h5
+            self.time_batch = (time-h6) % h5
             lcpiece = (1+h0*np.exp(-h1*self.time_batch + h2)
                        + h3*self.time_batch + h4*self.time_batch**2)
             lcfinal = np.append(lcfinal, lcpiece)
