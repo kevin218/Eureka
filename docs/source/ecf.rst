@@ -1081,6 +1081,17 @@ This file describes the transit/eclipse and systematics parameters and their pri
          ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``,
          ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``,
          and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
+   - Star Spot Parameters
+      - ``spotstari`` - The stellar inclination in degrees.
+      - ``spotrot`` - The stellar rotation rate in days.
+      - ``spotcon#`` - The spot contrast ratio. For fleck only assign one, for starry assign one per spot
+      - ``spotrad#`` - The spot radius. For fleck it is relative to the star, for starry it is in degrees
+      - ``spotlat#`` - The spot latitude. 
+      - ``spotlon#`` - The spot longitude. 
+      Fleck specific parameters:
+      - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good. 
+      Starry specific parameters:
+      - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
 
