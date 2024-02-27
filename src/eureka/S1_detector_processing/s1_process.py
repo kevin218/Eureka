@@ -233,7 +233,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
             if hasattr(meta, 'skip_rscd'):
                 self.rscd.skip = meta.skip_rscd
             if hasattr(meta, 'skip_emicorr'):
-                self.emicorr_step.skip = meta.skip_emicorr
+                self.emicorr.skip = meta.skip_emicorr
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
