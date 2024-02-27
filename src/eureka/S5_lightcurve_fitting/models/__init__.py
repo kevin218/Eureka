@@ -1,4 +1,5 @@
 from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
+from .FleckModel import FleckTransitModel
 from .CentroidModel import CentroidModel
 from .ExpRampModel import ExpRampModel
 from .GPModel import GPModel

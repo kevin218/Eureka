@@ -5,6 +5,9 @@ from matplotlib import rcParams
 from mc3.stats import time_avg
 import corner
 from scipy import stats
+import fleck
+import batman
+import astropy.units as unit
 try:
     import arviz as az
     from arviz.rcparams import rcParams as az_rcParams
@@ -781,3 +784,43 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+
+
+def plot_fleck_star(lc, model, meta, fitter):
+    
+    spotrad = np.array([])
+    spotlat = np.array([])
+    spotlon = np.array([])
+    uarray = np.array([])
+    
+    bm_params = batman.TransitParams()
+    for attr in model.parameters.dict:
+        if attr.startswith('spot'):
+            if 'rad' in attr:
+                spotrad = np.append(spotrad, model.parameters.dict[attr][0])
+            elif 'lat' in attr:
+                spotlat = np.append(spotlat, model.parameters.dict[attr][0])
+            elif 'lon' in attr:
+                spotlon = np.append(spotlon, model.parameters.dict[attr][0])
+            elif 'con' in attr:
+                spot_contrast = model.parameters.dict[attr][0]
+            elif 'rot' in attr:
+                star_rotation = model.parameters.dict[attr][0]
+            elif 'stari' in attr:
+                star_inc = model.parameters.dict[attr][0]
+        elif attr.startswith('u'):
+            uarray = np.append(uarray, model.parameters.dict[attr][0])
+        else:
+            setattr(bm_params, attr, model.parameters.dict[attr][0])
+    bm_params.u = uarray
+    
+    fig = plt.figure(1000, figsize=(8, 6))
+    plt.clf()
+    star = fleck.Star(spot_contrast=spot_contrast, 
+                      u_ld=bm_params.u,
+                      rotation_period=star_rotation)
+    star.plot(spotlon[:, None]*unit.deg, spotlat[:, None]*unit.deg, 
+              spotrad[:, None], star_inc*unit.deg, 
+              planet=bm_params, time=0)
+    fname = (f'figs{os.sep}fig1000_fleck_star_{fitter}')
+    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
