@@ -130,13 +130,16 @@ class PoetTransitModel(Model):
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -151,6 +154,11 @@ class PoetTransitModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
@@ -170,7 +178,7 @@ class PoetTransitModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             light_curve = np.ones_like(time)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize planet
                 poet_params = PlanetParams(self, pid)
 
@@ -290,13 +298,16 @@ class PoetEclipseModel(Model):
                              f"         will not be accounting for "
                              f"light-travel time).")
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -312,13 +323,17 @@ class PoetEclipseModel(Model):
             nchan = 1
             channels = [channel, ]
 
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
         # Set all parameters
         lcfinal = np.array([])
-        self.adjusted_time = []
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -331,7 +346,7 @@ class PoetEclipseModel(Model):
                 time = split([time, ], self.nints, chan)[0]
 
             light_curve = np.ones_like(time)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize planet
                 poet_params = PlanetParams(self, pid)
 
@@ -351,10 +366,10 @@ class PoetEclipseModel(Model):
 
                 # Compute light travel time for current planet
                 if self.compute_ltt:
-                    self.adjusted_time.append(
-                        correct_light_travel_time(time, poet_params))
+                    self.adjusted_time = correct_light_travel_time(time, 
+                                                                   poet_params)
                 else:
-                    self.adjusted_time.append(time)
+                    self.adjusted_time = time
 
                 if not np.any(['t_secondary' in key
                               for key in self.longparamlist[chan]]):
@@ -364,9 +379,9 @@ class PoetEclipseModel(Model):
                     poet_params.t_secondary = get_ecl_midpt(poet_params)
 
                 # Make the eclipse model
-                m_eclipse = TransitModel(poet_params, self.adjusted_time[pid],
+                m_eclipse = TransitModel(poet_params, self.adjusted_time,
                                          transittype='secondary')
-                light_curve *= m_eclipse.light_curve(poet_params)
+                light_curve += m_eclipse.light_curve(poet_params)-1
 
             lcfinal = np.append(lcfinal, light_curve)
 
@@ -500,7 +515,14 @@ class PoetPCModel(Model):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
                     phaseVars = 1e12*np.ones_like(time)
-                light_curve += phaseVars
+
+                if self.eclipse_model is None:
+                    eclipse = 1
+                else:
+                    eclipse = self.eclipse_model.eval(channel=channel,
+                                                      pid=pid) - 1
+
+                light_curve += eclipse*phaseVars
 
             lcfinal = np.append(lcfinal, light_curve)
 
@@ -508,11 +530,8 @@ class PoetPCModel(Model):
             transit = 1
         else:
             transit = self.transit_model.eval(channel=channel)
-        if self.eclipse_model is None:
-            eclipse = 1
-        else:
-            eclipse = self.eclipse_model.eval(channel=channel) - 1
-        return transit + lcfinal*eclipse
+        
+        return transit + lcfinal
    
 
 class TransitModel():
