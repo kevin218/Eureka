@@ -1,14 +1,10 @@
 import numpy as np
-import astropy.constants as const
-import inspect
 import batman as bm
 
 from .Model import Model
-from .BatmanModels import correct_light_travel_time, PlanetParams, \
-    BatmanTransitModel, BatmanEclipseModel
+from .BatmanModels import BatmanTransitModel, BatmanEclipseModel, \
+    PlanetParams, get_ecl_midpt
 from .KeplerOrbit import KeplerOrbit
-from ..limb_darkening_fit import ld_profile
-from ...lib.split_channels import split
 
 
 class PoetTransitModel(BatmanTransitModel):
@@ -800,63 +796,3 @@ def ellpic_bulirsch(n, k):
         else:
             return 0.5 * np.pi * (c * m0 + d) / (m0 * (m0 + p))
 
-
-# def correct_light_travel_time(time, poet_params):
-#     '''Correct for the finite light travel speed.
-
-#     This function uses the KeplerOrbit.py file from the Bell_EBM package
-#     as that code includes a newer, faster method of solving Kepler's equation
-#     based on Tommasini+2018.
-
-#     Parameters
-#     ----------
-#     time : ndarray
-#         The times at which observations were collected
-#     poet_params : poet.PlanetParams
-#         The POET PlanetParams object that contains information on the orbit.
-
-#     Returns
-#     -------
-#     time : ndarray
-#         Updated times that can be put into POET transit and eclipse functions
-#         that will give the expected results assuming a finite light travel
-#         speed.
-
-#     Notes
-#     -----
-#     History:
-
-#     - 2022-03-31 Taylor J Bell
-#         Initial version based on the Bell_EMB KeplerOrbit.py file by
-#         Taylor J Bell and the light travel time calculations of SPIDERMAN's
-#         web.c file by Tom Louden
-#     - 2024-01-29 Kevin B Stevenson
-#         Modified for POET eclipses
-#     '''
-#     # Need to convert from a/Rs to a in meters
-#     a = poet_params.ars * (poet_params.Rs*const.R_sun.value)
-
-#     if poet_params.ecc > 0:
-#         # Need to solve Kepler's equation, so use the KeplerOrbit class
-#         # for rapid computation. In the SPIDERMAN notation z is the radial
-#         # coordinate, while for Bell_EBM the radial coordinate is x
-#         orbit = KeplerOrbit(a=a, Porb=poet_params.per, inc=poet_params.inc,
-#                             t0=poet_params.t0, e=poet_params.ecc, 
-#                             argp=poet_params.w)
-#         old_x, _, _ = orbit.xyz(time)
-#         transit_x, _, _ = orbit.xyz(poet_params.t0)
-#     else:
-#         # No need to solve Kepler's equation for circular orbits, so save
-#         # some computation time
-#         transit_x = a*np.sin(poet_params.inc)
-#         old_x = transit_x*np.cos(2*np.pi*(time-poet_params.t0)/poet_params.per)
-
-#     # Get the radial distance variations of the planet
-#     delta_x = transit_x - old_x
-
-#     # Compute for light travel time (and convert to days)
-#     delta_t = (delta_x/const.c.value)/(3600.*24.)
-
-#     # Subtract light travel time as a first-order correction
-#     # POET will then calculate the model at a slightly earlier time
-#     return time-delta_t.flatten()
