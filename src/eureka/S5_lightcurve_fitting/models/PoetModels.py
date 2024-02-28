@@ -5,6 +5,7 @@ from .Model import Model
 from .BatmanModels import BatmanTransitModel, BatmanEclipseModel, \
     PlanetParams, get_ecl_midpt
 from .KeplerOrbit import KeplerOrbit
+from ...lib.split_channels import split
 
 
 class PoetTransitModel(BatmanTransitModel):
