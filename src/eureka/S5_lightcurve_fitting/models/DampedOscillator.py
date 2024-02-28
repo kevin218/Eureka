@@ -18,12 +18,12 @@ class Params():
             and their current values.
         """      
         # Set parameters
-        self.osc_amp = 0.
+        self.osc_amp = None
         self.osc_amp_decay = 0.
-        self.osc_per = 1
+        self.osc_per = None
         self.osc_per_decay = 0.
         self.osc_t0 = 0.
-        self.osc_t1 = 0.
+        self.osc_t1 = None
         for item in self.__dict__.keys():
             try:
                 setattr(self, item, model.parameters.dict[item][0])
@@ -49,33 +49,6 @@ class DampedOscillatorModel(Model):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
-
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time."""
-        self._time = time_array
-
-    # def update(self, newparams, **kwargs):
-    #     """Update the model with new parameter values.
-
-    #     Parameters
-    #     ----------
-    #     newparams : ndarray
-    #         New parameter values.
-    #     **kwargs : dict
-    #         Additional parameters to pass to
-    #         eureka.S5_lightcurve_fitting.models.Model.update().
-    #     """
-    #     super().update(newparams, **kwargs)
-    #     if self.transit_model is not None:
-    #         self.transit_model.update(newparams, **kwargs)
-    #     if self.eclipse_model is not None:
-    #         self.eclipse_model.update(newparams, **kwargs)
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.

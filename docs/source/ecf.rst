@@ -869,7 +869,7 @@ For standard numpy functions, this can be one or more (separated by commas) of t
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
-The POET transit and eclipse models are best-suited for planets with small eccentricities.  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
+The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
 
 compute_ltt
 '''''''''''

@@ -52,16 +52,6 @@ class LorentzianModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time."""
-        self._time = time_array
-
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
 
