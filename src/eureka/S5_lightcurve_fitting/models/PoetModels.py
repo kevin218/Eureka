@@ -287,7 +287,7 @@ class TransitModel():
                 lc = trquad(self.z, params.rprs, params.u[0], params.u[1])
             elif self.limb_dark == "linear":
                 lc = trquad(self.z, params.rprs, params.u[0], 0)
-            elif self.limb_dark == "4-parameter":
+            elif self.limb_dark == "nonlinear":
                 lc = trnlldsp(self.z, params.rprs, params.u)
             elif self.limb_dark == "uniform": 
                 lc = uniform(self.z, params.rprs)
