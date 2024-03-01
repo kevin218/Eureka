@@ -1173,9 +1173,9 @@ def load_model(meta, log, x_unit):
         if model_y_param != y_param:
             # This model is not relevant for this plot, so skipping it
             log.writelog(f'The model_y_param ({meta.model_y_param}) does not '
-                         f'match the current y_param ({meta.y_param}), so not'
+                         f'match the current y_param ({meta.y_param}), so not '
                          'using the model for this plot')
-            return meta, None, None
+            return None, None
 
     model_path = os.path.join(meta.topdir, *meta.model_spectrum.split(os.sep))
     model_x, model_y = np.loadtxt(model_path, delimiter=meta.model_delimiter).T
@@ -1184,11 +1184,13 @@ def load_model(meta, log, x_unit):
     model_x_unit = model_x_unit.to(x_unit, equivalencies=units.spectral())
     model_x *= model_x_unit
     # Figure out if model needs to be converted to Rp/Rs
-    sqrt_model = ((meta.param == 'rp^2' or meta.param == 'rprs^2') and 
-                  meta.model_y_param != meta.y_param)
+    sqrt_model = ((meta.model_y_param == 'rp^2'
+                   or meta.model_y_param == 'rprs^2')
+                  and meta.model_y_param != meta.y_param)
     # Figure out if model needs to be converted to (Rp/Rs)^2
-    sq_model = ((meta.param == 'rp' or meta.param == 'rprs') and 
-                meta.model_y_param != meta.y_param)
+    sq_model = ((meta.model_y_param == 'rp'
+                 or meta.model_y_param == 'rprs')
+                and meta.model_y_param != meta.y_param)
     if sqrt_model:
         model_y = np.sqrt(model_y)
     elif sq_model:
@@ -1206,7 +1208,7 @@ def load_model(meta, log, x_unit):
     if meta.model_y_scalar != 1:
         model_y *= meta.model_y_scalar
 
-    return model_x, model_y
+    return model_x, model_y*meta.y_scalar
 
 
 def save_table(meta, log):
