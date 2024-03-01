@@ -30,7 +30,7 @@ u2			0.2					'fixed'			-1				1			U
 # Phase curve parameters
 # ----------------------
 cos1_amp		0.0737	        'free'			0				1			U
-cos1_off		0.0000	        'free'			-0.2			0.2			U
+cos1_off		0.0000	        'free'			-20 			20			U
 # --------------------
 # Systematic variables
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!

@@ -1,82 +1,13 @@
 import numpy as np
-import astropy.constants as const
-import inspect
 import batman as bm
 
 from .Model import Model
-from .KeplerOrbit import KeplerOrbit
-from ..limb_darkening_fit import ld_profile
+from .BatmanModels import BatmanTransitModel, BatmanEclipseModel, \
+    PlanetParams, get_ecl_midpt
 from ...lib.split_channels import split
 
 
-class PlanetParams():
-    """
-    Define planet parameters.
-    """
-    def __init__(self, model, pid=0):
-        """ 
-        Set attributes to PlanetParams object.
-
-        Parameters
-        ----------
-        model : object
-            The model.eval object that contains a dictionary of parameter names 
-            and their current values.
-        pid : int; optional
-            Planet ID, default is 0.
-        """
-        # Planet ID
-        self.pid = pid       
-        # Set transit/eclipse parameters
-        self.t0 = None
-        self.rprs = None
-        self.inc = None
-        self.ars = None
-        self.per = None
-        self.ecc = 0.
-        self.w = None
-        self.fpfs = 0.
-        self.t_secondary = None
-        self.cos1_amp = 0.
-        self.cos1_off = 0.
-        self.cos2_amp = 0.
-        self.cos2_off = 0.
-        for item in self.__dict__.keys():
-            if pid > 0:
-                item0 = item + str(pid)
-            else:
-                item0 = item
-            try:
-                setattr(self, item, model.parameters.dict[item0][0])
-            except KeyError:
-                pass
-        # Allow for rp or rprs
-        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'rp' + str(pid)
-            else:
-                item0 = 'rp'
-            setattr(self, 'rprs', model.parameters.dict[item0][0])
-        # Allow for a or ars
-        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'a' + str(pid)
-            else:
-                item0 = 'a'
-            setattr(self, 'ars', model.parameters.dict[item0][0])
-        # Allow for fp or fpfs
-        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'fp' + str(pid)
-            else:
-                item0 = 'fp'
-            setattr(self, 'fpfs', model.parameters.dict[item0][0])
-        # Set stellar radius
-        if 'Rs' in model.parameters.dict.keys():
-            setattr(self, 'Rs', model.parameters.dict['Rs'][0])
-
-
-class PoetTransitModel(Model):
+class PoetTransitModel(BatmanTransitModel):
     """Transit Model"""
     def __init__(self, **kwargs):
         """Initialize the transit model
@@ -91,144 +22,11 @@ class PoetTransitModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
-
-        log = kwargs.get('log')
-
-        # Store the ld_profile
-        ld_func = ld_profile(self.parameters.limb_dark.value, 
-                             use_gen_ld=self.ld_from_S4)
-        len_params = len(inspect.signature(ld_func).parameters)
-        self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
-
-        # Replace u parameters with generated limb-darkening values
-        if self.ld_from_S4 or self.ld_from_file:
-            log.writelog("Using the following limb-darkening values:")
-            self.ld_array = kwargs.get('ld_coeffs')
-            for c in range(self.nchannel_fitted):
-                chan = self.fitted_channels[c]
-                if self.ld_from_S4:
-                    ld_array = self.ld_array[len_params-2]
-                else:
-                    ld_array = self.ld_array
-                for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[c][index[0]]
-                        param = int(item.split('_')[0][-1])
-                        ld_val = ld_array[chan][param-1]
-                        log.writelog(f"{item}, {ld_val}")
-                        # Use the file value as the starting guess
-                        self.parameters.dict[item][0] = ld_val
-                        # In a normal prior, center at the file value
-                        if (self.parameters.dict[item][-1] == 'N' and
-                                self.recenter_ld_prior):
-                            self.parameters.dict[item][-3] = ld_val
-                        # Update the non-dictionary form as well
-                        setattr(self.parameters, item,
-                                self.parameters.dict[item])
-
-    def eval(self, channel=None, pid=None, **kwargs):
-        """Evaluate the function with the given values.
-
-        Parameters
-        ----------
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
-        pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
-            all planets.
-        **kwargs : dict
-            Must pass in the time array here if not already set.
-
-        Returns
-        -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
-        """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
-
-        if pid is None:
-            pid_iter = range(self.num_planets)
-        else:
-            pid_iter = [pid,]
-
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Set all parameters
-        lcfinal = np.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
-            if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
-            light_curve = np.ones_like(time)
-            for pid in pid_iter:
-                # Initialize planet
-                poet_params = PlanetParams(self, pid)
-
-                # Set limb darkening parameters
-                uarray = []
-                for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[chan][index[0]]
-                        uarray.append(self.parameters.dict[item][0])
-                poet_params.u = uarray
-                poet_params.limb_dark = self.parameters.dict['limb_dark'][0]
-
-                # Enforce physicality to avoid crashes
-                if not ((0 < poet_params.per) and 
-                        (0 < poet_params.inc < 90) and
-                        (1 < poet_params.ars)):
-                    # Return poor fit
-                    light_curve = 1e12*np.ones_like(time)
-                    continue
-
-                # Check for out-of-bound values
-                if self.parameters.limb_dark.value == '4-parameter':
-                    # Enforce small planet approximation
-                    if poet_params.rprs > 0.1:
-                        # Return poor fit
-                        light_curve = 1e12*np.ones_like(time)
-                        continue
-                elif self.parameters.limb_dark.value == 'kipping2013':
-                    # Enforce physicality to avoid crashes
-                    if poet_params.u[0] <= 0:
-                        # Return poor fit
-                        light_curve = 1e12*np.ones_like(time)
-                        continue
-                    poet_params.limb_dark = 'quadratic'
-                    u1 = 2*np.sqrt(poet_params.u[0])*poet_params.u[1]
-                    u2 = np.sqrt(poet_params.u[0])*(1-2*poet_params.u[1])
-                    poet_params.u = np.array([u1, u2])
-
-                # Make the transit model
-                m_transit = TransitModel(poet_params, time,
-                                         transittype='primary')
-                light_curve *= m_transit.light_curve(poet_params)
-
-            lcfinal = np.append(lcfinal, light_curve)
-
-        return lcfinal
+        # Define transit model to be used
+        self.transit_model = TransitModel
 
 
-class PoetEclipseModel(Model):
+class PoetEclipseModel(BatmanEclipseModel):
     """Eclipse Model"""
     def __init__(self, **kwargs):
         """Initialize the eclipse model
@@ -243,149 +41,8 @@ class PoetEclipseModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
-
-        log = kwargs.get('log')
-
-        # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
-        ltt_par2 = np.array(['a', 'ars'])
-        # Check if able to do ltt correction
-        self.compute_ltt = (np.all(np.in1d(ltt_params, self.paramtitles))
-                            and 'Rs' in self.parameters.dict.keys()
-                            and np.any(np.in1d(ltt_par2, self.paramtitles)))
-        if self.compute_ltt:
-            # Check if we need to do ltt correction for each
-            # wavelength or only one
-            if self.nchannel_fitted > 1:
-                # Check whether the parameters are all either fixed or shared
-                once_type = ['shared', 'fixed']
-                self.compute_ltt_once = \
-                    np.all([self.parameters.dict.get(name)[1] in once_type
-                           for name in ltt_params]) and \
-                    np.any([self.parameters.dict.get(name)[1] in
-                            once_type for name in ltt_par2])
-            else:
-                self.compute_ltt_once = True
-        else:
-            missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) == 
-                                        np.array(self.paramtitles), axis=1)]
-            if 'Rs' not in self.parameters.dict.keys():
-                missing_params = np.append('Rs', missing_params)
-            if ('a' not in self.parameters.dict.keys()) and \
-                    ('ars' not in self.parameters.dict.keys()):
-                missing_params = np.append('ars', missing_params)
-            if 't_secondary' not in self.parameters.dict.keys():
-                log.writelog(f"WARNING: Missing parameters ["
-                             f"{', '.join(missing_params)}] in your EPF which "
-                             f"are required to account for light-travel time."
-                             f"\n"
-                             f"         You should either add these "
-                             f"parameters, or you should be fitting for "
-                             f"t_secondary\n"
-                             f"         (but note that the fitted t_secondary "
-                             f"will not be accounting for light-travel time).")
-            else:
-                log.writelog(f"WARNING: Missing parameters "
-                             f"{', '.join(missing_params)} in your EPF which "
-                             f"are required to account for light-travel time."
-                             f"\n"
-                             f"         While you are fitting for t_secondary"
-                             f" which will help, note that the fitted "
-                             f"t_secondary\n"
-                             f"         will not be accounting for "
-                             f"light-travel time).")
-
-    def eval(self, channel=None, pid=None, **kwargs):
-        """Evaluate the function with the given values.
-
-        Parameters
-        ----------
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
-        pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
-            all planets.
-        **kwargs : dict
-            Must pass in the time array here if not already set.
-
-        Returns
-        -------
-        lcfinal : ndarray
-            The value of the model at the times self.time.
-        """
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel, ]
-
-        if pid is None:
-            pid_iter = range(self.num_planets)
-        else:
-            pid_iter = [pid,]
-
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        # Set all parameters
-        lcfinal = np.array([])
-        for c in range(nchan):
-            if self.nchannel_fitted > 1:
-                chan = channels[c]
-            else:
-                chan = 0
-
-            time = self.time
-            if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
-            light_curve = np.ones_like(time)
-            for pid in pid_iter:
-                # Initialize planet
-                poet_params = PlanetParams(self, pid)
-
-                # Set limb darkening parameters
-                poet_params.u = []
-                poet_params.limb_dark = 'uniform'
-
-                # Enforce physicality to avoid crashes
-                if not ((0 < poet_params.per) and 
-                        (0 < poet_params.inc < 90) and
-                        (1 < poet_params.ars) and 
-                        (0 <= poet_params.ecc < 1) and
-                        (0 <= poet_params.w <= 360)):
-                    # Return poor fit
-                    light_curve = 1e12*np.ones_like(time)
-                    continue
-
-                # Compute light travel time for current planet
-                if self.compute_ltt:
-                    self.adjusted_time = correct_light_travel_time(time, 
-                                                                   poet_params)
-                else:
-                    self.adjusted_time = time
-
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
-                    # If not explicitly fitting for the time of eclipse, get
-                    # the time of eclipse from the time of transit, period,
-                    # eccentricity, and argument of periastron
-                    poet_params.t_secondary = get_ecl_midpt(poet_params)
-
-                # Make the eclipse model
-                m_eclipse = TransitModel(poet_params, self.adjusted_time,
-                                         transittype='secondary')
-                light_curve += m_eclipse.light_curve(poet_params)-1
-
-            lcfinal = np.append(lcfinal, light_curve)
-
-        return lcfinal
+        # Define transit model to be used
+        self.transit_model = TransitModel
 
 
 class PoetPCModel(Model):
@@ -503,6 +160,13 @@ class PoetPCModel(Model):
                 poet_params.limb_dark = 'uniform'
                 poet_params.u = []
 
+                if not np.any(['t_secondary' in key
+                              for key in self.longparamlist[chan]]):
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
+                    # eccentricity, and argument of periastron
+                    poet_params.t_secondary = get_ecl_midpt(poet_params)
+
                 # calculate the phase variations
                 p = poet_params.per
                 t1 = poet_params.cos1_off*p/360. + poet_params.t_secondary
@@ -518,6 +182,7 @@ class PoetPCModel(Model):
                     # the best I could think of
                     phaseVars = 1e12*np.ones_like(time)
 
+                # Compute eclipse model
                 if self.eclipse_model is None:
                     eclipse = 1
                 else:
@@ -541,7 +206,18 @@ class TransitModel():
     Class for generating model transit light curves.
     """
     def __init__(self, params, t, transittype="primary"):
-        # Initializes model parameters
+        """ 
+        Initializes model parameters and computes planet-star-distance
+
+        Parameters
+        ----------
+        params : object
+            Contains the physical parameters for the transit model.
+        t : array
+            Array of times.
+        transittype : str; optional
+            Options are primary or secondary.  Default is primary.
+        """
         self.t = t
         self.t0 = params.t0
         self.rprs = params.rprs
@@ -580,6 +256,16 @@ class TransitModel():
     def light_curve(self, params):
         """
         Calculate a model light curve.
+
+        Parameters
+        ----------
+        params : object
+            Contains the physical parameters for the transit model.
+
+        Returns
+        -------
+        lc : ndarray
+            Light curve.
         """
         # Update transit params
         self.t0 = params.t0
@@ -601,7 +287,7 @@ class TransitModel():
                 lc = trquad(self.z, params.rprs, params.u[0], params.u[1])
             elif self.limb_dark == "linear":
                 lc = trquad(self.z, params.rprs, params.u[0], 0)
-            elif self.limb_dark == "4-parameter":
+            elif self.limb_dark == "nonlinear":
                 lc = trnlldsp(self.z, params.rprs, params.u)
             elif self.limb_dark == "uniform": 
                 lc = uniform(self.z, params.rprs)
@@ -617,28 +303,6 @@ class TransitModel():
                                       params.fpfs, self.nthreads)
         return lc
     
-
-def get_ecl_midpt(params):
-    """
-    Return the time of secondary eclipse center.
-    """
-
-    # Start with primary transit
-    TA = np.pi / 2. - params.w * np.pi / 180.
-    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc)) 
-                       * np.tan(TA / 2.))
-    M = E - params.ecc * np.sin(E)
-    phase_tr = M / 2. / np.pi
-
-    # Now do secondary eclipse
-    TA = 3. * np.pi / 2. - params.w * np.pi / 180.
-    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc)) 
-                       * np.tan(TA / 2.))
-    M = E - params.ecc * np.sin(E)
-    phase_ecl = M / 2. / np.pi
-
-    return params.t0 + params.per * (phase_ecl - phase_tr)
-
 
 def uniform(z, rprs):
     """
@@ -657,12 +321,14 @@ def uniform(z, rprs):
     y : ndarray
         The flux for each point in time.
 
-    Revisions
-    ---------
-    2010-11-27      Kevin Stevenson, UCF
-                    Original version
-    2024-01-28      Kevin Stevenson, APL
-                    Updated for Eureka!
+    Notes
+    -----
+    History:
+
+    - 2010-11-27 Kevin Stevenson 
+        Original version
+    - 2024-01-28 Kevin Stevenson
+        Updated for Eureka!
     """
     # INGRESS/EGRESS INDICES
     iingress = np.where(np.bitwise_and((1-rprs) < z, z <= (1+rprs)))[0]
@@ -701,13 +367,14 @@ def trnlldsp(z, rprs, u):
     -------
     y : ndarray
         The flux for each point in time.
+    Notes
+    -----
+    History:
 
-    Revisions
-    ---------
-    2010-12-15      Kevin Stevenson, UCF
-                    Converted to Python
-    2024-01-28      Kevin Stevenson, APL
-                    Updated for Eureka!
+    - 2010-12-15 Kevin Stevenson
+        Converted to Python
+    - 2024-01-28 Kevin Stevenson
+        Updated for Eureka!
     """
 
     # DEFINE PARAMETERS
@@ -767,12 +434,14 @@ def trquad(z, rprs, u1, u2):
     y : ndarray
         The flux for each point in time.
 
-    Revisions
-    ---------
-    2012-08-13	    Kevin Stevenson, UChicago
-                    Modified from Jason Eastman's version
-    2024-01-28      Kevin Stevenson, APL
-                    Updated for Eureka!
+    Notes
+    -----
+    History:
+
+    - 2012-08-13 Kevin Stevenson
+        Modified from Jason Eastman's version
+    2024-01-28 Kevin Stevenson
+        Updated for Eureka!
     '''
 
     nz = np.size(z)
@@ -806,8 +475,7 @@ def trquad(z, rprs, u1, u2):
     # # Case 1 - the star is unocculted:
     # # only consider points with z < 1+rprs
 
-    notusedyet = np.where(z < 1. + rprs)
-    notusedyet = notusedyet[0]
+    notusedyet = np.where(z < 1. + rprs)[0]
     if np.size(notusedyet) == 0:
         muo1 = 1. - ((1. - u1 - 2. * u2) * lambdae + (u1 + 2. * u2)
                      * (lambdad + 2. / 3. * (rprs > z)) + u2 * etad) \
@@ -1017,6 +685,34 @@ def trquad(z, rprs, u1, u2):
 
 
 def ellke(k):
+    """
+    Computes Hasting's polynomial approximation for the complete
+    elliptic integral of the first (ek) and second (kk) find.
+
+    Parameters
+    ----------
+    k : 1D array
+        Intermediate value from trquad().
+
+    Returns
+    -------
+    ek : 1D array
+        elliptic integral of the first kind
+    kk : 1D array
+        elliptic integral of the second kind
+        
+    
+    Notes
+    -----
+    History:
+
+    - 2008-ish Jason Eastman
+        Originally written in IDL (Eastman et al. 2013, PASP 125, 83)
+    - 2010-ish Kevin Stevenson
+        Converted to Python
+    - 2024-01-29 Kevin B Stevenson
+        Modified for Eureka!
+    """
     m1 = 1. - k ** 2
     logm1 = np.log(m1)
 
@@ -1050,6 +746,35 @@ def ellke(k):
 
 
 def ellpic_bulirsch(n, k):
+    """
+    Computes the complete elliptical integral of the third kind using
+    the algorithm of Bulirsch (1965).
+
+    Parameters
+    ----------
+    n : float
+        An intermediate value describing the shape of the transit at a point 
+        in time.
+    k : float
+        Another intermediate value describing the shape of the transit at a 
+        point in time.
+
+    Returns
+    -------
+    ellpic : ndarray
+        The elliptical integral
+    
+    Notes
+    -----
+    History:
+
+    - 2008-ish Jason Eastman
+        Originally written in IDL (Eastman et al. 2013, PASP 125, 83)
+    - 2010-ish Kevin Stevenson
+        Converted to Python
+    - 2024-01-29 Kevin B Stevenson
+        Modified for Eureka!
+    """
     kc = np.sqrt(1. - k ** 2)
     p = n + 1.
     m0 = 1.
@@ -1071,63 +796,3 @@ def ellpic_bulirsch(n, k):
         else:
             return 0.5 * np.pi * (c * m0 + d) / (m0 * (m0 + p))
 
-
-def correct_light_travel_time(time, poet_params):
-    '''Correct for the finite light travel speed.
-
-    This function uses the KeplerOrbit.py file from the Bell_EBM package
-    as that code includes a newer, faster method of solving Kepler's equation
-    based on Tommasini+2018.
-
-    Parameters
-    ----------
-    time : ndarray
-        The times at which observations were collected
-    poet_params : poet.PlanetParams
-        The POET PlanetParams object that contains information on the orbit.
-
-    Returns
-    -------
-    time : ndarray
-        Updated times that can be put into POET transit and eclipse functions
-        that will give the expected results assuming a finite light travel
-        speed.
-
-    Notes
-    -----
-    History:
-
-    - 2022-03-31 Taylor J Bell
-        Initial version based on the Bell_EMB KeplerOrbit.py file by
-        Taylor J Bell and the light travel time calculations of SPIDERMAN's
-        web.c file by Tom Louden
-    - 2024-01-29 Kevin B Stevenson
-        Modified for POET eclipses
-    '''
-    # Need to convert from a/Rs to a in meters
-    a = poet_params.ars * (poet_params.Rs*const.R_sun.value)
-
-    if poet_params.ecc > 0:
-        # Need to solve Kepler's equation, so use the KeplerOrbit class
-        # for rapid computation. In the SPIDERMAN notation z is the radial
-        # coordinate, while for Bell_EBM the radial coordinate is x
-        orbit = KeplerOrbit(a=a, Porb=poet_params.per, inc=poet_params.inc,
-                            t0=poet_params.t0, e=poet_params.ecc, 
-                            argp=poet_params.w)
-        old_x, _, _ = orbit.xyz(time)
-        transit_x, _, _ = orbit.xyz(poet_params.t0)
-    else:
-        # No need to solve Kepler's equation for circular orbits, so save
-        # some computation time
-        transit_x = a*np.sin(poet_params.inc)
-        old_x = transit_x*np.cos(2*np.pi*(time-poet_params.t0)/poet_params.per)
-
-    # Get the radial distance variations of the planet
-    delta_x = transit_x - old_x
-
-    # Compute for light travel time (and convert to days)
-    delta_t = (delta_x/const.c.value)/(3600.*24.)
-
-    # Subtract light travel time as a first-order correction
-    # POET will then calculate the model at a slightly earlier time
-    return time-delta_t.flatten()
