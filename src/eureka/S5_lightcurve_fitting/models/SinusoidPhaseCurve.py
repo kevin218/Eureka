@@ -57,11 +57,26 @@ class SinusoidPhaseCurveModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
+        time_array = np.ma.masked_array(time_array)
         self._time = time_array
         if self.transit_model is not None:
             self.transit_model.time = time_array
         if self.eclipse_model is not None:
             self.eclipse_model.time = time_array
+
+    @property
+    def nints(self):
+        """A getter for the nints."""
+        return self._nints
+
+    @nints.setter
+    def nints(self, nints_array):
+        """A setter for the nints."""
+        self._nints = nints_array
+        if self.transit_model is not None:
+            self.transit_model.nints = nints_array
+        if self.eclipse_model is not None:
+            self.eclipse_model.nints = nints_array
 
     def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
@@ -107,7 +122,7 @@ class SinusoidPhaseCurveModel(Model):
             self.time = kwargs.get('time')
 
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -119,10 +134,10 @@ class SinusoidPhaseCurveModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.zeros_like(time)
+            light_curve = np.ma.zeros_like(time)
             for pid in range(self.num_planets):
                 # Initialize model
-                bm_params = PlanetParams(self, pid)
+                bm_params = PlanetParams(self, pid, chan)
 
                 bm_params.limb_dark = 'uniform'
                 bm_params.u = []
@@ -133,7 +148,7 @@ class SinusoidPhaseCurveModel(Model):
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
-                    m_transit = batman.TransitModel(bm_params, self.time,
+                    m_transit = batman.TransitModel(bm_params, time,
                                                     transittype='primary')
                     t_secondary = m_transit.get_t_secondary(bm_params)
                 else:
@@ -158,29 +173,28 @@ class SinusoidPhaseCurveModel(Model):
                 # calculate the phase variations
                 if bm_params.AmpCos2 == 0. and bm_params.AmpSin2 == 0.:
                     # Skip multiplying by a bunch of zeros to speed up fitting
-                    phaseVars = (1. + bm_params.AmpCos1*(np.cos(phi)-1.) +
-                                 bm_params.AmpSin1*np.sin(phi))
+                    phaseVars = (1. + bm_params.AmpCos1*(np.ma.cos(phi)-1.) +
+                                 bm_params.AmpSin1*np.ma.sin(phi))
                 else:
-                    phaseVars = (1. + bm_params.AmpCos1*(np.cos(phi)-1.) +
-                                 bm_params.AmpSin1*np.sin(phi) +
-                                 bm_params.AmpCos2*(np.cos(2.*phi)-1.) +
-                                 bm_params.AmpSin2*np.sin(2.*phi))
+                    phaseVars = (1. + bm_params.AmpCos1*(np.ma.cos(phi)-1.) +
+                                 bm_params.AmpSin1*np.ma.sin(phi) +
+                                 bm_params.AmpCos2*(np.ma.cos(2.*phi)-1.) +
+                                 bm_params.AmpSin2*np.ma.sin(2.*phi))
 
                 # If requested, force positive phase variations
-                if self.force_positivity and np.any(phaseVars < 0):
+                if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ones_like(time)
+                    phaseVars = 1e12*np.ma.ones_like(time)
                 
                 if self.eclipse_model is None:
                     eclipse = 1
                 else:
-                    eclipse = self.eclipse_model.eval(channel=channel,
+                    eclipse = self.eclipse_model.eval(channel=chan,
                                                       pid=pid) - 1
-
                 light_curve += eclipse*phaseVars
 
-            lcfinal = np.append(lcfinal, light_curve)
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         if self.transit_model is None:
             transit = 1

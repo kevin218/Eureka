@@ -146,12 +146,6 @@ class LightCurve(m.Model):
         - Dec 29, 2021 Taylor Bell
             Updated documentation and reduced repeated code
         """
-        # Empty default fit
-        fit_model = None
-
-        model.time = self.time
-        model.multwhite = meta.multwhite
-
         if fitter not in ['exoplanet', 'nuts']:
             # Make sure the model is a CompositeModel
             if not isinstance(model, m.CompositeModel):
@@ -194,9 +188,9 @@ class LightCurve(m.Model):
         """
         # Make the figure
         for i, channel in enumerate(self.fitted_channels):
-            flux = self.flux
+            flux = np.ma.copy(self.flux)
             unc = np.ma.copy(self.unc_fit)
-            time = self.time
+            time = np.ma.copy(self.time)
             
             if self.share and not meta.multwhite:
                 # Split the arrays that have lengths of the original time axis
@@ -210,11 +204,14 @@ class LightCurve(m.Model):
             if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
                meta.nbin_plot > len(time):
                 nbin_plot = len(time)
+                binned_time = time
+                binned_flux = flux
+                binned_unc = unc
             else:
                 nbin_plot = meta.nbin_plot
-            binned_time = util.binData_time(time, time, nbin_plot)
-            binned_flux = util.binData_time(flux, time, nbin_plot)
-            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+                binned_time = util.binData_time(time, time, nbin_plot)
+                binned_flux = util.binData_time(flux, time, nbin_plot)
+                binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
 
             fig = plt.figure(5103, figsize=(8, 6))
             fig.clf()

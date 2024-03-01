@@ -107,7 +107,7 @@ class LorentzianModel(Model):
                 ut[rhs] = (time[rhs]-t0)/params.lor_hwhm_rhs
                 lorentzian[lhs] = 1 + params.lor_amp_lhs/(1 + ut[lhs]**p)
                 baseline = 1 + params.lor_amp_lhs - params.lor_amp_rhs
-                lorentzian[rhs] = baseline + params.lor_amp_rhs/(1 + ut[rhs]**p)
+                lorentzian[rhs] = baseline+params.lor_amp_rhs/(1+ut[rhs]**p)
             elif (params.lor_hwhm is None) and \
                     (params.lor_amp_lhs is None) and \
                     (params.lor_amp_rhs is None):
@@ -128,8 +128,8 @@ class LorentzianModel(Model):
                 lorentzian = 1 + params.lor_amp/(1 + ut**p)
             else:
                 # Unresolvable situation
-                raise Exception("Cannot determine the type of Lorentzian model "
-                                "to fit.  Use one of the following options: "
+                raise Exception("Cannot determine the type of Lorentzian model"
+                                " to fit.  Use one of the following options: "
                                 "1. lor_amp, lor_hwhm; "
                                 "2. lor_amp, lor_hwhm_lhs, lor_hwhm_rhs; "
                                 "3. lor_amp_lhs, lor_amp_rhs, lor_hwhm_lhs, "

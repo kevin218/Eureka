@@ -232,7 +232,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 time_units = lc.data.attrs['time_units']+f' - {offset}'
             else:
                 time_units = lc.data.attrs['time_units']
-            meta.time = lc.time.values
             # Record units for Stage 6
             meta.time_units = time_units
             meta.wave_units = lc.data.attrs['wave_units']
@@ -247,7 +246,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                             getattr(lc, centroid_param).values))
                 else:
                     centroid_param_list.append(
-                        np.zeros_like(lc.time.values))
+                        np.ma.zeros_like(lc.time.values))
             xpos, xwidth, ypos, ywidth = centroid_param_list
 
             # make citations for current stage
@@ -373,13 +372,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                 for pi in range(len(meta.inputdirlist)+1):
                     mask = lc_whites[pi].mask.values[0, :]
+                    time_temp = lc_whites[pi].time.values - offset
+                    time_temp = np.ma.masked_where(mask, time_temp)
                     flux_temp = np.ma.masked_where(
                         mask, lc_whites[pi].data.values[0, :])
                     err_temp = np.ma.masked_where(
                         mask, lc_whites[pi].err.values[0, :])
                     flux_temp, err_temp = util.normalize_spectrum(
-                        meta, flux_temp, err_temp)
-                    time_temp = lc_whites[pi].time.values - offset
+                        meta, flux_temp, err_temp, mask)
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)
@@ -387,18 +387,26 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     if hasattr(lc_whites[pi], 'centroid_x'):
                         xpos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_x.values)
-                        xwidth_temp = np.ma.masked_invalid(
-                            lc_whites[pi].centroid_sx.values)
+                        xpos_temp = np.ma.masked_where(mask, xpos_temp)
                     else:
                         xpos_temp = None
+                    if hasattr(lc_whites[pi], 'centroid_x'):
+                        xwidth_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_sx.values)
+                        xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
+                    else:
                         xwidth_temp = None
                     if hasattr(lc_whites[pi], 'centroid_y'):
                         ypos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_y.values)
-                        ywidth_temp = np.ma.masked_invalid(
-                            lc_whites[pi].centroid_sy.values)
+                        ypos_temp = np.ma.masked_where(mask, ypos_temp)
                     else:
                         ypos_temp = None
+                    if hasattr(lc_whites[pi], 'centroid_y'):
+                        ywidth_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_sy.values)
+                        ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
+                    else:
                         ywidth_temp = None
 
                     xpos = np.ma.append(xpos, xpos_temp)
@@ -462,13 +470,14 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                               lc.data.values[channel, :])
                     flux_err = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
+                    time_temp = np.ma.masked_where(mask, time)
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
                     flux, flux_err = util.normalize_spectrum(meta, flux,
                                                              flux_err)
 
-                    meta, params = fit_channel(meta, time, flux, channel,
+                    meta, params = fit_channel(meta, time_temp, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
                                                paramtitles, chanrng, ld_coeffs,
@@ -732,10 +741,12 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         # Nest any transit and/or eclipse models inside of the
         # phase curve model
         if 'batman_tr' in model_names:
-            t_model = modellist.pop(np.where(model_names == 'batman_tr')[0][0])
+            t_model = modellist.pop(
+                np.where(model_names == 'batman_tr')[0][0])
             model_names = np.array([model.name for model in modellist])
         if 'batman_ecl' in model_names:
-            e_model = modellist.pop(np.where(model_names == 'batman_ecl')[0][0])
+            e_model = modellist.pop(
+                np.where(model_names == 'batman_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
         # Check if should enforce positivity
         if not hasattr(meta, 'force_positivity'):
@@ -1080,8 +1091,15 @@ def make_longparamlist(meta, params, chanrng):
             longparamlist[0].append(param)
             for c in np.arange(nspecchan-1):
                 title = param+'_'+str(c+1)
-                params.__setattr__(title, params.dict[param])
-                longparamlist[c+1].append(title)
+                if title in tlist:
+                    # The user specifically set this channel's parameter
+                    longparamlist[c+1].append(title)
+                    # Remove this parameter from tlist so we don't set it twice
+                    tlist.remove(title)
+                else:
+                    # Set this parameter based on channel 0's parameter
+                    params.__setattr__(title, params.dict[param])
+                    longparamlist[c+1].append(title)
         elif 'shared' in params.dict[param]:
             for c in np.arange(nspecchan):
                 longparamlist[c].append(param)

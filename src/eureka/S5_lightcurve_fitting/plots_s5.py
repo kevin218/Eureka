@@ -94,14 +94,19 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
            meta.nbin_plot > len(time):
-            nbin_plot = len(time)
+            binned_time = time
+            binned_flux = flux
+            binned_unc = unc
+            binned_normflux = flux/model_sys - gp
+            binned_res = residuals
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData_time(time, time, nbin_plot)
-        binned_flux = util.binData_time(flux, time, nbin_plot)
-        binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
-        binned_normflux = util.binData_time(flux/model_sys-gp, time, nbin_plot)
-        binned_res = util.binData_time(residuals, time, nbin_plot)
+            binned_time = util.binData_time(time, time, nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_normflux = util.binData_time(flux/model_sys - gp, time,
+                                                nbin_plot)
+            binned_res = util.binData_time(residuals, time, nbin_plot)
 
         fig = plt.figure(5101, figsize=(8, 6))
         plt.clf()
@@ -124,7 +129,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
 
         ax[2].errorbar(binned_time, binned_res*1e6, yerr=binned_unc*1e6,
                        fmt='.', color='w', ecolor=color, mec=color)
-        ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
+        ax[2].axhline(0, color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
@@ -222,12 +227,14 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         # Get binned data and times
         if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
            meta.nbin_plot > len(time):
-            nbin_plot = len(time)
+            binned_time = time
+            binned_flux = flux
+            binned_unc = unc
         else:
             nbin_plot = meta.nbin_plot
-        binned_time = util.binData_time(time, time, nbin_plot)
-        binned_flux = util.binData_time(flux, time, nbin_plot)
-        binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
+            binned_time = util.binData_time(time, time, nbin_plot)
+            binned_flux = util.binData_time(flux, time, nbin_plot)
+            binned_unc = util.binData_time(unc, time, nbin_plot, err=True)
 
         # Setup the figure
         fig = plt.figure(5104, figsize=(8, 6))
@@ -251,7 +258,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
         sigma = np.ma.mean(binned_unc)
         max_astro = np.ma.max((model_phys-1))
         ax.set_ylim(-6*sigma, max_astro+6*sigma)
-        ax.set_xlim(np.min(time), np.max(time))
+        ax.set_xlim(np.ma.min(time), np.ma.max(time))
 
         # Save/show the figure
         if lc.white:
@@ -287,8 +294,9 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                     zorder=10)
 
             # Set nice axis limits
+            max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
-            ax.set_xlim(np.min(time), np.max(time))
+            ax.set_xlim(np.ma.min(time), np.ma.max(time))
             # Save/show the figure
             if lc.white:
                 fname_tag = 'white'
@@ -347,11 +355,11 @@ def plot_rms(lc, model, meta, fitter):
         else:
             time = lc.time
 
-        residuals = flux - model_lc
-        residuals = residuals[np.argsort(time)]
+        residuals = np.ma.masked_invalid(flux-model_lc)
+        residuals = residuals[np.ma.argsort(time)]
 
-        # Remove NaNs
-        residuals = residuals[~np.isnan(residuals)]
+        # Remove masked values
+        residuals = residuals[~np.ma.getmaskarray(residuals)]
         # Compute RMS range
         maxbins = residuals.size//10
         if maxbins < 2:
@@ -379,15 +387,13 @@ def plot_rms(lc, model, meta, fitter):
                 label='Gaussian Std. Err.', zorder=1)
 
         # Format the main axes
-        ax.set_xlim(0.95, binsz[-1] * 2)
-        ax.set_ylim(stderr[-1] / normfactor / 2., stderr[0] / normfactor * 2.)
         ax.set_xlabel("Bin Size (N frames)", fontsize=14)
         ax.set_ylabel("RMS (ppm)", fontsize=14)
         ax.tick_params(axis='both', labelsize=12)
         ax.legend(loc=1)
 
         # Add second x-axis using time instead of N-binned
-        dt = (time[1]-time[0])*24*3600
+        dt = np.ma.min(np.ma.diff(time))*24*3600
 
         def t_N(N):
             return N*dt
@@ -661,7 +667,7 @@ def plot_res_distr(lc, model, meta, fitter):
         plt.clf()
 
         flux = np.ma.copy(lc.flux)
-        unc = np.ma.copy(np.array(lc.unc_fit))
+        unc = np.ma.copy(lc.unc_fit)
         model_lc = np.ma.copy(model_eval)
 
         if lc.share or meta.multwhite:
@@ -671,7 +677,8 @@ def plot_res_distr(lc, model, meta, fitter):
 
         residuals = flux - model_lc
         hist_vals = residuals/unc
-        hist_vals[~np.isfinite(hist_vals)] = np.nan  # Mask out any infinities
+        # Mask out any infinities or nans
+        hist_vals = np.ma.masked_invalid(hist_vals)
 
         n, bins, patches = plt.hist(hist_vals, alpha=0.5, color='b',
                                     edgecolor='b', lw=1)
@@ -765,7 +772,7 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
         ax[2].errorbar(time, residuals*1e6, yerr=unc*1e6, fmt='.',
                        color='w', ecolor=color, mec=color)
-        ax[2].plot(time, np.zeros_like(time), color='0.3', zorder=10)
+        ax[2].axhline(0, color='0.3', zorder=10)
         ax[2].set_ylabel('Residuals (ppm)', size=14)
         ax[2].set_xlabel(str(lc.time_units), size=14)
 
