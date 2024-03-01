@@ -202,7 +202,7 @@ class GPModel(Model):
             else:
                 time = self.time
 
-            kernel_inputs_channel = np.ma.zeros((0,time.size))
+            kernel_inputs_channel = np.ma.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
                     x = np.ma.copy(self.time)
@@ -289,7 +289,7 @@ class GPModel(Model):
         """
         if self.gp_code_name == 'george':
             # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
+            amp = np.exp(self.coeffs[c, k, 0])
             metric = np.exp(self.coeffs[c, k, 1]*2)
 
             if kernel_name == 'Matern32':
@@ -319,7 +319,7 @@ class GPModel(Model):
             kernel *= celerite2.terms.RealTerm(a=amp, c=0)
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
+            amp = np.exp(self.coeffs[c, k, 0])
             metric = np.exp(self.coeffs[c, k, 1]*2)
 
             if kernel_name == 'Matern32':
@@ -383,20 +383,26 @@ class GPModel(Model):
                 flux = self.flux
                 fit = self.fit
                 unc_fit = self.unc_fit
-            residuals = flux-fit
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
 
             # Remove poorly handled masked values
-            unc_fit = unc_fit[~np.ma.getmaskarray(residuals)]
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
 
             # set up GP with current parameters
             gp = self.setup_GP(chan)
 
             if self.gp_code_name == 'george':
-                gp.compute(kernel_inputs, unc_fit)
-                logL_temp = gp.lnlikelihood(self.kernel_inputs[chan].T, quiet=True)
+                gp.compute(self.kernel_inputs[chan][:,good].T, unc_fit)
+                logL_temp = gp.lnlikelihood(residuals, quiet=True)
             elif self.gp_code_name == 'celerite':
-                kernel_inputs = self.kernel_inputs[chan][0][~np.ma.getmaskarray(residuals)]
-                residuals = residuals[~np.ma.getmaskarray(residuals)]
+                kernel_inputs = self.kernel_inputs[chan][0][good]
                 gp.compute(kernel_inputs, yerr=unc_fit)
                 logL_temp = gp.log_likelihood(residuals)
             elif self.gp_code_name == 'tinygp':
