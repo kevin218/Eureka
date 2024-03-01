@@ -409,7 +409,7 @@ def trnlldsp(z, rprs, u):
                 - u3 * (1. - 4. / 7. * np.sqrt(np.sqrt(x * x * x))) \
                 - u4 * (1. - 4. / 8. * x)
     y[iingress] = 1. - I1star \
-        * (rprs ** 2 * np.arccos((z[iingress] - 1.) / rprs) - (z[iingress] - 1.)
+        * (rprs**2 * np.arccos((z[iingress] - 1.) / rprs) - (z[iingress] - 1.)
            * np.sqrt(rprs ** 2 - (z[iingress] - 1.) ** 2)) / np.pi / Sigma4
 
     # Full transit (except @ z=0)

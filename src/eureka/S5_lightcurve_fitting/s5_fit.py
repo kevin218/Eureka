@@ -736,10 +736,12 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         # Nest any transit and/or eclipse models inside of the
         # phase curve model
         if 'batman_tr' in model_names:
-            t_model = modellist.pop(np.where(model_names == 'batman_tr')[0][0])
+            t_model = modellist.pop(
+                np.where(model_names == 'batman_tr')[0][0])
             model_names = np.array([model.name for model in modellist])
         if 'batman_ecl' in model_names:
-            e_model = modellist.pop(np.where(model_names == 'batman_ecl')[0][0])
+            e_model = modellist.pop(
+                np.where(model_names == 'batman_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
         # Check if should enforce positivity
         if not hasattr(meta, 'force_positivity'):
