@@ -626,6 +626,19 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          multwhite=lc_model.multwhite,
                                          nints=lc_model.nints)
         modellist.append(t_eclipse)
+    if 'fleck_tr' in meta.run_myfuncs:
+        t_transit = m.FleckTransitModel(parameters=params, name='transit',
+                                        fmt='r--', log=log, time=time,
+                                        time_units=time_units,
+                                        freenames=freenames,
+                                        longparamlist=lc_model.longparamlist,
+                                        nchannel=chanrng,
+                                        nchannel_fitted=nchannel_fitted,
+                                        fitted_channels=fitted_channels,
+                                        paramtitles=paramtitles,
+                                        multwhite=lc_model.multwhite,
+                                        nints=lc_model.nints)
+        modellist.append(t_transit)
     if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
         model_names = np.array([model.name for model in modellist])
         # Nest the starry model inside of the phase curve model
