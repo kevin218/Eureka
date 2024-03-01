@@ -90,11 +90,26 @@ class PoetPCModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
+        time_array = np.ma.masked_array(time_array)
         self._time = time_array
         if self.transit_model is not None:
             self.transit_model.time = time_array
         if self.eclipse_model is not None:
             self.eclipse_model.time = time_array
+
+    @property
+    def nints(self):
+        """A getter for the nints."""
+        return self._nints
+
+    @nints.setter
+    def nints(self, nints_array):
+        """A setter for the nints."""
+        self._nints = nints_array
+        if self.transit_model is not None:
+            self.transit_model.nints = nints_array
+        if self.eclipse_model is not None:
+            self.eclipse_model.nints = nints_array
 
     def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
@@ -140,7 +155,7 @@ class PoetPCModel(Model):
             self.time = kwargs.get('time')                   
         
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -152,10 +167,10 @@ class PoetPCModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.zeros_like(time)
+            light_curve = np.ma.zeros_like(time)
             for pid in range(self.num_planets):
                 # Initialize planet
-                poet_params = PlanetParams(self, pid) 
+                poet_params = PlanetParams(self, pid, chan)
 
                 poet_params.limb_dark = 'uniform'
                 poet_params.u = []
@@ -172,26 +187,26 @@ class PoetPCModel(Model):
                 t1 = poet_params.cos1_off*p/360. + poet_params.t_secondary
                 t2 = poet_params.cos2_off*p/360. + poet_params.t_secondary
                 phaseVars = (1. + poet_params.cos1_amp 
-                             * np.cos(2*np.pi*(time-t1)/p) 
+                             * np.ma.cos(2*np.pi*(time-t1)/p) 
                              + poet_params.cos2_amp
-                             * np.cos(4*np.pi*(time-t2)/p))
+                             * np.ma.cos(4*np.pi*(time-t2)/p))
                 
                 # If requested, force positive phase variations
-                if self.force_positivity and np.any(phaseVars < 0):
+                if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ones_like(time)
+                    phaseVars = 1e12*np.ma.ones_like(time)
 
                 # Compute eclipse model
                 if self.eclipse_model is None:
                     eclipse = 1
                 else:
-                    eclipse = self.eclipse_model.eval(channel=channel,
+                    eclipse = self.eclipse_model.eval(channel=chan,
                                                       pid=pid) - 1
 
                 light_curve += eclipse*phaseVars
 
-            lcfinal = np.append(lcfinal, light_curve)
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         if self.transit_model is None:
             transit = 1
