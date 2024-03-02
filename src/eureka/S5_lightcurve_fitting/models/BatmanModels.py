@@ -40,8 +40,8 @@ class PlanetParams():
         self.per = None
         self.ecc = 0.
         self.w = None
-        self.fpfs = 0.
-        self.fp = 0.
+        self.fpfs = None
+        self.fp = None
         self.t_secondary = None
         self.cos1_amp = 0.
         self.cos1_off = 0.
