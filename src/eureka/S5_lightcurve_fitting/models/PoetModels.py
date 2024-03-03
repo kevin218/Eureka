@@ -186,10 +186,10 @@ class PoetPCModel(Model):
                 p = poet_params.per
                 t1 = poet_params.cos1_off*p/360. + poet_params.t_secondary
                 t2 = poet_params.cos2_off*p/360. + poet_params.t_secondary
-                phaseVars = (1. + poet_params.cos1_amp 
-                             * np.ma.cos(2*np.pi*(time-t1)/p) 
+                phaseVars = (0.5 + poet_params.cos1_amp 
+                             * np.cos(2*np.pi*(time+t1)/p) 
                              + poet_params.cos2_amp
-                             * np.ma.cos(4*np.pi*(time-t2)/p))
+                             * np.cos(4*np.pi*(time+t2)/p))
                 
                 # If requested, force positive phase variations
                 if self.force_positivity and np.ma.any(phaseVars < 0):
@@ -250,19 +250,25 @@ class TransitModel():
         if params.rprs < 0.:
             self.inverse = True
 
-        # Compute distance, z, of planet and star midpoints
-        self.z = self.ars \
-            * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per) ** 2 
-                      + (np.cos(self.inc * np.pi / 180) 
-                      * np.cos(2 * np.pi * (t - self.t0)
-                               / self.per)) ** 2)
-        
         if self.transittype == 'primary':
+            # Compute distance, z, of planet and star midpoints
+            self.z = self.ars \
+                * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per)**2 
+                          + (np.cos(self.inc * np.pi / 180) 
+                          * np.cos(2 * np.pi * (t - self.t0)
+                                   / self.per))**2)
             # Ignore close approach near secondary eclipse
             self.z[np.where(np.bitwise_and((t - self.t0) % self.per
                    > self.per / 4., (t - self.t0) % self.per
                    < self.per * 3. / 4))] = self.ars
         elif self.transittype == 'secondary':
+            # Compute distance, z, of planet and star midpoints
+            self.z = self.ars \
+                * np.sqrt(np.sin(2 * np.pi * (t - self.t_secondary) 
+                                 / self.per)**2 
+                          + (np.cos(self.inc * np.pi / 180) 
+                          * np.cos(2 * np.pi * (t - self.t_secondary)
+                                   / self.per))**2)
             # Ignore close approach near primary transit
             self.z[np.where(np.bitwise_and((t - self.t_secondary) % self.per
                    > self.per / 4., (t - self.t_secondary) % self.per
