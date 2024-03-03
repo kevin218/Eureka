@@ -246,7 +246,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                             getattr(lc, centroid_param).values))
                 else:
                     centroid_param_list.append(
-                        np.ma.zeros_like(lc.time.values))
+                        np.ma.zeros(lc.time.values.shape))
             xpos, xwidth, ypos, ywidth = centroid_param_list
 
             # make citations for current stage

@@ -60,7 +60,7 @@ class GPModel(Model):
         self.useHODLR = useHODLR
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
-        self.fit = np.ma.ones_like(self.flux)
+        self.fit = np.ma.ones(self.flux.shape)
         self.unc = lc.unc
         self.unc_fit = lc.unc_fit
         self.time = lc.time

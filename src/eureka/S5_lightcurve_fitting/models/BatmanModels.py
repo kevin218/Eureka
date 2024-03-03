@@ -223,7 +223,7 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.ones_like(time)
+            light_curve = np.ma.ones(time.shape)
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -244,7 +244,7 @@ class BatmanTransitModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
-                    light_curve = 1e12*np.ma.ones_like(time)
+                    light_curve = 1e12*np.ma.ones(time.shape)
                     continue
 
                 # Use batman ld_profile name
@@ -256,7 +256,7 @@ class BatmanTransitModel(Model):
                     if pl_params.u[0] <= 0:
                         # Returning nans or infs breaks the fits, so this was
                         # the best I could think of
-                        light_curve = 1e12*np.ma.ones_like(time)
+                        light_curve = 1e12*np.ma.ones(time.shape)
                         continue
                     pl_params.limb_dark = 'quadratic'
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
@@ -384,7 +384,7 @@ class BatmanEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.ones_like(time)
+            light_curve = np.ma.ones(time.shape)
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -398,7 +398,7 @@ class BatmanEclipseModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    light_curve = 1e12*np.ma.ones_like(time)
+                    light_curve = 1e12*np.ma.ones(time.shape)
                     continue
 
                 # Compute light travel time
