@@ -60,7 +60,7 @@ class GPModel(Model):
         self.useHODLR = useHODLR
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
-        self.fit = np.ma.ones_like(self.flux)
+        self.fit = np.ma.ones(self.flux.shape)
         self.unc = lc.unc
         self.unc_fit = lc.unc_fit
         self.time = lc.time
@@ -399,7 +399,7 @@ class GPModel(Model):
             gp = self.setup_GP(chan)
 
             if self.gp_code_name == 'george':
-                gp.compute(self.kernel_inputs[chan][:,good].T, unc_fit)
+                gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
                 logL_temp = gp.lnlikelihood(residuals, quiet=True)
             elif self.gp_code_name == 'celerite':
                 kernel_inputs = self.kernel_inputs[chan][0][good]

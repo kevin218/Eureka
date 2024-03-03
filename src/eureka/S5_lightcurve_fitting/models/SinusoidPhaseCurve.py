@@ -134,7 +134,7 @@ class SinusoidPhaseCurveModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.zeros_like(time)
+            light_curve = np.ma.zeros(time.shape)
             for pid in range(self.num_planets):
                 # Initialize model
                 bm_params = PlanetParams(self, pid, chan)
@@ -185,7 +185,7 @@ class SinusoidPhaseCurveModel(Model):
                 if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ma.ones_like(time)
+                    phaseVars = 1e12*np.ma.ones(time.shape)
                 
                 if self.eclipse_model is None:
                     eclipse = 1

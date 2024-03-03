@@ -553,7 +553,7 @@ def plot_chain(samples, lc, meta, freenames, fitter='emcee', burnin=False,
                 if add_legend:
                     axes[i][j].legend(loc=6, bbox_to_anchor=(1.01, 0.5))
                 k += 1
-        fig.tight_layout(h_pad=0.0)
+        fig.get_layout_engine().set(h_pad=0)
 
         if lc.white:
             fname_tag = 'white'
