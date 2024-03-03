@@ -175,8 +175,7 @@ class PoetPCModel(Model):
                 poet_params.limb_dark = 'uniform'
                 poet_params.u = []
 
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
+                if poet_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
@@ -212,7 +211,7 @@ class PoetPCModel(Model):
             transit = 1
         else:
             transit = self.transit_model.eval(channel=channel)
-        
+
         return transit + lcfinal
    
 
@@ -251,28 +250,20 @@ class TransitModel():
             self.inverse = True
 
         if self.transittype == 'primary':
-            # Compute distance, z, of planet and star midpoints
-            self.z = self.ars \
-                * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per)**2 
-                          + (np.cos(self.inc * np.pi / 180) 
-                          * np.cos(2 * np.pi * (t - self.t0)
-                                   / self.per))**2)
-            # Ignore close approach near secondary eclipse
-            self.z[np.where(np.bitwise_and((t - self.t0) % self.per
-                   > self.per / 4., (t - self.t0) % self.per
-                   < self.per * 3. / 4))] = self.ars
-        elif self.transittype == 'secondary':
-            # Compute distance, z, of planet and star midpoints
-            self.z = self.ars \
-                * np.sqrt(np.sin(2 * np.pi * (t - self.t_secondary) 
-                                 / self.per)**2 
-                          + (np.cos(self.inc * np.pi / 180) 
-                          * np.cos(2 * np.pi * (t - self.t_secondary)
-                                   / self.per))**2)
-            # Ignore close approach near primary transit
-            self.z[np.where(np.bitwise_and((t - self.t_secondary) % self.per
-                   > self.per / 4., (t - self.t_secondary) % self.per
-                   < self.per * 3. / 4))] = self.ars
+            tref = self.t0
+        else:
+            tref = params.t_secondary-params.per/2
+
+        # Compute distance, z, of planet and star midpoints
+        self.z = self.ars \
+            * np.sqrt(np.sin(2*np.pi*(t-tref)/self.per)**2
+                      + (np.cos(self.inc*np.pi/180)
+                         * np.cos(2*np.pi*(t-tref)/self.per))**2)
+
+        # Ignore close approach on other side of the orbit
+        self.z[np.where(np.bitwise_and(
+            (t-tref) % self.per > self.per/4,
+            (t-tref) % self.per < self.per*3/4))] = self.ars
 
     def light_curve(self, params):
         """
@@ -301,7 +292,7 @@ class TransitModel():
         self.inverse = False
         if params.rprs < 0.: 
             self.inverse = True
-        
+
         if self.transittype == 'primary':
             # Primary transit
             if self.limb_dark == "quadratic": 
@@ -816,4 +807,3 @@ def ellpic_bulirsch(n, k):
             e = kc * m0
         else:
             return 0.5 * np.pi * (c * m0 + d) / (m0 * (m0 + p))
-

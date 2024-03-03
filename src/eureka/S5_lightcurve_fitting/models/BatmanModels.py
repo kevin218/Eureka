@@ -408,8 +408,7 @@ class BatmanEclipseModel(Model):
                 else:
                     self.adjusted_time = time
 
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
+                if pl_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
