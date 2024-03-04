@@ -183,8 +183,8 @@ class PoetPCModel(Model):
 
                 # calculate the phase variations
                 p = poet_params.per
-                t1 = poet_params.cos1_off*p/360. + poet_params.t_secondary
-                t2 = poet_params.cos2_off*p/360. + poet_params.t_secondary
+                t1 = poet_params.cos1_off*p/360. - poet_params.t_secondary
+                t2 = poet_params.cos2_off*p/360. - poet_params.t_secondary
                 phaseVars = (poet_params.cos1_amp/2 * 
                              np.cos(2*np.pi*(time+t1)/p) +
                              poet_params.cos2_amp/2 *
