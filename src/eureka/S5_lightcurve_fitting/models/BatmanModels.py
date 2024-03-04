@@ -16,7 +16,7 @@ class PlanetParams():
     """
     Define planet parameters.
     """
-    def __init__(self, model, pid=0):
+    def __init__(self, model, pid=0, channel=0):
         """ 
         Set attributes to PlanetParams object.
 
@@ -27,9 +27,22 @@ class PlanetParams():
             and their current values.
         pid : int; optional
             Planet ID, default is 0.
+        channel : int, optional
+            The channel number for multi-wavelength fits or mutli-white fits.
+            Defaults to 0.
         """
         # Planet ID
-        self.pid = pid       
+        self.pid = pid
+        if pid == 0:
+            self.pid_id = ''
+        else:
+            self.pid_id = str(self.pid)
+        # Channel ID
+        self.channel = channel
+        if channel == 0:
+            self.channel_id = ''
+        else:
+            self.channel_id = f'_{self.channel}'
         # Set transit/eclipse parameters
         self.t0 = None
         self.rprs = None
@@ -52,56 +65,56 @@ class PlanetParams():
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
         for item in self.__dict__.keys():
-            if pid > 0:
-                item0 = item + str(pid)
-            else:
-                item0 = item
+            item0 = item+self.pid_id
             try:
+                if model.parameters.dict[item0][1] == 'free':
+                    item0 += self.channel_id
                 setattr(self, item, model.parameters.dict[item0][0])
             except KeyError:
                 pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'rp' + str(pid)
-            else:
-                item0 = 'rp'
+            item0 = 'rp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
             setattr(self, 'rprs', model.parameters.dict[item0][0])
         if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'rprs' + str(pid)
-            else:
-                item0 = 'rprs'
+            item0 = 'rprs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
             setattr(self, 'rp', model.parameters.dict[item0][0])
         # Allow for a or ars
         if (self.ars is None) and ('a' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'a' + str(pid)
-            else:
-                item0 = 'a'
+            item0 = 'a' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
             setattr(self, 'ars', model.parameters.dict[item0][0])
         if (self.a is None) and ('ars' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'ars' + str(pid)
-            else:
-                item0 = 'ars'
+            item0 = 'ars' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
             setattr(self, 'a', model.parameters.dict[item0][0])
         # Allow for fp or fpfs
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'fp' + str(pid)
-            else:
-                item0 = 'fp'
+            item0 = 'fp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
             setattr(self, 'fpfs', model.parameters.dict[item0][0])
+        elif self.fpfs is None:
+            setattr(self, 'fpfs', 0.)
         if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
-            if pid > 0:
-                item0 = 'fpfs' + str(pid)
-            else:
-                item0 = 'fpfs'
+            item0 = 'fpfs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
             setattr(self, 'fp', model.parameters.dict[item0][0])
+        elif self.fp is None:
+            setattr(self, 'fp', 0.)
         # Set stellar radius
         if 'Rs' in model.parameters.dict.keys():
-            setattr(self, 'Rs', model.parameters.dict['Rs'][0])
+            item0 = 'Rs'
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'Rs', model.parameters.dict[item0][0])
 
 
 class BatmanTransitModel(Model):
@@ -210,10 +223,10 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ones_like(time)
+            light_curve = np.ma.ones(time.shape)
             for pid in pid_iter:
                 # Initialize planet
-                pl_params = PlanetParams(self, pid)
+                pl_params = PlanetParams(self, pid, chan)
 
                 # Set limb darkening parameters
                 uarray = []
@@ -231,7 +244,7 @@ class BatmanTransitModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
-                    light_curve = 1e12*np.ones_like(time)
+                    light_curve = 1e12*np.ma.ones(time.shape)
                     continue
 
                 # Use batman ld_profile name
@@ -243,7 +256,7 @@ class BatmanTransitModel(Model):
                     if pl_params.u[0] <= 0:
                         # Returning nans or infs breaks the fits, so this was
                         # the best I could think of
-                        light_curve = 1e12*np.ones_like(time)
+                        light_curve = 1e12*np.ma.ones(time.shape)
                         continue
                     pl_params.limb_dark = 'quadratic'
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
@@ -255,7 +268,7 @@ class BatmanTransitModel(Model):
                                                transittype='primary')
                 light_curve *= m_transit.light_curve(pl_params)
 
-            lcfinal = np.append(lcfinal, light_curve)
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         return lcfinal
 
@@ -359,7 +372,7 @@ class BatmanEclipseModel(Model):
             self.time = kwargs.get('time')
 
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -371,10 +384,10 @@ class BatmanEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ones_like(time)
+            light_curve = np.ma.ones(time.shape)
             for pid in pid_iter:
                 # Initialize planet
-                pl_params = PlanetParams(self, pid)
+                pl_params = PlanetParams(self, pid, chan)
 
                 # Set limb darkening parameters
                 pl_params.u = []
@@ -385,7 +398,7 @@ class BatmanEclipseModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    light_curve = 1e12*np.ones_like(time)
+                    light_curve = 1e12*np.ma.ones(time.shape)
                     continue
 
                 # Compute light travel time
@@ -395,8 +408,7 @@ class BatmanEclipseModel(Model):
                 else:
                     self.adjusted_time = time
 
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
+                if pl_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
@@ -408,7 +420,7 @@ class BatmanEclipseModel(Model):
                                                transittype='secondary')
                 light_curve += m_eclipse.light_curve(pl_params)-1
 
-            lcfinal = np.append(lcfinal, light_curve)
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         return lcfinal
 

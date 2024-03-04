@@ -2,15 +2,15 @@
 
 ncpu            6 # The number of CPU threads to use when running emcee or dynesty in parallel
 
-allapers        False # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
+allapers        True # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 rescale_err     False    # Rescale uncertainties to have reduced chi-squared of unity
-fit_par         ./s5_fit_par.epf # What fitting epf do you want to use?
-verbose         True # If True, more details will be printed about steps
-fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,batman_ecl,sinusoid_pc,expramp,polynomial,xpos,ypos] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
+fit_par         ./S5_fit_par.epf # What fitting epf do you want to use?
+verbose         False # If True, more details will be printed about steps
+fit_method      [lsq] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
+run_myfuncs     [batman_tr, polynomial, xpos, ypos] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
-manual_clip     None  # A list of lists specifying the start and end integration numbers for manual removal.
+manual_clip     None   # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
@@ -18,17 +18,12 @@ use_generate_ld  None  # use the generated limb-darkening coefficients from Stag
 ld_file          None  # Fully qualified path to the location of a limb darkening file that you want to use
 ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
 
-# General fitter
-old_fitparams   None # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
-
-#dynesty
-run_nlive       'min' # Must be > ndim * (ndim + 1) // 2
-run_bound       'multi'
-run_sample      'auto'
-run_tol         10 # For testing, set to something dynesty can get to quickly
+#lsq
+lsq_method      Powell # The scipy.optimize.minimize optimization method to use
+lsq_tol         1e-6 # The tolerance for the scipy.optimize.minimize optimization method
 
 # Plotting controls
-interp          False   # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
+interp          False # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
 # Diagnostics
 isplots_S5      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -40,5 +35,5 @@ hide_plots      True # If True, plots will automatically be closed rather than p
 topdir          ../tests
 
 # Directories relative to project dir
-inputdir        /data/JWST-Sim/MIRI/Stage4/
-outputdir       /data/JWST-Sim/MIRI/Stage5/
+inputdir        /data/Photometry/NIRCam/Stage4/    # The folder containing the outputs from Eureka!'s S3 or JWST's S3 pipeline (will be overwritten if calling S3 and S4 sequentially)
+outputdir       /data/Photometry/NIRCam/Stage5/

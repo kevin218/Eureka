@@ -90,11 +90,26 @@ class PoetPCModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
+        time_array = np.ma.masked_array(time_array)
         self._time = time_array
         if self.transit_model is not None:
             self.transit_model.time = time_array
         if self.eclipse_model is not None:
             self.eclipse_model.time = time_array
+
+    @property
+    def nints(self):
+        """A getter for the nints."""
+        return self._nints
+
+    @nints.setter
+    def nints(self, nints_array):
+        """A setter for the nints."""
+        self._nints = nints_array
+        if self.transit_model is not None:
+            self.transit_model.nints = nints_array
+        if self.eclipse_model is not None:
+            self.eclipse_model.nints = nints_array
 
     def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
@@ -140,7 +155,7 @@ class PoetPCModel(Model):
             self.time = kwargs.get('time')                   
         
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -152,16 +167,15 @@ class PoetPCModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.zeros_like(time)
+            light_curve = np.ma.zeros(time.shape)
             for pid in range(self.num_planets):
                 # Initialize planet
-                poet_params = PlanetParams(self, pid) 
+                poet_params = PlanetParams(self, pid, chan)
 
                 poet_params.limb_dark = 'uniform'
                 poet_params.u = []
 
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
+                if poet_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
@@ -180,27 +194,27 @@ class PoetPCModel(Model):
                 phaseVars += 1 - phaseVars[ieclipse]
                 
                 # If requested, force positive phase variations
-                if self.force_positivity and np.any(phaseVars < 0):
+                if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ones_like(time)
+                    phaseVars = 1e12*np.ma.ones(time.shape)
 
                 # Compute eclipse model
                 if self.eclipse_model is None:
                     eclipse = 1
                 else:
-                    eclipse = self.eclipse_model.eval(channel=channel,
+                    eclipse = self.eclipse_model.eval(channel=chan,
                                                       pid=pid) - 1
 
                 light_curve += eclipse*phaseVars
 
-            lcfinal = np.append(lcfinal, light_curve)
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         if self.transit_model is None:
             transit = 1
         else:
             transit = self.transit_model.eval(channel=channel)
-        
+
         return transit + lcfinal
    
 
@@ -239,28 +253,20 @@ class TransitModel():
             self.inverse = True
 
         if self.transittype == 'primary':
-            # Compute distance, z, of planet and star midpoints
-            self.z = self.ars \
-                * np.sqrt(np.sin(2 * np.pi * (t - self.t0) / self.per)**2 
-                          + (np.cos(self.inc * np.pi / 180) 
-                          * np.cos(2 * np.pi * (t - self.t0)
-                                   / self.per))**2)
-            # Ignore close approach near secondary eclipse
-            self.z[np.where(np.bitwise_and((t - self.t0) % self.per
-                   > self.per / 4., (t - self.t0) % self.per
-                   < self.per * 3. / 4))] = self.ars
-        elif self.transittype == 'secondary':
-            # Compute distance, z, of planet and star midpoints
-            self.z = self.ars \
-                * np.sqrt(np.sin(2 * np.pi * (t - self.t_secondary) 
-                                 / self.per)**2 
-                          + (np.cos(self.inc * np.pi / 180) 
-                          * np.cos(2 * np.pi * (t - self.t_secondary)
-                                   / self.per))**2)
-            # Ignore close approach near primary transit
-            self.z[np.where(np.bitwise_and((t - self.t_secondary) % self.per
-                   > self.per / 4., (t - self.t_secondary) % self.per
-                   < self.per * 3. / 4))] = self.ars
+            tref = self.t0
+        else:
+            tref = params.t_secondary-params.per/2
+
+        # Compute distance, z, of planet and star midpoints
+        self.z = self.ars \
+            * np.sqrt(np.sin(2*np.pi*(t-tref)/self.per)**2
+                      + (np.cos(self.inc*np.pi/180)
+                         * np.cos(2*np.pi*(t-tref)/self.per))**2)
+
+        # Ignore close approach on other side of the orbit
+        self.z[np.where(np.bitwise_and(
+            (t-tref) % self.per > self.per/4,
+            (t-tref) % self.per < self.per*3/4))] = self.ars
 
     def light_curve(self, params):
         """
@@ -289,7 +295,7 @@ class TransitModel():
         self.inverse = False
         if params.rprs < 0.: 
             self.inverse = True
-        
+
         if self.transittype == 'primary':
             # Primary transit
             if self.limb_dark == "quadratic": 
@@ -403,7 +409,7 @@ def trnlldsp(z, rprs, u):
                 - u3 * (1. - 4. / 7. * np.sqrt(np.sqrt(x * x * x))) \
                 - u4 * (1. - 4. / 8. * x)
     y[iingress] = 1. - I1star \
-        * (rprs ** 2 * np.arccos((z[iingress] - 1.) / rprs) - (z[iingress] - 1.)
+        * (rprs**2 * np.arccos((z[iingress] - 1.) / rprs) - (z[iingress] - 1.)
            * np.sqrt(rprs ** 2 - (z[iingress] - 1.) ** 2)) / np.pi / Sigma4
 
     # Full transit (except @ z=0)
@@ -804,4 +810,3 @@ def ellpic_bulirsch(n, k):
             e = kc * m0
         else:
             return 0.5 * np.pi * (c * m0 + d) / (m0 * (m0 + p))
-
