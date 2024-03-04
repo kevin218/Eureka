@@ -185,10 +185,13 @@ class PoetPCModel(Model):
                 p = poet_params.per
                 t1 = poet_params.cos1_off*p/360. + poet_params.t_secondary
                 t2 = poet_params.cos2_off*p/360. + poet_params.t_secondary
-                phaseVars = (0.5 + poet_params.cos1_amp 
-                             * np.cos(2*np.pi*(time+t1)/p) 
-                             + poet_params.cos2_amp
-                             * np.cos(4*np.pi*(time+t2)/p))
+                phaseVars = (poet_params.cos1_amp/2 * 
+                             np.cos(2*np.pi*(time+t1)/p) +
+                             poet_params.cos2_amp/2 *
+                             np.cos(4*np.pi*(time+t2)/p))
+                # Apply normalizing offset
+                ieclipse = np.argmin(np.abs(time-poet_params.t_secondary))
+                phaseVars += 1 - phaseVars[ieclipse]
                 
                 # If requested, force positive phase variations
                 if self.force_positivity and np.ma.any(phaseVars < 0):
