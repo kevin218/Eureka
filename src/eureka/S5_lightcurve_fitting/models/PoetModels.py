@@ -255,7 +255,7 @@ class TransitModel():
         if self.transittype == 'primary':
             tref = self.t0
         else:
-            tref = params.t_secondary-params.per/2
+            tref = params.t_secondary
 
         # Compute distance, z, of planet and star midpoints
         self.z = self.ars \
