@@ -344,31 +344,31 @@ class TestModels(unittest.TestCase):
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.PoetTransitModel(parameters=params,
-                                                 name='transit', fmt='r--',
-                                                 freenames=freenames,
-                                                 longparamlist=longparamlist,
-                                                 nchan=1,
-                                                 paramtitles=paramtitles,
-                                                 ld_from_S4=meta.ld_from_S4,
-                                                 ld_from_file=meta.ld_file,
-                                                 num_planets=meta.num_planets)
+                                               name='transit', fmt='r--',
+                                               freenames=freenames,
+                                               longparamlist=longparamlist,
+                                               nchan=1,
+                                               paramtitles=paramtitles,
+                                               ld_from_S4=meta.ld_from_S4,
+                                               ld_from_file=meta.ld_file,
+                                               num_planets=meta.num_planets)
         self.e_model = models.PoetEclipseModel(parameters=params,
-                                                 name='eclipse', fmt='r--',
-                                                 log=log,
-                                                 freenames=freenames,
-                                                 longparamlist=longparamlist,
-                                                 nchan=1,
-                                                 paramtitles=paramtitles,
-                                                 num_planets=meta.num_planets)
+                                               name='eclipse', fmt='r--',
+                                               log=log,
+                                               freenames=freenames,
+                                               longparamlist=longparamlist,
+                                               nchan=1,
+                                               paramtitles=paramtitles,
+                                               num_planets=meta.num_planets)
         self.phasecurve = \
             models.PoetPCModel(parameters=params,
-                                           name='phasecurve', fmt='r--',
-                                           longparamlist=longparamlist,
-                                           freenames=freenames,
-                                           nchan=1, paramtitles=paramtitles,
-                                           transit_model=self.t_model,
-                                           eclipse_model=self.e_model,
-                                           num_planets=meta.num_planets)
+                               name='phasecurve', fmt='r--',
+                               longparamlist=longparamlist,
+                               freenames=freenames,
+                               nchan=1, paramtitles=paramtitles,
+                               transit_model=self.t_model,
+                               eclipse_model=self.e_model,
+                               num_planets=meta.num_planets)
 
         # Remove the temporary log file
         os.system(f"rm .{os.sep}data{os.sep}test.log")
