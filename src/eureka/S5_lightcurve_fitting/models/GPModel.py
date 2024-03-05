@@ -60,7 +60,7 @@ class GPModel(Model):
         self.useHODLR = useHODLR
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
-        self.fit = np.ones_like(self.flux)
+        self.fit = np.ma.ones(self.flux.shape)
         self.unc = lc.unc
         self.unc_fit = lc.unc_fit
         self.time = lc.time
@@ -143,7 +143,7 @@ class GPModel(Model):
             self.time = kwargs.get('time')
         self.fit = fit
 
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -154,7 +154,7 @@ class GPModel(Model):
                     fit = split([self.fit, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
-                    # that channel's fitted mode will be passed in
+                    # that channel's fitted model will be passed in
                     fit = self.fit
             else:
                 chan = 0
@@ -164,14 +164,9 @@ class GPModel(Model):
                 unc_fit = self.unc_fit
             residuals = flux-fit
 
-            time = self.time
-            if self.multwhite:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
             # Create the GP object with current parameters
             if gp is None:
-                gp = self.setup_GP(c)
+                gp = self.setup_GP(chan)
 
             if self.gp_code_name == 'george':
                 gp.compute(self.kernel_inputs[chan].T, unc_fit)
@@ -183,7 +178,9 @@ class GPModel(Model):
             elif self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(residuals, noise=unc_fit).gp
                 mu = cond_gp.loc
-            lcfinal = np.append(lcfinal, mu)
+            # Mask interpolated/extrapolated values
+            mu = np.ma.masked_where(np.ma.getmaskarray(residuals), mu)
+            lcfinal = np.ma.append(lcfinal, mu)
 
         return lcfinal
 
@@ -200,10 +197,15 @@ class GPModel(Model):
             else:
                 chan = 0
 
-            kernel_inputs_channel = []
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+
+            kernel_inputs_channel = np.ma.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.copy(self.time)        
+                    x = np.ma.copy(self.time)
                 else:
                     # add more input options here
                     raise ValueError('Currently, only GPs as a function of '
@@ -215,14 +217,10 @@ class GPModel(Model):
                     x = split([x, ], self.nints, chan)[0]
 
                 if self.normalize:
-                    x = (x-x.mean())/x.std()
+                    x = (x-np.ma.mean(x))/np.ma.std(x)
 
-                kernel_inputs_channel.append(x)
-            kernel_inputs_channel = np.array(kernel_inputs_channel)
-
-            # Need to reshape if there is only one covariate
-            if len(kernel_inputs_channel.shape) == 1:
-                kernel_inputs_channel = kernel_inputs_channel[np.newaxis]
+                kernel_inputs_channel = np.ma.append(kernel_inputs_channel,
+                                                     x[np.newaxis], axis=0)
 
             self.kernel_inputs.append(kernel_inputs_channel)
 
@@ -291,7 +289,7 @@ class GPModel(Model):
         """
         if self.gp_code_name == 'george':
             # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
+            amp = np.exp(self.coeffs[c, k, 0])
             metric = np.exp(self.coeffs[c, k, 1]*2)
 
             if kernel_name == 'Matern32':
@@ -321,7 +319,7 @@ class GPModel(Model):
             kernel *= celerite2.terms.RealTerm(a=amp, c=0)
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0]*2)  # Want exp(sigma)^2
+            amp = np.exp(self.coeffs[c, k, 0])
             metric = np.exp(self.coeffs[c, k, 1]*2)
 
             if kernel_name == 'Matern32':
@@ -366,33 +364,50 @@ class GPModel(Model):
         # update uncertainty
         self.fit = fit
 
-        logL = []
+        logL = 0
         for c in np.arange(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
                 # get flux and uncertainties for current channel
-                flux, fit, unc_fit = split([self.flux, self.fit, self.unc_fit],
-                                           self.nints, chan)
+                flux, unc_fit = split([self.flux, self.unc_fit],
+                                      self.nints, chan)
+                if channel is None:
+                    fit = split([self.fit, ], self.nints, chan)[0]
+                else:
+                    # If only a specific channel is being evaluated, then only
+                    # that channel's fitted model will be passed in
+                    fit = self.fit
             else:
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
                 fit = self.fit
                 unc_fit = self.unc_fit
-            residuals = flux-fit
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
+
+            # Remove poorly handled masked values
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
 
             # set up GP with current parameters
-            gp = self.setup_GP(c)
+            gp = self.setup_GP(chan)
 
             if self.gp_code_name == 'george':
-                gp.compute(self.kernel_inputs[chan].T, unc_fit)
+                gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
                 logL_temp = gp.lnlikelihood(residuals, quiet=True)
             elif self.gp_code_name == 'celerite':
-                gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
+                kernel_inputs = self.kernel_inputs[chan][0][good]
+                gp.compute(kernel_inputs, yerr=unc_fit)
                 logL_temp = gp.log_likelihood(residuals)
             elif self.gp_code_name == 'tinygp':
                 cond = gp.condition(residuals, diag=unc_fit)
                 logL_temp = cond.log_probability
-            logL.append(logL_temp)
+            logL += logL_temp
 
-        return sum(logL)
+        return logL

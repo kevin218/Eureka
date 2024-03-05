@@ -216,20 +216,20 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     continue
 
                 # Manipulate fitted values if needed
-                if meta.y_param == 'rp^2':
+                if meta.y_param == 'rp^2' or meta.y_param == 'rprs^2':
                     meta = compute_transit_depth(meta)
                 elif meta.y_param in ['1/r1', '1/r4']:
                     meta = compute_timescale(meta)
 
                 if meta.y_label is None:
                     # Provide some default formatting
-                    if meta.y_param == 'rp^2':
+                    if meta.y_param == 'rp^2' or meta.y_param == 'rprs^2':
                         # Transit depth
                         meta.y_label = r'$(R_{\rm p}/R_{\rm *})^2$'
-                    elif meta.y_param == 'rp':
+                    elif meta.y_param == 'rp' or meta.y_param == 'rprs':
                         # Radius ratio
                         meta.y_label = r'$R_{\rm p}/R_{\rm *}$'
-                    elif meta.y_param == 'fp':
+                    elif meta.y_param == 'fp' or meta.y_param == 'fpfs':
                         # Eclipse depth
                         meta.y_label = r'$F_{\rm p,day}/F_{\rm *}$'
                     elif meta.y_param == 'fn':
@@ -389,6 +389,8 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     """
     if meta.y_param == 'rp^2':
         y_param = 'rp'
+    elif meta.y_param == 'rprs^2':
+        y_param = 'rprs'
     elif meta.y_param in ['1/r1', '1/r4']:
         y_param = meta.y_param[2:]
     else:
@@ -932,11 +934,14 @@ def compute_fn(meta, log, fit_methods):
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
     if fp.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        # The parameter could not be found - try fpfs
+        meta.y_param = 'fpfs'
+        fp = load_s5_saves(meta, log, fit_methods)
+        if fp.shape[-1] == 0:
+            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
 
     # Load cosine amplitude
     meta.y_param = 'AmpCos1'
@@ -991,11 +996,14 @@ def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
     if fp.shape[-1] == 0:
-        # The parameter could not be found - skip it
-        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                     'fitted parameters')
-        log.writelog(f'  Skipping {y_param}')
-        return meta
+        # The parameter could not be found - try fpfs
+        meta.y_param = 'fpfs'
+        fp = load_s5_saves(meta, log, fit_methods)
+        if fp.shape[-1] == 0:
+            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
 
     nsamp = min([nsamp, len(fp[0])])
     inds = np.random.randint(0, len(fp[0]), nsamp)
@@ -1072,7 +1080,7 @@ def compute_scale_height(meta, log):
     """
     if meta.planet_Rad is None:
         meta.planet_Rad = meta.spectrum_median
-        if meta.y_param == 'rp^2':
+        if meta.y_param == 'rp^2' or meta.y_param == 'rprs^2':
             meta.planet_Rad = np.sqrt(meta.planet_Rad)
         meta.planet_Rad = np.mean(meta.planet_Rad)
         meta.planet_Rad *= (meta.star_Rad*constants.R_sun /
@@ -1165,9 +1173,9 @@ def load_model(meta, log, x_unit):
         if model_y_param != y_param:
             # This model is not relevant for this plot, so skipping it
             log.writelog(f'The model_y_param ({meta.model_y_param}) does not '
-                         f'match the current y_param ({meta.y_param}), so not'
+                         f'match the current y_param ({meta.y_param}), so not '
                          'using the model for this plot')
-            return meta, None, None
+            return None, None
 
     model_path = os.path.join(meta.topdir, *meta.model_spectrum.split(os.sep))
     model_x, model_y = np.loadtxt(model_path, delimiter=meta.model_delimiter).T
@@ -1176,9 +1184,13 @@ def load_model(meta, log, x_unit):
     model_x_unit = model_x_unit.to(x_unit, equivalencies=units.spectral())
     model_x *= model_x_unit
     # Figure out if model needs to be converted to Rp/Rs
-    sqrt_model = (meta.param == 'rp^2' and meta.model_y_param != meta.y_param)
+    sqrt_model = ((meta.model_y_param == 'rp^2'
+                   or meta.model_y_param == 'rprs^2')
+                  and meta.model_y_param != meta.y_param)
     # Figure out if model needs to be converted to (Rp/Rs)^2
-    sq_model = (meta.param == 'rp' and meta.model_y_param != meta.y_param)
+    sq_model = ((meta.model_y_param == 'rp'
+                 or meta.model_y_param == 'rprs')
+                and meta.model_y_param != meta.y_param)
     if sqrt_model:
         model_y = np.sqrt(model_y)
     elif sq_model:
@@ -1196,7 +1208,7 @@ def load_model(meta, log, x_unit):
     if meta.model_y_scalar != 1:
         model_y *= meta.model_y_scalar
 
-    return model_x, model_y
+    return model_x, model_y*meta.y_scalar
 
 
 def save_table(meta, log):
@@ -1335,11 +1347,11 @@ def transit_latex_table(meta, log):
     rows = int(np.ceil(nvals/meta.ncols))
 
     # Figure out the labels for the columns
-    if meta.y_param == 'rp^2':
+    if meta.y_param == 'rp^2' or meta.y_param == 'rprs^2':
         colhead = "\\colhead{Transit Depth}"
-    elif meta.y_param == 'rp':
+    elif meta.y_param == 'rp' or meta.y_param == 'rprs':
         colhead = "\\colhead{$R_{\\rm p}/R_{\\rm *}$}"
-    elif meta.y_param == 'fp':
+    elif meta.y_param == 'fp' or meta.y_param == 'fpfs':
         colhead = "\\colhead{Eclipse Depth}"
     else:
         colhead = f"\\colhead{{{meta.y_label}}}"
@@ -1351,10 +1363,10 @@ def transit_latex_table(meta, log):
         out += "CC|"
     out = out[:-1]+"}\n"
     # Give the table a caption based on the tabulated data
-    if meta.y_param in ['rp', 'rp^2']:
+    if meta.y_param in ['rp', 'rp^2', 'rprs', 'rprs^2']:
         out += "\\tablecaption{\\texttt{Eureka!}'s Transit Spectroscopy "
         out += "Results \\label{tab:eureka_transit_spectra}}\n"
-    elif meta.y_param == 'fp':
+    elif meta.y_param in ['fp', 'fpfs']:
         out += "\\tablecaption{\\texttt{Eureka!}'s Eclipse Spectroscopy "
         out += "Results \\label{tab:eureka_eclipse_spectra}}\n"
     # Label each column

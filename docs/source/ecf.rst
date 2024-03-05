@@ -865,16 +865,21 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, GP].
+[batman_tr, batman_ecl, poet_tr, poet_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
 For theano-based differentiable functions, this can be one or more of the following:
 [starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
+The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
 
 compute_ltt
 '''''''''''
 Optional. Determines whether to correct the astrophysical model for the light travel time effect (True) or to ignore the effect (False).
 The light travel time effect is caused by the finite speed of light which means that the signal from a secondary eclipse (which occurs on the far side of the orbit) arrive later than would be expected if the speed of light were infinite.
 Unless specified, compute_ltt is set to True for batman_ecl and starry models but set to False for batman_tr models (since the light travel time is insignificant during transit).
+
+force_positivity
+''''''''''''''''
+Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
 
 manual_clip
 '''''''''''
@@ -887,7 +892,7 @@ The following three parameters control the use of pre-generated limb darkening c
 
 use_generate_ld
 ^^^^^^^^^^^^^^^
-If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld are linear, quadratic, 3-parameter and 4-parameter non-linear.
+If you want to use the generated limb-darkening coefficients from Stage 4, use exotic-ld or spam. Otherwise, use None. Important: limb-darkening coefficients are not automatically fixed, change the limb darkening parameters to 'fixed' in the .epf file if they should be fixed instead of fitted! The limb-darkening laws available to exotic-ld and spam are linear, quadratic, 3-parameter and 4-parameter non-linear.
 
 ld_file
 ^^^^^^^
@@ -924,11 +929,15 @@ The following set the parameters for running the least-squares fitter.
 
 lsq_method
 ^^^^^^^^^^
-Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.
+Least-squares fitting method: one of any of the scipy.optimize.minimize least-squares methods.  We recommend using Powell.
 
 lsq_tolerance
 ^^^^^^^^^^^^^
 Float to determine the tolerance of the scipy.optimize.minimize method.
+
+lsq_maxiter
+^^^^^^^^^^^^^
+Integer.  Maximum number of iterations to perform.  Set to None to use the default value for the given scipy.optimize.minimize method.
 
 
 Emcee Fitting Parameters
@@ -997,25 +1006,23 @@ target_accept
 ^^^^^^^^^^^^^
 Adapt the step size such that the average acceptance probability across the trajectories are close to target_accept. Higher values for target_accept lead to smaller step sizes. A default of 0.8 is recommended, but setting this to higher values like 0.9 or 0.99 can help with sampling from difficult posteriors. Valid values are between 0 and 1 (exclusive).
 
-
-force_positivity
-''''''''''''''''
-Used by the sinusoid_pc model. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+Plotting and Diagnostics
+''''''''''''''''''''''''
 
 interp
-''''''
+^^^^^^
 Boolean to determine whether the astrophysical model is interpolated when plotted. This is useful when there is uneven sampling in the observed data.
 
 isplots_S5
-''''''''''
+^^^^^^^^^^
 Sets how many plots should be saved when running Stage 5. A full description of these outputs is available here: :ref:`Stage 5 Output <s5-out>`
 
 nbin_plot
-'''''''''
+^^^^^^^^^
 The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
 
 hide_plots
-''''''''''
+^^^^^^^^^^
 If True, plots will automatically be closed rather than popping up on the screen.
 
 
@@ -1040,30 +1047,39 @@ This file describes the transit/eclipse and systematics parameters and their pri
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
 ``Name`` defines the specific parameter being fit for. Available options are:
-   - Transit and Eclipse Parameters
-      - ``rp`` - planet-to-star radius ratio, for the transit models.
-      - ``fp`` - planet-to-star flux ratio, for the eclipse models.
-   - Orbital Parameters
+   - BATMAN/POET Transit and Eclipse Depth Parameters
+      - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
+      - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
+      When fitting for multiple planets, add a number after the parameter (e.g., ``rprs``, ``rprs1``, ``rprs2``, etc.).  This also applies to the planet orbital parameters below.
+   - BATMAN/POET/Starry Orbital Parameters
       - ``per`` - orbital period (in days)
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
       - ``time_offset`` - (optional), the absolute time offset of your time-series data (in days)
       - ``inc`` - orbital inclination (in degrees)
-      - ``a`` - a/R*, the ratio of the semimajor axis to the stellar radius
+      - ``a`` or ``ars`` - a/R*, the ratio of the semimajor axis to the stellar radius
       - ``ecc`` - orbital eccentricity
       - ``w`` - argument of periapsis (degrees)
+      - ``t_secondary`` - (optional) time of secondary eclipse
       - ``Rs`` - the host star's radius in units of solar radii.
 
-         This parameter is recommended for batman_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
+         This parameter is recommended for batman_ecl and poet_ecl fits as it allows for a conversion of a/R* to physical units in order to account for light travel time.
          If not provided for batman_ecl fits, the finite speed of light will not be accounted for.
          Fits with the starry model **require** that ``Rs`` be provided as starry always uses physical units. This parameter should be set to ``fixed``
          unless you really want to marginalize over ``Rs``.
    - Sinusoidal Phase Curve Parameters
       The sinusoid_pc phase curve model for the standard numpy models allows for the inclusion of up to four sinusoids into a single phase curve. The theano-based differentiable functions allow for any number of sinusoids.
 
-      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5)
-      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75
-      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0)
-      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75
+      - ``AmpCos1`` - Amplitude of the first cosine with one peak near eclipse (orbital phase 0.5). The units are in fractions of the eclipse depth.
+      - ``AmpSin1`` - Amplitude of the first sine with one peak near quadrature at orbital phase 0.75. The units are in fractions of the eclipse depth.
+      - ``AmpCos2`` - Amplitude of the second cosine with two peaks near eclipse (orbital phase 0.5) and transit (orbital phase 0). The units are in fractions of the eclipse depth.
+      - ``AmpSin2`` - Amplitude of the second sine with two peaks near quadrature at orbital phases 0.25 and 0.75. The units are in fractions of the eclipse depth.
+   - POET Phase Curve Parameters
+      The poet_pc phase curve model allows for the inclusion of up to two sinusoids into a single phase curve, but allows for the inclusion of offsets, thus making it functionally identical to sinusoid_pc.
+
+      - ``cos1_amp`` - Amplitude of the first cosine with period, per. The units are in fractions of the eclipse depth.
+      - ``cos1_off`` - Offset (in degrees) of the first cosine, relative to the time of secondary eclipse.
+      - ``cos2_amp`` - Amplitude of the second cosine with period, per/2. The units are in fractions of the eclipse depth.
+      - ``cos2_off`` - Offset (in degrees) of the second cosine, relative to the time of secondary eclipse.
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
@@ -1081,6 +1097,22 @@ This file describes the transit/eclipse and systematics parameters and their pri
          ``uniform`` limb-darkening has no parameters, ``linear`` has a single parameter ``u1``,
          ``quadratic``, ``kipping2013``, ``squareroot``, ``logarithmic``, and ``exponential`` have two parameters ``u1, u2``,
          and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
+   - Stellar Variability Parameters, Flares
+      - ``lor_amp``, ``lor_amp_lhs``, ``lor_amp_rhs`` - The amplitude of the Lorentzian.  For a single basline/amplitude, use ``lor_amp``.  For different baselines/amplitudes, use ``lor_amp_lhs`` and ``lor_amp_rhs`` for the left and right hand sides, respectively.
+      - ``lor_hwhm``, ``lor_hwhm_lhs``, ``lor_hwhm_rhs`` - The half-width at half maximum.  For a symmetric Lorentzian, use ``lor_hwhm``.  For an asymmetric Lorentzian, use ``lor_hwhm_lhs`` and ``lor_hwhm_rhs`` for the left and right hand sides, respectively.
+      - ``lor_t0`` - The midpoint of the Lorentzian.
+      - ``lor_power`` - The exponent, ``p``, in a modified Lorentzian with functional form, ``1/(1+x^p)``.  The default is 2, representing a standard Lorentzian.
+
+         The Lorentzian model is defined as: ``lorentzian = 1 + lor_amp/(1 + x**lor_power)``, such that ``x = 2*(time-lor_t0)/lor_hwhm``.
+   - Stellar Variability Parameters, Quasi-Periodic Pulsations
+      - ``osc_amp`` - The initial amplitude of the sinusoidal function.
+      - ``osc_amp_decay`` - The rate of amplitude damping.
+      - ``osc_per`` - The initial period of the sinusoidal function.
+      - ``osc_per_decay`` - The rate of period damping.
+      - ``osc_t0`` - The start time of the oscillations.  The models returns unity flux for all times before ``osc_t0``.
+      - ``osc_t1`` - This offset determined the start phase of the sinusoidal function.
+
+         The time-dependent amplitude and period are defined as follows: ``amp = osc_amp * np.exp(-osc_amp_decay * (time - osc_t0))`` and ``per = osc_per * np.exp(-osc_per_decay * (time - osc_t0))``.  The damped oscillator model is then defined as: ``osc = 1 + amp * np.sin(2 * np.pi * (time - osc_t1) / per)``.  Note that ``osc[time < osc_t0] = 1``.
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
 
