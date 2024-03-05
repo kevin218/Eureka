@@ -760,9 +760,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if not meta.photometry:
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
                                            spec.optspec.values,
-                                           optmask=spec.optmask.values)
+                                           spec.optmask.values,
+                                           scandir=getattr(spec, 'scandir',
+                                                           None))
             else:
-                normspec = util.normalize_spectrum(meta, data.aplev.values)
+                normspec = util.normalize_spectrum(
+                    meta, spec.aplev.values,
+                    scandir=getattr(spec, 'scandir', None))
                 meta.mad_s3 = util.get_mad_1d(normspec)
             try:
                 log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
@@ -774,7 +778,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                                        optmask=spec.optmask)
+                                        optmask=spec.optmask,
+                                        scandir=getattr(spec, 'scandir',
+                                                        None))
 
             # make citations for current stage
             util.make_citations(meta, 3)
