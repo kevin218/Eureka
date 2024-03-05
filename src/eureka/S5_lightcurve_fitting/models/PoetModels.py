@@ -183,12 +183,15 @@ class PoetPCModel(Model):
 
                 # calculate the phase variations
                 p = poet_params.per
-                t1 = poet_params.cos1_off*p/360. + poet_params.t_secondary
-                t2 = poet_params.cos2_off*p/360. + poet_params.t_secondary
-                phaseVars = (0.5 + poet_params.cos1_amp 
-                             * np.cos(2*np.pi*(time+t1)/p) 
-                             + poet_params.cos2_amp
-                             * np.cos(4*np.pi*(time+t2)/p))
+                t1 = poet_params.cos1_off*p/360. - poet_params.t_secondary
+                t2 = poet_params.cos2_off*p/360. - poet_params.t_secondary
+                phaseVars = (poet_params.cos1_amp/2 * 
+                             np.cos(2*np.pi*(time+t1)/p) +
+                             poet_params.cos2_amp/2 *
+                             np.cos(4*np.pi*(time+t2)/p))
+                # Apply normalizing offset
+                ieclipse = np.argmin(np.abs(time-poet_params.t_secondary))
+                phaseVars += 1 - phaseVars[ieclipse]
                 
                 # If requested, force positive phase variations
                 if self.force_positivity and np.ma.any(phaseVars < 0):
@@ -252,7 +255,7 @@ class TransitModel():
         if self.transittype == 'primary':
             tref = self.t0
         else:
-            tref = params.t_secondary-params.per/2
+            tref = params.t_secondary
 
         # Compute distance, z, of planet and star midpoints
         self.z = self.ars \

@@ -145,7 +145,7 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
     def test_sinsoidalmodel(self):
-        """Tests for the PolynomialModel class"""
+        """Tests for the SinusoidPhaseCurve class"""
         # create dictionary
         params = Parameters()
         params.rp = 0.22, 'free', 0.0, 0.4, 'U'  # rprs
@@ -191,7 +191,7 @@ class TestModels(unittest.TestCase):
                                                  ld_from_file=meta.ld_file,
                                                  num_planets=meta.num_planets)
         self.e_model = models.BatmanEclipseModel(parameters=params,
-                                                 name='transit', fmt='r--',
+                                                 name='eclipse', fmt='r--',
                                                  log=log,
                                                  freenames=freenames,
                                                  longparamlist=longparamlist,
@@ -292,7 +292,7 @@ class TestModels(unittest.TestCase):
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_poet_ecl = models.PoetEclipseModel(parameters=params,
-                                                  name='transit', fmt='r--',
+                                                  name='eclipse', fmt='r--',
                                                   log=log,
                                                   freenames=freenames,
                                                   longparamlist=longparamlist,
@@ -306,6 +306,76 @@ class TestModels(unittest.TestCase):
         # Evaluate and test output
         self.t_poet_ecl.time = self.time
         vals = self.t_poet_ecl.eval()
+        self.assertEqual(vals.size, self.time.size)
+
+    def test_poetpc_model(self):
+        """Tests for the PoetPC class"""
+        # create dictionary
+        params = Parameters()
+        params.rp = 0.1, 'free', 0.0, 0.4, 'U'  # rprs
+        params.fp = 0.01, 'free', 0.0, 0.1, 'U'  # fpfs
+        params.per = 1., 'fixed'
+        params.t0 = 0.0, 'free', 0, 1, 'U'
+        params.inc = 89.7, 'free', 80., 90., 'U'
+        params.a = 8.2, 'free', 15., 20., 'U'    # ars
+        params.ecc = 0., 'fixed'
+        params.w = 90., 'fixed'             # omega
+        params.limb_dark = 'quadratic', 'independent'
+        params.u1 = 0.1, 'free', 0., 1., 'U'
+        params.u2 = 0.1, 'free', 0., 1., 'U'
+        params.cos1_amp = 0.9, 'free', 0, 2.0, 'U'
+        params.cos1_off = 10, 'free', -30, 30, 'U'
+        params.cos2_amp = 0.1, 'fixed', -1, 1, 'U'
+        params.cos2_off = 45, 'fixed', -1, 1, 'U'
+        params.Rs = 1., 'independent'
+
+        # Create the model
+        meta = MetaClass()
+        meta.sharedp = False
+        meta.multwhite = False
+        meta.num_planets = 1
+        meta.ld_from_S4 = False
+        meta.ld_file = None
+        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
+        freenames = []
+        for key in params.dict:
+            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+                                       'white_fixed']:
+                freenames.append(key)
+        log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
+        self.t_model = models.PoetTransitModel(parameters=params,
+                                               name='transit', fmt='r--',
+                                               freenames=freenames,
+                                               longparamlist=longparamlist,
+                                               nchan=1,
+                                               paramtitles=paramtitles,
+                                               ld_from_S4=meta.ld_from_S4,
+                                               ld_from_file=meta.ld_file,
+                                               num_planets=meta.num_planets)
+        self.e_model = models.PoetEclipseModel(parameters=params,
+                                               name='eclipse', fmt='r--',
+                                               log=log,
+                                               freenames=freenames,
+                                               longparamlist=longparamlist,
+                                               nchan=1,
+                                               paramtitles=paramtitles,
+                                               num_planets=meta.num_planets)
+        self.phasecurve = \
+            models.PoetPCModel(parameters=params,
+                               name='phasecurve', fmt='r--',
+                               longparamlist=longparamlist,
+                               freenames=freenames,
+                               nchan=1, paramtitles=paramtitles,
+                               transit_model=self.t_model,
+                               eclipse_model=self.e_model,
+                               num_planets=meta.num_planets)
+
+        # Remove the temporary log file
+        os.system(f"rm .{os.sep}data{os.sep}test.log")
+
+        # Evaluate and test output
+        self.phasecurve.time = self.time
+        vals = self.phasecurve.eval()
         self.assertEqual(vals.size, self.time.size)
 
     def test_lorentzian_model(self):
