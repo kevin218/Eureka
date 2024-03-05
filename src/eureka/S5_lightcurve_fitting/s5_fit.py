@@ -295,7 +295,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                 # Normalize flux and uncertainties to avoid large
                 # flux values
-                flux, flux_err = util.normalize_spectrum(meta, flux, flux_err)
+                flux, flux_err = util.normalize_spectrum(
+                    meta, flux, flux_err, scandir=getattr(lc, 'scandir', None))
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -442,9 +443,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                                    lc.data.values[channel, :])
                     err_temp = np.ma.masked_where(mask,
                                                   lc.err.values[channel, :])
-                    flux_temp, err_temp = util.normalize_spectrum(meta,
-                                                                  flux_temp,
-                                                                  err_temp)
+                    flux_temp, err_temp = util.normalize_spectrum(
+                        meta, flux_temp, err_temp,
+                        scandir=getattr(lc, 'scandir', None))
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
 
@@ -474,8 +475,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                     # Normalize flux and uncertainties to avoid large
                     # flux values
-                    flux, flux_err = util.normalize_spectrum(meta, flux,
-                                                             flux_err)
+                    flux, flux_err = util.normalize_spectrum(
+                        meta, flux, flux_err,
+                        scandir=getattr(lc, 'scandir', None))
 
                     meta, params = fit_channel(meta, time_temp, flux, channel,
                                                flux_err, eventlabel, params,
