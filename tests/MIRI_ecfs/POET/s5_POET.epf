@@ -1,0 +1,57 @@
+# Stage 5 Fit Parameters Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5-fit-parameters
+
+
+# Name	 	Value	 			Free?			PriorPar1		PriorPar2	PriorType
+# "Free?" can be free, fixed, white_free, white_fixed, shared, or independent
+# PriorType can be U (Uniform), LU (Log Uniform), or N (Normal).
+# If U/LU, PriorPar1 and PriorPar2 represent upper and lower limits of the parameter/log(the parameter).
+# If N, PriorPar1 is the mean and PriorPar2 is the standard deviation of a Gaussian prior.
+#-------------------------------------------------------------------------------------------------------
+rprs	    0.184157029967815	'free'			0.19			0.05		N
+fpfs		0.00721333946967835	'free'			0.008000		0.006000	N
+# ------------------
+# Orbital parameters
+# ------------------
+per  		0.766894378762		'fixed'	        0.7668944		0.0000003	N
+t0  		0.520935022161196	'fixed'	        0.5209350221611 0.0001		N
+time_offset	0					'independent'
+inc   		79.0448701805676	'fixed'	        79.044870180567	1			N  # Exoplanet Archive value for b is seemingly not helpful
+ars    		4.42519793519358	'fixed'	        4.447	 		0.132		N
+ecc   		0.0	 				'fixed' 		0 				1			U
+w    		90.					'fixed' 		0 				180			U
+# -------------------------
+# Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential','3-parameter', '4-parameter']
+# When using generated limb-darkening coefficients from exotic-ld choose from ['linear', 'quadratic', '3-parameter', '4-parameter']
+# -------------------------
+limb_dark	'quadratic' 		'independent'
+u1			0.2					'fixed'			-1				1			U
+u2			0.2					'fixed'			-1				1			U
+# ----------------------
+# Phase curve parameters
+# ----------------------
+cos1_amp		0.0737	        'free'			0				1			U
+cos1_off		0.0000	        'free'			-20 			20			U
+# --------------------
+# Systematic variables
+# Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
+# Exponential ramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# GP model parameters (A, WN, m1, m2) in log scale
+# Step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
+# Drift model variables (xpos, ypos, xwidth, ywidth)
+# --------------------
+c0			1.000           	'free'			1				0.05		N
+r0			-0.124315778343348	'free' 			-0.12			0.05		N
+r1			35.5170488452062	'free' 			35 				20			N
+r2			-0.603176745805961	'free' 			-0.5 			0.4			N
+# -----------
+# ** White noise **
+# Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
+# Use scatter_ppm to fit the noise level in ppm
+# Use WN parameter in GP model parameters to account for white noise in the GP model
+# step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
+# -----------
+scatter_mult	1				'free'			1.1				0.1			N
+# ---------------------------------------
+# Light travel time correction parameters
+# ---------------------------------------
+Rs			0.697				'independent'
