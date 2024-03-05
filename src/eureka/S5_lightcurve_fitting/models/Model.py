@@ -107,7 +107,6 @@ class Model:
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
         # Set the array
-        # self._time = np.array(time_array)
         self._time = np.ma.masked_array(time_array)
 
     @property
@@ -317,9 +316,9 @@ class CompositeModel(Model):
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = np.ma.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = np.ma.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -365,9 +364,9 @@ class CompositeModel(Model):
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = np.ma.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = np.ma.ones(len(self.time)*nchan)
 
         # Evaluate flux at each component
         for component in self.components:
@@ -412,9 +411,9 @@ class CompositeModel(Model):
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.zeros(len(time))
+            flux = np.ma.zeros(len(time))
         else:
-            flux = np.zeros(len(self.time)*nchan)
+            flux = np.ma.zeros(len(self.time)*nchan)
 
         # Evaluate flux
         for component in self.components:
@@ -467,8 +466,15 @@ class CompositeModel(Model):
                     # Split the arrays that have lengths of
                     # the original time axis
                     time = split([self.time, ], self.nints, chan)[0]
-                    
-                    dt = time[1]-time[0]
+
+                    # Remove masked points at the start or end to avoid
+                    # extrapolating out to those points
+                    time = time[~np.ma.getmaskarray(time)]
+
+                    # Get time step on full time array to ensure good steps
+                    dt = np.min(np.diff(time))
+
+                    # Interpolate as needed
                     steps = int(np.round((time[-1]-time[0])/dt+1))
                     nints_interp.append(steps)
                     new_time.extend(np.linspace(time[0], time[-1], steps,
@@ -476,6 +482,15 @@ class CompositeModel(Model):
                 new_time = np.array(new_time)
             else:
                 time = self.time
+
+                # Remove masked points at the start or end to avoid
+                # extrapolating out to those points
+                time = time[~np.ma.getmaskarray(time)]
+
+                # Get time step on full time array to ensure good steps
+                dt = np.min(np.diff(time))
+
+                # Interpolate as needed
                 dt = time[1]-time[0]
                 steps = int(np.round((time[-1]-time[0])/dt+1))
                 nints_interp = np.ones(nchan)*steps
@@ -489,9 +504,9 @@ class CompositeModel(Model):
 
         # Setup the flux array
         if self.multwhite:
-            flux = np.ones(len(new_time))
+            flux = np.ma.ones(len(new_time))
         else:
-            flux = np.ones(len(new_time)*nchan)
+            flux = np.ma.ones(len(new_time)*nchan)
 
         # Evaluate flux at each component
         for component in self.components:

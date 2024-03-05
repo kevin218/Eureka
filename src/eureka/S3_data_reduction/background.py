@@ -259,19 +259,22 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     model = np.polyval(coeffs, goodxvals)
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
-                    #Choose method for finding bad pixels
-                    if hasattr(meta, 'bg_method') and meta.bg_method=='std':
-                        # Simple standard deviation (faster but prone to missing
-                        # scanned background stars)
+                    # Choose method for finding bad pixels
+                    if (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'std'):
+                        # Simple standard deviation (faster but prone to
+                        # missing scanned background stars)
                         stdres = np.std(residuals)
-                    elif hasattr(meta, 'bg_method') and meta.bg_method=='median':
+                    elif (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'median'):
                         # Median Absolute Deviation (slower but more robust)
-                        stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    elif hasattr(meta, 'bg_method') and meta.bg_method=='mean':
+                        stdres = np.median(np.abs(np.ediff1d(residuals)))
+                    elif (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'mean'):
                         # Mean Absolute Deviation (good compromise)
                         stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     else:
-                        #Default to standard deviation with no input
+                        # Default to standard deviation with no input
                         stdres = np.std(residuals)
                     if stdres == 0:
                         stdres = np.inf

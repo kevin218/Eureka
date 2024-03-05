@@ -12,6 +12,111 @@ from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
+class PlanetParams():
+    """
+    Define planet parameters.
+    """
+    def __init__(self, model, pid=0, channel=0):
+        """ 
+        Set attributes to PlanetParams object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names 
+            and their current values.
+        pid : int; optional
+            Planet ID, default is 0.
+        channel : int, optional
+            The channel number for multi-wavelength fits or mutli-white fits.
+            Defaults to 0.
+        """
+        # Planet ID
+        self.pid = pid
+        if pid == 0:
+            self.pid_id = ''
+        else:
+            self.pid_id = str(self.pid)
+        # Channel ID
+        self.channel = channel
+        if channel == 0:
+            self.channel_id = ''
+        else:
+            self.channel_id = f'_{self.channel}'
+        # Set transit/eclipse parameters
+        self.t0 = None
+        self.rprs = None
+        self.rp = None
+        self.inc = None
+        self.ars = None
+        self.a = None
+        self.per = None
+        self.ecc = 0.
+        self.w = None
+        self.fpfs = None
+        self.fp = None
+        self.t_secondary = None
+        self.cos1_amp = 0.
+        self.cos1_off = 0.
+        self.cos2_amp = 0.
+        self.cos2_off = 0.
+        self.AmpCos1 = 0.
+        self.AmpSin1 = 0.
+        self.AmpCos2 = 0.
+        self.AmpSin2 = 0.
+        for item in self.__dict__.keys():
+            item0 = item+self.pid_id
+            try:
+                if model.parameters.dict[item0][1] == 'free':
+                    item0 += self.channel_id
+                setattr(self, item, model.parameters.dict[item0][0])
+            except KeyError:
+                pass
+        # Allow for rp or rprs
+        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
+            item0 = 'rp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'rprs', model.parameters.dict[item0][0])
+        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
+            item0 = 'rprs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'rp', model.parameters.dict[item0][0])
+        # Allow for a or ars
+        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
+            item0 = 'a' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'ars', model.parameters.dict[item0][0])
+        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
+            item0 = 'ars' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'a', model.parameters.dict[item0][0])
+        # Allow for fp or fpfs
+        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
+            item0 = 'fp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'fpfs', model.parameters.dict[item0][0])
+        elif self.fpfs is None:
+            setattr(self, 'fpfs', 0.)
+        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
+            item0 = 'fpfs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'fp', model.parameters.dict[item0][0])
+        elif self.fp is None:
+            setattr(self, 'fp', 0.)
+        # Set stellar radius
+        if 'Rs' in model.parameters.dict.keys():
+            item0 = 'Rs'
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'Rs', model.parameters.dict[item0][0])
+
+
 class BatmanTransitModel(Model):
     """Transit Model"""
     def __init__(self, **kwargs):
@@ -27,36 +132,13 @@ class BatmanTransitModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        # Define transit model to be used
+        self.transit_model = batman.TransitModel
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
         log = kwargs.get('log')
-
-        # Set default to ignore light-travel correction if not specified
-        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
-            self.compute_ltt = False
-        
-        # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
-        # Check if able to do ltt correction
-        ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
-                              and 'Rs' in self.parameters.dict.keys())
-        if self.compute_ltt and not ltt_params_present:
-            missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
-                                                np.array(self.paramtitles),
-                                                axis=1)]
-            if 'Rs' not in self.parameters.dict.keys():
-                missing_params = np.append('Rs', missing_params)
-
-            log.writelog(f"WARNING: Missing parameters ["
-                         f"{', '.join(missing_params)}] in your EPF which "
-                         "are required to account for light-travel time.\n"
-                         "         You should either add these "
-                         "parameters, or you should set compute_ltt to "
-                         "False in your ECF.\n"
-                         "         Setting compute_ltt to False for now!")
-            self.compute_ltt = False
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
@@ -66,7 +148,7 @@ class BatmanTransitModel(Model):
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
         self.ld_from_file = kwargs.get('ld_from_file')
-        
+
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
             log.writelog("Using the following limb-darkening values:")
@@ -94,13 +176,16 @@ class BatmanTransitModel(Model):
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -115,13 +200,15 @@ class BatmanTransitModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+        
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-
-        # Initialize model
-        bm_params = batman.TransitParams()
 
         # Set all parameters
         lcfinal = np.array([])
@@ -136,55 +223,52 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                setattr(bm_params, self.paramtitles[index],
-                        self.parameters.dict[item][0])
+            light_curve = np.ma.ones(time.shape)
+            for pid in pid_iter:
+                # Initialize planet
+                pl_params = PlanetParams(self, pid, chan)
 
-            # Set limb darkening parameters
-            uarray = []
-            for u in self.coeffs:
-                index = np.where(np.array(self.paramtitles) == u)[0]
-                if len(index) != 0:
-                    item = self.longparamlist[chan][index[0]]
-                    uarray.append(self.parameters.dict[item][0])
-            bm_params.u = uarray
+                # Set limb darkening parameters
+                uarray = []
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[chan][index[0]]
+                        uarray.append(self.parameters.dict[item][0])
+                pl_params.u = uarray
+                pl_params.limb_dark = self.parameters.dict['limb_dark'][0]
 
-            # Enforce physicality to avoid crashes from batman by returning
-            # something that should be a horrible fit
-            if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
-                    (1 < bm_params.a) and (0 <= bm_params.ecc < 1)):
-                # Returning nans or infs breaks the fits, so this was the
-                # best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
-                continue
-
-            # Use batman ld_profile name
-            if self.parameters.limb_dark.value == '4-parameter':
-                bm_params.limb_dark = 'nonlinear'
-            elif self.parameters.limb_dark.value == 'kipping2013':
-                # Enforce physicality to avoid crashes from batman by
-                # returning something that should be a horrible fit
-                if bm_params.u[0] <= 0:
-                    # Returning nans or infs breaks the fits, so this was
-                    # the best I could think of
-                    lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
+                # Enforce physicality to avoid crashes from batman by returning
+                # something that should be a horrible fit
+                if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
+                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                    # Returning nans or infs breaks the fits, so this was the
+                    # best I could think of
+                    light_curve = 1e12*np.ma.ones(time.shape)
                     continue
-                bm_params.limb_dark = 'quadratic'
-                u1 = 2*np.sqrt(bm_params.u[0])*bm_params.u[1]
-                u2 = np.sqrt(bm_params.u[0])*(1-2*bm_params.u[1])
-                bm_params.u = np.array([u1, u2])
 
-            if self.compute_ltt:
-                self.adjusted_time = correct_light_travel_time(time, bm_params)
-            else:
-                self.adjusted_time = time
+                # Use batman ld_profile name
+                if self.parameters.limb_dark.value == '4-parameter':
+                    pl_params.limb_dark = 'nonlinear'
+                elif self.parameters.limb_dark.value == 'kipping2013':
+                    # Enforce physicality to avoid crashes from batman by
+                    # returning something that should be a horrible fit
+                    if pl_params.u[0] <= 0:
+                        # Returning nans or infs breaks the fits, so this was
+                        # the best I could think of
+                        light_curve = 1e12*np.ma.ones(time.shape)
+                        continue
+                    pl_params.limb_dark = 'quadratic'
+                    u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
+                    u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
+                    pl_params.u = np.array([u1, u2])
 
-            # Make the transit model
-            m_transit = batman.TransitModel(bm_params, self.adjusted_time,
-                                            transittype='primary')
+                # Make the transit model
+                m_transit = self.transit_model(pl_params, time,
+                                               transittype='primary')
+                light_curve *= m_transit.light_curve(pl_params)
 
-            lcfinal = np.append(lcfinal, m_transit.light_curve(bm_params))
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         return lcfinal
 
@@ -202,6 +286,8 @@ class BatmanEclipseModel(Model):
         """
         # Inherit from Model calss
         super().__init__(**kwargs)
+        # Define transit model to be used
+        self.transit_model = batman.TransitModel
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
@@ -213,16 +299,21 @@ class BatmanEclipseModel(Model):
             self.compute_ltt = True
 
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['a', 'per', 'inc', 't0', 'ecc', 'w'])
+        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
+        ltt_par2 = np.array(['a', 'ars'])
         # Check if able to do ltt correction
         ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
-                              and 'Rs' in self.parameters.dict.keys())
+                              and 'Rs' in self.parameters.dict.keys()
+                              and np.any(np.in1d(ltt_par2, self.paramtitles)))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
                                                 np.array(self.paramtitles),
                                                 axis=1)]
             if 'Rs' not in self.parameters.dict.keys():
                 missing_params = np.append('Rs', missing_params)
+            if ('a' not in self.parameters.dict.keys()) and \
+                    ('ars' not in self.parameters.dict.keys()):
+                missing_params = np.append('a', missing_params)
 
             log.writelog("WARNING: Missing parameters ["
                          f"{', '.join(missing_params)}] in your EPF which "
@@ -246,13 +337,16 @@ class BatmanEclipseModel(Model):
             log.writelog("         Setting compute_ltt to False for now!")
             self.compute_ltt = False
 
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -267,16 +361,18 @@ class BatmanEclipseModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+        
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Initialize model
-        bm_params = batman.TransitParams()
-
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -288,47 +384,80 @@ class BatmanEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Set all parameters
-            for index, item in enumerate(self.longparamlist[chan]):
-                setattr(bm_params, self.paramtitles[index],
-                        self.parameters.dict[item][0])
+            light_curve = np.ma.ones(time.shape)
+            for pid in pid_iter:
+                # Initialize planet
+                pl_params = PlanetParams(self, pid, chan)
 
-            # Enforce physicality to avoid crashes from batman by
-            # returning something that should be a horrible fit
-            if not ((0 < bm_params.per) and (0 < bm_params.inc < 90) and
-                    (1 < bm_params.a) and (0 <= bm_params.ecc < 1)):
-                # Returning nans or infs breaks the fits, so this was
-                # the best I could think of
-                lcfinal = np.append(lcfinal, 1e12*np.ones_like(time))
-                continue
+                # Set limb darkening parameters
+                pl_params.u = []
+                pl_params.limb_dark = 'uniform'
 
-            bm_params.limb_dark = 'uniform'
-            bm_params.u = []
+                # Enforce physicality to avoid crashes
+                if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
+                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                    # Returning nans or infs breaks the fits, so this was
+                    # the best I could think of
+                    light_curve = 1e12*np.ma.ones(time.shape)
+                    continue
 
-            if self.compute_ltt:
-                self.adjusted_time = correct_light_travel_time(time, bm_params)
-            else:
-                self.adjusted_time = time
+                # Compute light travel time
+                if self.compute_ltt:
+                    self.adjusted_time = correct_light_travel_time(time,
+                                                                   pl_params)
+                else:
+                    self.adjusted_time = time
 
-            if not np.any(['t_secondary' in key
-                           for key in self.longparamlist[chan]]):
-                # If not explicitly fitting for the time of eclipse, get
-                # the time of eclipse from the time of transit, period,
-                # eccentricity, and argument of periastron
-                m_transit = batman.TransitModel(bm_params, self.adjusted_time,
-                                                transittype='primary')
-                bm_params.t_secondary = m_transit.get_t_secondary(bm_params)
+                if pl_params.t_secondary is None:
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
+                    # eccentricity, and argument of periastron
+                    pl_params.t_secondary = get_ecl_midpt(pl_params)
 
-            # Make the eclipse model
-            m_eclipse = batman.TransitModel(bm_params, self.adjusted_time,
-                                            transittype='secondary')
+                # Make the eclipse model
+                m_eclipse = self.transit_model(pl_params, 
+                                               self.adjusted_time,
+                                               transittype='secondary')
+                light_curve += m_eclipse.light_curve(pl_params)-1
 
-            lcfinal = np.append(lcfinal, m_eclipse.light_curve(bm_params))
+            lcfinal = np.ma.append(lcfinal, light_curve)
 
         return lcfinal
 
 
-def correct_light_travel_time(time, bm_params):
+def get_ecl_midpt(params):
+    """
+    Return the time of secondary eclipse center.
+
+    Parameters
+    ----------
+    params : object
+        Contains the physical parameters for the transit model.
+
+    Returns
+    -------
+    t_secondary : float
+        The time of secondary eclipse.
+    """
+
+    # Start with primary transit
+    TA = np.pi / 2. - params.w * np.pi / 180.
+    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc)) 
+                       * np.tan(TA / 2.))
+    M = E - params.ecc * np.sin(E)
+    phase_tr = M / 2. / np.pi
+
+    # Now do secondary eclipse
+    TA = 3. * np.pi / 2. - params.w * np.pi / 180.
+    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc)) 
+                       * np.tan(TA / 2.))
+    M = E - params.ecc * np.sin(E)
+    phase_ecl = M / 2. / np.pi
+
+    return params.t0 + params.per * (phase_ecl - phase_tr)
+
+
+def correct_light_travel_time(time, pl_params):
     '''Correct for the finite light travel speed.
 
     This function uses the KeplerOrbit.py file from the Bell_EBM package
@@ -339,8 +468,8 @@ def correct_light_travel_time(time, bm_params):
     ----------
     time : ndarray
         The times at which observations were collected
-    bm_params : batman.TransitParams
-        The batman TransitParams object that contains information on the orbit.
+    pl_params : batman.TransitParams or poet.TransitParams
+        The TransitParams object that contains information on the orbit.
 
     Returns
     -------
@@ -359,21 +488,21 @@ def correct_light_travel_time(time, bm_params):
         web.c file by Tom Louden
     '''
     # Need to convert from a/Rs to a in meters
-    a = bm_params.a * (bm_params.Rs*const.R_sun.value)
+    a = pl_params.a * (pl_params.Rs*const.R_sun.value)
 
-    if bm_params.ecc > 0:
+    if pl_params.ecc > 0:
         # Need to solve Kepler's equation, so use the KeplerOrbit class
         # for rapid computation. In the SPIDERMAN notation z is the radial
         # coordinate, while for Bell_EBM the radial coordinate is x
-        orbit = KeplerOrbit(a=a, Porb=bm_params.per, inc=bm_params.inc,
-                            t0=bm_params.t0, e=bm_params.ecc, argp=bm_params.w)
+        orbit = KeplerOrbit(a=a, Porb=pl_params.per, inc=pl_params.inc,
+                            t0=pl_params.t0, e=pl_params.ecc, argp=pl_params.w)
         old_x, _, _ = orbit.xyz(time)
-        transit_x, _, _ = orbit.xyz(bm_params.t0)
+        transit_x, _, _ = orbit.xyz(pl_params.t0)
     else:
         # No need to solve Kepler's equation for circular orbits, so save
         # some computation time
-        transit_x = a*np.sin(bm_params.inc)
-        old_x = transit_x*np.cos(2*np.pi*(time-bm_params.t0)/bm_params.per)
+        transit_x = a*np.sin(pl_params.inc)
+        old_x = transit_x*np.cos(2*np.pi*(time-pl_params.t0)/pl_params.per)
 
     # Get the radial distance variations of the planet
     delta_x = transit_x - old_x

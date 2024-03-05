@@ -525,9 +525,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 if meta.isplots_S4 >= 3:
                     plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
 
-            # Generate limb-darkening coefficients
-            if hasattr(meta, 'compute_ld') and meta.compute_ld:
-                log.writelog("Generating limb-darkening coefficients...",
+            # Generate ExoTiC limb-darkening coefficients
+            if (meta.compute_ld == 'exotic-ld') or \
+                    (meta.compute_ld is True):
+                log.writelog("Computing ExoTiC limb-darkening coefficients...",
                              mute=(not meta.verbose))
                 ld_lin, ld_quad, ld_3para, ld_4para = \
                     generate_LD.exotic_ld(meta, spec, log)
@@ -553,6 +554,28 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                            'exotic-ld_4'],
                                                           ld_4para_w)
 
+            # Generate SPAM limb-darkening coefficients
+            elif meta.compute_ld == 'spam':
+                log.writelog("Computing SPAM limb-darkening coefficients...",
+                             mute=(not meta.verbose))
+                ld_coeffs = generate_LD.spam_ld(meta, white=False)
+                lc['spam_lin'] = (['wavelength', 'spam_1'], ld_coeffs[0])
+                lc['spam_quad'] = (['wavelength', 'spam_2'], ld_coeffs[1])
+                lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'], 
+                                           ld_coeffs[2])
+                lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'], 
+                                           ld_coeffs[3])
+                if meta.compute_white:
+                    ld_coeffs_w = generate_LD.spam_ld(meta, white=True)
+                    lc['spam_lin_white'] = (['wavelength', 'spam_1'], 
+                                            ld_coeffs_w[0])
+                    lc['spam_quad_white'] = (['wavelength', 'spam_2'], 
+                                             ld_coeffs_w[1])
+                    lc['spam_nonlin_3para_white'] = (['wavelength', 'spam_3'],
+                                                     ld_coeffs_w[2])
+                    lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
+                                                     ld_coeffs_w[3])
+            
             log.writelog('Saving results...')
 
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'

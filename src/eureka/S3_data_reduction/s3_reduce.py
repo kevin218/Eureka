@@ -462,7 +462,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Compute clean median frame
                         data = optspex.clean_median_flux(data, meta, log, m)
                         # Save the original median frame
-                        saved_ref_median_frame = data.medflux
+                        saved_ref_median_frame = deepcopy(data.medflux)
                     else:
                         # Load the original median frame
                         data['medflux'] = saved_ref_median_frame

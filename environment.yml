@@ -27,7 +27,7 @@ dependencies:
     - pandas
     - photutils
     - pip # required for the pip installs below
-    - pytest # Needed for testing
+    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
