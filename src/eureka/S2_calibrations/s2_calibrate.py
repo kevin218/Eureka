@@ -13,19 +13,22 @@
 import os
 import shutil
 import time as time_pkg
+from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from functools import partial
 from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
+import jwst.assign_wcs.nirspec
+import crds
+
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
 from ..lib import plots
-
-import jwst.assign_wcs.nirspec
-from functools import partial
+from ..version import version
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -63,6 +66,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     '''
     t0 = time_pkg.time()
 
+    s1_meta = deepcopy(s1_meta)
+    input_meta = deepcopy(input_meta)
+
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S2_' + eventlabel + '.ecf'
@@ -70,6 +76,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    # If a specific CRDS context is entered in the ECF, apply it.
+    # Otherwise, log and fix the default CRDS context to make sure it doesn't
+    # change between different segments.
+    if not hasattr(meta, 'pmap') or meta.pmap is None:
+        # Get just the numerical value
+        meta.pmap = crds.get_context_name('jwst')[5:-5]
+    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -100,6 +115,8 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
+    log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -120,6 +137,11 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     with fits.open(meta.segment_list[0]) as hdulist:
         # Figure out which observatory and observation mode we are using
         telescope = hdulist[0].header['TELESCOP']
+
+        # record instrument information in meta object for citations
+        if not hasattr(meta, 'inst'):
+            meta.inst = hdulist[0].header["INSTRUME"].lower()
+
     if telescope == 'JWST':
         exp_type = hdulist[0].header['EXP_TYPE']
         if 'image' in exp_type.lower():
@@ -131,13 +153,15 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
             # (or someone is putting weird files into Eureka!)
             pipeline = EurekaSpec2Pipeline()
 
-            # By default pipeline can trim the dispersion axis,
-            # override the function that does this with specific 
-            # wavelength range that you want to trim to.
-            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input, 
-                        wavelength_range=[meta.waverange_start,
-                                          meta.waverange_end])
+            if (meta.waverange_start is not None or
+                    meta.waverange_end is not None):
+                # By default pipeline can trim the dispersion axis,
+                # override the function that does this with specific
+                # wavelength range that you want to trim to.
+                jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
+                    partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input,
+                            wavelength_range=[meta.waverange_start,
+                                              meta.waverange_end])
     elif telescope == 'HST':
         log.writelog('There is no Stage 2 for HST - skipping.')
         # Clean up temporary folder
@@ -164,6 +188,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
                 hdulist[0].header['NRIMDTPT'] = 1
 
         pipeline.run_eurekaS2(filename, meta, log)
+
+    # make citations for current stage
+    util.make_citations(meta, 2)
 
     # Save results
     if not meta.testing_S2:
@@ -218,14 +245,20 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             Fragmented code to allow reuse of code between spectral and image
             analysis.
         '''
-        
-        if meta.slit_y_low is not None:
-            # Controls the cross-dispersion extraction
+
+        if hasattr(meta, 'slit_y_low') and meta.slit_y_low is not None:
+            #  NIRSpec subarray lower bound in cross-dispersion direction
             self.assign_wcs.slit_y_low = meta.slit_y_low
 
-        if meta.slit_y_high is not None:
-            # Controls the cross-dispersion extraction
+        if hasattr(meta, 'slit_y_high') and meta.slit_y_high is not None:
+            #  NIRSpec subarray upper bound in cross-dispersion direction
             self.assign_wcs.slit_y_high = meta.slit_y_high
+
+        if hasattr(meta, 'tsgrism_extract_height') and \
+           meta.tsgrism_extract_height is not None:
+            # NIRCam grism subarray height in cross-dispersion direction
+            self.extract_2d.tsgrism_extract_height = \
+                meta.tsgrism_extract_height
 
         # Skip steps according to input ecf file
         self.bkg_subtract.skip = meta.skip_bkg_subtract

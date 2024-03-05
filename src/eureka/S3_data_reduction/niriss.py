@@ -21,11 +21,7 @@ from scipy.ndimage import gaussian_filter
 
 from .background import fitbg3
 from .niriss_profiles import *
-
-# some cute cython code
-import pyximport
-pyximport.install()
-from . import niriss_cython
+from . import niriss_python
 
 
 __all__ = ['read', 'simplify_niriss_img', 'image_filtering',
@@ -606,7 +602,7 @@ def fit_orders(data, meta, which_table=2):
     combos = construct_guesses([0.1,30], [0.1,30], [1,40])
     
     # generates length x length x length number of images and fits to the data
-    img1, sigout1 = niriss_cython.build_image_models(data.median,
+    img1, sigout1 = niriss_python.build_image_models(data.median,
                                                      combos[:,0], combos[:,1], 
                                                      combos[:,2], 
                                                      pos1, pos2)
@@ -619,7 +615,7 @@ def fit_orders(data, meta, which_table=2):
 
     # generates length x length x length number of images centered around the previous
     #   guess to optimize the image fit
-    img2, sigout2 = niriss_cython.build_image_models(data.median, 
+    img2, sigout2 = niriss_python.build_image_models(data.median, 
                                                      combos[:,0], combos[:,1],
                                                      combos[:,2],
                                                      pos1, pos2)
@@ -627,7 +623,7 @@ def fit_orders(data, meta, which_table=2):
     # creates a 2D image for the first and second orders with the best-fit gaussian
     #    profiles
     final_guess = combos[np.argmin(sigout2)]
-    ord1, ord2, _ = niriss_cython.build_image_models(data.median,
+    ord1, ord2, _ = niriss_python.build_image_models(data.median,
                                                      [final_guess[0]],
                                                      [final_guess[1]],
                                                      [final_guess[2]],
@@ -661,7 +657,7 @@ def fit_orders_fast(data, meta, which_table=2):
         """ Calcualtes residuals for best-fit profile. """
         A, B, sig1 = params
         # Produce the model:   
-        model,_ = niriss_cython.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
+        model,_ = niriss_python.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
         # Calculate residuals:     
         res = (model[0] - data)
         return res.flatten()
@@ -676,7 +672,7 @@ def fit_orders_fast(data, meta, which_table=2):
                                )
 
     # creates the final mask
-    out_img1,out_img2,_= niriss_cython.build_image_models(data.median, 
+    out_img1,out_img2,_= niriss_python.build_image_models(data.median, 
                                                           results.x[0:1], 
                                                           results.x[1:2], 
                                                           results.x[2:3], 

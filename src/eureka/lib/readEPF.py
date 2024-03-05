@@ -277,6 +277,7 @@ class Parameters:
             raise TypeError("Cannot set {}={}.".format(item, value))
 
         # Set the attribute
+        self.params[item] = value
         self.__dict__[item] = Parameter(item, *value)
 
         # Add it to the list of parameters
@@ -296,7 +297,7 @@ class Parameters:
             The combined model
         """
         # Make sure it is the right type
-        if not type(self) == type(other):
+        if not isinstance(self, type(other)):
             raise TypeError('Only another Parameters instance may be added.')
 
         # Combine the model parameters too

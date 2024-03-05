@@ -10,7 +10,7 @@ fit_method      [lsq, emcee, dynesty] #options are: lsq, emcee, dynesty (can lis
 run_myfuncs     [batman_tr, polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
-manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
+manual_clip     [[None,1],]    # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!

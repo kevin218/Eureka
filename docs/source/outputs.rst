@@ -98,6 +98,11 @@ In Stage 3:
 
       Fig 3501: Spectral Extraction Subdata Plot
 
+   .. figure:: ../media/S3_out/fig3507a_file0_int011_tilt_events.png
+      :alt: Stage 3 tilt event plots
+
+      Fig 3507a: Tilt event frame plot. Figures 3507b and 3507c are GIF versions of this figure, b is at the segment level and c is over all segments
+
 .. _s4-out:
 
 Stage 4 Outputs

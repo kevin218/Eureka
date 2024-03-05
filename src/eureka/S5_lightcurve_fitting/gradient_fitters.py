@@ -1,11 +1,17 @@
 import numpy as np
 import copy
-import pymc3_ext as pmx
+try:
+    import pymc3 as pm
+    import pymc3_ext as pmx
+except:
+    # PyMC3 hasn't been installed
+    pass
 from astropy import table
 
 from .likelihood import computeRedChiSq
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
+from ..lib.split_channels import get_trim
 
 
 def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
@@ -51,6 +57,16 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+    model.update(freepars)
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter=calling_function+'StartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter=calling_function+'StartingPoint')
 
     log.writelog('Running exoplanet optimizer...')
     with model.model:
@@ -71,17 +87,18 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
         if not hasattr(lc, 'unc_fit'):
             lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                (fit_params[ind[chan]] *
-                 lc.unc[chan*lc.time.size:(chan+1)*lc.time.size])
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
+    else:
+        lc.unc_fit = lc.unc
 
     t_results = table.Table([freenames, fit_params],
                             names=("Parameter", "Mean"))
@@ -100,9 +117,9 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]) * 1e6)
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
+            scatter_ppm = 1e6*fit_params[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
             log.writelog(f'{freenames[i]}: {fit_params[i]}')
@@ -113,12 +130,13 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
-    # if model.GP and meta.isplots_S5 >= 1:
-    #     plots.plot_GP_components(lc, model, meta, fitter=calling_function)
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    # if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
-    #     plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
+                                  'sinusoid_pc' in meta.run_myfuncs)):
+        plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3 and calling_function == 'exoplanet':
@@ -177,6 +195,19 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
+    model.update(freepars)
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='nutsStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='nutsStartingPoint')
+
+    if not hasattr(meta, 'target_accept'):
+        meta.target_accept = 0.85
 
     log.writelog('Running PyMC3 NUTS sampler...')
     with model.model:
@@ -185,6 +216,13 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                            chains=meta.chains, cores=meta.ncpu)
         print()
 
+        # Log detailed convergence and sampling statistics
+        log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
+        log.writelog(pm.summary(trace, var_names=freenames),
+                     mute=(not meta.verbose))
+        log.writelog('', mute=(not meta.verbose))
+
+    samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
     samples = np.zeros((meta.draws*meta.chains, 0))
     for name in freenames:
         if model.linearized and name in ['fp', 'AmpCos1', 'AmpSin1',
@@ -194,7 +232,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                                 axis=1)
         else:
             samples = np.append(samples, trace[name].reshape(-1, 1), axis=1)
-    samples = np.array(samples)
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
@@ -217,15 +254,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:11] == "scatter_ppm"]
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * 1e-6
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
     elif "scatter_mult" in freenames:
         ind = [i for i in np.arange(len(freenames))
                if freenames[i][0:12] == "scatter_mult"]
+        if not hasattr(lc, 'unc_fit'):
+            lc.unc_fit = copy.deepcopy(lc.unc)
         for chan in range(len(ind)):
-            lc.unc_fit[chan*lc.time.size:(chan+1)*lc.time.size] = \
-                fit_params[ind[chan]] * lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]
+            trim1, trim2 = get_trim(meta.nints, chan)
+            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
     else:
         lc.unc_fit = lc.unc
 
@@ -235,7 +273,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Compute reduced chi-squared
     chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
-    log.writelog('PYMC3 NUTS RESULTS:')
+    log.writelog('\nPYMC3 NUTS RESULTS:')
     for i in range(ndim):
         if 'scatter_mult' in freenames[i]:
             chan = freenames[i].split('_')[-1]
@@ -243,15 +281,11 @@ def nutsfitter(lc, model, meta, log, **kwargs):
                 chan = int(chan)
             else:
                 chan = 0
-            scatter_ppm = (1e6 * fit_params[i] *
-                           np.ma.median(lc.unc[chan*lc.time.size:
-                                               (chan+1)*lc.time.size]))
-            scatter_ppm_upper = (1e6 * upper_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
-            scatter_ppm_lower = (1e6 * lower_errs[i] *
-                                 np.ma.median(lc.unc[chan*lc.time.size:
-                                                     (chan+1)*lc.time.size]))
+            trim1, trim2 = get_trim(meta.nints, chan)
+            unc = np.ma.median(lc.unc[trim1:trim2])
+            scatter_ppm = 1e6*fit_params[i]*unc
+            scatter_ppm_upper = 1e6*upper_errs[i]*unc
+            scatter_ppm_lower = 1e6*lower_errs[i]*unc
             log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]}); {scatter_ppm} '
                          f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm')
@@ -265,20 +299,24 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='nuts')
 
     # Plot GP fit + components
-    # if model.GP and meta.isplots_S5 >= 1:
-    #     plots.plot_GP_components(lc, model, meta, fitter='nuts')
+    if model.GP and meta.isplots_S5 >= 1:
+        plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
-    # if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
-    #     plots.plot_phase_variations(lc, model, meta, fitter='nuts')
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
+                                  'sinusoid_pc' in meta.run_myfuncs)):
+        plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
     # Plot Allan plot
     if meta.isplots_S5 >= 3:
         plots.plot_rms(lc, model, meta, fitter='nuts')
 
-    # Plot residuals distribution
     if meta.isplots_S5 >= 3:
+        # Plot residuals distribution
         plots.plot_res_distr(lc, model, meta, fitter='nuts')
+
+        # Plot trace evolution
+        plots.plot_trace(trace, model, lc, freenames, meta)
 
     if meta.isplots_S5 >= 5:
         plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')

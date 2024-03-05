@@ -52,24 +52,20 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
         Added IRSUB256
     - December 8, 2021, Taylor J Bell
         Updated for Eureka
+    - December 15, 2023, Kevin Stevenson
+        Cleaned up function
     '''
     nfiles = len(filenames)
     centers = []
-    # images = []
 
     # Swap the x-y order for the other, older code which used to have (y,x)
     guess = guess[::-1]
 
     for i in range(nfiles):
-        # images.append(fits.getdata(filenames[i].rstrip()))
         image = fits.getdata(filenames[i].rstrip())
-        # hdr0 = fits.getheader(filenames[i],0)
-        # hdr1 = fits.getheader(filenames[i],1)
         calhdr0 = fits.getheader(filenames[i].rstrip(), 0)
         calhdr1 = fits.getheader(filenames[i].rstrip(), 1)
         # Calculate centroid, correct for difference in image size, if any
-        # centers.append(centroid.ctrgauss(images[i], guess=guess, trim=trim) -
-        #                (images[i].shape[0]-ny)/2.)
         centers.append(centroid.ctrgauss(image, guess=guess, trim=trim) -
                        (image.shape[0]-ny)/2.)
         xoffset = (CRPIX1 - calhdr1['CRPIX1'] +
@@ -82,36 +78,10 @@ def imageCentroid(filenames, guess, trim, ny, CRPIX1, CRPIX2, POSTARG1,
                      f" pixels to x, y centroid position for integrations "
                      f"related to staring-mode image #{i}.",
                      mute=(not meta.verbose))
-        """
-        if calhdr0['APERTURE'] == 'IRSUB256':
-            # centers[i][1] -= 111
-            # xref_correct = (xref + CRPIX1_spec - CRPIX1_im +
-            #                 (POSTARG1_spec - POSTARG1_im)/0.135)
-            # offset = (scihdr1['CRPIX1'] - calhdr1['CRPIX1'] +
-            #           (scihdr0['POSTARG1'] - calhdr0['POSTARG1'])/0.135)
-            # centers[i][1] += offset
-            xoffset = (scihdr1['CRPIX1'] - calhdr1['CRPIX1'] +
-                       (scihdr0['POSTARG1'] - calhdr0['POSTARG1'])/0.135)
-            yoffset = (scihdr1['CRPIX2'] - calhdr1['CRPIX2'] +
-                       (scihdr0['POSTARG2'] - calhdr0['POSTARG2'])/0.121)
-            centers[i][0] += yoffset
-            centers[i][1] += xoffset
-            print(f"****WARNING: Direct image uses IRSUB256, adding {xoffset},"
-                  f"{yoffset} pixels to x,y position.")
-        if calhdr0['APERTURE'] == 'IRSUB512':
-            # centers[i][1] -= 111
-            # xref_correct = (xref + CRPIX1_spec - CRPIX1_im +
-            #                 (POSTARG1_spec - POSTARG1_im)/0.135)
-            xoffset = (scihdr1['CRPIX1'] - calhdr1['CRPIX1'] +
-                       (scihdr0['POSTARG1'] - calhdr0['POSTARG1'])/0.135)
-            yoffset = (scihdr1['CRPIX2'] - calhdr1['CRPIX2'] +
-                       (scihdr0['POSTARG2'] - calhdr0['POSTARG2'])/0.121)
-            centers[i][0] += yoffset
-            centers[i][1] += xoffset
-            print(f"****WARNING: Direct image uses IRSUB512, adding {xoffset},"
-                  f"{yoffset} pixels to x,y position.")
-        """
-    return centers  # , images
+        log.writelog(f"Final centroid is {np.round(centers[i][0], 3)},"
+                     f" {np.round(centers[i][1], 3)}",
+                     mute=(not meta.verbose))
+    return centers
 
 
 def groupFrames(dates):
@@ -325,7 +295,6 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
     # Read in flat frames
     hdulist = fits.open(flatfile)
     flat_mhdr = hdulist[0].header
-    # print(hdulist[0].data)
     wmin = float(flat_mhdr['wmin'])/1e4
     wmax = float(flat_mhdr['wmax'])/1e4
     # nx = flat_mhdr['naxis1']
@@ -354,7 +323,6 @@ def makeflats(flatfile, wave, xwindow, ywindow, flatoffset, n_spec, ny, nx,
             # WFC3.IR.G141.flat.2 OR WFC3.IR.G102.flat.2
             flat_window = hdulist[0].data[ylower:yupper, xlower:xupper]
             for j in range(1, len(hdulist)):
-                # print(j)
                 flat_window += hdulist[j].data[ylower:yupper,
                                                xlower:xupper]*x**j
 

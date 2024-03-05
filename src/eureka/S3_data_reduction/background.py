@@ -16,7 +16,7 @@ from . import plots_s3
 __all__ = ['BGsubtraction', 'fitbg', 'fitbg2', 'fitbg3']
 
 
-def BGsubtraction(data, meta, log, m):
+def BGsubtraction(data, meta, log, m, isplots=0):
     """Does background subtraction using inst.fit_bg & background.fitbg
 
     Parameters
@@ -30,6 +30,9 @@ def BGsubtraction(data, meta, log, m):
         The open log in which notes from this step can be added.
     m : int
         The current file/batch number.
+    isplots : bool; optional
+       Plots intermediate steps for the background fitting routine.
+       Default is False.
 
     Returns
     -------
@@ -83,7 +86,7 @@ def BGsubtraction(data, meta, log, m):
         return
 
     # Compute background for each integration
-    log.writelog('  Performing background subtraction...',
+    log.writelog('  Performing ' + meta.bg_dir + ' background subtraction...',
                  mute=(not meta.verbose))
     data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
     data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
@@ -95,17 +98,17 @@ def BGsubtraction(data, meta, log, m):
         for n in iterfn:
             # Fit sky background with out-of-spectra data
             if meta.inst == 'niriss':
-                writeBG(inst.fit_bg(data, meta, n, meta.isplots_S3))
+                writeBG(inst.fit_bg(data, meta, n, isplots))
             elif meta.inst == 'wfc3':
                 writeBG_WFC3(inst.fit_bg(data.flux[n].values,
                                          data.mask[n].values,
                                          data.v0[n].values,
                                          data.variance[n].values,
                                          data.guess[n].values,
-                                         n, meta, meta.isplots_S3))
+                                         n, meta, isplots))
             else:
                 writeBG(inst.fit_bg(data.flux[n].values, data.mask[n].values,
-                                    n, meta, meta.isplots_S3))
+                                    n, meta, isplots))
     else:
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
@@ -115,7 +118,7 @@ def BGsubtraction(data, meta, log, m):
         # (see nircam and below for example)
         if meta.inst == 'niriss':
             for n in range(meta.int_start, meta.n_int):
-                args_list.append((data, meta, n, meta.isplots_S3))
+                args_list.append((data, meta, n, isplots))
             jobs = [pool.apply_async(func=inst.fit_bg, args=(*args,),
                                      callback=writeBG) for args in args_list]
         elif meta.inst == 'wfc3':
@@ -127,14 +130,14 @@ def BGsubtraction(data, meta, log, m):
                                            data.v0[n].values,
                                            data.variance[n].values,
                                            data.guess[n].values,
-                                           n, meta, meta.isplots_S3,),
+                                           n, meta, isplots,),
                                      callback=writeBG_WFC3)
                     for n in range(meta.int_start, meta.n_int)]
         else:
             jobs = [pool.apply_async(func=inst.fit_bg,
                                      args=(data.flux[n].values,
                                            data.mask[n].values,
-                                           n, meta, meta.isplots_S3,),
+                                           n, meta, isplots,),
                                      callback=writeBG)
                     for n in range(meta.int_start, meta.n_int)]
         pool.close()
@@ -151,7 +154,7 @@ def BGsubtraction(data, meta, log, m):
         data['medflux'] -= np.median(data.bg, axis=0)
 
     # Make image+background plots
-    if meta.isplots_S3 >= 3:
+    if isplots >= 3:
         plots_s3.image_and_background(data, meta, log, m)
 
     return data
@@ -202,9 +205,9 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
 
     # Convert x1 and x2 to array, if need be
     ny, nx = np.shape(dataim)
-    if type(x1) == int or type(x1) == np.int64:
+    if isinstance(x1, (int, np.int64)):
         x1 = np.zeros(ny, dtype=int)+x1
-    if type(x2) == int or type(x2) == np.int64:
+    if isinstance(x2, (int, np.int64)):
         x2 = np.zeros(ny, dtype=int)+x2
 
     if deg < 0:
@@ -220,7 +223,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     else:
         degs = np.ones(ny)*deg
         # Initiate background image with zeros
-        bg = np.zeros((ny, nx))
+        bg = np.zeros((ny, nx))            
         # Fit polynomial to each column
         for j in range(ny):
             nobadpixels = False
@@ -256,13 +259,23 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     model = np.polyval(coeffs, goodxvals)
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
-                    # Simple standard deviation (faster but prone to missing
-                    # scanned background stars)
-                    # stdres = np.std(residuals)
-                    # Median Absolute Deviation (slower but more robust)
-                    # stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    # Mean Absolute Deviation (good compromise)
-                    stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    # Choose method for finding bad pixels
+                    if (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'std'):
+                        # Simple standard deviation (faster but prone to
+                        # missing scanned background stars)
+                        stdres = np.std(residuals)
+                    elif (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'median'):
+                        # Median Absolute Deviation (slower but more robust)
+                        stdres = np.median(np.abs(np.ediff1d(residuals)))
+                    elif (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'mean'):
+                        # Mean Absolute Deviation (good compromise)
+                        stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    else:
+                        # Default to standard deviation with no input
+                        stdres = np.std(residuals)
                     if stdres == 0:
                         stdres = np.inf
                     stdevs = np.abs(residuals) / stdres
@@ -273,19 +286,18 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                         mask[j, goodxvals[loc]] = 0
                     else:
                         nobadpixels = True  # exit while loop
-
             # Evaluate background model at all points, write model to
             # background image
             if len(goodxvals) != 0:
                 bg[j] = np.polyval(coeffs, range(nx))
-                if isplots >= 6:
+                if isplots == 6:
                     plt.figure(3601)
                     plt.clf()
                     plt.title(str(j))
                     plt.plot(goodxvals, dataslice, 'bo')
                     plt.plot(range(nx), bg[j], 'g-')
                     fname = ('figs'+os.sep+'Fig3601_BG_'+str(j) +
-                             plots.plots.figure_filetype)
+                             plots.figure_filetype)
                     plt.savefig(meta.outputdir + fname, dpi=300)
                     plt.pause(0.01)
 

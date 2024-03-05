@@ -18,6 +18,13 @@ from jwst.datamodels import dqflags
 from jwst.lib import reffile_utils
 from jwst.lib import pipe_utils
 
+from jwst.firstframe.firstframe_step import FirstFrameStep
+from jwst.lastframe.lastframe_step import LastFrameStep
+
+from . import update_saturation
+from . import group_level
+from . import remove390
+
 import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -87,6 +94,57 @@ default='none') # max number of processes to create
             Updated for JWST version 1.3.3, code restructure
         '''
         with datamodels.RampModel(input) as input_model:
+
+            if (hasattr(self.s1_meta, 'remove_390hz')
+                    and self.s1_meta.remove_390hz):
+                input_model = remove390.run(input_model, self.s1_log,
+                                            self.s1_meta)
+                
+                # Need to apply these steps afterward to remove 390 Hz
+                if not self.s1_meta.skip_firstframe:
+                    self.firstframe = FirstFrameStep()
+                    self.firstframe.skip = self.s1_meta.skip_firstframe
+                    input_model = self.firstframe(input_model)
+                if not self.s1_meta.skip_lastframe:
+                    self.lastframe = LastFrameStep()
+                    self.lastframe.skip = self.s1_meta.skip_lastframe
+                    input_model = self.lastframe(input_model)
+
+            if hasattr(self.s1_meta, 
+                       'mask_groups') and self.s1_meta.mask_groups:
+                self.s1_log.writelog('Manually marking groups '
+                                     f'{self.s1_meta.mask_groups} as '
+                                     'DO_NOT_USE.')
+                for index in self.s1_meta.mask_groups:
+                    input_model.groupdq[:, index, :, :] = \
+                        np.bitwise_or(input_model.groupdq[:, index, :, :],
+                                      dqflags.group['DO_NOT_USE'])
+
+            if hasattr(self.s1_meta, 
+                       'update_sat_flags') and self.s1_meta.update_sat_flags:
+                input_model = update_saturation.update_sat(input_model, 
+                                                           self.s1_log, 
+                                                           self.s1_meta)
+
+            if hasattr(self.s1_meta, 'masktrace') and self.s1_meta.masktrace:
+                input_model = group_level.mask_trace(input_model,
+                                                     self.s1_log,
+                                                     self.s1_meta)
+            
+            if hasattr(self.s1_meta, 
+                       'refpix_corr') and self.s1_meta.refpix_corr:
+                input_model = group_level.custom_ref_pixel(input_model,
+                                                           self.s1_log,
+                                                           self.s1_meta)
+            
+            if (hasattr(self.s1_meta, 'grouplevel_bg') and
+                    self.s1_meta.grouplevel_bg and
+                    (not hasattr(self.s1_meta, 'remove_390hz') 
+                     or not self.s1_meta.remove_390hz)):
+                input_model = group_level.GLBS(input_model,
+                                               self.s1_log,
+                                               self.s1_meta)
+
             readnoise_filename = self.get_reference_file(input_model,
                                                          'readnoise')
             gain_filename = self.get_reference_file(input_model, 'gain')
@@ -344,7 +402,7 @@ def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
 
     # Return 'empty' sums if there is no more data to fit
     if data_masked.size == 0:
-        return np.array([]), np.array([]), np.array([]), np.array([]),\
+        return np.array([]), np.array([]), np.array([]), np.array([]), \
             np.array([]), np.array([])
 
     # get initial group for each good pixel for this semiramp

@@ -223,3 +223,41 @@ If you got a bit lost along the way, you should check out our visual overview of
 If this quickstart guide wasn't enough to sate your appetite, consider taking a look at all the different parameter settings within the ``*.ecf`` files on our :ref:`ecf` documentation page and tweak away! If you want to explore the NIRSpec Tiny Dataset further, head back to the Stage 4 ``.ecf`` and try increasing the number of wavelength channels. Once you're comfortable, consider running things through with the `full dataset <https://app.box.com/folder/154382679630?s=f6ehe1i2tsn9dih8zl0emyvjm9vemh1r>`_. Or, if you're bored with NIRSpec, maybe take a look at a simulated dataset for `NIRCam <https://app.box.com/folder/154382958627?s=ctuol6orkulkrytbt7ajbd5653j93tg4>`_, `NIRISS <https://app.box.com/folder/154382588636?s=tyg3qqd85601gkbw5koowrx0obekeg0m>`_, or `MIRI <https://app.box.com/folder/154382561036?s=h662fiy3baw29ftulc9jxggoesq1u06y>`_ instead.
 
 If any bugs / errors cropped up while you were working through this quickstart, or if they turn up in the future, take a look at our :ref:`FAQ<faq>` or `report an issue <https://github.com/kevin218/Eureka/issues/new/choose>`_ on our GitHub repository. Thanks!
+
+7. HST Operations 🛰️
+--------------------
+
+Using ``Eureka!`` for HST operations works much the same way as JWST. Instead of
+using simulated data, we can use the ``download_data_HST_template.py`` script 
+in your ``Eureka!`` installation's `demos <demo_link_>`_ folder to grab just 
+the first visit of a transit of the planet HD 209458 b. Line 9 specifies this: 
+
+.. code-block:: python
+
+	# List of one or more visit numbers
+	visits = [60]
+
+where ``[60]`` can be replaced with a list of the visit numbers you want to 
+download, e.g. ``[60, 61, 62, 63, 64]`` if you want the entire transit 
+observation.
+
+You'll also need to change the ``final_dir`` variable to a more appropriate 
+location for your data, similar to how we made a new directory for the JWST 
+data above.
+
+The relevant HST-specific ECFs are also in your ``Eureka!`` installation's 
+`demos <demo_link_>`_ folder, and the HST-specific parameters are also described
+in the :ref:`ECF reference <ecf>` page.
+
+Note that HST operations start at Stage 3, unlike JWST operations. HST systematics 
+can also be slightly more complicated to fit, so it may be worthwhile to read some
+papers discussing these, such as `Knutson et al. (2014) <knutson2014_>`_ or 
+`Brande et al. (2022) <brande2022_>`_. Exponential ramps are available as systematics
+models in ``Eureka!`` Stage 5, but the spatial scan model described in 
+`Brande et al. (2022) <brande2022_>`_ is forthcoming, so currently only a single
+scan direction will be fit. 
+
+
+.. _demo_link: https://github.com/kevin218/Eureka/tree/main/demos
+.. _knutson2014: https://ui.adsabs.harvard.edu/abs/2014ApJ...794..155K/abstract
+.. _brande2022: https://ui.adsabs.harvard.edu/abs/2022AJ....164..197B/abstract

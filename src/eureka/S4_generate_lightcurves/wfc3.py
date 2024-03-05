@@ -75,7 +75,8 @@ def sum_reads(spec, lc, meta):
     spec.guess['time'] = time
     spec.scandir['time'] = time
     lc.centroid_x['time'] = time
-    lc.centroid_sx['time'] = time
+    if hasattr(lc, 'centroid_sx'):
+        lc.centroid_sx['time'] = time
     lc.centroid_y['time'] = time
     lc.scandir['time'] = time
     lc.driftmask['time'] = time

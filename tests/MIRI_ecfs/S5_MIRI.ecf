@@ -7,10 +7,10 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./s5_fit_par.epf # What fitting epf do you want to use?
 verbose         True # If True, more details will be printed about steps
 fit_method      [dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,batman_ecl,sinusoid_pc,expramp,polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,batman_ecl,sinusoid_pc,expramp,polynomial,xpos,ypos] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
-manual_clip     [[0,1]]  # A list of lists specifying the start and end integration numbers for manual removal.
+manual_clip     None  # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
@@ -22,7 +22,7 @@ ld_file_white    None  # Fully qualified path to the location of a limb darkenin
 old_fitparams   None # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
 
 #dynesty
-run_nlive       64 # Must be > ndim * (ndim + 1) // 2
+run_nlive       'min' # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'auto'
 run_tol         10 # For testing, set to something dynesty can get to quickly

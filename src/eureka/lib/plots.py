@@ -57,7 +57,8 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
                   'mathtext.fontset': 'dejavuserif',
                   'mathtext.it': 'serif:italic',
                   'mathtext.rm': 'serif', 'mathtext.sf': 'serif',
-                  'mathtext.bf': 'serif:bold'}
+                  'mathtext.bf': 'serif:bold',
+                  'figure.constrained_layout.use': True}
         rcParams.update(params)
     elif style == 'default':
         # Use default matplotlib settings

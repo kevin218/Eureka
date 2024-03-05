@@ -109,6 +109,7 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
         data = np.ma.masked_where(outliers, data)
     elif fill_value == 'boxcar':
         data = replace_moving_mean(data, outliers, kernel)
+        outliers[:] = False
     else:
         data[outliers] = fill_value
 

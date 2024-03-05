@@ -46,6 +46,11 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     model_x = deepcopy(model_x)
     model_y = deepcopy(model_y)
 
+    # Trim repeated wavelengths for multwhite fits
+    if len(set(wavelength)) == 1: 
+        wavelength = wavelength[0]
+        wavelength_error = wavelength_error[0]
+
     if np.all(np.isnan(err)):
         err = None
 
@@ -119,7 +124,6 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     clean_y_param = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", meta.y_param)
     fname += '_'+clean_y_param
 
-    fig.tight_layout()
     fig.savefig(meta.outputdir+fname+plots.figure_filetype,
                 bbox_inches='tight', dpi=300)
     if not meta.hide_plots:
