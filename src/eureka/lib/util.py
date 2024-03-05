@@ -4,6 +4,9 @@ import glob
 from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
+from scipy.ndimage import zoom
+from scipy.stats import binned_statistic
+from .naninterp1d import naninterp1d
 
 from .citations import CITATIONS
 
@@ -410,6 +413,44 @@ def binData(data, nbin=100, err=False):
     return binned
 
 
+def binData_time(data, time, nbin=100, err=False):
+    """Temporally bin data for easier visualization.
+
+    Parameters
+    ----------
+    data : ndarray (1D)
+        The data to temporally bin.
+    time : ndarray (1D)
+        The time axis along which to bin
+    nbin : int, optional
+        The number of bins there should be. By default 100.
+    err : bool, optional
+        If True, divide the binned data by sqrt(N) to get the error on the
+        mean. By default False.
+
+    Returns
+    -------
+    binned : ndarray
+        The binned data.
+    """
+    # Make a copy for good measure
+    data = np.ma.copy(data)
+    data = np.ma.masked_invalid(data)
+
+    binned, _, _ = binned_statistic(time, data, 
+                                    statistic=np.ma.mean, 
+                                    bins=nbin)
+    if err:
+        binned_count, _, _ = binned_statistic(time, data,
+                                              statistic='count',
+                                              bins=nbin)
+        binned /= np.sqrt(binned_count)
+
+    # Need to mask invalid data in case there is an empty bin 
+    # (leading to divide by zero)
+    return np.ma.masked_invalid(binned)
+
+
 def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     """Normalize a spectrum by its temporal mean.
 
@@ -468,9 +509,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
-    The computed MAD is the average MAD along the wavelength direction. In
-    otherwords, the MAD is computed in the spectral direction for each
-    integration, and then the returned value is the average of those MAD
+    The computed MAD is the average MAD along the time axis. In
+    otherwords, the MAD is computed in the time direction for each
+    wavelength, and then the returned value is the average of those MAD
     values.
 
     Parameters
@@ -514,22 +555,39 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     # Normalize the spectrum
     normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
 
-    # Compute the MAD
-    n_int = normspec.shape[0]
-    ediff = np.ma.zeros(n_int)
-    for m in range(n_int):
-        ediff[m] = get_mad_1d(normspec[m])
-
     if meta.inst == 'wfc3':
+        # Setup 1D MAD arrays
+        n_wav = normspec.shape[1]
+        ediff = np.ma.zeros((2, n_wav))
+
         scandir = np.repeat(meta.scandir, meta.nreads)
 
         # Compute the MAD for each scan direction
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
-                mad = np.ma.mean(ediff[iscans])
+                # Compute the MAD
+                for m in range(n_wav):
+                    ediff[p, m] = get_mad_1d(normspec[iscans, m])
+
+                mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
+        
+        if np.all(scandir == scandir[0]):
+            # Only scanned in one direction, so get rid of the other
+            ediff = ediff[scandir[0]]
+        else:
+            # Collapse the MAD along the scan direction
+            ediff = np.mean(ediff, axis=0)
+    else:
+        # Setup 1D MAD array
+        n_wav = normspec.shape[1]
+        ediff = np.ma.zeros(n_wav)
+
+        # Compute the MAD
+        for m in range(n_wav):
+            ediff[m] = get_mad_1d(normspec[:, m])
 
     return np.ma.mean(ediff)
 
@@ -681,7 +739,7 @@ def phot_arrays(data):
     keys = ['centroid_x', 'centroid_y', 'centroid_sx', 'centroid_sy',
             'aplev', 'aperr', 'nappix', 'skylev', 'skyerr', 'nskypix',
             'nskyideal', 'status', 'betaper']
-    
+
     for key in keys:
         data[key] = (['time'], np.zeros_like(data.time))
 
@@ -696,10 +754,10 @@ def phot_arrays(data):
 def make_citations(meta, stage=None):
     """Store relevant citation information in the current meta file.
 
-        Searches through imported libraries and current ECF parameters for 
-        terms that match BibTeX entries in citations.py. Every entry that 
+        Searches through imported libraries and current ECF parameters for
+        terms that match BibTeX entries in citations.py. Every entry that
         matches gets added to a bibliography field in the meta file.
-    
+
         Parameters
         ----------
         meta : eureka.lib.readECF.MetaClass
@@ -715,7 +773,7 @@ def make_citations(meta, stage=None):
 
     # in S5, extract fitting methods/myfuncs to grab citations
     other_cites = []
-    
+
     # check for nircam photometry in S3
     if stage == 3:
         if hasattr(meta, 'inst') and hasattr(meta, "photometry"):
@@ -740,9 +798,9 @@ def make_citations(meta, stage=None):
             other_cites.append("starry")
         if "GP" in meta.run_myfuncs:
             if hasattr(meta, "GP_package"):
-                other_cites.append(meta.GP_package) 
+                other_cites.append(meta.GP_package)
 
-    # I set the instrument in the relevant bits of S1/2, so I don't think this 
+    # I set the instrument in the relevant bits of S1/2, so I don't think this
     # should really be necessary. Taylor's boilerplate for later
     if not hasattr(meta, 'inst'):
         valid = False
@@ -769,12 +827,12 @@ def make_citations(meta, stage=None):
     # get all new citations together
     current_cites = np.union1d(module_cites, other_cites)
 
-    # check if meta has existing list of citations/bibitems, if it does, make 
+    # check if meta has existing list of citations/bibitems, if it does, make
     # sure we include imports from previous stages in our citations
     prev_cites = []
     if hasattr(meta, 'citations'):
         prev_cites = meta.citations
-    
+
     all_cites = np.union1d(current_cites, prev_cites).tolist()
 
     # make sure everything in meta citation list can be added to bibliography
@@ -785,3 +843,57 @@ def make_citations(meta, stage=None):
     # store everything in the meta object
     meta.citations = all_cites
     meta.bibliography = [CITATIONS[entry] for entry in meta.citations]
+
+
+def supersample(data, expand, type, axis=1):
+    """Apply subpixel interpolation to the given arrays in the cross-disperion
+    direction.
+
+    Parameters
+    ----------
+    data : ND array
+        Array of values to be super-sampled.
+    expand : int
+        Super-sampling factor along the given axis.
+    type : str
+        Options are: data, err, dq, or wave.
+    axis : int, Optional
+        Axis along which interpolation is performed (default is 1).
+
+    Returns
+    -------
+    zdata : ND array
+        The updated array at higher resolution
+    """
+    # Build array of expansion factors
+    # e.g., [1, 5, 1] for axis=1 and expand=5
+    ndim = np.ndim(data)
+    expand_seq = np.ones(ndim, dtype=int)
+    expand_seq[axis] = expand
+
+    # SciPy's zoom can't handle NaNs, so let's replace them via interpolation
+    if ndim == 3:
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                data[i, j] = naninterp1d(data[i, j])
+    if ndim == 2:
+        for i in range(data.shape[0]):
+            data[i] = naninterp1d(data[i])
+
+    # Apply linear interpolation along axis
+    if type == 'flux':
+        # Divide by 'expand' to conserve flux/variance
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')/expand
+    elif type == 'err':
+        # Divide by 'sqrt(expand)'' to conserve uncertainty
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')/np.sqrt(expand)
+    elif type == 'cal':
+        # Apply same dq flag, gain values, etc to all super-sampled pixels
+        zdata = np.repeat(data, expand, axis=axis)
+    elif type == 'wave':
+        zdata = zoom(data, expand_seq, order=1, mode='nearest')
+    else:
+        print(f"Type {type} not supported.  Must be one of flux, err, cal, " +
+              "or wave. No super-sampling applied.")
+        zdata = data
+    return zdata

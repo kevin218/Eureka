@@ -19,8 +19,12 @@ def get_trim(nints, channel):
     trim2 : int
         The second index to use when slicing an array.
     """
-    trim1 = int(np.nansum(nints[:channel]))
-    trim2 = trim1 + int(nints[channel])
+    if len(nints) == 1:
+        trim1 = 0
+        trim2 = nints[0]
+    else:
+        trim1 = int(np.nansum(nints[:channel]))
+        trim2 = trim1 + int(nints[channel])
     return trim1, trim2
 
 

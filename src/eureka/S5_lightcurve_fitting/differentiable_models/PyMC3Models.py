@@ -2,7 +2,6 @@ import os
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import astropy.constants as const
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
@@ -245,14 +244,14 @@ class PyMC3Model:
             channel = 0
         else:
             channel = chan
-        model = self.eval(channel=channel, **kwargs)
+        model = self.eval(channel=channel, incl_GP=True, **kwargs)
 
         time = self.time
         if self.multwhite:
             # Split the arrays that have lengths of the original time axis
             time = split([time, ], self.nints, chan)[0]
 
-        ax.plot(time, model, '.', ls='', ms=2, label=label,
+        ax.plot(time, model, '.', ls='', ms=1, label=label,
                 color=color, zorder=zorder)
 
         if components and self.components is not None:
@@ -298,22 +297,13 @@ class CompositePyMC3Model(PyMC3Model):
             # Add the PyMC3 model to each component
             component.model = self.model
 
+        self.GP = False
+        for component in self.components:
+            if component.modeltype == 'GP':
+                self.GP = True
+
         # Setup PyMC3 model parameters
         with self.model:
-
-            # Check that Ms, per, and a are compatible
-            a = (self.parameters.a.value*self.parameters.Rs.value
-                 * const.R_sun.value)
-            p = self.parameters.per.value*(24.*3600.)
-            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
-                  - self.parameters.Ms.value)
-            if Mp <= 0:
-                raise AssertionError('The input Ms, per, and a values are '
-                                     'incompatible and imply a negative '
-                                     'planetary mass. As a result, the '
-                                     'starry model is going to crash. '
-                                     'You should likely reduce your Ms value.')
-
             for parname in self.paramtitles:
                 param = getattr(self.parameters, parname)
                 if param.ptype in ['independent', 'fixed']:
@@ -350,7 +340,7 @@ class CompositePyMC3Model(PyMC3Model):
                                                 mu=param.priorpar1,
                                                 sigma=param.priorpar2,
                                                 testval=param.value))
-                                elif parname in ['rp', 'per', 'scatter_mult',
+                                elif parname in ['per', 'scatter_mult',
                                                  'scatter_ppm', 'c0', 'r1',
                                                  'r4', 'r7', 'r10']:
                                     setattr(self.model, parname_temp,
@@ -491,12 +481,39 @@ class CompositePyMC3Model(PyMC3Model):
             # we are assuming they are normally distributed about
             # the true model. This line effectively defines our
             # likelihood function.
-            pm.Normal("obs", mu=self.eval(eval=False), sd=self.scatter_array,
-                      observed=self.flux)
+            if self.GP:
+                for component in self.components:
+                    if component.modeltype == 'GP':
+                        gps = component.gps
+                        gp_component = component
+                
+                full_fit = self.eval(eval=False)
+                for c in range(self.nchannel_fitted):
+                    if self.nchannel_fitted > 1:
+                        chan = self.fitted_channels[c]
+                        # get flux and uncertainties for current channel
+                        flux, unc_fit = split([self.flux, self.scatter_array],
+                                              self.nints, chan)
+                        fit = split([full_fit, ], self.nints, chan)[0]
+                    else:
+                        chan = 0
+                        # get flux and uncertainties for current channel
+                        flux = self.flux
+                        unc_fit = self.scatter_array
+                        fit = full_fit
+                    residuals = flux-fit
+
+                    gps[c].compute(gp_component.kernel_inputs[chan][0],
+                                   yerr=unc_fit)
+                    gps[c].marginal(f"obs_{c}", observed=residuals)
+            else:
+                pm.Normal("obs", mu=self.eval(eval=False),
+                          sd=self.scatter_array,
+                          observed=self.flux)
         
         self.issetup = True
 
-    def eval(self, eval=True, channel=None, **kwargs):
+    def eval(self, eval=True, channel=None, incl_GP=False, **kwargs):
         """Evaluate the model components.
 
         Parameters
@@ -506,6 +523,9 @@ class CompositePyMC3Model(PyMC3Model):
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        incl_GP : bool; optional
+            Whether or not to include the GP's predictions in the
+            evaluated model predictions.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -539,9 +559,12 @@ class CompositePyMC3Model(PyMC3Model):
             if component.modeltype != 'GP':
                 flux *= component.eval(eval=eval, channel=channel, **kwargs)
 
+        if incl_GP:
+            flux += self.GPeval(flux, eval=eval, channel=channel, **kwargs)
+
         return flux
 
-    def syseval(self, eval=True, channel=None, **kwargs):
+    def syseval(self, eval=True, channel=None, incl_GP=False, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
@@ -551,6 +574,9 @@ class CompositePyMC3Model(PyMC3Model):
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        incl_GP : bool; optional
+            Whether or not to include the GP's predictions in the
+            evaluated model predictions.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -584,6 +610,54 @@ class CompositePyMC3Model(PyMC3Model):
                     component.time = self.time
                 flux *= component.eval(eval=eval, channel=channel, **kwargs)
 
+        if incl_GP:
+            flux += self.GPeval(flux, eval=eval, channel=channel, **kwargs)
+
+        return flux
+
+    def GPeval(self, fit, eval=True, channel=None, **kwargs):
+        """Evaluate the GP model components only.
+
+        Parameters
+        ----------
+        fit : ndarray
+            The model predictions (excluding the GP).
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        flux : ndarray
+            The evaluated GP model predictions at the times self.time.
+        """
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.zeros(len(time))
+        else:
+            flux = np.zeros(len(self.time)*nchan)
+
+        # Evaluate flux
+        for component in self.components:
+            if component.modeltype == 'GP':
+                flux = component.eval(fit, eval=eval, channel=channel,
+                                      **kwargs)
         return flux
 
     def physeval(self, eval=True, channel=None, interp=False, **kwargs):

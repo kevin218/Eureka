@@ -2,6 +2,7 @@ import numpy as np
 import scipy.interpolate as spi
 from scipy.constants import arcsec
 from astropy.io import fits
+from ..lib.util import supersample
 import crds
 
 
@@ -45,7 +46,7 @@ def rate2count(data):
     return data
 
 
-def dn2electrons(data, meta):
+def dn2electrons(data, meta, log):
     """This function converts the data, uncertainty, and variance arrays from
     raw units (DN) to electrons.
 
@@ -56,6 +57,8 @@ def dn2electrons(data, meta):
         units of DN.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -87,6 +90,22 @@ def dn2electrons(data, meta):
         # Load gain array or value
         gain = np.array(meta.gain)
     else:
+        # Find the required gainfile
+        if hasattr(meta, 'gainfile') and meta.gainfile is not None:
+            log.writelog(f'  Using provided gainfile={meta.gainfile} to '
+                         'convert units to DN...',
+                         mute=(not meta.verbose))
+        else:
+            # Retrieve the required reference files if not manually specified
+            log.writelog('  Automatically getting reference files to reverse'
+                         ' the PHOTOM step...', mute=(not meta.verbose))
+            if data.attrs['mhdr']['TELESCOP'] != 'JWST':
+                message = ('Error: Currently unable to automatically download '
+                           'reference files for non-JWST observations!')
+                log.writelog(message, mute=True)
+                raise ValueError(message)
+            meta.gainfile = retrieve_ancil(data.attrs['filename'], 'gain')
+            
         # Load gain array in units of e-/ADU
         gain_header = fits.getheader(meta.gainfile)
         xstart_gain = gain_header['SUBSTRT1']
@@ -105,6 +124,9 @@ def dn2electrons(data, meta):
         gain = np.swapaxes(gain, 0, 1)[:, ::-1]
 
     if gain.size > 1:
+        # Super-sample gain file
+        # Apply same gain values to all super-sampled pixels
+        gain = supersample(gain, meta.expand, 'cal', axis=0)
         # Get the gain subarray
         gain = gain[meta.ywindow[0]:meta.ywindow[1],
                     meta.xwindow[0]:meta.xwindow[1]]
@@ -117,7 +139,7 @@ def dn2electrons(data, meta):
     return data
 
 
-def bright2dn(data, meta, mjy=False):
+def bright2dn(data, meta, log, mjy=False):
     """This function converts the data, uncertainty, and variance arrays from
     brightness units (MJy/sr) or (MJy) to raw units (DN).
 
@@ -128,6 +150,8 @@ def bright2dn(data, meta, mjy=False):
         units of MJy/sr.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
+    log : logedit.Logedit
+        The open log in which notes from this step can be added.
 
     Returns
     -------
@@ -149,6 +173,22 @@ def bright2dn(data, meta, mjy=False):
     - Apr 20, 2022 Kevin Stevenson
         Convert to using Xarray Dataset
     """
+    # Find the required photfile
+    if hasattr(meta, 'photfile') and meta.photfile is not None:
+        log.writelog(f'  Using provided photfile={meta.photfile} to '
+                     'convert units to DN...',
+                     mute=(not meta.verbose))
+    else:
+        # Retrieve the required reference files if not manually specified
+        log.writelog('  Automatically getting reference files to reverse the '
+                     'PHOTOM step...', mute=(not meta.verbose))
+        if data.attrs['mhdr']['TELESCOP'] != 'JWST':
+            message = ('Error: Currently unable to automatically download '
+                       'reference files for non-JWST observations!')
+            log.writelog(message, mute=True)
+            raise ValueError(message)
+        meta.photfile = retrieve_ancil(data.attrs['filename'], 'photom')
+
     # Load response function and wavelength
     phot = fits.getdata(meta.photfile)
     if meta.inst == 'nircam':
@@ -285,62 +325,31 @@ def convert_to_e(data, meta, log):
         # HST/WFC3 spectra are in ELECTRONS already, so do nothing
         return data, meta
 
-    if (data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S' and
-            hasattr(meta, 'gain') and meta.gain is not None):
-        log.writelog(f'  Using provided gain={meta.gain} to convert units'
-                     ' to electrons...', mute=(not meta.verbose))
-    elif data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S':
-        log.writelog('  Automatically getting reference files to convert units'
-                     ' to electrons...', mute=(not meta.verbose))
-        if data.attrs['mhdr']['TELESCOP'] != 'JWST':
-            message = ('Error: Currently unable to automatically download '
-                       'reference files for non-JWST observations!')
-            log.writelog(message, mute=True)
-            raise ValueError(message)
-
-        # Retrieve the required reference files if not manually specified
-        if not hasattr(meta, 'gainfile') or not hasattr(meta, 'photfile'):
-            photfile, gainfile = retrieve_ancil(data.attrs['filename'])
-
-        if not hasattr(meta, 'photfile'):
-            meta.photfile = photfile
-        else:
-            log.writelog(f'  Using provided photfile={meta.photfile} to '
-                         'convert units to DN...',
-                         mute=(not meta.verbose))
-
-        if not hasattr(meta, 'gainfile'):
-            meta.gainfile = gainfile
-        else:
-            log.writelog(f'  Using provided gainfile={meta.gainfile} to '
-                         'convert units to electrons...',
-                         mute=(not meta.verbose))
-    else:
-        log.writelog('  Converting from electrons per second (e/s) to '
-                     'electrons...', mute=(not meta.verbose))
-
     if data.attrs['shdr']['BUNIT'] == 'MJy/sr':
         # Convert from brightness units (MJy/sr) to DN/s
         log.writelog('  Converting from brightness units (MJy/sr) to '
                      'electrons...')
-        data = bright2dn(data, meta)
-        data = dn2electrons(data, meta)
+        data = bright2dn(data, meta, log)
+        data = dn2electrons(data, meta, log)
     elif data.attrs['shdr']['BUNIT'] == 'MJy':
         # Convert from brightness units (MJy) to DN/s
         log.writelog('  Converting from brightness units MJy to electrons...')
-        data = bright2dn(data, meta, mjy=True)
-        data = dn2electrons(data, meta)
+        data = bright2dn(data, meta, log, mjy=True)
+        data = dn2electrons(data, meta, log)
     elif data.attrs['shdr']['BUNIT'] == 'DN/s':
         # Convert from DN/s to e/s
         log.writelog('  Converting from data numbers per second (DN/s) to '
                      'electrons...', mute=(not meta.verbose))
-        data = dn2electrons(data, meta)
+        data = dn2electrons(data, meta, log)
     elif data.attrs['shdr']['BUNIT'] != 'ELECTRONS/S':
         message = (f'Currently unable to convert from input units '
                    f'{data.attrs["shdr"]["BUNIT"]} to electrons.'
                    f'\nTry running Stage 2 again without the photom step.')
         log.writelog(message, mute=True)
         raise ValueError(message)
+    else:
+        log.writelog('  Converting from electrons per second (e/s) to '
+                     'electrons...', mute=(not meta.verbose))
 
     # Convert from e/s to e
     data = rate2count(data)
@@ -351,7 +360,7 @@ def convert_to_e(data, meta, log):
     return data, meta
 
 
-def retrieve_ancil(fitsname):
+def retrieve_ancil(fitsname, reftype='gain'):
     '''Use crds package to find/download the needed ancilliary files.
 
     This code requires that the CRDS_PATH and CRDS_SERVER_URL environment
@@ -362,6 +371,8 @@ def retrieve_ancil(fitsname):
     ----------
     fitsname : str
         The filename of the file currently being analyzed.
+    reftype : str
+        The ancillary reference file to retrieve (e.g., "gain", or "photom").
 
     Returns
     -------
@@ -396,9 +407,7 @@ def retrieve_ancil(fitsname):
             "meta.exposure.type": file[0].header["EXP_TYPE"],
         }
         observatory = file[0].header['TELESCOP'].lower()
-        refiles = crds.getreferences(parameters, ["gain", "photom"],
+        refiles = crds.getreferences(parameters, [reftype,],
                                      observatory=observatory)
-        gain_filename = refiles["gain"]
-        phot_filename = refiles["photom"]
 
-    return phot_filename, gain_filename
+    return refiles[reftype]

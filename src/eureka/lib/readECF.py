@@ -1,5 +1,5 @@
 import os
-
+import shlex
 # Required in case user passes in a numpy object (e.g. np.inf)
 import numpy as np
 
@@ -135,6 +135,18 @@ class MetaClass:
             self.__dict__[item] = value
             return
 
+        if ((item == 'pmap') and hasattr(self, 'pmap') and
+                (self.pmap is not None) and (self.pmap != value)):
+            print(f'WARNING: pmap was set to {self.pmap} in the previous stage'
+                  f' but is now set to {value} in this stage. This may cause '
+                  'unexpected or undesireable behaviors.')
+
+        if ((item == 'version') and hasattr(self, 'version') and
+                (self.version is not None) and (self.version != value)):
+            print(f'WARNING: The Eureka! version was {self.version} in the '
+                  f'previous stage but is now {value} in this stage. This may '
+                  'cause unexpected or undesireable behaviors.')
+
         # Set the attribute
         self.__dict__[item] = value
 
@@ -179,8 +191,11 @@ class MetaClass:
                 cleanlines.append(line)
 
         for line in cleanlines:
-            name = line.split()[0]
-            val = ''.join(line.split()[1:])
+            name = shlex.split(line)[0]
+            # Split off the name and remove all spaces except quoted substrings
+            # Also keep quotation marks for things that need to be escaped
+            # (e.g. max is a built-in funciton)
+            val = ''.join(shlex.split(line, posix=False)[1:])
             try:
                 val = eval(val)
             except:

@@ -107,7 +107,6 @@ class Model:
             raise TypeError("Time axis must be a tuple, list, or numpy array.")
 
         # Set the array
-        # self._time = np.array(time_array)
         self._time = np.ma.masked_array(time_array)
 
     @property
@@ -220,14 +219,14 @@ class Model:
             channel = 0
         else:
             channel = chan
-        model = self.eval(channel=channel, **kwargs)
+        model = self.eval(channel=channel, incl_GP=True, **kwargs)
 
         time = self.time
         if self.multwhite:
             # Split the arrays that have lengths of the original time axis
             time = split([time, ], self.nints, chan)[0]
 
-        ax.plot(time, model, '.', ls='', ms=2, label=label, color=color,
+        ax.plot(time, model, '.', ls='', ms=1, label=label, color=color,
                 zorder=zorder)
 
         if components and self.components is not None:
@@ -317,9 +316,9 @@ class CompositeModel(Model):
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = np.ma.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = np.ma.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -329,17 +328,20 @@ class CompositeModel(Model):
                 flux *= component.eval(channel=channel, **kwargs)
 
         if incl_GP:
-            flux += self.GPeval(flux)
+            flux += self.GPeval(flux, channel=channel, **kwargs)
 
         return flux
 
-    def syseval(self, channel=None, **kwargs):
+    def syseval(self, channel=None, incl_GP=False, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        incl_GP : bool; optional
+            Whether or not to include the GP's predictions in the
+            evaluated model predictions.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -362,9 +364,9 @@ class CompositeModel(Model):
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = np.ma.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = np.ma.ones(len(self.time)*nchan)
 
         # Evaluate flux at each component
         for component in self.components:
@@ -373,15 +375,20 @@ class CompositeModel(Model):
                     component.time = self.time
                 flux *= component.eval(channel=channel, **kwargs)
 
+        if incl_GP:
+            flux += self.GPeval(flux, channel=channel, **kwargs)
+
         return flux
 
-    def GPeval(self, fit, **kwargs):
+    def GPeval(self, fit, channel=None, **kwargs):
         """Evaluate the GP model components only.
 
         Parameters
         ----------
         fit : ndarray
             The model predictions (excluding the GP).
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -394,16 +401,25 @@ class CompositeModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Set the default value
-        if self.multwhite:
-            flux = np.zeros(len(self.time))
+        if channel is None:
+            nchan = self.nchannel_fitted
         else:
-            flux = np.zeros(len(self.time)*self.nchannel_fitted)
+            nchan = 1
+
+        if self.multwhite:
+            time = self.time
+            if channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, channel)[0]
+            flux = np.ma.zeros(len(time))
+        else:
+            flux = np.ma.zeros(len(self.time)*nchan)
 
         # Evaluate flux
         for component in self.components:
             if component.modeltype == 'GP':
-                flux = component.eval(fit, **kwargs)
+                flux = component.eval(fit, channel=channel,
+                                      **kwargs)
         return flux
 
     def physeval(self, interp=False, channel=None, **kwargs):
@@ -450,8 +466,15 @@ class CompositeModel(Model):
                     # Split the arrays that have lengths of
                     # the original time axis
                     time = split([self.time, ], self.nints, chan)[0]
-                    
-                    dt = time[1]-time[0]
+
+                    # Remove masked points at the start or end to avoid
+                    # extrapolating out to those points
+                    time = time[~np.ma.getmaskarray(time)]
+
+                    # Get time step on full time array to ensure good steps
+                    dt = np.min(np.diff(time))
+
+                    # Interpolate as needed
                     steps = int(np.round((time[-1]-time[0])/dt+1))
                     nints_interp.append(steps)
                     new_time.extend(np.linspace(time[0], time[-1], steps,
@@ -459,6 +482,15 @@ class CompositeModel(Model):
                 new_time = np.array(new_time)
             else:
                 time = self.time
+
+                # Remove masked points at the start or end to avoid
+                # extrapolating out to those points
+                time = time[~np.ma.getmaskarray(time)]
+
+                # Get time step on full time array to ensure good steps
+                dt = np.min(np.diff(time))
+
+                # Interpolate as needed
                 dt = time[1]-time[0]
                 steps = int(np.round((time[-1]-time[0])/dt+1))
                 nints_interp = np.ones(nchan)*steps
@@ -472,9 +504,9 @@ class CompositeModel(Model):
 
         # Setup the flux array
         if self.multwhite:
-            flux = np.ones(len(new_time))
+            flux = np.ma.ones(len(new_time))
         else:
-            flux = np.ones(len(new_time)*nchan)
+            flux = np.ma.ones(len(new_time)*nchan)
 
         # Evaluate flux at each component
         for component in self.components:

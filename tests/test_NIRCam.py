@@ -1,4 +1,4 @@
-# Last Updated: 2022-04-05
+# Last Updated: 2024-02-15
 
 import sys
 import os
@@ -51,7 +51,7 @@ def test_NIRCam(capsys):
     s4_spec, s4_lc, s4_meta = s4.genlc(meta.eventlabel, ecf_path=ecf_path,
                                        s3_meta=s3_meta)
     s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
-    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path, 
+    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
                               s5_meta=s5_meta)
 
     # run assertions for S3
@@ -60,7 +60,7 @@ def test_NIRCam(capsys):
     name = pathdirectory(meta, 'S3', 1, ap=8, bg=12)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
-    
+
     s3_cites = np.union1d(COMMON_IMPORTS[2], ["nircam"])
     assert np.array_equal(s3_meta.citations, s3_cites)
 
@@ -81,7 +81,7 @@ def test_NIRCam(capsys):
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
-    s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] + 
+    s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] +
                           ["emcee", "dynesty", "batman"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
@@ -94,6 +94,30 @@ def test_NIRCam(capsys):
 
     s6_cites = np.union1d(s5_cites, COMMON_IMPORTS[5])
     assert np.array_equal(s6_meta.citations, s6_cites)
+
+    # Rerun Stages 5 and 6 using POET
+    # remove Stage 5 and 6 temporary files
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage5")
+    os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage6")
+
+    ecf_path = f'.{os.sep}NIRCam_ecfs{os.sep}POET{os.sep}'
+    s5_meta = s5.fitlc(meta.eventlabel, ecf_path=ecf_path, s4_meta=None)
+    s6_meta = s6.plot_spectra(meta.eventlabel, ecf_path=ecf_path,
+                              s5_meta=s5_meta)
+
+    # run assertions for S5
+    meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
+                          f'Stage5{os.sep}')
+    name = pathdirectory(meta, 'S5', 1, ap=8, bg=12)
+    assert os.path.exists(name)
+    assert os.path.exists(name+os.sep+'figs')
+
+    # run assertions for S6
+    meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}'
+                          f'Stage6{os.sep}')
+    name = pathdirectory(meta, 'S6', 1, ap=8, bg=12)
+    assert os.path.exists(name)
+    assert os.path.exists(name+os.sep+'figs')
 
     # remove temporary files
     os.system(f"rm -r data{os.sep}JWST-Sim{os.sep}NIRCam{os.sep}Stage3")

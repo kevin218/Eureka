@@ -41,7 +41,11 @@ class StarryModel(PyMC3Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        required = np.array(['Ms', 'Rs'])
+        # Set default to turn light-travel correction on if not specified
+        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+            self.compute_ltt = True
+
+        required = np.array(['Rs'])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
             message = (f'Missing required params {required[missing]} in your '
@@ -104,6 +108,7 @@ class StarryModel(PyMC3Model):
         """Setup a model for evaluation and fitting.
         """
         self.systems = []
+        self.rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
@@ -121,9 +126,15 @@ class StarryModel(PyMC3Model):
                 else:
                     setattr(temp, key, getattr(self.model, key))
 
+            # Solve Keplerian orbital period equation for system mass
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Ms = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=temp.Ms, r=temp.Rs)
+                                  m=Ms, r=temp.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -143,13 +154,6 @@ class StarryModel(PyMC3Model):
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
 
-            # Solve Keplerian orbital period equation for Mp
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
-                  - temp.Ms)
-
             if not hasattr(temp, 'fp'):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
             else:
@@ -160,21 +164,18 @@ class StarryModel(PyMC3Model):
                         if hasattr(temp, f'Y{ell}{m}'):
                             planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
                             planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
-                amp = temp.fp/planet_map2.flux(theta=0)[0]
+                amp = temp.fp/tt.abs_(planet_map2.flux(theta=0)[0])
                 planet_map.amp = amp
+            self.rps.append(temp.rp)
 
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                # Convert mass to M_sun units
-                # m=temp.Mp*const.M_jup.value/const.M_sun.value,
-                m=Mp,
+                m=0,
                 # Convert radius to R_star units
-                r=temp.rp*temp.Rs,
+                r=tt.abs_(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
-                # porb = temp.per,
-                # prot = temp.per,
                 # Another option to set inclination using impact parameter
                 # inc=tt.arccos(b/a)*180/np.pi
                 inc=temp.inc,
@@ -190,7 +191,7 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            system = starry.System(star, planet)
+            system = starry.System(star, planet, light_delay=self.compute_ltt)
             self.systems.append(system)
 
     def eval(self, eval=True, channel=None, **kwargs):
@@ -221,23 +222,33 @@ class StarryModel(PyMC3Model):
         if eval:
             lib = np
             systems = self.fit.systems
+            rps = self.fit_rps
         else:
             lib = tt
             systems = self.systems
+            rps = self.rps
 
         phys_flux = lib.zeros(0)
         for c in range(nchan):
-            time = self.time
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, chan)[0]
-
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
-            lcpiece = systems[chan].flux(time)
+
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+
+            # Combine the planet and stellar flux (allowing negative rp)
+            fstar, fp = systems[chan].flux(time, total=False)
+            # Do some annoying math to allow theano functions to compile
+            # (correctly defined for -1 < rp < 1)
+            sign = (lib.ceil(rps[chan])+lib.floor(rps[chan]))
+            fstar = (fstar-1)*sign + 1
+            fp = fp*sign
+            lcpiece = fstar+fp
+
             if eval:
                 lcpiece = lcpiece.eval()
             phys_flux = lib.concatenate([phys_flux, lcpiece])
@@ -279,6 +290,7 @@ class StarryModel(PyMC3Model):
         super().update(newparams, **kwargs)
 
         self.fit.systems = []
+        self.fit_rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
             # new object without the _c parts of the parnames
@@ -295,9 +307,15 @@ class StarryModel(PyMC3Model):
                 else:
                     setattr(temp, key, getattr(self.fit, key))
 
+            # Solve Keplerian orbital period equation for system mass
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Ms = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=temp.Ms, r=temp.Rs)
+                                  m=Ms, r=temp.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -316,13 +334,6 @@ class StarryModel(PyMC3Model):
                                f'       limb_dark must be one of uniform, '
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
-            
-            # Solve Keplerian orbital period equation for Mp
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Mp = (((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
-                  - temp.Ms)
 
             if not hasattr(temp, 'fp'):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
@@ -334,21 +345,18 @@ class StarryModel(PyMC3Model):
                         if hasattr(temp, f'Y{ell}{m}'):
                             planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
                             planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
-                amp = temp.fp/planet_map2.flux(theta=0)[0]
+                amp = temp.fp/np.abs(planet_map2.flux(theta=0)[0])
                 planet_map.amp = amp
+            self.fit_rps.append(temp.rp)
 
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                # Convert mass to M_sun units
-                # m=temp.Mp*const.M_jup.value/const.M_sun.value,
-                m=Mp,
+                m=0,
                 # Convert radius to R_star units
-                r=temp.rp*temp.Rs,
+                r=np.abs(temp.rp)*temp.Rs,
                 # Setting porb here overwrites a
                 a=temp.a,
-                # porb = temp.per,
-                # prot = temp.per,
                 # Another option to set inclination using impact parameter
                 # inc=tt.arccos(b/a)*180/np.pi
                 inc=temp.inc,
@@ -364,5 +372,5 @@ class StarryModel(PyMC3Model):
             planet.t0 = temp.t0
 
             # Instantiate the system
-            sys = starry.System(star, planet)
+            sys = starry.System(star, planet, light_delay=self.compute_ltt)
             self.fit.systems.append(sys)

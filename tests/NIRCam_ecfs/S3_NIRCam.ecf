@@ -8,11 +8,12 @@ suffix      calints     # Data file suffix
 convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
 
 # Subarray region of interest
-ywindow     [5,64]      # Vertical axis as seen in DS9
-xwindow     [100,1700]  # Horizontal axis as seen in DS9
-src_pos_type gaussian   # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
-record_ypos True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
-dqmask      True        # Mask pixels with an odd entry in the DQ array
+ywindow         [5,64]      # Vertical axis as seen in DS9
+xwindow         [100,1700]  # Horizontal axis as seen in DS9
+src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
+record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+dqmask          True        # Mask pixels with an odd entry in the DQ array
+expand          2           # Super-sampling factor along cross-dispersion direction
 
 # Outlier rejection along time axis
 ff_outlier      True        # Set False to use only background region (recommended for deep transits)
@@ -20,9 +21,12 @@ ff_outlier      True        # Set False to use only background region (recommend
 bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rejection along time axis
 
 # Background parameters
-bg_hw       12          # Half-width of exclusion region for BG subtraction (relative to source position)
-bg_deg      1           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
-p3thresh    5           # X-sigma threshold for outlier rejection during background subtraction
+bg_hw           12          # Half-width of exclusion region for BG subtraction (relative to source position)
+bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
+p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
+bg_disp         True        # Row-by-row BG subtraction (only useful for NIRCam)
+bg_x1           28          # Left edge of exclusion region for row-by-row BG subtraction
+bg_x2           1840        # Right edge of exclusion region for row-by-row BG subtraction
 
 # Spectral extraction parameters
 spec_hw         8			# Half-width of aperture region for spectral extraction (relative to source position)

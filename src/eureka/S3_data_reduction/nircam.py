@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 import astraeus.xarrayIO as xrio
 from . import sigrej, background
-from ..lib.util import read_time
+from ..lib.util import read_time, supersample
 from tqdm import tqdm
 from ..lib import meanerr as me
 
@@ -86,6 +86,17 @@ def read(filename, data, meta, log):
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
+        # Increase pixel resolution along cross-dispersion direction
+        if hasattr(meta, 'expand') and meta.expand > 1:
+            log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
+                         f'to {sci.shape[1]*meta.expand} pixels...',
+                         mute=(not meta.verbose))
+            sci = supersample(sci, meta.expand, 'flux', axis=1)
+            err = supersample(err, meta.expand, 'err', axis=1)
+            dq = supersample(dq, meta.expand, 'cal', axis=1)
+            v0 = supersample(v0, meta.expand, 'flux', axis=1)
+            wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
+
     elif hdulist[0].header['CHANNEL'] == 'SHORT':
         # Photometry will have "SHORT" as CHANNEL
         meta.photometry = True
@@ -93,7 +104,7 @@ def read(filename, data, meta, log):
         # data. Added it here so that code in other sections doesn't have to
         # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
-        
+
         # FINDME: make this better for all filters
         if hdulist[0].header['FILTER'] == 'F210M':
             # will be deleted at the end of S3
@@ -122,6 +133,12 @@ def read(filename, data, meta, log):
     flux_units = data.attrs['shdr']['BUNIT']
     time_units = 'BMJD_TDB'
     wave_units = 'microns'
+
+    if (meta.firstFile and meta.spec_hw == meta.spec_hw_range[0] and
+            meta.bg_hw == meta.bg_hw_range[0]):
+        # Only apply super-sampling expansion once
+        meta.ywindow[0] *= meta.expand
+        meta.ywindow[1] *= meta.expand
 
     data['flux'] = xrio.makeFluxLikeDA(sci, time, flux_units, time_units,
                                        name='flux')
@@ -243,10 +260,16 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
-                                meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=2,
-                                isplots=isplots)
+    if hasattr(meta, 'bg_dir') and meta.bg_dir == 'RxR':
+        bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_x1,
+                                    meta.bg_x2, deg=meta.bg_deg,
+                                    threshold=meta.p3thresh, isrotate=0,
+                                    isplots=isplots)
+    else:
+        bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
+                                    meta.bg_y2, deg=meta.bg_deg,
+                                    threshold=meta.p3thresh, isrotate=2,
+                                    isplots=isplots)
 
     return bg, mask, n
 
@@ -287,7 +310,7 @@ def cut_aperture(data, meta, log):
                  mute=(not meta.verbose))
 
     ap_y1 = int(meta.src_ypos-meta.spec_hw)
-    ap_y2 = int(meta.src_ypos+meta.spec_hw)
+    ap_y2 = int(meta.src_ypos+meta.spec_hw+1)
     apdata = data.flux[:, ap_y1:ap_y2].values
     aperr = data.err[:, ap_y1:ap_y2].values
     apmask = data.mask[:, ap_y1:ap_y2].values
@@ -426,6 +449,16 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         err_all.append(data.err.values[i][:, use_cols_temp])
         mask_all.append(data.mask.values[i][:, use_cols_temp])
 
+    # Do odd even column subtraction
+    odd_cols = data.flux.values[i, :, ::2]
+    even_cols = data.flux.values[i, :, 1::2]
+    use_cols_odd = use_cols[::2]
+    use_cols_even = use_cols[1::2]
+    odd_median = np.nanmedian(odd_cols[:, use_cols_odd])
+    even_median = np.nanmedian(even_cols[:, use_cols_even])
+    data.flux.values[i, :, ::2] -= odd_median
+    data.flux.values[i, :, 1::2] -= even_median
+
     if meta.oneoverf_corr == 'meanerr':
         for j in range(128):
             for k in range(4):
@@ -439,10 +472,48 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
             if ampl_used_bool[k]:
                 edges_temp = edges_all[k]
                 data.flux.values[i][:, edges_temp[0]:edges_temp[1]] -= \
-                    np.median(flux_all[k], axis=1)[:, None]
+                    np.nanmedian(flux_all[k], axis=1)[:, None]
     else:
         log.writelog('This 1/f correction method is not supported.'
                      ' Please choose between meanerr or median.',
                      mute=(not meta.verbose))
 
+    return data
+
+
+def calibrated_spectra(data, meta, log):
+    """Modify data to compute calibrated spectra in units of mJy.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The Dataset object.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    log : logedit.Logedit
+        The current log.
+
+    Returns
+    -------
+    data : ndarray
+        The flux values in mJy
+
+    Notes
+    -----
+    History:
+
+    - 2023-07-17, KBS
+        Initial version.
+    """
+    # Convert from MJy/sr to mJy
+    log.writelog("  Converting from MJy/sr to mJy...",
+                 mute=(not meta.verbose))
+    data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['err'].data *= 1e9*data.shdr['PIXAR_SR']
+    data['v0'].data *= 1e9*data.shdr['PIXAR_SR']
+    
+    # Update units
+    data['flux'].attrs["flux_units"] = 'mJy'
+    data['err'].attrs["flux_units"] = 'mJy'
+    data['v0'].attrs["flux_units"] = 'mJy'
     return data

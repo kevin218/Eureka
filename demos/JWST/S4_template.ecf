@@ -9,7 +9,7 @@ wave_min        1.5         # Minimum wavelength. Set to None to use the shortes
 wave_max        4.5         # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
 allapers        False       # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
-# Mannualy mask pixel columns by index number
+# Manually mask pixel columns by index number
 # mask_columns  []
 
 # Parameters for drift correction of 1D spectra
@@ -33,15 +33,19 @@ maxiters        5       # The number of iterations of sigma clipping that should
 boundary        'fill'  # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
 fill_value      mask    # Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
-# Limb-darkening parameters needed to compute exotic-ld
-compute_ld      False
+# Limb-darkening parameters
+compute_ld      False   # Options: exotic-ld, spam, False
+# Options for ExoTiC-LD
 inst_filter     prism   # Filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html 
 metallicity     0.1     # Metallicity of the star 
 teff            6000    # Effective temperature of the star in K
 logg            4.0     # Surface gravity in log g
-exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/record/6344946
-exotic_ld_grid  3D      # 1D or 3D model grid
-exotic_ld_file  /home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
+exotic_ld_direc /home/User/exotic-ld_data/ # Directory for ancillary files for exotic-ld, download from: https://zenodo.org/doi/10.5281/zenodo.6047317
+exotic_ld_grid  stagger # You can choose from kurucz (or 1D), stagger (or 3D), mps1, or mps2 model grids, or custom (to use custom_si_grid below)
+# custom_si_grid  /home/User/path/to/custom/stellar/intensity/profile  #Custom Stellar Intensity profile. For examples see Eureka/demos/JWST/Custom_Stellar_Intensity_Files
+# exotic_ld_file  /home/User/exotic-ld_data/Custom_throughput_file.csv # Custom throughput file, for examples see Eureka/demos/JWST/Custom_throughput_files
+# Options for SPAM
+spam_file       /home/User/spam-ldcoeff-u1-u2.txt # Pre-generated file of SPAM limb-darkening values at high resolution
 
 # Diagnostics
 isplots_S4      3       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)

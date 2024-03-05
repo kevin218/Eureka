@@ -29,6 +29,7 @@ from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
 from ..lib import clipping
+from ..version import version
 
 
 def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
@@ -83,6 +84,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     else:
         meta = input_meta
 
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -107,10 +109,16 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
             meta.run_s4 = util.makedirectory(meta, 'S4', meta.run_s4,
-                                             ap=spec_hw_val, bg=bg_hw_val)
+                                             ap=spec_hw_val//meta.expand,
+                                             bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
@@ -122,15 +130,22 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
             # Load in the S3 metadata used for this particular aperture pair
             meta = load_specific_s3_meta_info(meta)
-
+            # Directory structure should not use expanded HW values
+            spec_hw_val //= meta.expand
+            if not isinstance(bg_hw_val, str):
+                # Only divide if value is not a string (spectroscopic modes)
+                bg_hw_val //= meta.expand
+            
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
-                                                ap=meta.spec_hw, bg=meta.bg_hw)
+                                                ap=spec_hw_val,
+                                                bg=bg_hw_val)
 
             # Copy existing S3 log file and resume log
             meta.s4_logname = meta.outputdir + 'S4_' + meta.eventlabel + ".log"
             log = logedit.Logedit(meta.s4_logname, read=meta.s3_logname)
             log.writelog("\nStarting Stage 4: Generate Light Curves\n")
+            log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
             log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -154,7 +169,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             elif meta.wave_min < np.min(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_min '
                              f'({meta.wave_min}) is smaller than the shortest '
-                             f'wavelength ({np.min(wave_1d)})')
+                             f'wavelength ({np.min(wave_1d)})!!')
+                if meta.inst == 'miri':
+                    axis = 'ywindow'
+                else:
+                    axis = 'xwindow'
+                log.writelog('  If you want to use wavelengths shorter than '
+                             f'{np.min(wave_1d)}, you will need to decrease '
+                             f'your {axis} lower limit in Stage 3.')
             if meta.wave_max is None:
                 meta.wave_max = np.max(wave_1d)
                 log.writelog(f'No value was provided for meta.wave_max, so '
@@ -163,10 +185,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             elif meta.wave_max > np.max(wave_1d):
                 log.writelog(f'WARNING: The selected meta.wave_max '
                              f'({meta.wave_max}) is larger than the longest '
-                             f'wavelength ({np.max(wave_1d)})')
-            indices = np.logical_and(wave_1d >= meta.wave_min,
-                                     wave_1d <= meta.wave_max)
-            wave_1d_trimmed = wave_1d[indices]
+                             f'wavelength ({np.max(wave_1d)})!!')
+                if meta.inst == 'miri':
+                    axis = 'ywindow'
+                else:
+                    axis = 'xwindow'
+                log.writelog('  If you want to use wavelengths longer than '
+                             f'{np.max(wave_1d)}, you will need to increase '
+                             f'your {axis} upper limit in Stage 3.')
 
             if meta.photometry:
                 meta.n_int, meta.subnx = spec.aplev.shape[0], 1
@@ -274,9 +300,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             # Manually mask pixel columns by index number
             if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
                 for w in meta.mask_columns:
-                    log.writelog(f"Masking absolute pixel column {w}.")
-                    offset = spec.optmask.x[0]
-                    spec.optmask[:, w-offset] = True
+                    log.writelog(f"Masking detector pixel column {w}.")
+                    index = np.where(spec.optmask.x == w)[0][0]
+                    spec.optmask[:, index] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -381,7 +407,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             log.writelog(f"Stage 4 MAD = {np.round(meta.mad_s4, 2):.2f} ppm")
             if not meta.photometry:
                 if meta.isplots_S4 >= 1:
-                    plots_s4.lc_driftcorr(meta, wave_1d_trimmed, spec.optspec,
+                    plots_s4.lc_driftcorr(meta, wave_1d, spec.optspec,
                                           optmask=spec.optmask)
 
             log.writelog("Generating light curves")
@@ -499,9 +525,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 if meta.isplots_S4 >= 3:
                     plots_s4.binned_lightcurve(meta, log, lc, 0, white=True)
 
-            # Generate limb-darkening coefficients
-            if hasattr(meta, 'compute_ld') and meta.compute_ld:
-                log.writelog("Generating limb-darkening coefficients...",
+            # Generate ExoTiC limb-darkening coefficients
+            if (meta.compute_ld == 'exotic-ld') or \
+                    (meta.compute_ld is True):
+                log.writelog("Computing ExoTiC limb-darkening coefficients...",
                              mute=(not meta.verbose))
                 ld_lin, ld_quad, ld_3para, ld_4para = \
                     generate_LD.exotic_ld(meta, spec, log)
@@ -527,6 +554,28 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                                            'exotic-ld_4'],
                                                           ld_4para_w)
 
+            # Generate SPAM limb-darkening coefficients
+            elif meta.compute_ld == 'spam':
+                log.writelog("Computing SPAM limb-darkening coefficients...",
+                             mute=(not meta.verbose))
+                ld_coeffs = generate_LD.spam_ld(meta, white=False)
+                lc['spam_lin'] = (['wavelength', 'spam_1'], ld_coeffs[0])
+                lc['spam_quad'] = (['wavelength', 'spam_2'], ld_coeffs[1])
+                lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'], 
+                                           ld_coeffs[2])
+                lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'], 
+                                           ld_coeffs[3])
+                if meta.compute_white:
+                    ld_coeffs_w = generate_LD.spam_ld(meta, white=True)
+                    lc['spam_lin_white'] = (['wavelength', 'spam_1'], 
+                                            ld_coeffs_w[0])
+                    lc['spam_quad_white'] = (['wavelength', 'spam_2'], 
+                                             ld_coeffs_w[1])
+                    lc['spam_nonlin_3para_white'] = (['wavelength', 'spam_3'],
+                                                     ld_coeffs_w[2])
+                    lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
+                                                     ld_coeffs_w[3])
+            
             log.writelog('Saving results...')
 
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
@@ -572,7 +621,12 @@ def load_specific_s3_meta_info(meta):
     """
     # Get directory containing S3 outputs for this aperture pair
     inputdir = os.sep.join(meta.inputdir.split(os.sep)[:-2]) + os.sep
-    inputdir += f'ap{meta.spec_hw}_bg{meta.bg_hw}'+os.sep
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    inputdir += f'ap{meta.spec_hw//meta.expand}_bg{bg_hw}'+os.sep
     # Locate the old MetaClass savefile, and load new ECF into
     # that old MetaClass
     meta.inputdir = inputdir

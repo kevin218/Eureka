@@ -108,9 +108,13 @@ class StepModel(Model):
         # Create the ramp from the coeffs
         lcfinal = np.ones((nchan, len(self.time)))
         for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
             time = self.time
             if self.multwhite:
-                chan = channels[c]
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 

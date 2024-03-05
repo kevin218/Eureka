@@ -52,15 +52,15 @@ class CentroidModel(Model):
         if self.centroid is not None:
             # Convert to local centroid
             if self.multwhite:
-                self.centroid_local = []
+                self.centroid_local = np.ma.zeros(0)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
                     centroid = split([self.centroid, ], self.nints, chan)[0]
-                    self.centroid_local.extend(centroid - centroid.mean())
-                self.centroid_local = np.array(self.centroid_local)
+                    self.centroid_local = np.ma.append(
+                        self.centroid_local, centroid-np.ma.mean(centroid))
             else:
-                self.centroid_local = self.centroid - self.centroid.mean()
+                self.centroid_local = self.centroid - np.ma.mean(self.centroid)
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -89,19 +89,19 @@ class CentroidModel(Model):
             self.centroid = kwargs.get('centroid')
 
         # Create the centroid model for each wavelength
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
         for c in range(nchan):
-            centroid = self.centroid_local
-            if self.multwhite:
-                chan = channels[c]
-                # Split the arrays that have lengths of the original time axis
-                centroid = split([centroid, ], self.nints, chan)[0]
-
             if self.nchannel_fitted > 1:
                 chan = channels[c]
             else:
                 chan = 0
+
+            centroid = self.centroid_local
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                centroid = split([centroid, ], self.nints, chan)[0]
+
             coeff = getattr(self.parameters, self.coeff_keys[chan]).value
             lcpiece = 1 + centroid*coeff
-            lcfinal = np.append(lcfinal, lcpiece)
+            lcfinal = np.ma.append(lcfinal, lcpiece)
         return lcfinal

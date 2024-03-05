@@ -16,7 +16,8 @@ import emcee
 from dynesty import NestedSampler
 from dynesty.utils import resample_equal
 
-from .likelihood import computeRedChiSq, lnprob, ln_like, ptform
+from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
+                         update_uncertainty)
 from . import plots_s5 as plots
 from ..lib import astropytable
 from ..lib.split_channels import get_trim
@@ -75,6 +76,15 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter=calling_function+'StartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter=calling_function+'StartingPoint')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -92,9 +102,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                              freenames)
 
     if not hasattr(meta, 'lsq_method'):
-        log.writelog('No lsq optimization method specified - using Nelder-Mead'
+        log.writelog('No lsq optimization method specified - using Powell'
                      ' by default.')
-        meta.lsq_method = 'Nelder-Mead'
+        meta.lsq_method = 'Powell'
     if not hasattr(meta, 'lsq_tol'):
         log.writelog('No lsq tolerance specified - using 1e-6 by default.')
         meta.lsq_tol = 1e-6
@@ -120,22 +130,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
@@ -172,14 +167,18 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs or
-                                 'spiderman' in meta.run_myfuncs):
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'spiderman' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+    if meta.isplots_S5 >= 3 and calling_function == 'lsq' and \
+            np.size(lc.flux) > 20:
         # This plot is only really useful if you're actually using the
         # lsq fitter, otherwise don't make it
+        # Also, mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     # Plot residuals distribution
@@ -292,7 +291,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     ndim = len(freenames)
 
     if hasattr(meta, 'old_chain') and meta.old_chain is not None:
-        pos, nwalkers = start_from_oldchain_emcee(meta, log, ndim, lc.channel,
+        pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
                                                   freenames)
     else:
         if not hasattr(meta, 'lsq_first') or meta.lsq_first:
@@ -317,6 +316,15 @@ def emceefitter(lc, model, meta, log, **kwargs):
     start_lnprob = lnprob(np.median(pos, axis=0), lc, model, prior1, prior2,
                           priortype, freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
+
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='emceeStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='emceeStartingPoint')
 
     # Initialize tread pool
     if hasattr(meta, 'ncpu') and meta.ncpu > 1:
@@ -380,22 +388,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
@@ -453,7 +446,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
+        # mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter='emcee')
 
     # Plot residuals distribution
@@ -479,19 +474,19 @@ def emceefitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
-def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
+def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     """Restart emcee using the ending point of an old chain.
 
     Parameters
     ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
     meta : eureka.lib.readECF.MetaClass
         The meta data object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
     ndim : int
         The number of fitted parameters.
-    channel : int
-        The channel number.
     freenames : list
         The names of the fitted parameters.
 
@@ -510,13 +505,16 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
     AssertionError
         Unable to get enough walkers within the prior range.
     """
-    if meta.sharedp:
-        channel_key = 'shared'
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
     else:
-        channel_key = f'ch{channel}'
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_tag = f'_ch{ch_number}'
 
     foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
-    fname = f'S5_emcee_fitparams_{channel_key}.csv'
+    fname = f'S5_emcee_fitparams{channel_tag}.csv'
     fitted_values = pd.read_csv(os.path.join(foldername, fname),
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
@@ -529,7 +527,7 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
         log.writelog(message, mute=True)
         raise AssertionError(message)
 
-    fname = f'S5_emcee_samples_{channel_key}'
+    fname = f'S5_emcee_samples{channel_tag}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
     ds = xrio.readXR(full_fname, verbose=False)
@@ -538,7 +536,7 @@ def start_from_oldchain_emcee(meta, log, ndim, channel, freenames):
         with h5py.File(full_fname, 'r') as hf:
             samples = hf['samples'][:]
     else:
-        samples = ds.to_array().T
+        samples = ds.to_array().T.values
     log.writelog(f'Old chain path: {full_fname}')
 
     # Initialize the walkers using samples from the old chain
@@ -794,6 +792,15 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                           freenames)
     log.writelog(f'Starting lnprob: {start_lnprob}', mute=(not meta.verbose))
 
+    # Plot starting point
+    if meta.isplots_S5 >= 1:
+        plots.plot_fit(lc, model, meta,
+                       fitter='dynestyStartingPoint')
+        # Plot GP starting point
+        if model.GP:
+            plots.plot_GP_components(lc, model, meta,
+                                     fitter='dynestyStartingPoint')
+
     # START DYNESTY
     l_args = [lc, model, freenames]
 
@@ -857,22 +864,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
@@ -919,7 +911,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
+        # mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter='dynesty')
 
     # Plot residuals distribution
@@ -1005,22 +999,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
@@ -1045,7 +1024,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='lmfitter')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
+        # mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     # Plot residuals distribution
@@ -1294,8 +1275,21 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
         ds = xrio.makeDataset(ds)
         xrio.writeXR(fname, ds)
 
+    # Directory structure should not use expanded HW values
+    spec_hw_val = meta.spec_hw
+    bg_hw_val = meta.bg_hw
+    spec_hw_val //= meta.expand
+    if not isinstance(bg_hw_val, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw_val //= meta.expand
     # Save the S5 outputs in a human readable ecsv file
-    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw)+'_bg'+str(meta.bg_hw)
+    if not isinstance(meta.bg_hw, str):
+        # Only divide if value is not a string (spectroscopic modes)
+        bg_hw = meta.bg_hw//meta.expand
+    else:
+        bg_hw = meta.bg_hw
+    event_ap_bg = meta.eventlabel+"_ap"+str(meta.spec_hw//meta.expand) + \
+        '_bg'+str(bg_hw)
     meta.tab_filename_s5 = (meta.outputdir+'S5_'+event_ap_bg+"_Table_Save" +
                             channel_tag+'.txt')
     wavelengths = np.mean(np.append(meta.wave_low.reshape(1, -1),
@@ -1303,8 +1297,15 @@ def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
                           axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     # Evaluate each individual model for easier access outside of Eureka!
-    individual_models = np.array([[comp.name, comp.eval()]
-                                  for comp in model.components], dtype=object)
+    individual_models = []
+    for comp in model.components:
+        if comp.name != 'GP':
+            individual_models.append([comp.name, comp.eval()])
+        else:
+            fit = model.eval(incl_GP=False)
+            individual_models.append([comp.name, comp.eval(fit)])
+    individual_models = np.array(individual_models, dtype=object)
+
     model_lc = model.eval()
     residuals = lc.flux-model_lc
     astropytable.savetable_S5(meta.tab_filename_s5, meta, lc.time,

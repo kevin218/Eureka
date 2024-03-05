@@ -86,7 +86,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
         return
 
     # Compute background for each integration
-    log.writelog('  Performing background subtraction...',
+    log.writelog('  Performing ' + meta.bg_dir + ' background subtraction...',
                  mute=(not meta.verbose))
     data['bg'] = (['time', 'y', 'x'], np.zeros(data.flux.shape))
     data['bg'].attrs['flux_units'] = data['flux'].attrs['flux_units']
@@ -205,9 +205,9 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
 
     # Convert x1 and x2 to array, if need be
     ny, nx = np.shape(dataim)
-    if type(x1) == int or type(x1) == np.int64:
+    if isinstance(x1, (int, np.int64)):
         x1 = np.zeros(ny, dtype=int)+x1
-    if type(x2) == int or type(x2) == np.int64:
+    if isinstance(x2, (int, np.int64)):
         x2 = np.zeros(ny, dtype=int)+x2
 
     if deg < 0:
@@ -223,7 +223,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     else:
         degs = np.ones(ny)*deg
         # Initiate background image with zeros
-        bg = np.zeros((ny, nx))
+        bg = np.zeros((ny, nx))            
         # Fit polynomial to each column
         for j in range(ny):
             nobadpixels = False
@@ -259,13 +259,23 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     model = np.polyval(coeffs, goodxvals)
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
-                    # Simple standard deviation (faster but prone to missing
-                    # scanned background stars)
-                    stdres = np.std(residuals)
-                    # Median Absolute Deviation (slower but more robust)
-                    # stdres  = np.median(np.abs(np.ediff1d(residuals)))
-                    # Mean Absolute Deviation (good compromise)
-                    # stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    # Choose method for finding bad pixels
+                    if (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'std'):
+                        # Simple standard deviation (faster but prone to
+                        # missing scanned background stars)
+                        stdres = np.std(residuals)
+                    elif (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'median'):
+                        # Median Absolute Deviation (slower but more robust)
+                        stdres = np.median(np.abs(np.ediff1d(residuals)))
+                    elif (hasattr(meta, 'bg_method') and
+                            meta.bg_method == 'mean'):
+                        # Mean Absolute Deviation (good compromise)
+                        stdres = np.mean(np.abs(np.ediff1d(residuals)))
+                    else:
+                        # Default to standard deviation with no input
+                        stdres = np.std(residuals)
                     if stdres == 0:
                         stdres = np.inf
                     stdevs = np.abs(residuals) / stdres
@@ -276,7 +286,6 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                         mask[j, goodxvals[loc]] = 0
                     else:
                         nobadpixels = True  # exit while loop
-
             # Evaluate background model at all points, write model to
             # background image
             if len(goodxvals) != 0:

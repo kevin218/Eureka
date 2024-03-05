@@ -5,6 +5,7 @@ from copy import deepcopy
 from astropy.io import fits
 
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
+import crds
 
 from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
 from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
@@ -12,6 +13,7 @@ from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
 from ..lib import logedit, util
 from ..lib import manageevent as me
 from ..lib import readECF
+from ..version import version
 
 
 def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
@@ -59,6 +61,15 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     else:
         meta = input_meta
 
+    # If a specific CRDS context is entered in the ECF, apply it.
+    # Otherwise, log and fix the default CRDS context to make sure it doesn't
+    # change between different segments.
+    if not hasattr(meta, 'pmap') or meta.pmap is None:
+        # Get just the numerical value
+        meta.pmap = crds.get_context_name('jwst')[5:-5]
+    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
+
+    meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
@@ -73,6 +84,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     meta.s1_logname = meta.outputdir + 'S1_' + meta.eventlabel + ".log"
     log = logedit.Logedit(meta.s1_logname)
     log.writelog("\nStarting Stage 1 Processing")
+    log.writelog(f"Eureka! Version: {meta.version}", mute=True)
+    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -106,8 +119,10 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                 hdulist[0].header['NDITHPTS'] = 1
                 hdulist[0].header['NRIMDTPT'] = 1
 
+            meta.m = m
             meta.intstart = hdulist[0].header['INTSTART']-1
             meta.intend = hdulist[0].header['INTEND']
+            meta.n_int = meta.intend-meta.intstart
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time
@@ -116,12 +131,14 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
 
     # make citations for current stage
     util.make_citations(meta, 1)
-    
+
     # Save results
     if not meta.testing_S1:
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
+
+    log.closelog()
 
     return meta
 
@@ -162,7 +179,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
         - February 2022 Aarynn Carter /  Eva-Maria Ahrer
             Updated for JWST version 1.3.3, code restructure
         '''
-        # Run the pipeline
+        # Define superbias offset procedure
+        self.superbias = Eureka_SuperBiasStep()
+        self.superbias.s1_meta = meta
+        self.superbias.s1_log = log
+
+        # Figure out which instrument we're working on
         with fits.open(filename) as f:
             instrument = f[0].header['INSTRUME']
 
@@ -182,6 +204,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
             self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
+        self.jump.maximum_cores = meta.maximum_cores
         if (hasattr(meta, 'jump_rejection_threshold') and
                 isinstance(meta.jump_rejection_threshold, float)):
             self.jump.rejection_threshold = meta.jump_rejection_threshold
@@ -197,19 +220,23 @@ class EurekaS1Pipeline(Detector1Pipeline):
             if hasattr(meta, 'custom_bias') and meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
         elif instrument in ['MIRI']:
-            self.firstframe.skip = meta.skip_firstframe
-            self.lastframe.skip = meta.skip_lastframe
-            self.rscd.skip = meta.skip_rscd
+            if (hasattr(meta, 'remove_390hz')
+                    and meta.remove_390hz):
+                # Need to apply these steps later to be able to remove 390 Hz
+                self.firstframe.skip = True
+                self.lastframe.skip = True
+            else:
+                self.firstframe.skip = meta.skip_firstframe
+                self.lastframe.skip = meta.skip_lastframe
+            if hasattr(meta, 'skip_reset'):
+                self.reset.skip = meta.skip_reset
+            if hasattr(meta, 'skip_rscd'):
+                self.rscd.skip = meta.skip_rscd
 
-        # Define superbias offset procedure
-        self.superbias = Eureka_SuperBiasStep()
-        self.superbias.s1_meta = meta
-        self.superbias.s1_log = log
-        
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
-        self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
+        self.ramp_fit.maximum_cores = meta.maximum_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
         self.ramp_fit.s1_meta = meta
         self.ramp_fit.s1_log = log
