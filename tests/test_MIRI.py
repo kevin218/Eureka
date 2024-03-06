@@ -56,7 +56,6 @@ def test_MIRI(capsys):
     # pathdirectory fn locally
     meta = MetaClass()
     meta.eventlabel = 'MIRI'
-    meta.inst = 'MIRI'
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
     meta.topdir = f'..{os.sep}tests'
     ecf_path = f'.{os.sep}MIRI_ecfs{os.sep}'
@@ -71,7 +70,7 @@ def test_MIRI(capsys):
     reload(s6)
     if s2_installed:
         # Only run S1-2 stuff if jwst package has been installed
-        # s1_meta = s1.rampfitJWST(meta.eventlabel, meta.inst, ecf_path=ecf_path)
+        # s1_meta = s1.rampfitJWST(meta.eventlabel, ecf_path=ecf_path)
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
 
         s2_cites = np.union1d(COMMON_IMPORTS[1], ["miri"])

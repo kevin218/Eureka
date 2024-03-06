@@ -17,10 +17,8 @@ eventlabel = 'nirspec_fs_template'
 # eventlabel = 'nircam_wfss_template'
 ecf_path = '.'+os.sep
 
-inst = 'nirspec'
-
 if __name__ == '__main__':
-    # s1_meta = s1.rampfitJWST(eventlabel, inst, ecf_path=ecf_path)
+    # s1_meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
 
     s2_meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
 
