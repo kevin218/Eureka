@@ -80,9 +80,10 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     # Create list of file segments
     meta = util.readfiles(meta, log)
     
-    # Figure out which instrument we're working on
-    with fits.open(meta.segment_list[-1]) as f:
-        meta.inst = f[0].header['INSTRUME']
+    if meta.inst is None:
+        # Figure out which instrument we're working on
+        with fits.open(meta.segment_list[-1]) as f:
+            meta.inst = f[0].header['INSTRUME']
 
     # First apply any instrument-specific defaults
     if meta.inst == 'MIRI':
