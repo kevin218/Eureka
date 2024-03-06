@@ -53,7 +53,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     input_meta = deepcopy(input_meta)
 
     if input_meta is None:
-        meta = S1MetaClass(folder=ecf_path, eventlabel=eventlabel, stage=1)
+        meta = S1MetaClass(folder=ecf_path, eventlabel=eventlabel)
     else:
         meta = input_meta
 

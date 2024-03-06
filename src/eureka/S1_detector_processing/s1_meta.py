@@ -10,9 +10,36 @@ class S1MetaClass(MetaClass):
     -----
     History:
 
-    - 2024-03-05 Taylor J Bell
+    - 2024-03 Taylor J Bell
         Made specific S1 class based on MetaClass
     '''
+
+    def __init__(self, folder=None, file=None, eventlabel=None, **kwargs):
+        '''Initialize the MetaClass object.
+
+        Parameters
+        ----------
+        folder : str; optional
+            The folder containing an ECF file to be read in. Defaults to None
+            which resolves to './'.
+        file : str; optional
+            The ECF filename to be read in. Defaults to None which first tries
+            to find the filename using eventlabel and stage, and if that fails
+            results in an empty MetaClass object.
+        eventlabel : str; optional
+            The unique identifier for these data.
+        **kwargs : dict
+            Any additional parameters to be loaded into the MetaClass after
+            the ECF has been read in
+
+        Notes
+        -----
+        History:
+
+        - 2024-03 Taylor J Bell
+            Initial version.
+        '''
+        super.__init__(folder, file, eventlabel, stage=1, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 1 specific defaults for generic instruments.
@@ -21,7 +48,7 @@ class S1MetaClass(MetaClass):
         -----
         History:
 
-        - 2024-03-05 Taylor J Bell
+        - 2024-03 Taylor J Bell
             Initial version setting defaults for any instrument.
         '''
         # Control parallelization
@@ -136,7 +163,7 @@ class S1MetaClass(MetaClass):
         -----
         History:
 
-        - 2024-03-05 Taylor J Bell
+        - 2024-03 Taylor J Bell
             Initial version setting defaults for MIRI.
         '''
         # MIRI-specific pipeline stages
@@ -159,7 +186,7 @@ class S1MetaClass(MetaClass):
         -----
         History:
 
-        - 2024-03-05 Taylor J Bell
+        - 2024-03 Taylor J Bell
             Initial version setting defaults for NIR-instruments.
         '''
         # NIR-specific pipeline stages
