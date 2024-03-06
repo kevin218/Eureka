@@ -65,7 +65,7 @@ class MetaClass:
         self.params = {}
         if file is not None and os.path.exists(os.path.join(folder, file)):
             self.read(folder, file)
-        elif file is None:
+        elif file is not None:
             raise ValueError(f"The file {os.path.join(folder, file)} "
                              "does not exist.")
 
