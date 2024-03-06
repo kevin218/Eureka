@@ -81,6 +81,9 @@ class MetaClass:
         self.eventlabel = eventlabel
         self.datetime = time_pkg.strftime('%Y-%m-%d')
 
+        # Set instrument to None if not specified
+        self.inst = getattr(self, 'inst', None)
+
         # If a specific CRDS context is entered in the ECF, apply it.
         # Otherwise, log and fix the default CRDS context to make sure it doesn't
         # change between different segments.
