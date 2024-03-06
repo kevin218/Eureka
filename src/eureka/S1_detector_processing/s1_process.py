@@ -7,16 +7,16 @@ from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 import crds
 
-from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
-from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
+from .ramp_fitting import Eureka_RampFitStep
+from .superbias import Eureka_SuperBiasStep
+from .s1_meta import S1MetaClass, S1MetaClass_MIRI, S1MetaClass_NIR
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import readECF
 from ..version import version
 
 
-def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
+def rampfitJWST(eventlabel, inst, ecf_path=None, input_meta=None):
     """Process a Stage 0, _uncal.fits file to Stage 1 _rate.fits and
     _rateints.fits files.
 
@@ -27,6 +27,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
+    inst : str
+        The instrument name, from one of [NIRCam, NIRSpec, NIRISS, MIRI].
     ecf_path : str; optional
         The absolute or relative path to where ecfs are stored. Defaults to
         None which resolves to './'.
@@ -55,19 +57,14 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     input_meta = deepcopy(input_meta)
 
     if input_meta is None:
-        # Load Eureka! control file and store values in Event object
-        ecffile = 'S1_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        if inst == 'MIRI':
+            meta = S1MetaClass_MIRI(eventlabel, inst, ecf_path)
+        elif inst in ['NIRCam', 'NIRSpec', 'NIRISS']:
+            meta = S1MetaClass_NIR(eventlabel, inst, ecf_path)
+        else:
+            meta = S1MetaClass(eventlabel, inst, ecf_path)
     else:
         meta = input_meta
-
-    # If a specific CRDS context is entered in the ECF, apply it.
-    # Otherwise, log and fix the default CRDS context to make sure it doesn't
-    # change between different segments.
-    if not hasattr(meta, 'pmap') or meta.pmap is None:
-        # Get just the numerical value
-        meta.pmap = crds.get_context_name('jwst')[5:-5]
-    os.environ['CRDS_CONTEXT'] = f'jwst_{meta.pmap}.pmap'
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -109,10 +106,6 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
                      filename.split(os.sep)[-1])
 
         with fits.open(filename, mode='update') as hdulist:
-            # record instrument information in meta object for citations
-            if not hasattr(meta, 'inst'):
-                meta.inst = hdulist[0].header["INSTRUME"].lower()
-
             # jwst 1.3.3 breaks unless NDITHPTS/NRIMDTPT are integers rather
             # than the strings that they are in the old simulated NIRCam data
             if hdulist[0].header['INSTRUME'] == 'NIRCAM':
@@ -200,38 +193,30 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.ipc.skip = meta.skip_ipc
         self.refpix.skip = meta.skip_refpix
         self.linearity.skip = meta.skip_linearity
-        if hasattr(meta, 'custom_linearity') and meta.custom_linearity:
+        if meta.custom_linearity:
             self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
         self.jump.maximum_cores = meta.maximum_cores
-        if (hasattr(meta, 'jump_rejection_threshold') and
-                isinstance(meta.jump_rejection_threshold, float)):
-            self.jump.rejection_threshold = meta.jump_rejection_threshold
-        else:
-            log.writelog("\nJump rejection threshold is not" +
-                         "defined or not a float, default is used (4.0)")
+        self.jump.rejection_threshold = meta.jump_rejection_threshold
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
         if instrument in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
             self.persistence.skip = meta.skip_persistence
             self.superbias.skip = meta.skip_superbias
-            if hasattr(meta, 'custom_bias') and meta.custom_bias:
+            if meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
         elif instrument in ['MIRI']:
-            if (hasattr(meta, 'remove_390hz')
-                    and meta.remove_390hz):
+            if meta.remove_390hz:
                 # Need to apply these steps later to be able to remove 390 Hz
                 self.firstframe.skip = True
                 self.lastframe.skip = True
             else:
                 self.firstframe.skip = meta.skip_firstframe
                 self.lastframe.skip = meta.skip_lastframe
-            if hasattr(meta, 'skip_reset'):
-                self.reset.skip = meta.skip_reset
-            if hasattr(meta, 'skip_rscd'):
-                self.rscd.skip = meta.skip_rscd
+            self.reset.skip = meta.skip_reset
+            self.rscd.skip = meta.skip_rscd
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
