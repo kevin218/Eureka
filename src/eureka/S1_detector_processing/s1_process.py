@@ -5,18 +5,16 @@ from copy import deepcopy
 from astropy.io import fits
 
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
-import crds
 
 from .ramp_fitting import Eureka_RampFitStep
 from .superbias import Eureka_SuperBiasStep
-from .s1_meta import S1MetaClass, S1MetaClass_MIRI, S1MetaClass_NIR
+from .s1_meta import S1MetaClass
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..version import version
 
 
-def rampfitJWST(eventlabel, inst, ecf_path=None, input_meta=None):
+def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     """Process a Stage 0, _uncal.fits file to Stage 1 _rate.fits and
     _rateints.fits files.
 
@@ -27,8 +25,6 @@ def rampfitJWST(eventlabel, inst, ecf_path=None, input_meta=None):
     ----------
     eventlabel : str
         The unique identifier for these data.
-    inst : str
-        The instrument name, from one of [NIRCam, NIRSpec, NIRISS, MIRI].
     ecf_path : str; optional
         The absolute or relative path to where ecfs are stored. Defaults to
         None which resolves to './'.
@@ -57,18 +53,9 @@ def rampfitJWST(eventlabel, inst, ecf_path=None, input_meta=None):
     input_meta = deepcopy(input_meta)
 
     if input_meta is None:
-        if inst == 'MIRI':
-            meta = S1MetaClass_MIRI(eventlabel, inst, ecf_path)
-        elif inst in ['NIRCam', 'NIRSpec', 'NIRISS']:
-            meta = S1MetaClass_NIR(eventlabel, inst, ecf_path)
-        else:
-            meta = S1MetaClass(eventlabel, inst, ecf_path)
+        meta = S1MetaClass(folder=ecf_path, eventlabel=eventlabel, stage=1)
     else:
         meta = input_meta
-
-    meta.version = version
-    meta.eventlabel = eventlabel
-    meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
     # Create directories for Stage 1 processing outputs
     run = util.makedirectory(meta, 'S1')
@@ -92,6 +79,18 @@ def rampfitJWST(eventlabel, inst, ecf_path=None, input_meta=None):
 
     # Create list of file segments
     meta = util.readfiles(meta, log)
+    
+    # Figure out which instrument we're working on
+    with fits.open(meta.segment_list[-1]) as f:
+        meta.inst = f[0].header['INSTRUME']
+
+    # First apply any instrument-specific defaults
+    if meta.inst == 'MIRI':
+        meta.set_MIRI_defaults()
+    elif meta.inst in ['NIRCam', 'NIRSpec', 'NIRISS']:
+        meta.set_NIR_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
 
     # If testing, only run the last file
     if meta.testing_S1:
@@ -177,10 +176,6 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.superbias.s1_meta = meta
         self.superbias.s1_log = log
 
-        # Figure out which instrument we're working on
-        with fits.open(filename) as f:
-            instrument = f[0].header['INSTRUME']
-
         # Reset suffix and assign whether to save and the output directory
         self.suffix = None
         self.save_results = (not meta.testing_S1)
@@ -202,12 +197,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
-        if instrument in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
+        if meta.inst in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
             self.persistence.skip = meta.skip_persistence
             self.superbias.skip = meta.skip_superbias
             if meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
-        elif instrument in ['MIRI']:
+        elif meta.inst in ['MIRI']:
             if meta.remove_390hz:
                 # Need to apply these steps later to be able to remove 390 Hz
                 self.firstframe.skip = True

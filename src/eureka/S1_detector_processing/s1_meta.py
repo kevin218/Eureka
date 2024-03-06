@@ -1,7 +1,3 @@
-import os
-import crds
-
-from ..version import version
 from ..lib.readECF import MetaClass
 
 class S1MetaClass(MetaClass):
@@ -18,21 +14,8 @@ class S1MetaClass(MetaClass):
         Made specific S1 class based on MetaClass
     '''
 
-    def __init__(self, eventlabel, inst=None, folder=None, **kwargs):
-        '''Initialize the MetaClass object.
-
-        Parameters
-        ----------
-        eventlabel : str
-            The nickname for this analysis.
-        inst : str
-            The instrument name, from one of [NIRCam, NIRSpec, NIRISS, MIRI].
-        folder : str; optional
-            The folder containing an ECF file to be read in. Defaults to None
-            which resolves to './'.
-        **kwargs : dict
-            Any additional parameters to be loaded into the MetaClass after
-            the ECF has been read in
+    def set_defaults(self):
+        '''Set Stage 1 specific defaults for generic instruments.
 
         Notes
         -----
@@ -41,18 +24,6 @@ class S1MetaClass(MetaClass):
         - 2024-03-05 Taylor J Bell
             Initial version setting defaults for any instrument.
         '''
-        self.inst = inst
-
-        # Load Eureka! control file and store values in Event object
-        ecffile = 'S1_' + eventlabel + '.ecf'
-        super.__init__(folder, ecffile, **kwargs)
-
-        # If a specific CRDS context is entered in the ECF, apply it.
-        # Otherwise, log and fix the default CRDS context to make sure it doesn't
-        # change between different segments.
-        self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
-        os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
-
         # Control parallelization
         # (Options are 'none', quarter', 'half', 'all', or any integer)
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')
@@ -158,36 +129,8 @@ class S1MetaClass(MetaClass):
             self.default_ramp_fit_custom_snr_bounds = getattr(self, 'default_ramp_fit_custom_snr_bounds')  # Force this to be specified if fixed weighting
             self.default_ramp_fit_custom_exponents = getattr(self, 'default_ramp_fit_custom_exponents')  # Force this to be specified if fixed weighting
 
-
-class S1MetaClass_MIRI(S1MetaClass):
-    '''A class to hold Eureka! S1 metadata for MIRI.
-
-    This class loads a Stage 1 Eureka! Control File (ecf) and lets you
-    query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03-05 Taylor J Bell
-        Made specific MIRI S1 class based on S1MetaClass
-    '''
-
-    def __init__(self, eventlabel, inst='MIRI', folder=None, **kwargs):
-        '''Initialize the MetaClass object.
-
-        Parameters
-        ----------
-        eventlabel : str
-            The nickname for this analysis.
-        inst : str; optional
-            The instrument name which must be MIRI.
-        folder : str; optional
-            The folder containing an ECF file to be read in. Defaults to None
-            which resolves to './'.
-        **kwargs : dict
-            Any additional parameters to be loaded into the MetaClass after
-            the ECF has been read in
+    def set_MIRI_defaults(self):
+        '''Set Stage 1 specific defaults for MIRI.
 
         Notes
         -----
@@ -196,12 +139,6 @@ class S1MetaClass_MIRI(S1MetaClass):
         - 2024-03-05 Taylor J Bell
             Initial version setting defaults for MIRI.
         '''
-        if inst != 'MIRI':
-            raise AssertionError(f'Cannot use S1MetaClass_MIRI for instrument {inst}.')
-
-        # Call readECF.MetaClass init function to read in the ECF
-        super(S1MetaClass, self).__init__(eventlabel, inst, folder, **kwargs)
-
         # MIRI-specific pipeline stages
         self.skip_firstframe = getattr(self, 'skip_firstframe', True)  # jwst skips by default for MIRI TSO, but should likely be set False (that may depend on the dataset though).
         self.skip_lastframe = getattr(self, 'skip_lastframe', True)  # jwst skips by default for MIRI TSO, but should likely be set False (that may depend on the dataset though).
@@ -214,40 +151,9 @@ class S1MetaClass_MIRI(S1MetaClass):
             self.grouplevel_bg = getattr(self, 'grouplevel_bg', True)  # Default to True if remove_390hz
         else:
             self.grouplevel_bg = getattr(self, 'grouplevel_bg', False)  # Default to False if not remove_390hz
-
-        # Finally, call S1MetaClass.MetaClass init function to populate any remaining defaults
-        super(S1MetaClass, self).__init__(eventlabel, inst, folder, **kwargs)
-
-
-class S1MetaClass_NIR(S1MetaClass):
-    '''A class to hold Eureka! S1 metadata for NIR-instruments.
-
-    This class loads a Stage 1 Eureka! Control File (ecf) and lets you
-    query the parameters and values.
-
-    Notes
-    -----
-    History:
-
-    - 2024-03-05 Taylor J Bell
-        Made specific NIR-instrument S1 class based on S1MetaClass
-    '''
-
-    def __init__(self, eventlabel, inst, folder=None, **kwargs):
-        '''Initialize the MetaClass object.
-
-        Parameters
-        ----------
-        eventlabel : str
-            The nickname for this analysis.
-        inst : str
-            The instrument name, from one of [NIRCam, NIRSpec, NIRISS].
-        folder : str; optional
-            The folder containing an ECF file to be read in. Defaults to None
-            which resolves to './'.
-        **kwargs : dict
-            Any additional parameters to be loaded into the MetaClass after
-            the ECF has been read in
+    
+    def set_NIR_defaults(self):
+        '''Set Stage 1 specific defaults for NIR-instruments.
 
         Notes
         -----
@@ -256,14 +162,6 @@ class S1MetaClass_NIR(S1MetaClass):
         - 2024-03-05 Taylor J Bell
             Initial version setting defaults for NIR-instruments.
         '''
-        if inst not in ['NIRCam', 'NIRSpec', 'NIRISS']:
-            raise AssertionError('Can only use S1MetaClass_NIR for instruments'
-                                 ' NIRCam, NIRSpec, or NIRISS, but you\'ve '
-                                 f'specified inst={inst}.')
-
-        # Call readECF.MetaClass init function to read in the ECF
-        super(S1MetaClass, self).__init__(eventlabel, inst, folder, **kwargs)
-
         # NIR-specific pipeline stages
         self.skip_superbias = getattr(self, 'skip_superbias', False)
         self.skip_persistence = getattr(self, 'skip_persistence', True)  # Skipped by default for Near-IR TSO.
@@ -272,6 +170,3 @@ class S1MetaClass_NIR(S1MetaClass):
         self.remove_390hz = getattr(self, 'remove_390hz', False)
         if self.remove_390hz:
             raise AssertionError('remove_390hz cannot be set to True for NIR instruments!')
-
-        # Finally, call S1MetaClass.MetaClass init function to populate any remaining defaults
-        super(S1MetaClass, self).__init__(eventlabel, inst, folder, **kwargs)

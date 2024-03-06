@@ -1,8 +1,11 @@
 import os
+import time as time_pkg
+import crds
 import shlex
 # Required in case user passes in a numpy object (e.g. np.inf)
 import numpy as np
 
+from ..version import version
 
 class MetaClass:
     '''A class to hold Eureka! metadata.
@@ -26,7 +29,7 @@ class MetaClass:
         Significantly modified for Eureka
     '''
 
-    def __init__(self, folder=None, file=None, **kwargs):
+    def __init__(self, file=None, folder=None, eventlabel=None, stage=None, **kwargs):
         '''Initialize the MetaClass object.
 
         Parameters
@@ -35,8 +38,13 @@ class MetaClass:
             The folder containing an ECF file to be read in. Defaults to None
             which resolves to './'.
         file : str; optional
-            The ECF filename to be read in. Defaults to None which results
-            in an empty MetaClass object.
+            The ECF filename to be read in. Defaults to None which first tries
+            to find the filename using eventlabel and stage, and if that fails
+            results in an empty MetaClass object.
+        eventlabel : str; optional
+            The unique identifier for these data.
+        stage : int; optional
+            The current analysis stage number.
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
@@ -50,14 +58,16 @@ class MetaClass:
         '''
         if folder is None:
             folder = '.'+os.sep
+        
+        if file is None and eventlabel is not None and stage is not None:
+            file = f'S{stage}_{eventlabel}.ecf'
 
         self.params = {}
-        if file is not None and folder is not None:
-            if os.path.exists(os.path.join(folder, file)):
-                self.read(folder, file)
-            else:
-                raise ValueError(f"The file {os.path.join(folder,file)} "
-                                 f"does not exist.")
+        if os.path.exists(os.path.join(folder, file)):
+            self.read(folder, file)
+        elif file is None:
+            raise ValueError(f"The file {os.path.join(folder, file)} "
+                             "does not exist.")
 
         if kwargs is not None:
             # Add any kwargs to the parameter dict
@@ -66,6 +76,16 @@ class MetaClass:
             # Store each as an attribute
             for param, value in kwargs.items():
                 setattr(self, param, value)
+        
+        self.version = version
+        self.eventlabel = eventlabel
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
+
+        # If a specific CRDS context is entered in the ECF, apply it.
+        # Otherwise, log and fix the default CRDS context to make sure it doesn't
+        # change between different segments.
+        self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
+        os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
