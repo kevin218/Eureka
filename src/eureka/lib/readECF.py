@@ -29,7 +29,7 @@ class MetaClass:
         Significantly modified for Eureka
     '''
 
-    def __init__(self, file=None, folder=None, eventlabel=None, stage=None, **kwargs):
+    def __init__(self, folder=None, file=None, eventlabel=None, stage=None, **kwargs):
         '''Initialize the MetaClass object.
 
         Parameters
