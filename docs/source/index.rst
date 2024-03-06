@@ -89,6 +89,7 @@ and `juliet <https://github.com/nespinoza/juliet>`_ packages offer some similar 
    stages
    ecf
    outputs
+   notebooks
    contribute
    api
    faq

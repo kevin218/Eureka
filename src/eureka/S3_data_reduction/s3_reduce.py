@@ -675,7 +675,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             data['betaper'][i]) = aphot
 
                 if not hasattr(meta, 'save_fluxdata'):
-                    meta.save_fluxdata = True
+                    meta.save_fluxdata = False
 
                 # plot tilt events
                 if meta.isplots_S3 >= 5 and meta.inst == 'nircam' and \
@@ -749,10 +749,17 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # arrays before saving
                 spec, meta, log = inst.conclusion_step(spec, meta, log)
 
+            # make citations for current stage
+            util.make_citations(meta, 3)
+
             # Save Dataset object containing time-series of 1D spectra
             if meta.save_output:
                 meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                              "_SpecData.h5")
+                
+                # Save Meta information to attributes of Xarray
+                util.add_meta_to_xarray(meta, spec)
+
                 success = xrio.writeXR(meta.filename_S3_SpecData, spec,
                                        verbose=True)
 
@@ -781,15 +788,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                         optmask=spec.optmask,
                                         scandir=getattr(spec, 'scandir',
                                                         None))
-
-            # make citations for current stage
-            util.make_citations(meta, 3)
-
-            # Save results
-            if meta.save_output:
-                log.writelog('Saving Metadata')
-                fname = meta.outputdir + 'S3_' + event_ap_bg + "_Meta_Save"
-                me.saveevent(meta, fname, save=[])
 
             # Calculate total time
             total = (time_pkg.time() - t0) / 60.
