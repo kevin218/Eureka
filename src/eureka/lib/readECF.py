@@ -63,7 +63,7 @@ class MetaClass:
             file = f'S{stage}_{eventlabel}.ecf'
 
         self.params = {}
-        if os.path.exists(os.path.join(folder, file)):
+        if file is not None and os.path.exists(os.path.join(folder, file)):
             self.read(folder, file)
         elif file is None:
             raise ValueError(f"The file {os.path.join(folder, file)} "
