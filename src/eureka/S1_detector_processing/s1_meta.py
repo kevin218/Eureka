@@ -51,6 +51,9 @@ class S1MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version setting defaults for any instrument.
         '''
+        # Data file suffix
+        self.suffix = getattr(self, 'suffix', 'uncal')
+
         # Control parallelization
         # (Options are 'none', quarter', 'half', 'all', or any integer)
         self.maximum_cores = getattr(self, 'maximum_cores', 'half')
@@ -58,7 +61,7 @@ class S1MetaClass(MetaClass):
         # Control ramp fitting method
         self.ramp_fit_algorithm = getattr(self, 'ramp_fit_algorithm', 'default')
 
-        # Pipeline stages
+        # Pipeline steps
         self.skip_group_scale = getattr(self, 'skip_group_scale', False)
         self.skip_dq_init = getattr(self, 'skip_dq_init', False)
         self.skip_saturation = getattr(self, 'skip_saturation', False)
