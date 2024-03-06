@@ -116,7 +116,7 @@ class S1MetaClass(MetaClass):
         self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF
 
         # Directories relative to topdir
-        self.inputdir = getattr(self, 'inputdir', 'Uncalibrated')
+        self.inputdir = getattr(self, 'inputdir', 'Stage0')
         self.outputdir = getattr(self, 'outputdir', 'Stage1')
 
         #####
