@@ -86,12 +86,12 @@ def dn2electrons(data, meta, log):
     nx = data.attrs['mhdr']['SUBSIZE1']
     ny = data.attrs['mhdr']['SUBSIZE2']
 
-    if hasattr(meta, 'gain') and meta.gain is not None:
+    if meta.gain is not None:
         # Load gain array or value
         gain = np.array(meta.gain)
     else:
         # Find the required gainfile
-        if hasattr(meta, 'gainfile') and meta.gainfile is not None:
+        if meta.gainfile is not None:
             log.writelog(f'  Using provided gainfile={meta.gainfile} to '
                          'convert units to DN...',
                          mute=(not meta.verbose))
@@ -174,7 +174,7 @@ def bright2dn(data, meta, log, mjy=False):
         Convert to using Xarray Dataset
     """
     # Find the required photfile
-    if hasattr(meta, 'photfile') and meta.photfile is not None:
+    if meta.photfile is not None:
         log.writelog(f'  Using provided photfile={meta.photfile} to '
                      'convert units to DN...',
                      mute=(not meta.verbose))
