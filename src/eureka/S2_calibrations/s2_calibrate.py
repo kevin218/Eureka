@@ -11,7 +11,6 @@
 # 5.  Produce plots
 
 import os
-import shutil
 import time as time_pkg
 from copy import deepcopy
 import numpy as np
@@ -22,14 +21,11 @@ from jwst import datamodels
 from jwst.pipeline.calwebb_spec2 import Spec2Pipeline
 from jwst.pipeline.calwebb_image2 import Image2Pipeline
 import jwst.assign_wcs.nirspec
-import crds
 
 from .s2_meta import S2MetaClass
 from ..lib import logedit, util
 from ..lib import manageevent as me
-from ..lib import readECF
 from ..lib import plots
-from ..version import version
 
 
 def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
@@ -103,7 +99,6 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         log = logedit.Logedit(meta.s2_logname)
     log.writelog("\nStarting Stage 2 Reduction")
     log.writelog(f"Eureka! Version: {meta.version}", mute=True)
-    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f"Output directory: {meta.outputdir}")
 
@@ -113,6 +108,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
 
     # Create list of file segments
     meta = util.readfiles(meta, log)
+    log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
 
     # If testing, only run the last file
     if meta.testing_S2:
@@ -120,43 +116,36 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         istart = 0
 
-    # Figure out which instrument we're working on
-    # Also figure out which pipeline we need to use (spectra or images)
-    with fits.open(meta.segment_list[0]) as hdulist:
-        meta.exp_type = getattr(meta, 'exp_type',
-                                hdulist[0].header['EXP_TYPE'])
-        meta.inst = getattr(meta, 'inst', hdulist[0].header['INSTRUME'])
-        
-        # First apply any instrument-specific defaults
-        if meta.inst == 'MIRI':
-            meta.set_MIRI_defaults()
-        elif meta.inst == 'NIRCam':
-            meta.set_NIRCam_defaults()
-        elif meta.inst == 'NIRSpec':
-            meta.set_NIRSpec_defaults()
-        elif meta.inst == 'NIRISS':
-            meta.set_NIRISS_defaults()
-        # Then apply instrument-agnostic defaults
-        meta.set_defaults()
+    # First apply any instrument-specific defaults
+    if meta.inst == 'MIRI':
+        meta.set_MIRI_defaults()
+    elif meta.inst == 'NIRCam':
+        meta.set_NIRCam_defaults()
+    elif meta.inst == 'NIRSpec':
+        meta.set_NIRSpec_defaults()
+    elif meta.inst == 'NIRISS':
+        meta.set_NIRISS_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
 
-        if 'IMAGE' in meta.exp_type:
-            # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
-            # NIS_IMAGE, or NRS_IMAGING
-            pipeline = EurekaImage2Pipeline()
-        else:
-            # EXP_TYPE doesn't say image, so it should be a spectrum
-            # (or someone is putting weird files into Eureka!)
-            pipeline = EurekaSpec2Pipeline()
+    if meta.photometry:
+        # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
+        # NIS_IMAGE, or NRS_IMAGING
+        pipeline = EurekaImage2Pipeline()
+    else:
+        # EXP_TYPE doesn't say image, so it should be a spectrum
+        # (or someone is putting weird files into Eureka!)
+        pipeline = EurekaSpec2Pipeline()
 
-            if (meta.waverange_start is not None or
-                    meta.waverange_end is not None):
-                # By default pipeline can trim the dispersion axis,
-                # override the function that does this with specific
-                # wavelength range that you want to trim to.
-                jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
-                    partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input,
-                            wavelength_range=[meta.waverange_start,
-                                              meta.waverange_end])
+        if (meta.waverange_start is not None or
+                meta.waverange_end is not None):
+            # By default pipeline can trim the dispersion axis,
+            # override the function that does this with specific
+            # wavelength range that you want to trim to.
+            jwst.assign_wcs.nirspec.nrs_wcs_set_input = \
+                partial(jwst.assign_wcs.nirspec.nrs_wcs_set_input,
+                        wavelength_range=[meta.waverange_start,
+                                          meta.waverange_end])
 
     # Run the pipeline on each file sequentially
     for m in range(istart, meta.num_data_files):

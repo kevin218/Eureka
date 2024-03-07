@@ -84,12 +84,6 @@ class MetaClass:
         # Set instrument to None if not specified
         self.inst = getattr(self, 'inst', None)
 
-        # If a specific CRDS context is entered in the ECF, apply it.
-        # Otherwise, log and fix the default CRDS context to make sure it doesn't
-        # change between different segments.
-        self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
-        os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
-
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
         converted to a string.
@@ -157,6 +151,38 @@ class MetaClass:
         if item in ['lines', 'params', 'filename', 'folder']:
             self.__dict__[item] = value
             return
+
+        if item == 'inst' and value == 'wfc3':
+            # Fix issues with CRDS server set for JWST
+            if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                print('CRDS_SERVER_URL is set for JWST and not HST.'
+                      ' Automatically adjusting it up for HST.')
+                url = 'https://hst-crds.stsci.edu'
+                os.environ['CRDS_SERVER_URL'] = url
+                crds.client.api.set_crds_server(url)
+                crds.client.api.get_server_info.cache.clear()
+
+            # If a specific CRDS context is entered in the ECF, apply it.
+            # Otherwise, log and fix the default CRDS context to make sure
+            # it doesn't change between different segments.
+            self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
+            os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
+        elif item == 'inst' and value is not None:
+            # Fix issues with CRDS server set for HST
+            if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                print('CRDS_SERVER_URL is set for HST and not JWST.'
+                      ' Automatically adjusting it up for JWST.')
+                url = 'https://jwst-crds.stsci.edu'
+                os.environ['CRDS_SERVER_URL'] = url
+                crds.client.api.set_crds_server(url)
+                crds.client.api.get_server_info.cache.clear()
+
+            # If a specific CRDS context is entered in the ECF, apply it.
+            # Otherwise, log and fix the default CRDS context to make sure it doesn't
+            # change between different segments.
+            self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
+            os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
+            
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value)):

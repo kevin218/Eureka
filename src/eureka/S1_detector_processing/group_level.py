@@ -48,7 +48,7 @@ def GLBS(input_model, log, meta):
     else:
         meta.int_end = meta.int_start+meta.nplots
     if meta.inst == 'miri':
-        meta.isrotate = False
+        meta.isrotate = 0
 
     for ngrp in range(all_data.shape[1]):
         log.writelog(f'  Starting group {ngrp}.')

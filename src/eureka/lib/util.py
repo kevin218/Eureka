@@ -79,7 +79,20 @@ def readfiles(meta, log):
 
         with fits.open(meta.segment_list[-1]) as hdulist:
             # Figure out which instrument we are using
-            meta.inst = hdulist[0].header['INSTRUME'].lower()
+            meta.inst = getattr(meta, 'inst',
+                                hdulist[0].header['INSTRUME'].lower()
+            # Also figure out which pipeline we need to use (spectra or images)
+            meta.exp_type = getattr(meta, 'exp_type',
+                                    hdulist[0].header['EXP_TYPE'])
+            
+            if 'IMAGE' in meta.exp_type:
+                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
+                # NIS_IMAGE, or NRS_IMAGING
+                meta.photometry = getattr(meta, 'photometry', True)
+            else:
+                # EXP_TYPE doesn't say image, so it should be a spectrum
+                # (or someone is putting weird files into Eureka!)
+                meta.photometry = getattr(meta, 'photometry', False)
 
     return meta
 
