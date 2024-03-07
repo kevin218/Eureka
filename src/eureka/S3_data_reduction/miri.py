@@ -72,9 +72,8 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
 
-    if data.attrs['mhdr']['EXP_TYPE'] == 'MIR_IMAGE':
+    if meta.photometry:
         # Working on photometry data
-        meta.photometry = True
         # The DISPAXIS argument does not exist in the header of the photometry
         # data. Added it here so that code in other sections doesn't have to
         # be changed
@@ -103,8 +102,7 @@ def read(filename, data, meta, log):
 
         wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
     else:
-        meta.photometry = False
-
+        # Working on spectroscopic data
         # If wavelengths are all zero or missing --> use jwst to get
         # wavelengths. Otherwise use the wavelength array from the header
         try:
@@ -122,7 +120,7 @@ def read(filename, data, meta, log):
             wave_2d = hdulist['WAVELENGTH', 1].data
 
         # Increase pixel resolution along cross-dispersion direction
-        if hasattr(meta, 'expand') and meta.expand > 1:
+        if meta.expand > 1:
             log.writelog(f'    Super-sampling x axis from {sci.shape[2]} ' +
                          f'to {sci.shape[2]*meta.expand} pixels...',
                          mute=(not meta.verbose))
@@ -134,7 +132,7 @@ def read(filename, data, meta, log):
 
     # Record integration mid-times in BMJD_TDB
     int_times = hdulist['INT_TIMES', 1].data
-    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+    if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
@@ -376,13 +374,10 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    if hasattr(meta, 'isrotate'):
-        isrotate = meta.isrotate
-    else:
-        isrotate = 2
     bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
                                 meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=isrotate,
+                                threshold=meta.p3thresh,
+                                isrotate=meta.isrotate,
                                 isplots=isplots)
     return bg, mask, n
 

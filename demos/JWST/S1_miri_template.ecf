@@ -80,9 +80,6 @@ topdir              /home/User/Data/JWST-Sim/MIRI/
 inputdir            Uncalibrated
 outputdir           Stage1
 
-# Diagnostics
-testing_S1          False
-
 #####
 
 # "Default" ramp fitting settings
