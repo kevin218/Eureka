@@ -318,6 +318,8 @@ def Stage_5(planet_data, file_path='output_file.txt',
     # rp_free = 'free'
     # rp_pt = "U"
 
+    rp_val = planet_data['Rp/Rs']
+              
     rp_pp1 = planet_data['Rp/Rs'] - (planet_data['Rp_lower']
                                      / planet_data['Rs'])  # Lower Bound
     rp_pp2 = planet_data['Rp/Rs'] + (planet_data['Rp_upper']
