@@ -1,4 +1,4 @@
-name: eureka_jwstV1_14_0
+name: eureka
 channels:
     - conda-forge
     - defaults

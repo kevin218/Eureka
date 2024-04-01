@@ -1,4 +1,4 @@
-name: eureka_starry_temp
+name: eureka_starry
 channels:
     - conda-forge
     - defaults
