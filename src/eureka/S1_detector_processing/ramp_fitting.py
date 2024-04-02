@@ -352,8 +352,8 @@ def custom_power(snr, snr_bounds, exponents):
     return pow_wt.ravel()
 
 
-def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked, mask_2d,
-                                 xvalues, good_pix):
+def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
+                                 mask_2d, xvalues, good_pix):
     """Adjusted version of calc_opt_sums() function from stcal ramp fitting.
 
     Now weights are all equal to 1, except for those that correspond to NaN or
