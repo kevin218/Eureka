@@ -292,9 +292,10 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 meta.max_memory = 0.5
             if not hasattr(meta, 'nfiles'):
                 meta.nfiles = 1
-            if meta.nfiles == 1 and meta.nfiles > 1:
-                log.writelog('WARNING: Strange behaviors can occur if you set '
-                             'nfiles to 1. If your computer has enough RAM to '
+            if meta.nfiles == 1 and meta.nfiles > 1 and meta.indep_batches:
+                log.writelog('WARNING: You have selected non-ideal settings '
+                             'with indep_batches = True and nfiles = 1.'
+                             'If your computer has enough RAM to '
                              'load many/all of your Stage 2 files, it is '
                              'strongly recommended to increase nfiles.')
             system_RAM = psutil.virtual_memory().total
@@ -461,7 +462,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Compute clean median frame
                         data = optspex.clean_median_flux(data, meta, log, m)
                         # Save the original median frame
-                        saved_ref_median_frame = data.medflux
+                        saved_ref_median_frame = deepcopy(data.medflux)
                     else:
                         # Load the original median frame
                         data['medflux'] = saved_ref_median_frame
@@ -759,9 +760,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if not meta.photometry:
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
                                            spec.optspec.values,
-                                           optmask=spec.optmask.values)
+                                           spec.optmask.values,
+                                           scandir=getattr(spec, 'scandir',
+                                                           None))
             else:
-                normspec = util.normalize_spectrum(meta, data.aplev.values)
+                normspec = util.normalize_spectrum(
+                    meta, spec.aplev.values,
+                    scandir=getattr(spec, 'scandir', None))
                 meta.mad_s3 = util.get_mad_1d(normspec)
             try:
                 log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
@@ -770,10 +775,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 meta.mad_s3 = 0
 
             if meta.isplots_S3 >= 1 and not meta.photometry:
-                log.writelog('Generating figure')
+                log.writelog('Generating figures')
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                                        optmask=spec.optmask)
+                                        optmask=spec.optmask,
+                                        scandir=getattr(spec, 'scandir',
+                                                        None))
 
             # make citations for current stage
             util.make_citations(meta, 3)

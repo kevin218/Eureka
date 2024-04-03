@@ -102,9 +102,9 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                              freenames)
 
     if not hasattr(meta, 'lsq_method'):
-        log.writelog('No lsq optimization method specified - using Nelder-Mead'
+        log.writelog('No lsq optimization method specified - using Powell'
                      ' by default.')
-        meta.lsq_method = 'Nelder-Mead'
+        meta.lsq_method = 'Powell'
     if not hasattr(meta, 'lsq_tol'):
         log.writelog('No lsq tolerance specified - using 1e-6 by default.')
         meta.lsq_tol = 1e-6
@@ -167,13 +167,17 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3 and calling_function == 'lsq':
+    if meta.isplots_S5 >= 3 and calling_function == 'lsq' and \
+            np.size(lc.flux) > 20:
         # This plot is only really useful if you're actually using the
         # lsq fitter, otherwise don't make it
+        # Also, mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter=calling_function)
 
     # Plot residuals distribution
@@ -440,7 +444,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
+        # mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter='emcee')
 
     # Plot residuals distribution
@@ -497,14 +503,16 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     AssertionError
         Unable to get enough walkers within the prior range.
     """
-    if meta.sharedp:
-        channel_key = 'shared'
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
     else:
         ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
-        channel_key = f'ch{ch_number}'
+        channel_tag = f'_ch{ch_number}'
 
     foldername = os.path.join(meta.topdir, *meta.old_chain.split(os.sep))
-    fname = f'S5_emcee_fitparams_{channel_key}.csv'
+    fname = f'S5_emcee_fitparams{channel_tag}.csv'
     fitted_values = pd.read_csv(os.path.join(foldername, fname),
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
@@ -517,7 +525,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         log.writelog(message, mute=True)
         raise AssertionError(message)
 
-    fname = f'S5_emcee_samples_{channel_key}'
+    fname = f'S5_emcee_samples{channel_tag}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
     ds = xrio.readXR(full_fname, verbose=False)
@@ -900,7 +908,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
+        # mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter='dynesty')
 
     # Plot residuals distribution
@@ -1010,7 +1020,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_phase_variations(lc, model, meta, fitter='lmfitter')
 
     # Plot Allan plot
-    if meta.isplots_S5 >= 3:
+    if meta.isplots_S5 >= 3 and np.size(lc.flux) > 20:
+        # mc3.stats.time_avg breaks when testing with a small
+        # number of integrations
         plots.plot_rms(lc, model, meta, fitter='lmfitter')
 
     # Plot residuals distribution

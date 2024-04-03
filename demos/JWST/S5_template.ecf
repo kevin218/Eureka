@@ -9,14 +9,17 @@ rescale_err     False                   # Rescale uncertainties to have reduced 
 fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to use?
 verbose         True                    # If True, more details will be printed about steps
 fit_method      [dynesty]               #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr,polynomial]  # options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial]  # options are: batman_tr, batman_ecl, sinusoid_pc, poet_tr, poet_ecl, poet_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
+compute_ltt     False                   # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
+force_positivity False                  # Optional boolean for sinusoid_pc and poet_pc models.  Set True to force positive phase variations.
+num_planets     1                       # Number of planets in the fit. Default is 1.
 
 # Manual clipping in time
 manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
-use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None. For exotic-ld, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
+use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, spam, None. For exotic-ld and spam, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
 ld_file          None  # Fully qualified path to the location of a limb darkening file that you want to use
 ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
 
@@ -25,7 +28,7 @@ old_fitparams   None # filename relative to topdir that points to a fitparams cs
 
 #lsq
 lsq_method      'Powell' # The scipy.optimize.minimize optimization method to use
-lsq_tol         1e-6    # The tolerance for the scipy.optimize.minimize optimization method
+lsq_tol         1e-7    # The tolerance for the scipy.optimize.minimize optimization method
 lsq_maxiter     None    # Maximum number of iterations to perform. Depending on the method each iteration may use several function evaluations. Set to None to use the default value
 
 #mcmc

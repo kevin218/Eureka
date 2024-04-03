@@ -5,6 +5,7 @@ from astropy.io import fits
 from . import sort_nicely as sn
 from scipy.interpolate import griddata
 from scipy.ndimage import zoom
+from scipy.stats import binned_statistic
 from .naninterp1d import naninterp1d
 
 from .citations import CITATIONS
@@ -149,8 +150,6 @@ def manual_clip(lc, meta, log):
 
     # Remove the requested integrations
     lc = lc.isel(time=time_inds)
-    if hasattr(meta, 'scandir'):
-        meta.scandir = meta.scandir[time_bool[::meta.nreads]]
 
     return meta, lc, log
 
@@ -412,7 +411,45 @@ def binData(data, nbin=100, err=False):
     return binned
 
 
-def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
+def binData_time(data, time, nbin=100, err=False):
+    """Temporally bin data for easier visualization.
+
+    Parameters
+    ----------
+    data : ndarray (1D)
+        The data to temporally bin.
+    time : ndarray (1D)
+        The time axis along which to bin
+    nbin : int, optional
+        The number of bins there should be. By default 100.
+    err : bool, optional
+        If True, divide the binned data by sqrt(N) to get the error on the
+        mean. By default False.
+
+    Returns
+    -------
+    binned : ndarray
+        The binned data.
+    """
+    # Make a copy for good measure
+    data = np.ma.copy(data)
+    data = np.ma.masked_invalid(data)
+
+    binned, _, _ = binned_statistic(time, data, 
+                                    statistic=np.ma.mean, 
+                                    bins=nbin)
+    if err:
+        binned_count, _, _ = binned_statistic(time, data,
+                                              statistic='count',
+                                              bins=nbin)
+        binned /= np.sqrt(binned_count)
+
+    # Need to mask invalid data in case there is an empty bin 
+    # (leading to divide by zero)
+    return np.ma.masked_invalid(binned)
+
+
+def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     """Normalize a spectrum by its temporal mean.
 
     Parameters
@@ -426,6 +463,10 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
     optmask : ndarray (1D); optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
 
     Returns
     -------
@@ -443,8 +484,6 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
 
     # Normalize the spectrum
     if meta.inst == 'wfc3':
-        scandir = np.repeat(meta.scandir, meta.nreads)
-
         for p in range(2):
             iscans = np.where(scandir == p)[0]
             if len(iscans) > 0:
@@ -466,7 +505,7 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None):
 
 
 def get_mad(meta, log, wave_1d, optspec, optmask=None,
-            wave_min=None, wave_max=None):
+            wave_min=None, wave_max=None, scandir=None):
     """Computes variation on median absolute deviation (MAD) using ediff1d
     for 2D data.
 
@@ -495,6 +534,10 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     wave_maxf : float; optional
         Maximum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose an upper limit.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
 
     Returns
     -------
@@ -514,14 +557,14 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
         iwmax = None
 
     # Normalize the spectrum
-    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+    normspec = normalize_spectrum(meta, optspec[:, iwmin:iwmax],
+                                  optmask=optmask[:, iwmin:iwmax],
+                                  scandir=scandir)
 
     if meta.inst == 'wfc3':
         # Setup 1D MAD arrays
         n_wav = normspec.shape[1]
         ediff = np.ma.zeros((2, n_wav))
-
-        scandir = np.repeat(meta.scandir, meta.nreads)
 
         # Compute the MAD for each scan direction
         for p in range(2):
