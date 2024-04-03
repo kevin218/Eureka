@@ -256,7 +256,7 @@ def Stage_5(planet_data, file_path='output_file.txt',
             h1_val=0, h1_free='free', h1_pp1=-500, h1_pp2=500, h1_pt='U',
             h3_val=0, h3_free='free', h3_pp1=0, h3_pp2=2, h3_pt='N',
             h5_val=0.0666667, h5_free='fixed', h5_pp1=0.0666667, h5_pp2=0.01, h5_pt='N',
-            h6_val=0.02, h6_free='free', h6_pp1=0.02, h6_pp2=0.04, h6_pt='U',
+            h6_val=0.03, h6_free='fixed', h6_pp1=0.02, h6_pp2=0.04, h6_pt='U',
             # xpos_val=0, xpos_free='free', xpos_pp1=0, xpos_pp2=0.5, xpos_pt='N',
             # ypos_val=0, ypos_free='free', ypos_pp1=0, ypos_pp2=0.5, ypos_pt='N',
             scatter_mult_val=1, scatter_mult_free='free', scatter_mult_pp1=0.8, scatter_mult_pp2=1.2, scatter_mult_pt='U'):
