@@ -1,5 +1,6 @@
 from ..lib.readECF import MetaClass
 
+
 class S2MetaClass(MetaClass):
     '''A class to hold Eureka! S2 metadata.
 
@@ -57,23 +58,29 @@ class S2MetaClass(MetaClass):
         # Control subarray cropping
         self.slit_y_low = getattr(self, 'slit_y_low', None)
         self.slit_y_high = getattr(self, 'slit_y_high', None)
-        self.tsgrism_extract_height = getattr(self, 'tsgrism_extract_height', None)
+        self.tsgrism_extract_height = getattr(self, 'tsgrism_extract_height',
+                                              None)
         self.waverange_start = getattr(self, 'waverange_start', None)
         self.waverange_end = getattr(self, 'waverange_end', None)
 
         # Generic pipeline steps that'd usually be run for TSO data
-        self.skip_extract_2d = getattr(self, 'skip_extract_2d', False)  # Run by default for instruments that call the function, but not all instruments call it so True is a safe default
+        # Run by default for instruments that call the function, but not all
+        # instruments call it so True is a safe default
+        self.skip_extract_2d = getattr(self, 'skip_extract_2d', False)
         self.skip_srctype = getattr(self, 'skip_srctype', False)
         self.skip_flat_field = getattr(self, 'skip_flat_field', False)
-        self.skip_photom = getattr(self, 'skip_photom', True)  # Recommended to skip to get better uncertainties out of our Stage 3
-        self.skip_extract_1d = getattr(self, 'skip_extract_1d', True)  # No need to run this time consuming step by default
+        # Recommended to skip to get better uncertainties out of our Stage 3
+        self.skip_photom = getattr(self, 'skip_photom', True)
+        # No need to run this time consuming step by default
+        self.skip_extract_1d = getattr(self, 'skip_extract_1d', True)
 
         # Steps that are not run by default for any TSO data
         self.skip_msaflagopen = getattr(self, 'skip_msaflagopen', True)
         self.skip_nsclean = getattr(self, 'skip_nsclean', True)
         self.skip_imprint = getattr(self, 'skip_imprint', True)
         self.skip_bkg_subtract = getattr(self, 'skip_bkg_subtract', True)
-        self.skip_master_background = getattr(self, 'skip_master_background', True)
+        self.skip_master_background = getattr(self, 'skip_master_background',
+                                              True)
         self.skip_wavecorr = getattr(self, 'skip_wavecorr', True)
         self.skip_straylight = getattr(self, 'skip_straylight', True)
         self.skip_fringe = getattr(self, 'skip_fringe', True)
@@ -89,7 +96,8 @@ class S2MetaClass(MetaClass):
         self.hide_plots = getattr(self, 'hide_plots', False)
 
         # Project directory
-        self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF
+        # Must be provided in the ECF
+        self.topdir = getattr(self, 'topdir')
 
         # Directories relative to topdir
         self.inputdir = getattr(self, 'inputdir', 'Stage1')

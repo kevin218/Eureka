@@ -7,6 +7,7 @@ import numpy as np
 
 from ..version import version
 
+
 class MetaClass:
     '''A class to hold Eureka! metadata.
 
@@ -29,7 +30,8 @@ class MetaClass:
         Significantly modified for Eureka
     '''
 
-    def __init__(self, folder=None, file=None, eventlabel=None, stage=None, **kwargs):
+    def __init__(self, folder=None, file=None, eventlabel=None, stage=None,
+                 **kwargs):
         '''Initialize the MetaClass object.
 
         Parameters
@@ -165,7 +167,8 @@ class MetaClass:
             # If a specific CRDS context is entered in the ECF, apply it.
             # Otherwise, log and fix the default CRDS context to make sure
             # it doesn't change between different segments.
-            self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
+            self.pmap = getattr(self, 'pmap',
+                                crds.get_context_name('jwst')[5:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
         elif item == 'inst' and value is not None:
             # Fix issues with CRDS server set for HST
@@ -178,11 +181,11 @@ class MetaClass:
                 crds.client.api.get_server_info.cache.clear()
 
             # If a specific CRDS context is entered in the ECF, apply it.
-            # Otherwise, log and fix the default CRDS context to make sure it doesn't
-            # change between different segments.
-            self.pmap = getattr(self, 'pmap', crds.get_context_name('jwst')[5:-5])
+            # Otherwise, log and fix the default CRDS context to make sure
+            # it doesn't change between different segments.
+            self.pmap = getattr(self, 'pmap',
+                                crds.get_context_name('jwst')[5:-5])
             os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
-            
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value)):
@@ -309,7 +312,7 @@ class MetaClass:
                 if val != new_val:
                     self.lines[i] = self.lines[i].replace(str(val), 
                                                           str(new_val))
-        
+
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
 

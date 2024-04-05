@@ -1,4 +1,7 @@
+import numpy as np
+
 from ..lib.readECF import MetaClass
+
 
 class S3MetaClass(MetaClass):
     '''A class to hold Eureka! S3 metadata.
@@ -55,31 +58,37 @@ class S3MetaClass(MetaClass):
         self.suffix = getattr(self, 'suffix', 'calints')
 
         self.ncpu = hasattr(self, 'ncpu', 4)
-        self.nfiles = hasattr(self, 'nfiles', 1000)  # By default, try to load a bunch of files if permitted by max_memory
+        # By default, try to load a bunch of files if permitted by max_memory
+        self.nfiles = hasattr(self, 'nfiles', 1000)
         self.max_memory = hasattr(self, 'max_memory', 0.5)
         self.indep_batches = hasattr(self, 'indep_batches', False)
         self.calibrated_spectra = getattr(self, 'calibrated_spectra', False)
 
         # Reference files or values
         self.gain = getattr(self, 'gain', None)
-        self.gainfile = getattr(meta, 'gainfile', None)
+        self.gainfile = getattr(self, 'gainfile', None)
         self.photfile = getattr(self, 'photfile', None)
         self.time_file = getattr(self, 'time_file', None)
 
         # Subarray region of interest
-        self.src_pos_type = getattr(self, 'ywindow')  # Require this to be set in the ECF
-        self.record_ypos = getattr(self, 'xwindow')  # Require this to be set in the ECF
+        # Require these to be set in the ECF
+        self.ywindow = getattr(self, 'ywindow')
+        self.xwindow = getattr(self, 'xwindow')
+
         self.src_pos_type = getattr(self, 'src_pos_type', 'gaussian')
         self.record_ypos = getattr(self, 'record_ypos', True)
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
-        self.isrotate = getattr(self, 'isrotate', 0)  # FINDME: I think bg_disp, bg_dir, and isrotate all control the same thing...
+        # FINDME: I think bg_disp, bg_dir, and isrotate all control
+        # the same thing...
+        self.isrotate = getattr(self, 'isrotate', 0)
 
         # Outlier rejection along time axis
         self.ff_outlier = getattr(self, 'ff_outlier', False)
-        self.bg_thresh = getattr(self, 'bg_thresh')  # Require this parameter to be set
         self.use_estsig = getattr(self, 'use_estsig', False)
+        # Require this parameter to be set
+        self.bg_thresh = getattr(self, 'bg_thresh')
 
         # Diagnostics
         self.isplots_S3 = getattr(self, 'isplots_S3', 3)
@@ -115,27 +124,36 @@ class S3MetaClass(MetaClass):
             Initial version setting defaults for any spectroscopic data.
         '''
         # Spectral extraction parameters
-        self.spec_hw = getattr(self, 'spec_hw')  # Require this parameter to be set
+        # Require this parameter to be set
+        self.spec_hw = getattr(self, 'spec_hw')
         self.fittype = getattr(self, 'fittype', 'meddata')
         self.median_thresh = getattr(self, 'median_thresh', 5)
         if self.fittype in ['meddata', 'smooth']:
-            self.window_len = getattr(self, 'window_len')  # Require this parameter to be set if relevant
+            # Require this parameter to be set if relevant
+            self.window_len = getattr(self, 'window_len')
         elif self.fittype == 'poly':
-            self.prof_deg = getattr(self, 'prof_deg')  # Require this parameter to be set if relevant
+            # Require this parameter to be set if relevant
+            self.prof_deg = getattr(self, 'prof_deg')
         if self.fittype in ['smooth', 'gauss', 'poly']:
-            self.p5thresh = getattr(self, 'p5thresh')  # Require this parameter to be set if relevant
+            # Require this parameter to be set if relevant
+            self.p5thresh = getattr(self, 'p5thresh')
         else:
-            self.p5thresh = getattr(self, 'p5thresh', None)  # Set it to None if not relevant
-        self.p7thresh = getattr(self, 'p7thresh')  # Require this parameter to be set
+            # Set it to None if not relevant
+            self.p5thresh = getattr(self, 'p5thresh', None)
+        # Require this parameter to be set
+        self.p7thresh = getattr(self, 'p7thresh')
 
         # Curvature correction
-        self.curvature = getattr(self, 'curvature', None)  # By default, don't correct curvature
+        # By default, don't correct curvature
+        self.curvature = getattr(self, 'curvature', None)
 
         # Background parameters
         self.bg_hw = getattr(self, 'bg_hw')  # Require this parameter to be set
         self.bg_deg = getattr(self, 'bg_deg', 0)
-        self.bg_disp = getattr(self, 'bg_disp', False)  # FINDME: I think bg_disp, bg_dir, and isrotate all control the same thing...
-        self.bg_dir = getattr(self, 'bg_dir', 'CxC')  # FINDME: I think bg_disp, bg_dir, and isrotate all control the same thing...
+        # FINDME: I think bg_disp, bg_dir, and isrotate all control
+        # the same thing...
+        self.bg_disp = getattr(self, 'bg_disp', False)
+        self.bg_dir = getattr(self, 'bg_dir', 'CxC')
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
         self.bg_method = getattr(self, 'bg_method', 'mean')
@@ -165,15 +183,15 @@ class S3MetaClass(MetaClass):
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 5)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
         self.centroid_method = getattr(self, 'centroid_method', 'fgc')
-        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
-        self.photap = getattr(self, 'photap')  # Require this parameter to be set
-        self.skyin = getattr(self, 'skyin')  # Require this parameter to be set
-        self.skywidth = getattr(self, 'skywidth')  # Require this parameter to be set
         if self.centroid_method == 'mgmc':
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
-            self.gauss_frame = getattr(self, 'gauss_frame', 15)  # For MIRI
-            self.gauss_frame = getattr(self, 'gauss_frame', 100)  # For NIRCam
-
+            self.gauss_frame = getattr(self, 'gauss_frame', 15)
+        self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
+        # Require these parameters to be set
+        self.photap = getattr(self, 'photap')
+        self.skyin = getattr(self, 'skyin')
+        self.skywidth = getattr(self, 'skywidth')  
+        
     def set_MIRI_defaults(self):
         '''Set Stage 3 specific defaults for MIRI.
 
@@ -249,7 +267,8 @@ class S3MetaClass(MetaClass):
             )
         self.horizonsfile = getattr(self, 'horizonsfile', None)
         if self.horizonsfile is not None:
-            self.hst_cal = getattr(self, 'hst_cal')  # Require this parameter to be set if relevant
+            # Require this parameter to be set if relevant
+            self.hst_cal = getattr(self, 'hst_cal')
         self.leapdir = getattr(self, 'leapdir', 'leapdir')
         self.flatfile = getattr(self, 'flatfile', None)
 
@@ -271,6 +290,10 @@ class S3MetaClass(MetaClass):
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', 'median')
         self.oneoverf_dist = getattr(self, 'oneoverf_dist', 350)
 
+        self.centroid_method = getattr(self, 'centroid_method', 'fgc')
+        if self.centroid_method == 'mgmc':
+            self.gauss_frame = getattr(self, 'gauss_frame', 100)
+
         self.set_photometric_defaults()
 
     def set_MIRI_Photometry_defaults(self):
@@ -286,7 +309,12 @@ class S3MetaClass(MetaClass):
         self.ctr_cutout_size = getattr(self, 'ctr_cutout_size', 10)
         self.oneoverf_corr = getattr(self, 'oneoverf_corr', None)
         if self.oneoverf_corr is not None:
-            raise AssertionError('Cannot apply the oneoverf_corr step to MIRI data.')
+            raise AssertionError('Cannot apply the oneoverf_corr step to '
+                                 'MIRI data.')
+
+        self.centroid_method = getattr(self, 'centroid_method', 'fgc')
+        if self.centroid_method == 'mgmc':
+            self.gauss_frame = getattr(self, 'gauss_frame', 15)
 
         self.set_photometric_defaults()
 
@@ -316,8 +344,8 @@ class S3MetaClass(MetaClass):
         if hasattr(self, 'bg_hw'):
             if isinstance(self.bg_hw, list):
                 self.bg_hw_range = np.arange(self.bg_hw[0],
-                                            self.bg_hw[1]+self.bg_hw[2],
-                                            self.bg_hw[2])
+                                             self.bg_hw[1]+self.bg_hw[2],
+                                             self.bg_hw[2])
             else:
                 self.bg_hw_range = np.array([self.bg_hw])
             self.bg_hw_range *= self.expand
@@ -328,14 +356,14 @@ class S3MetaClass(MetaClass):
                 self.skyin = [self.skyin]
             else:
                 self.skyin = range(self.skyin[0],
-                                self.skyin[1]+self.skyin[2],
-                                self.skyin[2])
+                                   self.skyin[1]+self.skyin[2],
+                                   self.skyin[2])
             if not isinstance(self.skywidth, list):
                 self.skywidth = [self.skywidth]
             else:
                 self.skywidth = range(self.skywidth[0],
-                                    self.skywidth[1]+self.skywidth[2],
-                                    self.skywidth[2])
+                                      self.skywidth[1]+self.skywidth[2],
+                                      self.skywidth[2])
             self.bg_hw_range = [f'{skyin}_{skyin+skywidth}'
                                 for skyin in self.skyin
                                 for skywidth in self.skywidth]
