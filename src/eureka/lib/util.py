@@ -80,7 +80,7 @@ def readfiles(meta, log):
         with fits.open(meta.segment_list[-1]) as hdulist:
             # Figure out which instrument we are using
             meta.inst = getattr(meta, 'inst',
-                                hdulist[0].header['INSTRUME'].lower()
+                                hdulist[0].header['INSTRUME'].lower())
             # Also figure out which pipeline we need to use (spectra or images)
             meta.exp_type = getattr(meta, 'exp_type',
                                     hdulist[0].header['EXP_TYPE'])
