@@ -337,7 +337,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
                                     pool=pool)
-    log.writelog('Running emcee burn-in...')
+    log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # state = sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # # Log some details about the burn-in phase
@@ -536,6 +536,13 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     else:
         samples = ds.to_array().T.values
     log.writelog(f'Old chain path: {full_fname}')
+
+    if np.all(full_keys != freenames):
+        # There were more free parameters before - just get the relevant ones
+        relevant_inds = np.array([key in freenames for key in full_keys])
+        samples = samples[:,relevant_inds]
+        log.writelog('Removing previously fitted parameters: '
+                     f'{full_keys[~relevant_inds]}')
 
     # Initialize the walkers using samples from the old chain
     nwalkers = meta.run_nwalkers
@@ -807,6 +814,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
     if nlive == 'min':
         nlive = min_nlive
+        log.writelog(f'Using {nlive} live points...')
     elif nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least '
                      f'{min_nlive} ****')
