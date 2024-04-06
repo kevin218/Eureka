@@ -44,8 +44,9 @@ class DampedOscillatorModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'damped oscillator'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'

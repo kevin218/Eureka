@@ -23,6 +23,7 @@ class AstroModel(Model):
         """
         # Inherit from Model class
         super().__init__(components=components, **kwargs)
+        self.name = 'astrophysical model'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'

@@ -23,19 +23,12 @@ class CentroidModel(Model):
             Can pass in the parameters, longparamlist, nchan,
             paramtitles, axis, and centroid arguments here.
         """
-        # Needed before setting centroid
-        self.multwhite = kwargs.get('multwhite')
-        self.nints = kwargs.get('nints')
-
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = self.axis
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
-
-        # Figure out if using xpos, ypos, xwidth, ywidth
-        self.axis = kwargs.get('axis')
-        self.centroid = kwargs.get('centroid')
 
         self.coeff_keys = [f'{self.axis}_{c}' if c > 0 else self.axis
                            for c in range(self.nchannel_fitted)]
@@ -96,7 +89,7 @@ class CentroidModel(Model):
             else:
                 chan = 0
 
-            centroid = self.centroid_local
+            centroid = np.ma.copy(self.centroid_local)
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 centroid = split([centroid, ], self.nints, chan)[0]

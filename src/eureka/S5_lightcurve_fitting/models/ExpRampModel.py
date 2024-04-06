@@ -20,6 +20,7 @@ class ExpRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'exp. ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -49,13 +50,13 @@ class ExpRampModel(Model):
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(0)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
                     time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time[0])
-                self.time_local = np.array(self.time_local)
+                    self.time_local = np.ma.append(
+                        self.time_local, time-time[0])
             else:
                 self.time_local = self.time - self.time[0]
 

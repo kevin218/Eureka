@@ -64,6 +64,7 @@ class PlanetParams():
         self.AmpSin1 = 0.
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
+        self.gamma = 0.
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
@@ -132,6 +133,7 @@ class BatmanTransitModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'batman transit'
         # Define transit model to be used
         self.transit_model = batman.TransitModel
 
@@ -256,7 +258,7 @@ class BatmanTransitModel(Model):
                     if pl_params.u[0] <= 0:
                         # Returning nans or infs breaks the fits, so this was
                         # the best I could think of
-                        light_curve = 1e12*np.ma.ones(time.shape)
+                        light_curve = 1e8*np.ma.ones(time.shape)
                         continue
                     pl_params.limb_dark = 'quadratic'
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
@@ -284,8 +286,9 @@ class BatmanEclipseModel(Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'batman eclipse'
         # Define transit model to be used
         self.transit_model = batman.TransitModel
 
@@ -398,7 +401,7 @@ class BatmanEclipseModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    light_curve = 1e12*np.ma.ones(time.shape)
+                    light_curve = 1e8*np.ma.ones(time.shape)
                     continue
 
                 # Compute light travel time

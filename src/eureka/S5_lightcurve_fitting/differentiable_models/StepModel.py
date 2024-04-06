@@ -25,6 +25,7 @@ class StepModel(PyMC3Model):
         """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
+        self.name = 'step'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -72,16 +73,12 @@ class StepModel(PyMC3Model):
                 chan = 0
 
             for i in range(10):
-                try:
-                    if chan == 0:
-                        steps[c][i] = getattr(model, f'step{i}')
-                        steptimes[c][i] = getattr(model, f'steptime{i}')
-                    else:
-                        steps[c][i] = getattr(model, f'step{i}_{chan}')
-                        steptimes[c][i] = getattr(model,
-                                                  f'steptime{i}_{chan}')
-                except AttributeError:
-                    pass
+                if chan == 0:
+                    steps[c][i] = getattr(model, f'step{i}', 0)
+                    steptimes[c][i] = getattr(model, f'steptime{i}', 0)
+                else:
+                    steps[c][i] = getattr(model, f'step{i}_{chan}', 0)
+                    steptimes[c][i] = getattr(model, f'steptime{i}_{chan}', 0)
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):

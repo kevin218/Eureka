@@ -20,6 +20,7 @@ class HSTRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'hst ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'

@@ -18,15 +18,16 @@ except ModuleNotFoundError:
 
 class GPModel(Model):
     """Model for Gaussian Process (GP)"""
-    def __init__(self, kernel_classes, kernel_inputs, lc, gp_code='george',
-                 normalize=False, useHODLR=False, **kwargs):
+    def __init__(self, kernel_types, kernel_input_names, lc,
+                 gp_code_name='george', normalize=False,
+                 useHODLR=False, **kwargs):
         """Initialize the GP model.
 
         Parameters
         ----------
-        kernel_classes : list
+        kernel_types : list
             The types of GP kernels to use.
-        kernel_inputs : list
+        kernel_input_names : list
             The names of the GP kernel inputs.
         lc : eureka.S5_lightcurve_fitting.lightcurve
             The current lightcurve object.
@@ -46,25 +47,20 @@ class GPModel(Model):
             paramtitles arguments here.
         """
         # Inherit from Model class
-        super().__init__(**kwargs)
+        super().__init__(kernel_types=kernel_types,
+                         nkernels=len(kernel_types),
+                         kernel_input_names=kernel_input_names,
+                         kernel_inputs=None,
+                         gp_code_name=gp_code_name, normalize=normalize,
+                         useHODLR=useHODLR, fit=np.ma.ones(self.flux.shape),
+                         flux=lc.flux, unc=lc.unc, unc_fit=lc.unc_fit,
+                         time=lc.time, **kwargs)
+        self.name = 'GP'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'GP'
 
-        # Get GP parameters
-        self.gp_code_name = gp_code
-        self.normalize = normalize
-        self.kernel_types = kernel_classes
-        self.kernel_input_names = kernel_inputs
-        self.kernel_inputs = None
-        self.useHODLR = useHODLR
-        self.nkernels = len(kernel_classes)
-        self.flux = lc.flux
-        self.fit = np.ma.ones(self.flux.shape)
-        self.unc = lc.unc
-        self.unc_fit = lc.unc_fit
-        self.time = lc.time
-
+        # Do some initial sanity checks and raise errors if needed
         if self.gp_code_name == 'celerite':
             if self.nkernels > 1:
                 raise AssertionError('Celerite2 cannot compute multi-'

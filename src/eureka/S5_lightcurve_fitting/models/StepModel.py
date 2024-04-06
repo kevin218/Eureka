@@ -20,6 +20,7 @@ class StepModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'step'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'

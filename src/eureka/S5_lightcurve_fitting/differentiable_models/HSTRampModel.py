@@ -26,6 +26,7 @@ class HSTRampModel(PyMC3Model):
         """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
+        self.name = 'hst ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -94,14 +95,10 @@ class HSTRampModel(PyMC3Model):
                 chan = 0
             
             for i in range(6):
-                try:
-                    if chan == 0:
-                        hst_coeffs[c][i] = getattr(model, f'h{i}')
-                    else:
-                        hst_coeffs[c][i] = getattr(model,
-                                                   f'h{i}_{chan}')
-                except AttributeError:
-                    pass
+                if chan == 0:
+                    hst_coeffs[c][i] = getattr(model, f'h{i}', 0)
+                else:
+                    hst_coeffs[c][i] = getattr(model, f'h{i}_{chan}', 0)
 
         hst_flux = lib.zeros(0)
         for c in range(nchan):
