@@ -81,7 +81,7 @@ class HSTRampModel(PyMC3Model):
         hst_coeffs = np.zeros((nchan, 6)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt

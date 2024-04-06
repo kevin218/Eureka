@@ -80,7 +80,7 @@ class ExpRampModel(PyMC3Model):
         ramp_coeffs = np.zeros((nchan, 12)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt

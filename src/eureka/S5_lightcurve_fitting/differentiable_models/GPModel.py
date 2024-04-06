@@ -292,7 +292,7 @@ class GPModel(PyMC3Model):
             The requested kernel.
         """
         if eval:
-            lib = np
+            lib = np.ma
             coeffs = self.fit_coeffs
         else:
             lib = tt

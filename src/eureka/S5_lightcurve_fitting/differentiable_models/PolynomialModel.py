@@ -80,7 +80,7 @@ class PolynomialModel(PyMC3Model):
         poly_coeffs = np.zeros((nchan, 10)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt
