@@ -1,3 +1,4 @@
+from .AstroModel import AstroModel
 from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from .CentroidModel import CentroidModel
 from .DampedOscillator import DampedOscillatorModel
