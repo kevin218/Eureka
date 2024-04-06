@@ -1,7 +1,4 @@
-import os
 import copy
-import numpy as np
-import matplotlib.pyplot as plt
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
@@ -17,8 +14,7 @@ BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
 BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
-from ..utils import COLORS
-from ...lib.readEPF import Parameters
+from ..models import Model, CompositeModel
 from ...lib.split_channels import split, get_trim
 
 
@@ -27,7 +23,7 @@ class fit_class:
         pass
 
 
-class PyMC3Model:
+class PyMC3Model(Model):
     def __init__(self, **kwargs):
         """Create a model instance.
 
@@ -39,28 +35,12 @@ class PyMC3Model:
             PyMC3Model object as Logedit objects cannot be pickled
             which is required for multiprocessing.
         """
-        # Set up default model attributes
-        self.components = kwargs.get('components', [])
-        self.name = kwargs.get('name', 'New PyMC3Model')
-        self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
-        self.fitted_channels = kwargs.get('fitted_channels', [0, ])
-        self.multwhite = kwargs.get('multwhite')
-        self.nints = kwargs.get('nints')
-        self.fitter = kwargs.get('fitter', None)
-        self.time = kwargs.get('time', None)
-        self.time_units = kwargs.get('time_units', 'BMJD_TDB')
-        self.flux = kwargs.get('flux', None)
-        self.freenames = kwargs.get('freenames', None)
-        self._parameters = kwargs.get('parameters', Parameters())
-        self.longparamlist = kwargs.get('longparamlist', None)
-        self.paramtitles = kwargs.get('paramtitles', None)
-        self.modeltype = kwargs.get('modeltype', None)
-        self.fmt = kwargs.get('fmt', None)
-
-        # Store the arguments as attributes
-        for arg, val in kwargs.items():
-            if arg != 'log':
-                setattr(self, arg, val)
+        self.default_name = 'New PyMC3Model'
+        # Set up PyMC3-specific default attributes
+        kwargs['name'] = kwargs.get('name', self.default_name)
+        
+        # Inherit from Model class
+        super().__init__(**kwargs)
 
         # Initialize fit with all parameters (including fixed and independent)
         # which won't get changed throughout the fit
@@ -73,12 +53,12 @@ class PyMC3Model:
 
         Parameters
         ----------
-        other : eureka.S5_lightcurve_fitting.models.Model
+        other : eureka.S5_lightcurve_fitting.models.PyMC3Model
             The model to multiply.
 
         Returns
         -------
-        eureka.S5_lightcurve_fitting.models.CompositeModel
+        eureka.S5_lightcurve_fitting.models.CompositePyMC3Model
             The combined model.
         """
         # Make sure it is the right type
@@ -88,68 +68,29 @@ class PyMC3Model:
 
         # Combine the model parameters too
         parameters = self.parameters + other.parameters
-        paramtitles = self.paramtitles.append(other.paramtitles)
+        if self.paramtitles is None:
+            paramtitles = other.paramtitles
+        elif other.paramtitles is not None:
+            paramtitles = self.paramtitles.append(other.paramtitles)
+        else:
+            paramtitles = self.paramtitles
 
         return CompositePyMC3Model([copy.copy(self), other],
                                    parameters=parameters,
                                    paramtitles=paramtitles)
 
     @property
-    def flux(self):
-        """A getter for the flux"""
-        return self._flux
+    def model(self):
+        """A getter for the model."""
+        return self._model
 
-    @flux.setter
-    def flux(self, flux_array):
-        """A setter for the flux
-
-        Parameters
-        ----------
-        flux_array : sequence
-            The flux array
-        """
-        # Check the type
-        if not isinstance(flux_array, (np.ndarray, tuple, list, type(None))):
-            raise TypeError("flux axis must be a tuple, list, or numpy array.")
-
-        # Set the array
-        self._flux = np.ma.masked_array(flux_array)
-
-    @property
-    def time(self):
-        """A getter for the time"""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time"""
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list, type(None))):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the array
-        self._time = np.ma.masked_array(time_array)
-
-    @property
-    def parameters(self):
-        """A getter for the parameters"""
-        return self._parameters
-
-    @parameters.setter
-    def parameters(self, params):
-        """A setter for the parameters"""
-        # Process if it is a parameters file
-        if isinstance(params, str) and os.path.isfile(params):
-            params = Parameters(params)
-
-        # Or a Parameters instance
-        if (params is not None) and (type(params).__name__ !=
-                                     Parameters.__name__):
-            raise TypeError("'params' argument must be a JSON file, "
-                            "ascii file, or Parameters instance.")
-
-        # Set the parameters attribute
-        self._parameters = params
+    @model.setter
+    def model(self, model):
+        """A setter for the model."""
+        self._model = model
+        # Update the components' model
+        for component in self.components:
+            component.model = model
 
     def interp(self, new_time, nints, eval=True, channel=None, **kwargs):
         """Evaluate the model over a different time array.
@@ -169,20 +110,9 @@ class PyMC3Model:
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
-        # Save the current values
-        old_time = copy.deepcopy(self.time)
-        old_nints = copy.deepcopy(self.nints)
-
-        # Evaluate the model on the new time array
-        self.time = new_time
-        self.nints = nints
-        interp_flux = self.eval(eval=eval, channel=channel, **kwargs)
-
-        # Reset the old values
-        self.time = old_time
-        self.nints = old_nints
-
-        return interp_flux
+        # Inherit from Model class but add the eval argument for PyMC3 models
+        return super().interp(new_time, nints, eval=eval, channel=channel,
+                              **kwargs)
 
     def update(self, newparams, **kwargs):
         """Update the model with new parameter values.
@@ -202,75 +132,22 @@ class PyMC3Model:
         for val, key in zip(newparams, self.freenames):
             setattr(self.fit, key, val)
 
+        # The following code should work but doesn't see to work well
+        # self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
+        # longitude of periastron needs to be in degrees for batman!
+        # self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180./np.pi
+
+        for component in self.components:
+            component.update(newparams, **kwargs)
+
     def setup(self, **kwargs):
         """A placeholder function to do any additional setup.
         """
-        return
-
-    def plot(self, components=False, ax=None, draw=False, color='blue',
-             zorder=np.inf, share=False, chan=0, **kwargs):
-        """Plot the model.
-
-        Parameters
-        ----------
-        components : bool; optional
-            Plot all model components.
-        ax : Matplotlib Axes; optional
-            The figure axes to plot on.
-        draw : bool; optional
-            Whether or not to display the plot. Defaults to False.
-        color : str; optional
-            The color to use for the plot. Defaults to 'blue'.
-        zorder : numeric; optional
-            The zorder for the plot. Defaults to np.inf.
-        share : bool; optional
-            Whether or not this model is a shared model. Defaults to False.
-        chan : int; optional
-            The current channel number. Detaults to 0.
-        **kwargs : dict
-            Additional parameters to pass to plot and self.eval().
-        """
-        # Make the figure
-        if ax is None:
-            fig = plt.figure(5103, figsize=(8, 6))
-            ax = fig.gca()
-
-        # Plot the model
-        label = self.fitter
-        if self.name != 'New PyMC3Model':
-            label += ': '+self.name
-        
-        if not share:
-            channel = 0
-        else:
-            channel = chan
-        model = self.eval(channel=channel, incl_GP=True, **kwargs)
-
-        time = self.time
-        if self.multwhite:
-            # Split the arrays that have lengths of the original time axis
-            time = split([time, ], self.nints, chan)[0]
-
-        ax.plot(time, model, '.', ls='', ms=1, label=label,
-                color=color, zorder=zorder)
-
-        if components and self.components is not None:
-            for component in self.components:
-                component.plot(ax=ax, draw=False,
-                               color=next(COLORS), zorder=zorder, share=share,
-                               chan=chan, **kwargs)
-
-        # Format axes
-        ax.set_xlabel(str(self.time_units))
-        ax.set_ylabel('Flux')
-
-        if draw:
-            fig.show()
-        else:
-            return
+        for component in self.components:
+            component.setup(**kwargs)
 
 
-class CompositePyMC3Model(PyMC3Model):
+class CompositePyMC3Model(PyMC3Model, CompositeModel):
     """A class to create composite models."""
     def __init__(self, components, **kwargs):
         """Initialize the composite model.
@@ -286,16 +163,10 @@ class CompositePyMC3Model(PyMC3Model):
         self.issetup = False
 
         # Inherit from PyMC3Model class
-        super().__init__(**kwargs)
+        PyMC3Model.__init__(components=components, **kwargs)
 
-        # Setup PyMC3 model
+        # Setup PyMC3 model (which will also be stored in components)
         self.model = pm.Model()
-
-        # Store the components
-        self.components = components
-        for component in self.components:
-            # Add the PyMC3 model to each component
-            component.model = self.model
 
         self.GP = False
         for component in self.components:
@@ -304,7 +175,7 @@ class CompositePyMC3Model(PyMC3Model):
 
         # Setup PyMC3 model parameters
         with self.model:
-            for parname in self.paramtitles:
+            for i, parname in enumerate(self.paramtitles):
                 param = getattr(self.parameters, parname)
                 if param.ptype in ['independent', 'fixed']:
                     setattr(self.model, parname, param.value)
@@ -315,10 +186,12 @@ class CompositePyMC3Model(PyMC3Model):
                     raise ValueError(message)
                 else:
                     for c in range(self.nchannel_fitted):
-                        if c != 0:
-                            parname_temp = parname+'_'+str(c)
-                        else:
+                        if c == 0:
                             parname_temp = parname
+                        elif self.longparamlist[c][i] != param:
+                            # This parameter is either free or was changed in some way by the user
+                            parname_temp = self.longparamlist[c][i]
+                            param = getattr(self.parameters, parname_temp)
 
                         if param.ptype == 'free' or c == 0:
                             if param.prior == 'U':
@@ -373,42 +246,8 @@ class CompositePyMC3Model(PyMC3Model):
                         else:
                             # If a parameter is shared, make it equal to the
                             # 0th parameter value
-                            setattr(self.model, parname_temp,
-                                    getattr(self.model, parname))
-
-    @property
-    def time(self):
-        """A getter for the time"""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time"""
-        # Check the type
-        if not isinstance(time_array, (np.ndarray, tuple, list)):
-            raise TypeError("Time axis must be a tuple, list, or numpy array.")
-
-        # Set the array
-        self._time = np.ma.masked_array(time_array)
-
-        # Set the array for the components
-        for component in self.components:
-            component.time = time_array
-
-    @property
-    def freenames(self):
-        """A getter for the freenames."""
-        return self._freenames
-
-    @freenames.setter
-    def freenames(self, freenames):
-        """A setter for the freenames."""
-        # Update the components' freenames
-        for component in self.components:
-            component.freenames = freenames
-
-        # Set the freenames attribute
-        self._freenames = freenames
+                            if not hasattr(self.model, parname_temp):
+                                setattr(self.model, parname_temp, param.value)
 
     def setup(self, time, flux, lc_unc):
         """Setup a model for evaluation and fitting.
@@ -487,21 +326,21 @@ class CompositePyMC3Model(PyMC3Model):
                         gps = component.gps
                         gp_component = component
                 
-                full_fit = self.eval(eval=False)
+                full_fit_lc = self.eval(eval=False)
                 for c in range(self.nchannel_fitted):
                     if self.nchannel_fitted > 1:
                         chan = self.fitted_channels[c]
                         # get flux and uncertainties for current channel
                         flux, unc_fit = split([self.flux, self.scatter_array],
                                               self.nints, chan)
-                        fit = split([full_fit, ], self.nints, chan)[0]
+                        fit_lc = split([full_fit_lc, ], self.nints, chan)[0]
                     else:
                         chan = 0
                         # get flux and uncertainties for current channel
                         flux = self.flux
                         unc_fit = self.scatter_array
-                        fit = full_fit
-                    residuals = flux-fit
+                        fit_lc = full_fit_lc
+                    residuals = flux-fit_lc
 
                     gps[c].compute(gp_component.kernel_inputs[chan][0],
                                    yerr=unc_fit)
@@ -513,19 +352,19 @@ class CompositePyMC3Model(PyMC3Model):
         
         self.issetup = True
 
-    def eval(self, eval=True, channel=None, incl_GP=False, **kwargs):
+    def eval(self, channel=None, incl_GP=False, eval=True, **kwargs):
         """Evaluate the model components.
 
         Parameters
         ----------
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -534,49 +373,23 @@ class CompositePyMC3Model(PyMC3Model):
         flux : ndarray
             The evaluated model predictions at the times self.time.
         """
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
+        # Inherit from CompositeModel but add eval argument for PyMC3 models
+        return CompositeModel.eval(channel=channel, incl_GP=incl_GP,
+                                   eval=eval, **kwargs)
 
-        if channel is None:
-            nchan = self.nchannel_fitted
-        else:
-            nchan = 1
-
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
-        else:
-            flux = np.ones(len(self.time)*nchan)
-
-        # Evaluate flux of each component
-        for component in self.components:
-            if component.time is None:
-                component.time = self.time
-            if component.modeltype != 'GP':
-                flux *= component.eval(eval=eval, channel=channel, **kwargs)
-
-        if incl_GP:
-            flux += self.GPeval(flux, eval=eval, channel=channel, **kwargs)
-
-        return flux
-
-    def syseval(self, eval=True, channel=None, incl_GP=False, **kwargs):
+    def syseval(self, channel=None, incl_GP=False, eval=True, **kwargs):
         """Evaluate the systematic model components only.
 
         Parameters
         ----------
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -585,48 +398,22 @@ class CompositePyMC3Model(PyMC3Model):
         flux : ndarray
             The evaluated systematics model predictions at the times self.time.
         """
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
+        # Inherit from CompositeModel but add eval argument for PyMC3 models
+        return CompositeModel.syseval(channel=channel, incl_GP=incl_GP,
+                                      eval=eval, **kwargs)
 
-        if channel is None:
-            nchan = self.nchannel_fitted
-        else:
-            nchan = 1
-
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
-        else:
-            flux = np.ones(len(self.time)*nchan)
-
-        # Evaluate flux at each model
-        for component in self.components:
-            if component.modeltype == 'systematic':
-                if component.time is None:
-                    component.time = self.time
-                flux *= component.eval(eval=eval, channel=channel, **kwargs)
-
-        if incl_GP:
-            flux += self.GPeval(flux, eval=eval, channel=channel, **kwargs)
-
-        return flux
-
-    def GPeval(self, fit, eval=True, channel=None, **kwargs):
+    def GPeval(self, fit, channel=None, eval=True, **kwargs):
         """Evaluate the GP model components only.
 
         Parameters
         ----------
         fit : ndarray
             The model predictions (excluding the GP).
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         eval : bool; optional
             If true evaluate the model, otherwise simply compile the model.
             Defaults to True.
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -635,44 +422,23 @@ class CompositePyMC3Model(PyMC3Model):
         flux : ndarray
             The evaluated GP model predictions at the times self.time.
         """
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
+        # Inherit from CompositeModel but add eval argument for PyMC3 models
+        return CompositeModel.GPeval(fit, channel=channel,
+                                     eval=eval, **kwargs)
 
-        if channel is None:
-            nchan = self.nchannel_fitted
-        else:
-            nchan = 1
-
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.zeros(len(time))
-        else:
-            flux = np.zeros(len(self.time)*nchan)
-
-        # Evaluate flux
-        for component in self.components:
-            if component.modeltype == 'GP':
-                flux = component.eval(fit, eval=eval, channel=channel,
-                                      **kwargs)
-        return flux
-
-    def physeval(self, eval=True, channel=None, interp=False, **kwargs):
+    def physeval(self, channel=None, interp=False, eval=True, **kwargs):
         """Evaluate the physical model components only.
 
         Parameters
         ----------
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         interp : bool; optional
             Whether to uniformly sample in time or just use
             the self.time time points. Defaults to False.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -686,64 +452,9 @@ class CompositePyMC3Model(PyMC3Model):
             The value of self.time if interp==False, otherwise the time points
             used in the temporally interpolated model.
         """
-        # Get the time
-        if self.time is None:
-            self.time = kwargs.get('time')
-
-        if channel is None:
-            nchan = self.nchannel_fitted
-            channels = self.fitted_channels
-        else:
-            nchan = 1
-            channels = [channel]
-
-        if interp:
-            if self.multwhite:
-                new_time = []
-                nints_interp = []
-                for chan in channels:
-                    # Split the arrays that have lengths of
-                    # the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    
-                    dt = time[1]-time[0]
-                    steps = int(np.round((time[-1]-time[0])/dt+1))
-                    nints_interp.append(steps)
-                    new_time.extend(np.linspace(time[0], time[-1], steps,
-                                                endpoint=True))
-                new_time = np.array(new_time)
-            else:
-                time = self.time
-                dt = time[1]-time[0]
-                steps = int(np.round((time[-1]-time[0])/dt+1))
-                nints_interp = np.ones(nchan)*steps
-                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
-        else:
-            new_time = self.time
-            if self.multwhite and channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                new_time = split([new_time, ], self.nints, channel)[0]
-            nints_interp = self.nints
-
-        # Setup the flux array
-        if self.multwhite:
-            flux = np.ones(len(new_time))
-        else:
-            flux = np.ones(len(new_time)*nchan)
-
-        # Evaluate flux at each model
-        for component in self.components:
-            if component.modeltype == 'physical':
-                if component.time is None:
-                    component.time = self.time
-                if interp:
-                    flux *= component.interp(new_time, nints_interp, eval=eval,
-                                             channel=channel, **kwargs)
-                else:
-                    flux *= component.eval(eval=eval, channel=channel,
-                                           **kwargs)
-
-        return flux, new_time, nints_interp
+        # Inherit from CompositeModel but add eval argument for PyMC3 models
+        return CompositeModel.physeval(channel=channel, interp=interp,
+                                       eval=eval, **kwargs)
 
     def compute_fp(self, theta=0):
         """Compute the planetary flux at an arbitrary orbital position.
@@ -766,17 +477,3 @@ class CompositePyMC3Model(PyMC3Model):
         for component in self.components:
             if component.name == 'starry':
                 return component.compute_fp(theta=theta)
-
-    def update(self, newparams, **kwargs):
-        """Update parameters in the model components.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.update().
-        """
-        for component in self.components:
-            component.update(newparams, **kwargs)

@@ -1,6 +1,7 @@
 import numpy as np
 import inspect
 import astropy.constants as const
+import re
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"
@@ -21,8 +22,124 @@ from ...lib.split_channels import split
 
 
 class temp_class:
+    # FINDME: I shouldn't need this anymore once I've fully setup PlanetParams
     def __init__(self):
         pass
+
+
+class PlanetParams():
+    """
+    Define planet parameters.
+    """
+    def __init__(self, model, pid=0, channel=0, eval=True):
+        """ 
+        Set attributes to PlanetParams object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names 
+            and their current values.
+        pid : int; optional
+            Planet ID, default is 0.
+        channel : int, optional
+            The channel number for multi-wavelength fits or mutli-white fits.
+            Defaults to 0.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        """
+        # Planet ID
+        self.pid = pid
+        if pid == 0:
+            self.pid_id = ''
+        else:
+            self.pid_id = str(self.pid)
+        # Channel ID
+        self.channel = channel
+        if channel == 0:
+            self.channel_id = ''
+        else:
+            self.channel_id = f'_{self.channel}'
+        # Set transit/eclipse parameters
+        self.t0 = None
+        self.rprs = None
+        self.rp = None
+        self.inc = None
+        self.ars = None
+        self.a = None
+        self.per = None
+        self.ecc = 0.
+        self.w = None
+        self.fpfs = None
+        self.fp = None
+        self.t_secondary = None
+        self.cos1_amp = 0.
+        self.cos1_off = 0.
+        self.cos2_amp = 0.
+        self.cos2_off = 0.
+        self.AmpCos1 = 0.
+        self.AmpSin1 = 0.
+        self.AmpCos2 = 0.
+        self.AmpSin2 = 0.
+        self.gamma = 0.
+
+        if eval:
+            parameterObject = model.fit
+        else:
+            parameterObject = model.model
+
+        for item in self.__dict__.keys():
+            item0 = item+self.pid_id
+            try:
+                if model.parameters.dict[item0][1] == 'free':
+                    item0 += self.channel_id
+                setattr(self, item, getattr(parameterObject, item0))
+            except KeyError:
+                pass
+        # Allow for rp or rprs
+        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
+            item0 = 'rp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'rprs', getattr(parameterObject, item0))
+        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
+            item0 = 'rprs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'rp', getattr(parameterObject, item0))
+        # Allow for a or ars
+        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
+            item0 = 'a' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'ars', getattr(parameterObject, item0))
+        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
+            item0 = 'ars' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'a', getattr(parameterObject, item0))
+        # Allow for fp or fpfs
+        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
+            item0 = 'fp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'fpfs', getattr(parameterObject, item0))
+        elif self.fpfs is None:
+            setattr(self, 'fpfs', 0.)
+        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
+            item0 = 'fpfs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'fp', getattr(parameterObject, item0))
+        elif self.fp is None:
+            setattr(self, 'fp', 0.)
+        # Set stellar radius
+        if 'Rs' in model.parameters.dict.keys():
+            item0 = 'Rs'
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'Rs', getattr(parameterObject, item0))
 
 
 class StarryModel(PyMC3Model):
@@ -45,7 +162,7 @@ class StarryModel(PyMC3Model):
         if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
             self.compute_ltt = True
 
-        required = np.array(['Rs'])
+        required = np.array(['Rs',])
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
             message = (f'Missing required params {required[missing]} in your '
@@ -78,7 +195,6 @@ class StarryModel(PyMC3Model):
             self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
         self.ld_from_file = kwargs.get('ld_from_file')
-
         self.recenter_ld_prior = kwargs.get('recenter_ld_prior')
 
         # Replace u parameters with generated limb-darkening values
@@ -115,26 +231,21 @@ class StarryModel(PyMC3Model):
             # For example, this way we can do `temp.u1` rather than
             # `getattr(self.model, 'u1_'+c)`.
             temp = temp_class()
-            for key in self.paramtitles:
-                ptype = getattr(self.parameters, key).ptype
-                if (ptype not in ['fixed', 'independent']
-                        and c > 0):
-                    # Remove the _c part of the parname but leave any
-                    # other underscores intact
-                    setattr(temp, key, getattr(self.model,
-                                               key+'_'+str(c)))
+            for key in self.longparamlist[c]:
+                # FINDME: I shouldn't need this anymore once I've fully setup PlanetParams
+                # Remove the _c part of the parname but leave any
+                # other underscores intact
+                if c == 0:
+                    suffix = ''
                 else:
-                    setattr(temp, key, getattr(self.model, key))
-
-            # Solve Keplerian orbital period equation for system mass
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Ms = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                    suffix = '_'+str(c)
+                    if key.endswith(suffix):
+                        key = re.sub(suffix, '', key)
+                setattr(temp, key, getattr(self.model, key+suffix, getattr(self.model, key)))
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=Ms, r=temp.Rs)
+                                  m=0, r=temp.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -158,23 +269,35 @@ class StarryModel(PyMC3Model):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
-                planet_map2 = starry.Map(ydeg=self.ydeg)
+                planet_map_temp = starry.Map(ydeg=self.ydeg)
                 for ell in range(1, self.ydeg+1):
                     for m in range(-ell, ell+1):
                         if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
-                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
-                amp = temp.fp/tt.abs_(planet_map2.flux(theta=0)[0])
+                            planet_map[ell, m] = getattr(temp,
+                                                         f'Y{ell}{m}')
+                            planet_map_temp[ell, m] = getattr(temp,
+                                                              f'Y{ell}{m}')
+                amp = temp.fp/tt.abs_(planet_map_temp.flux(theta=0)[0])
                 planet_map.amp = amp
             self.rps.append(temp.rp)
+
+            # Solve Keplerian orbital period equation for system mass
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Mp = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+
+            # The following code should work but doesn't see to work well
+            # self.model.ecc = tt.sqrt(temp.ecosw**2 + temp.esinw**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # self.model.w = tt.arctan2(temp.esinw, temp.ecosw)*180./np.pi
 
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                m=0,
-                # Convert radius to R_star units
+                m=Mp,
+                # Convert radius ratio to R_star units
                 r=tt.abs_(temp.rp)*temp.Rs,
-                # Setting porb here overwrites a
                 a=temp.a,
                 # Another option to set inclination using impact parameter
                 # inc=tt.arccos(b/a)*180/np.pi
@@ -182,11 +305,8 @@ class StarryModel(PyMC3Model):
                 ecc=temp.ecc,
                 w=temp.w
             )
-            # Setting porb here may not override a
             planet.porb = temp.per
-            # Setting prot here may not override a
             planet.prot = temp.per
-            # Offset is controlled by Y11
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
@@ -194,7 +314,7 @@ class StarryModel(PyMC3Model):
             system = starry.System(star, planet, light_delay=self.compute_ltt)
             self.systems.append(system)
 
-    def eval(self, eval=True, channel=None, **kwargs):
+    def eval(self, eval=True, channel=None, piecewise=False, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
@@ -204,6 +324,9 @@ class StarryModel(PyMC3Model):
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        piecewise : bool; optional
+            If True, return the lightcurve from each object, otherwise return
+            the lightcurve of the entire system.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -219,16 +342,20 @@ class StarryModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
+        # Currently can't separate starry models (given mutual occultations)
+        pid_iter = range(self.num_planets)
+
         if eval:
-            lib = np
+            lib = np.ma
             systems = self.fit.systems
-            rps = self.fit_rps
         else:
             lib = tt
             systems = self.systems
-            rps = self.rps
 
-        phys_flux = lib.zeros(0)
+        if piecewise:
+            returnVal = []
+        else:
+            returnVal = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -240,20 +367,46 @@ class StarryModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            # Combine the planet and stellar flux (allowing negative rp)
-            fstar, fp = systems[chan].flux(time, total=False)
-            # Do some annoying math to allow theano functions to compile
-            # (correctly defined for -1 < rp < 1)
-            sign = (lib.ceil(rps[chan])+lib.floor(rps[chan]))
-            fstar = (fstar-1)*sign + 1
-            fp = fp*sign
-            lcpiece = fstar+fp
+            temp_system = systems[chan]
+            if self.mutualOccultations:
+                if eval:
+                    result = temp_system.flux(time, total=False).eval()
+                else:
+                    result = temp_system.flux(time, total=False)
+                fstar = result.pop(0)
+                fplanets = result
+                if self.num_planets == 1:
+                    fplanets = [fplanets,]
+                if pid is not None:
+                    fplanets = [fplanets[pid],]
+            else:
+                fstar = lib.ones(len(time))
+                fplanets = []
+                for pid in pid_iter:
+                    simple_system = starry.System(
+                        temp_system.primary, temp_system.secondaries[pid],
+                        light_delay=temp_system.light_delay)
+                    if eval:
+                        transit, eclipse = simple_system.flux(
+                            time, total=False).eval()
+                    else:
+                        transit, eclipse = simple_system.flux(
+                            time, total=False)
+                    fstar *= transit
+                    fplanets.append(eclipse)
+            result = [fstar, *fplanets]
 
-            if eval:
-                lcpiece = lcpiece.eval()
-            phys_flux = lib.concatenate([phys_flux, lcpiece])
+            if piecewise:
+                # Return each body's lightcurve separately
+                returnVal.append(result)
+            else:
+                # Return the system lightcurve
+                lcpiece = lib.zeros(len(time))
+                for piece in result:
+                    lcpiece = lcpiece+piece 
+                returnVal = lib.concatenate([returnVal, lcpiece])
 
-        return phys_flux
+        return returnVal
 
     def compute_fp(self, theta=0):
         """Compute the planetary flux at an arbitrary orbital position.
@@ -297,25 +450,21 @@ class StarryModel(PyMC3Model):
             # For example, this way we can do `temp.u1` rather than
             # `getattr(self.model, 'u1_'+c)`.
             temp = temp_class()
-            for key in self.paramtitles:
-                ptype = getattr(self.parameters, key).ptype
-                if (ptype not in ['fixed', 'independent', 'shared']
-                        and c > 0):
-                    # Remove the _c part of the parname but leave any
-                    # other underscores intact
-                    setattr(temp, key, getattr(self.fit, key+'_'+str(c)))
+            for key in self.longparamlist[c]:
+                # FINDME: I shouldn't need this anymore once I've fully setup PlanetParams
+                # Remove the _c part of the parname but leave any
+                # other underscores intact
+                if c == 0:
+                    suffix = ''
                 else:
-                    setattr(temp, key, getattr(self.fit, key))
-
-            # Solve Keplerian orbital period equation for system mass
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Ms = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                    suffix = '_'+str(c)
+                    if key.endswith(suffix):
+                        key = re.sub(suffix, '', key)
+                setattr(temp, key, getattr(self.fit, key+suffix, getattr(self.fit, key)))
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=Ms, r=temp.Rs)
+                                  m=0, r=temp.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -339,23 +488,35 @@ class StarryModel(PyMC3Model):
                 planet_map = starry.Map(ydeg=self.ydeg, amp=0)
             else:
                 planet_map = starry.Map(ydeg=self.ydeg)
-                planet_map2 = starry.Map(ydeg=self.ydeg)
+                planet_map_temp = starry.Map(ydeg=self.ydeg)
                 for ell in range(1, self.ydeg+1):
                     for m in range(-ell, ell+1):
                         if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp, f'Y{ell}{m}')
-                            planet_map2[ell, m] = getattr(temp, f'Y{ell}{m}')
-                amp = temp.fp/np.abs(planet_map2.flux(theta=0)[0])
+                            planet_map[ell, m] = getattr(temp,
+                                                         f'Y{ell}{m}')
+                            planet_map_temp[ell, m] = getattr(temp,
+                                                              f'Y{ell}{m}')
+                amp = temp.fp/np.abs(planet_map_temp.flux(theta=0)[0])
                 planet_map.amp = amp
             self.fit_rps.append(temp.rp)
+
+            # Solve Keplerian orbital period equation for system mass
+            # (otherwise starry is going to mess with P or a...)
+            a = temp.a*temp.Rs*const.R_sun.value
+            p = temp.per*(24.*3600.)
+            Mp = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+
+            # The following code should work but doesn't see to work well
+            # ecc = np.sqrt(temp.ecosw**2 + temp.esinw**2)
+            # longitude of periastron needs to be in degrees for batman!
+            # w = np.arctan2(temp.esinw, temp.ecosw)*180./np.pi
 
             # Initialize planet object
             planet = starry.Secondary(
                 planet_map,
-                m=0,
+                m=Mp,
                 # Convert radius to R_star units
                 r=np.abs(temp.rp)*temp.Rs,
-                # Setting porb here overwrites a
                 a=temp.a,
                 # Another option to set inclination using impact parameter
                 # inc=tt.arccos(b/a)*180/np.pi
@@ -363,14 +524,11 @@ class StarryModel(PyMC3Model):
                 ecc=temp.ecc,
                 w=temp.w
             )
-            # Setting porb here may not override a
             planet.porb = temp.per
-            # Setting prot here may not override a
             planet.prot = temp.per
-            # Offset is controlled by Y11
             planet.theta0 = 180.0
             planet.t0 = temp.t0
 
             # Instantiate the system
-            sys = starry.System(star, planet, light_delay=self.compute_ltt)
-            self.fit.systems.append(sys)
+            system = starry.System(star, planet, light_delay=self.compute_ltt)
+            self.fit.systems.append(system)

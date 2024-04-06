@@ -576,6 +576,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
             freenames.append(key)
     freenames = np.array(freenames)
 
+    if not hasattr(meta, 'useHODLR'):
+            meta.useHODLR = False
     if not hasattr(meta, 'recenter_ld_prior'):
         meta.recenter_ld_prior = True
     if not hasattr(meta, 'num_planets'):
@@ -583,10 +585,38 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     if not hasattr(meta, 'compute_ltt'):
         # Let each model have its own default
         meta.compute_ltt = None
+    if not hasattr(meta, 'force_positivity'):
+        # Check if should enforce positivity
+        meta.force_positivity = False
+    if not hasattr(meta, 'mutualOccultations'):
+        # Compute planet-planet occultations when using starry?
+        meta.mutualOccultations = True
+
+    if 'starry' in meta.run_myfuncs:
+        use_starry = True
+        SinusoidModel = dm.SinusoidPhaseCurveModel
+        PolynomialModel = dm.PolynomialModel
+        StepModel = dm.StepModel
+        ExpRampModel = dm.ExpRampModel
+        HSTRampModel = dm.HSTRampModel
+        CentroidModel = dm.CentroidModel
+        GPModel = dm.GPModel
+        AstroModel = dm.AstroModel
+        CompositeModel = dm.CompositeModel
+    else:
+        SinusoidModel = m.SinusoidPhaseCurveModel
+        PolynomialModel = m.PolynomialModel
+        StepModel = m.StepModel
+        ExpRampModel = m.ExpRampModel
+        HSTRampModel = m.HSTRampModel
+        CentroidModel = m.CentroidModel
+        GPModel = m.GPModel
+        AstroModel = m.AstroModel
+        CompositeModel = m.CompositeModel
 
     # Make the astrophysical and detector models
     modellist = []
-    if 'starry' in meta.run_myfuncs:
+    if use_starry:
         # Fixed any masked uncertainties
         masked = np.logical_or(np.ma.getmaskarray(flux),
                                np.ma.getmaskarray(flux_err))
@@ -595,7 +625,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         lc_model.unc.mask = False
         lc_model.unc_fit.mask = False
 
-        t_starry = dm.StarryModel(parameters=params, name='starry',
+        t_starry = dm.StarryModel(parameters=params,
                                   fmt='r--', log=log,
                                   time=time, time_units=time_units,
                                   freenames=freenames,
@@ -610,11 +640,13 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   recenter_ld_prior=meta.recenter_ld_prior,
                                   compute_ltt=meta.compute_ltt,
                                   multwhite=lc_model.multwhite,
-                                  nints=lc_model.nints)
+                                  nints=lc_model.nints,
+                                  num_planets=meta.num_planets,
+                                  mutualOccultations=meta.mutualOccultations)
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
-        t_transit = m.BatmanTransitModel(parameters=params, name='batman_tr',
+        t_transit = m.BatmanTransitModel(parameters=params,
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,
                                          freenames=freenames,
@@ -633,7 +665,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
-        t_eclipse = m.BatmanEclipseModel(parameters=params, name='batman_ecl',
+        t_eclipse = m.BatmanEclipseModel(parameters=params,
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,
                                          freenames=freenames,
@@ -648,7 +680,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          num_planets=meta.num_planets)
         modellist.append(t_eclipse)
     if 'poet_tr' in meta.run_myfuncs:
-        t_poet_tr = m.PoetTransitModel(parameters=params, name='poet_tr',
+        t_poet_tr = m.PoetTransitModel(parameters=params,
                                        fmt='r--', log=log, time=time,
                                        time_units=time_units,
                                        freenames=freenames,
@@ -667,7 +699,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        num_planets=meta.num_planets)
         modellist.append(t_poet_tr)
     if 'poet_ecl' in meta.run_myfuncs:
-        t_poet_ecl = m.PoetEclipseModel(parameters=params, name='poet_ecl',
+        t_poet_ecl = m.PoetEclipseModel(parameters=params,
                                         fmt='r--', log=log, time=time,
                                         time_units=time_units,
                                         freenames=freenames,
@@ -682,21 +714,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         num_planets=meta.num_planets)
         modellist.append(t_poet_ecl)
     if 'poet_pc' in meta.run_myfuncs:
-        model_names = np.array([model.name for model in modellist])
-        t_model = None
-        e_model = None
-        # Nest any transit and/or eclipse models inside of the
-        # phase curve model
-        if 'poet_tr' in model_names:
-            t_model = modellist.pop(np.where(model_names == 'poet_tr')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        if 'poet_ecl' in model_names:
-            e_model = modellist.pop(np.where(model_names == 'poet_ecl')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
-        t_poet_pc = m.PoetPCModel(parameters=params, name='phasecurve',
+        t_poet_pc = m.PoetPCModel(parameters=params,
                                   fmt='r--', log=log, time=time,
                                   time_units=time_units,
                                   freenames=freenames,
@@ -706,67 +724,60 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   fitted_channels=fitted_channels,
                                   paramtitles=paramtitles,
                                   force_positivity=meta.force_positivity,
-                                  transit_model=t_model,
-                                  eclipse_model=e_model,
                                   multwhite=lc_model.multwhite,
                                   nints=lc_model.nints,
                                   num_planets=meta.num_planets)
         modellist.append(t_poet_pc)
-    if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
+    if 'sinusoid_pc' in meta.run_myfuncs and use_starry:
         model_names = np.array([model.name for model in modellist])
         # Nest the starry model inside of the phase curve model
         starry_model = modellist.pop(np.where(model_names == 'starry')[0][0])
-        t_phase = \
-            dm.SinusoidPhaseCurveModel(starry_model,
-                                       parameters=params, name='phasecurve',
-                                       fmt='r--', log=log, time=time,
-                                       time_units=time_units,
-                                       freenames=freenames,
-                                       longparamlist=lc_model.longparamlist,
-                                       nchannel=chanrng,
-                                       nchannel_fitted=nchannel_fitted,
-                                       fitted_channels=fitted_channels,
-                                       paramtitles=paramtitles,
-                                       multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints,
-                                       num_planets=meta.num_planets)
+        t_phase = SinusoidModel(starry_model,
+                                parameters=params,
+                                fmt='r--', log=log, time=time,
+                                time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                paramtitles=paramtitles,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints,
+                                num_planets=meta.num_planets)
         modellist.append(t_phase)
     elif 'sinusoid_pc' in meta.run_myfuncs:
-        model_names = np.array([model.name for model in modellist])
-        t_model = None
-        e_model = None
-        # Nest any transit and/or eclipse models inside of the
-        # phase curve model
-        if 'batman_tr' in model_names:
-            t_model = modellist.pop(
-                np.where(model_names == 'batman_tr')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        if 'batman_ecl' in model_names:
-            e_model = modellist.pop(
-                np.where(model_names == 'batman_ecl')[0][0])
-            model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
+        t_phase = SinusoidModel(parameters=params,
+                                fmt='r--', log=log, time=time,
+                                time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                paramtitles=paramtitles,
+                                force_positivity=meta.force_positivity,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints,
+                                num_planets=meta.num_planets)
+        modellist.append(t_phase)
+    if 'quasilambert_pc' in meta.run_myfuncs:
         t_phase = \
-            m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
-                                      fmt='r--', log=log, time=time,
-                                      time_units=time_units,
-                                      freenames=freenames,
-                                      longparamlist=lc_model.longparamlist,
-                                      nchannel=chanrng,
-                                      nchannel_fitted=nchannel_fitted,
-                                      fitted_channels=fitted_channels,
-                                      paramtitles=paramtitles,
-                                      force_positivity=meta.force_positivity,
-                                      transit_model=t_model,
-                                      eclipse_model=e_model,
-                                      multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints,
-                                      num_planets=meta.num_planets)
+            m.QuasiLambertianPhaseCurve(parameters=params,
+                                        fmt='r--', log=log, time=time,
+                                        time_units=time_units,
+                                        freenames=freenames,
+                                        longparamlist=lc_model.longparamlist,
+                                        nchannel=chanrng,
+                                        nchannel_fitted=nchannel_fitted,
+                                        fitted_channels=fitted_channels,
+                                        paramtitles=paramtitles,
+                                        multwhite=lc_model.multwhite,
+                                        nints=lc_model.nints,
+                                        num_planets=meta.num_planets)
         modellist.append(t_phase)
     if 'damped_osc' in meta.run_myfuncs:
-        t_osc = m.DampedOscillatorModel(parameters=params, name='damped_osc',
+        t_osc = m.DampedOscillatorModel(parameters=params,
                                         fmt='r--', log=log, time=time,
                                         time_units=time_units,
                                         freenames=freenames,
@@ -779,8 +790,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         nints=lc_model.nints)
         modellist.append(t_osc)
     if 'lorentzian' in meta.run_myfuncs:
-        t_lorentzian = m.LorentzianModel(parameters=params, 
-                                         name='lorentzian',
+        t_lorentzian = m.LorentzianModel(parameters=params,
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,
                                          freenames=freenames,
@@ -793,11 +803,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nints=lc_model.nints)
         modellist.append(t_lorentzian)
     if 'polynomial' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            PolynomialModel = dm.PolynomialModel
-        else:
-            PolynomialModel = m.PolynomialModel
-        t_polynom = PolynomialModel(parameters=params, name='polynom',
+        t_polynom = PolynomialModel(parameters=params,
                                     fmt='r--', log=log, time=time,
                                     time_units=time_units,
                                     freenames=freenames,
@@ -810,11 +816,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     nints=lc_model.nints)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            StepModel = dm.StepModel
-        else:
-            StepModel = m.StepModel
-        t_step = StepModel(parameters=params, name='step', fmt='r--',
+        t_step = StepModel(parameters=params, fmt='r--',
                            log=log, time=time, time_units=time_units,
                            freenames=freenames,
                            longparamlist=lc_model.longparamlist,
@@ -826,11 +828,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            nints=lc_model.nints)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            ExpRampModel = dm.ExpRampModel
-        else:
-            ExpRampModel = m.ExpRampModel
-        t_expramp = ExpRampModel(parameters=params, name='ramp', fmt='r--',
+        t_expramp = ExpRampModel(parameters=params, fmt='r--',
                                  log=log, time=time, time_units=time_units,
                                  freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
@@ -842,11 +840,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  nints=lc_model.nints)
         modellist.append(t_expramp)
     if 'hstramp' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            HSTRampModel = dm.HSTRampModel
-        else:
-            HSTRampModel = m.HSTRampModel
-        t_hstramp = HSTRampModel(parameters=params, name='hstramp', fmt='r--',
+        t_hstramp = HSTRampModel(parameters=params, fmt='r--',
                                  log=log, time=time, time_units=time_units,
                                  freenames=freenames,
                                  longparamlist=lc_model.longparamlist,
@@ -858,11 +852,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  nints=lc_model.nints)
         modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='xpos', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
@@ -875,11 +865,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='xwidth', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
@@ -892,11 +878,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='ypos', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
@@ -909,11 +891,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
-        if 'starry' in meta.run_myfuncs:
-            CentroidModel = dm.CentroidModel
-        else:
-            CentroidModel = m.CentroidModel
-        t_cent = CentroidModel(parameters=params, name='ywidth', fmt='r--',
+        t_cent = CentroidModel(parameters=params, fmt='r--',
                                log=log, time=time, time_units=time_units,
                                freenames=freenames,
                                longparamlist=lc_model.longparamlist,
@@ -926,14 +904,8 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
-        if not hasattr(meta, 'useHODLR'):
-            meta.useHODLR = False
-        if 'starry' in meta.run_myfuncs:
-            GPModel = dm.GPModel
-        else:
-            GPModel = m.GPModel
         t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
-                       parameters=params, name='GP', fmt='r--', log=log,
+                       parameters=params, fmt='r--', log=log,
                        time=time, time_units=time_units,
                        gp_code=meta.GP_package,
                        useHODLR=meta.useHODLR,
@@ -947,26 +919,38 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                        nints=lc_model.nints)
         modellist.append(t_GP)
 
-    if 'starry' in meta.run_myfuncs:
-        # Only have that one model for starry
-        model = dm.CompositePyMC3Model(modellist, parameters=params,
-                                       log=log, time=time,
-                                       time_units=time_units,
-                                       freenames=freenames,
-                                       longparamlist=lc_model.longparamlist,
-                                       nchannel=chanrng,
-                                       nchannel_fitted=nchannel_fitted,
-                                       fitted_channels=fitted_channels,
-                                       paramtitles=paramtitles,
-                                       multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints)
-    else:
-        model = m.CompositeModel(modellist, parameters=params, time=time,
-                                 nchannel=chanrng,
-                                 nchannel_fitted=nchannel_fitted,
-                                 fitted_channels=fitted_channels,
-                                 multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+    # Combine all physical models into an AstroModel
+    physical_models = [model for model in modellist
+                       if model.modeltype=='physical']
+    modellist = [model for model in modellist
+                 if model.modeltype!='physical']
+    astroModel = AstroModel(components=physical_models,
+                            parameters=params,
+                            fmt='r--', log=log, time=time,
+                            time_units=time_units,
+                            freenames=freenames,
+                            longparamlist=lc_model.longparamlist,
+                            nchannel=chanrng,
+                            nchannel_fitted=nchannel_fitted,
+                            fitted_channels=fitted_channels,
+                            paramtitles=paramtitles,
+                            multwhite=lc_model.multwhite,
+                            nints=lc_model.nints,
+                            num_planets=meta.num_planets)
+    modellist.append(astroModel)
+
+    # Combine all models into a composite model
+    model = CompositeModel(modellist, parameters=params,
+                           log=log, time=time, time_units=time_units,
+                           freenames=freenames,
+                           longparamlist=lc_model.longparamlist,
+                           nchannel=chanrng,
+                           nchannel_fitted=nchannel_fitted,
+                           fitted_channels=fitted_channels,
+                           paramtitles=paramtitles,
+                           multwhite=lc_model.multwhite,
+                           nints=lc_model.nints,
+                            num_planets=meta.num_planets)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")

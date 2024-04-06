@@ -1,11 +1,19 @@
 import numpy as np
-from copy import deepcopy
 
-from .Model import Model
+import theano
+theano.config.gcc__cxxflags += " -fexceptions"
+import theano.tensor as tt
+
+# Avoid tonnes of "Cannot construct a scalar test value" messages
+import logging
+logger = logging.getLogger("theano.tensor.opt")
+logger.setLevel(logging.ERROR)
+
+from .PyMC3Models import PyMC3Model
 from ...lib.split_channels import split
 
 
-class AstroModel(Model):
+class AstroModel(PyMC3Model):
     """A model which combines all astrophysical components."""
     def __init__(self, components, **kwargs):
         """Initialize the phase curve model.
@@ -43,30 +51,27 @@ class AstroModel(Model):
             The flux array
         """
         self._components = components
-        self.transit_model = []
-        self.eclipse_model = []
+        self.starry_model = []
         self.phasevariation_models = []
         self.stellar_models = []
         for component in self.components:
-            if 'transit' in component.name.lower():
-                self.transit_model = component
-            elif 'eclipse' in component.name.lower():
-                self.eclipse_model = component
+            if 'starry' in component.name.lower():
+                self.starry_model = component
             elif 'phase curve' in component.name.lower():
                 self.phasevariation_models.append(component)
             else:
                 self.stellar_models.append(component)
 
-    def eval(self, channel=None, pid=None, **kwargs):
+    def eval(self, channel=None, eval=True, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
-        pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
-            all planets.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -82,18 +87,19 @@ class AstroModel(Model):
             nchan = 1
             channels = [channel, ]
 
-        pid_input = deepcopy(pid)
-        if pid_input is None:
-            pid_iter = range(self.num_planets)
-        else:
-            pid_iter = [pid_input,]
+        # Currently can't separate starry models (given mutual occultations)
+        pid_iter = range(self.num_planets)
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # Set all parameters
-        lcfinal = np.ma.zeros(0)
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
+        lcfinal = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -105,26 +111,28 @@ class AstroModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            starFlux = np.ma.ones(len(time))
+            starFlux = lib.ones(len(time))
             for component in self.stellar_models:
                 starFlux *= component.eval(channel=chan, eval=eval, **kwargs)
-            if self.transit_model is not None:
-                starFlux *= self.transit_model.eval(channel=chan,
-                                                    pid=pid_input,
-                                                    **kwargs)
+            if self.starry_model is not None:
+                result = self.starry_model.eval(channel=chan, eval=eval,
+                                                piecewise=True, **kwargs)
+                transits = result.pop(0)
+                eclipses = result
+                starFlux *= transits
 
-            planetFluxes = np.ma.zeros(len(time))
+            planetFluxes = lib.zeros(len(time))
             for pid in pid_iter:
-                if self.eclipse_model is not None:
-                    planetFlux = self.eclipse_model.eval(channel=chan, pid=pid,
-                                                         **kwargs)
+                if self.starry_model is not None:
+                    planetFlux = eclipses[pid]
                 else:
-                    planetFlux = np.ma.ones(len(time))
+                    planetFlux = lib.ones(len(time))
 
                 for model in self.phasevariation_models:
-                    planetFlux *= model.eval(channel=chan, pid=pid, **kwargs)
+                    planetFlux *= model.eval(channel=chan, pid=pid,
+                                             eval=eval, **kwargs)
 
                 planetFluxes += planetFlux
 
-            lcfinal = np.ma.append(lcfinal, starFlux+planetFluxes)
+            lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
         return lcfinal

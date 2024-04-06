@@ -59,7 +59,7 @@ class StepModel(PyMC3Model):
         steptimes = np.zeros((nchan, 10)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt

@@ -37,7 +37,7 @@ class QuasiLambertianPhaseCurve(Model):
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
+            Planet ID, default is None which combines the models from
             all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.

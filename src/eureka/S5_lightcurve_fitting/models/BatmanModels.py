@@ -6,8 +6,8 @@ try:
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
-from .Model import Model
-from .KeplerOrbit import KeplerOrbit
+from . import Model
+from . import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
@@ -186,7 +186,7 @@ class BatmanTransitModel(Model):
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
+            Planet ID, default is None which combines the models from
             all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -225,7 +225,7 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.ones(time.shape)
+            light_curve = np.ma.zeros(len(time))
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -348,7 +348,7 @@ class BatmanEclipseModel(Model):
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
+            Planet ID, default is None which combines the models from
             all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -387,7 +387,7 @@ class BatmanEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.ones(time.shape)
+            light_curve = np.ma.zeros(len(time))
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -421,7 +421,7 @@ class BatmanEclipseModel(Model):
                 m_eclipse = self.transit_model(pl_params, 
                                                self.adjusted_time,
                                                transittype='secondary')
-                light_curve += m_eclipse.light_curve(pl_params)-1
+                light_curve += m_eclipse.light_curve(pl_params)
 
             lcfinal = np.ma.append(lcfinal, light_curve)
 

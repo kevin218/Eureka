@@ -10,6 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
+from .StarryModel import PlanetParams
 from ...lib.split_channels import split
 
 
@@ -19,79 +20,22 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         Parameters
         ----------
-        transit_model : eureka.S5_lightcurve_fitting.differentiable_models.StarryModel
+        starry_model : eureka.S5_lightcurve_fitting.differentiable_models.StarryModel
             The starry model to combined with this phase curve model.
             Defaults to None.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """  # NOQA: E501
-        self.starry_model = starry_model
-
         # Inherit from PyMC3Model class
-        super().__init__(**kwargs)
+        super().__init__(**kwargs,
+                         components=[starry_model,],
+                         modeltype='physical')
 
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
+        # Temporary code to switch between different starry models
+        self.starry_model_name = starry_model.name
 
-        self.components = []
-        if self.starry_model is not None:
-            self.components.append(self.starry_model)
-
-        orders = [int(key[6:]) for key in self.paramtitles
-                  if 'AmpCos' in key or 'AmpSin' in key]
-        if len(orders) > 0:
-            self.maxOrder = np.max(orders)
-        else:
-            raise AssertionError('There are no AmpCos or AmpSin parameters to'
-                                 'fit. Either remove sinusoid_pc or add some'
-                                 'AmpCos or AmpSin terms to fit.')
-
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time."""
-        self._time = time_array
-        if self.starry_model is not None:
-            self.starry_model.time = time_array
-
-    @property
-    def model(self):
-        """A getter for the model."""
-        return self._model
-
-    @model.setter
-    def model(self, model):
-        """A setter for the model."""
-        self._model = model
-        if self.starry_model is not None:
-            self.starry_model.model = model
-
-    def setup(self, **kwargs):
-        super().setup(**kwargs)
-        if self.starry_model is not None:
-            self.starry_model.setup(**kwargs)
-
-    def update(self, newparams, **kwargs):
-        """Update the model with new parameter values.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        super().update(newparams, **kwargs)
-        if self.starry_model is not None:
-            self.starry_model.update(newparams, **kwargs)
-
-    def eval(self, eval=True, channel=None, **kwargs):
+    def eval(self, eval=True, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
@@ -101,6 +45,9 @@ class SinusoidPhaseCurveModel(PyMC3Model):
             Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -116,16 +63,19 @@ class SinusoidPhaseCurveModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
+
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
-            if self.starry_model is not None:
-                systems = self.starry_model.fit.systems
+            # systems = self.components[0].fit.systems
         else:
             lib = tt
             model = self.model
-            if self.starry_model is not None:
-                systems = self.starry_model.systems
+            # systems = self.components[0].systems
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
@@ -139,43 +89,84 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            phaseVars = lib.ones(len(time))
-            
-            # Compute orbital phase
-            if model.ecc == 0.:
-                # the planet is on a circular orbit
-                t = self.time - model.t0 - model.per/2.
-                phi = 2.*np.pi/model.per*t
-            else:
-                # the planet is on an eccentric orbit
-                anom = true_anomaly(model, lib, self.time)
-                phi = anom + model.w*np.pi/180. + np.pi/2.
+            for pid in pid_iter:
+                # Initialize model
+                pl_params = PlanetParams(model, pid, chan, eval=eval)
 
-            for order in range(1, self.maxOrder+1):
-                if self.nchannel_fitted == 1 or chan == 0:
-                    suffix = ''
+                if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
+                        and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
+                    # Don't waste time running the following code
+                    phaseVars = np.ma.ones_like(time)
+                    continue
+
+                if pl_params.t_secondary is None:
+                    # If not explicitly fitting for the time of eclipse, get
+                    # the time of eclipse from the time of transit, period,
+                    # eccentricity, and argument of periastron
+                    pl_params.t_secondary = get_ecl_midpt(pl_params)
+
+                # Compute orbital phase
+                if pl_params.ecc == 0:
+                    # the planet is on a circular orbit
+                    t = self.time - pl_params.t_secondary
+                    phi = 2*np.pi/pl_params.per*t
                 else:
-                    suffix = f'_{chan}'
-                AmpCos = getattr(model, f'AmpCos{order}{suffix}', 0)
-                AmpSin = getattr(model, f'AmpSin{order}{suffix}', 0)
-                phaseVars += (AmpCos*(lib.cos(order*phi)-1.) +
-                              AmpSin*lib.sin(order*phi))
+                    # the planet is on an eccentric orbit
+                    anom = true_anomaly(pl_params, lib, self.time)
+                    phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
-            if self.starry_model is not None:
-                # Combine with the starry model
-                flux_star, flux_planet = systems[chan].flux(time,
-                                                            total=False)
-                lcpiece = flux_star + flux_planet*phaseVars
-                if eval:
-                    # Evaluate if needed
-                    lcpiece = lcpiece.eval()
-            else:
-                lcpiece = phaseVars
+                # calculate the phase variations
+                if eval and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0:
+                    # Skip multiplying by a bunch of zeros to speed up fitting
+                    phaseVars = (1 + pl_params.AmpCos1*(lib.cos(phi)-1) +
+                                 pl_params.AmpSin1*lib.sin(phi))
+                else:
+                    phaseVars = (1 + pl_params.AmpCos1*(lib.cos(phi)-1) +
+                                 pl_params.AmpSin1*lib.sin(phi) +
+                                 pl_params.AmpCos2*(lib.cos(2*phi)-1) +
+                                 pl_params.AmpSin2*lib.sin(2*phi))
 
-            lcfinal = lib.concatenate([lcfinal, lcpiece])
+            if eval:
+                # Evaluate if needed
+                phaseVars = phaseVars.eval()
+            lcfinal = lib.concatenate([lcfinal, phaseVars])
 
         return lcfinal
 
+def get_ecl_midpt(params, lib):
+    """
+    Return the time of secondary eclipse center.
+
+    Parameters
+    ----------
+    params : object
+        Contains the physical parameters for the transit model.
+    lib : library
+        Either np (numpy) or tt (theano.tensor), depending on whether the
+        code is being run in numpy or theano mode.
+
+    Returns
+    -------
+    t_secondary : float
+        The time of secondary eclipse.
+    """
+    # FINDME: The this function can likely heavily reuse the functions below
+
+    # Start with primary transit
+    TA = np.pi/2-params.w*np.pi/180
+    E = 2*lib.arctan(lib.sqrt((1-params.ecc)/(1+params.ecc))
+                     * lib.tan(TA/2))
+    M = E-params.ecc*lib.sin(E)
+    phase_tr = M/2/np.pi
+
+    # Now do secondary eclipse
+    TA = 3*np.pi/2-params.w*np.pi/180
+    E = 2*lib.arctan(lib.sqrt((1-params.ecc)/(1+params.ecc)) 
+                     * lib.tan(TA/2))
+    M = E-params.ecc*lib.sin(E)
+    phase_ecl = M/2/np.pi
+
+    return params.t0+params.per*(phase_ecl-phase_tr)
 
 def true_anomaly(model, lib, t, xtol=1e-10):
     """Convert time to true anomaly, numerically.
