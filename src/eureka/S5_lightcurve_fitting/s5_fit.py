@@ -1067,25 +1067,21 @@ def make_longparamlist(meta, params, chanrng):
     longparamlist = [[] for i in range(nspecchan)]
     tlist = list(params.dict.keys())
     for param in tlist:
-        if 'free' in params.dict[param]:
-            longparamlist[0].append(param)
-            for c in np.arange(nspecchan-1):
-                title = param+'_'+str(c+1)
-                if title in tlist:
-                    # The user specifically set this channel's parameter
-                    longparamlist[c+1].append(title)
-                    # Remove this parameter from tlist so we don't set it twice
-                    tlist.remove(title)
-                else:
-                    # Set this parameter based on channel 0's parameter
+        longparamlist[0].append(param)
+        for c in np.arange(1, nspecchan):
+            title = param+'_'+str(c)
+            if title in tlist:
+                # The user specifically set this channel's parameter
+                longparamlist[c].append(title)
+                # Remove this parameter from tlist so we don't set it twice
+                tlist.remove(title)
+            else:
+                # Set this parameter based on channel 0's parameter
+                if 'free' in params.dict[param]:
                     params.__setattr__(title, params.dict[param])
-                    longparamlist[c+1].append(title)
-        elif 'shared' in params.dict[param]:
-            for c in np.arange(nspecchan):
-                longparamlist[c].append(param)
-        else:
-            for c in np.arange(nspecchan):
-                longparamlist[c].append(param)
+                    longparamlist[c].append(title)
+                else:
+                    longparamlist[c].append(param)
     paramtitles = longparamlist[0]
 
     return longparamlist, paramtitles
