@@ -1,6 +1,7 @@
 from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 
 
 def exotic_ld(meta, spec, log, white=False):
@@ -109,24 +110,46 @@ def exotic_ld(meta, spec, log, white=False):
     quad = np.zeros((meta.nspecchan, 2))
     nonlin_3 = np.zeros((meta.nspecchan, 3))
     nonlin_4 = np.zeros((meta.nspecchan, 4))
+    extrapNeeded = False
     for i in range(meta.nspecchan):
-        # generate limb-darkening coefficients for each bin
-        lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
-                                                 mode, custom_wavelengths,
-                                                 custom_throughput)[0]
-        quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode,
-                                                  custom_wavelengths,
-                                                  custom_throughput)
-        nonlin_3[i] = \
-            sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i],
-                                                         mode,
-                                                         custom_wavelengths,
-                                                         custom_throughput)
-        nonlin_4[i] = \
-            sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i],
-                                                         mode,
-                                                         custom_wavelengths,
-                                                         custom_throughput)
+        try:
+            # generate limb-darkening coefficients for each bin
+            lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
+                                                     mode, custom_wavelengths,
+                                                     custom_throughput)[0]
+            quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode,
+                                                      custom_wavelengths,
+                                                      custom_throughput)
+            nonlin_3[i] = \
+                sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i],
+                                                             mode,
+                                                             custom_wavelengths,
+                                                             custom_throughput)
+            nonlin_4[i] = \
+                sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i],
+                                                             mode,
+                                                             custom_wavelengths,
+                                                             custom_throughput)
+        except ValueError:
+            # Log a warning the first time
+            if not extrapNeeded:
+                log.writelog("WARNING: Extrapolating LD model to wavelengths "
+                             "outside the bandpass.")
+
+            extrapNeeded = True
+            lin_c1[i] = np.nan
+            quad[i] = np.nan
+            nonlin_3[i] = np.nan
+            nonlin_4[i] = np.nan
+    
+    if extrapNeeded != 0:
+        x = np.copy(meta.wave)
+        for y in [lin_c1, quad, nonlin_3, nonlin_4]:
+            for c in range(y.shape[1]):
+                good = np.isfinite(y[:, c])
+                f = interp1d(x[good], y[good, c], fill_value="extrapolate")
+                y[:, c] = f(x)
+        
     return lin_c1, quad, nonlin_3, nonlin_4
 
 
