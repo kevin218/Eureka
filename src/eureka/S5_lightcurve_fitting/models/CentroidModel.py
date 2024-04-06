@@ -94,7 +94,9 @@ class CentroidModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 centroid = split([centroid, ], self.nints, chan)[0]
 
-            coeff = getattr(self.parameters, self.coeff_keys[chan]).value
+            coeff = getattr(self.parameters, self.coeff_keys[chan], 0)
+            if not str(coeff).isnumeric():
+                coeff = coeff.value
             lcpiece = 1 + centroid*coeff
             lcfinal = np.ma.append(lcfinal, lcpiece)
         return lcfinal
