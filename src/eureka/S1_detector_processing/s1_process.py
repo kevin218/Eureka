@@ -7,8 +7,8 @@ from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 import crds
 
-from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
-from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
+from .ramp_fitting import Eureka_RampFitStep
+from .superbias import Eureka_SuperBiasStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
