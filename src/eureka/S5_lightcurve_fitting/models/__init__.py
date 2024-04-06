@@ -3,6 +3,7 @@ from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from .CentroidModel import CentroidModel
 from .DampedOscillator import DampedOscillatorModel
 from .ExpRampModel import ExpRampModel
+from .QuasiLambertianPhaseCurve import QuasiLambertianPhaseCurve
 from .GPModel import GPModel
 from .HSTRampModel import HSTRampModel
 from .KeplerOrbit import KeplerOrbit
