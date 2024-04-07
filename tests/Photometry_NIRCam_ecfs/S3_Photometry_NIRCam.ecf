@@ -26,6 +26,7 @@ ctr_cutout_size  7           # Cutoff size all around the centroid after the coa
 oneoverf_corr    median      # Options: None, meanerr, median
 oneoverf_dist    300         # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
 skip_apphot_bg   True        # Skips the background subtraction during the aperture photometry step
+aperture_shape   circle      # Shape of extraction aperture: options are 'circle' or 'hexagon'
 photap           60          # Size of photometry aperture in pixels
 skyin            70          # Inner sky annulus edge, in pixels
 skywidth         20          # Width of the sky annulus, in pixels

@@ -1000,8 +1000,10 @@ def phot_2d_frame(data, meta, m, i):
     if meta.aperture_shape == "hexagon":
         # to make a hexagon, make the vertices and add them into a path
         # need to add extraneous vertex to close path, for some reason
-        xvert = centroid_x.data.tolist() - meta.photap*np.sin(2*np.pi*np.arange(7)/6)
-        yvert = centroid_y.data.tolist() + meta.photap*np.cos(2*np.pi*np.arange(7)/6)
+        xvert = centroid_x.data.tolist() - meta.photap*np.sin(
+            2*np.pi*np.arange(7)/6)
+        yvert = centroid_y.data.tolist() + meta.photap*np.cos(
+            2*np.pi*np.arange(7)/6)
         hex1 = Path(np.vstack((xvert, yvert)).T)
 
         # make patch of hexagon
@@ -1009,16 +1011,20 @@ def phot_2d_frame(data, meta, m, i):
                                 fill=False, lw=3, alpha=0.7, 
                                 label='target aperture')
         
-        xvert = centroid_x.data.tolist() - meta.skyin*np.sin(2*np.pi*np.arange(7)/6)
-        yvert = centroid_y.data.tolist() + meta.skyin*np.cos(2*np.pi*np.arange(7)/6)
+        xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
+            2*np.pi*np.arange(7)/6)
+        yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
+            2*np.pi*np.arange(7)/6)
         hex2 = Path(np.vstack((xvert, yvert)).T)
 
         ap2 = patches.PathPatch(hex2, color='w',
                                 fill=False, lw=4, alpha=0.8, 
                                 label='sky aperture')
         
-        xvert = centroid_x.data.tolist() - meta.skyout*np.sin(2*np.pi*np.arange(7)/6)
-        yvert = centroid_y.data.tolist() + meta.skyout*np.cos(2*np.pi*np.arange(7)/6)
+        xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
+            2*np.pi*np.arange(7)/6)
+        yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
+            2*np.pi*np.arange(7)/6)
         hex3 = Path(np.vstack((xvert, yvert)).T)
 
         ap3 = patches.PathPatch(hex3, color='w',
@@ -1067,8 +1073,10 @@ def phot_2d_frame(data, meta, m, i):
         # Plot proper aperture shapes
         if meta.aperture_shape == "hexagon":
             # to make a hexagon, make the vertices and add them into a path
-            xvert = centroid_x.data.tolist() - meta.photap*np.sin(2*np.pi*np.arange(7)/6)
-            yvert = centroid_y.data.tolist() + meta.photap*np.cos(2*np.pi*np.arange(7)/6)
+            xvert = centroid_x.data.tolist() - meta.photap*np.sin(
+                2*np.pi*np.arange(7)/6)
+            yvert = centroid_y.data.tolist() + meta.photap*np.cos(
+                2*np.pi*np.arange(7)/6)
             hex1 = Path(np.vstack((xvert, yvert)).T)
 
             # make patch of hexagon
@@ -1077,8 +1085,10 @@ def phot_2d_frame(data, meta, m, i):
                                     label='target aperture')
             
             # to make a hexagon, make the vertices and add them into a path
-            xvert = centroid_x.data.tolist() - meta.skyin*np.sin(2*np.pi*np.arange(7)/6)
-            yvert = centroid_y.data.tolist() + meta.skyin*np.cos(2*np.pi*np.arange(7)/6)
+            xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
+                2*np.pi*np.arange(7)/6)
+            yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
+                2*np.pi*np.arange(7)/6)
             hex2 = Path(np.vstack((xvert, yvert)).T)
 
             # make patch of hexagon
@@ -1087,8 +1097,10 @@ def phot_2d_frame(data, meta, m, i):
                                     label='sky aperture')
             
             # to make a hexagon, make the vertices and add them into a path
-            xvert = centroid_x.data.tolist() - meta.skyout*np.sin(2*np.pi*np.arange(7)/6)
-            yvert = centroid_y.data.tolist() + meta.skyout*np.cos(2*np.pi*np.arange(7)/6)
+            xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
+                2*np.pi*np.arange(7)/6)
+            yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
+                2*np.pi*np.arange(7)/6)
             hex3 = Path(np.vstack((xvert, yvert)).T)
 
             # make patch of hexagon
