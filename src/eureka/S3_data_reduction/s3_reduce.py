@@ -666,7 +666,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             aperr=True, nappix=True, skylev=True,
                             skyerr=True, nskypix=True,
                             nskyideal=True, status=True,
-                            betaper=True)
+                            betaper=True, aperture_shape=meta.aperture_shape)
                         # Save results into arrays
                         (data['aplev'][i], data['aperr'][i],
                             data['nappix'][i], data['skylev'][i],
