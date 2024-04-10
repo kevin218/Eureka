@@ -1116,6 +1116,10 @@ def phot_2d_frame(data, meta, m, i):
             ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
                              fill=False, lw=4, alpha=0.8)
 
+        plt.gca().add_patch(ap1)
+        plt.gca().add_patch(ap2)
+        plt.gca().add_patch(ap3)
+
         add_colorbar(im, label='Flux (electrons)')
         xlim_min = max(0, centroid_x - meta.skyout - 10)
         xlim_max = min(centroid_x + meta.skyout + 10, flux.shape[1])

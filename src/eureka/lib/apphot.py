@@ -455,14 +455,16 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     if imerr is not None:
         iimerr = i2d.interp2d(imerr, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
 
+    # Specify aperture shape function
+    if aperture_shape == "hexagon":
+        apFunc = di.hex
+    else:
+        apFunc = di.disk
+
     # SKY
     # make sky annulus mask
-    if aperture_shape == "hexagon":
-        skyann = np.bitwise_xor(di.hex(iskyout, ictr, isz),
-                                di.hex(iskyin, ictr, isz))
-    else:
-        skyann = np.bitwise_xor(di.disk(iskyout, ictr, isz),
-                                di.disk(iskyin, ictr, isz))
+    skyann = np.bitwise_xor(apFunc(iskyout, ictr, isz),
+                            apFunc(iskyin, ictr, isz))
 
     skymask = skyann * imask * np.isfinite(iimage)  # flag NaNs to eliminate
     # from nskypix
@@ -473,16 +475,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     szsky = (int(np.ceil(iskyout)) * 2 + 3) * np.array([1, 1], dtype=int)
     ctrsky = (ictr % 1.0) + np.ceil(iskyout) + 1.0
     # nskyideal = all pixels in sky
-    if aperture_shape == "hexagon":
-        ret[nskyideal] = (np.sum(
-                          np.bitwise_xor(di.hex(iskyout, ctrsky, szsky),
-                                         di.hex(iskyin, ctrsky, szsky))) 
-                          / iexpand**2.0)
-    else:
-        ret[nskyideal] = (np.sum(
-                          np.bitwise_xor(di.disk(iskyout, ctrsky, szsky),
-                                         di.disk(iskyin, ctrsky, szsky))) 
-                          / iexpand**2.0)
+    ret[nskyideal] = (np.sum(
+                      np.bitwise_xor(apFunc(iskyout, ctrsky, szsky),
+                                     apFunc(iskyin, ctrsky, szsky))) 
+                      / iexpand**2.0)
 
     if ret[nskypix] < iskyfrac * ret[nskyideal]:
         status |= statsky
@@ -551,10 +547,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
     # APERTURE
     # make aperture mask, extract data and mask
-    if aperture_shape == "hexagon":
-        apmask, dstatus = di.hex(iphotap, ictr, isz, status=True)
-    else:        
-        apmask, dstatus = di.disk(iphotap, ictr, isz, status=True)
+    apmask, dstatus = apFunc(iphotap, ictr, isz, status=True)
     if dstatus:  # is the aperture fully on the image?
         status |= statap
 

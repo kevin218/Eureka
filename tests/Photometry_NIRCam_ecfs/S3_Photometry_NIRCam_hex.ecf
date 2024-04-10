@@ -1,0 +1,49 @@
+# Eureka! Control File for Stage 3: Data Reduction
+
+# Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
+
+ncpu            1           # Number of CPUs
+nfiles          1           # The number of data files to analyze simultaneously
+max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+suffix          calints     # Data file suffix
+photometry      True        # Set to True if the user wants to analyze a photometric dataset
+
+convert_to_e    True        # Whether or not a conversion to electrons should be performed (can set to False to compute flux-calibrated spectra/photometry)
+
+# Subarray region of interest
+ywindow         [4, 256]     # Vertical axis as seen in DS9
+xwindow         [512, 1536]  # Horizontal axis as seen in DS9
+dqmask          True         # Mask pixels with an odd entry in the DQ array
+
+# Background parameters
+flag_bg         False        # Do outlier rejection along time axis for each individual pixel?
+bg_thresh       [5,5]        # Double-iteration X-sigma threshold for outlier rejection along time axis
+
+# Photometric extraction parameters
+interp_method    linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
+centroid_method  mgmc        # Method used for centroiding. Options: mgmc, fgc
+ctr_cutout_size  7           # Cutoff size all around the centroid after the coarse centroid calculation
+oneoverf_corr    median      # Options: None, meanerr, median
+oneoverf_dist    300         # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
+skip_apphot_bg   True        # Skips the background subtraction during the aperture photometry step
+aperture_shape   hexagon     # Shape of extraction aperture: options are 'circle' or 'hexagon'
+photap           60          # Size of photometry aperture in pixels
+skyin            70          # Inner sky annulus edge, in pixels
+skywidth         20          # Width of the sky annulus, in pixels
+centroid_tech    com         # (mgmc method param) Technique used for centroiding. Options: com, 1dg, 2dg
+gauss_frame      100         # (mgmc method param) Half-width away from second centroid guess to include in centroiding map for gaussian widths. Options: his should be set to something larger than your expected PSF size; ~100 for defocused NIRCam photometry, or ~15 for MIRI photometry.
+
+# Diagnostics
+isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+nplots          5           # How many of each type of figure do you want to make per file?
+testing_S3      False       # Boolean, set True to only use last file and generate select figures
+hide_plots      True        # If True, plots will automatically be closed rather than popping up
+save_output     True        # Save outputs for use in S4
+verbose         False       # If True, more details will be printed about steps
+
+# Project directory
+topdir     ../tests
+
+# Directories relative to project dir
+inputdir     /data/Photometry/NIRCam/Stage2/
+outputdir    /data/Photometry/NIRCam/Stage3/

@@ -66,8 +66,8 @@ def hex(r, ctr, size, status=False):
 
     The hexagon is centered at (ctr[0], ctr[1]), and is circumscribed by a 
     circle of radius r. The array is (size[0], size[1]) in size and has byte 
-    type. Pixel values of 1 indicate that the center of a pixel is within r 
-    of (ctr[0], ctr[1]). Pixel values of 0 indicate the opposite. The center 
+    type. Pixel values of 1 indicate that the center of a pixel is within the 
+    hexagonal aperture. Pixel values of 0 indicate the opposite. The center 
     of each pixel is the integer position of that pixel.
 
     Parameters
