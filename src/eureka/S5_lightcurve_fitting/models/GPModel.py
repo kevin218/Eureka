@@ -52,9 +52,9 @@ class GPModel(Model):
                          kernel_input_names=kernel_input_names,
                          kernel_inputs=None,
                          gp_code_name=gp_code_name, normalize=normalize,
-                         useHODLR=useHODLR, fit_lc=np.ma.ones(self.flux.shape),
+                         useHODLR=useHODLR, fit_lc=np.ma.ones(lc.flux.shape),
                          flux=lc.flux, unc=lc.unc, unc_fit=lc.unc_fit,
-                         time=lc.time, **kwargs)
+                         **kwargs)
         self.name = 'GP'
 
         # Define model type (physical, systematic, other)

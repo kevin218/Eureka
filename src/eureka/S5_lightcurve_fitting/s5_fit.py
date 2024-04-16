@@ -602,8 +602,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         CentroidModel = dm.CentroidModel
         GPModel = dm.GPModel
         AstroModel = dm.AstroModel
-        CompositeModel = dm.CompositeModel
+        CompositeModel = dm.CompositePyMC3Model
     else:
+        use_starry = False
         SinusoidModel = m.SinusoidPhaseCurveModel
         PolynomialModel = m.PolynomialModel
         StepModel = m.StepModel

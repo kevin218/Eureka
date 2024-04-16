@@ -43,8 +43,8 @@ class AstroModel(Model):
             The flux array
         """
         self._components = components
-        self.transit_model = []
-        self.eclipse_model = []
+        self.transit_model = None
+        self.eclipse_model = None
         self.phasevariation_models = []
         self.stellar_models = []
         for component in self.components:

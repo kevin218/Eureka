@@ -50,7 +50,7 @@ class GPModel(PyMC3Model):
                          gp_code_name=gp_code_name, normalize=normalize,
                          fit_lc=np.ma.ones(self.flux.shape),
                          flux=lc.flux, unc=lc.unc, unc_fit=lc.unc_fit,
-                         time=lc.time, **kwargs)
+                         **kwargs)
         self.name = 'GP'
 
         # Define model type (physical, systematic, other)
