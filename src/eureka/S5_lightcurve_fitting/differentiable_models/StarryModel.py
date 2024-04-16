@@ -22,7 +22,8 @@ from ...lib.split_channels import split
 
 
 class temp_class:
-    # FINDME: I shouldn't need this anymore once I've fully setup PlanetParams
+    # FINDME: I shouldn't need this anymore once I've
+    #         fully setup PlanetParams
     def __init__(self):
         pass
 
@@ -232,7 +233,8 @@ class StarryModel(PyMC3Model):
             # `getattr(self.model, 'u1_'+c)`.
             temp = temp_class()
             for key in self.longparamlist[c]:
-                # FINDME: I shouldn't need this anymore once I've fully setup PlanetParams
+                # FINDME: I shouldn't need this anymore once I've
+                #         fully setup PlanetParams
                 # Remove the _c part of the parname but leave any
                 # other underscores intact
                 if c == 0:
@@ -241,7 +243,8 @@ class StarryModel(PyMC3Model):
                     suffix = '_'+str(c)
                     if key.endswith(suffix):
                         key = re.sub(suffix, '', key)
-                setattr(temp, key, getattr(self.model, key+suffix, getattr(self.model, key)))
+                setattr(temp, key, getattr(self.model, key+suffix,
+                                           getattr(self.model, key)))
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
@@ -377,8 +380,6 @@ class StarryModel(PyMC3Model):
                 fplanets = result
                 if self.num_planets == 1:
                     fplanets = [fplanets,]
-                if pid is not None:
-                    fplanets = [fplanets[pid],]
             else:
                 fstar = lib.ones(len(time))
                 fplanets = []
@@ -451,7 +452,8 @@ class StarryModel(PyMC3Model):
             # `getattr(self.model, 'u1_'+c)`.
             temp = temp_class()
             for key in self.longparamlist[c]:
-                # FINDME: I shouldn't need this anymore once I've fully setup PlanetParams
+                # FINDME: I shouldn't need this anymore once I've
+                #         fully setup PlanetParams
                 # Remove the _c part of the parname but leave any
                 # other underscores intact
                 if c == 0:
@@ -460,7 +462,8 @@ class StarryModel(PyMC3Model):
                     suffix = '_'+str(c)
                     if key.endswith(suffix):
                         key = re.sub(suffix, '', key)
-                setattr(temp, key, getattr(self.fit, key+suffix, getattr(self.fit, key)))
+                setattr(temp, key, getattr(self.fit, key+suffix,
+                                           getattr(self.fit, key)))
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),

@@ -114,22 +114,18 @@ def exotic_ld(meta, spec, log, white=False):
     for i in range(meta.nspecchan):
         try:
             # generate limb-darkening coefficients for each bin
-            lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
-                                                     mode, custom_wavelengths,
-                                                     custom_throughput)[0]
-            quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode,
-                                                      custom_wavelengths,
-                                                      custom_throughput)
-            nonlin_3[i] = \
-                sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i],
-                                                             mode,
-                                                             custom_wavelengths,
-                                                             custom_throughput)
-            nonlin_4[i] = \
-                sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i],
-                                                             mode,
-                                                             custom_wavelengths,
-                                                             custom_throughput)
+            lin_c1[i] = sld.compute_linear_ld_coeffs(
+                wavelength_range[i], mode, custom_wavelengths,
+                custom_throughput)[0]
+            quad[i] = sld.compute_quadratic_ld_coeffs(
+                wavelength_range[i], mode, custom_wavelengths,
+                custom_throughput)
+            nonlin_3[i] = sld.compute_3_parameter_non_linear_ld_coeffs(
+                wavelength_range[i], mode, custom_wavelengths,
+                custom_throughput)
+            nonlin_4[i] = sld.compute_4_parameter_non_linear_ld_coeffs(
+                wavelength_range[i], mode, custom_wavelengths,
+                custom_throughput)
         except ValueError:
             # Log a warning the first time
             if not extrapNeeded:

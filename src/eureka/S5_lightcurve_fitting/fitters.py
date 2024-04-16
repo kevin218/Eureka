@@ -540,7 +540,7 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     if np.all(full_keys != freenames):
         # There were more free parameters before - just get the relevant ones
         relevant_inds = np.array([key in freenames for key in full_keys])
-        samples = samples[:,relevant_inds]
+        samples = samples[:, relevant_inds]
         log.writelog('Removing previously fitted parameters: '
                      f'{full_keys[~relevant_inds]}')
 

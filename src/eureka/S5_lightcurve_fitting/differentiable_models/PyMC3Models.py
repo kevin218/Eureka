@@ -189,7 +189,8 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                         if c == 0:
                             parname_temp = parname
                         elif self.longparamlist[c][i] != param:
-                            # This parameter is either free or was changed in some way by the user
+                            # This parameter is either free or was changed in
+                            # some way by the user
                             parname_temp = self.longparamlist[c][i]
                             param = getattr(self.parameters, parname_temp)
 

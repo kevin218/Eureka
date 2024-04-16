@@ -133,6 +133,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         return lcfinal
 
+
 def get_ecl_midpt(params, lib):
     """
     Return the time of secondary eclipse center.
@@ -167,6 +168,7 @@ def get_ecl_midpt(params, lib):
     phase_ecl = M/2/np.pi
 
     return params.t0+params.per*(phase_ecl-phase_tr)
+
 
 def true_anomaly(model, lib, t, xtol=1e-10):
     """Convert time to true anomaly, numerically.

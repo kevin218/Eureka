@@ -577,7 +577,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     freenames = np.array(freenames)
 
     if not hasattr(meta, 'useHODLR'):
-            meta.useHODLR = False
+        meta.useHODLR = False
     if not hasattr(meta, 'recenter_ld_prior'):
         meta.recenter_ld_prior = True
     if not hasattr(meta, 'num_planets'):
@@ -921,9 +921,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
 
     # Combine all physical models into an AstroModel
     physical_models = [model for model in modellist
-                       if model.modeltype=='physical']
+                       if model.modeltype == 'physical']
     modellist = [model for model in modellist
-                 if model.modeltype!='physical']
+                 if model.modeltype != 'physical']
     astroModel = AstroModel(components=physical_models,
                             parameters=params,
                             fmt='r--', log=log, time=time,
@@ -950,7 +950,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
                            nints=lc_model.nints,
-                            num_planets=meta.num_planets)
+                           num_planets=meta.num_planets)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
