@@ -1,3 +1,4 @@
+import numpy as np
 import copy
 
 import theano
@@ -163,7 +164,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         self.issetup = False
 
         # Inherit from PyMC3Model class
-        PyMC3Model.__init__(components=components, **kwargs)
+        PyMC3Model.__init__(self, components=components, **kwargs)
 
         # Setup PyMC3 model (which will also be stored in components)
         self.model = pm.Model()
@@ -250,7 +251,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                             if not hasattr(self.model, parname_temp):
                                 setattr(self.model, parname_temp, param.value)
 
-    def setup(self, time, flux, lc_unc):
+    def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.
 
         Parameters
@@ -261,6 +262,8 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             The observed flux.
         lc_unc : array-like
             The estimated uncertainties from Stages 3-4.
+        newparams : ndarray
+            New parameter values.
         """
         if self.issetup:
             # Only setup once if trying multiple different fitting algorithms
@@ -315,7 +318,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             for component in self.components:
                 # Do any one-time setup needed after model initialization and
                 # before evaluating the model
-                component.setup()
+                component.setup(newparams=newparams)
 
             # This is how we tell pymc3 about our observations;
             # we are assuming they are normally distributed about
@@ -374,9 +377,40 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         flux : ndarray
             The evaluated model predictions at the times self.time.
         """
-        # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.eval(channel=channel, incl_GP=incl_GP,
-                                   eval=eval, **kwargs)
+        # Get the time
+        if self.time is None:
+            # This also updates all components
+            self.time = kwargs.get('time')
+
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
+        else:
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        
+        if eval:
+            flux = np.ma.ones(flux_length)
+        else:
+            flux = tt.ones(flux_length)
+
+        # Evaluate flux of each component
+        for component in self.components:
+            if component.modeltype != 'GP':
+                flux *= component.eval(channel=channel, eval=eval, **kwargs)
+
+        if incl_GP:
+            flux += self.GPeval(flux, channel=channel, eval=eval, **kwargs)
+
+        return flux
 
     def syseval(self, channel=None, incl_GP=False, eval=True, **kwargs):
         """Evaluate the systematic model components only.
@@ -400,7 +434,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             The evaluated systematics model predictions at the times self.time.
         """
         # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.syseval(channel=channel, incl_GP=incl_GP,
+        return CompositeModel.syseval(self, channel=channel, incl_GP=incl_GP,
                                       eval=eval, **kwargs)
 
     def GPeval(self, fit, channel=None, eval=True, **kwargs):
@@ -424,7 +458,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             The evaluated GP model predictions at the times self.time.
         """
         # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.GPeval(fit, channel=channel,
+        return CompositeModel.GPeval(self, fit, channel=channel,
                                      eval=eval, **kwargs)
 
     def physeval(self, channel=None, interp=False, eval=True, **kwargs):
@@ -454,7 +488,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             used in the temporally interpolated model.
         """
         # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.physeval(channel=channel, interp=interp,
+        return CompositeModel.physeval(self, channel=channel, interp=interp,
                                        eval=eval, **kwargs)
 
     def compute_fp(self, theta=0):

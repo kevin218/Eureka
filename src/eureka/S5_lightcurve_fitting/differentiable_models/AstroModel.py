@@ -51,7 +51,7 @@ class AstroModel(PyMC3Model):
             The flux array
         """
         self._components = components
-        self.starry_model = []
+        self.starry_model = None
         self.phasevariation_models = []
         self.stellar_models = []
         for component in self.components:
@@ -99,7 +99,6 @@ class AstroModel(PyMC3Model):
         else:
             lib = tt
 
-        lcfinal = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -116,7 +115,7 @@ class AstroModel(PyMC3Model):
                 starFlux *= component.eval(channel=chan, eval=eval, **kwargs)
             if self.starry_model is not None:
                 result = self.starry_model.eval(channel=chan, eval=eval,
-                                                piecewise=True, **kwargs)
+                                                piecewise=True, **kwargs)[0]
                 transits = result.pop(0)
                 eclipses = result
                 starFlux *= transits
@@ -134,5 +133,8 @@ class AstroModel(PyMC3Model):
 
                 planetFluxes += planetFlux
 
-            lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
+            if c == 0:
+                lcfinal = starFlux+planetFluxes
+            else:
+                lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
         return lcfinal

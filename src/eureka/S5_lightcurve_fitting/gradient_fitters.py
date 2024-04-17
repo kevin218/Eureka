@@ -52,12 +52,12 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     
-    model.setup(lc.time, lc.flux, lc.unc)
+    model.setup(lc.time, lc.flux, lc.unc, freepars)
+    model.update(freepars)
 
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
-    model.update(freepars)
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -183,12 +183,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
 
-    model.setup(lc.time, lc.flux, lc.unc)
+    model.setup(lc.time, lc.flux, lc.unc, freepars)
+    model.update(freepars)
 
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
-    model.update(freepars)
 
     # Plot starting point
     if meta.isplots_S5 >= 1:

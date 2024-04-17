@@ -155,6 +155,7 @@ class StarryModel(PyMC3Model):
         """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
+        self.name = 'starry'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
@@ -221,8 +222,13 @@ class StarryModel(PyMC3Model):
                         setattr(self.parameters, item,
                                 self.parameters.dict[item])
 
-    def setup(self):
+    def setup(self, newparams):
         """Setup a model for evaluation and fitting.
+
+        Parameters
+        ----------
+        newparams : ndarray
+            New parameter values.
         """
         self.systems = []
         self.rps = []
@@ -316,6 +322,8 @@ class StarryModel(PyMC3Model):
             # Instantiate the system
             system = starry.System(star, planet, light_delay=self.compute_ltt)
             self.systems.append(system)
+        
+        self.update(newparams)
 
     def eval(self, eval=True, channel=None, piecewise=False, **kwargs):
         """Evaluate the function with the given values.
@@ -372,14 +380,12 @@ class StarryModel(PyMC3Model):
 
             temp_system = systems[chan]
             if self.mutualOccultations:
-                if eval:
-                    result = temp_system.flux(time, total=False).eval()
-                else:
-                    result = temp_system.flux(time, total=False)
+                result = temp_system.flux(time, total=False)
                 fstar = result.pop(0)
-                fplanets = result
-                if self.num_planets == 1:
-                    fplanets = [fplanets,]
+                if self.num_planets == 0:
+                    fplanets = []
+                else:
+                    fplanets = result
             else:
                 fstar = lib.ones(len(time))
                 fplanets = []
@@ -387,14 +393,17 @@ class StarryModel(PyMC3Model):
                     simple_system = starry.System(
                         temp_system.primary, temp_system.secondaries[pid],
                         light_delay=temp_system.light_delay)
-                    if eval:
-                        transit, eclipse = simple_system.flux(
-                            time, total=False).eval()
-                    else:
-                        transit, eclipse = simple_system.flux(
-                            time, total=False)
+                    transit, eclipse = simple_system.flux(time, total=False)
                     fstar *= transit
                     fplanets.append(eclipse)
+
+            if eval:
+                fstar = fstar.eval()
+                fplanets_eval = []
+                for fplanet in fplanets:
+                    fplanets_eval.append(fplanet.eval())
+                fplanets = fplanets_eval
+
             result = [fstar, *fplanets]
 
             if piecewise:
@@ -404,8 +413,11 @@ class StarryModel(PyMC3Model):
                 # Return the system lightcurve
                 lcpiece = lib.zeros(len(time))
                 for piece in result:
-                    lcpiece = lcpiece+piece 
-                returnVal = lib.concatenate([returnVal, lcpiece])
+                    lcpiece = lcpiece+piece
+                if c == 0:
+                    returnVal = lcpiece
+                else:    
+                    returnVal = lib.concatenate([returnVal, lcpiece])
 
         return returnVal
 
