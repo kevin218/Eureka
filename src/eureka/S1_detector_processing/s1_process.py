@@ -9,6 +9,7 @@ import crds
 
 from .ramp_fitting import Eureka_RampFitStep
 from .superbias import Eureka_SuperBiasStep
+from .bfecorr import Eureka_BfeCorrStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
@@ -183,6 +184,9 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.superbias = Eureka_SuperBiasStep()
         self.superbias.s1_meta = meta
         self.superbias.s1_log = log
+
+        self.bfecorr = Eureka_BfeCorrStep()
+        self.bfecorr.s1_meta = meta
 
         # Figure out which instrument we're working on
         with fits.open(filename) as f:
