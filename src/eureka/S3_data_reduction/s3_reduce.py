@@ -532,11 +532,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         if meta.interp_method is not None:
                             util.interp_masked(data, meta, i, log)
 
-                        # Check if aperture shape has been defined
-                        if (not hasattr(meta, 'aperture_shape') 
-                                or meta.aperture_shape is None):
-                            meta.aperture_shape = 'circle'
-
                         # Calculate flux in aperture and subtract
                         # background flux
                         aphot = apphot.apphot(
