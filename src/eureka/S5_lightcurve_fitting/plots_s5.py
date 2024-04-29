@@ -2,7 +2,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from mc3.stats import time_avg
+try:
+    from mc3.stats import time_avg
+except:
+    print("Could not import MC3. No Allan variance plots will be produced.")
 import corner
 from scipy import stats
 try:
@@ -310,7 +313,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_rms(lc, model, meta, fitter):
-    """Plot an Allan plot to look for red noise. (Figs 5301)
+    """Create an Allan variance plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -339,6 +342,9 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
+        if 'time_avg' not in dir():
+            # If MC3 failed to load, exit for loop
+            break
         flux = np.ma.copy(lc.flux)
         model_lc = np.ma.copy(model_eval)
 

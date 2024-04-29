@@ -218,6 +218,7 @@ class S1MetaClass(MetaClass):
         self.skip_reset = getattr(self, 'skip_reset', False)
         # jwst skips by default for MIRI TSO.
         self.skip_rscd = getattr(self, 'skip_rscd', True)
+        self.skip_emicorr = getattr(self, 'skip_emicorr', True)
 
         # Remove the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM
         # group-level data?

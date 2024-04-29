@@ -208,6 +208,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
                 self.lastframe.skip = meta.skip_lastframe
             self.reset.skip = meta.skip_reset
             self.rscd.skip = meta.skip_rscd
+            self.emicorr.skip = meta.skip_emicorr
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
