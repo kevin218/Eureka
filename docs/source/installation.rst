@@ -8,8 +8,8 @@ Installation methods
 In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
 the most recent stable release of ``Eureka!``, v0.10. The following installation instructions are written with this in mind,
 and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.10>`_.
-Also note that if you are using a macOS device with an M1 processor, you will need to use the ``conda`` environment.yml file
-installation instructions below as the pip dependencies fail to build on the M1 processor.
+Also note that if you are using a macOS device with an Apple Silicon processor (e.g., M1), you may need to use the ``conda`` environment.yml file
+installation instructions below as the ``pip`` dependencies have been reported to fail to build on Apple Silicon processors.
 
 
 Initial environment preparation
@@ -21,7 +21,7 @@ new environment by doing:
 
 .. code-block:: bash
 
-	conda create -n eureka python==3.9.7
+	conda create -n eureka python==3.10.14
 	conda activate eureka
 
 Option 1) With ``git`` and ``pip``

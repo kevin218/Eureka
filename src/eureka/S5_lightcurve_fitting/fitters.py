@@ -517,7 +517,8 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
 
-    if np.all(full_keys != freenames):
+    # Make sure at least all the currently fitted parameters were present
+    if not np.all([key in full_keys for key in freenames]):
         message = ('Old chain does not have the same fitted parameters and '
                    'cannot be used to initialize the new fit.\n'
                    'The old chain included:\n['+','.join(full_keys)+']\n'
