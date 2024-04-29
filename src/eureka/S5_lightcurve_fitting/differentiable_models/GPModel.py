@@ -139,7 +139,7 @@ class GPModel(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
 
         # Parse parameters as coefficients
         coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
@@ -161,7 +161,17 @@ class GPModel(PyMC3Model):
                 flux = self.flux
                 fit = fit_lc
                 unc_fit = self.unc_fit
-            residuals = flux-fit
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
+
+            # Remove poorly handled masked values
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
 
             if chan == 0:
                 chankey = ''
@@ -190,13 +200,19 @@ class GPModel(PyMC3Model):
 
             # Make the gp object
             gp = celerite2.GaussianProcess(kernel, mean=0.)
-            gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
+            kernel_inputs = self.kernel_inputs[chan][0][good]
+            gp.compute(kernel_inputs, yerr=unc_fit)
 
             # Predict values
-            lcpiece = gp.predict(residuals).eval()
+            mu = gp.predict(residuals).eval()
+
+            # Re-insert and mask bad values
+            mu_full = np.ma.zeros(len(time))
+            mu_full[good] = mu
+            mu_full = np.ma.masked_where(~good, mu_full)
 
             # Append this channel to the outputs
-            lcfinal = np.append(lcfinal, lcpiece)
+            lcfinal = np.ma.append(lcfinal, mu_full)
 
         return lcfinal
 
