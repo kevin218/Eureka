@@ -38,7 +38,7 @@ def exotic_ld(meta, spec, log, white=False):
     custom_wavelengths = None
     custom_throughput = None
 
-    if hasattr(meta, 'exotic_ld_file') and meta.exotic_ld_file is not None:
+    if meta.exotic_ld_file is not None:
         mode = 'custom'
         log.writelog("Using custom throughput file " +
                      meta.exotic_ld_file,
@@ -81,7 +81,7 @@ def exotic_ld(meta, spec, log, white=False):
         wavelength_range *= 1e4
 
     # compute stellar limb darkening model
-    if hasattr(meta, "custom_si_grid") and meta.exotic_ld_grid == 'custom':
+    if meta.exotic_ld_grid == 'custom':
         # read the wavelengths, Mus, and intensity grid from file
         # 1st column is the wavelengths. Skip the header and row of Mus
         # also convert to angstrom! 

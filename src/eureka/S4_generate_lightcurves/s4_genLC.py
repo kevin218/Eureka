@@ -109,8 +109,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -200,14 +198,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.n_int, meta.subnx = spec.optspec.shape
 
             # Set the max number of copies of a figure
-            if not hasattr(meta, 'nplots') or meta.nplots is None:
+            if meta.nplots is None:
                 meta.nplots = meta.n_int
             elif meta.int_start+meta.nplots > meta.n_int:
                 # Too many figures requested, so reduce it
                 meta.nplots = meta.n_int
 
             # Determine wavelength bins
-            if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
+            if meta.nspecchan is None:
                 # User wants unbinned spectra
                 dwav = np.ediff1d(wave_1d)/2
                 # Approximate the first neg_dwav as the same as the second
@@ -222,7 +220,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.wave_low = meta.wave-neg_dwav
                 meta.wave_hi = meta.wave+pos_dwav
                 meta.nspecchan = len(meta.wave)
-            elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
+            elif meta.wave_hi is None or meta.wave_low is None:
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,
                                                      meta.wave_max-binsize,
@@ -293,16 +291,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
-            if not hasattr(meta, 'boundary'):
-                # The default value before this was added as an option
-                meta.boundary = 'extend'
-
             # Manually mask pixel columns by index number
-            if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
-                for w in meta.mask_columns:
-                    log.writelog(f"Masking detector pixel column {w}.")
-                    index = np.where(spec.optmask.x == w)[0][0]
-                    spec.optmask[:, index] = True
+            for w in meta.mask_columns:
+                log.writelog(f"Masking detector pixel column {w}.")
+                index = np.where(spec.optmask.x == w)[0][0]
+                spec.optmask[:, index] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -390,7 +383,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     plots_s4.driftxpos(meta, lc)
                     plots_s4.driftxwidth(meta, lc)
 
-            if hasattr(meta, 'sum_reads') and meta.sum_reads:
+            if meta.inst == 'wfc3' and meta.sum_reads:
                 # Sum each read from a scan together
                 spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
 
@@ -465,8 +458,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
 
             # If requested, also generate white-light light curve
-            if (hasattr(meta, 'compute_white') and meta.compute_white
-                    and not meta.photometry):
+            if meta.compute_white and not meta.photometry:
                 log.writelog("Generating white-light light curve")
 
                 # Compute valid indeces within wavelength range
