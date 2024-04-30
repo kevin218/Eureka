@@ -57,6 +57,10 @@ class S3MetaClass(MetaClass):
         # Data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
 
+        # Make sure the inst and filt attributes are at least initialized
+        self.inst = getattr(self, 'inst', None)
+        self.filter = getattr(self, 'filter', None)
+
         self.ncpu = hasattr(self, 'ncpu', 4)
         # By default, try to load a bunch of files if permitted by max_memory
         self.nfiles = hasattr(self, 'nfiles', 1000)

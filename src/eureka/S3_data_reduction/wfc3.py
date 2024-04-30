@@ -390,7 +390,7 @@ def read(filename, data, meta, log):
         data.attrs['shdr'] = hdulist[1].header
         meta.nx = data.attrs['shdr']['NAXIS1']
         meta.ny = data.attrs['shdr']['NAXIS2']
-        meta.grism = data.attrs['mhdr']['FILTER']
+        meta.filter = data.attrs['mhdr']['FILTER']
         meta.detector = data.attrs['mhdr']['DETECTOR']
         meta.flatoffset = [[-1*data.attrs['shdr']['LTV2'],
                             -1*data.attrs['shdr']['LTV1']]]
@@ -464,11 +464,11 @@ def read(filename, data, meta, log):
 
     # Calculate trace
     if meta.firstInBatch:
-        log.writelog(f"  Calculating wavelength assuming {meta.grism} "
+        log.writelog(f"  Calculating wavelength assuming {meta.filter} "
                      f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
-    wave = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4
+    wave = hst.calibrateLambda(xrange, centroids[0], meta.filter)/1e4
     # Assume no skew over the detector
     wave_2d = wave*np.ones((meta.ny, 1))
     wave_units = 'microns'

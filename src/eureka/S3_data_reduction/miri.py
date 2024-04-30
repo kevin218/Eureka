@@ -71,6 +71,8 @@ def read(filename, data, meta, log):
     err = hdulist['ERR', 1].data
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
+    if not meta.photometry:
+        meta.filter = 'LRS'
 
     if meta.photometry:
         # Working on photometry data

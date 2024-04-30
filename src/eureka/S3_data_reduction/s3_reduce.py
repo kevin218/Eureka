@@ -363,7 +363,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     if meta.curvature == 'correct':
                         data, meta = straighten.straighten_trace(data, meta,
                                                                  log, m)
-                    elif meta.inst == 'nirspec' and meta.grating != 'PRISM':
+                    elif meta.inst == 'nirspec' and meta.filter != 'PRISM':
                         log.writelog('WARNING: NIRSpec GRISM spectra is '
                                      'significantly curved and will very '
                                      'likely benefit from setting '

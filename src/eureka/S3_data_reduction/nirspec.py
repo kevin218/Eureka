@@ -54,7 +54,7 @@ def read(filename, data, meta, log):
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
         data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
-    meta.grating = data.attrs['mhdr']['GRATING']
+    meta.filter = data.attrs['mhdr']['GRATING']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data

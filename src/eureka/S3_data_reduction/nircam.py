@@ -60,6 +60,8 @@ def read(filename, data, meta, log):
     v0 = hdulist['VAR_RNOISE', 1].data
     int_times = hdulist['INT_TIMES', 1].data
 
+    meta.filter = data.attrs['mhdr']['FILTER']
+
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
