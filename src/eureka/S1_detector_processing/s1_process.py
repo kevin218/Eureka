@@ -7,8 +7,8 @@ from astropy.io import fits
 from jwst.pipeline.calwebb_detector1 import Detector1Pipeline
 import crds
 
-from eureka.S1_detector_processing.ramp_fitting import Eureka_RampFitStep
-from eureka.S1_detector_processing.superbias import Eureka_SuperBiasStep
+from .ramp_fitting import Eureka_RampFitStep
+from .superbias import Eureka_SuperBiasStep
 
 from ..lib import logedit, util
 from ..lib import manageevent as me
@@ -122,6 +122,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
             meta.m = m
             meta.intstart = hdulist[0].header['INTSTART']-1
             meta.intend = hdulist[0].header['INTEND']
+            meta.n_int = meta.intend-meta.intstart
             EurekaS1Pipeline().run_eurekaS1(filename, meta, log)
 
     # Calculate total run time
@@ -136,6 +137,8 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
         log.writelog('Saving Metadata')
         me.saveevent(meta, meta.outputdir+'S1_'+meta.eventlabel+"_Meta_Save",
                      save=[])
+
+    log.closelog()
 
     return meta
 
@@ -201,6 +204,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
             self.linearity.override_linearity = meta.linearity_file
         self.dark_current.skip = meta.skip_dark_current
         self.jump.skip = meta.skip_jump
+        self.jump.maximum_cores = meta.maximum_cores
         if (hasattr(meta, 'jump_rejection_threshold') and
                 isinstance(meta.jump_rejection_threshold, float)):
             self.jump.rejection_threshold = meta.jump_rejection_threshold
@@ -216,14 +220,25 @@ class EurekaS1Pipeline(Detector1Pipeline):
             if hasattr(meta, 'custom_bias') and meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
         elif instrument in ['MIRI']:
-            self.firstframe.skip = meta.skip_firstframe
-            self.lastframe.skip = meta.skip_lastframe
-            self.rscd.skip = meta.skip_rscd
+            if (hasattr(meta, 'remove_390hz')
+                    and meta.remove_390hz):
+                # Need to apply these steps later to be able to remove 390 Hz
+                self.firstframe.skip = True
+                self.lastframe.skip = True
+            else:
+                self.firstframe.skip = meta.skip_firstframe
+                self.lastframe.skip = meta.skip_lastframe
+            if hasattr(meta, 'skip_reset'):
+                self.reset.skip = meta.skip_reset
+            if hasattr(meta, 'skip_rscd'):
+                self.rscd.skip = meta.skip_rscd
+            if hasattr(meta, 'skip_emicorr'):
+                self.emicorr.skip = meta.skip_emicorr
 
         # Define ramp fitting procedure
         self.ramp_fit = Eureka_RampFitStep()
         self.ramp_fit.algorithm = meta.ramp_fit_algorithm
-        self.ramp_fit.maximum_cores = meta.ramp_fit_max_cores
+        self.ramp_fit.maximum_cores = meta.maximum_cores
         self.ramp_fit.skip = meta.skip_ramp_fitting
         self.ramp_fit.s1_meta = meta
         self.ramp_fit.s1_log = log

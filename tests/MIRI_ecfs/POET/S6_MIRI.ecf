@@ -1,0 +1,45 @@
+# Eureka! Control File for Stage 6: Spectra Plotting
+
+allapers        True # Run S6 on all of the apertures considered in S5? Otherwise will use newest output in the inputdir
+
+# Plotting parameters
+y_params        ['rp^2', 'fp', 'AmpSin1', 'AmpSin2', 'AmpCos1', 'AmpCos2', 'u1', 'u2', 'c1', 'r0', 'r1', 'r3', 'r4', 'scatter_mult']  # The parameter name as entered in your EPF file in Stage 5. rp^2, 1/r1, and 1/r4 are also permitted.
+y_labels        None  # The formatted string you want on the y-label. Set to None to use the default formatting.
+y_label_units   [None, None, None, None, None, None, None, None, None, None, '(minutes)', None, '(minutes)', None]  # The formatted string for the units you want on the y-label - e.g., (ppm), (seconds), '(days$^{-1})$', etc.. Set to None to automatically add any implied units from y_scalars (e.g. ppm), or set to '' to force no units.
+y_scalars       [1e6, 1e6, 1, 1, 1, 1, 1, 1, 1, 1, 24*60, 1, 24*60, 1]  # Can be used to convert to percent (100), ppm (1e6), etc.
+x_unit          um # Options include any measurement of light included in astropy.units.spectral (e.g. um, nm, Hz, etc.)
+
+# Tabulating parameters
+ncol            4  # The number of columns you want in your LaTeX formatted tables
+
+# This section is relevant if isplots_S6>=3
+# Scale height parameters (if you want a second copy of the plot with a second y-axis with units of scale height)
+# -------------------
+# NGTS-10b parameters
+# -------------------
+star_Rad		0.697 # The radius of the star in units of solar radii
+planet_Teq		1332 # The equilibrium temperature of the planet in units of Kelvin
+planet_Mass		2.162 # The planet's mass in units of Jupiter radii (used to calculate surface gravity)
+planet_Rad		None # The planet's radius in units of Jupiter radii (used to calculate surface gravity); Set to None to use the average fitted radius
+planet_mu		2.3 # The mean molecular mass of the atmosphere (in atomic mass units)
+planet_R0		None # The reference radius (in Jupiter radii) for the scale height measurement; Set to None to use the mean fitted radius
+
+# Diagnostics
+isplots_S6      5 # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+testing_S6		False
+hide_plots      True # If True, plots will automatically be closed rather than popping up
+
+# Project directory
+topdir          ../tests
+
+# Model to plot overtop (csv with col 1 as wavelength in microns, col 2 in the same units as the plotted spectrum, any headers preceded by a #)
+model_spectrum	None
+model_x_unit	um
+model_y_param	fp # Options include Rp/Rs, (Rp/Rs)^2, Fp/Fs
+model_y_scalar	1 # Indicate whether model y-values have already been scaled (e.g. write 1e6 if model_spectrum is in ppm)
+model_zorder    0 # The zorder of the model on the plot (0 for beneath the data, 1 for above the data)
+model_delimiter None # Delimiter between columns. Typical options: None (for space), ',' for comma
+
+# Directories relative to project dir
+inputdir        /data/JWST-Sim/MIRI/Stage5/
+outputdir       /data/JWST-Sim/MIRI/Stage6/

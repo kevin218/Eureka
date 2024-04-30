@@ -4,33 +4,38 @@
 
 suffix              uncal
 
+maximum_cores       'half'  # Options are 'none', quarter', 'half','all'
+
 # Control ramp fitting method
 ramp_fit_algorithm  'default'   #Options are 'default', 'mean', or 'differenced'
-ramp_fit_max_cores  'none'  #Options are 'none', quarter', 'half','all'
 
 # Pipeline stages
 skip_group_scale    False
 skip_dq_init        False
+skip_emicorr        True    # Skipped by default despite what the jwst readthedocs page says
 skip_saturation     False
-skip_ipc            True    #Skipped by default for all instruments
-skip_firstframe     True    #Skipped by default for MIRI TSO
-skip_lastframe      True
+skip_ipc            True    # Skipped by default for all instruments
+skip_firstframe     False   # Typically best to set False for MIRI TSO, but you should experiment
+skip_lastframe      False   # Typically best to set False for MIRI TSO, but you should experiment
 skip_refpix         False
 skip_linearity      False
-skip_rscd           True    #Skipped by default for MIRI TSO
+skip_rscd           True    # Skipped by default for MIRI TSO
 skip_dark_current   False
 skip_jump           False
 skip_ramp_fitting   False
 skip_gain_scale     False
 
 #Pipeline stages parameters
-jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
+jump_rejection_threshold  4.0 # float, default is 4.0, CR sigma rejection threshold
 
 # Custom linearity reference file
 custom_linearity    False
 linearity_file      /path/to/custom/linearity/fits/file
 
-# Custom bias frames
+# Custom bias
+bias_correction     None    # Bias correction options: [mean, group_level, smooth, None]
+bias_group          1       # Group number options: [1, 2, ..., each]
+bias_smooth_length  201     # Window length when using 'smooth' bias correction
 custom_bias         False
 superbias_file      /path/to/custom/superbias/fits/file
 
@@ -40,6 +45,34 @@ expand_prev_group   False   # Expand saturation flags to previous group
 dq_sat_mode         percentile # Options: [percentile, min, defined]
 dq_sat_percentile   50      # Percentile of the entire time series to use to define the saturation mask (50=median)
 dq_sat_columns      [[0, 0], [0,0], [0,0], [0,0], [0,0]]  #for dq_sat_mode = defined, user defined saturated columns
+
+# Background subtraction
+remove_390hz        False    # Use custom Eureka! code to remove the 390 Hz periodic noise in MIRI/LRS SLITLESSPRISM group-level data
+grouplevel_bg       False
+ncpu                8
+bg_y1               6
+bg_y2               26
+bg_deg              0 
+p3thresh            5
+
+# Mask curved traces
+masktrace           False
+window_len          11
+expand_mask         8
+ignore_low          600
+ignore_hi           None
+
+# Manual reference pixel correction for NIRSpec PRISM
+refpix_corr         False
+npix_top            8
+npix_bot            8
+
+# Diagnostics
+isplots_S1          1
+nplots              5
+hide_plots          False
+testing_S1          False
+verbose             True
 
 # Project directory
 topdir              /home/User/Data/JWST-Sim/MIRI/

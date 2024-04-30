@@ -39,6 +39,7 @@ def preparation_step(meta, log):
     meta, log = separate_scan_direction(meta, log)
 
     # Calculate centroid of direct image(s)
+    # meta.centroid order is (y,x)
     meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
                                       meta.centroidtrim, meta.ny, meta.CRPIX1,
                                       meta.CRPIX2, meta.postarg1,
@@ -100,7 +101,7 @@ def get_reference_frames(meta, log):
 
     # Save the reference frame for each scan direction
     for i in meta.iref:
-        log.writelog(f"Preparing reference frame {i}...")
+        log.writelog(f"Capturing info from reference frame {i}...")
         data = xrio.makeDataset()
         data, meta, log = read(meta.segment_list[i], data, meta, log)
         meta.n_int, meta.ny, meta.nx = data.flux.shape
@@ -162,6 +163,9 @@ def conclusion_step(data, meta, log):
     meta.guess = np.array(meta.guess)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
+    
+    # Delete the no-longer needed scandir attribute
+    delattr(meta, 'scandir')
 
     return data, meta, log
 
@@ -403,7 +407,7 @@ def read(filename, data, meta, log):
         # Determine if we are using IMA or FLT files
         if filename.endswith('flt.fits'):
             # FLT files subtract first from last, 2 reads
-            meta.nreads = 2
+            meta.nreads = 1
         else:
             meta.nreads = data.attrs['shdr']['SAMPNUM']
 
@@ -411,14 +415,12 @@ def read(filename, data, meta, log):
         err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
         dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
         jd = []
-        j = 0
-        for rd in range(meta.nreads, 0, -1):
+        for j, rd in enumerate(range(meta.nreads, 0, -1)):
             sci[j] = hdulist['SCI', rd].data
             err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
             jd.append(2400000.5+hdulist['SCI', rd].header['ROUTTIME']
                       - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
-            j += 1
         jd = np.array(jd)
 
     ra = data.attrs['mhdr']['RA_TARG']*np.pi/180
@@ -599,7 +601,7 @@ def difference_frames(data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
-    if meta.firstInBatch:
+    if meta.nreads > 1 and meta.firstInBatch:
         log.writelog('  Differencing non-destructive reads...',
                      mute=(not meta.verbose))
 
@@ -623,17 +625,20 @@ def difference_frames(data, meta, log):
     guess = np.zeros((meta.nreads), dtype=int)
     for n in range(meta.nreads):
         diffmask[n] = data['flatmask'][0][0]
-        try:
+        if meta.nreads > 1:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
                         np.median(differr[n], axis=1)[:, np.newaxis])] = 0
-        except:
-            # FINDME: Need to only catch the expected exception
-            # May fail for FLT files
-            log.writelog("Diffthresh failed - this may happen for FLT files.")
+        else:
+            # Don't use diffthresh for FLT files
+            pass
 
-        masked_data = diffflux[n]*diffmask[n]
-        guess[n] = np.median(np.where(masked_data > np.mean(masked_data)
-                                      )[0]).astype(int)
+        # Guess spectrum position only using subarray region
+        masked_data = diffflux[n, meta.ywindow[0]:meta.ywindow[1],
+                               meta.xwindow[0]:meta.xwindow[1]] * \
+            diffmask[n, meta.ywindow[0]:meta.ywindow[1],
+                     meta.xwindow[0]:meta.xwindow[1]]
+        guess[n] = (np.median(np.where(masked_data > np.mean(masked_data))[0]) 
+                    + meta.ywindow[0]).astype(int)
     # Guess may be skewed if first read is zeros
     if guess[0] < 0 or guess[0] > meta.ny:
         guess[0] = guess[1]
@@ -657,7 +662,11 @@ def difference_frames(data, meta, log):
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
     time_units = data.flux.attrs['time_units']
-    difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
+    if meta.nreads > 1:
+        difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
+    else:
+        # FLT data has already been differenced
+        difftime = data.time
     diffdata = xrio.makeDataset()
     diffdata['flux'] = xrio.makeFluxLikeDA(diffflux, difftime, flux_units,
                                            time_units, name='flux')
@@ -874,17 +883,13 @@ def correct_drift2D(data, meta, log, m):
         log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
-            iscan = np.where(meta.scandir == p)[0]*meta.nreads
-            if len(iscan) > 0:
+            iscans = np.where(data.scandir.values == p)[0]
+            if len(iscans) > 0:
                 for n in range(meta.nreads):
-                    # FINDME: The following commented-out code is outdated
-                    # y1 = data.guess[meta.iref+n] - meta.spec_hw
-                    # y2 = data.guess[meta.iref+n] + meta.spec_hw
-                    # estsig = [data.err[meta.iref+n, y1:y2]
-                    #           for j in range(len(meta.bg_thresh))]
-                    data.mask[iscan+n] = sigrej.sigrej(data.flux[iscan+n],
-                                                       meta.bg_thresh,
-                                                       data.mask[iscan+n])
+                    iscan = iscans[n::meta.nreads]
+                    data.mask[iscan] = sigrej.sigrej(data.flux[iscan],
+                                                     meta.bg_thresh,
+                                                     data.mask[iscan])
 
     log.writelog("  Performing sub-pixel drift correction...",
                  mute=(not meta.verbose))
@@ -895,9 +900,6 @@ def correct_drift2D(data, meta, log, m):
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
     for n in range(meta.n_int):
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
         # Need to swap ix and iy because of numpy
         spline = spi.RectBivariateSpline(iy, ix, data.flux[n], kx=kx,
                                          ky=ky, s=0)

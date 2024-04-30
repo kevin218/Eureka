@@ -10,6 +10,7 @@ fit_par         ./S5_fit_par_wfc3_template.epf # What fitting epf do you want to
 verbose         True                   # If True, more details will be printed about steps
 fit_method      [dynesty]              #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
 run_myfuncs     [batman_tr,polynomial,hstramp] # options are: batman_tr, batman_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, and GP (can list multiple types separated by commas)
+compute_ltt     False                   # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
 
 # Manual clipping in time
 manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.

@@ -50,7 +50,9 @@ u2           0.1           'free'         0            1            U
 c0           1             'free'         0.95         1.05         U
 h0           0             'free'         -0.1         0.1          U
 h1           10            'free'         0            100          U
-h3           0             'free'         -1           1            U
+h3           0.0           'fixed'        -1           1            U
+h5           6.6422e-02    'fixed'        6.6422e-02   0.001        N
+h6           0.03          'fixed'        0.03         0.0          N
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)

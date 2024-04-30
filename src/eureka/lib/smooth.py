@@ -93,13 +93,13 @@ def medfilt(x, window_len):
     """
     assert (x.ndim == 1), "Input must be one-dimensional."
     if window_len % 2 == 0:
-        print("Median filter length ("+str(window_len)+") must be odd." +
+        print("Median filter length ("+str(window_len)+") must be odd. "
               "Adding 1.")
         window_len += 1
     k2 = (window_len - 1) // 2
-    s = np.r_[2*np.median(x[0:window_len//5])-x[window_len:1:-1], x,
-              2*np.median(x[-window_len//5:])-x[-1:-window_len:-1]]
-    y = np.zeros((len(s), window_len), dtype=s.dtype)
+    s = np.r_[2*np.ma.median(x[0:window_len//5])-x[window_len:1:-1], x,
+              2*np.ma.median(x[-window_len//5:])-x[-1:-window_len:-1]]
+    y = np.ma.zeros((len(s), window_len), dtype=s.dtype)
     y[:, k2] = s
     for i in range(k2):
         j = k2 - i
@@ -107,4 +107,4 @@ def medfilt(x, window_len):
         y[:j, i] = s[0]
         y[:-j, -(i+1)] = s[j:]
         y[-j:, -(i+1)] = s[-1]
-    return np.median(y[window_len-1:-window_len+1], axis=1)
+    return np.ma.median(y[window_len-1:-window_len+1], axis=1)

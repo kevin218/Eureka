@@ -3,12 +3,11 @@ channels:
     - conda-forge
     - defaults
 dependencies:
-    - python==3.9.7
+    - python==3.10.14
     - astropy
     - batman-package
     - bokeh[version='<3.0']
     - ccdproc
-    - celerite # Needed for GP
     - corner
     - dynesty[version='>1.0'] # Lower limit needed for specific arguments
     - emcee[version='>3.0.0'] # Lower limit needed for specific arguments
@@ -26,7 +25,7 @@ dependencies:
     - pandas
     - photutils
     - pip # required for the pip installs below
-    - pytest # Needed for testing
+    - pytest[version='<8.0'] # Upper limit needed to avoid some conflict between pytest, an asdf package, and something in the pymc3 set of installs. Needed for testing
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
@@ -36,10 +35,12 @@ dependencies:
     - tqdm
     - pip:
         - astraeus@git+https://github.com/kevin218/Astraeus@main
+        - celerite2 # Needed for GP
         - crds
-        - exotic-ld
+        - exotic-ld==3 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.11.4
+        - jwst==1.14.0
+        - mc3 # Needed for uncertainties in the Allan variance plots in S5
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
