@@ -194,7 +194,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             spec = xrio.readXR(specData_savefile)
 
             # Assign an empty mask for custom datasets
-            if meta.data_format == 'custom':
+            if meta.data_format != 'eureka':
                 if not hasattr(spec, 'optmask'):
                     spec['optmask'] = spec.optspec * 0
 
