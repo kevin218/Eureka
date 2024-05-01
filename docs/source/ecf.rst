@@ -1083,7 +1083,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
          and ``4-parameter`` has four parameters ``u1, u2, u3, u4``.
    - Star Spot Parameters
       - ``spotstari`` - The stellar inclination in degrees.
-      - ``spotrot`` - The stellar rotation rate in days.
+      - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise Eureka! will use fleck's slow mode which assumes the stellar rotation is >> transit time and spots are stationary)
       - ``spotcon#`` - The spot contrast ratio. For fleck only assign one, for starry assign one per spot
       - ``spotrad#`` - The spot radius. For fleck it is relative to the star, for starry it is in degrees
       - ``spotlat#`` - The spot latitude. 

@@ -794,6 +794,13 @@ def plot_fleck_star(lc, model, meta, fitter):
     uarray = np.array([])
     
     bm_params = batman.TransitParams()
+    # Set spot/fleck parameters
+    nspots = 0
+    # set a star rotation for the star object
+    # not actually used in fast mode. 
+    # overwritten if user supplies and runs slow mode
+    star_rotation = 100 
+    fleck_fast = True
     for attr in model.parameters.dict:
         if attr.startswith('spot'):
             if 'rad' in attr:
@@ -806,6 +813,7 @@ def plot_fleck_star(lc, model, meta, fitter):
                 spot_contrast = model.parameters.dict[attr][0]
             elif 'rot' in attr:
                 star_rotation = model.parameters.dict[attr][0]
+                fleck_fast = True
             elif 'stari' in attr:
                 star_inc = model.parameters.dict[attr][0]
         elif attr.startswith('u'):

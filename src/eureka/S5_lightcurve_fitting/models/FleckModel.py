@@ -123,6 +123,11 @@ class FleckTransitModel(Model):
                         
             # Set spot/fleck parameters
             nspots = 0
+            # set a star rotation for the star object
+            # not actually used in fast mode. 
+            # overwritten if user supplies and runs slow mode
+            star_rotation = 100 
+            fleck_fast = True
             for key in self.keys:
                 split_key = key.split('_')
                 if len(split_key) == 1:
@@ -148,10 +153,11 @@ class FleckTransitModel(Model):
                 elif 'rot' in split_key[0]:
                     # Get the stellar rotation and assign
                     star_rotation = self.parameters.dict[key][0]
+                    fleck_fast = False
                 elif 'stari' in split_key[0]:
                     # Get the stellar inclination and assign
                     star_inc = self.parameters.dict[key][0]
-                else:
+                elif 'npts' in split_key[0]:
                     # it's the number of points to evaluate
                     npoints = self.parameters.dict[key][0]
             
