@@ -163,6 +163,9 @@ def conclusion_step(data, meta, log):
     meta.guess = np.array(meta.guess)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
+    
+    # Delete the no-longer needed scandir attribute
+    delattr(meta, 'scandir')
 
     return data, meta, log
 
@@ -880,17 +883,13 @@ def correct_drift2D(data, meta, log, m):
         log.writelog("  Performing full-frame outlier rejection...",
                      mute=(not meta.verbose))
         for p in range(2):
-            iscan = np.where(meta.scandir == p)[0]*meta.nreads
-            if len(iscan) > 0:
+            iscans = np.where(data.scandir.values == p)[0]
+            if len(iscans) > 0:
                 for n in range(meta.nreads):
-                    # FINDME: The following commented-out code is outdated
-                    # y1 = data.guess[meta.iref+n] - meta.spec_hw
-                    # y2 = data.guess[meta.iref+n] + meta.spec_hw
-                    # estsig = [data.err[meta.iref+n, y1:y2]
-                    #           for j in range(len(meta.bg_thresh))]
-                    data.mask[iscan+n] = sigrej.sigrej(data.flux[iscan+n],
-                                                       meta.bg_thresh,
-                                                       data.mask[iscan+n])
+                    iscan = iscans[n::meta.nreads]
+                    data.mask[iscan] = sigrej.sigrej(data.flux[iscan],
+                                                     meta.bg_thresh,
+                                                     data.mask[iscan])
 
     log.writelog("  Performing sub-pixel drift correction...",
                  mute=(not meta.verbose))
@@ -901,9 +900,6 @@ def correct_drift2D(data, meta, log, m):
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
     for n in range(meta.n_int):
-        # Get index of reference frame
-        # (0 = forward scan, 1 = reverse scan)
-        p = meta.scandir[m]
         # Need to swap ix and iy because of numpy
         spline = spi.RectBivariateSpline(iy, ix, data.flux[n], kx=kx,
                                          ky=ky, s=0)

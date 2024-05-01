@@ -79,7 +79,8 @@ def sum_reads(spec, lc, meta):
         lc.centroid_sx['time'] = time
     lc.centroid_y['time'] = time
     lc.scandir['time'] = time
-    lc.driftmask['time'] = time
+    if meta.correctDrift:
+        lc.driftmask['time'] = time
 
     # Update meta parameters
     meta.nreads = 1

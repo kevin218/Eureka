@@ -337,7 +337,7 @@ def computeRedChiSq(lc, log, model, meta, freenames):
     model_lc = model.eval(incl_GP=True)
     residuals = (lc.flux - model_lc)
     chi2 = np.ma.sum((residuals / lc.unc_fit) ** 2)
-    chi2red = chi2 / (len(lc.flux) - len(freenames))
+    chi2red = chi2 / (np.sum(~np.ma.getmaskarray(lc.flux)) - len(freenames))
 
     log.writelog(f'Reduced Chi-squared: {chi2red}', mute=(not meta.verbose))
 
@@ -384,8 +384,8 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         maxnbins = npts / 10.
     binsz = np.arange(1, maxnbins + binstep, step=binstep, dtype=int)
     nbins = np.zeros(binsz.size, dtype=int)
-    rms = np.zeros(binsz.size)
-    rmserr = np.zeros(binsz.size)
+    rms = np.ma.zeros(binsz.size)
+    rmserr = np.ma.zeros(binsz.size)
     for i in range(binsz.size):
         nbins[i] = int(np.floor(data.size / binsz[i]))
         bindata = np.ma.zeros(nbins[i], dtype=float)
@@ -394,7 +394,7 @@ def computeRMS(data, maxnbins=None, binstep=1, isrmserr=False):
         for j in range(nbins[i]):
             bindata[j] = np.ma.mean(data[j * binsz[i]:(j + 1) * binsz[i]])
         # get rms
-        rms[i] = np.sqrt(np.ma.mean(bindata ** 2))
+        rms[i] = np.ma.sqrt(np.ma.mean(bindata ** 2))
         rmserr[i] = rms[i] / np.sqrt(2. * nbins[i])
     # expected for white noise (WINN 2008, PONT 2006)
     stderr = (np.ma.std(data) / np.sqrt(binsz)) * np.sqrt(nbins / (nbins - 1.))

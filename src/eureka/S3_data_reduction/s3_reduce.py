@@ -462,7 +462,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # Compute clean median frame
                         data = optspex.clean_median_flux(data, meta, log, m)
                         # Save the original median frame
-                        saved_ref_median_frame = data.medflux
+                        saved_ref_median_frame = deepcopy(data.medflux)
                     else:
                         # Load the original median frame
                         data['medflux'] = saved_ref_median_frame
@@ -652,6 +652,11 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         if meta.interp_method is not None:
                             util.interp_masked(data, meta, i, log)
 
+                        # Check if aperture shape has been defined
+                        if (not hasattr(meta, 'aperture_shape') 
+                                or meta.aperture_shape is None):
+                            meta.aperture_shape = 'circle'
+
                         # Calculate flux in aperture and subtract
                         # background flux
                         aphot = apphot.apphot(
@@ -666,7 +671,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             aperr=True, nappix=True, skylev=True,
                             skyerr=True, nskypix=True,
                             nskyideal=True, status=True,
-                            betaper=True)
+                            betaper=True, aperture_shape=meta.aperture_shape)
                         # Save results into arrays
                         (data['aplev'][i], data['aperr'][i],
                             data['nappix'][i], data['skylev'][i],
@@ -760,9 +765,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if not meta.photometry:
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,
                                            spec.optspec.values,
-                                           optmask=spec.optmask.values)
+                                           spec.optmask.values,
+                                           scandir=getattr(spec, 'scandir',
+                                                           None))
             else:
-                normspec = util.normalize_spectrum(meta, data.aplev.values)
+                normspec = util.normalize_spectrum(
+                    meta, spec.aplev.values,
+                    scandir=getattr(spec, 'scandir', None))
                 meta.mad_s3 = util.get_mad_1d(normspec)
             try:
                 log.writelog(f"Stage 3 MAD = {int(np.round(meta.mad_s3))} ppm")
@@ -774,7 +783,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 log.writelog('Generating figures')
                 # 2D light curve without drift correction
                 plots_s3.lc_nodriftcorr(meta, spec.wave_1d, spec.optspec,
-                                        optmask=spec.optmask)
+                                        optmask=spec.optmask,
+                                        scandir=getattr(spec, 'scandir',
+                                                        None))
 
             # make citations for current stage
             util.make_citations(meta, 3)

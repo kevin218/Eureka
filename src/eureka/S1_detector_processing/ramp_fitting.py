@@ -209,7 +209,7 @@ default='none') # max number of processes to create
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    # Pipeline version 1.3.3
+                    # Pipeline version 1.13.4
                     stcal.ramp_fitting.ols_fit.calc_opt_sums = \
                         calc_opt_sums_uniform_weight
                 elif self.weighting == 'custom':
@@ -352,8 +352,8 @@ def custom_power(snr, snr_bounds, exponents):
     return pow_wt.ravel()
 
 
-def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
-                                 xvalues, good_pix):
+def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
+                                 mask_2d, xvalues, good_pix):
     """Adjusted version of calc_opt_sums() function from stcal ramp fitting.
 
     Now weights are all equal to 1, except for those that correspond to NaN or
@@ -369,6 +369,8 @@ def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
 
     Parameters
     ----------
+    ramp_data : RampData
+        Input data necessary for computing ramp fitting. (Unused)
     rn_sect : float, 2D array
         read noise values for all pixels in data section
     gain_sect : float, 2D array

@@ -6,6 +6,8 @@ import scipy.interpolate as spi
 import scipy.stats as stats
 from scipy.interpolate import interp1d
 from matplotlib.colors import LogNorm
+import matplotlib.patches as patches
+from matplotlib.path import Path
 from mpl_toolkits import axes_grid1
 import imageio
 
@@ -13,7 +15,7 @@ from .source_pos import gauss
 from ..lib import util, plots
 
 
-def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
+def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
     '''Plot a 2D light curve without drift correction. (Fig 3101+3102)
 
     Fig 3101 uses a linear wavelength x-axis, while Fig 3102 uses a linear
@@ -31,9 +33,14 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None):
     optmask : Xarray Dataset; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
     '''
     normspec = util.normalize_spectrum(meta, optspec.values,
-                                       optmask=optmask.values)
+                                       optmask=optmask.values,
+                                       scandir=scandir)
 
     # Save the wavelength units as the copy below will erase them
     wave_units = wave_1d.wave_units
@@ -963,6 +970,8 @@ def phot_2d_frame(data, meta, m, i):
 
     - 2022-08-02 Sebastian Zieba
         Initial version
+    - 2024-04-06 Yoni Brande
+        Added hexagonal aperture plotting
     """
     plt.figure(3306, figsize=(8, 8))
     plt.clf()
@@ -987,15 +996,52 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylabel('y pixels')
     plt.xlabel('x pixels')
 
-    circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
+    # Plot proper aperture shapes
+    if meta.aperture_shape == "hexagon":
+        # to make a hexagon, make the vertices and add them into a path
+        # need to add extraneous vertex to close path, for some reason
+        xvert = centroid_x.data.tolist() - meta.photap*np.sin(
+            2*np.pi*np.arange(7)/6)
+        yvert = centroid_y.data.tolist() + meta.photap*np.cos(
+            2*np.pi*np.arange(7)/6)
+        hex1 = Path(np.vstack((xvert, yvert)).T)
+
+        # make patch of hexagon
+        ap1 = patches.PathPatch(hex1, color='r',
+                                fill=False, lw=3, alpha=0.7, 
+                                label='target aperture')
+        
+        xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
+            2*np.pi*np.arange(7)/6)
+        yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
+            2*np.pi*np.arange(7)/6)
+        hex2 = Path(np.vstack((xvert, yvert)).T)
+
+        ap2 = patches.PathPatch(hex2, color='w',
+                                fill=False, lw=4, alpha=0.8, 
+                                label='sky aperture')
+        
+        xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
+            2*np.pi*np.arange(7)/6)
+        yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
+            2*np.pi*np.arange(7)/6)
+        hex3 = Path(np.vstack((xvert, yvert)).T)
+
+        ap3 = patches.PathPatch(hex3, color='w',
+                                fill=False, lw=4, alpha=0.8)
+    else:
+        # circular apertures
+        ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
                          fill=False, lw=3, alpha=0.7, label='target aperture')
-    circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
+        ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
                          fill=False, lw=4, alpha=0.8, label='sky aperture')
-    circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
+        ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
                          fill=False, lw=4, alpha=0.8)
-    plt.gca().add_patch(circle1)
-    plt.gca().add_patch(circle2)
-    plt.gca().add_patch(circle3)
+        
+    plt.gca().add_patch(ap1)
+    plt.gca().add_patch(ap2)
+    plt.gca().add_patch(ap3)
+
     add_colorbar(im, label='Flux (electrons)')
     plt.xlim(0, flux.shape[1])
     plt.ylim(0, flux.shape[0])
@@ -1024,17 +1070,55 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylabel('y pixels')
         plt.xlabel('x pixels')
 
-        circle1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                             fill=False, lw=3, alpha=0.7,
+        # Plot proper aperture shapes
+        if meta.aperture_shape == "hexagon":
+            # to make a hexagon, make the vertices and add them into a path
+            xvert = centroid_x.data.tolist() - meta.photap*np.sin(
+                2*np.pi*np.arange(7)/6)
+            yvert = centroid_y.data.tolist() + meta.photap*np.cos(
+                2*np.pi*np.arange(7)/6)
+            hex1 = Path(np.vstack((xvert, yvert)).T)
+
+            # make patch of hexagon
+            ap1 = patches.PathPatch(hex1, color='r',
+                                    fill=False, lw=3, alpha=0.7, 
+                                    label='target aperture')
+            
+            # to make a hexagon, make the vertices and add them into a path
+            xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
+                2*np.pi*np.arange(7)/6)
+            yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
+                2*np.pi*np.arange(7)/6)
+            hex2 = Path(np.vstack((xvert, yvert)).T)
+
+            # make patch of hexagon
+            ap2 = patches.PathPatch(hex2, color='w',
+                                    fill=False, lw=4, alpha=0.8, 
+                                    label='sky aperture')
+            
+            # to make a hexagon, make the vertices and add them into a path
+            xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
+                2*np.pi*np.arange(7)/6)
+            yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
+                2*np.pi*np.arange(7)/6)
+            hex3 = Path(np.vstack((xvert, yvert)).T)
+
+            # make patch of hexagon
+            ap3 = patches.PathPatch(hex3, color='w',
+                                    fill=False, lw=4, alpha=0.8)
+        else:
+            # circular apertures
+            ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
+                             fill=False, lw=3, alpha=0.7, 
                              label='target aperture')
-        circle2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
-                             fill=False, lw=4, alpha=0.8,
-                             label='sky aperture')
-        circle3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
+            ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
+                             fill=False, lw=4, alpha=0.8, label='sky aperture')
+            ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
                              fill=False, lw=4, alpha=0.8)
-        plt.gca().add_patch(circle1)
-        plt.gca().add_patch(circle2)
-        plt.gca().add_patch(circle3)
+
+        plt.gca().add_patch(ap1)
+        plt.gca().add_patch(ap2)
+        plt.gca().add_patch(ap3)
 
         add_colorbar(im, label='Flux (electrons)')
         xlim_min = max(0, centroid_x - meta.skyout - 10)
