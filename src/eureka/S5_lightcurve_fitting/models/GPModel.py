@@ -158,26 +158,41 @@ class GPModel(Model):
                 flux = self.flux
                 fit_lc = self.fit_lc
                 unc_fit = self.unc_fit
-            residuals = flux-fit_lc
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
+
+            # Remove poorly handled masked values
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
 
             # Create the GP object with current parameters
             if gp is None:
                 gp = self.setup_GP(chan)
 
             if self.gp_code_name == 'george':
-                gp.compute(self.kernel_inputs[chan].T, unc_fit)
+                gp.compute(self.kernel_inputs[chan][:, good].T, unc_fit)
                 mu = gp.predict(residuals, self.kernel_inputs[chan].T,
                                 return_cov=False)
             elif self.gp_code_name == 'celerite':
-                gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
+                kernel_inputs = self.kernel_inputs[chan][0][good]
+                gp.compute(kernel_inputs, yerr=unc_fit)
                 mu = gp.predict(residuals)
             elif self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(residuals, noise=unc_fit).gp
                 mu = cond_gp.loc
 
-            # Mask interpolated/extrapolated values
-            mu = np.ma.masked_where(np.ma.getmaskarray(residuals), mu)
-            lcfinal = np.ma.append(lcfinal, mu)
+            # Re-insert and mask bad values
+            mu_full = np.ma.zeros(len(time))
+            mu_full[good] = mu
+            mu_full = np.ma.masked_where(~good, mu_full)
+
+            # Append to the full list
+            lcfinal = np.ma.append(lcfinal, mu_full)
 
         return lcfinal
 

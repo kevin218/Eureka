@@ -182,7 +182,17 @@ class GPModel(PyMC3Model):
                 flux = self.flux
                 fit_lc = self.fit_lc
                 unc_fit = self.unc_fit
-            residuals = flux-fit_lc
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
+
+            # Remove poorly handled masked values
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
 
             # Create the GP object with current parameters
             if gp is None:
@@ -192,9 +202,13 @@ class GPModel(PyMC3Model):
                 gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
                 mu = gp.predict(residuals).eval()
 
-            # Mask interpolated/extrapolated values
-            mu = np.ma.masked_where(np.ma.getmaskarray(residuals), mu)
-            lcfinal = np.ma.append(lcfinal, mu)
+            # Re-insert and mask bad values
+            mu_full = np.ma.zeros(len(time))
+            mu_full[good] = mu
+            mu_full = np.ma.masked_where(~good, mu_full)
+
+            # Append this channel to the outputs
+            lcfinal = np.ma.append(lcfinal, mu_full)
 
         return lcfinal
 
