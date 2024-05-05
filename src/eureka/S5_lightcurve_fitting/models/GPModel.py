@@ -158,7 +158,7 @@ class GPModel(Model):
                 flux = self.flux
                 fit_lc = self.fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit)
+            residuals = np.ma.masked_invalid(flux-fit_lc)
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
