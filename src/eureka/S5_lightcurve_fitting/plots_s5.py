@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -342,7 +343,7 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        if 'time_avg' not in dir():
+        if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
             break
         flux = np.ma.copy(lc.flux)
