@@ -159,7 +159,13 @@ def conclusion_step(data, meta, log):
     log : logedit.Logedit
         The updated log.
     """
-    meta.centroids = np.array(meta.centroids, dtype=object)
+    
+    if len(np.shape(np.array(meta.centroids, dtype=object))) < 2:
+        raise AssertionError("ERROR: Input spectra have inconsistent numbers "
+                             "of reads. Ensure each spatially scanned "
+                             "spectrum is the same size.")
+
+    meta.centroids = np.array(meta.centroids)
     meta.guess = np.array(meta.guess)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
