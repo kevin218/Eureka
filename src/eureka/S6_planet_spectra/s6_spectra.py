@@ -423,7 +423,9 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
         fname = f'S5_{fitter}_samples_{channel_key}'
 
-        keys = [key for key in full_keys if y_param == key[:len(y_param)]]
+        temp_keys = [y_param+f'_{c}' if c > 0 else y_param
+                     for c in range(meta.nspecchan)]
+        keys = [key for key in temp_keys if key in full_keys]
         if len(keys) == 0:
             log.writelog(f'  Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n  ['
@@ -689,7 +691,7 @@ def load_s5_saves(meta, log, fit_methods):
                 if meta.y_param in list(ds._variables):
                     sample = ds[meta.y_param].values
                 else:
-                    sample = np.zeros(0)
+                    sample = np.zeros(1)
             samples.append(sample)
     else:
         # No samples for lsq, so just shape it as a single value
@@ -699,9 +701,9 @@ def load_s5_saves(meta, log, fit_methods):
             meta = parse_unshared_saves(meta, log, fit_methods)
         samples = np.array(meta.spectrum_median)
         if all(x is None for x in samples):
-            samples = np.zeros((meta.nspecchan, 0))
+            samples = np.zeros((meta.nspecchan, 1))
 
-    return np.array(samples)
+    return samples
 
 
 def compute_offset(meta, log, fit_methods, nsamp=1e4):
@@ -718,10 +720,10 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
-    if ampsin.shape[-1] == 0:
+    if np.all(ampsin == 0):
         meta.y_param = f'Y{suffix}1'
         ampsin = -load_s5_saves(meta, log, fit_methods)
-        if ampsin.shape[-1] == 0:
+        if np.all(ampsin == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -731,10 +733,10 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         meta.y_param = f'Y{suffix}0'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -785,7 +787,7 @@ def compute_amp(meta, log, fit_methods):
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
-    if fp.shape[-1] == 0:
+    if np.all(fp == 0):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                      'fitted parameters')
@@ -795,10 +797,10 @@ def compute_amp(meta, log, fit_methods):
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
-    if ampsin.shape[-1] == 0:
+    if np.all(ampsin == 0):
         meta.y_param = f'Y{suffix}1'
         ampsin = -load_s5_saves(meta, log, fit_methods)
-        if ampsin.shape[-1] == 0:
+        if np.all(ampsin == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -808,10 +810,10 @@ def compute_amp(meta, log, fit_methods):
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         meta.y_param = f'Y{suffix}0'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -933,11 +935,11 @@ def compute_fn(meta, log, fit_methods):
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
-    if fp.shape[-1] == 0:
+    if np.all(fp == 0):
         # The parameter could not be found - try fpfs
         meta.y_param = 'fpfs'
         fp = load_s5_saves(meta, log, fit_methods)
-        if fp.shape[-1] == 0:
+        if np.all(fp == 0):
             log.writelog('  Planet flux (fp or fpfs) was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
@@ -946,7 +948,7 @@ def compute_fn(meta, log, fit_methods):
     # Load cosine amplitude
     meta.y_param = 'AmpCos1'
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         # FINDME: The following only works if the model does not include any
         # terms other than Y10, Y11, Y20, Y22 (or other higher order terms
         # which evaluate to zero at the anti-stellar point). In general, should
@@ -955,7 +957,7 @@ def compute_fn(meta, log, fit_methods):
         # the anti-stellar point flux. Really do need to use compute_fp instead
         meta.y_param = 'Y10'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
