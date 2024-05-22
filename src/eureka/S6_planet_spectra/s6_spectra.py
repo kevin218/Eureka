@@ -448,7 +448,9 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                     skipinitialspace=True)
         full_keys = list(fitted_values["Parameter"])
-        keys = [key for key in full_keys if y_param in key]
+        temp_keys = [y_param+f'_{c}' if c > 0 else y_param
+                     for c in range(meta.nspecchan)]
+        keys = [key for key in temp_keys if key in full_keys]
         if len(keys) == 0:
             log.writelog(f'Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n['
