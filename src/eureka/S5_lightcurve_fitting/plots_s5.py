@@ -835,7 +835,7 @@ def plot_fleck_star(lc, model, meta, fitter):
             setattr(bm_params, attr, model.parameters.dict[attr][0])
     bm_params.u = uarray
     
-    fig = plt.figure(1000, figsize=(8, 6))
+    fig = plt.figure(5306, figsize=(8, 6))
     plt.clf()
     star = fleck.Star(spot_contrast=spot_contrast, 
                       u_ld=bm_params.u,
@@ -843,5 +843,5 @@ def plot_fleck_star(lc, model, meta, fitter):
     star.plot(spotlon[:, None]*unit.deg, spotlat[:, None]*unit.deg, 
               spotrad[:, None], star_inc*unit.deg, 
               planet=bm_params, time=0)
-    fname = (f'figs{os.sep}fig1000_fleck_star_{fitter}')
+    fname = (f'figs{os.sep}fig5306_fleck_star_{fitter}')
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)

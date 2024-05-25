@@ -440,7 +440,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='emcee')
     
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5:
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
@@ -909,7 +909,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='dynesty')
 
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5:
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >=3:
         plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
 
     # Plot GP fit + components
@@ -1025,7 +1025,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5:
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5>=3:
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
