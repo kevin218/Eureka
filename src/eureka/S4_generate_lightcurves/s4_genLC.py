@@ -224,8 +224,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.nspecchan = len(meta.wave)
             elif hasattr(meta, 'wave_input') and meta.wave_input is not None:
                 # bins defined by file input. 2 columns: low and high edges
-                meta.wave_low = np.genfromtxt(meta.wave_input, usecols = [0])
-                meta.wave_hi = np.genfromtxt(meta.wave_input, usecols = [1])
+                meta.wave_low = np.genfromtxt(meta.wave_input, usecols=[0])
+                meta.wave_hi = np.genfromtxt(meta.wave_input, usecols=[1])
                 meta.wave = (meta.wave_low + meta.wave_hi)/2 
                 meta.nspecchan = len(meta.wave)
             elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
