@@ -31,7 +31,7 @@ custom_linearity    False
 linearity_file      /path/to/custom/linearity/fits/file
 
 # Custom pixel mask file
-custom_mask         True
+custom_mask         False
 mask_file           /path/to/custom/pixel/mask/fits/file
 
 # Custom bias when using NIRSpec G395H
