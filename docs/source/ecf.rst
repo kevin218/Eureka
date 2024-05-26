@@ -49,6 +49,14 @@ linearity_file
 ''''''''''''''
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
+custom_mask
+''''''''''''''''
+Boolean. If True, allows user to supply a custom bad pixel mask file and overwrite the default file.
+
+mask_file
+''''''''''''''
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True.
+
 bias_correction
 '''''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
@@ -665,6 +673,10 @@ If True, also compute the white-light lightcurve.
 wave_min & wave_max
 '''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
+
+wave_input
+'''''''''''''''''''
+Path to a user supplied file with pre-defined wavelength bins. Two columns: first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
 
 
 allapers
