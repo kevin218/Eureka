@@ -859,6 +859,10 @@ allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
 
+multwhite
+''''''''
+Boolean to determine whether to run a joint fit of multiple white light curves. If True, must use inputdirlist.
+
 rescale_err
 '''''''''''
 Boolean to determine whether the uncertainties will be rescaled to have a reduced chi-squared of 1
@@ -1045,6 +1049,11 @@ If True, plots will automatically be closed rather than popping up on the screen
 topdir + inputdir
 '''''''''''''''''
 The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + inputdirlist
+'''''''''''''''''
+List of paths to the other white light curve directories. topdir + inputdirlist contains the first white light curve, This list contains the remainder. Each item must be enclosed in quotation marks. Ensure there are brakets around the list.
 
 
 topdir + outputdir
