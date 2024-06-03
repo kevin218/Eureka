@@ -1,5 +1,3 @@
-import numpy as np
-
 from ..lib.readECF import MetaClass
 
 
@@ -114,7 +112,9 @@ class S4MetaClass(MetaClass):
                 self.exotic_ld_file = getattr(self, 'exotic_ld_file', None)
                 if self.exotic_ld_file is None:
                     # Require the file to be specified if relevant            
-                    self.inst_filter = getattr(self, 'inst_filter')  # FINDME: This should never need to be manually passed in - we should be able to use meta.inst and meta.filter.
+                    # FINDME: This should never need to be manually passed in.
+                    #         We should just use meta.inst and meta.filter.
+                    self.inst_filter = getattr(self, 'inst_filter')
                 # Require the following to be specified if relevant
                 self.exotic_ld_direc = getattr(self, 'exotic_ld_direc')
                 self.exotic_ld_grid = getattr(self, 'exotic_ld_grid')

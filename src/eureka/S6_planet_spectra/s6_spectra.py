@@ -301,8 +301,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         meta.y_label, meta.xlabel)
 
                 # Should we also make the scale_height version of the figure?
-                make_fig6301 = (meta.isplots_S6 >= 3 and meta.has_fig6301reqs and
-                                meta.y_param in ['rp', 'rp^2'])
+                make_fig6301 = (meta.isplots_S6 >= 3 and meta.has_fig6301reqs
+                                and meta.y_param in ['rp', 'rp^2'])
                 if make_fig6301:
                     # Make spectrum plot with scale height on the 2nd y-axis
                     scale_height = compute_scale_height(meta, log)

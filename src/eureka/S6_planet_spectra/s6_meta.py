@@ -96,17 +96,18 @@ class S6MetaClass(MetaClass):
         # If requested, can we make the scale_height version of the figure?
         self.has_fig6301reqs = np.all([hasattr(self, val) for val in
                                        ['planet_Teq', 'planet_mu',
-                                       'planet_Rad', 'planet_Mass',
-                                       'star_Rad', 'planet_R0']])
+                                        'planet_Rad', 'planet_Mass',
+                                        'star_Rad', 'planet_R0']])
 
         # Parameters for also plotting a fitted/predicted model
         self.model_spectrum = getattr(self, 'model_spectrum', None)
         if self.model_spectrum is not None:
             self.model_x_unit = getattr(self, 'model_x_unit', 'um')
-            self.model_y_param = getattr(self, 'model_y_param')  # Must be specified if relevant
             self.model_y_scalar = getattr(self, 'model_y_scalar', 1)
             self.model_zorder = getattr(self, 'model_zorder', 0)
             self.model_delimiter = getattr(self, 'model_delimiter', None)
+            # Must be specified if relevant
+            self.model_y_param = getattr(self, 'model_y_param')
 
         # Some parameters for saving the outputs
         self.wave_units = getattr(self, 'wave_units', 'microns')
