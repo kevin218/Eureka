@@ -42,7 +42,7 @@ class S3MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version.
         '''
-        super.__init__(folder, file, eventlabel, stage=3, **kwargs)
+        super().__init__(folder, file, eventlabel, stage=3, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.

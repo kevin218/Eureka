@@ -40,7 +40,7 @@ class S2MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version.
         '''
-        super.__init__(folder, file, eventlabel, stage=2, **kwargs)
+        super().__init__(folder, file, eventlabel, stage=2, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 2 specific defaults for generic instruments.

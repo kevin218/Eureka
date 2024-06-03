@@ -40,7 +40,7 @@ class S5MetaClass(MetaClass):
         - 2024-06 Taylor J Bell
             Initial version.
         '''
-        super.__init__(folder, file, eventlabel, stage=5, **kwargs)
+        super().__init__(folder, file, eventlabel, stage=5, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 5 specific defaults for generic instruments.

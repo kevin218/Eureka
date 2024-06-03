@@ -43,7 +43,7 @@ class S6MetaClass(MetaClass):
         - 2024-06 Taylor J Bell
             Initial version.
         '''
-        super.__init__(folder, file, eventlabel, stage=6, **kwargs)
+        super().__init__(folder, file, eventlabel, stage=6, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 6 specific defaults for generic instruments.
