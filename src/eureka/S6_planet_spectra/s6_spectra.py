@@ -92,8 +92,6 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
     # Create directories for Stage 6 outputs
     meta.run_s6 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -141,46 +139,23 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                        axis=0)
             meta.wave_errs = (meta.wave_hi-meta.wave_low)/2
 
-            # Convert to the user-provided x-axis unit if needed
-            if hasattr(meta, 'x_unit'):
-                x_unit = getattr(units, meta.x_unit)
-            else:
-                log.writelog('Assuming a wavelength unit of microns')
-                meta.x_unit = 'um'
-                x_unit = units.um
             # FINDME: For now this is assuming that the data is in units of
             # microns We should add something to S3 that notes what the units
             # of the wavelength were in the FITS file
-            meta.wavelengths *= units.um.to(x_unit,
+            meta.wavelengths *= units.um.to(meta.x_unit,
                                             equivalencies=units.spectral())
-            meta.wave_errs *= units.um.to(x_unit,
+            meta.wave_errs *= units.um.to(meta.x_unit,
                                           equivalencies=units.spectral())
-            physical_type = str(x_unit.physical_type).title()
+            physical_type = str(meta.x_unit.physical_type).title()
             if physical_type == 'Length':
                 physical_type = 'Wavelength'
-            label_unit = x_unit.name
+            label_unit = meta.x_unit.name
             if label_unit == 'um':
                 label_unit = r'$\mu$m'
             meta.xlabel = physical_type+' ('+label_unit+')'
 
             fit_methods = meta.fit_method.strip('[').strip(']').strip()
             fit_methods = fit_methods.split(',')
-
-            # Make sure these are lists even if it's just one item
-            if (isinstance(meta.y_scalars, int) or
-                    isinstance(meta.y_scalars, float)):
-                meta.y_scalars = [meta.y_scalars]
-            if isinstance(meta.y_params, str):
-                meta.y_params = [meta.y_params]
-            if not hasattr(meta, 'y_labels') or meta.y_labels is None:
-                meta.y_labels = [None for _ in range(len(meta.y_params))]
-            elif isinstance(meta.y_labels, str):
-                meta.y_labels = [meta.y_labels]
-            if (not hasattr(meta, 'y_label_units') or
-                    meta.y_label_units is None):
-                meta.y_label_units = [None for _ in range(len(meta.y_params))]
-            elif isinstance(meta.y_label_units, str):
-                meta.y_label_units = [meta.y_label_units]
 
             zipped_vals = zip(meta.y_params, meta.y_scalars, meta.y_labels,
                               meta.y_label_units)
@@ -292,10 +267,6 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     else:
                         meta.y_label = meta.y_param
 
-                # Convert to percent, ppm, etc. if requested
-                if not hasattr(meta, 'y_scalar'):
-                    meta.y_scalar = 1
-
                 if meta.y_label_unit is None:
                     if meta.y_scalar == 1e6:
                         meta.y_label_unit = ' (ppm)'
@@ -319,7 +290,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 meta.y_label += meta.y_label_unit
 
                 if meta.model_spectrum is not None:
-                    model_x, model_y = load_model(meta, log, x_unit)
+                    model_x, model_y = load_model(meta, log, meta.x_unit)
                 else:
                     model_x = None
                     model_y = None
@@ -330,11 +301,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         meta.y_label, meta.xlabel)
 
                 # Should we also make the scale_height version of the figure?
-                has_requirements = np.all([hasattr(meta, val) for val in
-                                           ['planet_Teq', 'planet_mu',
-                                            'planet_Rad', 'planet_Mass',
-                                            'star_Rad', 'planet_R0']])
-                make_fig6301 = (meta.isplots_S6 >= 3 and has_requirements and
+                make_fig6301 = (meta.isplots_S6 >= 3 and meta.has_fig6301reqs and
                                 meta.y_param in ['rp', 'rp^2'])
                 if make_fig6301:
                     # Make spectrum plot with scale height on the 2nd y-axis
@@ -618,14 +585,8 @@ def convert_s5_LC(meta, log):
 
     # Create Xarray DataArrays and dictionary
     flux_units = 'Normalized'
-    if hasattr(meta, 'wave_units'):
-        wave_units = meta.wave_units
-    else:
-        wave_units = 'microns'
-    if hasattr(meta, 'time_units'):
-        time_units = meta.time_units
-    else:
-        time_units = 'BMJD'
+    wave_units = meta.wave_units
+    time_units = meta.time_units
     lc_da = []
     dict = {}
     for i in range(n_col):
@@ -1017,8 +978,6 @@ def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
             pass
 
     # Load map parameters
-    if not hasattr(meta, 'ydeg'):
-        meta.ydeg = 2  # For backwards compatibility with my old saves
     temp = temp_class()
     for ell in range(1, meta.ydeg+1):
         for m in range(-ell, ell+1):
@@ -1204,9 +1163,6 @@ def load_model(meta, log, x_unit):
                              f'{meta.y_param} and model_y_param '
                              f'{meta.model_y_param}')
 
-    if not hasattr(meta, 'model_y_scalar'):
-        meta.model_y_scalar = 1
-
     # Convert the model y-units if needed to match the data
     # y-units requested
     if meta.model_y_scalar != 1:
@@ -1346,8 +1302,6 @@ def transit_latex_table(meta, log):
 
     # Figure out the number of rows and columns in the table
     nvals = data.shape[0]
-    if not hasattr(meta, 'ncols'):
-        meta.ncols = 4
     rows = int(np.ceil(nvals/meta.ncols))
 
     # Figure out the labels for the columns
