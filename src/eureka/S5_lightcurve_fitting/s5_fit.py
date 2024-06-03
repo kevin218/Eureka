@@ -72,9 +72,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
-    if not hasattr(meta, 'multwhite'):
-        meta.multwhite = False
-
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
         # that old MetaClass
@@ -115,8 +112,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -214,7 +209,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
-            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+            if meta.manual_clip is not None:
                 # Remove requested data points
                 if meta.multwhite:
                     for p in range(len(meta.inputdirlist)+1):
@@ -552,7 +547,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
 
-    if hasattr(meta, 'testing_model') and meta.testing_model:
+    if meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
@@ -575,14 +570,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                    'white_fixed']:
             freenames.append(key)
     freenames = np.array(freenames)
-
-    if not hasattr(meta, 'recenter_ld_prior'):
-        meta.recenter_ld_prior = True
-    if not hasattr(meta, 'num_planets'):
-        meta.num_planets = 1
-    if not hasattr(meta, 'compute_ltt'):
-        # Let each model have its own default
-        meta.compute_ltt = None
 
     # Make the astrophysical and detector models
     modellist = []
@@ -693,9 +680,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         if 'poet_ecl' in model_names:
             e_model = modellist.pop(np.where(model_names == 'poet_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
         t_poet_pc = m.PoetPCModel(parameters=params, name='phasecurve',
                                   fmt='r--', log=log, time=time,
                                   time_units=time_units,
@@ -746,8 +730,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                 np.where(model_names == 'batman_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
         # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log, time=time,
@@ -926,8 +908,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
-        if not hasattr(meta, 'useHODLR'):
-            meta.useHODLR = False
         if 'starry' in meta.run_myfuncs:
             GPModel = dm.GPModel
         else:
