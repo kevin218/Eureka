@@ -523,11 +523,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         data['centroid_y'][i], data['centroid_x'][i] = position
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
 
-                        # Check if aperture shape has been defined
-                        if (not hasattr(meta, 'aperture_shape') 
-                                or meta.aperture_shape is None):
-                            meta.aperture_shape = 'circle'
-
                         # Plot 2D frame, the centroid and the centroid position
                         if meta.isplots_S3 >= 3 and i < meta.nplots:
                             plots_s3.phot_2d_frame(data, meta, m, i)
