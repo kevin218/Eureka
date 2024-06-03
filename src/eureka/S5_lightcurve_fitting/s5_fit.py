@@ -541,6 +541,14 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     meta : eureka.lib.readECF.MetaClass
         The updated metadata object.
     """
+    if np.all(flux.mask):
+        # All of the data for this channel are masked - skip it
+        log.writelog("=========================")
+        log.writelog(f"All data for channel {chan} are masked, so skipping "
+                     "this channel.")
+        log.writelog("=========================")
+        return meta, params
+
     # Load the relevant values into the LightCurve model object
     lc_model = lightcurve.LightCurve(time, flux, chan, chanrng, log,
                                      longparamlist, params,
