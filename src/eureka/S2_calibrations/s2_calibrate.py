@@ -235,7 +235,9 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
 
         # Skip steps according to input ecf file
         self.msa_flagging.skip = meta.skip_msa_flagging
-        self.nsclean.skip = meta.skip_nsclean
+        if hasattr(self, 'nsclean'):
+            # Allowing backwards compatibility with older jwst versions
+            self.nsclean.skip = meta.skip_nsclean
         self.imprint_subtract.skip = meta.skip_imprint_subtract
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.extract_2d.skip = meta.skip_extract_2d
