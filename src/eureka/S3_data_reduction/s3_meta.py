@@ -111,7 +111,7 @@ class S3MetaClass(MetaClass):
         self.save_output = getattr(self, 'save_output', True)
         self.save_fluxdata = getattr(self, 'save_fluxdata', True)
         self.verbose = getattr(self, 'verbose', True)
-        
+
         # Project directory
         self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF
 
@@ -207,7 +207,7 @@ class S3MetaClass(MetaClass):
         self.bg_x2 = getattr(self, 'bg_x2', None)
         self.bg_method = getattr(self, 'bg_method', 'mean')
         self.p3thresh = getattr(self, 'p3thresh', 5)
-        
+
     def set_MIRI_defaults(self):
         '''Set Stage 3 specific defaults for MIRI.
 

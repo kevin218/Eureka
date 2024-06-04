@@ -122,7 +122,7 @@ class S4MetaClass(MetaClass):
             if self.custom_si_grid is None:
                 self.exotic_ld_file = getattr(self, 'exotic_ld_file', None)
                 if self.exotic_ld_file is None:
-                    # Require the file to be specified if relevant            
+                    # Require the file to be specified if relevant
                     # FINDME: This should never need to be manually passed in.
                     #         We should just use meta.inst and meta.filter.
                     self.inst_filter = getattr(self, 'inst_filter')
@@ -145,7 +145,7 @@ class S4MetaClass(MetaClass):
             self.time_axis = 'y'
         self.hide_plots = getattr(self, 'hide_plots', False)
         self.verbose = getattr(self, 'verbose', True)
-        
+
         # Project directory
         self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF
 
