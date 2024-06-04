@@ -17,11 +17,10 @@ except ModuleNotFoundError:
     # starry hasn't been installed
     pass
 
-from ..lib import manageevent as me
-from ..lib import readECF
-from ..lib import util, logedit
+from .s6_meta import S6MetaClass
 from . import plots_s6 as plots
-from ..lib import astropytable
+from ..lib import manageevent as me
+from ..lib import util, logedit, astropytable
 from ..version import version
 
 
@@ -61,9 +60,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S6_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S6MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S6MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -80,7 +79,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
         meta.inputdir = s5_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s5_meta)
+    meta = S6MetaClass(**me.mergeevents(meta, s5_meta).__dict__)
+    meta.set_defaults()
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one
@@ -1098,7 +1098,7 @@ def load_specific_s5_meta_info(meta):
     s5_meta, meta.inputdir, meta.inputdir_raw = \
         me.findevent(meta, 'S5', allowFail=False)
     # Merge S6 meta into old S5 meta
-    meta = me.mergeevents(meta, s5_meta)
+    meta = S6MetaClass(**me.mergeevents(meta, s5_meta).__dict__)
 
     return meta
 

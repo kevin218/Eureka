@@ -24,8 +24,8 @@ from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
 from . import plots_s4, drift, generate_LD, wfc3
+from .s4_meta import S4MetaClass
 from ..lib import logedit
-from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
 from ..lib import clipping
@@ -80,9 +80,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S4_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S4MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S4MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -99,13 +99,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         meta.inputdir = s3_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s3_meta)
-
-    if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider
-        # one aperture
-        meta.spec_hw_range = [meta.spec_hw, ]
-        meta.bg_hw_range = [meta.bg_hw, ]
+    meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
+    meta.set_defaults()
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
@@ -632,7 +627,7 @@ def load_specific_s3_meta_info(meta):
         me.findevent(meta, 'S3', allowFail=False)
     filename_S3_SpecData = s3_meta.filename_S3_SpecData
     # Merge S4 meta into old S3 meta
-    meta = me.mergeevents(meta, s3_meta)
+    meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
 
     # Make sure the filename_S3_SpecData is kept
     meta.filename_S3_SpecData = filename_S3_SpecData

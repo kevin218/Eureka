@@ -65,20 +65,22 @@ class S6MetaClass(MetaClass):
         # Which parameters are being plotted? Must be specified in ECF
         self.y_params = getattr(self, 'y_params')
         # The formatted string you want on the y-label
-        self.y_labels = getattr(self, 'y_labels',
-                                [None for _ in self.y_params])
+        self.y_labels = getattr(self, 'y_labels', None)
         # The formatted string for the units you want on the y-label
-        self.y_label_units = getattr(self, 'y_label_units',
-                                     [None for _ in self.y_params])
+        self.y_label_units = getattr(self, 'y_label_units', None)
         # Convert to percent, ppm, etc. if requested
         self.y_scalar = getattr(self, 'y_scalar', 1)
 
         # Make sure these are lists, even if it's just one item
         if isinstance(self.y_params, str):
             self.y_params = [self.y_params]
-        if isinstance(self.y_labels, str):
+        if self.y_labels is None:
+            self.y_labels = [None for _ in self.y_params]
+        elif isinstance(self.y_labels, str):
             self.y_labels = [self.y_labels]
-        if isinstance(self.y_label_units, str):
+        if self.y_label_units is None:
+            self.y_label_units = [None for _ in self.y_params]
+        elif isinstance(self.y_label_units, str):
             self.y_label_units = [self.y_label_units]
         if (isinstance(self.y_scalars, int) or
                 isinstance(self.y_scalars, float)):

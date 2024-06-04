@@ -5,11 +5,7 @@ from glob import glob
 from copy import deepcopy
 import astraeus.xarrayIO as xrio
 
-from ..lib import manageevent as me
-from ..lib import readECF
-from ..lib import util, logedit
-from ..lib.readEPF import Parameters
-from ..version import version
+from .s5_meta import S5MetaClass
 from . import lightcurve
 from . import models as m
 try:
@@ -17,6 +13,10 @@ try:
 except:
     # PyMC3 hasn't been installed
     dm = None
+from ..lib import manageevent as me
+from ..lib import util, logedit
+from ..lib.readEPF import Parameters
+from ..version import version
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -64,9 +64,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S5_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S5MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S5MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -83,7 +83,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         meta.inputdir = s4_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s4_meta)
+    meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
+    meta.set_defaults()
 
     # Check to make sure that dm is accessible if using dm models/fitters
     if (dm is None and ('starry' in meta.fit_method or
@@ -92,14 +93,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                              "could not import starry and/or pymc3 related "
                              "packages. Ensure that you have installed the "
                              "pymc3-related packages when installing Eureka!.")
-
-    if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider one
-        # aperture in which case the code will consider only the one which
-        # made s4_meta. Alternatively, if S4 was run without allapers, S5
-        # will already only consider that one
-        meta.spec_hw_range = [meta.spec_hw, ]
-        meta.bg_hw_range = [meta.bg_hw, ]
 
     if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
@@ -1115,7 +1108,7 @@ def load_specific_s4_meta_info(meta):
         me.findevent(meta, 'S4', allowFail=False)
     filename_S4_LCData = s4_meta.filename_S4_LCData
     # Merge S5 meta into old S4 meta
-    meta = me.mergeevents(meta, s4_meta)
+    meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
 
     # Make sure the filename_S4_LCData is kept
     meta.filename_S4_LCData = filename_S4_LCData

@@ -56,13 +56,21 @@ class S5MetaClass(MetaClass):
         # (to allow resuming from old analyses)
         self.expand = getattr(self, 'expand', 1)
 
-        self.ncpu = hasattr(self, 'ncpu', 4)
+        self.ncpu = getattr(self, 'ncpu', 4)
 
         # Joint fit of multiple white lightcurves?
-        self.multwhite = hasattr(self, 'multwhite', False)
+        self.multwhite = getattr(self, 'multwhite', False)
 
         # Repeat Stage 5 for each of the aperture sizes run from Stage 3?
         self.allapers = getattr(self, 'allapers', False)
+
+        if not self.allapers:
+            # The user indicated in the ecf that they only want to consider one
+            # aperture in which case the code will consider only the one which
+            # made s4_meta. Alternatively, if S4 was run without allapers, S5
+            # will already only consider that one
+            self.spec_hw_range = [self.spec_hw, ]
+            self.bg_hw_range = [self.bg_hw, ]
 
         # Rescale uncertainties after fit to have reduced chi-squared of unity.
         # *NOT* recommended, since that rescaling does not inflate
@@ -89,8 +97,11 @@ class S5MetaClass(MetaClass):
         self.ld_file_white = getattr(self, 'ld_file_white', None)
         if not all([self.use_generate_ld is None, self.ld_file is None,
                     self.ld_file_white is None]):
-            # Only set this parameter if relevant
+            # Only set this parameter to True if relevant
             self.recenter_ld_prior = getattr(self, 'recenter_ld_prior', True)
+        else:
+            # Set this to False if not relevant
+            self.recenter_ld_prior = getattr(self, 'recenter_ld_prior', False)
 
         # General fitter, fitparams CSV file to resume from
         self.old_fitparams = getattr(self, 'old_fitparams', None)

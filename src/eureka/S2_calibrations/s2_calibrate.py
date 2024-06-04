@@ -69,7 +69,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     if input_meta is None:
         meta = S2MetaClass(folder=ecf_path, eventlabel=eventlabel)
     else:
-        meta = input_meta
+        meta = S2MetaClass(**input_meta.__dict__)
 
     if s1_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -86,7 +86,7 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         # Attempt to find subdirectory containing S1 FITS files
         meta = util.find_fits(meta)
     else:
-        meta = me.mergeevents(meta, s1_meta)
+        meta = S2MetaClass(**me.mergeevents(meta, s1_meta).__dict__)
 
     run = util.makedirectory(meta, 'S2')
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
@@ -117,13 +117,13 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         istart = 0
 
     # First apply any instrument-specific defaults
-    if meta.inst == 'MIRI':
+    if meta.inst == 'miri':
         meta.set_MIRI_defaults()
-    elif meta.inst == 'NIRCam':
+    elif meta.inst == 'nircam':
         meta.set_NIRCam_defaults()
-    elif meta.inst == 'NIRSpec':
+    elif meta.inst == 'nirspec':
         meta.set_NIRSpec_defaults()
-    elif meta.inst == 'NIRISS':
+    elif meta.inst == 'niriss':
         meta.set_NIRISS_defaults()
     # Then apply instrument-agnostic defaults
     meta.set_defaults()
@@ -240,7 +240,7 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.extract_2d.skip = meta.skip_extract_2d
         self.srctype.skip = meta.skip_srctype
-        self.master_background.skip = meta.skip_master_background
+        self.master_background_mos.skip = meta.skip_master_background
         self.wavecorr.skip = meta.skip_wavecorr
         self.straylight.skip = meta.skip_straylight
         self.flat_field.skip = meta.skip_flat_field

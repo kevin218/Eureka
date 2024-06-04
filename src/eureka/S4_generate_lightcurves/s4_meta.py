@@ -55,6 +55,17 @@ class S4MetaClass(MetaClass):
         # Repeat Stage 4 for each of the aperture sizes run from Stage 3?
         self.allapers = getattr(self, 'allapers', False)
 
+        if not self.allapers:
+            # The user indicated in the ecf that they only want to consider one
+            # aperture in which case the code will consider only the one which
+            # made s3_meta.
+            if self.photometry:
+                self.spec_hw_range = [self.spec_hw, ]
+                self.bg_hw_range = [self.bg_hw, ]
+            else:
+                self.spec_hw_range = [self.spec_hw, ]
+                self.bg_hw_range = [self.bg_hw, ]
+
         # Make sure the inst and filt attributes are at least initialized
         self.inst = getattr(self, 'inst', None)
         self.filter = getattr(self, 'filter', None)
