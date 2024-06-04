@@ -105,7 +105,7 @@ def dn2electrons(data, meta, log):
                 log.writelog(message, mute=True)
                 raise ValueError(message)
             meta.gainfile = retrieve_ancil(data.attrs['filename'], 'gain')
-            
+
         # Load gain array in units of e-/ADU
         gain_header = fits.getheader(meta.gainfile)
         xstart_gain = gain_header['SUBSTRT1']

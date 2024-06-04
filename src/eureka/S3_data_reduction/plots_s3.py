@@ -1008,9 +1008,9 @@ def phot_2d_frame(data, meta, m, i):
 
         # make patch of hexagon
         ap1 = patches.PathPatch(hex1, color='r',
-                                fill=False, lw=3, alpha=0.7, 
+                                fill=False, lw=3, alpha=0.7,
                                 label='target aperture')
-        
+
         xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
             2*np.pi*np.arange(7)/6)
         yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
@@ -1018,9 +1018,9 @@ def phot_2d_frame(data, meta, m, i):
         hex2 = Path(np.vstack((xvert, yvert)).T)
 
         ap2 = patches.PathPatch(hex2, color='w',
-                                fill=False, lw=4, alpha=0.8, 
+                                fill=False, lw=4, alpha=0.8,
                                 label='sky aperture')
-        
+
         xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
             2*np.pi*np.arange(7)/6)
         yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
@@ -1037,7 +1037,7 @@ def phot_2d_frame(data, meta, m, i):
                          fill=False, lw=4, alpha=0.8, label='sky aperture')
         ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
                          fill=False, lw=4, alpha=0.8)
-        
+
     plt.gca().add_patch(ap1)
     plt.gca().add_patch(ap2)
     plt.gca().add_patch(ap3)
@@ -1081,9 +1081,9 @@ def phot_2d_frame(data, meta, m, i):
 
             # make patch of hexagon
             ap1 = patches.PathPatch(hex1, color='r',
-                                    fill=False, lw=3, alpha=0.7, 
+                                    fill=False, lw=3, alpha=0.7,
                                     label='target aperture')
-            
+
             # to make a hexagon, make the vertices and add them into a path
             xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
                 2*np.pi*np.arange(7)/6)
@@ -1093,9 +1093,9 @@ def phot_2d_frame(data, meta, m, i):
 
             # make patch of hexagon
             ap2 = patches.PathPatch(hex2, color='w',
-                                    fill=False, lw=4, alpha=0.8, 
+                                    fill=False, lw=4, alpha=0.8,
                                     label='sky aperture')
-            
+
             # to make a hexagon, make the vertices and add them into a path
             xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
                 2*np.pi*np.arange(7)/6)
@@ -1109,7 +1109,7 @@ def phot_2d_frame(data, meta, m, i):
         else:
             # circular apertures
             ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                             fill=False, lw=3, alpha=0.7, 
+                             fill=False, lw=3, alpha=0.7,
                              label='target aperture')
             ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
                              fill=False, lw=4, alpha=0.8, label='sky aperture')

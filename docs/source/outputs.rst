@@ -161,7 +161,7 @@ In Stage 5:
       :alt: Stage 5 All fits comparison
 
       Fig 5103: Comparison of Different Fitters
-   
+
    Fig 5104: *(Demo figure to come)* Zoomed-in Figure Emphasizing Phase Variations Using Temporally Binned Data.
 
    - If ``isplots_S5`` = 3: ``Eureka!`` will plot an RMS deviation plot for each channel to help check for correlated noise, plot the normalized residual distribution, and plot the fitting chains for each channel. If fitting a sinusoid_pc model, another zoomed-in figure with binned data in front of the unbinned data will be made to emphasize the phase variations.
