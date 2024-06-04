@@ -123,7 +123,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
             meta.run_s5 = util.makedirectory(meta, 'S5', meta.run_s5,
-                                             ap=spec_hw_val//meta.expand, 
+                                             ap=spec_hw_val//meta.expand,
                                              bg=bg_hw_val)
 
     for spec_hw_val in meta.spec_hw_range:
@@ -182,7 +182,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 bg_hw_val //= meta.expand
             # Get the directory for Stage 5 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S5', meta.run_s5,
-                                                ap=spec_hw_val, 
+                                                ap=spec_hw_val,
                                                 bg=bg_hw_val)
 
             # Copy existing S4 log file and resume log
@@ -779,7 +779,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         nints=lc_model.nints)
         modellist.append(t_osc)
     if 'lorentzian' in meta.run_myfuncs:
-        t_lorentzian = m.LorentzianModel(parameters=params, 
+        t_lorentzian = m.LorentzianModel(parameters=params,
                                          name='lorentzian',
                                          fmt='r--', log=log, time=time,
                                          time_units=time_units,

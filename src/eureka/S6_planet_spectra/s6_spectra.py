@@ -100,7 +100,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
             meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                             ap=spec_hw_val//meta.expand, 
+                                             ap=spec_hw_val//meta.expand,
                                              bg=bg_hw_val)
 
     for meta.spec_hw_val in meta.spec_hw_range:
@@ -344,7 +344,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         scale_height, meta.planet_R0)
 
                 save_table(meta, log)
-            
+
             # Copy S5 text files to a single h5 file
             convert_s5_LC(meta, log)
 
@@ -731,7 +731,7 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
@@ -744,7 +744,7 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -781,7 +781,7 @@ def compute_amp(meta, log, fit_methods):
 
     # Figure out the desired order
     suffix = meta.y_param[-1]
-    
+
     if not suffix.isnumeric():
         # First order doesn't have a numeric suffix
         suffix = '1'
@@ -821,7 +821,7 @@ def compute_amp(meta, log, fit_methods):
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -1239,7 +1239,7 @@ def save_table(meta, log):
                                     axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelengths)) == 1: 
+    if len(set(wavelengths)) == 1:
         wavelengths = wavelengths[0]
         wave_errs = wave_errs[0]
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
