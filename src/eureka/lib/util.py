@@ -474,8 +474,8 @@ def binData_time(data, time, nbin=100, err=False):
     data = np.ma.copy(data)
     data = np.ma.masked_invalid(data)
 
-    binned, _, _ = binned_statistic(time, data, 
-                                    statistic=np.ma.mean, 
+    binned, _, _ = binned_statistic(time, data,
+                                    statistic=np.ma.mean,
                                     bins=nbin)
     if err:
         binned_count, _, _ = binned_statistic(time, data,
@@ -483,7 +483,7 @@ def binData_time(data, time, nbin=100, err=False):
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
 
-    # Need to mask invalid data in case there is an empty bin 
+    # Need to mask invalid data in case there is an empty bin
     # (leading to divide by zero)
     return np.ma.masked_invalid(binned)
 
@@ -616,7 +616,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
-        
+
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]

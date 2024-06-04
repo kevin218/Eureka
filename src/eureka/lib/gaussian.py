@@ -254,7 +254,7 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
     History:
 
     - 2011-05-03  patricio pcubillos@fulbrightmail.org
-        Initial version.                 
+        Initial version.
     """
     # Use bgpars as default for background parameters, if those values
     # are being fitted update them:

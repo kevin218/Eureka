@@ -65,13 +65,13 @@ class GPModel(PyMC3Model):
             raise AssertionError('Our celerite2 implementation cannot compute '
                                  'multi-dimensional GPs, please choose a '
                                  'different GP code.')
-        
+
     def setup(self):
         """Setup a model for evaluation and fitting.
         """
         # Parse parameters as coefficients
         coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
-        
+
         self.gps = []
         for c in range(self.nchannel_fitted):
             if self.nchannel_fitted > 1:
@@ -218,7 +218,7 @@ class GPModel(PyMC3Model):
 
     def setup_inputs(self):
         """Setting up kernel inputs as array and standardizing them if asked.
-        
+
         For details on the benefits of normalization, see e.g.
         Evans et al. 2017.
         """
@@ -232,7 +232,7 @@ class GPModel(PyMC3Model):
             kernel_inputs_channel = []
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.copy(self.time)        
+                    x = np.copy(self.time)
                 else:
                     # add more input options here
                     raise ValueError('Currently, only GPs as a function of '

@@ -98,7 +98,7 @@ default='none') # max number of processes to create
             if self.s1_meta.remove_390hz:
                 input_model = remove390.run(input_model, self.s1_log,
                                             self.s1_meta)
-                
+
                 # Need to apply these steps afterward to remove 390 Hz
                 if not self.s1_meta.skip_firstframe:
                     self.firstframe = FirstFrameStep()
@@ -119,20 +119,20 @@ default='none') # max number of processes to create
                                       dqflags.group['DO_NOT_USE'])
 
             if self.s1_meta.update_sat_flags:
-                input_model = update_saturation.update_sat(input_model, 
-                                                           self.s1_log, 
+                input_model = update_saturation.update_sat(input_model,
+                                                           self.s1_log,
                                                            self.s1_meta)
 
             if self.s1_meta.masktrace:
                 input_model = group_level.mask_trace(input_model,
                                                      self.s1_log,
                                                      self.s1_meta)
-            
+
             if self.s1_meta.refpix_corr:
                 input_model = group_level.custom_ref_pixel(input_model,
                                                            self.s1_log,
                                                            self.s1_meta)
-            
+
             if self.s1_meta.grouplevel_bg and not self.s1_meta.remove_390hz:
                 input_model = group_level.GLBS(input_model,
                                                self.s1_log,

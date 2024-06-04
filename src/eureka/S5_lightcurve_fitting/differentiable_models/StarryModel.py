@@ -68,11 +68,11 @@ class StarryModel(PyMC3Model):
             self.ydeg = max(l_vals)
         else:
             self.ydeg = 0
-        
+
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
         if hasattr(self.parameters, 'limb_dark'):
-            ld_func = ld_profile(self.parameters.limb_dark.value, 
+            ld_func = ld_profile(self.parameters.limb_dark.value,
                                  use_gen_ld=self.ld_from_S4)
             len_params = len(inspect.signature(ld_func).parameters)
             self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]

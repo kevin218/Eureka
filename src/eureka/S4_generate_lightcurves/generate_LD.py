@@ -84,18 +84,18 @@ def exotic_ld(meta, spec, log, white=False):
     if meta.exotic_ld_grid == 'custom':
         # read the wavelengths, Mus, and intensity grid from file
         # 1st column is the wavelengths. Skip the header and row of Mus
-        # also convert to angstrom! 
-        s_wvs = (np.genfromtxt(meta.custom_si_grid, 
+        # also convert to angstrom!
+        s_wvs = (np.genfromtxt(meta.custom_si_grid,
                                skip_header=2, usecols=[0]).T)*1e4
         # 1st row after the header is the Mus. Skip header, read 1 line
         # file has increasing Mus, Exotic requires decreasing, so flip
-        s_mus = np.flip(np.genfromtxt(meta.custom_si_grid, 
+        s_mus = np.flip(np.genfromtxt(meta.custom_si_grid,
                                       skip_header=1, max_rows=1))
         # Now get the rest of the file. Skip header and row of Mus.
         # file has increasing Mus, Exotic requires decreasing, so flip
-        custom_si = np.flip(np.genfromtxt(meta.custom_si_grid, 
+        custom_si = np.flip(np.genfromtxt(meta.custom_si_grid,
                                           skip_header=2)[:, 1:], axis=1)
-        
+
         sld = StellarLimbDarkening(ld_data_path=meta.exotic_ld_direc,
                                    ld_model="custom",
                                    custom_wavelengths=s_wvs,
@@ -183,7 +183,7 @@ def spam_ld(meta, white=False):
         # Average limb-darkening coefficients for each bin
         for j in range(num_ld_coef):
             ld_coeffs[i, j] = np.mean(sld[j+1, ii])
-    
+
     # Create list of NaNs
     nan1 = np.empty([meta.nspecchan, 1])*np.nan
     nan2 = np.empty([meta.nspecchan, 2])*np.nan

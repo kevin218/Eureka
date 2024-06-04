@@ -87,7 +87,7 @@ def get_reference_frames(meta, log):
     meta.int_start = 0
     meta.int_end = 0
     meta.files_per_batch = 1
-    
+
     # Make sure that the scan directions are in the right order
     if meta.iref[0] % 2 != 0:
         meta.iref = meta.iref[::-1]
@@ -117,7 +117,7 @@ def get_reference_frames(meta, log):
         data = flag_bg(data, meta, log)
         data = background.BGsubtraction(data, meta, log, i)
         cut_aperture(data, meta, log)
-        
+
         # Save the reference values
         meta.subdata_ref.append(data.flux)
         meta.subdiffmask_ref.append(data.flatmask)
@@ -156,7 +156,7 @@ def conclusion_step(data, meta, log):
     meta.guess = np.array(meta.guess)
     meta.subdata_ref = np.array(meta.subdata_ref)
     meta.subdiffmask_ref = np.array(meta.subdiffmask_ref)
-    
+
     # Delete the no-longer needed scandir attribute
     delattr(meta, 'scandir')
 
@@ -606,7 +606,7 @@ def difference_frames(data, meta, log):
         # FLT data has already been differenced
         diffflux = data.flux
         differr = data.err
-    
+
     # Temporarily set this value for now
     meta.n_int = meta.nreads
 
@@ -626,7 +626,7 @@ def difference_frames(data, meta, log):
                                meta.xwindow[0]:meta.xwindow[1]] * \
             diffmask[n, meta.ywindow[0]:meta.ywindow[1],
                      meta.xwindow[0]:meta.xwindow[1]]
-        guess[n] = (np.median(np.where(masked_data > np.mean(masked_data))[0]) 
+        guess[n] = (np.median(np.where(masked_data > np.mean(masked_data))[0])
                     + meta.ywindow[0]).astype(int)
     # Guess may be skewed if first read is zeros
     if guess[0] < 0 or guess[0] > meta.ny:
@@ -984,7 +984,7 @@ def cut_aperture(data, meta, log):
             if ap_y1 < 0:
                 ap_y1 = 0
                 ap_y2 = 2*meta.spec_hw + 1
-        
+
             if ap_y2 > len(data.flux.values[n]):
                 ap_y2 = len(data.flux.values[n])
                 ap_y1 = len(data.flux.values[n]) - (2*meta.spec_hw + 1)
