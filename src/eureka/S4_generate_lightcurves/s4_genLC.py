@@ -104,10 +104,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     meta = me.mergeevents(meta, s3_meta)
 
-    # If the data format hasn't been set, must be eureka output
-    if not hasattr(meta, 'data_format'):
-        meta.data_format = 'eureka'
-
     # Assign some variables if not using eureka output
     if meta.data_format != 'eureka':
         if not hasattr(meta, 'spec_hw'):
@@ -202,10 +198,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                          mute=(not meta.verbose))
             spec = xrio.readXR(specData_savefile)
 
-            # Assign an empty mask for custom datasets
-            if meta.data_format != 'eureka':
-                if not hasattr(spec, 'optmask'):
-                    spec['optmask'] = spec.optspec * 0
+            # Assign a mask for custom datasets, masking any NaN values
+            if not hasattr(spec, 'optmask'):
+                spec['optmask'] = (~np.isfinite(spec.optspec)).astype(int)
 
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
