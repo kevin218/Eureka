@@ -224,7 +224,7 @@ def findevent(meta, stage, allowFail=False):
             newfnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
                                   meta.eventlabel+file_suffix, recursive=True)
 
-        fnames.append(newfnames)
+        fnames.extend(newfnames)
 
     if len(fnames) >= 1:
         # get the folder with the latest modified time
