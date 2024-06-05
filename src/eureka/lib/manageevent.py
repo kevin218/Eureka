@@ -67,7 +67,7 @@ def loadevent(filename, load=[], loadfilename=None):
     Parameters
     ----------
     filename : str
-               The string contains the name of the event file.
+        The string contains the name of the event file.
     load : str tuple; optional
         The elements of this tuple contain the parameters to read.
         We usually use the values: 'data', 'uncd', 'head', 'bdmskd',
@@ -80,10 +80,6 @@ def loadevent(filename, load=[], loadfilename=None):
     -------
     eureka.lib.readECF.MetaClass
         The requested metadata object.
-
-    Notes
-    -----
-    The input filename should not have the .dat nor the .h5 extentions.
 
     History:
 
@@ -117,11 +113,11 @@ def loadevent(filename, load=[], loadfilename=None):
         raise AssertionError(f'Unrecognized metadata save file {filename}'
                              'contains neither "_Meta_Save" or "SpecData".')
 
-    if loadfilename is None:
-        loadfilename = filename
-
     # FINDME: Do we really need this following code anymore?
     if load != []:
+        if loadfilename is None:
+            loadfilename = filename
+
         with h5.File(loadfilename + '.h5', 'r') as handle:
             for param in load:
                 exec('event.' + param + ' = handle["' + param + '"][:]')
