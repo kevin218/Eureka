@@ -93,7 +93,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     # Load Stage 3 meta information
     if s3_meta is None:
         # Not running sequentially, or not passing meta
-        # between function calls. Read from SpecData file instead. 
+        # between function calls. Read from SpecData file instead.
         s3_meta, meta.inputdir, meta.inputdir_raw = \
             me.findevent(meta, 'S3', allowFail=False)
     else:
@@ -119,18 +119,27 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         if not hasattr(meta, 'filename_S3_SpecData'):
             # Get filename, due to Eureka! default behaviours
             # only one non-eureka can be included in the
-            # specified input directory if this is unassigned. 
+            # specified input directory if this is unassigned.
             fnames = glob.glob(meta.inputdir+'S3_'+meta.eventlabel +
                                '*SpecData.h5')
-            if len(fnames) != 1:
-                raise AssertionError(f'WARNING: Unable to execute Stage 4'
-                                     f' processing as there is more than'
-                                     f' one SpecData.h5 file in the folder'
-                                     f':\n"{meta.inputdir}"')
+            if len(fnames) == 0:
+                raise AssertionError('WARNING: Unable to execute Stage 4'
+                                     ' processing as there are no'
+                                     ' SpecData.h5 files in the folder'
+                                     f':\n"{meta.inputdir}"\n'
+                                     'You likely need to change your'
+                                     ' topdir or inputdir value.')
+            elif len(fnames) != 1:
+                raise AssertionError('WARNING: Unable to execute Stage 4'
+                                     ' processing as there is more than'
+                                     ' one SpecData.h5 file in the folder'
+                                     f':\n"{meta.inputdir}"\n'
+                                     'You likely need to increase the specificity'
+                                     ' of your inputdir value.')
             else:
                 meta.filename_S3_SpecData = fnames[0]
         if not hasattr(meta, 'photometry'):
-            # Assume spectroscopy unless manually set. 
+            # Assume spectroscopy unless manually set.
             meta.photometry = False
 
     if not meta.allapers:
@@ -168,7 +177,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
-            
+
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
                                                 ap=spec_hw_val,
@@ -605,21 +614,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 ld_coeffs = generate_LD.spam_ld(meta, white=False)
                 lc['spam_lin'] = (['wavelength', 'spam_1'], ld_coeffs[0])
                 lc['spam_quad'] = (['wavelength', 'spam_2'], ld_coeffs[1])
-                lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'], 
+                lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'],
                                            ld_coeffs[2])
-                lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'], 
+                lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'],
                                            ld_coeffs[3])
                 if meta.compute_white:
                     ld_coeffs_w = generate_LD.spam_ld(meta, white=True)
-                    lc['spam_lin_white'] = (['wavelength', 'spam_1'], 
+                    lc['spam_lin_white'] = (['wavelength', 'spam_1'],
                                             ld_coeffs_w[0])
-                    lc['spam_quad_white'] = (['wavelength', 'spam_2'], 
+                    lc['spam_quad_white'] = (['wavelength', 'spam_2'],
                                              ld_coeffs_w[1])
                     lc['spam_nonlin_3para_white'] = (['wavelength', 'spam_3'],
                                                      ld_coeffs_w[2])
                     lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
                                                      ld_coeffs_w[3])
-            
+
             log.writelog('Saving results...')
 
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
