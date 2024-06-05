@@ -36,8 +36,7 @@ version = __version__
 # ones.
 extensions = ['sphinx_rtd_theme', 'sphinx.ext.todo', 'sphinx.ext.viewcode',
               'sphinx.ext.autodoc', 'numpydoc', 'nbsphinx', 'myst_parser',
-              'sphinx.ext.autosectionlabel', 'sphinx.ext.napoleon',
-              'nbsphinx']
+              'sphinx.ext.autosectionlabel', 'sphinx.ext.napoleon']
 
 master_doc = 'index'
 # Add any paths that contain templates here, relative to this directory.
