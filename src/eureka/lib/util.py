@@ -435,8 +435,8 @@ def binData_time(data, time, nbin=100, err=False):
     data = np.ma.copy(data)
     data = np.ma.masked_invalid(data)
 
-    binned, _, _ = binned_statistic(time, data, 
-                                    statistic=np.ma.mean, 
+    binned, _, _ = binned_statistic(time, data,
+                                    statistic=np.ma.mean,
                                     bins=nbin)
     if err:
         binned_count, _, _ = binned_statistic(time, data,
@@ -444,7 +444,7 @@ def binData_time(data, time, nbin=100, err=False):
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
 
-    # Need to mask invalid data in case there is an empty bin 
+    # Need to mask invalid data in case there is an empty bin
     # (leading to divide by zero)
     return np.ma.masked_invalid(binned)
 
@@ -577,7 +577,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
-        
+
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]
@@ -911,7 +911,7 @@ def add_meta_to_xarray(meta, data):
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     data : Xarray Dataset
-        The updated Dataset object, meta parameters can be accessed in 
+        The updated Dataset object, meta parameters can be accessed in
         data.attrs.
     """
     all_attrs = meta.params
@@ -931,7 +931,6 @@ def add_meta_to_xarray(meta, data):
             if '<U' in str(attr_value.dtype):
                 attr_value = attr_value.tolist()
         # Save value to xarray attributes
-        print(attr, attr_value)
         data.attrs[attr] = attr_value
 
 
@@ -943,7 +942,7 @@ def load_attrs_from_xarray(data):
     Parameters
     ----------
     data : Xarray Dataset
-        The updated Dataset object, meta parameters can be accessed in 
+        The updated Dataset object, meta parameters can be accessed in
         data.attrs.
 
     Returns
@@ -959,7 +958,7 @@ def load_attrs_from_xarray(data):
             attr_value = None
         # Restructure bibliography correctly
         if attr == 'bibliography':
-            attr_value = [citations.split('_ENDOFCITATION_') 
+            attr_value = [citations.split('_ENDOFCITATION_')
                           for citations in attr_value]
         # Ensure array is updated
         attrs[attr] = attr_value
