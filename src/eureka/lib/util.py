@@ -914,6 +914,9 @@ def add_meta_to_xarray(meta, data):
         The updated Dataset object, meta parameters can be accessed in
         data.attrs.
     """
+    if not hasattr(meta, 'data_format'):
+        meta.data_format = 'eureka'
+
     all_attrs = meta.params
     for attr in all_attrs.keys():
         attr_value = all_attrs[attr]

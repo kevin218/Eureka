@@ -3,6 +3,7 @@ import pickle
 import os
 import glob
 import astraeus.xarrayIO as xrio
+
 from . import readECF
 from . import util
 
@@ -97,6 +98,8 @@ def loadevent(filename, load=[], loadfilename=None):
             filname += '.dat'
         with open(filename, 'rb') as handle:
             event = pickle.load(handle, encoding='latin1')
+        if not hasattr(event, 'data_format'):
+            event.data_format = 'eureka'
     elif 'SpecData' in filename:
         # This is a Stage 3 SpecData.h5 file.
         if filename[-3:] != '.h5':
@@ -204,26 +207,33 @@ def findevent(meta, stage, allowFail=False):
         Initial version.
     """
     # Search for the output metadata in the inputdir provided
-    # First just check the specific inputdir folder
-    if stage == 'S3':
-        # This is stage 3 data, not looking for _Save.dat file
-        file_suffix = '*SpecData.h5'
-        ext_strip = 3
-    else:
-        file_suffix = '*_Meta_Save.dat'
-        ext_strip = 4
-    fnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
-                       file_suffix)
+    # First just check the specific inputdir folder, then check children
+    # Check for both old (Meta_Save) and new (SpecData) metadata save files
+    fnames = []
+    for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
+        newfnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
+                           file_suffix)
 
-    if len(fnames) == 0:
-        # There were no metadata files in that folder, so let's see if there
-        # are in children folders
-        fnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
-                           meta.eventlabel+file_suffix, recursive=True)
+        if len(newfnames) == 0:
+            # There were no metadata files in that folder, so let's see if
+            # there are in children folders
+            newfnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
+                                  meta.eventlabel+file_suffix, recursive=True)
+
+        fnames.append(newfnames)
 
     if len(fnames) >= 1:
         # get the folder with the latest modified time
-        fname = max(fnames, key=os.path.getmtime)
+        folders = np.unique([os.sep.join(fname.split(os.sep)[:-1])
+                             for fname in fnames])
+        folder = max(folders, key=os.path.getmtime)
+
+        # Prefer Meta_Save if present to support older runs
+        fname = glob.glob(folder+stage+'_'+meta.eventlabel+'*_Meta_Save.dat')
+        if len(fname) == 0:
+            # Otherwise, use the SpecData file
+            fname = glob.glob(folder+stage+'_'+meta.eventlabel+'*SpecData.dat')
+        fname = fname[0]
 
     if len(fnames) == 0 and allowFail:
         # There may be no rateints files in the inputdir or any of its
@@ -248,8 +258,6 @@ def findevent(meta, stage, allowFail=False):
               f'metadata file is not a part\n'
               f'of the run you intended, please provide a more precise folder '
               f'for the metadata file.')
-
-    fname = fname[:-ext_strip]  # Strip off the .dat ending
 
     # Load old savefile
     old_meta = loadevent(fname)
