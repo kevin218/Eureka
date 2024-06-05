@@ -226,42 +226,43 @@ def findevent(meta, stage, allowFail=False):
 
         fnames.extend(newfnames)
 
-    if len(fnames) >= 1:
+    if len(fnames) == 0 and allowFail:
+        # We're running an early enough stage that we don't need to find a
+        # previous metadata save file. Just warn the user
+        print(f'WARNING: Unable to find an output metadata file from '
+              f'Eureka!\'s {stage} in the folder:\n"{meta.inputdir}"\n'
+              f'Assuming this {stage} data was produced by another pipeline.')
+        return None, meta.inputdir, meta.inputdir_raw
+    elif len(fnames) == 0:
+        # There were no metafiles in the inputdir or its children - raise an
+        # error and give a helpful message
+        raise AssertionError(f'WARNING: Unable to find an output metadata file'
+                             f' of kind {file_suffix }from Eureka!\'s {stage}'
+                             f' in the folder:\n"{meta.inputdir}"')
+    elif len(fnames) > 1:
         # get the folder with the latest modified time
         folders = np.unique([os.sep.join(fname.split(os.sep)[:-1])
                              for fname in fnames])
         folder = max(folders, key=os.path.getmtime) + os.sep
 
         # Prefer Meta_Save if present to support older runs
-        fname = glob.glob(folder+stage+'_'+meta.eventlabel+'*_Meta_Save.dat')
-        if len(fname) == 0:
+        fnames = glob.glob(folder+stage+'_'+meta.eventlabel+'*_Meta_Save.dat')
+        if len(fnames) == 0:
             # Otherwise, use the SpecData file
-            fname = glob.glob(folder+stage+'_'+meta.eventlabel+'*SpecData.dat')
-        fname = fname[0]
+            fnames = glob.glob(folder+stage+'_'+meta.eventlabel+'*SpecData.h5')
+        fname = fnames[0]
 
-    if len(fnames) == 0 and allowFail:
-        # There may be no rateints files in the inputdir or any of its
-        # children directories - raise an error and give a helpful message
-        print(f'WARNING: Unable to find an output metadata file from '
-              f'Eureka!\'s {stage} in the folder:\n"{meta.inputdir}"\n'
-              f'Assuming this {stage} data was produced by the JWST pipeline '
-              f'instead.')
-        return None, meta.inputdir, meta.inputdir_raw
-    elif len(fnames) == 0:
-        # There may be no metafiles in the inputdir - raise an error and give
-        # a helpful message
-        raise AssertionError(f'WARNING: Unable to find an output metadata file'
-                             f' of kind {file_suffix }from Eureka!\'s {stage}'
-                             f' in the folder:\n"{meta.inputdir}"')
-    elif len(fnames) > 1:
-        # There may be multiple runs - use the most recent but warn the user
-        print(f'WARNING: There are multiple metadata save files in the folder:'
-              f'\n"{meta.inputdir}"\n'
-              f'Using the metadata file: \n{fname}\n'
+        # There were multiple runs - use the most recent but warn the user
+        print(f'WARNING: There are {len(fnames)} metadata save files in the '
+              f'folder: {meta.inputdir}\n  '
+              f'Using the metadata file: {fname}\n  '
               f'and will consider aperture ranges listed there. If this '
-              f'metadata file is not a part\n'
+              f'metadata file is not a part\n  '
               f'of the run you intended, please provide a more precise folder '
               f'for the metadata file.')
+    else:
+        # There was only the one save file found
+        fname = fnames[0]
 
     # Load old savefile
     old_meta = loadevent(fname)
