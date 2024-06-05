@@ -230,7 +230,7 @@ def findevent(meta, stage, allowFail=False):
         # get the folder with the latest modified time
         folders = np.unique([os.sep.join(fname.split(os.sep)[:-1])
                              for fname in fnames])
-        folder = max(folders, key=os.path.getmtime)
+        folder = max(folders, key=os.path.getmtime) + os.sep
 
         # Prefer Meta_Save if present to support older runs
         fname = glob.glob(folder+stage+'_'+meta.eventlabel+'*_Meta_Save.dat')
