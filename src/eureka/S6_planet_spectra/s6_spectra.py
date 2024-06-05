@@ -100,7 +100,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
             meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                             ap=spec_hw_val//meta.expand, 
+                                             ap=spec_hw_val//meta.expand,
                                              bg=bg_hw_val)
 
     for meta.spec_hw_val in meta.spec_hw_range:
@@ -344,7 +344,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         scale_height, meta.planet_R0)
 
                 save_table(meta, log)
-            
+
             # Copy S5 text files to a single h5 file
             convert_s5_LC(meta, log)
 
@@ -423,7 +423,9 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
         fname = f'S5_{fitter}_samples_{channel_key}'
 
-        keys = [key for key in full_keys if y_param == key[:len(y_param)]]
+        temp_keys = [y_param+f'_{c}' if c > 0 else y_param
+                     for c in range(meta.nspecchan)]
+        keys = [key for key in temp_keys if key in full_keys]
         if len(keys) == 0:
             log.writelog(f'  Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n  ['
@@ -446,7 +448,9 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                     skipinitialspace=True)
         full_keys = list(fitted_values["Parameter"])
-        keys = [key for key in full_keys if y_param in key]
+        temp_keys = [y_param+f'_{c}' if c > 0 else y_param
+                     for c in range(meta.nspecchan)]
+        keys = [key for key in temp_keys if key in full_keys]
         if len(keys) == 0:
             log.writelog(f'Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n['
@@ -689,7 +693,7 @@ def load_s5_saves(meta, log, fit_methods):
                 if meta.y_param in list(ds._variables):
                     sample = ds[meta.y_param].values
                 else:
-                    sample = np.zeros(0)
+                    sample = np.zeros(1)
             samples.append(sample)
     else:
         # No samples for lsq, so just shape it as a single value
@@ -699,9 +703,9 @@ def load_s5_saves(meta, log, fit_methods):
             meta = parse_unshared_saves(meta, log, fit_methods)
         samples = np.array(meta.spectrum_median)
         if all(x is None for x in samples):
-            samples = np.zeros((meta.nspecchan, 0))
+            samples = np.zeros((meta.nspecchan, 1))
 
-    return np.array(samples)
+    return samples
 
 
 def compute_offset(meta, log, fit_methods, nsamp=1e4):
@@ -718,29 +722,29 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
-    if ampsin.shape[-1] == 0:
+    if np.all(ampsin == 0):
         meta.y_param = f'Y{suffix}1'
         ampsin = -load_s5_saves(meta, log, fit_methods)
-        if ampsin.shape[-1] == 0:
+        if np.all(ampsin == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         meta.y_param = f'Y{suffix}0'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -777,7 +781,7 @@ def compute_amp(meta, log, fit_methods):
 
     # Figure out the desired order
     suffix = meta.y_param[-1]
-    
+
     if not suffix.isnumeric():
         # First order doesn't have a numeric suffix
         suffix = '1'
@@ -785,7 +789,7 @@ def compute_amp(meta, log, fit_methods):
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
-    if fp.shape[-1] == 0:
+    if np.all(fp == 0):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                      'fitted parameters')
@@ -795,10 +799,10 @@ def compute_amp(meta, log, fit_methods):
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
-    if ampsin.shape[-1] == 0:
+    if np.all(ampsin == 0):
         meta.y_param = f'Y{suffix}1'
         ampsin = -load_s5_saves(meta, log, fit_methods)
-        if ampsin.shape[-1] == 0:
+        if np.all(ampsin == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -808,16 +812,16 @@ def compute_amp(meta, log, fit_methods):
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         meta.y_param = f'Y{suffix}0'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -933,11 +937,11 @@ def compute_fn(meta, log, fit_methods):
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
-    if fp.shape[-1] == 0:
+    if np.all(fp == 0):
         # The parameter could not be found - try fpfs
         meta.y_param = 'fpfs'
         fp = load_s5_saves(meta, log, fit_methods)
-        if fp.shape[-1] == 0:
+        if np.all(fp == 0):
             log.writelog('  Planet flux (fp or fpfs) was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
@@ -946,7 +950,7 @@ def compute_fn(meta, log, fit_methods):
     # Load cosine amplitude
     meta.y_param = 'AmpCos1'
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         # FINDME: The following only works if the model does not include any
         # terms other than Y10, Y11, Y20, Y22 (or other higher order terms
         # which evaluate to zero at the anti-stellar point). In general, should
@@ -955,7 +959,7 @@ def compute_fn(meta, log, fit_methods):
         # the anti-stellar point flux. Really do need to use compute_fp instead
         meta.y_param = 'Y10'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -1235,7 +1239,7 @@ def save_table(meta, log):
                                     axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelengths)) == 1: 
+    if len(set(wavelengths)) == 1:
         wavelengths = wavelengths[0]
         wave_errs = wave_errs[0]
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,

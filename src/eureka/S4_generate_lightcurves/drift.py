@@ -86,7 +86,7 @@ def spec1D(spectra, meta, log, mask=None):
     '''
     spectra = np.ma.masked_invalid(np.ma.copy(spectra))
     spectra = np.ma.masked_where(mask, spectra)
-    
+
     if meta.drift_postclip is not None:
         meta.drift_postclip = -meta.drift_postclip
     drift1d = np.zeros(meta.n_int)

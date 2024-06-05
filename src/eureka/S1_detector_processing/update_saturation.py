@@ -31,21 +31,21 @@ def update_sat(input_model, log, meta):
     if meta.dq_sat_mode == "percentile":
         log.writelog('  Creating a saturation map based on the ' +
                      'percentile set in the ecf file.')
-        median_sat = np.percentile(input_model.groupdq, 
+        median_sat = np.percentile(input_model.groupdq,
                                    meta.dq_sat_percentile, axis=0).astype(int)
     elif meta.dq_sat_mode == "min":
         log.writelog('  Creating a saturation map based on the ' +
                      'minimum saturated group for each pixel.')
-        median_sat = np.max(input_model.groupdq, axis=0).astype(int)    
+        median_sat = np.max(input_model.groupdq, axis=0).astype(int)
     elif meta.dq_sat_mode == "defined":
         log.writelog('  Creating a saturation map based on the ' +
                      'user defined columns.')
         median_sat = np.zeros_like(np.median(input_model.groupdq, axis=0))
-        
+
     # Store the saturation flag value
     sat_flag = dqflags.pixel['SATURATED']
     median_sat_mask = (median_sat == sat_flag)
- 
+
     # Expand saturated pixels to full columns
     log.writelog('  Expand flags along columns.')
     new_sat_mask = 1 * median_sat_mask
@@ -61,12 +61,12 @@ def update_sat(input_model, log, meta):
             c1 = meta.dq_sat_columns[i][0]
             c2 = meta.dq_sat_columns[i][1]
             new_sat_mask[i, :, c1:c2] = sat_flag
-            
+
     # Expand saturation flags to one group before
     if meta.expand_prev_group:
         log.writelog('  Expand flags to previous group.')
         for i in range(ngrp-1):
-            new_sat_mask[i, :, :] += new_sat_mask[i+1, :, :] 
+            new_sat_mask[i, :, :] += new_sat_mask[i+1, :, :]
 
     # Make sure that we did not put saturation in Group 1
     # If so, remove it (o.w. no info at all for ramp_fitting)
@@ -82,10 +82,10 @@ def update_sat(input_model, log, meta):
         log.writelog('    Saturation flags found in the 2nd group ')
         log.writelog('    This means some columns only have nGroup=1... ')
         log.writelog('    Use caution for this part of the detector.')
-                
+
     # Ensure we still have a boolean mask
     new_sat_mask = new_sat_mask.astype(bool)
-    
+
     # Now broadcast that mask back to the number of ints
     new_sat_mask = np.broadcast_to(new_sat_mask, input_model.groupdq.shape)
 

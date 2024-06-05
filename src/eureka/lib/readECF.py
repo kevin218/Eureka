@@ -244,7 +244,7 @@ class MetaClass:
         - Oct 2022 Eva-Maria Ahrer
             Update parameters and replace
         """
-        
+
         for i in range(len(self.lines)):
             line = self.lines[i]
             # Strip off comments:
@@ -258,9 +258,9 @@ class MetaClass:
                 new_val = self.params[name]
                 # check if values have been updated
                 if val != new_val:
-                    self.lines[i] = self.lines[i].replace(str(val), 
+                    self.lines[i] = self.lines[i].replace(str(val),
                                                           str(new_val))
-        
+
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
 

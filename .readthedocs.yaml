@@ -2,7 +2,7 @@
 # Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
-# Required: Readthedocs Config-file 
+# Required: Readthedocs Config-file
 version: 2
 
 # Set the version of Python and other tools you might need

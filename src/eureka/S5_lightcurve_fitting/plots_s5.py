@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -342,7 +343,7 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        if 'time_avg' not in dir():
+        if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
             break
         flux = np.ma.copy(lc.flux)
@@ -369,7 +370,7 @@ def plot_rms(lc, model, meta, fitter):
         maxbins = residuals.size//10
         if maxbins < 2:
             maxbins = residuals.size//2
-        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, 
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals,
                                                     maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
@@ -446,7 +447,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    
+
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
