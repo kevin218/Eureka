@@ -952,15 +952,12 @@ def load_attrs_from_xarray(data):
     """
     attrs = data.attrs
     for attr in attrs.keys():
-        attr_value = attrs[attr]
         # Convert None strings back to None
-        if attr_value == 'None':
-            attr_value = None
+        if attrs[attr] == 'None':
+            attrs[attr] = None
         # Restructure bibliography correctly
         if attr == 'bibliography':
-            attr_value = [citations.split('_ENDOFCITATION_')
-                          for citations in attr_value]
-        # Ensure array is updated
-        attrs[attr] = attr_value
+            attrs[attr] = [citations.split('_ENDOFCITATION_')
+                           for citations in attrs[attr]]
 
     return attrs
