@@ -694,6 +694,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         saved_refrence_tilt_frame = refrence_tilt_frame
 
                 if meta.save_fluxdata:
+                    # Save Meta information to attributes of Xarray
+                    util.add_meta_to_xarray(meta, data)
+
                     # Save flux data from current segment
                     filename_xr = (meta.outputdir+'S3_'+event_ap_bg +
                                    "_FluxData_seg"+str(m).zfill(4)+".h5")
@@ -761,7 +764,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             if meta.save_output:
                 meta.filename_S3_SpecData = (meta.outputdir+'S3_'+event_ap_bg +
                                              "_SpecData.h5")
-                
+
                 # Save Meta information to attributes of Xarray
                 util.add_meta_to_xarray(meta, spec)
 
