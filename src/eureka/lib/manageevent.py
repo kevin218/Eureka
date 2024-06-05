@@ -1,3 +1,4 @@
+import numpy as np
 import h5py as h5
 import pickle
 import os
@@ -95,7 +96,7 @@ def loadevent(filename, load=[], loadfilename=None):
     if '_Meta_Save' in filename:
         # This is a standard Meta_Save.dat file.
         if filename[-4:] != '.dat':
-            filname += '.dat'
+            filename += '.dat'
         with open(filename, 'rb') as handle:
             event = pickle.load(handle, encoding='latin1')
         if not hasattr(event, 'data_format'):
@@ -103,7 +104,7 @@ def loadevent(filename, load=[], loadfilename=None):
     elif 'SpecData' in filename:
         # This is a Stage 3 SpecData.h5 file.
         if filename[-3:] != '.h5':
-            filname += '.h5'
+            filename += '.h5'
         with xrio.readXR(filename) as handle:
             meta_attrs = util.load_attrs_from_xarray(handle)
         # Now create the Meta class and assign attrs
@@ -212,7 +213,7 @@ def findevent(meta, stage, allowFail=False):
     fnames = []
     for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
         newfnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
-                           file_suffix)
+                              file_suffix)
 
         if len(newfnames) == 0:
             # There were no metadata files in that folder, so let's see if

@@ -130,8 +130,8 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                                      ' processing as there is more than'
                                      ' one SpecData.h5 file in the folder'
                                      f':\n"{meta.inputdir}"\n'
-                                     'You likely need to increase the specificity'
-                                     ' of your inputdir value.')
+                                     'You likely need to increase the '
+                                     ' specificity of your inputdir value.')
             else:
                 meta.filename_S3_SpecData = fnames[0]
         if not hasattr(meta, 'photometry'):
