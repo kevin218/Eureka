@@ -107,8 +107,15 @@ def loadevent(filename, load=[], loadfilename=None):
             filename += '.h5'
         with xrio.readXR(filename) as handle:
             meta_attrs = util.load_attrs_from_xarray(handle)
+        if 'data_format' not in meta_attrs.keys():
+            # All Eureka! save files should have the data_format,
+            # so this must be a custom file
+            meta_attrs['data_format'] = 'custom'
         # Now create the Meta class and assign attrs
         event = readECF.MetaClass(**meta_attrs)
+    else:
+        raise AssertionError(f'Unrecognized metadata save file {filename}'
+                             'contains neither "_Meta_Save" or "SpecData".')
 
     if loadfilename is None:
         loadfilename = filename
