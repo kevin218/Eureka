@@ -92,12 +92,16 @@ def loadevent(filename, load=[], loadfilename=None):
     """
 
     if '_Meta_Save' in filename:
-        # This is a standard Meta_Save.dat file. 
-        with open(filename + '.dat', 'rb') as handle:
+        # This is a standard Meta_Save.dat file.
+        if filename[-4:] != '.dat':
+            filname += '.dat'
+        with open(filename, 'rb') as handle:
             event = pickle.load(handle, encoding='latin1')
     elif 'SpecData' in filename:
-        # This is a Stage 3 SpecData.h5 file. 
-        with xrio.readXR(filename + '.h5') as handle:
+        # This is a Stage 3 SpecData.h5 file.
+        if filename[-3:] != '.h5':
+            filname += '.h5'
+        with xrio.readXR(filename) as handle:
             meta_attrs = util.load_attrs_from_xarray(handle)
         # Now create the Meta class and assign attrs
         event = readECF.MetaClass(**meta_attrs)
@@ -105,6 +109,7 @@ def loadevent(filename, load=[], loadfilename=None):
     if loadfilename is None:
         loadfilename = filename
 
+    # FINDME: Do we really need this following code anymore?
     if load != []:
         with h5.File(loadfilename + '.h5', 'r') as handle:
             for param in load:
