@@ -61,8 +61,8 @@ def read(filename, f277_filename, data, meta):
     data.shdr = hdu['SCI',1].header
 
     data.intend = hdu[0].header['NINTS'] + 0.0
-    data.time = np.linspace(data.mhdr['EXPSTART'], 
-                              data.mhdr['EXPEND'], 
+    data.time = np.linspace(data.mhdr['EXPSTART'],
+                              data.mhdr['EXPEND'],
                               int(data.intend))
     meta.time_units = 'BJD_TDB'
 
@@ -92,13 +92,13 @@ def read(filename, f277_filename, data, meta):
 def image_filtering(img, radius=1, gf=4):
     """
     Does some simple image processing to isolate where the
-    spectra are located on the detector. This routine is 
+    spectra are located on the detector. This routine is
     optimized for NIRISS S2 processed data and the F277W filter.
 
     Parameters
     ----------
     img : np.ndarray
-       2D image array. 
+       2D image array.
     radius : np.float; optional
        Default is 1.
     gf : np.float; optional
@@ -108,7 +108,7 @@ def image_filtering(img, radius=1, gf=4):
     Returns
     -------
     img_mask : np.ndarray
-       A mask for the image that isolates where the spectral 
+       A mask for the image that isolates where the spectral
        orders are.
     """
     mask = filters.rank.maximum(img/np.nanmax(img),
@@ -129,9 +129,9 @@ def image_filtering(img, radius=1, gf=4):
     return z, g
 
 def f277_mask(data, isplots=0):
-    """        
+    """
     Marks the overlap region in the f277w filter image.
-    
+
     Parameters
     ----------
     data : object
@@ -139,7 +139,7 @@ def f277_mask(data, isplots=0):
        Level of plots that should be created in the S3 stage.
        This is set in the .ecf control files. Default is 0.
        This stage will plot if isplots >= 5.
-    
+
     Returns
     -------
     mask : np.ndarray
@@ -151,7 +151,7 @@ def f277_mask(data, isplots=0):
     mask, _ = image_filtering(img[:150,:500])
     mid = np.zeros((mask.shape[1], 2),dtype=int)
     new_mask = np.zeros(img.shape)
-    
+
     for i in range(mask.shape[1]):
         inds = np.where(mask[:,i]==True)[0]
         if len(inds) > 1:
@@ -179,8 +179,8 @@ def mask_method_one(data, meta, isplots=0, save=True):
     image processing to identify the boundaries of the orders and fits
     the edges of the first and second orders with a 4th degree polynomial.
 
-    Parameters  
-    ----------  
+    Parameters
+    ----------
     data : object
     meta : object
     isplots : int; optional
@@ -201,7 +201,7 @@ def mask_method_one(data, meta, isplots=0, save=True):
         outliers = np.where(np.abs(diff)>=np.nanmean(diff)+3*np.nanstd(diff))
         arr[outliers] = 0
         return arr
-    
+
     def find_centers(img, cutends):
         """ Finds a running center """
         centers = np.zeros(len(img[0]), dtype=int)
@@ -216,11 +216,11 @@ def mask_method_one(data, meta, isplots=0, save=True):
             centers[cutends:] = 0
 
         return centers
-    
+
     def clean_and_fit(x1,x2,y1,y2):
         x1,y1 = x1[y1>0], y1[y1>0]
         x2,y2 = x2[y2>0], y2[y2>0]
-        
+
         poly = np.polyfit(np.append(x1,x2),
                           np.append(y1,y2),
                           deg=4) # hard coded deg of polynomial fit
@@ -254,7 +254,7 @@ def mask_method_one(data, meta, isplots=0, save=True):
                          f_centers, gcenters_1[x>800])
     fit2 = clean_and_fit(x, x[(x>800) & (x<1800)],
                          f_centers, gcenters_2[(x>800) & (x<1800)])
-    
+
     if isplots >= 5:
         plt.figure(figsize=(14,4))
         plt.title('Order Approximation')
@@ -313,13 +313,13 @@ def mask_method_two(data, meta, isplots=0, save=False):
 
     new_ccd_no_premask = ccdp.cosmicray_lacosmic(ccd, readnoise=150,
                                                  sigclip=5, verbose=False)
-    
+
     summed_f277 = np.nansum(data.f277, axis=(0,1))
 
     f277_peaks = np.zeros((summed_f277.shape[1],2))
     peaks = np.zeros((new_ccd_no_premask.shape[1], 6))
     double_peaked = [500, 700, 1850] # hard coded numbers to help set height bounds
-    
+
 
     for i in range(summed.shape[1]):
 
@@ -327,18 +327,18 @@ def mask_method_two(data, meta, isplots=0, save=False):
         fp = identify_peaks(summed_f277[:,i], height=100000, distance=10)
         if len(fp)==2:
             f277_peaks[i] = fp
-    
+
         if i < double_peaked[0]:
             height=2000
         elif i >= double_peaked[0] and i < double_peaked[1]:
             height = 100
         elif i >= double_peaked[1]:
             height = 5000
-            
+
         p = identify_peaks(new_ccd_no_premask[:,i].data, height=height, distance=10)
         if i < 900:
             p = p[p>40] # sometimes catches an upper edge that doesn't exist
-        
+
         peaks[i][:len(p)] = p
 
     # Removes 0s from the F277W boundaries
@@ -353,14 +353,14 @@ def mask_method_two(data, meta, isplots=0, save=False):
 
     for ind in range(4): # CHANGE THIS TO 6 TO ADD THE THIRD ORDER
         q = peaks[:,ind] > 0
-        
+
         # removes outliers
         diff = np.diff(peaks[:,ind][q])
         good = np.where(np.abs(diff)<=np.nanmedian(diff)+2*np.nanstd(diff))
         good = good[5:-5]
         y = peaks[:,ind][q][good] + 0
         y = y[x[q][good]>xf[-1]]
-        
+
         # removes some of the F277W points to better fit the 2nd order
         if ind < 2:
             cutoff=-1
@@ -372,11 +372,11 @@ def mask_method_two(data, meta, isplots=0, save=False):
             ytot = np.append(f277_peaks[:,0][:cutoff], y)
         else:
             ytot = np.append(f277_peaks[:,1][:cutoff], y)
-        
+
         # Fits a 4th degree polynomiall
         poly= np.polyfit(xtot, ytot, deg=4)
         fit = np.poly1d(poly)
-            
+
         avg[:,ind] = fit(x)
 
     if isplots >= 5:
@@ -389,7 +389,7 @@ def mask_method_two(data, meta, isplots=0, save=False):
                  label='Second Order')
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         plt.show()
-    
+
 
     tab = Table()
     tab['x'] = x
@@ -409,13 +409,13 @@ def simplify_niriss_img(data, meta, isplots=0):
     Creates an image to map out where the orders are in
     the NIRISS data.
 
-    Parameters     
-    ----------     
-    data : object  
-    meta : object 
+    Parameters
+    ----------
+    data : object
+    meta : object
     isplots : int; optional
        Level of plots that should be created in the S3 stage.
-       This is set in the .ecf control files. Default is 0.  
+       This is set in the .ecf control files. Default is 0.
 
     Returns
     -------
@@ -427,7 +427,7 @@ def simplify_niriss_img(data, meta, isplots=0):
 
     # creates data img mask
     z,g = image_filtering(perc)
-    
+
     if isplots >= 6:
         fig, (ax1,ax2) = plt.subplots(nrows=2,figsize=(14,4),
                                       sharex=True, sharey=True)
@@ -447,7 +447,7 @@ def simplify_niriss_img(data, meta, isplots=0):
 def wave_NIRISS(wavefile, meta):
     """
     Adds the 2D wavelength solutions to the meta object.
-    
+
     Parameters
     ----------
     wavefile : str
@@ -509,7 +509,7 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
        sigma-level which should be clipped in the cosmic
        ray removal routine. Default is [4,2,3].
     isplots : int; optional
-       The level of output plots to display. Default is 0 
+       The level of output plots to display. Default is 0
        (no plots).
 
     Returns
@@ -521,7 +521,7 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
         order1 = np.zeros((boxsize1, len(img[0])))
         order2 = np.zeros((boxsize2, len(img[0])))
         mask = np.ones(img.shape)
-        
+
         for i in range(img.shape[1]):
             s,e = int(meta.tab2['order_1'][i]-boxsize1/2), int(meta.tab2['order_1'][i]+boxsize1/2)
             order1[:,i] = img[s:e,i]
@@ -537,13 +537,13 @@ def fit_bg(data, meta, n_iters=3, readnoise=11, sigclip=[4,4,4], isplots=0):
         return mask
 
     box_mask = dirty_mask(data.median)
-    data = fitbg3(data, np.array(box_mask-1, dtype=bool), 
+    data = fitbg3(data, np.array(box_mask-1, dtype=bool),
                   readnoise, sigclip, isplots)
     return data
 
 
 def set_which_table(i, meta):
-    """ 
+    """
     A little routine to return which table to
     use for the positions of the orders.
 
@@ -597,14 +597,14 @@ def fit_orders(data, meta, which_table=2):
         return combos
 
     pos1, pos2 = set_which_table(which_table, meta)
-    
+
     # Good initial guesses
     combos = construct_guesses([0.1,30], [0.1,30], [1,40])
-    
+
     # generates length x length x length number of images and fits to the data
     img1, sigout1 = niriss_python.build_image_models(data.median,
-                                                     combos[:,0], combos[:,1], 
-                                                     combos[:,2], 
+                                                     combos[:,0], combos[:,1],
+                                                     combos[:,2],
                                                      pos1, pos2)
 
     # Iterates on a smaller region around the best guess
@@ -615,7 +615,7 @@ def fit_orders(data, meta, which_table=2):
 
     # generates length x length x length number of images centered around the previous
     #   guess to optimize the image fit
-    img2, sigout2 = niriss_python.build_image_models(data.median, 
+    img2, sigout2 = niriss_python.build_image_models(data.median,
                                                      combos[:,0], combos[:,1],
                                                      combos[:,2],
                                                      pos1, pos2)
@@ -633,12 +633,12 @@ def fit_orders(data, meta, which_table=2):
     meta.order2_mask = ord2[0]
 
     return meta
-    
+
 
 def fit_orders_fast(data, meta, which_table=2):
     """
     A faster method to fit a 2D mask to the NIRISS data.
-    Very similar to `fit_orders`, but works with 
+    Very similar to `fit_orders`, but works with
     `scipy.optimize.leastsq`.
 
     Parameters
@@ -656,27 +656,27 @@ def fit_orders_fast(data, meta, which_table=2):
     def residuals(params, data, y1_pos, y2_pos):
         """ Calcualtes residuals for best-fit profile. """
         A, B, sig1 = params
-        # Produce the model:   
+        # Produce the model:
         model,_ = niriss_python.build_image_models(data, [A], [B], [sig1], y1_pos, y2_pos)
-        # Calculate residuals:     
+        # Calculate residuals:
         res = (model[0] - data)
         return res.flatten()
 
     pos1, pos2 = set_which_table(which_table, meta)
 
     # fits the mask
-    results = so.least_squares( residuals, 
-                                x0=np.array([2,3,30]), 
+    results = so.least_squares( residuals,
+                                x0=np.array([2,3,30]),
                                 args=(data.median, pos1, pos2),
                                 xtol=1e-11, ftol=1e-11, max_nfev=1e3
                                )
 
     # creates the final mask
-    out_img1,out_img2,_= niriss_python.build_image_models(data.median, 
-                                                          results.x[0:1], 
-                                                          results.x[1:2], 
-                                                          results.x[2:3], 
-                                                          pos1, 
+    out_img1,out_img2,_= niriss_python.build_image_models(data.median,
+                                                          results.x[0:1],
+                                                          results.x[1:2],
+                                                          results.x[2:3],
+                                                          pos1,
                                                           pos2,
                                                           return_together=False)
     meta.order1_mask_fast = out_img1[0]

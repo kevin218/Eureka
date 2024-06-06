@@ -421,7 +421,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if hasattr(meta, 'manmask'):
                     data = util.manmask(data, meta, log)
-                
+
                 if not hasattr(meta, 'calibrated_spectra'):
                     meta.calibrated_spectra = False
 
@@ -644,7 +644,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         data['centroid_sy'][i], data['centroid_sx'][i] = extra
 
                         # Check if aperture shape has been defined
-                        if (not hasattr(meta, 'aperture_shape') 
+                        if (not hasattr(meta, 'aperture_shape')
                                 or meta.aperture_shape is None):
                             meta.aperture_shape = 'circle'
 

@@ -59,7 +59,7 @@ def test_NIRSpec(capsys):
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
-        
+
         s2_cites = np.union1d(COMMON_IMPORTS[1], ["nirspec"])
         assert np.array_equal(s2_meta.citations, s2_cites)
 

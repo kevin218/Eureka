@@ -91,10 +91,10 @@ class CentroidModel(PyMC3Model):
         else:
             lib = tt
             model = self.model
-        
+
         for c in range(nchan):
             coeffs[c] = getattr(model, self.coeff_keys[c])
-        
+
         centroid_flux = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:

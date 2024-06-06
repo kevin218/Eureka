@@ -33,7 +33,7 @@ class StepModel(Model):
             params = {key: coeff for key, coeff in steps_dict.items()
                       if key.startswith('step') and key[4:].isdigit()}
             params.update({key: coeff for key, coeff in steptimes_dict.items()
-                           if (key.startswith('steptime') and 
+                           if (key.startswith('steptime') and
                                key[9:].isdigit())})
             self.parameters = Parameters(**params)
 
@@ -46,12 +46,12 @@ class StepModel(Model):
 
     def _parse_coeffs(self):
         """Convert dictionary of parameters into an array.
-        
+
         Converts dict of 'step#' coefficients into an array
         of coefficients in increasing order, i.e. ['step0', 'step1'].
         Also converts dict of 'steptime#' coefficients into an array
         of times in increasing order, i.e. ['steptime0', 'steptime1'].
-        
+
         Returns
         -------
         np.ndarray
@@ -63,7 +63,7 @@ class StepModel(Model):
 
         - 2022 July 14, Taylor J Bell
             Initial version.
-        """    
+        """
         for key in self.keys:
             split_key = key.split('_')
             if len(split_key) == 1:

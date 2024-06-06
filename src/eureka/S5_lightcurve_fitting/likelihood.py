@@ -11,7 +11,7 @@ def update_uncertainty(theta, nints, unc, freenames):
     Parameters
     ----------
     theta : np.array
-        The 
+        The
     nints : list
         The number of integrations for each channel being fit at once.
     unc : np.array

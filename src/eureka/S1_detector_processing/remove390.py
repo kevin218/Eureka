@@ -45,26 +45,26 @@ def computePixelTimes(integ, grp, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE,
     nrows = SUBSIZE2  # px
     ncols = SUBSIZE1  # px
     ngrp = NGROUPS
-    
+
     nreadouts = 4  # There are four readouts that are all simultaneous
     dt_fourPix = TSAMPLE*1e-6  # s
     dt_rowSep = dt_fourPix*11  # s (Not sure why it is 11 or if it is always)
     dt_oneRow = (ncols/nreadouts-1)*dt_fourPix + dt_rowSep  # s
     dt_grp = TGROUP  # s
     dt_int = dt_grp*(ngrp+1)  # s
-    
+
     # Time steps within one row
     dt_cols = np.repeat(np.arange(ncols/nreadouts, dtype=float)*dt_fourPix,
                         nreadouts)
-    
+
     # Time steps between rows
     dt_rows = np.arange(nrows, dtype=float)*dt_oneRow
-    
+
     # Reshape and add together to get 2D time array
     dt_rows = dt_rows.reshape((-1, 1))
     dt_cols = dt_cols.reshape((1, -1))
     pixel_times = dt_cols+dt_rows+(dt_grp*grp)+(dt_int*integ)
-    
+
     return pixel_times
 
 
@@ -98,7 +98,7 @@ def computeBG(cleaned, smooth=True):
     if smooth:
         bg = medfilt(bg, 51)
     bg = bg.reshape((-1, 1))
-    
+
     return bg
 
 
@@ -183,7 +183,7 @@ def get_pgram(data, time):
     y = np.delete(y, maskedInds)
 
     pgram = lombscargle(x, y, freqs*2*np.pi, normalize=True)
-    
+
     return pgram, freqs
 
 
@@ -244,27 +244,27 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
     # Mask out the star for when fitting the noise
     images2 = np.ma.copy(images1)
     images2[:, 50:, 30:44].mask = True
-    
+
     # Get the change in flux since the last group
     cleaned = np.ma.masked_invalid(images2[1:]-images2[:-1])
-    
+
     # Get the time for each pixel
     pixel_times = []
     for grp in range(1, images2.shape[0]):
         pixel_times.append(computePixelTimes(integ, grp, SUBSIZE2, SUBSIZE1,
                                              NGROUPS, TSAMPLE, TGROUP))
     pixel_times = np.array(pixel_times)
-    
+
     # Subtract a smoothed background
     pgrams = []
     for grp in range(images2.shape[0]-1):
         bg = computeBG(cleaned[grp], smooth=True)
         cleaned[grp] -= bg
-    
+
         if isplots_S1 >= 3:
             pgram, freqs = get_pgram(cleaned[grp], pixel_times[grp])
             pgrams.append(pgram)
-    
+
     # Package the data for fitting/plotting
     x = pixel_times.flatten()
     y = cleaned.flatten()
@@ -280,7 +280,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         # Show the fit to a small chunk of data
         plt.figure(1301)
         plt.clf()
-        
+
         plt.plot(x, y, '.', label='Raw Data')
         plt.plot(x, model390(p1, x), label='Fitted Model')
         plt.xlim(x[0]+0.01, x[0]+0.02)
@@ -301,12 +301,12 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         plt.savefig(meta.outputdir+fname, dpi=300, bbox_inches='tight')
         if not meta.hide_plots:
             plt.pause(0.2)
-    
+
     # Remove the 390 Hz noise
     cleaned_no390_nostar = np.ma.masked_invalid(images2[1:]-images2[:-1])
     cleaned_no390_nostar -= model390(p1, pixel_times
                                      ).reshape(cleaned_no390_nostar.shape)
-    
+
     cleaned_no390 = np.ma.copy(images)
     for grp in range(images2.shape[0]):
         # Since groups are non-destructive, need to subtract from current and
@@ -315,7 +315,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
                                              NGROUPS, TSAMPLE, TGROUP)
         cleaned_no390[grp:] -= model390(p1, pixel_times_temp
                                         ).reshape(cleaned_no390.shape[1:])
-    
+
     # Remove the background
     for grp in range(images2.shape[0]-1):
         bg = computeBG(cleaned_no390_nostar[grp], smooth=False)
@@ -323,7 +323,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
         # all subsequent groups
         if meta.grouplevel_bg:
             cleaned_no390[grp+1:] -= bg
-    
+
         if (isplots_S1 >= 3 and meta.m == 0 and integ < meta.nplots and
                 grp < meta.nplots):
             # Demonstrate the improvement in the noise power spectrum
@@ -353,7 +353,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
             plt.legend(loc='best')
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Power (Abitrary Units)')
-            
+
             file_number = str(meta.m).zfill(
                 int(np.floor(np.log10(meta.num_data_files))+1))
             int_number = str(integ).zfill(
@@ -365,7 +365,7 @@ def run_integ(images, dq, integ, SUBSIZE2, SUBSIZE1, NGROUPS, TSAMPLE, TGROUP,
             plt.savefig(meta.outputdir+fname, dpi=300, bbox_inches='tight')
             if not meta.hide_plots:
                 plt.pause(0.2)
-    
+
     if returnp1:
         return cleaned_no390, p1, integ
     else:

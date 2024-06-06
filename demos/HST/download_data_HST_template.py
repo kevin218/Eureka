@@ -34,7 +34,7 @@ for vis in visits:
     if result is not None:
         # Consolodate and move data into new directory
         md.consolidate(result, final_dir)
-        
+
 # Delete empty temporary directory structure
 md.cleanup(download_dir)
 md.logout()

@@ -47,7 +47,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     model_y = deepcopy(model_y)
 
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelength)) == 1: 
+    if len(set(wavelength)) == 1:
         wavelength = wavelength[0]
         wavelength_error = wavelength_error[0]
 

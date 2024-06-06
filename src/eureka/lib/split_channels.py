@@ -51,5 +51,5 @@ def split(arrays, nints, channel):
     arrays_return = []
     for array in arrays:
         arrays_return.append(array[trim1:trim2])
-    
+
     return arrays_return

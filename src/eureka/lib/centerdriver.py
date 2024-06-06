@@ -5,7 +5,7 @@ from . import gaussian_min as gmin
 from ..S3_data_reduction import plots_s3
 
 
-def centerdriver(method, data, guess, trim, radius, size, i, m, meta, 
+def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
                  saved_ref_median_frame,
                  mask=None, uncd=None, fitbg=1, maskstar=True,
                  expand=5.0, psf=None, psfctr=None):
@@ -51,10 +51,10 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
     23-11-2010 patricio   Written by Patricio Cubillos
                           pcubillos@fulbrightmail.org
     2-24-2023  Isaac      Edited by Isaac edelman
-                          Added new centroiding method 
+                          Added new centroiding method
                           called mgmc_pri and mgmc_sec
     """
-    
+
     extra = []
 
     # Default mask: all good
@@ -69,14 +69,14 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         # Trim the image if requested
         if trim != 0:
             # Integer part of center
-            cen = np.rint(guess) 
+            cen = np.rint(guess)
             # Center in the trimed image
             loc = (trim, trim)
             # Do the trim:
             img, msk, err = ie.trimimage(data, cen, loc, mask=mask, uncd=uncd)
         else:
             cen = np.array([0, 0])
-            loc = np.rint(guess) 
+            loc = np.rint(guess)
             img, msk, err = data, mask, uncd
         weights = 1.0 / np.abs(err)
     else:
@@ -84,14 +84,14 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         img, msk, err = data, mask, uncd
         loc = guess
         cen = np.array([0, 0])
-        # Subtract median BG because photutils sometimes has a hard time 
+        # Subtract median BG because photutils sometimes has a hard time
         # fitting for a constant offset
         img -= np.nanmedian(img)
 
     # If all data is bad:
     if not np.any(msk):
         raise Exception('Bad Frame Exception!')
-    
+
     # Get the center with one of the methods:
     refrence_median_frame = None
     if method in ['fgc', 'fgc_sec']:
@@ -103,7 +103,7 @@ def centerdriver(method, data, guess, trim, radius, size, i, m, meta,
         # Median frame creation + first centroid
         x, y, refrence_median_frame = gmin.pri_cent(img, meta,
                                                     saved_ref_median_frame)
-    elif method == 'mgmc_sec': 
+    elif method == 'mgmc_sec':
         # Second enhanced centroid position + gaussian widths
         sy, sx, y, x = gmin.mingauss(img, yxguess=loc, meta=meta)
         extra = sy, sx  # Gaussian 1-sigma half-widths

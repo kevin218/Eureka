@@ -65,7 +65,7 @@ class LightCurve(m.Model):
         - Jan. 15, 2022 Megan Mansfield
             Added ability to share fit between all channels
         - Oct. 2022 Erin May
-            Added ability to joint fit WLCs with different time arrays    
+            Added ability to joint fit WLCs with different time arrays
         """
         # Initialize the model
         super().__init__(**kwargs)
@@ -191,7 +191,7 @@ class LightCurve(m.Model):
             flux = np.ma.copy(self.flux)
             unc = np.ma.copy(self.unc_fit)
             time = np.ma.copy(self.time)
-            
+
             if self.share and not meta.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 flux, unc = split([flux, unc], meta.nints, channel)
@@ -235,7 +235,7 @@ class LightCurve(m.Model):
             else:
                 wave = meta.wave[channel]
             # Format axes
-            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' + 
+            ax.set_title(f'{meta.eventlabel} - Channel {channel} ' +
                          f'- {wave} microns')
             ax.set_xlabel(str(self.time_units))
             ax.set_ylabel('Normalized Flux', size=14)

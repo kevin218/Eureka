@@ -186,7 +186,7 @@ class SinusoidPhaseCurveModel(Model):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
                     phaseVars = 1e12*np.ma.ones(time.shape)
-                
+
                 if self.eclipse_model is None:
                     eclipse = 1
                 else:

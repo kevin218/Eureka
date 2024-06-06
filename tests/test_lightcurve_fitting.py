@@ -83,7 +83,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         self.t_model = models.BatmanTransitModel(parameters=params,
@@ -123,7 +123,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -177,7 +177,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -226,14 +226,14 @@ class TestModels(unittest.TestCase):
         params.inc = 89.7, 'free', 80., 90., 'U'
         params.a = 18.2, 'free', 15., 20., 'U'
         params.ecc = 0., 'fixed'
-        params.w = 90., 'fixed' 
+        params.w = 90., 'fixed'
         params.rp1 = 0.12, 'free', 0.0, 0.4, 'U'
         params.per1 = 5.721490, 'fixed'
         params.t01 = 0.28, 'free', 0, 1, 'U'
         params.inc1 = 89.5, 'free', 80., 90., 'U'
         params.a1 = 8.2, 'free', 15., 20., 'U'
         params.ecc1 = 0.1, 'fixed'
-        params.w1 = 90., 'fixed' 
+        params.w1 = 90., 'fixed'
         params.limb_dark = 'linear', 'independent'
         params.u1 = 0.2, 'free', 0., 1., 'U'
 
@@ -247,7 +247,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         self.t_poet_tr = models.PoetTransitModel(parameters=params,
@@ -287,7 +287,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -339,7 +339,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
@@ -396,7 +396,7 @@ class TestModels(unittest.TestCase):
         longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
         freenames = []
         for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
+            if params.dict[key][1] in ['free', 'shared', 'white_free',
                                        'white_fixed']:
                 freenames.append(key)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')

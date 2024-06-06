@@ -70,7 +70,7 @@ def test_WFC3(capsys):
 
     s4_cites = np.union1d(s3_cites, COMMON_IMPORTS[3])
     assert np.array_equal(s4_meta.citations, s4_cites)
-    
+
     # remove temporary files
     os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage3")
     os.system(f"rm -r data{os.sep}WFC3{os.sep}Stage4")

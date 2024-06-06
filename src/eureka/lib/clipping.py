@@ -70,9 +70,9 @@ def clip_outliers(data, log, wavelength, wavelength_units='microns', mask=None,
     '''
     data = np.ma.masked_invalid(np.ma.copy(data))
     data = np.ma.masked_where(mask, data)
-        
+
     kernel = Box1DKernel(box_width)
-    
+
     outliers = np.zeros_like(data, dtype=bool)
     new_clipped = True
     i = 0

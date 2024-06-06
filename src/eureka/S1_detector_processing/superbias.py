@@ -19,8 +19,8 @@ __all__ = ["Eureka_SuperBiasStep"]
 
 
 class Eureka_SuperBiasStep(Step):
-    """This step is an alternative to the jwst pipeline superbias. 
-    Performs super-bias subtraction by subtracting scaled super-bias 
+    """This step is an alternative to the jwst pipeline superbias.
+    Performs super-bias subtraction by subtracting scaled super-bias
     reference data from the input science data model at the group level.
     """
 
@@ -53,7 +53,7 @@ class Eureka_SuperBiasStep(Step):
             bias_model = datamodels.SuperBiasModel(self.bias_name)
 
             # Do the bias subtraction
-            result = bias_sub.do_correction(input_model, bias_model, 
+            result = bias_sub.do_correction(input_model, bias_model,
                                             self.s1_meta, self.s1_log)
 
             # Close the superbias reference file model and

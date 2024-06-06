@@ -31,7 +31,7 @@ flatoffset      [[374, 374]]  #[[379, 379]]
 flatsigma       50
 
 # Sigma theshold for bad pixel identification in the differential non-destructive reads (NDRs)
-diffthresh      10                
+diffthresh      10
 
 # Background parameters
 bg_hw           5           # Half-width of exclusion region for BG subtraction (relative to source position)

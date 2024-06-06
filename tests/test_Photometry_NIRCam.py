@@ -93,7 +93,7 @@ def test_NIRCam_hex(capsys):
         print("\n\nIMPORTANT: Make sure that any changes to the ecf files "
               "are\nincluded in demo ecf files and documentation "
               "(docs/source/ecf.rst).")
-        print("\nPhotometry NIRCam S3 hexagonal aperture test: ", 
+        print("\nPhotometry NIRCam S3 hexagonal aperture test: ",
               end='', flush=True)
 
     # explicitly define meta variables to be able to run

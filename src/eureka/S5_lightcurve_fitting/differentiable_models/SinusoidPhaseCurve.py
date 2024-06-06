@@ -140,7 +140,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 time = split([time, ], self.nints, chan)[0]
 
             phaseVars = lib.ones(len(time))
-            
+
             # Compute orbital phase
             if model.ecc == 0.:
                 # the planet is on a circular orbit
@@ -243,7 +243,7 @@ def eccentric_anomaly(model, lib, t, xtol=1e-10):
     ma_peri = ea_peri - model.ecc*np.sin(ea_peri)
     t_peri = (model.t0 - (ma_peri/(2.*np.pi)*model.per))
 
-    if ((lib == tt and tt.lt(t_peri, 0)) or 
+    if ((lib == tt and tt.lt(t_peri, 0)) or
             (t_peri < 0)):
         t_peri = t_peri + model.per
 
@@ -256,7 +256,7 @@ def eccentric_anomaly(model, lib, t, xtol=1e-10):
 
 def FSSI_Eccentric_Inverse(model, lib, M, xtol=1e-10):
     """Convert mean anomaly to eccentric anomaly using FSSI algorithm.
-    
+
     Algorithm based on that from Tommasini+2018.
 
     Parameters

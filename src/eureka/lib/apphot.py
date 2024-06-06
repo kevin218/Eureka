@@ -82,7 +82,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     betaper  : Scalar
         Returns aperture size used for beta.
     aperture_shape : String
-        Specifies shape of the extraction aperture used, currently 
+        Specifies shape of the extraction aperture used, currently
         only "circle" and "hexagon" are supported.
 
     Returns
@@ -164,7 +164,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         Converted to python.
     - 2024-06-05: Yoni Brande, jbrande@ku.edu
         Added ability for non-circular apertures with aperture_shape
-        parameter. Currently supporting hexagonal apertures for 
+        parameter. Currently supporting hexagonal apertures for
         eureka!
 
     Examples
@@ -477,7 +477,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     # nskyideal = all pixels in sky
     ret[nskyideal] = (np.sum(
                       np.bitwise_xor(apFunc(iskyout, ctrsky, szsky),
-                                     apFunc(iskyin, ctrsky, szsky))) 
+                                     apFunc(iskyin, ctrsky, szsky)))
                       / iexpand**2.0)
 
     if ret[nskypix] < iskyfrac * ret[nskyideal]:

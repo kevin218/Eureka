@@ -35,31 +35,31 @@ The full code for ``Eureka!`` is available on `GitHub <http://github.com/kevin21
 Citing ``Eureka!`` and its dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you wish to just cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://joss.theoj.org/papers/10.21105/joss.04503>`_. 
+If you wish to just cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://joss.theoj.org/papers/10.21105/joss.04503>`_.
 
 .. code-block::
 
-    @article{Bell2022, 
-         doi = {10.21105/joss.04503}, 
-         url = {https://doi.org/10.21105/joss.04503}, 
-         year = {2022}, 
-         publisher = {The Open Journal}, 
-         volume = {7}, 
-         number = {79}, 
-         pages = {4503}, 
-         author = {Taylor J. Bell and Eva-Maria Ahrer and 
-                   Jonathan Brande and Aarynn L. Carter and Adina D. Feinstein 
-                   and Giannina {Guzman Caloca} and Megan Mansfield and 
-                   Sebastian Zieba and Caroline Piaulet and Björn Benneke and 
-                   Joseph Filippazzo and Erin M. May and Pierre-Alexis Roy and 
-                   Laura Kreidberg and Kevin B. Stevenson}, 
-         title = {Eureka!: An End-to-End Pipeline for 
-                  JWST Time-Series Observations}, 
-        journal = {Journal of Open Source Software} 
+    @article{Bell2022,
+         doi = {10.21105/joss.04503},
+         url = {https://doi.org/10.21105/joss.04503},
+         year = {2022},
+         publisher = {The Open Journal},
+         volume = {7},
+         number = {79},
+         pages = {4503},
+         author = {Taylor J. Bell and Eva-Maria Ahrer and
+                   Jonathan Brande and Aarynn L. Carter and Adina D. Feinstein
+                   and Giannina {Guzman Caloca} and Megan Mansfield and
+                   Sebastian Zieba and Caroline Piaulet and Björn Benneke and
+                   Joseph Filippazzo and Erin M. May and Pierre-Alexis Roy and
+                   Laura Kreidberg and Kevin B. Stevenson},
+         title = {Eureka!: An End-to-End Pipeline for
+                  JWST Time-Series Observations},
+        journal = {Journal of Open Source Software}
     }
 
 Citation information for ``Eureka!`` dependencies is available in the ``meta`` objects returned at each stage. ``meta.citations`` stores a list of names of all Python packages and JWST instruments used in the analysis,
-and ``meta.bibliography`` stores a list of key-value pairs where the keys are the elements of ``meta.citations`` and the values are lists of the relevant BibTeX entries for each citable dependency or instrument. 
+and ``meta.bibliography`` stores a list of key-value pairs where the keys are the elements of ``meta.citations`` and the values are lists of the relevant BibTeX entries for each citable dependency or instrument.
 
 Similar Tools
 ~~~~~~~~~~~~~

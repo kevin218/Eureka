@@ -25,10 +25,10 @@ def generalized_normal(x, mu,alpha,beta,scale):
     mu : float
        Mean/center value of the distribution.
     alpha : float
-       Sets the scale/standard deviation of the 
+       Sets the scale/standard deviation of the
        distribution.
     beta : float
-       Sets the shape of the distribution. 
+       Sets the shape of the distribution.
        Beta > 2 becomes boxy. Beta < 2 becomes
        peaky. Beta = 2 is a normal Gaussian.
     scale : float
@@ -54,13 +54,13 @@ def moffat_2poly_piecewise(args, x):
        X values to evaluate the shape over.
     """
     x0,x1,mu1,alpha1,gamma1,f1,a,b,c,mu2,alpha2,gamma2,f2 = args
-    model = np.piecewise(x, [((x<x0)), 
+    model = np.piecewise(x, [((x<x0)),
                              ((x>=x0) & (x<x1))],
-                         [lambda x: Moffat1D(x, x_0=mu1, alpha=alpha1, 
+                         [lambda x: Moffat1D(x, x_0=mu1, alpha=alpha1,
                                              gamma=gamma1, amplitude=f1),
                           lambda x: a*x**2+b*x+c,
-                          lambda x: Moffat1D(x, x_0=mu2, alpha=alpha2, 
-                                             gamma=gamma2, 
+                          lambda x: Moffat1D(x, x_0=mu2, alpha=alpha2,
+                                             gamma=gamma2,
                                              amplitude=f2)]
                         )
     return model
@@ -75,12 +75,12 @@ def moffat_1poly_piecewise(args, x):
     Parameters
     ----------
     args : np.ndarray
-       A list or array of parameters for the fits.   
-    x : np.ndarray  
+       A list or array of parameters for the fits.
+    x : np.ndarray
        X values to evaluate the shape over.
     """
     x0,x1,mu1,alpha1,gamma1,f1,m,b,mu2,alpha2,gamma2,f2 = args
-    model = np.piecewise(x, [((x<x0)), 
+    model = np.piecewise(x, [((x<x0)),
                              ((x>=x0) & (x<x1))],
                          [lambda x: Moffat1D(x, x_0=mu1, alpha=alpha1,
                                              gamma=gamma1, amplitude=f1),
@@ -104,10 +104,10 @@ def gaussian_1poly_piecewise(args, x):
     args : np.ndarray
        A list or array of parameters for the fits.
     x : np.ndarray
-       X values to evaluate the shape over. 
+       X values to evaluate the shape over.
     """
     x0,x1,mu1,std1,beta1,scale1,m,b,mu2,std2,beta2,scale2 = args
-    model = np.piecewise(x, [((x<x0)), 
+    model = np.piecewise(x, [((x<x0)),
                              ((x>=x0) & (x<x1))],
                          [lambda x: generalized_normal(x, mu1,std1,beta1,scale1),
                           lambda x: m*x+b,
@@ -119,19 +119,19 @@ def gaussian_1poly_piecewise(args, x):
 def gaussian_2poly_piecewise(args, x):
     """
     A piece-wise function consisting of 2 generalized
-    normal distribution profiles  
+    normal distribution profiles
     connected with a 2D polynomial to mimic the bat-shaped
-    profile of NIRISS. 
+    profile of NIRISS.
 
-    Parameters  
-    ----------  
+    Parameters
+    ----------
     args : np.ndarray
        A list or array of parameters for the fits.
-    x : np.ndarray 
+    x : np.ndarray
        X values to evaluate the shape over.
     """
     x0,x1,mu1,std1,beta1,scale1,a,b,c,mu2,std2,beta2,scale2 = args
-    model = np.piecewise(x, [((x<x0)), 
+    model = np.piecewise(x, [((x<x0)),
                              ((x>=x0) & (x<x1))],
                          [lambda x: generalized_normal(x, mu1,std1,beta1,scale1),
                           lambda x: a*x**2+b*x+c,

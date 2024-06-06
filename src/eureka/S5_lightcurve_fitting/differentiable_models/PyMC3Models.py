@@ -239,7 +239,7 @@ class PyMC3Model:
         label = self.fitter
         if self.name != 'New PyMC3Model':
             label += ': '+self.name
-        
+
         if not share:
             channel = 0
         else:
@@ -366,7 +366,7 @@ class CompositePyMC3Model(PyMC3Model):
                             elif param.prior == 'LU':
                                 setattr(self.model, parname_temp,
                                         tt.exp(pm.Uniform(
-                                            parname_temp, 
+                                            parname_temp,
                                             lower=param.priorpar1,
                                             upper=param.priorpar2,
                                             testval=param.value)))
@@ -486,7 +486,7 @@ class CompositePyMC3Model(PyMC3Model):
                     if component.modeltype == 'GP':
                         gps = component.gps
                         gp_component = component
-                
+
                 full_fit = self.eval(eval=False)
                 for c in range(self.nchannel_fitted):
                     if self.nchannel_fitted > 1:
@@ -510,7 +510,7 @@ class CompositePyMC3Model(PyMC3Model):
                 pm.Normal("obs", mu=self.eval(eval=False),
                           sd=self.scatter_array,
                           observed=self.flux)
-        
+
         self.issetup = True
 
     def eval(self, eval=True, channel=None, incl_GP=False, **kwargs):
@@ -705,7 +705,7 @@ class CompositePyMC3Model(PyMC3Model):
                     # Split the arrays that have lengths of
                     # the original time axis
                     time = split([self.time, ], self.nints, chan)[0]
-                    
+
                     dt = time[1]-time[0]
                     steps = int(np.round((time[-1]-time[0])/dt+1))
                     nints_interp.append(steps)

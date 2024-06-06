@@ -84,7 +84,7 @@ class PolynomialModel(PyMC3Model):
         else:
             lib = tt
             model = self.model
-        
+
         # Parse 'c#' keyword arguments as coefficients
         for c in range(nchan):
             if self.nchannel_fitted > 1:

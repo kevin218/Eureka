@@ -7,13 +7,13 @@ from photutils.centroids import (centroid_com, centroid_1dg,  # noqa: F401
 
 def evalgauss(params, x, y, x0, y0):
     """
-    Calculate the values of an unrotated Gauss function 
+    Calculate the values of an unrotated Gauss function
     given positions in x and y in a mesh grid.
 
     Parameters
     ----------
     params : list
-        List components : amplitude, x_stddev, y_stddev. 
+        List components : amplitude, x_stddev, y_stddev.
         Acts as the inital guess from meta (params_guess).
     x : ndarray
         The x-coordinates for every pixel within the considered frame.
@@ -26,14 +26,14 @@ def evalgauss(params, x, y, x0, y0):
 
     Returns
     -------
-    ndarray 
+    ndarray
         A 2D array of a 2D gaussian formula.
 
     Notes
     -----
     History:
 
-    - Feb 22, 2023 Isaac Edelman 
+    - Feb 22, 2023 Isaac Edelman
         Initial implementation.
     """
     # unpack params
@@ -46,13 +46,13 @@ def evalgauss(params, x, y, x0, y0):
 
 def minfunc(params, frame, x, y, x_mean, y_mean):
     """
-    A cost function that should be minimized 
+    A cost function that should be minimized
     when fitting for the Gaussian PSF widths.
 
     Parameters
     ----------
     params : list
-        List components : amplitude, x_stddev, y_stddev. 
+        List components : amplitude, x_stddev, y_stddev.
         Acts as the inital guess from meta (params_guess).
     frame : 2D ndarray
         Array containing the star image.
@@ -65,21 +65,21 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
     y_mean : float
         Y position guess for centroid.
 
-    Returns 
-    ------- 
-    float 
+    Returns
+    -------
+    float
         The mean-squared error of the Gaussian centroid model.
 
     Notes
     -----
     History:
 
-    - Feb 22, 2023 Isaac Edelman 
+    - Feb 22, 2023 Isaac Edelman
         Initial implementation.
     """
     # Evaluates the guassian using parameters given
     model_gauss = evalgauss(params, x, y, x_mean, y_mean)
-    
+
     # Returns the model - observations squared or "R^2" value
     return np.nanmean((model_gauss-frame)**2)
 
@@ -87,7 +87,7 @@ def minfunc(params, frame, x, y, x_mean, y_mean):
 def pri_cent(img, meta, saved_ref_median_frame):
     """
     Create initial centroid guess based off of median frame of data.
-    
+
     Parameters
     ----------
     img : 2D ndarray
@@ -97,11 +97,11 @@ def pri_cent(img, meta, saved_ref_median_frame):
     saved_ref_median_frame : ndarray
         The stored median frame of the first batch.
 
-    Returns 
-    ------- 
-    x : float 
-        First guess of x centroid position. 
-    y : float 
+    Returns
+    -------
+    x : float
+        First guess of x centroid position.
+    y : float
         First guess of y centroid position.
     refrence_median_frame : ndarray
         Median frame of the first batch.
@@ -110,7 +110,7 @@ def pri_cent(img, meta, saved_ref_median_frame):
     -----
     History:
 
-    - Feb 22, 2023 Isaac Edelman 
+    - Feb 22, 2023 Isaac Edelman
         Initial implementation.
     """
 
@@ -133,10 +133,10 @@ def pri_cent(img, meta, saved_ref_median_frame):
 
 def mingauss(img, yxguess, meta):
     """
-    Using an inital centroid guess, 
-    get a more precise centroid and PSF-width measurement 
+    Using an inital centroid guess,
+    get a more precise centroid and PSF-width measurement
     using only pixels near the inital guess.
-    
+
     Parameters
     ----------
     img : 2D ndarray
@@ -161,11 +161,11 @@ def mingauss(img, yxguess, meta):
     -----
     History:
 
-    - Feb 22, 2023 Isaac Edelman 
+    - Feb 22, 2023 Isaac Edelman
         Initial implementation.
     """
-    # Create centroid position x,y 
-    # based off of centroid method 
+    # Create centroid position x,y
+    # based off of centroid method
     # and inital centroid guess
     if meta.centroid_tech.lower() in ['com', '1dg', '2dg']:
         cent_func = getattr(sys.modules[__name__],
@@ -176,7 +176,7 @@ def mingauss(img, yxguess, meta):
         x, y = x[0], y[0]
     else:
         print("Invalid centroid_tech option")
-    
+
     # Cropping frame to speed up guassian fit
     minx = -int(meta.gauss_frame)+int(x)
     maxx = int(meta.gauss_frame)+int(x)
