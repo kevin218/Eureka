@@ -199,7 +199,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             spec = xrio.readXR(specData_savefile)
 
             # Assign a mask for custom datasets, masking any NaN values
-            if not hasattr(spec, 'optmask'):
+            if hasattr(spec, 'optspec') and not hasattr(spec, 'optmask'):
                 spec['optmask'] = (~np.isfinite(spec.optspec)).astype(int)
 
             wave_1d = spec.wave_1d.values
