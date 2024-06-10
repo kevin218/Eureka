@@ -77,9 +77,9 @@ class StepModel(PyMC3Model):
                         steps[c][i] = getattr(model, f'step{i}')
                         steptimes[c][i] = getattr(model, f'steptime{i}')
                     else:
-                        steps[c][i] = getattr(model, f'step{i}_{chan}')
+                        steps[c][i] = getattr(model, f'step{i}_ch{chan}')
                         steptimes[c][i] = getattr(model,
-                                                  f'steptime{i}_{chan}')
+                                                  f'steptime{i}_ch{chan}')
                 except AttributeError:
                     pass
 

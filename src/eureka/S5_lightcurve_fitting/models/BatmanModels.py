@@ -36,13 +36,13 @@ class PlanetParams():
         if pid == 0:
             self.pid_id = ''
         else:
-            self.pid_id = str(self.pid)
+            self.pid_id = f'_pl{self.pid}'
         # Channel ID
         self.channel = channel
         if channel == 0:
             self.channel_id = ''
         else:
-            self.channel_id = f'_{self.channel}'
+            self.channel_id = f'_ch{self.channel}'
         # Set transit/eclipse parameters
         self.t0 = None
         self.rprs = None
@@ -51,8 +51,10 @@ class PlanetParams():
         self.ars = None
         self.a = None
         self.per = None
-        self.ecc = 0.
+        self.ecc = None
         self.w = None
+        self.ecosw = None
+        self.esinw = None
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
@@ -94,6 +96,33 @@ class PlanetParams():
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
             setattr(self, 'a', model.parameters.dict[item0][0])
+        # Allow for (ecc, w) or (ecosw, esinw)
+        if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
+            item0 = 'ecc' + self.pid_id
+            item1 = 'w' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            if model.parameters.dict[item1][1] == 'free':
+                item1 += self.channel_id
+            ecc = model.parameters.dict[item0][0]
+            w = model.parameters.dict[item1][0]
+            ecosw = ecc*np.cos(w*np.pi/180)
+            esinw = ecc*np.sin(w*np.pi/180)
+            setattr(self, 'ecosw', ecosw)
+            setattr(self, 'esinw', esinw)
+        if (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
+            item0 = 'ecosw' + self.pid_id
+            item1 = 'esinw' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            if model.parameters.dict[item1][1] == 'free':
+                item1 += self.channel_id
+            ecosw = model.parameters.dict[item0][0]
+            esinw = model.parameters.dict[item1][0]
+            ecc = np.sqrt(ecosw**2+esinw**2)
+            w = np.arctan2(esinw, ecosw)*180/np.pi
+            setattr(self, 'ecc', ecc)
+            setattr(self, 'w', w)
         # Allow for fp or fpfs
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
             item0 = 'fp' + self.pid_id
@@ -116,6 +145,12 @@ class PlanetParams():
                 item0 += self.channel_id
             setattr(self, 'Rs', model.parameters.dict[item0][0])
 
+        # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
+        if self.ecc is None:
+            self.ecc = 0
+            self.w = None
+            self.ecosw = 0
+            self.esinw = 0
 
 class BatmanTransitModel(Model):
     """Transit Model"""
@@ -240,8 +275,9 @@ class BatmanTransitModel(Model):
 
                 # Enforce physicality to avoid crashes from batman by returning
                 # something that should be a horrible fit
-                if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
-                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                if not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
+                        (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                        (-1 <= pl_params.esinw <= 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
                     light_curve = 1e12*np.ma.ones(time.shape)
@@ -299,12 +335,18 @@ class BatmanEclipseModel(Model):
             self.compute_ltt = True
 
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
+        ltt_params = np.array(['per', 'inc', 't0'])
         ltt_par2 = np.array(['a', 'ars'])
+        ltt_par3 = np.array(['ecc', 'w'])
+        ltt_par4 = np.array(['ecosw', 'esinw'])
         # Check if able to do ltt correction
         ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
                               and 'Rs' in self.parameters.dict.keys()
-                              and np.any(np.in1d(ltt_par2, self.paramtitles)))
+                              and np.any(np.in1d(ltt_par2, self.paramtitles))
+                              and np.any(
+                                  [np.all(np.in1d(ltt_par3, self.paramtitles)),
+                                   np.all(np.in1d(ltt_par4, self.paramtitles))]
+                                  ))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
                                                 np.array(self.paramtitles),

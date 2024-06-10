@@ -90,7 +90,7 @@ class GPModel(Model):
             if chan == 0:
                 chankey = ''
             else:
-                chankey = f'_{chan}'
+                chankey = f'_ch{chan}'
 
             for i, par in enumerate(['A', 'm']):
                 for k in range(self.nkernels):
@@ -110,7 +110,7 @@ class GPModel(Model):
         super().update(newparams, **kwargs)
 
         self.unc_fit = update_uncertainty(newparams, self.nints, self.unc,
-                                          self.freenames)
+                                          self.freenames, self.nchannel_fitted)
 
     def eval(self, fit, channel=None, gp=None, **kwargs):
         """Compute GP with the given parameters

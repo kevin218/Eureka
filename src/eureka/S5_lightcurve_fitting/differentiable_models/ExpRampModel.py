@@ -98,7 +98,7 @@ class ExpRampModel(PyMC3Model):
                         ramp_coeffs[c][i] = getattr(model, f'r{i}')
                     else:
                         ramp_coeffs[c][i] = getattr(model,
-                                                    f'r{i}_{chan}')
+                                                    f'r{i}_ch{chan}')
                 except AttributeError:
                     pass
 
