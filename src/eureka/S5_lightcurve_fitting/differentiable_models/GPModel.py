@@ -52,7 +52,6 @@ class GPModel(PyMC3Model):
         self.kernel_inputs = None
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
-        self.fit = np.ones_like(self.flux)
         self.unc = lc.unc
         self.unc_fit = lc.unc_fit
         self.time = lc.time
@@ -82,7 +81,7 @@ class GPModel(PyMC3Model):
             if chan == 0:
                 chankey = ''
             else:
-                chankey = f'_{chan}'
+                chankey = f'_ch{chan}'
 
             for i, par in enumerate(['A', 'm']):
                 for k in range(self.nkernels):
@@ -150,18 +149,18 @@ class GPModel(PyMC3Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if channel is None:
-                    fit = split([fit_lc, ], self.nints, chan)[0]
+                    fit_lc_temp = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted mode will be passed in
-                    fit = fit_lc
+                    fit_lc_temp = fit_lc
             else:
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit = fit_lc
+                fit_lc_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit)
+            residuals = np.ma.masked_invalid(flux-fit_lc_temp)
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
@@ -176,7 +175,7 @@ class GPModel(PyMC3Model):
             if chan == 0:
                 chankey = ''
             else:
-                chankey = f'_{chan}'
+                chankey = f'_ch{chan}'
 
             for i, par in enumerate(['A', 'm']):
                 for k in range(self.nkernels):

@@ -97,7 +97,7 @@ class PolynomialModel(PyMC3Model):
                         poly_coeffs[c][i] = getattr(model, f'c{i}')
                     else:
                         poly_coeffs[c][i] = getattr(model,
-                                                    f'c{i}_{chan}')
+                                                    f'c{i}_ch{chan}')
                 except AttributeError:
                     pass
 

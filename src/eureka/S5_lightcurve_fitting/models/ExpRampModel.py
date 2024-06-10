@@ -81,7 +81,7 @@ class ExpRampModel(Model):
                         self.coeffs[c, i] = self.parameters.dict[f'r{i}'][0]
                     else:
                         self.coeffs[c, i] = \
-                            self.parameters.dict[f'r{i}_{chan}'][0]
+                            self.parameters.dict[f'r{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 

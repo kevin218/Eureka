@@ -155,7 +155,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 if self.nchannel_fitted == 1 or chan == 0:
                     suffix = ''
                 else:
-                    suffix = f'_{chan}'
+                    suffix = f'_ch{chan}'
                 AmpCos = getattr(model, f'AmpCos{order}{suffix}', 0)
                 AmpSin = getattr(model, f'AmpSin{order}{suffix}', 0)
                 phaseVars += (AmpCos*(lib.cos(order*phi)-1.) +

@@ -99,7 +99,7 @@ class HSTRampModel(PyMC3Model):
                         hst_coeffs[c][i] = getattr(model, f'h{i}')
                     else:
                         hst_coeffs[c][i] = getattr(model,
-                                                   f'h{i}_{chan}')
+                                                   f'h{i}_ch{chan}')
                 except AttributeError:
                     pass
 

@@ -33,7 +33,7 @@ class CentroidModel(PyMC3Model):
         self.axis = kwargs.get('axis')
         self.centroid = kwargs.get('centroid')
 
-        self.coeff_keys = [f'{self.axis}_{c}' if c > 0 else self.axis
+        self.coeff_keys = [f'{self.axis}_ch{c}' if c > 0 else self.axis
                            for c in range(self.nchannel_fitted)]
 
     @property

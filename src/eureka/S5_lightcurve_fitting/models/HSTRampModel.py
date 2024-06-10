@@ -82,7 +82,7 @@ class HSTRampModel(Model):
                         self.coeffs[c, i] = self.parameters.dict[f'h{i}'][0]
                     else:
                         self.coeffs[c, i] = \
-                            self.parameters.dict[f'h{i}_{chan}'][0]
+                            self.parameters.dict[f'h{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 

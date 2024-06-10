@@ -67,7 +67,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Record an astropy table for param values
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
+    freenames = lc.freenames
+    freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
@@ -130,7 +131,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
@@ -387,7 +389,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
@@ -863,7 +866,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
@@ -997,7 +1001,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
@@ -1049,8 +1054,6 @@ def group_variables(model):
 
     Returns
     -------
-    freenames : np.array
-        The names of fitted variables.
     freepars : np.array
         The fitted variables.
     prior1 : np.array
@@ -1075,32 +1078,19 @@ def group_variables(model):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
-    all_params = []
-    alreadylist = []
-    for c in range(model.components[0].nchannel_fitted):
-        temp = model.components[0].longparamlist[c]
-        for par in list(model.components[0].parameters.dict.items()):
-            if par[0] in temp:
-                if not all_params:
-                    all_params.append(par)
-                    alreadylist.append(par[0])
-                if par[0] not in alreadylist:
-                    all_params.append(par)
-                    alreadylist.append(par[0])
+    parameters_dict = model.components[0].parameters.dict
+    freenames = model.components[0].freenames
 
     # Group the different variable types
-    freenames = []
     freepars = []
     prior1 = []
     prior2 = []
     priortype = []
-    indep_vars = {}
-    for ii, item in enumerate(all_params):
-        name, param = item
+    for ii, name in enumerate(freenames):
+        param = parameters_dict[name]
         # param = list(param)
         if ((param[1] == 'free') or (param[1] == 'shared')
                 or ('white' in param[1])):
-            freenames.append(name)
             freepars.append(param[0])
             if len(param) == 5:  # If prior is specified.
                 prior1.append(param[2])
@@ -1117,17 +1107,15 @@ def group_variables(model):
                 prior1.append(-np.inf)
                 prior2.append(np.inf)
                 priortype.append('U')
-        elif param[1] == 'independent':
-            indep_vars[name] = param[0]
-    freenames = np.array(freenames)
     freepars = np.array(freepars)
     prior1 = np.array(prior1)
     prior2 = np.array(prior2)
     priortype = np.array(priortype)
+    indep_vars = dict([[key, parameters_dict[key][0]]
+                       for key in parameters_dict.keys()
+                       if key not in freenames])
 
-    model.freenames = freenames
-
-    return freenames, freepars, prior1, prior2, priortype, indep_vars
+    return freepars, prior1, prior2, priortype, indep_vars
 
 
 def group_variables_lmfit(model):
@@ -1142,8 +1130,6 @@ def group_variables_lmfit(model):
     -------
     paramlist : list
         The fitted variables.
-    freenames : np.array
-        The names of fitted variables.
     indep_vars : dict
         The frozen variables.
 
@@ -1159,12 +1145,10 @@ def group_variables_lmfit(model):
 
     # Group the different variable types
     param_list = []
-    freenames = []
     indep_vars = {}
     for param in all_params:
         param = list(param)
         if param[1][1] == 'free':
-            freenames.append(param[0])
             param[1][1] = True
             param_list.append(tuple(param))
         elif param[1][1] == 'fixed':
@@ -1172,9 +1156,8 @@ def group_variables_lmfit(model):
             param_list.append(tuple(param))
         else:
             indep_vars[param[0]] = param[1]
-    freenames = np.array(freenames)
 
-    return param_list, freenames, indep_vars
+    return param_list, indep_vars
 
 
 def load_old_fitparams(meta, log, channel, freenames):

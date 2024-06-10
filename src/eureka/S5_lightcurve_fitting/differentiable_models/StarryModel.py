@@ -111,9 +111,9 @@ class StarryModel(PyMC3Model):
         self.rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
-            # new object without the _c parts of the parnames
+            # new object without the _ch# parts of the parnames
             # For example, this way we can do `temp.u1` rather than
-            # `getattr(self.model, 'u1_'+c)`.
+            # `getattr(self.model, 'u1_ch'+c)`.
             temp = temp_class()
             for key in self.paramtitles:
                 ptype = getattr(self.parameters, key).ptype
@@ -122,7 +122,7 @@ class StarryModel(PyMC3Model):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact
                     setattr(temp, key, getattr(self.model,
-                                               key+'_'+str(c)))
+                                               key+'_ch'+str(c)))
                 else:
                     setattr(temp, key, getattr(self.model, key))
 
@@ -293,9 +293,9 @@ class StarryModel(PyMC3Model):
         self.fit_rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
-            # new object without the _c parts of the parnames
+            # new object without the _ch# parts of the parnames
             # For example, this way we can do `temp.u1` rather than
-            # `getattr(self.model, 'u1_'+c)`.
+            # `getattr(self.fit, 'u1_ch'+c)`.
             temp = temp_class()
             for key in self.paramtitles:
                 ptype = getattr(self.parameters, key).ptype
@@ -303,7 +303,7 @@ class StarryModel(PyMC3Model):
                         and c > 0):
                     # Remove the _c part of the parname but leave any
                     # other underscores intact
-                    setattr(temp, key, getattr(self.fit, key+'_'+str(c)))
+                    setattr(temp, key, getattr(self.fit, key+'_ch'+str(c)))
                 else:
                     setattr(temp, key, getattr(self.fit, key))
 
