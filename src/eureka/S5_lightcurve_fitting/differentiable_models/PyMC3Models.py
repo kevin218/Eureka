@@ -15,6 +15,7 @@ logger.setLevel(logging.ERROR)
 import pymc3 as pm
 BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
 BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
+BoundedNormal_m1_1 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
 from ..utils import COLORS
@@ -327,9 +328,19 @@ class CompositePyMC3Model(PyMC3Model):
                                             upper=param.priorpar2,
                                             testval=param.value))
                     elif param.prior == 'N':
-                        if (parname == 'ecc' or
-                                (parname in ['u1', 'u2'] and
-                                    self.parameters.limb_dark.value ==
+                        if any(substring in parname
+                               for substring in ['ecosw', 'esinw']):
+                            # ecosw and esinw are defined on [-1,1]
+                            setattr(self.model, parname,
+                                    BoundedNormal_m1_1(
+                                        parname,
+                                        mu=param.priorpar1,
+                                        sigma=param.priorpar2,
+                                        testval=param.value))
+                        elif ('ecc' in parname or
+                                (any(substring in parname
+                                     for substring in ['u1', 'u2'])
+                                 and self.parameters.limb_dark.value ==
                                     'kipping2013')):
                             # Kipping2013 parameters are only on [0,1]
                             # Eccentricity is only [0,1]
@@ -339,16 +350,17 @@ class CompositePyMC3Model(PyMC3Model):
                                         mu=param.priorpar1,
                                         sigma=param.priorpar2,
                                         testval=param.value))
-                        elif parname in ['per', 'scatter_mult',
-                                            'scatter_ppm', 'c0', 'r1',
-                                            'r4', 'r7', 'r10']:
+                        elif any(substring in parname
+                                 for substring in ['per', 'scatter_mult',
+                                                   'scatter_ppm', 'c0', 'r1',
+                                                   'r4', 'r7', 'r10']):
                             setattr(self.model, parname,
                                     BoundedNormal_0(
                                         parname,
                                         mu=param.priorpar1,
                                         sigma=param.priorpar2,
                                         testval=param.value))
-                        elif parname in ['inc']:
+                        elif 'inc' in parname:
                             # An inclination > 90 is not meaningful
                             setattr(self.model, parname,
                                     BoundedNormal_90(
@@ -369,6 +381,15 @@ class CompositePyMC3Model(PyMC3Model):
                                     lower=param.priorpar1,
                                     upper=param.priorpar2,
                                     testval=param.value)))
+
+            if hasattr(self.model, 'ecosw') and hasattr(self.model, 'esinw'):
+                # ecosw and esinw are defined; convert them to ecc and w
+                setattr(self.model, 'ecc', pm.Deterministic(
+                        'ecc', tt.sqrt(self.model.ecosw**2
+                                       + self.model.esinw**2)))
+                setattr(self.model, 'w', pm.Deterministic(
+                        'w', tt.arctan2(self.model.esinw,
+                                        self.model.ecosw)*180/np.pi))
 
     @property
     def time(self):
