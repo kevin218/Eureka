@@ -1093,7 +1093,7 @@ def make_longparamlist(meta, params, chanrng):
                 name += f'_ch{c}'
             longparamlist[c].append(name)
             if (name not in params.dict.keys() and
-                    getattr(params, param).ptype == 'free'):
+                    getattr(params, param).ptype != 'shared'):
                 # Set this parameter based on channel 0's parameter
                 params.__setattr__(name, params.dict[param])
 

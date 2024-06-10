@@ -69,6 +69,11 @@ class PyMC3Model:
         for key in self.parameters.dict.keys():
             setattr(self.fit, key, getattr(self.parameters, key).value)
 
+        if hasattr(self.fit, 'ecosw') and hasattr(self.fit, 'esinw'):
+            # ecosw and esinw are defined; convert them to ecc and w
+            self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
+            self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180/np.pi
+
     def __mul__(self, other):
         """Multiply model components to make a combined model.
 
@@ -307,10 +312,11 @@ class CompositePyMC3Model(PyMC3Model):
         with self.model:
             for parname in self.parameters.params:
                 param = getattr(self.parameters, parname)
-                if param.ptype in ['independent', 'fixed']:
-                    setattr(self.model, parname, param.value)
+                if param.ptype in ['fixed']:
+                    setattr(self.model, parname,
+                            pm.Deterministic(parname, param.value*tt.ones(1)))
                 elif param.ptype not in ['free', 'shared', 'white_free',
-                                         'white_fixed']:
+                                         'white_fixed', 'independent']:
                     message = (f'ptype {param.ptype} for parameter '
                                f'{param.name} is not recognized.')
                     raise ValueError(message)

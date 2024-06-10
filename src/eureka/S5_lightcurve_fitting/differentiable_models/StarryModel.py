@@ -115,16 +115,14 @@ class StarryModel(PyMC3Model):
             # For example, this way we can do `temp.u1` rather than
             # `getattr(self.model, 'u1_ch'+c)`.
             temp = temp_class()
-            for key in self.paramtitles:
-                ptype = getattr(self.parameters, key).ptype
-                if (ptype not in ['fixed', 'independent']
-                        and c > 0):
-                    # Remove the _c part of the parname but leave any
+            for key in self.model.named_vars.keys():
+                channum = key.split('_ch')[-1].split('_')[0]
+                if ((channum.isnumeric() and int(channum) == c)
+                        or not channum.isnumeric()):
+                    # Remove the _ch part of the parname but leave any
                     # other underscores intact
-                    setattr(temp, key, getattr(self.model,
-                                               key+'_ch'+str(c)))
-                else:
-                    setattr(temp, key, getattr(self.model, key))
+                    name = key.split('_ch')[0]
+                    setattr(temp, name, getattr(self.model, key))
 
             # Solve Keplerian orbital period equation for system mass
             # (otherwise starry is going to mess with P or a...)
@@ -297,15 +295,14 @@ class StarryModel(PyMC3Model):
             # For example, this way we can do `temp.u1` rather than
             # `getattr(self.fit, 'u1_ch'+c)`.
             temp = temp_class()
-            for key in self.paramtitles:
-                ptype = getattr(self.parameters, key).ptype
-                if (ptype not in ['fixed', 'independent', 'shared']
-                        and c > 0):
-                    # Remove the _c part of the parname but leave any
+            for key in self.fit.__dict__.keys():
+                channum = key.split('_ch')[-1].split('_')[0]
+                if ((channum.isnumeric() and int(channum) == c)
+                        or not channum.isnumeric()):
+                    # Remove the _ch part of the parname but leave any
                     # other underscores intact
-                    setattr(temp, key, getattr(self.fit, key+'_ch'+str(c)))
-                else:
-                    setattr(temp, key, getattr(self.fit, key))
+                    name = key.split('_ch')[0]
+                    setattr(temp, name, getattr(self.fit, key))
 
             # Solve Keplerian orbital period equation for system mass
             # (otherwise starry is going to mess with P or a...)
