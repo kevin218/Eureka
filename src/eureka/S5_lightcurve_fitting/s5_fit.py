@@ -961,6 +961,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nints=lc_model.nints)
     else:
         model = m.CompositeModel(modellist, parameters=params, time=time,
+                                 freenames=freenames,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,

@@ -95,7 +95,7 @@ class GPModel(PyMC3Model):
 
             # Create the GP object with current parameters and condition the GP
             if self.kernel_inputs is None:
-                self.setup_inputs()
+                self.setup_inputs(lib=tt)
 
             # the kernel is the sum of individual kernel functions
             kernel = self.get_kernel(tt, self.kernel_types[0], coeffs, 0, c)
@@ -189,7 +189,7 @@ class GPModel(PyMC3Model):
 
             # Create the GP object with current parameters and condition the GP
             if self.kernel_inputs is None:
-                self.setup_inputs()
+                self.setup_inputs(lib=np.ma)
 
             # the kernel is the sum of individual kernel functions
             kernel = self.get_kernel(np, self.kernel_types[0], coeffs, 0, c)
@@ -215,7 +215,7 @@ class GPModel(PyMC3Model):
 
         return lcfinal
 
-    def setup_inputs(self):
+    def setup_inputs(self, lib):
         """Setting up kernel inputs as array and standardizing them if asked.
 
         For details on the benefits of normalization, see e.g.
@@ -228,10 +228,15 @@ class GPModel(PyMC3Model):
             else:
                 chan = 0
 
-            kernel_inputs_channel = []
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+
+            kernel_inputs_channel = lib.zeros((0, time.size))
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.copy(self.time)
+                    x = np.ma.copy(self.time)
                 else:
                     # add more input options here
                     raise ValueError('Currently, only GPs as a function of '
@@ -243,14 +248,10 @@ class GPModel(PyMC3Model):
                     x = split([x, ], self.nints, chan)[0]
 
                 if self.normalize:
-                    x = (x-x.mean())/x.std()
+                    x = (x-np.ma.mean(x))/np.ma.std(x)
 
-                kernel_inputs_channel.append(x)
-            kernel_inputs_channel = np.array(kernel_inputs_channel)
-
-            # Need to reshape if there is only one covariate
-            if len(kernel_inputs_channel.shape) == 1:
-                kernel_inputs_channel = kernel_inputs_channel[np.newaxis]
+                kernel_inputs_channel = lib.concatenate([kernel_inputs_channel,
+                                                         x[np.newaxis]])
 
             self.kernel_inputs.append(kernel_inputs_channel)
 
