@@ -60,7 +60,6 @@ class GPModel(Model):
         self.useHODLR = useHODLR
         self.nkernels = len(kernel_classes)
         self.flux = lc.flux
-        self.fit = np.ma.ones(self.flux.shape)
         self.unc = lc.unc
         self.unc_fit = lc.unc_fit
         self.time = lc.time
@@ -112,12 +111,12 @@ class GPModel(Model):
         self.unc_fit = update_uncertainty(newparams, self.nints, self.unc,
                                           self.freenames, self.nchannel_fitted)
 
-    def eval(self, fit, channel=None, gp=None, **kwargs):
+    def eval(self, fit_lc, channel=None, gp=None, **kwargs):
         """Compute GP with the given parameters
 
         Parameters
         ----------
-        fit : ndarray
+        fit_lc : ndarray
             The rest of the current model evaluated.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
@@ -141,7 +140,6 @@ class GPModel(Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-        self.fit = fit
 
         lcfinal = np.ma.array([])
         for c in range(nchan):
@@ -151,16 +149,16 @@ class GPModel(Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if channel is None:
-                    fit = split([self.fit, ], self.nints, chan)[0]
+                    fit = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit = self.fit
+                    fit = fit_lc
             else:
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit = self.fit
+                fit = fit_lc
                 unc_fit = self.unc_fit
             residuals = np.ma.masked_invalid(flux-fit)
             if self.multwhite:
@@ -355,12 +353,12 @@ class GPModel(Model):
 
         return kernel
 
-    def loglikelihood(self, fit, channel=None):
+    def loglikelihood(self, fit_lc, channel=None):
         """Compute log likelihood of GP
 
         Parameters
         ----------
-        fit : ndarray
+        fit_lc : ndarray
             The fitted model.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
@@ -377,9 +375,6 @@ class GPModel(Model):
             nchan = 1
             channels = [channel, ]
 
-        # update uncertainty
-        self.fit = fit
-
         logL = 0
         for c in np.arange(nchan):
             if self.nchannel_fitted > 1:
@@ -388,16 +383,16 @@ class GPModel(Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if channel is None:
-                    fit = split([self.fit, ], self.nints, chan)[0]
+                    fit = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit = self.fit
+                    fit = fit_lc
             else:
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit = self.fit
+                fit = fit_lc
                 unc_fit = self.unc_fit
             residuals = np.ma.masked_invalid(flux-fit)
             if self.multwhite:

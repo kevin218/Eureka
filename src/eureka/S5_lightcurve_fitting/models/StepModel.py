@@ -106,7 +106,7 @@ class StepModel(Model):
             self.time = kwargs.get('time')
 
         # Create the ramp from the coeffs
-        lcfinal = np.ones((nchan, len(self.time)))
+        lcfinal = np.ma.ones((nchan, len(self.time)))
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]

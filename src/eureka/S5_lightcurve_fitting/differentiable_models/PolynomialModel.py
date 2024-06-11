@@ -10,7 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class PolynomialModel(PyMC3Model):
@@ -37,17 +37,17 @@ class PolynomialModel(PyMC3Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
+        self._time = np.ma.masked_invalid(time_array)
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time.mean())
-                self.time_local = np.array(self.time_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time - time.mean()
             else:
                 self.time_local = self.time - self.time.mean()
 

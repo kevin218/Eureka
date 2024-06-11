@@ -205,8 +205,7 @@ class PyMC3Model:
             # For now, the dict and Parameter are separate
             self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
-        for val, key in zip(newparams, self.freenames):
-            setattr(self.fit, key, val)
+            setattr(self.fit, arg, val)
 
     def setup(self, **kwargs):
         """A placeholder function to do any additional setup.
@@ -454,7 +453,7 @@ class CompositePyMC3Model(PyMC3Model):
         with self.model:
             if hasattr(self.model, 'scatter_ppm'):
                 for c in range(self.nchannel_fitted):
-                    if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
+                    if c == 0:
                         parname_temp = 'scatter_ppm'
                     else:
                         parname_temp = 'scatter_ppm_ch'+str(c)
@@ -473,7 +472,7 @@ class CompositePyMC3Model(PyMC3Model):
             if hasattr(self.model, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
                 for c in range(self.nchannel_fitted):
-                    if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
+                    if c == 0:
                         parname_temp = 'scatter_mult'
                     else:
                         parname_temp = 'scatter_mult_ch'+str(c)
@@ -513,9 +512,9 @@ class CompositePyMC3Model(PyMC3Model):
                     if self.nchannel_fitted > 1:
                         chan = self.fitted_channels[c]
                         # get flux and uncertainties for current channel
-                        flux, unc_fit = split([self.flux, self.scatter_array],
-                                              self.nints, chan)
-                        fit = split([full_fit, ], self.nints, chan)[0]
+                        flux, unc_fit, fit = split(
+                            [self.flux, self.scatter_array, full_fit],
+                            self.nints, chan)
                     else:
                         chan = 0
                         # get flux and uncertainties for current channel
@@ -564,14 +563,19 @@ class CompositePyMC3Model(PyMC3Model):
         else:
             nchan = 1
 
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
         if self.multwhite:
             time = self.time
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = lib.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = lib.ones(len(self.time)*nchan)
 
         # Evaluate flux of each component
         for component in self.components:
@@ -615,14 +619,19 @@ class CompositePyMC3Model(PyMC3Model):
         else:
             nchan = 1
 
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
         if self.multwhite:
             time = self.time
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.ones(len(time))
+            flux = lib.ones(len(time))
         else:
-            flux = np.ones(len(self.time)*nchan)
+            flux = lib.ones(len(self.time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:
@@ -665,14 +674,19 @@ class CompositePyMC3Model(PyMC3Model):
         else:
             nchan = 1
 
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
         if self.multwhite:
             time = self.time
             if channel is not None:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, channel)[0]
-            flux = np.zeros(len(time))
+            flux = lib.zeros(len(time))
         else:
-            flux = np.zeros(len(self.time)*nchan)
+            flux = lib.zeros(len(self.time)*nchan)
 
         # Evaluate flux
         for component in self.components:
@@ -718,6 +732,11 @@ class CompositePyMC3Model(PyMC3Model):
             nchan = 1
             channels = [channel]
 
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
         if interp:
             if self.multwhite:
                 new_time = []
@@ -748,9 +767,9 @@ class CompositePyMC3Model(PyMC3Model):
 
         # Setup the flux array
         if self.multwhite:
-            flux = np.ones(len(new_time))
+            flux = lib.ones(len(new_time))
         else:
-            flux = np.ones(len(new_time)*nchan)
+            flux = lib.ones(len(new_time)*nchan)
 
         # Evaluate flux at each model
         for component in self.components:

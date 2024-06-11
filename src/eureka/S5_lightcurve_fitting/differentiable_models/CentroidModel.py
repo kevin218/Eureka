@@ -10,7 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class CentroidModel(PyMC3Model):
@@ -48,13 +48,13 @@ class CentroidModel(PyMC3Model):
         if self.centroid is not None:
             # Convert to local centroid
             if self.multwhite:
-                self.centroid_local = []
+                self.centroid_local = np.ma.zeros(self.centroid.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    centroid = split([self.centroid, ], self.nints, chan)[0]
-                    self.centroid_local.extend(centroid - centroid.mean())
-                self.centroid_local = np.array(self.centroid_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    centroid = self.centroid[trim1:trim2]
+                    self.centroid_local[trim1:trim2] = centroid - centroid.mean()
             else:
                 self.centroid_local = self.centroid - self.centroid.mean()
 
