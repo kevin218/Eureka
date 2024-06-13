@@ -64,10 +64,10 @@ def hex(r, ctr, size, status=False):
     """
     This function returns a byte array containing a hexagon.
 
-    The hexagon is centered at (ctr[0], ctr[1]), and is circumscribed by a 
-    circle of radius r. The array is (size[0], size[1]) in size and has byte 
-    type. Pixel values of 1 indicate that the center of a pixel is within the 
-    hexagonal aperture. Pixel values of 0 indicate the opposite. The center 
+    The hexagon is centered at (ctr[0], ctr[1]), and is circumscribed by a
+    circle of radius r. The array is (size[0], size[1]) in size and has byte
+    type. Pixel values of 1 indicate that the center of a pixel is within the
+    hexagonal aperture. Pixel values of 0 indicate the opposite. The center
     of each pixel is the integer position of that pixel.
 
     Parameters
@@ -100,7 +100,7 @@ def hex(r, ctr, size, status=False):
     # check if hex is off image (same check as disk, for now)
     retstatus = int(ctr[0] - r < 0 or ctr[0] + r > size[0]-1 or
                     ctr[1] - r < 0 or ctr[1] + r > size[1]-1)
-    
+
     # make hexagon, oriented like the JWST mirrors (corner vertex at 12:00)
     yvert = ctr[1] + r*np.cos(2*np.pi*np.arange(6)/6)
     xvert = ctr[0] - r*np.sin(2*np.pi*np.arange(6)/6)
@@ -111,8 +111,8 @@ def hex(r, ctr, size, status=False):
 
     # get list of coordinates for each pixel in image
     ind = np.indices(size)
-    coors = np.hstack((ind[0].reshape(-1, 1), ind[1].reshape(-1, 1))) 
-    
+    coors = np.hstack((ind[0].reshape(-1, 1), ind[1].reshape(-1, 1)))
+
     # use matplotlib.path to do easy masking
     ret = poly_path.contains_points(coors).reshape(size[0], size[1])
 
