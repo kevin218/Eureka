@@ -498,7 +498,13 @@ def parse_unshared_saves(meta, log, fit_methods):
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
-        meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+        try:
+            meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+        except FileNotFoundError:
+            # This channel was skipped or was all masked. Insert NaNs in its place.
+            spectrum_median.extend([np.nan,])
+            spectrum_err.extend([[np.nan,np.nan]])
+            continue
         if meta.spectrum_median is None:
             # Parameter wasn't found, so don't keep looking for it
             meta.spectrum_median = np.array([None for _ in
@@ -580,8 +586,8 @@ def convert_s5_LC(meta, log):
         niter = 1
     else:
         niter = meta.nspecchan
-    wavelengths = np.zeros(niter)
-    bin_widths = np.zeros(niter)
+    wavelengths = meta.wavelengths
+    lc_array_setup = False
     for ch in range(niter):
         # Get the channel key
         if meta.sharedp:
@@ -593,14 +599,18 @@ def convert_s5_LC(meta, log):
         # Load text file
         fname = f'S5_{event_ap_bg}_Table_Save_{channel_key}.txt'
         full_fname = meta.inputdir+fname
-        lc_table = astropytable.readtable(full_fname)
+        try:
+            lc_table = astropytable.readtable(full_fname)
+        except FileNotFoundError:
+            # This channel was skipped or was all masked.
+            # We'll insert NaNs in its place lower down.
+            continue
 
         # Assign known values to array
-        wavelengths[ch] = lc_table['wavelength'][0]
-        bin_widths[ch] = lc_table['bin_width'][0]
         lc_table.remove_column('wavelength')
         lc_table.remove_column('bin_width')
-        if ch == 0:
+        if not lc_array_setup:
+            lc_array_setup = True
             # Record time array
             time = lc_table['time']
             lc_table.remove_column('time')
@@ -609,7 +619,7 @@ def convert_s5_LC(meta, log):
             n_col = len(colnames)
             n_int = len(time)
             # Create numpy array to hold data
-            lc_array = np.zeros((n_col, niter, n_int))
+            lc_array = np.ones((n_col, niter, n_int))*np.nan
         else:
             lc_table.remove_column('time')
         # Assign remaining values to array
@@ -1086,7 +1096,7 @@ def compute_scale_height(meta, log):
         meta.planet_Rad = meta.spectrum_median
         if meta.y_param == 'rp^2' or meta.y_param == 'rprs^2':
             meta.planet_Rad = np.sqrt(meta.planet_Rad)
-        meta.planet_Rad = np.mean(meta.planet_Rad)
+        meta.planet_Rad = np.nanmean(meta.planet_Rad)
         meta.planet_Rad *= (meta.star_Rad*constants.R_sun /
                             constants.R_jup).si.value
     if meta.planet_R0 is not None:
