@@ -60,7 +60,7 @@ bias_group
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
 
 bias_smooth_length
-'''''''''''''''''
+''''''''''''''''''
 Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
 
 custom_bias
@@ -332,7 +332,7 @@ photometry
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
 calibrated_spectra
-''''''''''''
+''''''''''''''''''
 An optional input parameter. If False (default), convert the units of the images to electrons for easy noise estimation. If True (useful for flux-calibrated spectroscopy/photometry), the units of the images will be converted to mJy.
 
 poly_wavelength
@@ -673,7 +673,7 @@ If True, run S4 on all of the apertures considered in S3. Otherwise the code wil
 
 
 mask_columns
-''''''''
+''''''''''''
 List of pixel columns that should not be used when constructing a light curve.  Absolute (not relative) pixel columns should be used. Figure 3102 is very helpful for identifying bad pixel columns.
 
 

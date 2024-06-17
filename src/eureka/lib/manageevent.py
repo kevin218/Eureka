@@ -1,7 +1,12 @@
+import numpy as np
 import h5py as h5
 import pickle
 import os
 import glob
+import astraeus.xarrayIO as xrio
+
+from . import readECF
+from . import util
 
 
 def saveevent(event, filename, save=[], delete=[], protocol=3):
@@ -62,7 +67,7 @@ def loadevent(filename, load=[], loadfilename=None):
     Parameters
     ----------
     filename : str
-               The string contains the name of the event file.
+        The string contains the name of the event file.
     load : str tuple; optional
         The elements of this tuple contain the parameters to read.
         We usually use the values: 'data', 'uncd', 'head', 'bdmskd',
@@ -76,10 +81,6 @@ def loadevent(filename, load=[], loadfilename=None):
     eureka.lib.readECF.MetaClass
         The requested metadata object.
 
-    Notes
-    -----
-    The input filename should not have the .dat nor the .h5 extentions.
-
     History:
 
     - 2010-07-10  patricio
@@ -87,13 +88,36 @@ def loadevent(filename, load=[], loadfilename=None):
     - 2010-11-12  patricio
         reimplemented using exec()
     """
-    with open(filename + '.dat', 'rb') as handle:
-        event = pickle.load(handle, encoding='latin1')
 
-    if loadfilename is None:
-        loadfilename = filename
+    if '_Meta_Save' in filename:
+        # This is a standard Meta_Save.dat file.
+        if filename[-4:] != '.dat':
+            filename += '.dat'
+        with open(filename, 'rb') as handle:
+            event = pickle.load(handle, encoding='latin1')
+        if not hasattr(event, 'data_format'):
+            event.data_format = 'eureka'
+    elif 'SpecData' in filename:
+        # This is a Stage 3 SpecData.h5 file.
+        if filename[-3:] != '.h5':
+            filename += '.h5'
+        with xrio.readXR(filename) as handle:
+            meta_attrs = util.load_attrs_from_xarray(handle)
+        if 'data_format' not in meta_attrs.keys():
+            # All Eureka! save files should have the data_format,
+            # so this must be a custom file
+            meta_attrs['data_format'] = 'custom'
+        # Now create the Meta class and assign attrs
+        event = readECF.MetaClass(**meta_attrs)
+    else:
+        raise AssertionError(f'Unrecognized metadata save file {filename}'
+                             'contains neither "_Meta_Save" or "SpecData".')
 
+    # FINDME: Do we really need this following code anymore?
     if load != []:
+        if loadfilename is None:
+            loadfilename = filename
+
         with h5.File(loadfilename + '.h5', 'r') as handle:
             for param in load:
                 exec('event.' + param + ' = handle["' + param + '"][:]')
@@ -187,44 +211,58 @@ def findevent(meta, stage, allowFail=False):
         Initial version.
     """
     # Search for the output metadata in the inputdir provided
-    # First just check the specific inputdir folder
-    fnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
-                       '*_Meta_Save.dat')
-    if len(fnames) == 0:
-        # There were no metadata files in that folder, so let's see if there
-        # are in children folders
-        fnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
-                           meta.eventlabel+'*_Meta_Save.dat', recursive=True)
+    # First just check the specific inputdir folder, then check children
+    # Check for both old (Meta_Save) and new (SpecData) metadata save files
+    fnames = []
+    for file_suffix in ['*_Meta_Save.dat', '*SpecData.h5']:
+        newfnames = glob.glob(meta.inputdir+stage+'_'+meta.eventlabel +
+                              file_suffix)
 
-    if len(fnames) >= 1:
-        # get the folder with the latest modified time
-        fname = max(fnames, key=os.path.getmtime)
+        if len(newfnames) == 0:
+            # There were no metadata files in that folder, so let's see if
+            # there are in children folders
+            newfnames = glob.glob(meta.inputdir+'**'+os.sep+stage+'_' +
+                                  meta.eventlabel+file_suffix, recursive=True)
+
+        fnames.extend(newfnames)
 
     if len(fnames) == 0 and allowFail:
-        # There may be no rateints files in the inputdir or any of its
-        # children directories - raise an error and give a helpful message
+        # We're running an early enough stage that we don't need to find a
+        # previous metadata save file. Just warn the user
         print(f'WARNING: Unable to find an output metadata file from '
               f'Eureka!\'s {stage} in the folder:\n"{meta.inputdir}"\n'
-              f'Assuming this {stage} data was produced by the JWST pipeline '
-              f'instead.')
+              f'Assuming this {stage} data was produced by another pipeline.')
         return None, meta.inputdir, meta.inputdir_raw
     elif len(fnames) == 0:
-        # There may be no metafiles in the inputdir - raise an error and give
-        # a helpful message
+        # There were no metafiles in the inputdir or its children - raise an
+        # error and give a helpful message
         raise AssertionError(f'WARNING: Unable to find an output metadata file'
-                             f' from Eureka!\'s {stage} in the folder:'
-                             f'\n"{meta.inputdir}"')
+                             f' of kind {file_suffix }from Eureka!\'s {stage}'
+                             f' in the folder:\n"{meta.inputdir}"')
     elif len(fnames) > 1:
-        # There may be multiple runs - use the most recent but warn the user
-        print(f'WARNING: There are multiple metadata save files in the folder:'
-              f'\n"{meta.inputdir}"\n'
-              f'Using the metadata file: \n{fname}\n'
+        # get the folder with the latest modified time
+        folders = np.unique([os.sep.join(fname.split(os.sep)[:-1])
+                             for fname in fnames])
+        folder = max(folders, key=os.path.getmtime) + os.sep
+
+        # Prefer Meta_Save if present to support older runs
+        fnames = glob.glob(folder+stage+'_'+meta.eventlabel+'*_Meta_Save.dat')
+        if len(fnames) == 0:
+            # Otherwise, use the SpecData file
+            fnames = glob.glob(folder+stage+'_'+meta.eventlabel+'*SpecData.h5')
+        fname = fnames[0]
+
+        # There were multiple runs - use the most recent but warn the user
+        print(f'WARNING: There are {len(fnames)} metadata save files in the '
+              f'folder: {meta.inputdir}\n  '
+              f'Using the metadata file: {fname}\n  '
               f'and will consider aperture ranges listed there. If this '
-              f'metadata file is not a part\n'
+              f'metadata file is not a part\n  '
               f'of the run you intended, please provide a more precise folder '
               f'for the metadata file.')
-
-    fname = fname[:-4]  # Strip off the .dat ending
+    else:
+        # There was only the one save file found
+        fname = fnames[0]
 
     # Load old savefile
     old_meta = loadevent(fname)
