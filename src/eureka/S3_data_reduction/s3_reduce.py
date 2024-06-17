@@ -87,7 +87,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     if input_meta is None:
         meta = S3MetaClass(folder=ecf_path, eventlabel=eventlabel)
     else:
-        meta = input_meta
+        meta = S3MetaClass(**input_meta.__dict__)
 
     if s2_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -104,7 +104,27 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
         # Attempt to find subdirectory containing S2 FITS files
         meta = util.find_fits(meta)
     else:
-        meta = me.mergeevents(meta, s2_meta)
+        meta = S3MetaClass(**me.mergeevents(meta, s2_meta).__dict__)
+
+    # First apply any instrument-specific defaults
+    if meta.photometry:
+        if meta.inst == 'miri':
+            meta.set_MIRI_Photometry_defaults()
+        elif meta.inst == 'nircam':
+            meta.set_NIRCam_Photometry_defaults()
+    else:
+        if meta.inst == 'miri':
+            meta.set_MIRI_defaults()
+        elif meta.inst == 'nircam':
+            meta.set_NIRCam_defaults()
+        elif meta.inst == 'nirspec':
+            meta.set_NIRSpec_defaults()
+        elif meta.inst == 'niriss':
+            meta.set_NIRISS_defaults()
+        elif meta.inst == 'wfc3':
+            meta.set_WFC3_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
 
     # Setup range of spectral apertures
     meta.setup_aperture_radii()
@@ -367,7 +387,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     if meta.curvature == 'correct':
                         data, meta = straighten.straighten_trace(data, meta,
                                                                  log, m)
-                    elif meta.inst == 'nirspec' and meta.grating != 'PRISM':
+                    elif meta.inst == 'nirspec' and meta.filter != 'PRISM':
                         log.writelog('WARNING: NIRSpec GRISM spectra is '
                                      'significantly curved and will very '
                                      'likely benefit from setting '
@@ -535,11 +555,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                         # aperture photometry
                         if meta.interp_method is not None:
                             util.interp_masked(data, meta, i, log)
-
-                        # Check if aperture shape has been defined
-                        if (not hasattr(meta, 'aperture_shape') 
-                                or meta.aperture_shape is None):
-                            meta.aperture_shape = 'circle'
 
                         # Calculate flux in aperture and subtract
                         # background flux

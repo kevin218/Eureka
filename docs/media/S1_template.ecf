@@ -49,7 +49,7 @@ grouplevel_bg       True
 ncpu                6
 bg_y1               6
 bg_y2               26
-bg_deg              0 
+bg_deg              0
 p3thresh            5
 verbose             True
 isplots_S1          3

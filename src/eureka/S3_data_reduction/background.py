@@ -223,7 +223,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
     else:
         degs = np.ones(ny)*deg
         # Initiate background image with zeros
-        bg = np.zeros((ny, nx))            
+        bg = np.zeros((ny, nx))
         # Fit polynomial to each column
         for j in range(ny):
             nobadpixels = False

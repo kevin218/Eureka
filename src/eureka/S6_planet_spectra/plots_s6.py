@@ -47,7 +47,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     model_y = deepcopy(model_y)
 
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelength)) == 1: 
+    if len(set(wavelength)) == 1:
         wavelength = wavelength[0]
         wavelength_error = wavelength_error[0]
 
@@ -66,8 +66,6 @@ def plot_spectrum(meta, model_x=None, model_y=None,
         in_range = np.logical_and(model_x >= wavelength[0]-wavelength_error[0],
                                   model_x <= (wavelength[-1] +
                                               wavelength_error[-1]))
-        if not hasattr(meta, 'model_zorder'):
-            meta.model_zorder = 0
         ax.plot(model_x[in_range], model_y[in_range], color='r',
                 zorder=meta.model_zorder)
         if wavelength_error is not None:

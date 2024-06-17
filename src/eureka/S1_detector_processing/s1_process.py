@@ -55,7 +55,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     if input_meta is None:
         meta = S1MetaClass(folder=ecf_path, eventlabel=eventlabel)
     else:
-        meta = input_meta
+        meta = S1MetaClass(**input_meta.__dict__)
 
     # Create directories for Stage 1 processing outputs
     run = util.makedirectory(meta, 'S1')
@@ -81,9 +81,9 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
 
     # First apply any instrument-specific defaults
-    if meta.inst == 'MIRI':
+    if meta.inst == 'miri':
         meta.set_MIRI_defaults()
-    elif meta.inst in ['NIRCam', 'NIRSpec', 'NIRISS']:
+    elif meta.inst in ['nircam', 'nirspec', 'niriss']:
         meta.set_NIR_defaults()
     # Then apply instrument-agnostic defaults
     meta.set_defaults()

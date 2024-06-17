@@ -60,6 +60,8 @@ def read(filename, data, meta, log):
     v0 = hdulist['VAR_RNOISE', 1].data
     int_times = hdulist['INT_TIMES', 1].data
 
+    meta.filter = data.attrs['mhdr']['FILTER']
+
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
@@ -511,7 +513,7 @@ def calibrated_spectra(data, meta, log):
     data['flux'].data *= 1e9*data.shdr['PIXAR_SR']
     data['err'].data *= 1e9*data.shdr['PIXAR_SR']
     data['v0'].data *= 1e9*data.shdr['PIXAR_SR']
-    
+
     # Update units
     data['flux'].attrs["flux_units"] = 'mJy'
     data['err'].attrs["flux_units"] = 'mJy'

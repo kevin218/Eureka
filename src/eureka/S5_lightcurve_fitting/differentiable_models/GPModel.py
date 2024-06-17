@@ -65,13 +65,13 @@ class GPModel(PyMC3Model):
             raise AssertionError('Our celerite2 implementation cannot compute '
                                  'multi-dimensional GPs, please choose a '
                                  'different GP code.')
-        
+
     def setup(self):
         """Setup a model for evaluation and fitting.
         """
         # Parse parameters as coefficients
         coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
-        
+
         self.gps = []
         for c in range(self.nchannel_fitted):
             if self.nchannel_fitted > 1:
@@ -139,7 +139,7 @@ class GPModel(PyMC3Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        lcfinal = np.array([])
+        lcfinal = np.ma.array([])
 
         # Parse parameters as coefficients
         coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
@@ -161,7 +161,17 @@ class GPModel(PyMC3Model):
                 flux = self.flux
                 fit = fit_lc
                 unc_fit = self.unc_fit
-            residuals = flux-fit
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
+
+            # Remove poorly handled masked values
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
 
             if chan == 0:
                 chankey = ''
@@ -190,19 +200,25 @@ class GPModel(PyMC3Model):
 
             # Make the gp object
             gp = celerite2.GaussianProcess(kernel, mean=0.)
-            gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
+            kernel_inputs = self.kernel_inputs[chan][0][good]
+            gp.compute(kernel_inputs, yerr=unc_fit)
 
             # Predict values
-            lcpiece = gp.predict(residuals).eval()
+            mu = gp.predict(residuals).eval()
+
+            # Re-insert and mask bad values
+            mu_full = np.ma.zeros(len(time))
+            mu_full[good] = mu
+            mu_full = np.ma.masked_where(~good, mu_full)
 
             # Append this channel to the outputs
-            lcfinal = np.append(lcfinal, lcpiece)
+            lcfinal = np.ma.append(lcfinal, mu_full)
 
         return lcfinal
 
     def setup_inputs(self):
         """Setting up kernel inputs as array and standardizing them if asked.
-        
+
         For details on the benefits of normalization, see e.g.
         Evans et al. 2017.
         """
@@ -216,7 +232,7 @@ class GPModel(PyMC3Model):
             kernel_inputs_channel = []
             for name in self.kernel_input_names:
                 if name == 'time':
-                    x = np.copy(self.time)        
+                    x = np.copy(self.time)
                 else:
                     # add more input options here
                     raise ValueError('Currently, only GPs as a function of '

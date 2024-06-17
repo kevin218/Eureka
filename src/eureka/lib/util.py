@@ -81,17 +81,22 @@ def readfiles(meta, log):
             # Figure out which instrument we are using
             meta.inst = getattr(meta, 'inst',
                                 hdulist[0].header['INSTRUME'].lower())
-            # Also figure out which pipeline we need to use (spectra or images)
-            meta.exp_type = getattr(meta, 'exp_type',
-                                    hdulist[0].header['EXP_TYPE'])
-            
-            if 'IMAGE' in meta.exp_type:
-                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
-                # NIS_IMAGE, or NRS_IMAGING
-                meta.photometry = getattr(meta, 'photometry', True)
+            if meta.inst != 'wfc3':
+                # Also figure out which pipeline we need to use
+                # (spectra or images)
+                exp_type = getattr(meta, 'exp_type',
+                                   hdulist[0].header['EXP_TYPE'])
+                
+                if 'IMAGE' in exp_type:
+                    # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE,
+                    # NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+                    meta.photometry = getattr(meta, 'photometry', True)
+                else:
+                    # EXP_TYPE doesn't say image, so it should be a spectrum
+                    # (or someone is putting weird files into Eureka!)
+                    meta.photometry = getattr(meta, 'photometry', False)
             else:
-                # EXP_TYPE doesn't say image, so it should be a spectrum
-                # (or someone is putting weird files into Eureka!)
+                # WFC3 photometry isn't supported
                 meta.photometry = getattr(meta, 'photometry', False)
 
     return meta
@@ -391,6 +396,27 @@ def find_fits(meta):
     if meta.inputdir[-1] != os.sep:
         meta.inputdir += os.sep
 
+    relevant_fnames = [fname for fname in fnames if folder in fname]
+    with fits.open(relevant_fnames[-1]) as hdulist:
+        # Figure out which instrument we are using
+        meta.inst = getattr(meta, 'inst',
+                            hdulist[0].header['INSTRUME'].lower())
+        if meta.inst != 'wfc3':
+            # Also figure out which pipeline we need to use (spectra or images)
+            exp_type = getattr(meta, 'exp_type', hdulist[0].header['EXP_TYPE'])
+            
+            if 'IMAGE' in exp_type:
+                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
+                # NIS_IMAGE, or NRS_IMAGING
+                meta.photometry = getattr(meta, 'photometry', True)
+            else:
+                # EXP_TYPE doesn't say image, so it should be a spectrum
+                # (or someone is putting weird files into Eureka!)
+                meta.photometry = getattr(meta, 'photometry', False)
+        else:
+            # WFC3 photometry isn't supported
+            meta.photometry = getattr(meta, 'photometry', False)
+
     return meta
 
 
@@ -448,8 +474,8 @@ def binData_time(data, time, nbin=100, err=False):
     data = np.ma.copy(data)
     data = np.ma.masked_invalid(data)
 
-    binned, _, _ = binned_statistic(time, data, 
-                                    statistic=np.ma.mean, 
+    binned, _, _ = binned_statistic(time, data,
+                                    statistic=np.ma.mean,
                                     bins=nbin)
     if err:
         binned_count, _, _ = binned_statistic(time, data,
@@ -457,7 +483,7 @@ def binData_time(data, time, nbin=100, err=False):
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
 
-    # Need to mask invalid data in case there is an empty bin 
+    # Need to mask invalid data in case there is an empty bin
     # (leading to divide by zero)
     return np.ma.masked_invalid(binned)
 
@@ -590,7 +616,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
-        
+
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]

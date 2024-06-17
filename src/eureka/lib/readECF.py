@@ -83,9 +83,6 @@ class MetaClass:
         self.eventlabel = eventlabel
         self.datetime = time_pkg.strftime('%Y-%m-%d')
 
-        # Set instrument to None if not specified
-        self.inst = getattr(self, 'inst', None)
-
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
         converted to a string.
@@ -168,7 +165,7 @@ class MetaClass:
             # Otherwise, log and fix the default CRDS context to make sure
             # it doesn't change between different segments.
             self.pmap = getattr(self, 'pmap',
-                                crds.get_context_name('jwst')[5:-5])
+                                crds.get_context_name('hst')[4:-5])
             os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
         elif item == 'inst' and value is not None:
             # Fix issues with CRDS server set for HST
@@ -296,7 +293,7 @@ class MetaClass:
         - Oct 2022 Eva-Maria Ahrer
             Update parameters and replace
         """
-        
+
         for i in range(len(self.lines)):
             line = self.lines[i]
             # Strip off comments:
@@ -310,7 +307,7 @@ class MetaClass:
                 new_val = self.params[name]
                 # check if values have been updated
                 if val != new_val:
-                    self.lines[i] = self.lines[i].replace(str(val), 
+                    self.lines[i] = self.lines[i].replace(str(val),
                                                           str(new_val))
 
         with open(os.path.join(folder, self.filename), 'w') as file:

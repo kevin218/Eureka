@@ -40,7 +40,7 @@ class S1MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version.
         '''
-        super.__init__(folder, file, eventlabel, stage=1, **kwargs)
+        super().__init__(folder, file, eventlabel, stage=1, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 1 specific defaults for generic instruments.

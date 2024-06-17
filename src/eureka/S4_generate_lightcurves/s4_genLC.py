@@ -24,8 +24,8 @@ from astropy.convolution import Box1DKernel
 from tqdm import tqdm
 
 from . import plots_s4, drift, generate_LD, wfc3
+from .s4_meta import S4MetaClass
 from ..lib import logedit
-from ..lib import readECF
 from ..lib import manageevent as me
 from ..lib import util
 from ..lib import clipping
@@ -80,9 +80,9 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S4_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S4MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S4MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -99,18 +99,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
         meta.inputdir = s3_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s3_meta)
-
-    if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider
-        # one aperture
-        meta.spec_hw_range = [meta.spec_hw, ]
-        meta.bg_hw_range = [meta.bg_hw, ]
+    meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
+    meta.set_defaults()
 
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -135,7 +128,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
-            
+
             # Get directory for Stage 4 processing outputs
             meta.outputdir = util.pathdirectory(meta, 'S4', meta.run_s4,
                                                 ap=spec_hw_val,
@@ -200,14 +193,14 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.n_int, meta.subnx = spec.optspec.shape
 
             # Set the max number of copies of a figure
-            if not hasattr(meta, 'nplots') or meta.nplots is None:
+            if meta.nplots is None:
                 meta.nplots = meta.n_int
             elif meta.int_start+meta.nplots > meta.n_int:
                 # Too many figures requested, so reduce it
                 meta.nplots = meta.n_int
 
             # Determine wavelength bins
-            if not hasattr(meta, 'nspecchan') or meta.nspecchan is None:
+            if meta.nspecchan is None:
                 # User wants unbinned spectra
                 dwav = np.ediff1d(wave_1d)/2
                 # Approximate the first neg_dwav as the same as the second
@@ -222,7 +215,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.wave_low = meta.wave-neg_dwav
                 meta.wave_hi = meta.wave+pos_dwav
                 meta.nspecchan = len(meta.wave)
-            elif not hasattr(meta, 'wave_hi') or not hasattr(meta, 'wave_low'):
+            elif meta.wave_hi is None or meta.wave_low is None:
                 binsize = (meta.wave_max - meta.wave_min)/meta.nspecchan
                 meta.wave_low = np.round(np.linspace(meta.wave_min,
                                                      meta.wave_max-binsize,
@@ -293,16 +286,11 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
             lc.wave_mid.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
             lc.wave_err.attrs['wave_units'] = spec.wave_1d.attrs['wave_units']
 
-            if not hasattr(meta, 'boundary'):
-                # The default value before this was added as an option
-                meta.boundary = 'extend'
-
             # Manually mask pixel columns by index number
-            if hasattr(meta, 'mask_columns') and len(meta.mask_columns) > 0:
-                for w in meta.mask_columns:
-                    log.writelog(f"Masking detector pixel column {w}.")
-                    index = np.where(spec.optmask.x == w)[0][0]
-                    spec.optmask[:, index] = True
+            for w in meta.mask_columns:
+                log.writelog(f"Masking detector pixel column {w}.")
+                index = np.where(spec.optmask.x == w)[0][0]
+                spec.optmask[:, index] = True
 
             # Do 1D sigma clipping (along time axis) on unbinned spectra
             if meta.clip_unbinned:
@@ -390,7 +378,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     plots_s4.driftxpos(meta, lc)
                     plots_s4.driftxwidth(meta, lc)
 
-            if hasattr(meta, 'sum_reads') and meta.sum_reads:
+            if meta.inst == 'wfc3' and meta.sum_reads:
                 # Sum each read from a scan together
                 spec, lc, meta = wfc3.sum_reads(spec, lc, meta)
 
@@ -465,8 +453,7 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     plots_s4.binned_lightcurve(meta, log, lc, i)
 
             # If requested, also generate white-light light curve
-            if (hasattr(meta, 'compute_white') and meta.compute_white
-                    and not meta.photometry):
+            if meta.compute_white and not meta.photometry:
                 log.writelog("Generating white-light light curve")
 
                 # Compute valid indeces within wavelength range
@@ -567,21 +554,21 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 ld_coeffs = generate_LD.spam_ld(meta, white=False)
                 lc['spam_lin'] = (['wavelength', 'spam_1'], ld_coeffs[0])
                 lc['spam_quad'] = (['wavelength', 'spam_2'], ld_coeffs[1])
-                lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'], 
+                lc['spam_nonlin_3para'] = (['wavelength', 'spam_3'],
                                            ld_coeffs[2])
-                lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'], 
+                lc['spam_nonlin_4para'] = (['wavelength', 'spam_4'],
                                            ld_coeffs[3])
                 if meta.compute_white:
                     ld_coeffs_w = generate_LD.spam_ld(meta, white=True)
-                    lc['spam_lin_white'] = (['wavelength', 'spam_1'], 
+                    lc['spam_lin_white'] = (['wavelength', 'spam_1'],
                                             ld_coeffs_w[0])
-                    lc['spam_quad_white'] = (['wavelength', 'spam_2'], 
+                    lc['spam_quad_white'] = (['wavelength', 'spam_2'],
                                              ld_coeffs_w[1])
                     lc['spam_nonlin_3para_white'] = (['wavelength', 'spam_3'],
                                                      ld_coeffs_w[2])
                     lc['spam_nonlin_4para_white'] = (['wavelength', 'spam_4'],
                                                      ld_coeffs_w[3])
-            
+
             log.writelog('Saving results...')
 
             event_ap_bg = (meta.eventlabel + "_ap" + str(spec_hw_val) + '_bg'
@@ -640,7 +627,7 @@ def load_specific_s3_meta_info(meta):
         me.findevent(meta, 'S3', allowFail=False)
     filename_S3_SpecData = s3_meta.filename_S3_SpecData
     # Merge S4 meta into old S3 meta
-    meta = me.mergeevents(meta, s3_meta)
+    meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
 
     # Make sure the filename_S3_SpecData is kept
     meta.filename_S3_SpecData = filename_S3_SpecData

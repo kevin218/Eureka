@@ -42,7 +42,7 @@ class S3MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial version.
         '''
-        super.__init__(folder, file, eventlabel, stage=3, **kwargs)
+        super().__init__(folder, file, eventlabel, stage=3, **kwargs)
 
     def set_defaults(self):
         '''Set Stage 3 specific defaults for generic instruments.
@@ -57,11 +57,17 @@ class S3MetaClass(MetaClass):
         # Data file suffix
         self.suffix = getattr(self, 'suffix', 'calints')
 
-        self.ncpu = hasattr(self, 'ncpu', 4)
+        # Make sure the inst, filt, and src_ypos attributes are at
+        # least initialized
+        self.inst = getattr(self, 'inst', None)
+        self.filter = getattr(self, 'filter', None)
+        self.src_ypos = getattr(self, 'src_ypos', None)
+
+        self.ncpu = getattr(self, 'ncpu', 4)
         # By default, try to load a bunch of files if permitted by max_memory
-        self.nfiles = hasattr(self, 'nfiles', 1000)
-        self.max_memory = hasattr(self, 'max_memory', 0.5)
-        self.indep_batches = hasattr(self, 'indep_batches', False)
+        self.nfiles = getattr(self, 'nfiles', 1000)
+        self.max_memory = getattr(self, 'max_memory', 0.5)
+        self.indep_batches = getattr(self, 'indep_batches', False)
         self.calibrated_spectra = getattr(self, 'calibrated_spectra', False)
 
         # Reference files or values
@@ -105,7 +111,7 @@ class S3MetaClass(MetaClass):
         self.save_output = getattr(self, 'save_output', True)
         self.save_fluxdata = getattr(self, 'save_fluxdata', True)
         self.verbose = getattr(self, 'verbose', True)
-        
+
         # Project directory
         self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF
 
@@ -187,11 +193,21 @@ class S3MetaClass(MetaClass):
             self.centroid_tech = getattr(self, 'centroid_tech', 'com')
             self.gauss_frame = getattr(self, 'gauss_frame', 15)
         self.skip_apphot_bg = getattr(self, 'skip_apphot_bg', False)
+        self.aperture_shape = getattr(self, 'aperture_shape', 'circle')
         # Require these parameters to be set
         self.photap = getattr(self, 'photap')
         self.skyin = getattr(self, 'skyin')
-        self.skywidth = getattr(self, 'skywidth')  
-        
+        self.skywidth = getattr(self, 'skywidth')
+
+        # FINDME: I think bg_disp, bg_dir, and isrotate all control
+        # the same thing...
+        self.bg_disp = getattr(self, 'bg_disp', False)
+        self.bg_dir = getattr(self, 'bg_dir', 'CxC')
+        self.bg_x1 = getattr(self, 'bg_x1', None)
+        self.bg_x2 = getattr(self, 'bg_x2', None)
+        self.bg_method = getattr(self, 'bg_method', 'mean')
+        self.p3thresh = getattr(self, 'p3thresh', 5)
+
     def set_MIRI_defaults(self):
         '''Set Stage 3 specific defaults for MIRI.
 

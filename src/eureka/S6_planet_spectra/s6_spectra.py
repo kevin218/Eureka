@@ -17,11 +17,10 @@ except ModuleNotFoundError:
     # starry hasn't been installed
     pass
 
-from ..lib import manageevent as me
-from ..lib import readECF
-from ..lib import util, logedit
+from .s6_meta import S6MetaClass
 from . import plots_s6 as plots
-from ..lib import astropytable
+from ..lib import manageevent as me
+from ..lib import util, logedit, astropytable
 from ..version import version
 
 
@@ -61,9 +60,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S6_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S6MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S6MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
@@ -80,7 +79,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
         meta.inputdir = s5_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s5_meta)
+    meta = S6MetaClass(**me.mergeevents(meta, s5_meta).__dict__)
+    meta.set_defaults()
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider one
@@ -92,15 +92,13 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
 
     # Create directories for Stage 6 outputs
     meta.run_s6 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
                 # Only divide if value is not a string (spectroscopic modes)
                 bg_hw_val //= meta.expand
             meta.run_s6 = util.makedirectory(meta, 'S6', meta.run_s6,
-                                             ap=spec_hw_val//meta.expand, 
+                                             ap=spec_hw_val//meta.expand,
                                              bg=bg_hw_val)
 
     for meta.spec_hw_val in meta.spec_hw_range:
@@ -141,46 +139,23 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                        axis=0)
             meta.wave_errs = (meta.wave_hi-meta.wave_low)/2
 
-            # Convert to the user-provided x-axis unit if needed
-            if hasattr(meta, 'x_unit'):
-                x_unit = getattr(units, meta.x_unit)
-            else:
-                log.writelog('Assuming a wavelength unit of microns')
-                meta.x_unit = 'um'
-                x_unit = units.um
             # FINDME: For now this is assuming that the data is in units of
             # microns We should add something to S3 that notes what the units
             # of the wavelength were in the FITS file
-            meta.wavelengths *= units.um.to(x_unit,
+            meta.wavelengths *= units.um.to(meta.x_unit,
                                             equivalencies=units.spectral())
-            meta.wave_errs *= units.um.to(x_unit,
+            meta.wave_errs *= units.um.to(meta.x_unit,
                                           equivalencies=units.spectral())
-            physical_type = str(x_unit.physical_type).title()
+            physical_type = str(meta.x_unit.physical_type).title()
             if physical_type == 'Length':
                 physical_type = 'Wavelength'
-            label_unit = x_unit.name
+            label_unit = meta.x_unit.name
             if label_unit == 'um':
                 label_unit = r'$\mu$m'
             meta.xlabel = physical_type+' ('+label_unit+')'
 
             fit_methods = meta.fit_method.strip('[').strip(']').strip()
             fit_methods = fit_methods.split(',')
-
-            # Make sure these are lists even if it's just one item
-            if (isinstance(meta.y_scalars, int) or
-                    isinstance(meta.y_scalars, float)):
-                meta.y_scalars = [meta.y_scalars]
-            if isinstance(meta.y_params, str):
-                meta.y_params = [meta.y_params]
-            if not hasattr(meta, 'y_labels') or meta.y_labels is None:
-                meta.y_labels = [None for _ in range(len(meta.y_params))]
-            elif isinstance(meta.y_labels, str):
-                meta.y_labels = [meta.y_labels]
-            if (not hasattr(meta, 'y_label_units') or
-                    meta.y_label_units is None):
-                meta.y_label_units = [None for _ in range(len(meta.y_params))]
-            elif isinstance(meta.y_label_units, str):
-                meta.y_label_units = [meta.y_label_units]
 
             zipped_vals = zip(meta.y_params, meta.y_scalars, meta.y_labels,
                               meta.y_label_units)
@@ -292,10 +267,6 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     else:
                         meta.y_label = meta.y_param
 
-                # Convert to percent, ppm, etc. if requested
-                if not hasattr(meta, 'y_scalar'):
-                    meta.y_scalar = 1
-
                 if meta.y_label_unit is None:
                     if meta.y_scalar == 1e6:
                         meta.y_label_unit = ' (ppm)'
@@ -319,7 +290,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 meta.y_label += meta.y_label_unit
 
                 if meta.model_spectrum is not None:
-                    model_x, model_y = load_model(meta, log, x_unit)
+                    model_x, model_y = load_model(meta, log, meta.x_unit)
                 else:
                     model_x = None
                     model_y = None
@@ -330,12 +301,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         meta.y_label, meta.xlabel)
 
                 # Should we also make the scale_height version of the figure?
-                has_requirements = np.all([hasattr(meta, val) for val in
-                                           ['planet_Teq', 'planet_mu',
-                                            'planet_Rad', 'planet_Mass',
-                                            'star_Rad', 'planet_R0']])
-                make_fig6301 = (meta.isplots_S6 >= 3 and has_requirements and
-                                meta.y_param in ['rp', 'rp^2'])
+                make_fig6301 = (meta.isplots_S6 >= 3 and meta.has_fig6301reqs
+                                and meta.y_param in ['rp', 'rp^2'])
                 if make_fig6301:
                     # Make spectrum plot with scale height on the 2nd y-axis
                     scale_height = compute_scale_height(meta, log)
@@ -344,7 +311,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                                         scale_height, meta.planet_R0)
 
                 save_table(meta, log)
-            
+
             # Copy S5 text files to a single h5 file
             convert_s5_LC(meta, log)
 
@@ -423,7 +390,9 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
 
         fname = f'S5_{fitter}_samples_{channel_key}'
 
-        keys = [key for key in full_keys if y_param == key[:len(y_param)]]
+        temp_keys = [y_param+f'_{c}' if c > 0 else y_param
+                     for c in range(meta.nspecchan)]
+        keys = [key for key in temp_keys if key in full_keys]
         if len(keys) == 0:
             log.writelog(f'  Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n  ['
@@ -446,7 +415,9 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
         fitted_values = pd.read_csv(meta.inputdir+fname, escapechar='#',
                                     skipinitialspace=True)
         full_keys = list(fitted_values["Parameter"])
-        keys = [key for key in full_keys if y_param in key]
+        temp_keys = [y_param+f'_{c}' if c > 0 else y_param
+                     for c in range(meta.nspecchan)]
+        keys = [key for key in temp_keys if key in full_keys]
         if len(keys) == 0:
             log.writelog(f'Parameter {y_param} was not in the list of '
                          'fitted parameters which includes:\n['
@@ -614,14 +585,8 @@ def convert_s5_LC(meta, log):
 
     # Create Xarray DataArrays and dictionary
     flux_units = 'Normalized'
-    if hasattr(meta, 'wave_units'):
-        wave_units = meta.wave_units
-    else:
-        wave_units = 'microns'
-    if hasattr(meta, 'time_units'):
-        time_units = meta.time_units
-    else:
-        time_units = 'BMJD'
+    wave_units = meta.wave_units
+    time_units = meta.time_units
     lc_da = []
     dict = {}
     for i in range(n_col):
@@ -689,7 +654,7 @@ def load_s5_saves(meta, log, fit_methods):
                 if meta.y_param in list(ds._variables):
                     sample = ds[meta.y_param].values
                 else:
-                    sample = np.zeros(0)
+                    sample = np.zeros(1)
             samples.append(sample)
     else:
         # No samples for lsq, so just shape it as a single value
@@ -699,9 +664,9 @@ def load_s5_saves(meta, log, fit_methods):
             meta = parse_unshared_saves(meta, log, fit_methods)
         samples = np.array(meta.spectrum_median)
         if all(x is None for x in samples):
-            samples = np.zeros((meta.nspecchan, 0))
+            samples = np.zeros((meta.nspecchan, 1))
 
-    return np.array(samples)
+    return samples
 
 
 def compute_offset(meta, log, fit_methods, nsamp=1e4):
@@ -718,29 +683,29 @@ def compute_offset(meta, log, fit_methods, nsamp=1e4):
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
-    if ampsin.shape[-1] == 0:
+    if np.all(ampsin == 0):
         meta.y_param = f'Y{suffix}1'
         ampsin = -load_s5_saves(meta, log, fit_methods)
-        if ampsin.shape[-1] == 0:
+        if np.all(ampsin == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         meta.y_param = f'Y{suffix}0'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -777,7 +742,7 @@ def compute_amp(meta, log, fit_methods):
 
     # Figure out the desired order
     suffix = meta.y_param[-1]
-    
+
     if not suffix.isnumeric():
         # First order doesn't have a numeric suffix
         suffix = '1'
@@ -785,7 +750,7 @@ def compute_amp(meta, log, fit_methods):
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
-    if fp.shape[-1] == 0:
+    if np.all(fp == 0):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                      'fitted parameters')
@@ -795,10 +760,10 @@ def compute_amp(meta, log, fit_methods):
     # Load sine amplitude
     meta.y_param = 'AmpSin'+suffix
     ampsin = load_s5_saves(meta, log, fit_methods)
-    if ampsin.shape[-1] == 0:
+    if np.all(ampsin == 0):
         meta.y_param = f'Y{suffix}1'
         ampsin = -load_s5_saves(meta, log, fit_methods)
-        if ampsin.shape[-1] == 0:
+        if np.all(ampsin == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -808,16 +773,16 @@ def compute_amp(meta, log, fit_methods):
     # Load cosine amplitude
     meta.y_param = 'AmpCos'+suffix
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         meta.y_param = f'Y{suffix}0'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
             return meta
-    
+
     # Reset meta.y_param
     meta.y_param = y_param
 
@@ -933,11 +898,11 @@ def compute_fn(meta, log, fit_methods):
     # Load eclipse depth
     meta.y_param = 'fp'
     fp = load_s5_saves(meta, log, fit_methods)
-    if fp.shape[-1] == 0:
+    if np.all(fp == 0):
         # The parameter could not be found - try fpfs
         meta.y_param = 'fpfs'
         fp = load_s5_saves(meta, log, fit_methods)
-        if fp.shape[-1] == 0:
+        if np.all(fp == 0):
             log.writelog('  Planet flux (fp or fpfs) was not in the list of '
                          'fitted parameters')
             log.writelog(f'  Skipping {y_param}')
@@ -946,7 +911,7 @@ def compute_fn(meta, log, fit_methods):
     # Load cosine amplitude
     meta.y_param = 'AmpCos1'
     ampcos = load_s5_saves(meta, log, fit_methods)
-    if ampcos.shape[-1] == 0:
+    if np.all(ampcos == 0):
         # FINDME: The following only works if the model does not include any
         # terms other than Y10, Y11, Y20, Y22 (or other higher order terms
         # which evaluate to zero at the anti-stellar point). In general, should
@@ -955,7 +920,7 @@ def compute_fn(meta, log, fit_methods):
         # the anti-stellar point flux. Really do need to use compute_fp instead
         meta.y_param = 'Y10'
         ampcos = load_s5_saves(meta, log, fit_methods)
-        if ampcos.shape[-1] == 0:
+        if np.all(ampcos == 0):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                          'fitted parameters')
@@ -1013,8 +978,6 @@ def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
             pass
 
     # Load map parameters
-    if not hasattr(meta, 'ydeg'):
-        meta.ydeg = 2  # For backwards compatibility with my old saves
     temp = temp_class()
     for ell in range(1, meta.ydeg+1):
         for m in range(-ell, ell+1):
@@ -1135,7 +1098,7 @@ def load_specific_s5_meta_info(meta):
     s5_meta, meta.inputdir, meta.inputdir_raw = \
         me.findevent(meta, 'S5', allowFail=False)
     # Merge S6 meta into old S5 meta
-    meta = me.mergeevents(meta, s5_meta)
+    meta = S6MetaClass(**me.mergeevents(meta, s5_meta).__dict__)
 
     return meta
 
@@ -1200,9 +1163,6 @@ def load_model(meta, log, x_unit):
                              f'{meta.y_param} and model_y_param '
                              f'{meta.model_y_param}')
 
-    if not hasattr(meta, 'model_y_scalar'):
-        meta.model_y_scalar = 1
-
     # Convert the model y-units if needed to match the data
     # y-units requested
     if meta.model_y_scalar != 1:
@@ -1235,7 +1195,7 @@ def save_table(meta, log):
                                     axis=0), axis=0)
     wave_errs = (meta.wave_hi-meta.wave_low)/2
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelengths)) == 1: 
+    if len(set(wavelengths)) == 1:
         wavelengths = wavelengths[0]
         wave_errs = wave_errs[0]
     astropytable.savetable_S6(meta.tab_filename_s6, meta.y_param, wavelengths,
@@ -1342,8 +1302,6 @@ def transit_latex_table(meta, log):
 
     # Figure out the number of rows and columns in the table
     nvals = data.shape[0]
-    if not hasattr(meta, 'ncols'):
-        meta.ncols = 4
     rows = int(np.ceil(nvals/meta.ncols))
 
     # Figure out the labels for the columns

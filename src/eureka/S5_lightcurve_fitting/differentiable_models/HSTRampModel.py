@@ -92,7 +92,7 @@ class HSTRampModel(PyMC3Model):
                 chan = channels[c]
             else:
                 chan = 0
-            
+
             for i in range(6):
                 try:
                     if chan == 0:
