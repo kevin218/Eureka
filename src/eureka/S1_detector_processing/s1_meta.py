@@ -77,8 +77,17 @@ class S1MetaClass(MetaClass):
 
         # CR sigma rejection threshold
         self.jump_rejection_threshold = getattr(self,
-                                                'jump_rejection_threshold',
-                                                4.0)
+                                                'jump_rejection_threshold', 4.)
+        try:
+            self.jump_rejection_threshold = float(self.jump_rejection_threshold)
+        except ValueError:
+            print("\nmeta.jump_rejection_threshold cannot be type-casted to "
+                  "a float. Defaulting to 4.0")
+            self.jump_rejection_threshold = 4.0
+
+        # CR algorithm threshold
+        self.minimum_sigclip_groups = getattr(self, 'minimum_sigclip_groups',
+                                              100)
 
         # Custom linearity reference file
         self.custom_linearity = getattr(self, 'custom_linearity', False)
@@ -126,7 +135,7 @@ class S1MetaClass(MetaClass):
         self.masktrace = getattr(self, 'masktrace', False)
         if self.masktrace:
             # Force these to be specified if masking the trace
-            self.window_len = getattr(self, 'window_len')  
+            self.window_len = getattr(self, 'window_len')
             self.expand_mask = getattr(self, 'expand_mask')
             self.ignore_low = getattr(self, 'ignore_low')
             self.ignore_hi = getattr(self, 'ignore_hi')
@@ -152,7 +161,7 @@ class S1MetaClass(MetaClass):
             # Force this to be specified if grouplevel_bg is True
             self.bg_y1 = getattr(self, 'bg_y1')
             # Force this to be specified if grouplevel_bg is True
-            self.bg_y2 = getattr(self, 'bg_y2')  
+            self.bg_y2 = getattr(self, 'bg_y2')
             self.bg_deg = getattr(self, 'bg_deg', 0)
             # Options: std (Standard Deviation),
             # median (Median Absolute Deviation), or
@@ -229,7 +238,7 @@ class S1MetaClass(MetaClass):
         else:
             # Default to False if not remove_390hz
             self.grouplevel_bg = getattr(self, 'grouplevel_bg', False)
-    
+
     def set_NIR_defaults(self):
         '''Set Stage 1 specific defaults for NIR-instruments.
 

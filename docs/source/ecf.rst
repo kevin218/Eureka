@@ -30,9 +30,16 @@ Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. 
 
 
 maximum_cores
-''''''''''''''''''
+'''''''''''''
 Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
+jump_rejection_threshold
+''''''''''''''''''''''''
+A floating-point value that sets the sigma threshold for jump detection. The default is 4.0, but it is often best to increase this number for time-series observations to avoid excessively high false-positives. The optimal value will vary between different datasets and different instruments, but from experience we have found that values around 6.0--8.0 are often reasonable.
+
+minimum_sigclip_groups
+''''''''''''''''''''''
+The minimum number of groups to switch the jump detection to use sigma clipping. The default is 100.
 
 skip_*
 ''''''
@@ -50,17 +57,17 @@ linearity_file
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
 bias_correction
-'''''''''''''''''
+'''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
 
 Note that this routine requires masking the trace; therefore, ``masktrace`` must be set to True.
 
 bias_group
-'''''''''''''''''
+''''''''''
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
 
 bias_smooth_length
-'''''''''''''''''
+''''''''''''''''''
 Integer. When ``bias_correction = smooth``, this value is used as the window length during smoothing across integrations.
 
 custom_bias
@@ -80,7 +87,7 @@ expand_prev_group
 Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
-'''''''''''''''''
+'''''''''''
 Method to use for updating the saturation flags. Options are percentile (a pixel must be saturated in this percent of integrations to be marked as saturated), min, and defined (user can define which columns are saturated in a given group)
 
 dq_sat_percentile
@@ -116,7 +123,7 @@ bg_deg
 See Stage 3 inputs
 
 bg_method
-''''''
+'''''''''
 See Stage 3 inputs
 
 p3thresh
@@ -160,7 +167,7 @@ window_len
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''''''''
+'''''''''''
 Aperture (in pixels) around the trace to mask
 
 ignore_low
@@ -332,7 +339,7 @@ photometry
 Only used for photometry analyses. Set to True if the user wants to analyze a photometric dataset.
 
 calibrated_spectra
-''''''''''''
+''''''''''''''''''
 An optional input parameter. If False (default), convert the units of the images to electrons for easy noise estimation. If True (useful for flux-calibrated spectroscopy/photometry), the units of the images will be converted to mJy.
 
 poly_wavelength
@@ -481,7 +488,7 @@ Possible values:
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
 bg_method
-''''''
+'''''''''
 Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
 bg_disp
@@ -673,7 +680,7 @@ If True, run S4 on all of the apertures considered in S3. Otherwise the code wil
 
 
 mask_columns
-''''''''
+''''''''''''
 List of pixel columns that should not be used when constructing a light curve.  Absolute (not relative) pixel columns should be used. Figure 3102 is very helpful for identifying bad pixel columns.
 
 
@@ -940,7 +947,7 @@ lsq_tolerance
 Float to determine the tolerance of the scipy.optimize.minimize method.
 
 lsq_maxiter
-^^^^^^^^^^^^^
+^^^^^^^^^^^
 Integer.  Maximum number of iterations to perform.  Set to None to use the default value for the given scipy.optimize.minimize method.
 
 
@@ -1135,11 +1142,11 @@ This file describes the transit/eclipse and systematics parameters and their pri
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
          where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.
          If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
-         Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.  
+         Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.
          One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
 
       - ``step0`` and ``steptime0`` - The step size and time for the first step function (useful for removing mirror segment tilt events).
-      
+
          For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).  The change in flux is relative to the flux from the previous step.
       - ``xpos`` - Coefficient for linear decorrelation against drift/jitter in the x direction (spectral direction for spectroscopy data).
       - ``xwidth`` - Coefficient for linear decorrelation against changes in the PSF width in the x direction (cross-correlation width in the spectral direction for spectroscopy data).
@@ -1147,7 +1154,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``ywidth`` - Coefficient for linear decorrelation against changes in the PSF width in the y direction (spatial direction for spectroscopy data).
 
       - ``A`` and ``m`` - The natural logarithm (``ln``) of the covariance amplitude and lengthscale to use for the GP model specified in your Stage 5 ECF.
-      
+
          Significant care should be used when specifying the priors on these parameters as an excessively flexible GP model may end up competing with your astrophysical model.
          That said, there are no hard and fast rules about what your priors should be, and you will need to experiment to find what works best.
          If there are multiple kernels that are being added, the second kernel's parameters will be ``A1`` and ``m1``, and so on.

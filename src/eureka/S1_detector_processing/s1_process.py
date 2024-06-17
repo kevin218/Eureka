@@ -190,6 +190,7 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.jump.skip = meta.skip_jump
         self.jump.maximum_cores = meta.maximum_cores
         self.jump.rejection_threshold = meta.jump_rejection_threshold
+        self.jump.minimum_sigclip_groups = meta.minimum_sigclip_groups
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
