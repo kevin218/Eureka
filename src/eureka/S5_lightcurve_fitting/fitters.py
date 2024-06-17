@@ -285,10 +285,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
         +/- 1 sigma, all params
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
+    freenames = lc.freenames
+    freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
 
     if hasattr(meta, 'old_chain') and meta.old_chain is not None:
@@ -339,8 +338,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
                                     pool=pool)
-    log.writelog('Running emcee burn-in...')
+    log.writelog('Running emcee sampler...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
+    # log.writelog('Running emcee burn-in...')
     # state = sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # # Log some details about the burn-in phase
     # acceptance_fraction = np.mean(sampler.acceptance_fraction)
@@ -778,10 +778,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         +/- 1 sigma, all params
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
+    freenames = lc.freenames
+    freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     # DYNESTY
     nlive = meta.run_nlive  # number of live points
@@ -970,9 +969,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
     # parameter name like c0_1 and c0_2?)
+    freenames = lc.freenames
 
     # Group the different variable types
-    param_list, freenames, indep_vars = group_variables_lmfit(model)
+    param_list, indep_vars = group_variables_lmfit(model)
 
     # Add the time as an independent variable
     indep_vars['time'] = lc.time

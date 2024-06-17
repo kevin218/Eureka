@@ -48,13 +48,21 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 pygments_style = 'sphinx'
+
+# nbsphinx settings
+nbsphinx_allow_errors = True
+nbsphinx_execute = 'never'
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+.. note::  `Download the full notebook for this tutorial here <https://github.com/kevin218/Eureka/tree/main/docs/source/{{ docname }}>`_
+"""
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-
 
 import sphinx_rtd_theme
 # Add any paths that contain custom themes here, relative to this directory.

@@ -901,3 +901,66 @@ def supersample(data, expand, type, axis=1):
               "or wave. No super-sampling applied.")
         zdata = data
     return zdata
+
+
+def add_meta_to_xarray(meta, data):
+    """Add meta information to the attributes of an xarray.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in
+        data.attrs.
+    """
+    if not hasattr(meta, 'data_format'):
+        meta.data_format = 'eureka'
+
+    all_attrs = meta.params
+    for attr in all_attrs.keys():
+        attr_value = all_attrs[attr]
+        # None values cannot be saved, convert to string
+        if attr_value is None:
+            attr_value = 'None'
+        # Bibliography needs special handling
+        if attr == 'bibliography':
+            # Can't have different sized lists, must collapse
+            # citations for each citation flag.
+            attr_value = ['_ENDOFCITATION_'.join(citations)
+                          for citations in attr_value]
+        # Need to convert numpy arrays of strings to lists
+        if isinstance(attr_value, np.ndarray):
+            if '<U' in str(attr_value.dtype):
+                attr_value = attr_value.tolist()
+        # Save value to xarray attributes
+        data.attrs[attr] = attr_value
+
+
+def load_attrs_from_xarray(data):
+    """Function to load attrs from xarray file, ensuring
+    that potential conversions performed in add_meta_to_xarray()
+    are reversed.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in
+        data.attrs.
+
+    Returns
+    -------
+    attrs : dict
+        Dictionary of attributes saved to the Xarray.
+    """
+    attrs = data.attrs
+    for attr in attrs.keys():
+        # Convert None strings back to None
+        if attrs[attr] == 'None':
+            attrs[attr] = None
+        # Restructure bibliography correctly
+        if attr == 'bibliography':
+            attrs[attr] = [citations.split('_ENDOFCITATION_')
+                           for citations in attrs[attr]]
+
+    return attrs

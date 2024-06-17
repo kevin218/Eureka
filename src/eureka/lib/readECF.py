@@ -67,6 +67,9 @@ class MetaClass:
             for param, value in kwargs.items():
                 setattr(self, param, value)
 
+        # If the data format hasn't been specified, must be eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
+
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
         converted to a string.

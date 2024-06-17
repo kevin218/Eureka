@@ -144,11 +144,11 @@ class SinusoidPhaseCurveModel(PyMC3Model):
             # Compute orbital phase
             if model.ecc == 0.:
                 # the planet is on a circular orbit
-                t = self.time - model.t0 - model.per/2.
+                t = time - model.t0 - model.per/2.
                 phi = 2.*np.pi/model.per*t
             else:
                 # the planet is on an eccentric orbit
-                anom = true_anomaly(model, lib, self.time)
+                anom = true_anomaly(model, lib, time)
                 phi = anom + model.w*np.pi/180. + np.pi/2.
 
             for order in range(1, self.maxOrder+1):

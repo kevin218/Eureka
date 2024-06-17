@@ -160,12 +160,6 @@ class LightCurve(m.Model):
         - Dec 29, 2021 Taylor Bell
             Updated documentation and reduced repeated code
         """
-        if fitter not in ['exoplanet', 'nuts']:
-            # Make sure the model is a CompositeModel
-            if not isinstance(model, m.CompositeModel):
-                model = m.CompositeModel([model])
-                model.time = self.time
-
         if fitter == 'lmfit':
             self.fitter_func = fitters.lmfitter
         elif fitter == 'lsq':
