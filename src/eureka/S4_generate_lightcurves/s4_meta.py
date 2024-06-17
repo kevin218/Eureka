@@ -1,3 +1,4 @@
+from glob import glob
 from ..lib.readECF import MetaClass
 
 
@@ -52,6 +53,12 @@ class S4MetaClass(MetaClass):
         - 2024-04 Taylor J Bell
             Initial version setting defaults for any instrument.
         '''
+        # If not specified, assuming the inputs are from a Eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
+        if self.data_format != 'eureka':
+            # Assign some variables if not using eureka output
+            self.set_nonEureka_defaults()
+
         # Repeat Stage 4 for each of the aperture sizes run from Stage 3?
         self.allapers = getattr(self, 'allapers', False)
 
@@ -152,3 +159,39 @@ class S4MetaClass(MetaClass):
         # Directories relative to topdir
         self.inputdir = getattr(self, 'inputdir', 'Stage3')
         self.outputdir = getattr(self, 'outputdir', 'Stage4')
+
+    def set_nonEureka_defaults(self):
+        '''Set Stage 4 specific defaults for non-Eureka inputs.
+
+        Notes
+        -----
+        History:
+
+        - 2024-06 Taylor J Bell
+            Initial version based on Aarynn's code in s4_genLC.py.
+        '''
+        self.spec_hw = getattr(self, 'spec_hw', 0)
+        self.bg_hw = getattr(self, 'bg_hw', 0)
+        self.s3_logname = getattr(self, 's3_logname', None)
+        self.photometry = getattr(self, 'photometry', False)
+        if not hasattr(self, 'filename_S3_SpecData'):
+            # Get filename, due to Eureka! default behaviours
+            # only one non-eureka can be included in the
+            # specified input directory if this is unassigned.
+            fnames = glob(self.inputdir+'S3_'+self.eventlabel+'*SpecData.h5')
+            if len(fnames) == 0:
+                raise AssertionError('WARNING: Unable to execute Stage 4'
+                                     ' processing as there are no'
+                                     ' SpecData.h5 files in the folder'
+                                     f':\n"{self.inputdir}"\n'
+                                     'You likely need to change your'
+                                     ' topdir or inputdir value.')
+            elif len(fnames) != 1:
+                raise AssertionError('WARNING: Unable to execute Stage 4'
+                                     ' processing as there is more than'
+                                     ' one SpecData.h5 file in the folder'
+                                     f':\n"{self.inputdir}"\n'
+                                     'You likely need to increase the '
+                                     ' specificity of your inputdir value.')
+            else:
+                self.filename_S3_SpecData = fnames[0]

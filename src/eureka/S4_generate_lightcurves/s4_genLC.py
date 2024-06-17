@@ -14,7 +14,6 @@
 # 8.  Save Stage 4 data products
 # 9.  Produce plots
 
-import glob
 import os
 import time as time_pkg
 import numpy as np
@@ -104,40 +103,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
 
     meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
     meta.set_defaults()
-
-    # Assign some variables if not using eureka output
-    if meta.data_format != 'eureka':
-        if not hasattr(meta, 'spec_hw'):
-            meta.spec_hw = 0  # Spec half-width not specified
-        if not hasattr(meta, 'bg_hw'):
-            meta.bg_hw = 0   # BG half-width not specified
-        if not hasattr(meta, 's3_logname'):
-            meta.s3_logname = None  # No log file
-        if not hasattr(meta, 'filename_S3_SpecData'):
-            # Get filename, due to Eureka! default behaviours
-            # only one non-eureka can be included in the
-            # specified input directory if this is unassigned.
-            fnames = glob.glob(meta.inputdir+'S3_'+meta.eventlabel +
-                               '*SpecData.h5')
-            if len(fnames) == 0:
-                raise AssertionError('WARNING: Unable to execute Stage 4'
-                                     ' processing as there are no'
-                                     ' SpecData.h5 files in the folder'
-                                     f':\n"{meta.inputdir}"\n'
-                                     'You likely need to change your'
-                                     ' topdir or inputdir value.')
-            elif len(fnames) != 1:
-                raise AssertionError('WARNING: Unable to execute Stage 4'
-                                     ' processing as there is more than'
-                                     ' one SpecData.h5 file in the folder'
-                                     f':\n"{meta.inputdir}"\n'
-                                     'You likely need to increase the '
-                                     ' specificity of your inputdir value.')
-            else:
-                meta.filename_S3_SpecData = fnames[0]
-        if not hasattr(meta, 'photometry'):
-            # Assume spectroscopy unless manually set.
-            meta.photometry = False
 
     if not meta.allapers:
         # The user indicated in the ecf that they only want to consider
