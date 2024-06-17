@@ -109,7 +109,7 @@ class S3MetaClass(MetaClass):
         self.testing_S3 = getattr(self, 'testing_S3', False)
         self.hide_plots = getattr(self, 'hide_plots', False)
         self.save_output = getattr(self, 'save_output', True)
-        self.save_fluxdata = getattr(self, 'save_fluxdata', True)
+        self.save_fluxdata = getattr(self, 'save_fluxdata', False)
         self.verbose = getattr(self, 'verbose', True)
 
         # Project directory
