@@ -238,10 +238,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                     # MIRI will keep swapping x and y windows
                     meta.firstFile = m == 0 and i == 0
                     meta.firstInBatch = i == 0
+                    if i == last_file-1:
+                        end = '\n'
+                    else:
+                        end = '\r'
                     # Initialize a new data object
                     data = xrio.makeDataset()
                     log.writelog(f'  Reading file {i+1}...',
-                                 mute=(not meta.verbose))
+                                 mute=(not meta.verbose), end=end)
                     data, meta, log = inst.read(meta.segment_list[i], data,
                                                 meta, log)
                     batch.append(data)
