@@ -68,16 +68,6 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
     else:
         pmin = optspec.x[0].values-0.5
         pmax = optspec.x[-1].values+0.5
-    if not hasattr(meta, 'vmin') or meta.vmin is None:
-        meta.vmin = 0.97
-    if not hasattr(meta, 'vmax') or meta.vmin is None:
-        meta.vmax = 1.03
-    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
-        meta.time_axis = 'y'
-    elif meta.time_axis not in ['y', 'x']:
-        print("WARNING: meta.time_axis is not one of ['y', 'x']!"
-              " Using 'y' by default.")
-        meta.time_axis = 'y'
 
     cmap = plt.cm.RdYlBu_r.copy()
     fig1 = plt.figure(3101, figsize=(8, 8))

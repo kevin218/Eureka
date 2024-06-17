@@ -26,6 +26,8 @@ def leapdates(rundir, log):
         The Julian dates of leap seconds.
     '''
     ntpepoch = 2208988800
+    if rundir[-1] != os.sep:
+        rundir += os.sep
     if not os.path.isdir(rundir):
         # Make the leapdir folder if needed
         os.mkdir(rundir)
