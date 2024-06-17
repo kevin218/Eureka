@@ -45,8 +45,8 @@ class ExpRampModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = np.ma.masked_invalid(time_array)
-        if self.time is not None:
+        if time_array is not None:
+            self._time = np.ma.masked_invalid(time_array)
             # Convert to local time
             if self.multwhite:
                 self.time_local = np.ma.zeros(self.time.shape)
