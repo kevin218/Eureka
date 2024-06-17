@@ -1,5 +1,4 @@
 import numpy as np
-import copy
 try:
     import pymc3 as pm
     import pymc3_ext as pmx
@@ -47,14 +46,15 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         Initial version.
     """
     # Group the different variable types
+    freenames = lc.freenames
     freepars = group_variables(model)[0]
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, lc.freenames)
+        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     model.setup(lc.time, lc.flux, lc.unc)
 
     start = {}
-    for name, val in zip(lc.freenames, freepars):
+    for name, val in zip(freenames, freepars):
         start[name] = val
     model.update(freepars)
 
@@ -72,24 +72,24 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         map_soln = pmx.optimize(start=start)
 
     # Get the best fit params
-    fit_params = np.array([map_soln[name] for name in lc.freenames])
+    fit_params = np.array([map_soln[name] for name in freenames])
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, lc.freenames,
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
                                     lc.nchannel_fitted)
 
-    t_results = table.Table([lc.freenames, fit_params],
+    t_results = table.Table([freenames, fit_params],
                             names=("Parameter", "Mean"))
 
     # Save the fit ASAP
-    save_fit(meta, lc, model, calling_function, t_results, lc.freenames)
+    save_fit(meta, lc, model, calling_function, t_results, freenames)
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, log, model, meta, lc.freenames)
+    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
     log.writelog('\nEXOPLANET RESULTS:')
-    for i in range(len(lc.freenames)):
-        if 'scatter_mult' in lc.freenames[i]:
-            chan = lc.freenames[i].split('_ch')[-1].split('_')[0]
+    for i in range(len(freenames)):
+        if 'scatter_mult' in freenames[i]:
+            chan = freenames[i].split('_ch')[-1].split('_')[0]
             if chan.isnumeric():
                 chan = int(chan)
             else:
@@ -97,9 +97,9 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
             trim1, trim2 = get_trim(meta.nints, chan)
             unc = np.ma.median(lc.unc[trim1:trim2])
             scatter_ppm = 1e6*fit_params[i]*unc
-            log.writelog(f'{lc.freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
+            log.writelog(f'{freenames[i]}: {fit_params[i]}; {scatter_ppm} ppm')
         else:
-            log.writelog(f'{lc.freenames[i]}: {fit_params[i]}')
+            log.writelog(f'{freenames[i]}: {fit_params[i]}')
     log.writelog('')
 
     # Plot fit
@@ -111,8 +111,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if (meta.isplots_S5 >= 1 and ('Y10' in lc.freenames or
-                                  'Y11' in lc.freenames or
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or
+                                  'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
@@ -162,15 +162,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         Initial version.
     """
     # Group the different variable types
+    freenames = lc.freenames
     freepars = group_variables(model)[0]
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, lc.freenames)
-    ndim = len(lc.freenames)
+        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
+    ndim = len(freenames)
 
     model.setup(lc.time, lc.flux, lc.unc)
 
     start = {}
-    for name, val in zip(lc.freenames, freepars):
+    for name, val in zip(freenames, freepars):
         start[name] = val
     model.update(freepars)
 
@@ -195,11 +196,11 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
         # Log detailed convergence and sampling statistics
         log.writelog('\nPyMC3 sampling statistics:', mute=(not meta.verbose))
-        log.writelog(pm.summary(trace, var_names=lc.freenames),
+        log.writelog(pm.summary(trace, var_names=freenames),
                      mute=(not meta.verbose))
         log.writelog('', mute=(not meta.verbose))
 
-    samples = np.hstack([trace[name].reshape(-1, 1) for name in lc.freenames])
+    samples = np.hstack([trace[name].reshape(-1, 1) for name in freenames])
 
     # Record median + percentiles
     q = np.percentile(samples, [16, 50, 84], axis=0)
@@ -208,7 +209,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     errs = np.std(samples, axis=0)
 
     # Create table of results
-    t_results = table.Table([lc.freenames, mean_params, q[0]-q[1], q[2]-q[1],
+    t_results = table.Table([freenames, mean_params, q[0]-q[1], q[2]-q[1],
                              q[0], fit_params, q[2]],
                             names=("Parameter", "Mean", "-1sigma", "+1sigma",
                                    "16th", "50th", "84th"))
@@ -217,19 +218,20 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     lower_errs = q[1]-q[0]
 
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, lc.freenames,
+    model.errs = dict(zip(freenames, errs))
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
                                     lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
-    save_fit(meta, lc, model, 'nuts', t_results, lc.freenames, samples)
+    save_fit(meta, lc, model, 'nuts', t_results, freenames, samples)
 
     # Compute reduced chi-squared
-    chi2red = computeRedChiSq(lc, log, model, meta, lc.freenames)
+    chi2red = computeRedChiSq(lc, log, model, meta, freenames)
 
     log.writelog('\nPYMC3 NUTS RESULTS:')
     for i in range(ndim):
-        if 'scatter_mult' in lc.freenames[i]:
-            chan = lc.freenames[i].split('_ch')[-1].split('_')[0]
+        if 'scatter_mult' in freenames[i]:
+            chan = freenames[i].split('_ch')[-1].split('_')[0]
             if chan.isnumeric():
                 chan = int(chan)
             else:
@@ -239,11 +241,11 @@ def nutsfitter(lc, model, meta, log, **kwargs):
             scatter_ppm = 1e6*fit_params[i]*unc
             scatter_ppm_upper = 1e6*upper_errs[i]*unc
             scatter_ppm_lower = 1e6*lower_errs[i]*unc
-            log.writelog(f'{lc.freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
+            log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]}); {scatter_ppm} '
                          f'(+{scatter_ppm_upper}, -{scatter_ppm_lower}) ppm')
         else:
-            log.writelog(f'{lc.freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
+            log.writelog(f'{freenames[i]}: {fit_params[i]} (+{upper_errs[i]},'
                          f' -{lower_errs[i]})')
     log.writelog('')
 
@@ -256,8 +258,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
-    if (meta.isplots_S5 >= 1 and ('Y10' in lc.freenames or
-                                  'Y11' in lc.freenames or
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or
+                                  'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 
@@ -270,10 +272,10 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_res_distr(lc, model, meta, fitter='nuts')
 
         # Plot trace evolution
-        plots.plot_trace(trace, model, lc, lc.freenames, meta)
+        plots.plot_trace(trace, model, lc, freenames, meta)
 
     if meta.isplots_S5 >= 5:
-        plots.plot_corner(samples, lc, meta, lc.freenames, fitter='nuts')
+        plots.plot_corner(samples, lc, meta, freenames, fitter='nuts')
 
     # Make a new model instance
     model.chi2red = chi2red

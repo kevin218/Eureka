@@ -498,7 +498,14 @@ def parse_unshared_saves(meta, log, fit_methods):
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
-        meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+        try:
+            meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+        except FileNotFoundError:
+            # This channel was skipped or was all masked.
+            # Insert NaNs in its place.
+            spectrum_median.extend([np.nan,])
+            spectrum_err.extend([[np.nan, np.nan]])
+            continue
         if meta.spectrum_median is None:
             # Parameter wasn't found, so don't keep looking for it
             meta.spectrum_median = np.array([None for _ in

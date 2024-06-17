@@ -68,9 +68,6 @@ class GPModel(PyMC3Model):
     def setup(self):
         """Setup a model for evaluation and fitting.
         """
-        # Parse parameters as coefficients
-        coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
-
         self.gps = []
         for c in range(self.nchannel_fitted):
             if self.nchannel_fitted > 1:
@@ -78,36 +75,11 @@ class GPModel(PyMC3Model):
             else:
                 chan = 0
 
-            if chan == 0:
-                chankey = ''
-            else:
-                chankey = f'_ch{chan}'
-
-            for i, par in enumerate(['A', 'm']):
-                for k in range(self.nkernels):
-                    if k == 0:
-                        kernelkey = ''
-                    else:
-                        kernelkey = str(k)
-
-                    index = f'{par}{kernelkey}{chankey}'
-                    coeffs[c][k][i] = getattr(self.model, index)
-
-            # Create the GP object with current parameters and condition the GP
-            if self.kernel_inputs is None:
-                self.setup_inputs(lib=tt)
-
-            # the kernel is the sum of individual kernel functions
-            kernel = self.get_kernel(tt, self.kernel_types[0], coeffs, 0, c)
-            for k in range(1, self.nkernels):
-                kernel += self.get_kernel(tt, self.kernel_types[k], coeffs,
-                                          k, c)
-
             # Make the gp object
-            gp = celerite2.GaussianProcess(kernel, mean=0.)
+            gp = self.setup_GP(tt, chan)
             self.gps.append(gp)
 
-    def eval(self, fit_lc, channel=None, **kwargs):
+    def eval(self, fit_lc, channel=None, gp=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
@@ -127,6 +99,8 @@ class GPModel(PyMC3Model):
         lcfinal : ndarray
             Predicted systematics model
         """
+        input_gp = gp
+
         if channel is None:
             nchan = self.nchannel_fitted
             channels = self.fitted_channels
@@ -141,7 +115,6 @@ class GPModel(PyMC3Model):
         lcfinal = np.ma.array([])
 
         # Parse parameters as coefficients
-        coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -172,37 +145,14 @@ class GPModel(PyMC3Model):
             unc_fit = unc_fit[good]
             residuals = residuals[good]
 
-            if chan == 0:
-                chankey = ''
+            # Create the GP object with current parameters
+            if input_gp is None:
+                gp = self.setup_GP(np, chan)
             else:
-                chankey = f'_ch{chan}'
+                gp = input_gp
 
-            for i, par in enumerate(['A', 'm']):
-                for k in range(self.nkernels):
-                    if k == 0:
-                        kernelkey = ''
-                    else:
-                        kernelkey = str(k)
-
-                    index = f'{par}{kernelkey}{chankey}'
-                    coeffs[c][k][i] = getattr(self.fit, index)
-
-            # Create the GP object with current parameters and condition the GP
-            if self.kernel_inputs is None:
-                self.setup_inputs(lib=np.ma)
-
-            # the kernel is the sum of individual kernel functions
-            kernel = self.get_kernel(np, self.kernel_types[0], coeffs, 0, c)
-            for k in range(1, self.nkernels):
-                kernel += self.get_kernel(np, self.kernel_types[k], coeffs,
-                                          k, c)
-
-            # Make the gp object
-            gp = celerite2.GaussianProcess(kernel, mean=0.)
             kernel_inputs = self.kernel_inputs[chan][0][good]
             gp.compute(kernel_inputs, yerr=unc_fit)
-
-            # Predict values
             mu = gp.predict(residuals).eval()
 
             # Re-insert and mask bad values
@@ -255,6 +205,50 @@ class GPModel(PyMC3Model):
 
             self.kernel_inputs.append(kernel_inputs_channel)
 
+    def setup_GP(self, lib, c=0):
+        """Set up GP kernels and GP object.
+
+        Parameters
+        ----------
+        c : int; optional
+            The current channel index. Defaults to 0.
+
+        Returns
+        -------
+        celerite2.GP, george.GP, or tinygp.GaussianProcess
+            The GP object to use for this fit.
+        """
+        if c == 0:
+            chankey = ''
+        else:
+            chankey = f'_ch{c}'
+
+        if lib == tt:
+            model = self.model
+        else:
+            model = self.fit
+
+        coeffs = np.zeros((self.nkernels, 2)).tolist()
+        for i, par in enumerate(['A', 'm']):
+            for k in range(self.nkernels):
+                if k == 0:
+                    kernelkey = ''
+                else:
+                    kernelkey = str(k)
+                index = f'{par}{kernelkey}{chankey}'
+                coeffs[k][i] = getattr(model, index)
+
+        if self.kernel_inputs is None:
+            self.setup_inputs(lib=lib)
+
+        # get the kernel which is the sum of the individual kernel functions
+        kernel = self.get_kernel(lib, self.kernel_types[0], coeffs, 0, c)
+        for k in range(1, self.nkernels):
+            kernel += self.get_kernel(lib, self.kernel_types[k], coeffs, k, c)
+
+        # Make the gp object
+        return celerite2.GaussianProcess(kernel, mean=0, fit_mean=False)
+
     def get_kernel(self, lib, kernel_name, coeffs, k, c=0):
         """Get individual kernels.
 
@@ -279,8 +273,8 @@ class GPModel(PyMC3Model):
             The requested kernel.
         """
         # get metric and amplitude for the current kernel and channel
-        amp = lib.exp(coeffs[c][k][0])
-        ls = lib.exp(coeffs[c][k][1])
+        amp = lib.exp(coeffs[k][0])
+        ls = lib.exp(coeffs[k][1])
 
         if kernel_name == 'Matern32':
             kernel = celerite2.terms.Matern32Term(sigma=1, rho=ls)
@@ -292,3 +286,67 @@ class GPModel(PyMC3Model):
         kernel *= celerite2.terms.RealTerm(a=amp, c=0)
 
         return kernel
+
+    def loglikelihood(self, fit_lc, channel=None):
+        """Compute log likelihood of GP
+
+        Parameters
+        ----------
+        fit_lc : ndarray
+            The fitted model.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+
+        Returns
+        -------
+        float
+            log likelihood of the GP evaluated by celerite2
+        """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+
+        logL = 0
+        for c in np.arange(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+                # get flux and uncertainties for current channel
+                flux, unc_fit = split([self.flux, self.unc_fit],
+                                      self.nints, chan)
+                if channel is None:
+                    fit = split([fit_lc, ], self.nints, chan)[0]
+                else:
+                    # If only a specific channel is being evaluated, then only
+                    # that channel's fitted model will be passed in
+                    fit = fit_lc
+            else:
+                chan = 0
+                # get flux and uncertainties for current channel
+                flux = self.flux
+                fit = fit_lc
+                unc_fit = self.unc_fit
+            residuals = np.ma.masked_invalid(flux-fit)
+            if self.multwhite:
+                time = split([self.time, ], self.nints, chan)[0]
+            else:
+                time = self.time
+            residuals = np.ma.masked_where(time.mask, residuals)
+
+            # Remove poorly handled masked values
+            good = ~np.ma.getmaskarray(residuals)
+            unc_fit = unc_fit[good]
+            residuals = residuals[good]
+
+            # set up GP with current parameters
+            gp = self.setup_GP(np, chan)
+
+            kernel_inputs = self.kernel_inputs[chan][0][good]
+            gp.compute(kernel_inputs, yerr=unc_fit)
+            logL_temp = gp.log_likelihood(residuals).eval()
+
+            logL += logL_temp
+
+        return logL

@@ -54,7 +54,7 @@ class CentroidModel(PyMC3Model):
                     # of the original time axis
                     trim1, trim2 = get_trim(self.nints, chan)
                     centroid = self.centroid[trim1:trim2]
-                    self.centroid_local[trim1:trim2] = centroid - centroid.mean()
+                    self.centroid_local[trim1:trim2] = centroid-centroid.mean()
             else:
                 self.centroid_local = self.centroid - self.centroid.mean()
 

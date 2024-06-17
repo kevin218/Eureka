@@ -1094,8 +1094,9 @@ def make_longparamlist(meta, params, chanrng):
                 name += f'_ch{c}'
             longparamlist[c].append(name)
             if (name not in params.dict.keys() and
-                    getattr(params, param).ptype != 'shared'):
-                # Set this parameter based on channel 0's parameter
+                    getattr(params, param).ptype not in ['shared',
+                                                         'independent']):
+                # Set this parameter based on channel 0
                 params.__setattr__(name, params.dict[param])
 
     freenames = [key for key in params.dict.keys()
@@ -1105,11 +1106,11 @@ def make_longparamlist(meta, params, chanrng):
     freenames_sorted = []
     for name in paramtitles:
         for c in range(nspecchan):
-            channelkey = ''
-            if c>0:
-                channelkey += f'_ch{c}'
-            if name+channelkey in freenames:
-                freenames_sorted.append(name+channelkey)
+            key = ''
+            if c > 0:
+                key += f'_ch{c}'
+            if name+key in freenames:
+                freenames_sorted.append(name+key)
 
     return longparamlist, paramtitles, freenames_sorted
 

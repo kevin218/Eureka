@@ -83,7 +83,8 @@ def ln_like(theta, lc, model, freenames):
     """
     model.update(theta)
     model_lc = model.eval()
-    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames, lc.nchannel_fitted)
+    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     if model.GP:
         ln_like_val = 0
