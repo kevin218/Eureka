@@ -79,7 +79,8 @@ class S1MetaClass(MetaClass):
         self.jump_rejection_threshold = getattr(self,
                                                 'jump_rejection_threshold', 4.)
         try:
-            self.jump_rejection_threshold = float(self.jump_rejection_threshold)
+            self.jump_rejection_threshold = \
+                float(self.jump_rejection_threshold)
         except ValueError:
             print("\nmeta.jump_rejection_threshold cannot be type-casted to "
                   "a float. Defaulting to 4.0")
