@@ -464,7 +464,7 @@ def read(filename, data, meta, log):
 
     # Calculate trace
     if meta.firstInBatch:
-        log.writelog(f"\n  Calculating wavelength assuming {meta.grism} "
+        log.writelog(f"\n  Calculating wavelength assuming {meta.filter} "
                      f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
