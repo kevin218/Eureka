@@ -189,6 +189,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                  meta.y_label, meta.y_label_unit) = vals
                 log.writelog(f'Plotting {meta.y_param}...')
 
+                meta.y_param_basic = meta.y_param.split('_pl')[0].split('_ch')[0].split('^')[0]
+                if meta.y_param[-2:] == '^2':
+                    meta.y_param_basic += '^2'
+
                 # Figure out which channel we're working with
                 channelNumber = meta.y_param.split('_ch')[-1].split('_pl')[0].split('^')[0]
                 if channelNumber.isnumeric():
@@ -202,12 +206,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 if planetNumber.isnumeric():
                     planetNumber = int(planetNumber)
                 else:
+                    # This is a parameter that changes with planet
                     planetNumber = 0
                 meta.planetNumber = planetNumber
-
-                meta.y_param_basic = meta.y_param.split('_pl')[0].split('_ch')[0].split('^')[0]
-                if meta.y_param[-2:] == '^2':
-                    meta.y_param_basic += '^2'
 
                 meta.spectrum_median = None
                 meta.spectrum_err = None
@@ -244,19 +245,64 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     # Provide some default formatting
                     if meta.y_param_basic in ['rp^2', 'rprs^2']:
                         # Transit depth
-                        meta.y_label = r'$(R_{\rm p}/R_{\rm *})^2$'
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = '$(R_{\\rm p'+suffix+'}/R_{\\rm *})^2$'
                     elif meta.y_param_basic in ['rp', 'rprs']:
                         # Radius ratio
-                        meta.y_label = r'$R_{\rm p}/R_{\rm *}$'
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = '$R_{\\rm p'+suffix+'}/R_{\\rm *}$'
                     elif meta.y_param_basic in ['fp', 'fpfs']:
                         # Eclipse depth
-                        meta.y_label = r'$F_{\rm p,day}/F_{\rm *}$'
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = '$F_{\\rm p,day'+suffix+'}/F_{\\rm *}$'
                     elif meta.y_param_basic == 'fn':
                         # Nightside emission
-                        meta.y_label = r'$F_{\rm p,night}/F_{\rm *}$'
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = '$F_{\\rm p,night'+suffix+'}/F_{\\rm *}$'
+                    elif meta.y_param_basic == 't0':
+                        # Time of transit
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = '$t_{\\rm 0'+suffix+'}$'
+                    elif meta.y_param_basic == 'AmpSin1':
+                        # Sine amplitude
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Amplitude of $\\sin(\\phi)$'+suffix
+                    elif meta.y_param_basic == 'AmpSin2':
+                        # Sine2 amplitude
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Amplitude of $\\sin(2\\phi)$'+suffix
+                    elif meta.y_param_basic == 'AmpCos1':
+                        # Cosine amplitude
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Amplitude of $\\cos(\\phi)$'+suffix
+                    elif meta.y_param_basic == 'AmpCos2':
+                        # Cosine2 amplitude
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Amplitude of $\\cos(2\\phi)$'+suffix
+                    elif meta.y_param_basic == 'pc_offset':
+                        # Phase Curve Offset, first order
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Phase Curve Offset'+suffix
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = '($^{\\circ}$E)'
+                    elif meta.y_param_basic == 'pc_amp':
+                        # Phase Curve Amplitude, first order
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Phase Curve Amplitude'+suffix
+                    elif meta.y_param_basic == 'pc_offset2':
+                        # Phase Curve Offset, second order
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Second Order Phase Curve Offset'+suffix
+                        if meta.y_label_unit is None:
+                            meta.y_label_unit = '($^{\\circ}$E)'
+                    elif meta.y_param_basic == 'pc_amp2':
+                        # Phase Curve Amplitude, second order
+                        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+                        meta.y_label = 'Second Order Phase Curve Amplitude'+suffix
                     elif meta.y_param_basic in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
-                        meta.y_label = r'$u_{\rm '+meta.y_param_basic[-1]+'}$'
+                        suffix = getChannelSuffix(meta)
+                        meta.y_label = '$u_{\\rm '+meta.y_param_basic[-1]+'}$'
                         # Figure out which limb darkening law was used
                         epf_name = glob(meta.inputdir+'*.epf')[0]
                         with open(epf_name, 'r') as file:
@@ -267,47 +313,19 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         limb_law = limb_law[1:-1]
                         if limb_law == 'kipping2013':
                             limb_law = 'Kipping (2013)'
-                        meta.y_label += ' for '+limb_law
-                    elif meta.y_param_basic == 't0':
-                        # Time of transit
-                        meta.y_label = r'$t_{\rm 0}$'
-                    elif meta.y_param_basic == 'AmpSin1':
-                        # Sine amplitude
-                        meta.y_label = r'Amplitude of $\sin(\phi)$'
-                    elif meta.y_param_basic == 'AmpSin2':
-                        # Sine2 amplitude
-                        meta.y_label = r'Amplitude of $\sin(2\phi)$'
-                    elif meta.y_param_basic == 'AmpCos1':
-                        # Cosine amplitude
-                        meta.y_label = r'Amplitude of $\cos(\phi)$'
-                    elif meta.y_param_basic == 'AmpCos2':
-                        # Cosine2 amplitude
-                        meta.y_label = r'Amplitude of $\cos(2\phi)$'
-                    elif meta.y_param_basic == 'pc_offset':
-                        # Phase Curve Offset, first order
-                        meta.y_label = 'Phase Curve Offset'
-                        if meta.y_label_unit is None:
-                            meta.y_label_unit = r'($^{\circ}$E)'
-                    elif meta.y_param_basic == 'pc_amp':
-                        # Phase Curve Amplitude, first order
-                        meta.y_label = 'Phase Curve Amplitude'
-                    elif meta.y_param_basic == 'pc_offset2':
-                        # Phase Curve Offset, second order
-                        meta.y_label = ('Second Order Phase Curve Offset')
-                        if meta.y_label_unit is None:
-                            meta.y_label_unit = r'($^{\circ}$E)'
-                    elif meta.y_param_basic == 'pc_amp2':
-                        # Phase Curve Amplitude, second order
-                        meta.y_label = ('Second Order Phase Curve Amplitude')
+                        meta.y_label += ' for '+limb_law+suffix
                     elif meta.y_param_basic in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient
-                        meta.y_label = r'$c_{\rm '+meta.y_param_basic[1:]+'}$'
+                        suffix = getChannelSuffix(meta)
+                        meta.y_label = '$c_{\\rm '+meta.y_param_basic[1:]+'}$'+suffix
                     elif meta.y_param_basic in [f'r{i}' for i in range(6)]:
                         # Exponential ramp parameters
-                        meta.y_label = r'$r_{\rm '+meta.y_param_basic[1:]+'}$'
+                        suffix = getChannelSuffix(meta)
+                        meta.y_label = '$r_{\\rm '+meta.y_param_basic[1:]+'}$'+suffix
                     elif meta.y_param_basic in ['1/r1', '1/r4']:
                         # Exponential ramp timescales
-                        meta.y_label = r'$1/r_{\rm '+meta.y_param_basic[-1]+'}$'
+                        suffix = getChannelSuffix(meta)
+                        meta.y_label = '$1/r_{\\rm '+meta.y_param_basic[-1]+'}$'+suffix
                     else:
                         meta.y_label = meta.y_param
 
@@ -1412,13 +1430,17 @@ def transit_latex_table(meta, log):
 
     # Figure out the labels for the columns
     if meta.y_param_basic in ['rp^2', 'rprs^2']:
-        colhead = "\\colhead{Transit Depth}"
+        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+        colhead = '\\colhead{Transit Depth'+suffix+'}'
     elif meta.y_param_basic in ['rp', 'rprs']:
-        colhead = "\\colhead{$R_{\\rm p}/R_{\\rm *}$}"
+        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+        colhead = '\\colhead{$R_{\\rm p}/R_{\\rm *}$'+suffix+'}'
     elif meta.y_param_basic in ['fp', 'fpfs']:
-        colhead = "\\colhead{Eclipse Depth}"
+        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+        colhead = '\\colhead{Eclipse Depth'+suffix+'}'
     elif meta.y_param_basic in ['fn']:
-        colhead = "\\colhead{Nightside Flux}"
+        suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
+        colhead = '\\colhead{Nightside Flux'+suffix+'}'
     else:
         colhead = f"\\colhead{{{meta.y_label}}}"
 
@@ -1508,3 +1530,17 @@ def transit_latex_table(meta, log):
         file.write(out)
 
     return
+
+
+def getPlanetSuffix(meta):
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f', pl{meta.planetNumber}'
+    return suffix
+
+
+def getChannelSuffix(meta):
+    suffix = ''
+    if meta.channelNumber > 0:
+        suffix += f', ch{meta.channelNumber}'
+    return suffix
