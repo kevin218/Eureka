@@ -72,40 +72,10 @@ class GPModel(PyMC3Model):
     def setup(self):
         """Setup a model for evaluation and fitting.
         """
-        if eval:
-            coeffs = self.fit_coeffs
-            model = self.fit
-        else:
-            coeffs = self.coeffs
-            model = self.model
-
-        # Parse parameters as coefficients
-        coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
-
         self.gps = []
         for c in range(self.nchannel_fitted):
-            if self.nchannel_fitted > 1:
-                chan = self.fitted_channels[c]
-            else:
-                chan = 0
-
-            if chan == 0:
-                chankey = ''
-            else:
-                chankey = f'_{chan}'
-
-            for i, par in enumerate(['A', 'm']):
-                for k in range(self.nkernels):
-                    if k == 0:
-                        kernelkey = ''
-                    else:
-                        kernelkey = str(k)
-
-                    try:
-                        index = f'{par}{kernelkey}{chankey}'
-                        coeffs[c][k][i] = getattr(model, index)
-                    except KeyError:
-                        pass
+            gp = self.setup_GP(c=c, eval=False)
+            self.gps.append(gp)
 
     def update(self, newparams, **kwargs):
         # Inherit from Model class
@@ -113,14 +83,6 @@ class GPModel(PyMC3Model):
 
         self.unc_fit = update_uncertainty(newparams, self.nints, self.unc,
                                           self.freenames)
-
-    def setup(self):
-        """Setup a model for evaluation and fitting.
-        """
-        self.gps = []
-        for c in range(self.nchannel_fitted):
-            gp = self.setup_GP(c=c, eval=False)
-            self.gps.append(gp)
 
     def eval(self, fit_lc, channel=None, gp=None, **kwargs):
         """Compute GP with the given parameters
@@ -151,7 +113,6 @@ class GPModel(PyMC3Model):
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
-        self.fit_lc = fit_lc
 
         lcfinal = np.ma.array([])
         for c in range(nchan):
@@ -161,18 +122,18 @@ class GPModel(PyMC3Model):
                 flux, unc_fit = split([self.flux, self.unc_fit],
                                       self.nints, chan)
                 if channel is None:
-                    fit_lc = split([self.fit_lc, ], self.nints, chan)[0]
+                    fit_lc = split([fit_lc, ], self.nints, chan)[0]
                 else:
                     # If only a specific channel is being evaluated, then only
                     # that channel's fitted model will be passed in
-                    fit_lc = self.fit_lc
+                    fit_lc = fit_lc
             else:
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit_lc = self.fit_lc
+                fit_lc = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit)
+            residuals = np.ma.masked_invalid(flux-fit_lc)
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:
