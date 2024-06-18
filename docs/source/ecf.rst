@@ -49,6 +49,14 @@ linearity_file
 ''''''''''''''
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
+custom_mask
+''''''''''''''''
+Boolean. If True, allows user to supply a custom bad pixel mask file and overwrite the default file.
+
+mask_file
+''''''''''''''
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True.
+
 bias_correction
 '''''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
@@ -666,6 +674,10 @@ wave_min & wave_max
 '''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
+wave_input
+'''''''''''''''''''
+Path to a user supplied file with pre-defined wavelength bins. Two columns: first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
+
 
 allapers
 ''''''''
@@ -846,6 +858,10 @@ Integer. Sets the number of CPUs to use for multiprocessing Stage 5 fitting.
 allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
+
+multwhite
+''''''''
+Boolean to determine whether to run a joint fit of multiple white light curves. If True, must use inputdirlist.
 
 rescale_err
 '''''''''''
@@ -1033,6 +1049,11 @@ If True, plots will automatically be closed rather than popping up on the screen
 topdir + inputdir
 '''''''''''''''''
 The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + inputdirlist
+'''''''''''''''''
+List of paths to the other white light curve directories. topdir + inputdirlist contains the first white light curve, This list contains the remainder. Each item must be enclosed in quotation marks. Ensure there are brakets around the list.
 
 
 topdir + outputdir
