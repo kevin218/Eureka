@@ -10,6 +10,8 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from .PyMC3Models import PyMC3Model
+# Importing these here to give access to other differentiable models
+from ..models.AstroModel import get_ecl_midpt, true_anomaly  # NOQA: F401
 from ...lib.split_channels import split
 
 

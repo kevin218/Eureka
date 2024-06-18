@@ -1,11 +1,8 @@
 import numpy as np
-try:
-    import batman
-except ImportError:
-    print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
-from .BatmanModels import PlanetParams, get_ecl_midpt
+from .AstroModel import get_ecl_midpt, true_anomaly
+from .BatmanModels import PlanetParams
 from ...lib.split_channels import split
 
 
@@ -99,15 +96,11 @@ class SinusoidPhaseCurveModel(Model):
                 if pl_params.ecc == 0.:
                     # the planet is on a circular orbit
                     t = time - pl_params.t_secondary
-                    freq = 2.*np.pi/pl_params.per
-                    phi = freq*t
+                    phi = 2*np.pi/pl_params.per*t
                 else:
                     # the planet is on an eccentric orbit
-                    m_transit = batman.TransitModel(pl_params, time,
-                                                    transittype='primary')
-                    anom = m_transit.get_true_anomaly()
-                    w = pl_params.w
-                    phi = anom + w*np.pi/180. + np.pi/2.
+                    anom = true_anomaly(pl_params, time)
+                    phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
                 # calculate the phase variations
                 if pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0:
