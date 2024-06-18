@@ -189,12 +189,16 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                  meta.y_label, meta.y_label_unit) = vals
                 log.writelog(f'Plotting {meta.y_param}...')
 
-                meta.y_param_basic = meta.y_param.split('_pl')[0].split('_ch')[0].split('^')[0]
+                meta.y_param_basic = meta.y_param.split('_pl')[0]
+                meta.y_param_basic = meta.y_param_basic.split('_ch')[0]
+                meta.y_param_basic = meta.y_param_basic.split('^')[0]
                 if meta.y_param[-2:] == '^2':
                     meta.y_param_basic += '^2'
 
                 # Figure out which channel we're working with
-                channelNumber = meta.y_param.split('_ch')[-1].split('_pl')[0].split('^')[0]
+                channelNumber = meta.y_param.split('_ch')[-1]
+                channelNumber = channelNumber.split('_pl')[0]
+                channelNumber = channelNumber.split('^')[0]
                 if channelNumber.isnumeric():
                     channelNumber = int(channelNumber)
                 else:
@@ -202,7 +206,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 meta.channelNumber = channelNumber
 
                 # Figure out which planet we're working with
-                planetNumber = meta.y_param.split('_pl')[-1].split('_ch')[0].split('^')[0]
+                planetNumber = meta.y_param.split('_pl')[-1]
+                planetNumber = planetNumber.split('_ch')[0]
+                planetNumber = planetNumber.split('^')[0]
                 if planetNumber.isnumeric():
                     planetNumber = int(planetNumber)
                 else:
@@ -258,7 +264,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     elif meta.y_param_basic == 'fn':
                         # Nightside emission
                         suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
-                        meta.y_label = '$F_{\\rm p,night'+suffix+'}/F_{\\rm *}$'
+                        meta.y_label = ('$F_{\\rm p,night'+suffix +
+                                        '}/F_{\\rm *}$')
                     elif meta.y_param_basic == 't0':
                         # Time of transit
                         suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
@@ -298,7 +305,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     elif meta.y_param_basic == 'pc_amp2':
                         # Phase Curve Amplitude, second order
                         suffix = getPlanetSuffix(meta)+getChannelSuffix(meta)
-                        meta.y_label = 'Second Order Phase Curve Amplitude'+suffix
+                        meta.y_label = ('Second Order Phase Curve Amplitude' +
+                                        suffix)
                     elif meta.y_param_basic in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         suffix = getChannelSuffix(meta)
@@ -317,15 +325,18 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     elif meta.y_param_basic in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient
                         suffix = getChannelSuffix(meta)
-                        meta.y_label = '$c_{\\rm '+meta.y_param_basic[1:]+'}$'+suffix
+                        meta.y_label = ('$c_{\\rm '+meta.y_param_basic[1:] +
+                                        '}$'+suffix)
                     elif meta.y_param_basic in [f'r{i}' for i in range(6)]:
                         # Exponential ramp parameters
                         suffix = getChannelSuffix(meta)
-                        meta.y_label = '$r_{\\rm '+meta.y_param_basic[1:]+'}$'+suffix
+                        meta.y_label = ('$r_{\\rm '+meta.y_param_basic[1:] +
+                                        '}$'+suffix)
                     elif meta.y_param_basic in ['1/r1', '1/r4']:
                         # Exponential ramp timescales
                         suffix = getChannelSuffix(meta)
-                        meta.y_label = '$1/r_{\\rm '+meta.y_param_basic[-1]+'}$'+suffix
+                        meta.y_label = ('$1/r_{\\rm '+meta.y_param_basic[-1] +
+                                        '}$'+suffix)
                     else:
                         meta.y_label = meta.y_param
 
@@ -1124,8 +1135,10 @@ def compute_fn_starry(meta, log, fit_methods, nsamp=1e3):
         for ell in range(1, meta.ydeg+1):
             for m in range(-ell, ell+1):
                 if hasattr(temp, f'Y{ell}{m}{suffix}'):
-                    planet_map[ell, m, :] = getattr(temp, f'Y{ell}{m}{suffix}')[i]
-                    planet_map2[ell, m, :] = getattr(temp, f'Y{ell}{m}{suffix}')[i]
+                    planet_map[ell, m, :] = getattr(temp,
+                                                    f'Y{ell}{m}{suffix}')[i]
+                    planet_map2[ell, m, :] = getattr(temp,
+                                                     f'Y{ell}{m}{suffix}')[i]
         planet_map.amp = fp[i][inds]/planet_map2.flux(theta=0)[0]
 
         fluxes = planet_map.flux(theta=180)[0].eval()
