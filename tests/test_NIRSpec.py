@@ -59,7 +59,7 @@ def test_NIRSpec(capsys):
     if s2_installed:
         # Only run S2 stuff if jwst package has been installed
         s2_meta = s2.calibrateJWST(meta.eventlabel, ecf_path=ecf_path)
-        
+
         s2_cites = np.union1d(COMMON_IMPORTS[1], ["nirspec"])
         assert np.array_equal(s2_meta.citations, s2_cites)
 
@@ -78,14 +78,16 @@ def test_NIRSpec(capsys):
         # Only run S2 stuff if jwst package has been installed
         meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                               f'Stage2{os.sep}')
-        name = pathdirectory(meta, 'S2', 1)
+        name = pathdirectory(meta, 'S2', 1,
+                             old_datetime=s2_meta.datetime)
         assert os.path.exists(name)
         assert os.path.exists(name+os.sep+'figs')
 
     # run assertions for S3
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage3{os.sep}')
-    name = pathdirectory(meta, 'S3', 1, ap=8, bg=10)
+    name = pathdirectory(meta, 'S3', 1, ap=8, bg=10,
+                         old_datetime=s3_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
@@ -94,7 +96,8 @@ def test_NIRSpec(capsys):
     # run assertions for S4
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage4{os.sep}')
-    name = pathdirectory(meta, 'S4', 1, ap=8, bg=10)
+    name = pathdirectory(meta, 'S4', 1, ap=8, bg=10,
+                         old_datetime=s4_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 
@@ -104,7 +107,8 @@ def test_NIRSpec(capsys):
     # run assertions for S5
     meta.outputdir_raw = (f'data{os.sep}JWST-Sim{os.sep}NIRSpec{os.sep}'
                           f'Stage5{os.sep}')
-    name = pathdirectory(meta, 'S5', 1, ap=8, bg=10)
+    name = pathdirectory(meta, 'S5', 1, ap=8, bg=10,
+                         old_datetime=s5_meta.datetime)
     assert os.path.exists(name)
     assert os.path.exists(name+os.sep+'figs')
 

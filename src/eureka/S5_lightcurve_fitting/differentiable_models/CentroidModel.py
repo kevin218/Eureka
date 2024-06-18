@@ -15,7 +15,7 @@ from ...lib.split_channels import split
 
 class CentroidModel(PyMC3Model):
     """Centroid Model
-    
+
     This can be used to do a linear decorrelation against the x position
     (axis='xpos'), y position (axis='ypos'), x width (axis='xwidth'),
     or y width (axis='ywidth').

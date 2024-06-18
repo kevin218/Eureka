@@ -39,7 +39,7 @@ class PyMC3Model(Model):
         self.default_name = 'New PyMC3Model'
         # Set up PyMC3-specific default attributes
         kwargs['name'] = kwargs.get('name', self.default_name)
-        
+
         # Inherit from Model class
         super().__init__(**kwargs)
 
@@ -241,7 +241,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                             elif param.prior == 'LU':
                                 setattr(self.model, parname_temp,
                                         tt.exp(pm.Uniform(
-                                            parname_temp, 
+                                            parname_temp,
                                             lower=param.priorpar1,
                                             upper=param.priorpar2,
                                             testval=param.value)))
@@ -329,7 +329,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                     if component.modeltype == 'GP':
                         gps = component.gps
                         gp_component = component
-                
+
                 full_fit_lc = self.eval(eval=False)
                 for c in range(self.nchannel_fitted):
                     if self.nchannel_fitted > 1:
@@ -353,7 +353,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                 pm.Normal("obs", mu=self.eval(eval=False),
                           sd=self.scatter_array,
                           observed=self.flux)
-        
+
         self.issetup = True
 
     def eval(self, channel=None, incl_GP=False, eval=True, **kwargs):
@@ -396,7 +396,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         else:
             # Evaluating a non-multwhite fit (individual or shared)
             flux_length = len(self.time)*nchan
-        
+
         if eval:
             flux = np.ma.ones(flux_length)
         else:

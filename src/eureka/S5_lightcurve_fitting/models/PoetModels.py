@@ -103,8 +103,8 @@ class PoetPCModel(Model):
 
         # Get the time
         if self.time is None:
-            self.time = kwargs.get('time')                   
-        
+            self.time = kwargs.get('time')
+
         # Set all parameters
         lcfinal = np.ma.array([])
         for c in range(nchan):
@@ -132,14 +132,14 @@ class PoetPCModel(Model):
                 p = poet_params.per
                 t1 = poet_params.cos1_off*p/360. - poet_params.t_secondary
                 t2 = poet_params.cos2_off*p/360. - poet_params.t_secondary
-                phaseVars = (poet_params.cos1_amp/2 * 
+                phaseVars = (poet_params.cos1_amp/2 *
                              np.cos(2*np.pi*(time+t1)/p) +
                              poet_params.cos2_amp/2 *
                              np.cos(4*np.pi*(time+t2)/p))
                 # Apply normalizing offset
                 ieclipse = np.argmin(np.abs(time-poet_params.t_secondary))
                 phaseVars += 1 - phaseVars[ieclipse]
-                
+
                 # If requested, force positive phase variations
                 if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
@@ -149,14 +149,14 @@ class PoetPCModel(Model):
             lcfinal = np.ma.append(lcfinal, phaseVars)
 
         return lcfinal
-   
+
 
 class TransitModel():
     """
     Class for generating model transit light curves.
     """
     def __init__(self, params, t, transittype="primary"):
-        """ 
+        """
         Initializes model parameters and computes planet-star-distance
 
         Parameters
@@ -226,20 +226,20 @@ class TransitModel():
 
         # Handle the case of inverse transits (rp < 0)
         self.inverse = False
-        if params.rprs < 0.: 
+        if params.rprs < 0.:
             self.inverse = True
 
         if self.transittype == 'primary':
             # Primary transit
-            if self.limb_dark == "quadratic": 
+            if self.limb_dark == "quadratic":
                 lc = trquad(self.z, params.rprs, params.u[0], params.u[1])
             elif self.limb_dark == "linear":
                 lc = trquad(self.z, params.rprs, params.u[0], 0)
             elif self.limb_dark == "nonlinear":
                 lc = trnlldsp(self.z, params.rprs, params.u)
-            elif self.limb_dark == "uniform": 
+            elif self.limb_dark == "uniform":
                 lc = uniform(self.z, params.rprs)
-            else: 
+            else:
                 raise Exception('Invalid limb darkening option.  '
                                 + 'POET supports linear, quadratic, '
                                 + '4-parameter, and uniform.')
@@ -247,14 +247,14 @@ class TransitModel():
                 lc = 2. - lc
         elif self.transittype == 'secondary':
             # Secondary eclipse
-            lc = bm._eclipse._eclipse(self.z, np.abs(params.rprs), 
+            lc = bm._eclipse._eclipse(self.z, np.abs(params.rprs),
                                       params.fpfs, self.nthreads)
         return lc
-    
+
 
 def uniform(z, rprs):
     """
-    This function computes the primary transit shape 
+    This function computes the primary transit shape
     using equations provided by Mandel & Agol (2002).
 
     Parameters
@@ -273,7 +273,7 @@ def uniform(z, rprs):
     -----
     History:
 
-    - 2010-11-27 Kevin Stevenson 
+    - 2010-11-27 Kevin Stevenson
         Original version
     - 2024-01-28 Kevin Stevenson
         Updated for Eureka!
@@ -298,8 +298,8 @@ def uniform(z, rprs):
 
 def trnlldsp(z, rprs, u):
     """
-    This function computes the primary transit shape using non-linear 
-    limb-darkening equations for a "small planet" (rprs <= 0.1), 
+    This function computes the primary transit shape using non-linear
+    limb-darkening equations for a "small planet" (rprs <= 0.1),
     as provided by Mandel & Agol (2002).
 
     Parameters
@@ -472,8 +472,8 @@ def trquad(z, rprs, u1, u2):
         # eta_1
 
         etad[ndxuse] = 1. / 2. / np.pi \
-            * (kap1 + rprs ** 2 * (rprs ** 2 + 2. * z[ndxuse] ** 2) 
-               * kap0 - (1. + 5. * rprs ** 2 + z[ndxuse] ** 2) 
+            * (kap1 + rprs ** 2 * (rprs ** 2 + 2. * z[ndxuse] ** 2)
+               * kap0 - (1. + 5. * rprs ** 2 + z[ndxuse] ** 2)
                / 4. * np.sqrt((1. - x1[ndxuse]) * (x2[ndxuse] - 1.)))
 
     # Case 5, 6, 7 - the edge of planet lies at origin of star
@@ -548,9 +548,9 @@ def trquad(z, rprs, u1, u2):
                * rprs ** 2 - 4.) * Ek - 3. * x3[ndxuse] / x1[ndxuse]
                * ellpic_bulirsch(n, q))
         notused4 = np.where(
-            ((z[notusedyet] <= 0.5 + np.abs(rprs - 0.5)) | 
+            ((z[notusedyet] <= 0.5 + np.abs(rprs - 0.5)) |
              (z[notusedyet] >= 1.0 + rprs))
-            & ((rprs <= 0.5) | (z[notusedyet] <= np.abs(1.0 - rprs)) | 
+            & ((rprs <= 0.5) | (z[notusedyet] <= np.abs(1.0 - rprs)) |
                (z[notusedyet] >= rprs)))
 
         if np.size(notused4) == 0:
@@ -648,8 +648,8 @@ def ellke(k):
         elliptic integral of the first kind
     kk : 1D array
         elliptic integral of the second kind
-        
-    
+
+
     Notes
     -----
     History:
@@ -701,17 +701,17 @@ def ellpic_bulirsch(n, k):
     Parameters
     ----------
     n : float
-        An intermediate value describing the shape of the transit at a point 
+        An intermediate value describing the shape of the transit at a point
         in time.
     k : float
-        Another intermediate value describing the shape of the transit at a 
+        Another intermediate value describing the shape of the transit at a
         point in time.
 
     Returns
     -------
     ellpic : ndarray
         The elliptical integral
-    
+
     Notes
     -----
     History:

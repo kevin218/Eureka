@@ -128,7 +128,7 @@ class PolynomialModel(Model):
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
-            
+
             poly = np.poly1d(self.coeffs[chan])
             lcpiece = np.polyval(poly, time)
             lcpiece = np.ma.masked_where(np.ma.getmaskarray(time), lcpiece)

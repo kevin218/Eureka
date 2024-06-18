@@ -51,7 +51,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         group_variables(model)
     if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
-    
+
     model.setup(lc.time, lc.flux, lc.unc, freepars)
     model.update(freepars)
 

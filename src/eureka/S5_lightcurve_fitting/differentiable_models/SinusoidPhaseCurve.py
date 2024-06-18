@@ -162,7 +162,7 @@ def get_ecl_midpt(params, lib):
 
     # Now do secondary eclipse
     TA = 3*np.pi/2-params.w*np.pi/180
-    E = 2*lib.arctan(lib.sqrt((1-params.ecc)/(1+params.ecc)) 
+    E = 2*lib.arctan(lib.sqrt((1-params.ecc)/(1+params.ecc))
                      * lib.tan(TA/2))
     M = E-params.ecc*lib.sin(E)
     phase_ecl = M/2/np.pi
@@ -236,7 +236,7 @@ def eccentric_anomaly(model, lib, t, xtol=1e-10):
     ma_peri = ea_peri - model.ecc*np.sin(ea_peri)
     t_peri = (model.t0 - (ma_peri/(2.*np.pi)*model.per))
 
-    if ((lib == tt and tt.lt(t_peri, 0)) or 
+    if ((lib == tt and tt.lt(t_peri, 0)) or
             (t_peri < 0)):
         t_peri = t_peri + model.per
 
@@ -249,7 +249,7 @@ def eccentric_anomaly(model, lib, t, xtol=1e-10):
 
 def FSSI_Eccentric_Inverse(model, lib, M, xtol=1e-10):
     """Convert mean anomaly to eccentric anomaly using FSSI algorithm.
-    
+
     Algorithm based on that from Tommasini+2018.
 
     Parameters

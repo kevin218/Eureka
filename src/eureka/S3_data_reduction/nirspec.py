@@ -280,14 +280,14 @@ def calibrated_spectra(data, meta, log, cutoff=1e-4):
                                  data.flux.data)
     log.writelog(f"    Zeroed {np.sum(boolmask.data)} " +
                  "pixels in total.", mute=(not meta.verbose))
-    
+
     # Convert from MJy to mJy
     log.writelog("  Converting from MJy to mJy...",
                  mute=(not meta.verbose))
     data['flux'].data *= 1e9
     data['err'].data *= 1e9
     data['v0'].data *= 1e9
-    
+
     # Update units
     data['flux'].attrs["flux_units"] = 'mJy'
     data['err'].attrs["flux_units"] = 'mJy'

@@ -67,6 +67,9 @@ class MetaClass:
             for param, value in kwargs.items():
                 setattr(self, param, value)
 
+        # If the data format hasn't been specified, must be eureka output
+        self.data_format = getattr(self, 'data_format', 'eureka')
+
     def __str__(self):
         '''A function to nicely format some outputs when a MetaClass object is
         converted to a string.
@@ -244,7 +247,7 @@ class MetaClass:
         - Oct 2022 Eva-Maria Ahrer
             Update parameters and replace
         """
-        
+
         for i in range(len(self.lines)):
             line = self.lines[i]
             # Strip off comments:
@@ -258,9 +261,9 @@ class MetaClass:
                 new_val = self.params[name]
                 # check if values have been updated
                 if val != new_val:
-                    self.lines[i] = self.lines[i].replace(str(val), 
+                    self.lines[i] = self.lines[i].replace(str(val),
                                                           str(new_val))
-        
+
         with open(os.path.join(folder, self.filename), 'w') as file:
             file.writelines(self.lines)
 

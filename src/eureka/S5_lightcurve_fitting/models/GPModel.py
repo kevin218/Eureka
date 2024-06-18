@@ -198,7 +198,7 @@ class GPModel(Model):
 
     def setup_inputs(self):
         """Setting up kernel inputs as array and standardizing them if asked.
-        
+
         For details on the benefits of normalization, see e.g.
         Evans et al. 2017.
         """

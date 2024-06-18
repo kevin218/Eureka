@@ -125,7 +125,7 @@ class SinusoidPhaseCurveModel(Model):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
                     phaseVars = 1e8*np.ma.ones(time.shape)
-                
+
             lcfinal = np.ma.append(lcfinal, phaseVars)
 
         return lcfinal

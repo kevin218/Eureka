@@ -17,13 +17,13 @@ class PlanetParams():
     Define planet parameters.
     """
     def __init__(self, model, pid=0, channel=0):
-        """ 
+        """
         Set attributes to PlanetParams object.
 
         Parameters
         ----------
         model : object
-            The model.eval object that contains a dictionary of parameter names 
+            The model.eval object that contains a dictionary of parameter names
             and their current values.
         pid : int; optional
             Planet ID, default is 0.
@@ -144,7 +144,7 @@ class BatmanTransitModel(Model):
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
-        ld_func = ld_profile(self.parameters.limb_dark.value, 
+        ld_func = ld_profile(self.parameters.limb_dark.value,
                              use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
@@ -202,7 +202,7 @@ class BatmanTransitModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
-        
+
         if pid is None:
             pid_iter = range(self.num_planets)
         else:
@@ -364,7 +364,7 @@ class BatmanEclipseModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
-        
+
         if pid is None:
             pid_iter = range(self.num_planets)
         else:
@@ -418,7 +418,7 @@ class BatmanEclipseModel(Model):
                     pl_params.t_secondary = get_ecl_midpt(pl_params)
 
                 # Make the eclipse model
-                m_eclipse = self.transit_model(pl_params, 
+                m_eclipse = self.transit_model(pl_params,
                                                self.adjusted_time,
                                                transittype='secondary')
                 light_curve += m_eclipse.light_curve(pl_params)
@@ -445,14 +445,14 @@ def get_ecl_midpt(params):
 
     # Start with primary transit
     TA = np.pi / 2. - params.w * np.pi / 180.
-    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc)) 
+    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc))
                        * np.tan(TA / 2.))
     M = E - params.ecc * np.sin(E)
     phase_tr = M / 2. / np.pi
 
     # Now do secondary eclipse
     TA = 3. * np.pi / 2. - params.w * np.pi / 180.
-    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc)) 
+    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc))
                        * np.tan(TA / 2.))
     M = E - params.ecc * np.sin(E)
     phase_ecl = M / 2. / np.pi

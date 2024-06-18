@@ -93,7 +93,7 @@ class HSTRampModel(PyMC3Model):
                 chan = channels[c]
             else:
                 chan = 0
-            
+
             for i in range(6):
                 if chan == 0:
                     hst_coeffs[c][i] = getattr(model, f'h{i}', 0)

@@ -106,7 +106,7 @@ class HSTRampModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
-        
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -123,7 +123,7 @@ class HSTRampModel(Model):
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
-            
+
             h0, h1, h2, h3, h4, h5, h6 = self.coeffs[c]
             # Batch time is relative to the start of each HST orbit
             # h5 is the orbital period of HST (~96 minutes)

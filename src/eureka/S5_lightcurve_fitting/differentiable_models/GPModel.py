@@ -69,21 +69,8 @@ class GPModel(PyMC3Model):
             raise AssertionError('Our celerite2 implementation currently only '
                                  'supports a Matern32 kernel.')
 
-        # Setup coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)
-                               ).tolist()
-        self.fit_coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)
-                                   ).tolist()
-
-    def _parse_coeffs(self, eval=True):
-        """Convert dict of coefficients into an array.
-        
-        Parameters
-        ----------
-        eval : bool; optional
-            If true, parse the coefficients to prepare for model evaluation
-            (using self.fit), otherwise compile the model (using self.model).
-            Defaults to True.
+    def setup(self):
+        """Setup a model for evaluation and fitting.
         """
         if eval:
             coeffs = self.fit_coeffs
@@ -93,6 +80,9 @@ class GPModel(PyMC3Model):
             model = self.model
 
         # Parse parameters as coefficients
+        coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2)).tolist()
+
+        self.gps = []
         for c in range(self.nchannel_fitted):
             if self.nchannel_fitted > 1:
                 chan = self.fitted_channels[c]
@@ -130,7 +120,7 @@ class GPModel(PyMC3Model):
         self.gps = []
         for c in range(self.nchannel_fitted):
             gp = self.setup_GP(c=c, eval=False)
-            self.gps.append(gp)            
+            self.gps.append(gp)
 
     def eval(self, fit_lc, channel=None, gp=None, **kwargs):
         """Compute GP with the given parameters
@@ -214,7 +204,7 @@ class GPModel(PyMC3Model):
 
     def setup_inputs(self):
         """Setting up kernel inputs as array and standardizing them if asked.
-        
+
         For details on the benefits of normalization, see e.g.
         Evans et al. 2017.
         """
