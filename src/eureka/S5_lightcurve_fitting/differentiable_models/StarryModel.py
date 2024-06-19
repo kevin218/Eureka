@@ -17,6 +17,7 @@ starry.config.quiet = True
 starry.config.lazy = True
 
 from . import PyMC3Model
+from .AstroModel import PlanetParams
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
@@ -26,121 +27,6 @@ class temp_class:
     #         fully setup PlanetParams
     def __init__(self):
         pass
-
-
-class PlanetParams():
-    """
-    Define planet parameters.
-    """
-    def __init__(self, model, pid=0, channel=0, eval=True):
-        """ 
-        Set attributes to PlanetParams object.
-
-        Parameters
-        ----------
-        model : object
-            The model.eval object that contains a dictionary of parameter names 
-            and their current values.
-        pid : int; optional
-            Planet ID, default is 0.
-        channel : int, optional
-            The channel number for multi-wavelength fits or mutli-white fits.
-            Defaults to 0.
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
-        """
-        # Planet ID
-        self.pid = pid
-        if pid == 0:
-            self.pid_id = ''
-        else:
-            self.pid_id = str(self.pid)
-        # Channel ID
-        self.channel = channel
-        if channel == 0:
-            self.channel_id = ''
-        else:
-            self.channel_id = f'_{self.channel}'
-        # Set transit/eclipse parameters
-        self.t0 = None
-        self.rprs = None
-        self.rp = None
-        self.inc = None
-        self.ars = None
-        self.a = None
-        self.per = None
-        self.ecc = 0.
-        self.w = None
-        self.fpfs = None
-        self.fp = None
-        self.t_secondary = None
-        self.cos1_amp = 0.
-        self.cos1_off = 0.
-        self.cos2_amp = 0.
-        self.cos2_off = 0.
-        self.AmpCos1 = 0.
-        self.AmpSin1 = 0.
-        self.AmpCos2 = 0.
-        self.AmpSin2 = 0.
-        self.gamma = 0.
-
-        if eval:
-            parameterObject = model.fit
-        else:
-            parameterObject = model.model
-
-        for item in self.__dict__.keys():
-            item0 = item+self.pid_id
-            try:
-                if model.parameters.dict[item0][1] == 'free':
-                    item0 += self.channel_id
-                setattr(self, item, getattr(parameterObject, item0))
-            except KeyError:
-                pass
-        # Allow for rp or rprs
-        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
-            item0 = 'rp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'rprs', getattr(parameterObject, item0))
-        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
-            item0 = 'rprs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'rp', getattr(parameterObject, item0))
-        # Allow for a or ars
-        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
-            item0 = 'a' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'ars', getattr(parameterObject, item0))
-        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
-            item0 = 'ars' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'a', getattr(parameterObject, item0))
-        # Allow for fp or fpfs
-        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
-            item0 = 'fp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'fpfs', getattr(parameterObject, item0))
-        elif self.fpfs is None:
-            setattr(self, 'fpfs', 0.)
-        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
-            item0 = 'fpfs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'fp', getattr(parameterObject, item0))
-        elif self.fp is None:
-            setattr(self, 'fp', 0.)
-        # Set stellar radius
-        if 'Rs' in model.parameters.dict.keys():
-            item0 = 'Rs'
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'Rs', getattr(parameterObject, item0))
 
 
 class StarryModel(PyMC3Model):
@@ -322,7 +208,7 @@ class StarryModel(PyMC3Model):
             # Instantiate the system
             system = starry.System(star, planet, light_delay=self.compute_ltt)
             self.systems.append(system)
-        
+
         self.update(newparams)
 
     def eval(self, eval=True, channel=None, piecewise=False, **kwargs):
@@ -416,7 +302,7 @@ class StarryModel(PyMC3Model):
                     lcpiece = lcpiece+piece
                 if c == 0:
                     returnVal = lcpiece
-                else:    
+                else:
                     returnVal = lib.concatenate([returnVal, lcpiece])
 
         return returnVal

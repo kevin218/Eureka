@@ -1,5 +1,5 @@
 from .PyMC3Models import PyMC3Model, CompositePyMC3Model
-from .AstroModel import AstroModel
+from .AstroModel import AstroModel, PlanetParams
 from .CentroidModel import CentroidModel
 from .ExpRampModel import ExpRampModel
 from .GPModel import GPModel

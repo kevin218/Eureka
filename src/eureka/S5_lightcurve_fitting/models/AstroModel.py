@@ -7,6 +7,147 @@ from . import KeplerOrbit
 from ...lib.split_channels import split
 
 
+class PlanetParams():
+    """
+    Define planet parameters.
+    """
+    def __init__(self, model, pid=0, channel=0, eval=True):
+        """
+        Set attributes to PlanetParams object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names
+            and their current values.
+        pid : int; optional
+            Planet ID, default is 0.
+        channel : int, optional
+            The channel number for multi-wavelength fits or mutli-white fits.
+            Defaults to 0.
+        eval : bool; optional
+            If true evaluate the model, otherwise simply compile the model.
+            Defaults to True.
+        """
+
+        if eval:
+            parameterObject = model.parameters
+        else:
+            # PyMC3 model that is being compiled
+            parameterObject = model.model
+
+        # Planet ID
+        self.pid = pid
+        if pid == 0:
+            self.pid_id = ''
+        else:
+            self.pid_id = str(self.pid)
+        # Channel ID
+        self.channel = channel
+        if channel == 0:
+            self.channel_id = ''
+        else:
+            self.channel_id = f'_{self.channel}'
+        # Set transit/eclipse parameters
+        self.t0 = None
+        self.rprs = None
+        self.rp = None
+        self.inc = None
+        self.ars = None
+        self.a = None
+        self.per = None
+        self.ecc = 0.
+        self.w = None
+        self.fpfs = None
+        self.fp = None
+        self.t_secondary = None
+        self.cos1_amp = 0.
+        self.cos1_off = 0.
+        self.cos2_amp = 0.
+        self.cos2_off = 0.
+        self.AmpCos1 = 0.
+        self.AmpSin1 = 0.
+        self.AmpCos2 = 0.
+        self.AmpSin2 = 0.
+        self.gamma = 0.
+
+        for item in self.__dict__.keys():
+            item0 = item+self.pid_id
+            try:
+                if model.parameters.dict[item0][1] == 'free':
+                    item0 += self.channel_id
+                value = getattr(parameterObject, item0)
+                if eval:
+                    value = value.value
+                setattr(self, item, value)
+            except KeyError:
+                pass
+        # Allow for rp or rprs
+        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
+            item0 = 'rp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'rprs', value)
+        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
+            item0 = 'rprs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'rp', value)
+        # Allow for a or ars
+        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
+            item0 = 'a' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'ars', value)
+        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
+            item0 = 'ars' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'a', value)
+        # Allow for fp or fpfs
+        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
+            item0 = 'fp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'fpfs', value)
+        elif self.fpfs is None:
+            setattr(self, 'fpfs', 0.)
+        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
+            item0 = 'fpfs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'fp', value)
+        elif self.fp is None:
+            setattr(self, 'fp', 0.)
+        # Set stellar radius
+        if 'Rs' in model.parameters.dict.keys():
+            item0 = 'Rs'
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'Rs', value)
+
+
 class AstroModel(Model):
     """A model which combines all astrophysical components."""
     def __init__(self, components, **kwargs):

@@ -10,8 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
-from .AstroModel import get_ecl_midpt, true_anomaly
-from .StarryModel import PlanetParams
+from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
 

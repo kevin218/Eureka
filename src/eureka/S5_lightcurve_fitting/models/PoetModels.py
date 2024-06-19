@@ -2,8 +2,8 @@ import numpy as np
 import batman as bm
 
 from .Model import Model
-from .BatmanModels import BatmanTransitModel, BatmanEclipseModel, \
-    PlanetParams, get_ecl_midpt
+from .AstroModel import PlanetParams, get_ecl_midpt
+from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from ...lib.split_channels import split
 
 

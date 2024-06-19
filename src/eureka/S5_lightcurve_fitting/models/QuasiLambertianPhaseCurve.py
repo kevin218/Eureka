@@ -1,8 +1,7 @@
 import numpy as np
 
 from .Model import Model
-from .AstroModel import get_ecl_midpt, true_anomaly
-from .BatmanModels import PlanetParams
+from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
 
