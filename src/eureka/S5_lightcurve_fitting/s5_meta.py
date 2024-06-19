@@ -90,6 +90,8 @@ class S5MetaClass(MetaClass):
         self.num_planets = getattr(self, 'num_planets', 1)
         self.compute_ltt = getattr(self, 'compute_ltt', None)
         self.force_positivity = getattr(self, 'force_positivity', False)
+        # The following is only relevant for the starry model
+        self.mutualOccultations = getattr(self, 'mutualOccultations', True)
 
         # Use of modelled LD coefficients
         self.use_generate_ld = getattr(self, 'use_generate_ld', None)
