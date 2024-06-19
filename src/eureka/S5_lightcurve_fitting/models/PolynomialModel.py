@@ -83,7 +83,7 @@ class PolynomialModel(Model):
                             self.parameters.dict[f'c{i}'][0]
                     else:
                         self.coeffs[c, 9-i] = \
-                            self.parameters.dict[f'c{i}_{chan}'][0]
+                            self.parameters.dict[f'c{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 

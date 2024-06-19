@@ -1,7 +1,7 @@
 import numpy as np
 
 from .Model import Model
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class CentroidModel(Model):
@@ -30,7 +30,7 @@ class CentroidModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
 
-        self.coeff_keys = [f'{self.axis}_{c}' if c > 0 else self.axis
+        self.coeff_keys = [f'{self.axis}_ch{c}' if c > 0 else self.axis
                            for c in range(self.nchannel_fitted)]
 
     @property
@@ -45,15 +45,15 @@ class CentroidModel(Model):
         if self.centroid is not None:
             # Convert to local centroid
             if self.multwhite:
-                self.centroid_local = np.ma.zeros(0)
+                self.centroid_local = np.ma.zeros(self.centroid.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    centroid = split([self.centroid, ], self.nints, chan)[0]
-                    self.centroid_local = np.ma.append(
-                        self.centroid_local, centroid-np.ma.mean(centroid))
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    centroid = self.centroid[trim1:trim2]
+                    self.centroid_local[trim1:trim2] = centroid-centroid.mean()
             else:
-                self.centroid_local = self.centroid - np.ma.mean(self.centroid)
+                self.centroid_local = self.centroid - self.centroid.mean()
 
     def eval(self, channel=None, **kwargs):
         """Evaluate the function with the given values.

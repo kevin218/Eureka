@@ -13,6 +13,7 @@ logger.setLevel(logging.ERROR)
 import pymc3 as pm
 BoundedNormal_0 = pm.Bound(pm.Normal, lower=0.0)
 BoundedNormal_0_1 = pm.Bound(pm.Normal, lower=0.0, upper=1.0)
+BoundedNormal_m1_1 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)
 BoundedNormal_90 = pm.Bound(pm.Normal, upper=90.)
 
 from ..models import Model, CompositeModel
@@ -48,6 +49,11 @@ class PyMC3Model(Model):
         self.fit = fit_class()
         for key in self.parameters.dict.keys():
             setattr(self.fit, key, getattr(self.parameters, key).value)
+
+        if hasattr(self.fit, 'ecosw') and hasattr(self.fit, 'esinw'):
+            # ecosw and esinw are defined; convert them to ecc and w
+            self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
+            self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180/np.pi
 
     def __mul__(self, other):
         """Multiply model components to make a combined model.
@@ -130,13 +136,12 @@ class PyMC3Model(Model):
             # For now, the dict and Parameter are separate
             self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
-        for val, key in zip(newparams, self.freenames):
-            setattr(self.fit, key, val)
+            setattr(self.fit, arg, val)
 
-        # The following code should work but doesn't see to work well
-        # self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
-        # longitude of periastron needs to be in degrees for batman!
-        # self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180./np.pi
+        if hasattr(self.fit, 'ecosw') and hasattr(self.fit, 'esinw'):
+            # ecosw and esinw are defined; convert them to ecc and w
+            self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
+            self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180/np.pi
 
         for component in self.components:
             component.update(newparams, **kwargs)
@@ -176,80 +181,92 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
 
         # Setup PyMC3 model parameters
         with self.model:
-            for i, parname in enumerate(self.paramtitles):
+            for parname in self.parameters.params:
                 param = getattr(self.parameters, parname)
-                if param.ptype in ['independent', 'fixed']:
+                if param.ptype in ['fixed']:
                     setattr(self.model, parname, param.value)
+                    self.model.named_vars[parname] = param.value
                 elif param.ptype not in ['free', 'shared', 'white_free',
-                                         'white_fixed']:
+                                         'white_fixed', 'independent']:
                     message = (f'ptype {param.ptype} for parameter '
                                f'{param.name} is not recognized.')
                     raise ValueError(message)
                 else:
-                    for c in range(self.nchannel_fitted):
-                        if c == 0:
-                            parname_temp = parname
-                        elif self.longparamlist[c][i] != param:
-                            # This parameter is either free or was changed in
-                            # some way by the user
-                            parname_temp = self.longparamlist[c][i]
-                            param = getattr(self.parameters, parname_temp)
+                    c = parname.split('_ch')[-1].split('_')[0]
+                    if c.isnumeric():
+                        c = int(c)
+                    else:
+                        c = 0
 
-                        if param.ptype == 'free' or c == 0:
-                            if param.prior == 'U':
-                                setattr(self.model, parname_temp,
-                                        pm.Uniform(parname_temp,
-                                                   lower=param.priorpar1,
-                                                   upper=param.priorpar2,
-                                                   testval=param.value))
-                            elif param.prior == 'N':
-                                if (parname == 'ecc' or
-                                        (parname in ['u1', 'u2'] and
-                                         self.parameters.limb_dark.value ==
-                                         'kipping2013')):
-                                    # Kipping2013 parameters are only on [0,1]
-                                    # Eccentricity is only [0,1]
-                                    setattr(self.model, parname_temp,
-                                            BoundedNormal_0_1(
-                                                parname_temp,
-                                                mu=param.priorpar1,
-                                                sigma=param.priorpar2,
-                                                testval=param.value))
-                                elif parname in ['per', 'scatter_mult',
-                                                 'scatter_ppm', 'c0', 'r1',
-                                                 'r4', 'r7', 'r10']:
-                                    setattr(self.model, parname_temp,
-                                            BoundedNormal_0(
-                                                parname_temp,
-                                                mu=param.priorpar1,
-                                                sigma=param.priorpar2,
-                                                testval=param.value))
-                                elif parname in ['inc']:
-                                    # An inclination > 90 is not meaningful
-                                    setattr(self.model, parname_temp,
-                                            BoundedNormal_90(
-                                                parname_temp,
-                                                mu=param.priorpar1,
-                                                sigma=param.priorpar2,
-                                                testval=param.value))
-                                else:
-                                    setattr(self.model, parname_temp,
-                                            pm.Normal(parname_temp,
-                                                      mu=param.priorpar1,
-                                                      sigma=param.priorpar2,
-                                                      testval=param.value))
-                            elif param.prior == 'LU':
-                                setattr(self.model, parname_temp,
-                                        tt.exp(pm.Uniform(
-                                            parname_temp,
-                                            lower=param.priorpar1,
-                                            upper=param.priorpar2,
-                                            testval=param.value)))
+                    if param.prior == 'U':
+                        setattr(self.model, parname,
+                                pm.Uniform(parname,
+                                           lower=param.priorpar1,
+                                           upper=param.priorpar2,
+                                           testval=param.value))
+                    elif param.prior == 'N':
+                        if any(substring in parname
+                               for substring in ['ecosw', 'esinw']):
+                            # ecosw and esinw are defined on [-1,1]
+                            setattr(self.model, parname,
+                                    BoundedNormal_m1_1(
+                                        parname,
+                                        mu=param.priorpar1,
+                                        sigma=param.priorpar2,
+                                        testval=param.value))
+                        elif ('ecc' in parname or
+                                (any(substring in parname
+                                     for substring in ['u1', 'u2'])
+                                 and self.parameters.limb_dark.value ==
+                                    'kipping2013')):
+                            # Kipping2013 parameters are only on [0,1]
+                            # Eccentricity is only [0,1]
+                            setattr(self.model, parname,
+                                    BoundedNormal_0_1(
+                                        parname,
+                                        mu=param.priorpar1,
+                                        sigma=param.priorpar2,
+                                        testval=param.value))
+                        elif any(substring in parname
+                                 for substring in ['per', 'scatter_mult',
+                                                   'scatter_ppm', 'c0', 'r1',
+                                                   'r4', 'r7', 'r10']):
+                            setattr(self.model, parname,
+                                    BoundedNormal_0(
+                                        parname,
+                                        mu=param.priorpar1,
+                                        sigma=param.priorpar2,
+                                        testval=param.value))
+                        elif 'inc' in parname:
+                            # An inclination > 90 is not meaningful
+                            setattr(self.model, parname,
+                                    BoundedNormal_90(
+                                        parname,
+                                        mu=param.priorpar1,
+                                        sigma=param.priorpar2,
+                                        testval=param.value))
                         else:
-                            # If a parameter is shared, make it equal to the
-                            # 0th parameter value
-                            if not hasattr(self.model, parname_temp):
-                                setattr(self.model, parname_temp, param.value)
+                            setattr(self.model, parname,
+                                    pm.Normal(parname,
+                                              mu=param.priorpar1,
+                                              sigma=param.priorpar2,
+                                              testval=param.value))
+                    elif param.prior == 'LU':
+                        setattr(self.model, parname,
+                                tt.exp(pm.Uniform(
+                                    parname,
+                                    lower=param.priorpar1,
+                                    upper=param.priorpar2,
+                                    testval=param.value)))
+
+            if hasattr(self.model, 'ecosw') and hasattr(self.model, 'esinw'):
+                # ecosw and esinw are defined; convert them to ecc and w
+                setattr(self.model, 'ecc', pm.Deterministic(
+                        'ecc', tt.sqrt(tt.sqr(self.model.ecosw)
+                                       + tt.sqr(self.model.esinw))))
+                setattr(self.model, 'w', pm.Deterministic(
+                        'w', tt.arctan2(self.model.esinw,
+                                        self.model.ecosw)*180/np.pi))
 
     def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.
@@ -276,10 +293,10 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         with self.model:
             if hasattr(self.model, 'scatter_ppm'):
                 for c in range(self.nchannel_fitted):
-                    if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
+                    if c == 0:
                         parname_temp = 'scatter_ppm'
                     else:
-                        parname_temp = 'scatter_ppm_'+str(c)
+                        parname_temp = f'scatter_ppm_ch{c}'
 
                     if self.multwhite:
                         size = self.nints[c]
@@ -292,13 +309,13 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                     else:
                         self.scatter_array = \
                             tt.concatenate([self.scatter_array, unc])
-            if hasattr(self.model, 'scatter_mult'):
+            elif hasattr(self.model, 'scatter_mult'):
                 # Fitting the noise level as a multiplier
                 for c in range(self.nchannel_fitted):
-                    if c == 0 or self.parameters.scatter_mult.ptype == 'fixed':
+                    if c == 0:
                         parname_temp = 'scatter_mult'
                     else:
-                        parname_temp = 'scatter_mult_'+str(c)
+                        parname_temp = f'scatter_mult_ch{c}'
 
                     chan = self.fitted_channels[c]
                     trim1, trim2 = get_trim(self.nints, chan)
@@ -311,7 +328,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                         self.scatter_array = \
                             tt.concatenate([self.scatter_array,
                                             unc*scatter_mult])
-            if not hasattr(self, 'scatter_array'):
+            else:
                 # Not fitting the noise level
                 self.scatter_array = self.lc_unc
 
@@ -330,25 +347,35 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                         gps = component.gps
                         gp_component = component
 
-                full_fit_lc = self.eval(eval=False)
+                fit_lc = self.eval(eval=False)
                 for c in range(self.nchannel_fitted):
                     if self.nchannel_fitted > 1:
                         chan = self.fitted_channels[c]
                         # get flux and uncertainties for current channel
-                        flux, unc_fit = split([self.flux, self.scatter_array],
-                                              self.nints, chan)
-                        fit_lc = split([full_fit_lc, ], self.nints, chan)[0]
+                        flux, unc_fit, fit_temp = split(
+                            [self.flux, self.scatter_array, fit_lc],
+                            self.nints, chan)
+                        if self.multwhite:
+                            time = split([self.time], self.nints, chan)[0]
+                        else:
+                            time = self.time
                     else:
                         chan = 0
                         # get flux and uncertainties for current channel
                         flux = self.flux
                         unc_fit = self.scatter_array
-                        fit_lc = full_fit_lc
-                    residuals = flux-fit_lc
+                        fit_temp = fit_lc
+                        time = self.time
+                    residuals = flux-fit_temp
 
-                    gps[c].compute(gp_component.kernel_inputs[chan][0],
-                                   yerr=unc_fit)
-                    gps[c].marginal(f"obs_{c}", observed=residuals)
+                    # Remove poorly handled masked values
+                    good = ~np.ma.getmaskarray(time)
+                    unc_fit = unc_fit[good]
+                    residuals = residuals[good]
+
+                    kernel_inputs = gp_component.kernel_inputs[chan][0][good]
+                    gps[c].compute(kernel_inputs, yerr=unc_fit)
+                    gps[c].marginal(f"obs_ch{c}", observed=residuals)
             else:
                 pm.Normal("obs", mu=self.eval(eval=False),
                           sd=self.scatter_array,

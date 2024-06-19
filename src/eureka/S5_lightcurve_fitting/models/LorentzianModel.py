@@ -80,7 +80,7 @@ class LorentzianModel(Model):
             self.time = kwargs.get('time')
 
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.masked_array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -99,11 +99,11 @@ class LorentzianModel(Model):
 
             if (params.lor_hwhm is None) and (params.lor_amp is None):
                 # Determine left and right halves of asymmetric Lorentzian
-                lhs = np.where(time <= t0)
-                rhs = np.where(time > t0)
+                lhs = np.ma.where(time <= t0)
+                rhs = np.ma.where(time > t0)
                 # Compute asymmetric Lorentzian with baseline offset
-                ut = np.zeros_like(time)
-                lorentzian = np.zeros_like(time)
+                ut = np.ma.zeros(time.shape)
+                lorentzian = np.ma.zeros(time.shape)
                 ut[lhs] = (t0-time[lhs])/params.lor_hwhm_lhs
                 ut[rhs] = (time[rhs]-t0)/params.lor_hwhm_rhs
                 lorentzian[lhs] = 1 + params.lor_amp_lhs/(1 + ut[lhs]**p)
@@ -113,10 +113,10 @@ class LorentzianModel(Model):
                     (params.lor_amp_lhs is None) and \
                     (params.lor_amp_rhs is None):
                 # Determine left and right halves of asymmetric Lorentzian
-                lhs = np.where(time <= t0)
-                rhs = np.where(time > t0)
+                lhs = np.ma.where(time <= t0)
+                rhs = np.ma.where(time > t0)
                 # Compute asymmetric Lorentzian with constant baseline
-                ut = np.zeros_like(time)
+                ut = np.ma.zeros(time.shape)
                 ut[lhs] = (time[lhs]-t0)/params.lor_hwhm_lhs
                 ut[rhs] = (time[rhs]-t0)/params.lor_hwhm_rhs
                 lorentzian = 1 + params.lor_amp_lhs/(1 + ut**p)
@@ -136,6 +136,6 @@ class LorentzianModel(Model):
                                 "3. lor_amp_lhs, lor_amp_rhs, lor_hwhm_lhs, "
                                 "lor_hwhm_rhs.")
 
-            lcfinal = np.append(lcfinal, lorentzian)
+            lcfinal = np.ma.append(lcfinal, lorentzian)
 
         return lcfinal

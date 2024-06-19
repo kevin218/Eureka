@@ -120,23 +120,21 @@ class StarryModel(PyMC3Model):
         self.rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
-            # new object without the _c parts of the parnames
+            # new object without the _ch# parts of the parnames
             # For example, this way we can do `temp.u1` rather than
-            # `getattr(self.model, 'u1_'+c)`.
+            # `getattr(self.model, 'u1_ch'+c)`.
+            #
+            # FINDME: I shouldn't need this anymore once I've
+            #         fully setup PlanetParams
             temp = temp_class()
-            for key in self.longparamlist[c]:
-                # FINDME: I shouldn't need this anymore once I've
-                #         fully setup PlanetParams
-                # Remove the _c part of the parname but leave any
-                # other underscores intact
-                if c == 0:
-                    suffix = ''
-                else:
-                    suffix = '_'+str(c)
-                    if key.endswith(suffix):
-                        key = re.sub(suffix, '', key)
-                setattr(temp, key, getattr(self.model, key+suffix,
-                                           getattr(self.model, key)))
+            for key in self.model.named_vars.keys():
+                channum = key.split('_ch')[-1].split('_')[0]
+                if ((channum.isnumeric() and int(channum) == c)
+                        or not channum.isnumeric()):
+                    # Remove the _ch part of the parname but leave any
+                    # other underscores intact
+                    name = key.split('_ch')[0]
+                    setattr(temp, name, getattr(self.model, key))
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
@@ -345,23 +343,21 @@ class StarryModel(PyMC3Model):
         self.fit_rps = []
         for c in range(self.nchannel_fitted):
             # To save ourselves from tonnes of getattr lines, let's make a
-            # new object without the _c parts of the parnames
+            # new object without the _ch# parts of the parnames
             # For example, this way we can do `temp.u1` rather than
-            # `getattr(self.model, 'u1_'+c)`.
+            # `getattr(self.fit, 'u1_ch'+c)`.
+            #
+            # FINDME: I shouldn't need this anymore once I've
+            #         fully setup PlanetParams
             temp = temp_class()
-            for key in self.longparamlist[c]:
-                # FINDME: I shouldn't need this anymore once I've
-                #         fully setup PlanetParams
-                # Remove the _c part of the parname but leave any
-                # other underscores intact
-                if c == 0:
-                    suffix = ''
-                else:
-                    suffix = '_'+str(c)
-                    if key.endswith(suffix):
-                        key = re.sub(suffix, '', key)
-                setattr(temp, key, getattr(self.fit, key+suffix,
-                                           getattr(self.fit, key)))
+            for key in self.fit.__dict__.keys():
+                channum = key.split('_ch')[-1].split('_')[0]
+                if ((channum.isnumeric() and int(channum) == c)
+                        or not channum.isnumeric()):
+                    # Remove the _ch part of the parname but leave any
+                    # other underscores intact
+                    name = key.split('_ch')[0]
+                    setattr(temp, name, getattr(self.fit, key))
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),

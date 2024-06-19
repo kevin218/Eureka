@@ -74,11 +74,13 @@ class StepModel(PyMC3Model):
 
             for i in range(10):
                 if chan == 0:
-                    steps[c][i] = getattr(model, f'step{i}', 0)
-                    steptimes[c][i] = getattr(model, f'steptime{i}', 0)
+                    parname1 = f'step{i}'
+                    parname2 = f'steptime{i}'
                 else:
-                    steps[c][i] = getattr(model, f'step{i}_{chan}', 0)
-                    steptimes[c][i] = getattr(model, f'steptime{i}_{chan}', 0)
+                    parname1 = f'step{i}_ch{chan}'
+                    parname2 = f'steptime{i}_ch{chan}'
+                steps[c][i] = getattr(model, parname1, 0)
+                steptimes[c][i] = getattr(model, parname2, 0)
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):

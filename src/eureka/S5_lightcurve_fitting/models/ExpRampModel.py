@@ -2,7 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class ExpRampModel(Model):
@@ -46,17 +46,17 @@ class ExpRampModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
-        if self.time is not None:
+        if time_array is not None:
+            self._time = np.ma.masked_invalid(time_array)
             # Convert to local time
             if self.multwhite:
-                self.time_local = np.ma.zeros(0)
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local = np.ma.append(
-                        self.time_local, time-time[0])
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
                 self.time_local = self.time - self.time[0]
 
@@ -82,7 +82,7 @@ class ExpRampModel(Model):
                         self.coeffs[c, i] = self.parameters.dict[f'r{i}'][0]
                     else:
                         self.coeffs[c, i] = \
-                            self.parameters.dict[f'r{i}_{chan}'][0]
+                            self.parameters.dict[f'r{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 

@@ -54,4 +54,4 @@ scatter_mult	1				'free'			1.1				0.1			N
 # ---------------------------------------
 # Light travel time correction parameters
 # ---------------------------------------
-Rs			0.697				'independent'
+Rs			0.697				'fixed'
