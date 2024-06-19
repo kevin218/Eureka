@@ -96,8 +96,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         residuals = flux - model_lc
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
@@ -229,8 +228,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc

@@ -42,7 +42,7 @@ class StarryModel(PyMC3Model):
         self.modeltype = 'physical'
 
         # Set default to turn light-travel correction on if not specified
-        if not hasattr(self, 'compute_ltt') or self.compute_ltt is None:
+        if self.compute_ltt is None:
             self.compute_ltt = True
 
         required = np.array(['Rs'])

@@ -45,10 +45,6 @@ class SinusoidPhaseCurveModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check if should enforce positivity
-        if not hasattr(self, 'force_positivity'):
-            self.force_positivity = False
-
     @property
     def time(self):
         """A getter for the time."""
