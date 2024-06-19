@@ -191,6 +191,7 @@ class BatmanEclipseModel(Model):
         log = kwargs.get('log')
 
         # Set default to turn light-travel correction on if not specified
+        self.compute_ltt = getattr(self, 'compute_ltt', None)
         if self.compute_ltt is None:
             self.compute_ltt = True
 

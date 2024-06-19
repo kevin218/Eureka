@@ -67,6 +67,9 @@ class PoetPCModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
+        # Set default to not force positivity
+        self.force_positivity = getattr(self, 'force_positivity', False)
+
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
