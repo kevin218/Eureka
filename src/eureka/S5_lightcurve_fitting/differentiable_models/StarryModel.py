@@ -17,7 +17,7 @@ starry.config.quiet = True
 starry.config.lazy = True
 
 from . import PyMC3Model
-from .AstroModel import PlanetParams
+# from .AstroModel import PlanetParams
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 

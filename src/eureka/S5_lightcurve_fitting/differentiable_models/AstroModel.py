@@ -11,7 +11,7 @@ logger.setLevel(logging.ERROR)
 
 from .PyMC3Models import PyMC3Model
 # Importing these here to give access to other differentiable models
-from ..models.AstroModel import PlanetParams, get_ecl_midpt, true_anomaly  # NOQA: F401
+from ..models.AstroModel import PlanetParams, get_ecl_midpt, true_anomaly  # NOQA: F401, E501
 from ...lib.split_channels import split
 
 
