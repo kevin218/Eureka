@@ -78,6 +78,9 @@ class PoetPCModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
+        # Set default to not force positivity
+        self.force_positivity = getattr(self, 'force_positivity', False)
+
     @property
     def time(self):
         """A getter for the time."""
