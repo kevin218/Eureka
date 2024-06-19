@@ -1,7 +1,6 @@
 import numpy as np
 import inspect
 import astropy.constants as const
-import re
 
 import theano
 theano.config.gcc__cxxflags += " -fexceptions"

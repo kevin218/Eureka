@@ -396,9 +396,9 @@ class GPModel(Model):
                 chan = 0
                 # get flux and uncertainties for current channel
                 flux = self.flux
-                fit = fit_temp
+                fit_temp = fit_lc
                 unc_fit = self.unc_fit
-            residuals = np.ma.masked_invalid(flux-fit_lc)
+            residuals = np.ma.masked_invalid(flux-fit_temp)
             if self.multwhite:
                 time = split([self.time, ], self.nints, chan)[0]
             else:

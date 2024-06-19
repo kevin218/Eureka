@@ -280,7 +280,7 @@ class GPModel(PyMC3Model):
         """
         # get metric and amplitude for the current kernel and channel
         amp = lib.exp(coeffs[k][0])
-        ls = lib.exp(coeffs[k][1])
+        metric = lib.exp(coeffs[k][1])
 
         # Currently only the Matern32 kernel is supported
         kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
