@@ -2,6 +2,18 @@ import numpy as np
 import astropy.constants as const
 from copy import deepcopy
 
+try:
+    import theano
+    theano.config.gcc__cxxflags += " -fexceptions"
+    import theano.tensor as tt
+
+    # Avoid tonnes of "Cannot construct a scalar test value" messages
+    import logging
+    logger = logging.getLogger("theano.tensor.opt")
+    logger.setLevel(logging.ERROR)
+except ImportError:
+    pass
+
 from .Model import Model
 from . import KeplerOrbit
 from ...lib.split_channels import split
@@ -32,22 +44,24 @@ class PlanetParams():
 
         if eval:
             parameterObject = model.parameters
+            lib = np
         else:
             # PyMC3 model that is being compiled
             parameterObject = model.model
+            lib = tt
 
         # Planet ID
         self.pid = pid
         if pid == 0:
             self.pid_id = ''
         else:
-            self.pid_id = str(self.pid)
+            self.pid_id = f'_pl{self.pid}'
         # Channel ID
         self.channel = channel
         if channel == 0:
             self.channel_id = ''
         else:
-            self.channel_id = f'_{self.channel}'
+            self.channel_id = f'_ch{self.channel}'
         # Set transit/eclipse parameters
         self.t0 = None
         self.rprs = None
@@ -56,8 +70,10 @@ class PlanetParams():
         self.ars = None
         self.a = None
         self.per = None
-        self.ecc = 0.
+        self.ecc = None
         self.w = None
+        self.ecosw = None
+        self.esinw = None
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
@@ -70,6 +86,10 @@ class PlanetParams():
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
         self.gamma = 0.
+        self.u1 = 0.
+        self.u2 = 0.
+        self.u3 = 0.
+        self.u4 = 0.
 
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
@@ -81,7 +101,20 @@ class PlanetParams():
                     value = value.value
                 setattr(self, item, value)
             except KeyError:
-                pass
+                if item in [f'u{i}' for i in range(1, 5)]:
+                    # Limb darkening probably doesn't vary with planet
+                    try:
+                        item0 = item
+                        if model.parameters.dict[item0][1] == 'free':
+                            item0 += self.channel_id
+                        value = getattr(parameterObject, item0)
+                        if eval:
+                            value = value.value
+                        setattr(self, item, value)
+                    except KeyError:
+                        pass
+                else:
+                    pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
             item0 = 'rp' + self.pid_id
@@ -116,6 +149,43 @@ class PlanetParams():
             if eval:
                 value = value.value
             setattr(self, 'a', value)
+        # Allow for (ecc, w) or (ecosw, esinw)
+        if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
+            item0 = 'ecc' + self.pid_id
+            item1 = 'w' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            if model.parameters.dict[item1][1] == 'free':
+                item1 += self.channel_id
+            value0 = getattr(parameterObject, item0)
+            value1 = getattr(parameterObject, item1)
+            if eval:
+                value0 = value0.value
+                value1 = value1.value
+            ecc = value0
+            w = value1
+            ecosw = ecc*lib.cos(w*np.pi/180)
+            esinw = ecc*lib.sin(w*np.pi/180)
+            setattr(self, 'ecosw', ecosw)
+            setattr(self, 'esinw', esinw)
+        elif (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
+            item0 = 'ecosw' + self.pid_id
+            item1 = 'esinw' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            if model.parameters.dict[item1][1] == 'free':
+                item1 += self.channel_id
+            value0 = getattr(parameterObject, item0)
+            value1 = getattr(parameterObject, item1)
+            if eval:
+                value0 = value0.value
+                value1 = value1.value
+            ecosw = value0
+            esinw = value1
+            ecc = lib.sqrt(ecosw**2+esinw**2)
+            w = lib.arctan2(esinw, ecosw)*180/np.pi
+            setattr(self, 'ecc', ecc)
+            setattr(self, 'w', w)
         # Allow for fp or fpfs
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
             item0 = 'fp' + self.pid_id
@@ -146,6 +216,13 @@ class PlanetParams():
             if eval:
                 value = value.value
             setattr(self, 'Rs', value)
+
+        # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
+        if self.ecc is None:
+            self.ecc = 0
+            self.w = None
+            self.ecosw = 0
+            self.esinw = 0
 
 
 class AstroModel(Model):
