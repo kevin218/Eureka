@@ -80,12 +80,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         self.t_model = models.BatmanTransitModel(parameters=params,
                                                  name='transit', fmt='r--',
                                                  freenames=freenames,
@@ -120,12 +116,8 @@ class TestModels(unittest.TestCase):
         meta.sharedp = False
         meta.multwhite = False
         meta.num_planets = 1
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.e_model = models.BatmanEclipseModel(parameters=params,
                                                  name='transit', fmt='r--',
@@ -174,12 +166,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.BatmanTransitModel(parameters=params,
                                                  name='transit', fmt='r--',
@@ -244,12 +232,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         self.t_poet_tr = models.PoetTransitModel(parameters=params,
                                                  name='poet_tr', fmt='r--',
                                                  freenames=freenames,
@@ -284,12 +268,8 @@ class TestModels(unittest.TestCase):
         meta.sharedp = False
         meta.multwhite = False
         meta.num_planets = 1
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_poet_ecl = models.PoetEclipseModel(parameters=params,
                                                   name='eclipse', fmt='r--',
@@ -336,12 +316,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.PoetTransitModel(parameters=params,
                                                name='transit', fmt='r--',
@@ -393,12 +369,8 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         meta.multwhite = False
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_lorentzian = models.LorentzianModel(parameters=params,
                                                    name='transit', fmt='r--',
