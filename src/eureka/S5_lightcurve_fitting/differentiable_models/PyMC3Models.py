@@ -207,6 +207,11 @@ class PyMC3Model:
             getattr(self.parameters, arg).value = val
             setattr(self.fit, arg, val)
 
+        if hasattr(self.fit, 'ecosw') and hasattr(self.fit, 'esinw'):
+            # ecosw and esinw are defined; convert them to ecc and w
+            self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
+            self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180/np.pi
+
     def setup(self, **kwargs):
         """A placeholder function to do any additional setup.
         """
