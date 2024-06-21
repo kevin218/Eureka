@@ -1,10 +1,11 @@
+import matplotlib
 from matplotlib import rcdefaults, rcParams
 
 # Default figure file type
 figure_filetype = '.png'
 
 
-def set_rc(style='preserve', usetex=False, filetype='.png',
+def set_rc(style='preserve', usetex=False, backend=None, filetype='.png',
            from_scratch=False, **kwargs):
     """Function to adjust matplotlib rcParams for plotting procedures.
 
@@ -20,6 +21,9 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
     usetex : bool; optional
         Do you want to use LaTeX fonts (which requires LaTeX to be
         installed), by default False
+    backend : bool; optional
+        The Matplotlib backend you want to use. Defaults to None which
+        will use whatever the result of `matplotlib.get_backend()` is.
     filetype : str
         The file type that all Eureka figures should be saved as
         (e.g. .png, .pdf).
@@ -71,6 +75,9 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
 
     # TeX fonts may not work on all machines
     rcParams.update({'text.usetex': usetex})
+
+    if backend is not None:
+        matplotlib.use(backend)
 
     # Update the figure filetype
     global figure_filetype
