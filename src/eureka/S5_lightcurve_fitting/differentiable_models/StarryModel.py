@@ -16,16 +16,9 @@ starry.config.quiet = True
 starry.config.lazy = True
 
 from . import PyMC3Model
-# from .AstroModel import PlanetParams
+from .AstroModel import PlanetParams
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
-
-
-class temp_class:
-    # FINDME: I shouldn't need this anymore once I've
-    #         fully setup PlanetParams
-    def __init__(self):
-        pass
 
 
 class StarryModel(PyMC3Model):
@@ -117,93 +110,83 @@ class StarryModel(PyMC3Model):
         """
         self.systems = []
         self.rps = []
-        for c in range(self.nchannel_fitted):
-            # To save ourselves from tonnes of getattr lines, let's make a
-            # new object without the _ch# parts of the parnames
-            # For example, this way we can do `temp.u1` rather than
-            # `getattr(self.model, 'u1_ch'+c)`.
-            #
-            # FINDME: I shouldn't need this anymore once I've
-            #         fully setup PlanetParams
-            temp = temp_class()
-            for key in self.model.named_vars.keys():
-                channum = key.split('_ch')[-1].split('_')[0]
-                if ((channum.isnumeric() and int(channum) == c)
-                        or not channum.isnumeric()):
-                    # Remove the _ch part of the parname but leave any
-                    # other underscores intact
-                    name = key.split('_ch')[0]
-                    setattr(temp, name, getattr(self.model, key))
+        for chan in range(self.nchannel_fitted):
+            # Initialize PlanetParams object
+            pl_params = PlanetParams(self, 0, chan, eval=False)
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=0, r=temp.Rs)
-
+                                  m=0, r=pl_params.Rs)
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
                     # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*tt.sqrt(temp.u1)*temp.u2
-                    star.map[2] = tt.sqrt(temp.u1)*(1-2*temp.u2)
+                    star.map[1] = 2*tt.sqrt(pl_params.u1)*pl_params.u2
+                    star.map[2] = tt.sqrt(pl_params.u1)*(1-2*pl_params.u2)
                 elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = temp.u1
-                    star.map[2] = temp.u2
+                    star.map[1] = pl_params.u1
+                    star.map[2] = pl_params.u2
                 elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = temp.u1
+                    star.map[1] = pl_params.u1
                 elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: starryModel is not yet able to '
+                    message = (f'ERROR: Our StarryModel is not yet able to '
                                f'handle {self.parameters.limb_dark.value} '
                                f'limb darkening.\n'
                                f'       limb_dark must be one of uniform, '
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
 
-            if not hasattr(temp, 'fp'):
-                planet_map = starry.Map(ydeg=self.ydeg, amp=0)
-            else:
-                planet_map = starry.Map(ydeg=self.ydeg)
-                planet_map_temp = starry.Map(ydeg=self.ydeg)
-                for ell in range(1, self.ydeg+1):
-                    for m in range(-ell, ell+1):
-                        if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp,
-                                                         f'Y{ell}{m}')
-                            planet_map_temp[ell, m] = getattr(temp,
-                                                              f'Y{ell}{m}')
-                amp = temp.fp/tt.abs_(planet_map_temp.flux(theta=0)[0])
-                planet_map.amp = amp
-            self.rps.append(temp.rp)
+            # Setup each planet
+            planets = []
+            for pid in range(self.num_planets):
+                # Initialize PlanetParams object for this planet
+                pl_params = PlanetParams(self, pid, chan)
 
-            # Solve Keplerian orbital period equation for system mass
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Mp = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                if not hasattr(pl_params, 'fp'):
+                    planet_map = starry.Map(ydeg=self.ydeg, amp=0)
+                else:
+                    planet_map = starry.Map(ydeg=self.ydeg)
+                    planet_map_temp = starry.Map(ydeg=self.ydeg)
+                    for ell in range(1, self.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            if hasattr(pl_params, f'Y{ell}{m}'):
+                                planet_map[ell, m] = getattr(pl_params,
+                                                             f'Y{ell}{m}')
+                                planet_map_temp[ell, m] = getattr(pl_params,
+                                                                  f'Y{ell}{m}')
+                    amp = pl_params.fp/tt.abs_(
+                        planet_map_temp.flux(theta=0)[0])
+                    planet_map.amp = amp
+                self.rps.append(pl_params.rp)
 
-            # The following code should work but doesn't see to work well
-            # self.model.ecc = tt.sqrt(temp.ecosw**2 + temp.esinw**2)
-            # longitude of periastron needs to be in degrees for batman!
-            # self.model.w = tt.arctan2(temp.esinw, temp.ecosw)*180./np.pi
+                # Solve Keplerian orbital period equation for system mass
+                # (otherwise starry is going to mess with P or a...)
+                a = pl_params.a*pl_params.Rs*const.R_sun.value
+                p = pl_params.per*(24*3600)
+                Mp = ((2*np.pi*a**(3/2))/p)**2/const.G.value/const.M_sun.value
 
-            # Initialize planet object
-            planet = starry.Secondary(
-                planet_map,
-                m=Mp,
-                # Convert radius ratio to R_star units
-                r=tt.abs_(temp.rp)*temp.Rs,
-                a=temp.a,
-                # Another option to set inclination using impact parameter
-                # inc=tt.arccos(b/a)*180/np.pi
-                inc=temp.inc,
-                ecc=temp.ecc,
-                w=temp.w
-            )
-            planet.porb = temp.per
-            planet.prot = temp.per
-            planet.theta0 = 180.0
-            planet.t0 = temp.t0
+                # Initialize planet object
+                planet = starry.Secondary(
+                    planet_map,
+                    m=Mp,
+                    # Convert radius ratio to R_star units
+                    r=tt.abs_(pl_params.rp)*pl_params.Rs,
+                    a=pl_params.a,
+                    # Another option to set inclination using impact parameter
+                    # inc=tt.arccos(b/a)*180/np.pi
+                    inc=pl_params.inc,
+                    ecc=pl_params.ecc,
+                    w=pl_params.w
+                )
+                planet.porb = pl_params.per
+                planet.prot = pl_params.per
+                planet.theta0 = 180.0
+                planet.t0 = pl_params.t0
+
+                planets.append(planet)
 
             # Instantiate the system
-            system = starry.System(star, planet, light_delay=self.compute_ltt)
+            system = starry.System(star, *planets,
+                                   light_delay=self.compute_ltt)
             self.systems.append(system)
 
         self.update(newparams)
@@ -236,7 +219,8 @@ class StarryModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        # Currently can't separate starry models (given mutual occultations)
+        # Currently can't separately evaluate starry models
+        # (given mutual occultations)
         pid_iter = range(self.num_planets)
 
         if eval:
@@ -304,11 +288,13 @@ class StarryModel(PyMC3Model):
 
         return returnVal
 
-    def compute_fp(self, theta=0):
+    def compute_fp(self, pid=0, theta=0):
         """Compute the planetary flux at an arbitrary orbital position.
 
         Parameters
         ----------
+        pid : int; optional
+            Planet ID, default is 0.
         theta : int, ndarray; optional
             The orbital angle(s) in degrees with respect to mid-eclipse.
             Defaults to 0.
@@ -321,7 +307,7 @@ class StarryModel(PyMC3Model):
         with self.model:
             fps = []
             for system in self.fit.systems:
-                planet_map = system.secondaries[0].map
+                planet_map = system.secondaries[pid].map
                 fps.append(planet_map.flux(theta=theta).eval())
             return np.array(fps)
 
@@ -340,91 +326,80 @@ class StarryModel(PyMC3Model):
 
         self.fit.systems = []
         self.fit_rps = []
-        for c in range(self.nchannel_fitted):
-            # To save ourselves from tonnes of getattr lines, let's make a
-            # new object without the _ch# parts of the parnames
-            # For example, this way we can do `temp.u1` rather than
-            # `getattr(self.fit, 'u1_ch'+c)`.
-            #
-            # FINDME: I shouldn't need this anymore once I've
-            #         fully setup PlanetParams
-            temp = temp_class()
-            for key in self.fit.__dict__.keys():
-                channum = key.split('_ch')[-1].split('_')[0]
-                if ((channum.isnumeric() and int(channum) == c)
-                        or not channum.isnumeric()):
-                    # Remove the _ch part of the parname but leave any
-                    # other underscores intact
-                    name = key.split('_ch')[0]
-                    setattr(temp, name, getattr(self.fit, key))
+        for chan in range(self.nchannel_fitted):
+            # Initialize PlanetParams object
+            pl_params = PlanetParams(self, 0, chan, eval=True)
 
             # Initialize star object
             star = starry.Primary(starry.Map(udeg=self.udeg),
-                                  m=0, r=temp.Rs)
-
+                                  m=0, r=pl_params.Rs)
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
                     # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*np.sqrt(temp.u1)*temp.u2
-                    star.map[2] = np.sqrt(temp.u1)*(1-2*temp.u2)
+                    star.map[1] = 2*np.sqrt(pl_params.u1)*pl_params.u2
+                    star.map[2] = np.sqrt(pl_params.u1)*(1-2*pl_params.u2)
                 elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = temp.u1
-                    star.map[2] = temp.u2
+                    star.map[1] = pl_params.u1
+                    star.map[2] = pl_params.u2
                 elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = temp.u1
+                    star.map[1] = pl_params.u1
                 elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: starryModel is not yet able to handle '
-                               f'{self.parameters.limb_dark.value} '
-                               f'limb_dark.\n'
+                    message = (f'ERROR: Our StarryModel is not yet able to '
+                               f'handle {self.parameters.limb_dark.value} '
+                               f'limb darkening.\n'
                                f'       limb_dark must be one of uniform, '
                                f'linear, quadratic, or kipping2013.')
                     raise ValueError(message)
 
-            if not hasattr(temp, 'fp'):
-                planet_map = starry.Map(ydeg=self.ydeg, amp=0)
-            else:
-                planet_map = starry.Map(ydeg=self.ydeg)
-                planet_map_temp = starry.Map(ydeg=self.ydeg)
-                for ell in range(1, self.ydeg+1):
-                    for m in range(-ell, ell+1):
-                        if hasattr(temp, f'Y{ell}{m}'):
-                            planet_map[ell, m] = getattr(temp,
-                                                         f'Y{ell}{m}')
-                            planet_map_temp[ell, m] = getattr(temp,
-                                                              f'Y{ell}{m}')
-                amp = temp.fp/np.abs(planet_map_temp.flux(theta=0)[0])
-                planet_map.amp = amp
-            self.fit_rps.append(temp.rp)
+            # Setup each planet
+            planets = []
+            for pid in range(self.num_planets):
+                # Initialize PlanetParams object for this planet
+                pl_params = PlanetParams(self, pid, chan, eval=True)
 
-            # Solve Keplerian orbital period equation for system mass
-            # (otherwise starry is going to mess with P or a...)
-            a = temp.a*temp.Rs*const.R_sun.value
-            p = temp.per*(24.*3600.)
-            Mp = ((2.*np.pi*a**(3./2.))/p)**2/const.G.value/const.M_sun.value
+                if not hasattr(pl_params, 'fp'):
+                    planet_map = starry.Map(ydeg=self.ydeg, amp=0)
+                else:
+                    planet_map = starry.Map(ydeg=self.ydeg)
+                    planet_map_temp = starry.Map(ydeg=self.ydeg)
+                    for ell in range(1, self.ydeg+1):
+                        for m in range(-ell, ell+1):
+                            if hasattr(pl_params, f'Y{ell}{m}'):
+                                planet_map[ell, m] = getattr(pl_params,
+                                                             f'Y{ell}{m}')
+                                planet_map_temp[ell, m] = getattr(pl_params,
+                                                                  f'Y{ell}{m}')
+                    amp = pl_params.fp/np.abs(planet_map_temp.flux(theta=0)[0])
+                    planet_map.amp = amp
+                self.fit_rps.append(pl_params.rp)
 
-            # The following code should work but doesn't see to work well
-            # ecc = np.sqrt(temp.ecosw**2 + temp.esinw**2)
-            # longitude of periastron needs to be in degrees for batman!
-            # w = np.arctan2(temp.esinw, temp.ecosw)*180./np.pi
+                # Solve Keplerian orbital period equation for system mass
+                # (otherwise starry is going to mess with P or a...)
+                a = pl_params.a*pl_params.Rs*const.R_sun.value
+                p = pl_params.per*(24*3600)
+                Mp = ((2*np.pi*a**(3/2))/p)**2/const.G.value/const.M_sun.value
 
-            # Initialize planet object
-            planet = starry.Secondary(
-                planet_map,
-                m=Mp,
-                # Convert radius to R_star units
-                r=np.abs(temp.rp)*temp.Rs,
-                a=temp.a,
-                # Another option to set inclination using impact parameter
-                # inc=tt.arccos(b/a)*180/np.pi
-                inc=temp.inc,
-                ecc=temp.ecc,
-                w=temp.w
-            )
-            planet.porb = temp.per
-            planet.prot = temp.per
-            planet.theta0 = 180.0
-            planet.t0 = temp.t0
+                # Initialize planet object
+                planet = starry.Secondary(
+                    planet_map,
+                    m=Mp,
+                    # Convert radius ratio to R_star units
+                    r=np.abs(pl_params.rp)*pl_params.Rs,
+                    a=pl_params.a,
+                    # Another option to set inclination using impact parameter
+                    # inc=tt.arccos(b/a)*180/np.pi
+                    inc=pl_params.inc,
+                    ecc=pl_params.ecc,
+                    w=pl_params.w
+                )
+                planet.porb = pl_params.per
+                planet.prot = pl_params.per
+                planet.theta0 = 180.0
+                planet.t0 = pl_params.t0
+
+                planets.append(planet)
 
             # Instantiate the system
-            system = starry.System(star, planet, light_delay=self.compute_ltt)
+            system = starry.System(star, *planets,
+                                   light_delay=self.compute_ltt)
             self.fit.systems.append(system)
