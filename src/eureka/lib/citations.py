@@ -1,20 +1,20 @@
 CITATIONS = {
-    "eureka": 
-    [r"""@article{eureka, 
-         doi = {10.21105/joss.04503}, 
-         url = {https://doi.org/10.21105/joss.04503}, 
-         year = {2022}, publisher = {The Open Journal}, 
-         volume = {7}, number = {79}, pages = {4503}, 
-         author = {Taylor J. Bell and Eva-Maria Ahrer and 
-                   Jonathan Brande and Aarynn L. Carter and Adina D. Feinstein 
-                   and Giannina {Guzman Caloca} and Megan Mansfield and 
-                   Sebastian Zieba and Caroline Piaulet and Björn Benneke and 
-                   Joseph Filippazzo and Erin M. May and Pierre-Alexis Roy and 
-                   Laura Kreidberg and Kevin B. Stevenson}, 
-         title = {Eureka!: An End-to-End Pipeline for 
-                  JWST Time-Series Observations}, 
+    "eureka":
+    [r"""@article{eureka,
+         doi = {10.21105/joss.04503},
+         url = {https://doi.org/10.21105/joss.04503},
+         year = {2022}, publisher = {The Open Journal},
+         volume = {7}, number = {79}, pages = {4503},
+         author = {Taylor J. Bell and Eva-Maria Ahrer and
+                   Jonathan Brande and Aarynn L. Carter and Adina D. Feinstein
+                   and Giannina {Guzman Caloca} and Megan Mansfield and
+                   Sebastian Zieba and Caroline Piaulet and Björn Benneke and
+                   Joseph Filippazzo and Erin M. May and Pierre-Alexis Roy and
+                   Laura Kreidberg and Kevin B. Stevenson},
+         title = {Eureka!: An End-to-End Pipeline for
+                  JWST Time-Series Observations},
         journal = {Journal of Open Source Software} }"""],
-    "numpy": 
+    "numpy":
     [r"""@Article{numpy,
         title  = {Array programming with {NumPy}},
         author = {Charles R. Harris and K. Jarrod Millman and St{\'{e}}fan J.
@@ -24,8 +24,8 @@ CITATIONS = {
                     and Stephan Hoyer and Marten H. van Kerkwijk and Matthew
                     Brett and Allan Haldane and Jaime Fern{\'{a}}ndez del
                     R{\'{i}}o and Mark Wiebe and Pearu Peterson and Pierre
-                    G{\'{e}}rard-Marchant and Kevin Sheppard and Tyler Reddy 
-                    and Warren Weckesser and Hameer Abbasi and Christoph 
+                    G{\'{e}}rard-Marchant and Kevin Sheppard and Tyler Reddy
+                    and Warren Weckesser and Hameer Abbasi and Christoph
                     Gohlke and Travis E. Oliphant},
             year          = {2020},
             month         = sep,
@@ -37,7 +37,7 @@ CITATIONS = {
             publisher     = {Springer Science and Business Media {LLC}},
             url           = {https://doi.org/10.1038/s41586-020-2649-2}
         }"""],
-    "matplotlib": 
+    "matplotlib":
         [r"""@Article{matplotlib,
             Author    = {Hunter, J. D.},
             Title     = {Matplotlib: A 2D graphics environment},
@@ -45,17 +45,17 @@ CITATIONS = {
             Volume    = {9},
             Number    = {3},
             Pages     = {90--95},
-            abstract  = {Matplotlib is a 2D graphics package used for Python 
-            for application development, interactive scripting, and 
-            publication-quality image generation across user interfaces and 
+            abstract  = {Matplotlib is a 2D graphics package used for Python
+            for application development, interactive scripting, and
+            publication-quality image generation across user interfaces and
             operating systems.},
             publisher = {IEEE COMPUTER SOC},
             doi       = {10.1109/MCSE.2007.55},
             year      = 2007
             }"""],
-    "scipy": 
+    "scipy":
         [r"""@ARTICLE{scipy,
-        author  = {Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E. 
+        author  = {Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E.
             and Haberland, Matt and Reddy, Tyler and Cournapeau, David and
             Burovski, Evgeni and Peterson, Pearu and Weckesser, Warren and
             Bright, Jonathan and {van der Walt}, St{\'e}fan J. and
@@ -77,30 +77,30 @@ CITATIONS = {
             adsurl  = {https://rdcu.be/b08Wh},
             doi     = {10.1038/s41592-019-0686-2},
         }"""],
-    "astropy": 
+    "astropy":
         [r"""@article{astropy2013,
             Adsnote = {Provided by the SAO/NASA Astrophysics Data System},
             Adsurl = {http://adsabs.harvard.edu/abs/2013A%26A...558A..33A},
             Archiveprefix = {arXiv},
-            Author = {{Astropy Collaboration} and {Robitaille}, T.~P. and 
-            {Tollerud}, E.~J. and {Greenfield}, P. and {Droettboom}, M. and 
-            {Bray}, E. and {Aldcroft}, T. and {Davis}, M. and {Ginsburg}, A. 
-            and {Price-Whelan}, A.~M. and {Kerzendorf}, W.~E. and {Conley}, A. 
-            and {Crighton}, N. and {Barbary}, K. and {Muna}, D. and {Ferguson}, 
-            H. and {Grollier}, F. and {Parikh}, M.~M. and {Nair}, P.~H. and 
-            {Unther}, H.~M. and {Deil}, C. and {Woillez}, J. and {Conseil}, S. 
-            and {Kramer}, R. and {Turner}, J.~E.~H. and {Singer}, L. and 
-            {Fox}, R. and {Weaver}, B.~A. and {Zabalza}, V. and {Edwards}, 
-            Z.~I. and {Azalee Bostroem}, K. and {Burke}, D.~J. and {Casey}, 
-            A.~R. and {Crawford}, S.~M. and {Dencheva}, N. and {Ely}, J. and 
-            {Jenness}, T. and {Labrie}, K. and {Lim}, P.~L. and 
-            {Pierfederici}, F. and {Pontzen}, A. and {Ptak}, A. and 
+            Author = {{Astropy Collaboration} and {Robitaille}, T.~P. and
+            {Tollerud}, E.~J. and {Greenfield}, P. and {Droettboom}, M. and
+            {Bray}, E. and {Aldcroft}, T. and {Davis}, M. and {Ginsburg}, A.
+            and {Price-Whelan}, A.~M. and {Kerzendorf}, W.~E. and {Conley}, A.
+            and {Crighton}, N. and {Barbary}, K. and {Muna}, D. and {Ferguson},
+            H. and {Grollier}, F. and {Parikh}, M.~M. and {Nair}, P.~H. and
+            {Unther}, H.~M. and {Deil}, C. and {Woillez}, J. and {Conseil}, S.
+            and {Kramer}, R. and {Turner}, J.~E.~H. and {Singer}, L. and
+            {Fox}, R. and {Weaver}, B.~A. and {Zabalza}, V. and {Edwards},
+            Z.~I. and {Azalee Bostroem}, K. and {Burke}, D.~J. and {Casey},
+            A.~R. and {Crawford}, S.~M. and {Dencheva}, N. and {Ely}, J. and
+            {Jenness}, T. and {Labrie}, K. and {Lim}, P.~L. and
+            {Pierfederici}, F. and {Pontzen}, A. and {Ptak}, A. and
             {Refsdal}, B. and {Servillat}, M. and {Streicher}, O.},
             Doi = {10.1051/0004-6361/201322068},
             Eid = {A33},
             Eprint = {1307.6212},
             Journal = {\aap},
-            Keywords = {methods: data analysis, methods: miscellaneous, 
+            Keywords = {methods: data analysis, methods: miscellaneous,
             virtual observatory tools},
             Month = oct,
             Pages = {A33},
@@ -112,58 +112,58 @@ CITATIONS = {
         }""",
             r"""@ARTICLE{astropy2018,
             author = {{Astropy Collaboration} and {Price-Whelan}, A.~M. and
-                {Sip{\H{o}}cz}, B.~M. and {G{\"u}nther}, H.~M. and {Lim}, 
-                P.~L. and {Crawford}, S.~M. and {Conseil}, S. and {Shupe}, 
-                D.~L. and {Craig}, M.~W. and {Dencheva}, N. and {Ginsburg}, A. 
-                and {VanderPlas}, J.~T. and {Bradley}, L.~D. and 
-                {P{\'e}rez-Su{\'a}rez}, D. and {de Val-Borro}, M. and 
-                {Aldcroft}, T.~L. and {Cruz}, K.~L. and {Robitaille}, T.~P. and 
-                {Tollerud}, E.~J. and {Ardelean}, C. and {Babej}, T. and 
-                {Bach}, Y.~P. and {Bachetti}, M. and {Bakanov}, A.~V. and 
-                {Bamford}, S.~P. and {Barentsen}, G. and {Barmby}, P. and 
-                {Baumbach}, A. and {Berry}, K.~L. and {Biscani}, F. and 
-                {Boquien}, M. and {Bostroem}, K.~A. and {Bouma}, L.~G. and 
-                {Brammer}, G.~B. and {Bray}, E.~M. and {Breytenbach}, H. and 
-                {Buddelmeijer}, H. and {Burke}, D.~J. and {Calderone}, G. and 
-                {Cano Rodr{\'\i}guez}, J.~L. and {Cara}, M. and {Cardoso}, 
-                J.~V.~M. and {Cheedella}, S. and {Copin}, Y. and {Corrales}, L. 
-                and {Crichton}, D. and {D'Avella}, D. and {Deil}, C. and 
+                {Sip{\H{o}}cz}, B.~M. and {G{\"u}nther}, H.~M. and {Lim},
+                P.~L. and {Crawford}, S.~M. and {Conseil}, S. and {Shupe},
+                D.~L. and {Craig}, M.~W. and {Dencheva}, N. and {Ginsburg}, A.
+                and {VanderPlas}, J.~T. and {Bradley}, L.~D. and
+                {P{\'e}rez-Su{\'a}rez}, D. and {de Val-Borro}, M. and
+                {Aldcroft}, T.~L. and {Cruz}, K.~L. and {Robitaille}, T.~P. and
+                {Tollerud}, E.~J. and {Ardelean}, C. and {Babej}, T. and
+                {Bach}, Y.~P. and {Bachetti}, M. and {Bakanov}, A.~V. and
+                {Bamford}, S.~P. and {Barentsen}, G. and {Barmby}, P. and
+                {Baumbach}, A. and {Berry}, K.~L. and {Biscani}, F. and
+                {Boquien}, M. and {Bostroem}, K.~A. and {Bouma}, L.~G. and
+                {Brammer}, G.~B. and {Bray}, E.~M. and {Breytenbach}, H. and
+                {Buddelmeijer}, H. and {Burke}, D.~J. and {Calderone}, G. and
+                {Cano Rodr{\'\i}guez}, J.~L. and {Cara}, M. and {Cardoso},
+                J.~V.~M. and {Cheedella}, S. and {Copin}, Y. and {Corrales}, L.
+                and {Crichton}, D. and {D'Avella}, D. and {Deil}, C. and
                 {Depagne}, {\'E}. and {Dietrich}, J.~P. and {Donath}, A. and
-                {Droettboom}, M. and {Earl}, N. and {Erben}, T. and {Fabbro}, 
+                {Droettboom}, M. and {Earl}, N. and {Erben}, T. and {Fabbro},
                 S. and {Ferreira}, L.~A. and {Finethy}, T. and {Fox}, R.~T. and
-                {Garrison}, L.~H. and {Gibbons}, S.~L.~J. and {Goldstein}, 
-                D.~A. and {Gommers}, R. and {Greco}, J.~P. and {Greenfield}, 
-                P. and {Groener}, A.~M. and {Grollier}, F. and {Hagen}, A. and 
-                {Hirst}, P. and {Homeier}, D. and {Horton}, A.~J. and 
-                {Hosseinzadeh}, G. and {Hu}, L. and {Hunkeler}, J.~S. and 
-                {Ivezi{\'c}}, {\v{Z}}. and {Jain}, A. and {Jenness}, T. and 
-                {Kanarek}, G. and {Kendrew}, S. and {Kern}, N.~S. and 
-                {Kerzendorf}, W.~E. and {Khvalko}, A. and {King}, J. and 
-                {Kirkby}, D. and {Kulkarni}, A.~M. and {Kumar}, A. and {Lee}, 
-                A. and {Lenz}, D. and {Littlefair}, S.~P. and {Ma}, Z. and 
-                {Macleod}, D.~M. and {Mastropietro}, M. and {McCully}, C. and 
-                {Montagnac}, S. and {Morris}, B.~M. and {Mueller}, M. and 
-                {Mumford}, S.~J. and {Muna}, D. and {Murphy}, N.~A. and 
-                {Nelson}, S. and {Nguyen}, G.~H. and {Ninan}, J.~P. and 
-                {N{\"o}the}, M. and {Ogaz}, S. and {Oh}, S. and {Parejko}, 
+                {Garrison}, L.~H. and {Gibbons}, S.~L.~J. and {Goldstein},
+                D.~A. and {Gommers}, R. and {Greco}, J.~P. and {Greenfield},
+                P. and {Groener}, A.~M. and {Grollier}, F. and {Hagen}, A. and
+                {Hirst}, P. and {Homeier}, D. and {Horton}, A.~J. and
+                {Hosseinzadeh}, G. and {Hu}, L. and {Hunkeler}, J.~S. and
+                {Ivezi{\'c}}, {\v{Z}}. and {Jain}, A. and {Jenness}, T. and
+                {Kanarek}, G. and {Kendrew}, S. and {Kern}, N.~S. and
+                {Kerzendorf}, W.~E. and {Khvalko}, A. and {King}, J. and
+                {Kirkby}, D. and {Kulkarni}, A.~M. and {Kumar}, A. and {Lee},
+                A. and {Lenz}, D. and {Littlefair}, S.~P. and {Ma}, Z. and
+                {Macleod}, D.~M. and {Mastropietro}, M. and {McCully}, C. and
+                {Montagnac}, S. and {Morris}, B.~M. and {Mueller}, M. and
+                {Mumford}, S.~J. and {Muna}, D. and {Murphy}, N.~A. and
+                {Nelson}, S. and {Nguyen}, G.~H. and {Ninan}, J.~P. and
+                {N{\"o}the}, M. and {Ogaz}, S. and {Oh}, S. and {Parejko},
                 J.~K. and {Parley}, N. and {Pascual}, S. and {Patil}, R. and
                 {Patil}, A.~A. and {Plunkett}, A.~L. and {Prochaska}, J.~X. and
                 {Rastogi}, T. and {Reddy Janga}, V. and {Sabater}, J. and
                 {Sakurikar}, P. and {Seifert}, M. and {Sherbert}, L.~E. and
                 {Sherwood-Taylor}, H. and {Shih}, A.~Y. and {Sick}, J. and
-                {Silbiger}, M.~T. and {Singanamalla}, S. and {Singer}, L.~P. 
-                and {Sladen}, P.~H. and {Sooley}, K.~A. and {Sornarajah}, S. 
+                {Silbiger}, M.~T. and {Singanamalla}, S. and {Singer}, L.~P.
+                and {Sladen}, P.~H. and {Sooley}, K.~A. and {Sornarajah}, S.
                 and {Streicher}, O. and {Teuben}, P. and {Thomas}, S.~W. and
-                {Tremblay}, G.~R. and {Turner}, J.~E.~H. and {Terr{\'o}n}, V. 
-                and {van Kerkwijk}, M.~H. and {de la Vega}, A. and {Watkins}, 
-                L.~L. and {Weaver}, B.~A. and {Whitmore}, J.~B. and {Woillez}, 
+                {Tremblay}, G.~R. and {Turner}, J.~E.~H. and {Terr{\'o}n}, V.
+                and {van Kerkwijk}, M.~H. and {de la Vega}, A. and {Watkins},
+                L.~L. and {Weaver}, B.~A. and {Whitmore}, J.~B. and {Woillez},
                 J. and {Zabalza}, V. and {Astropy Contributors}},
-                title = "{The Astropy Project: Building an Open-science Project 
+                title = "{The Astropy Project: Building an Open-science Project
                         and Status of the v2.0 Core Package}",
             journal = {\aj},
-            keywords = {methods: data analysis, methods: miscellaneous, 
-                        methods: statistical, reference systems, 
-                        Astrophysics - Instrumentation and Methods 
+            keywords = {methods: data analysis, methods: miscellaneous,
+                        methods: statistical, reference systems,
+                        Astrophysics - Instrumentation and Methods
                         for Astrophysics},
                 year = 2018,
                 month = sep,
@@ -178,28 +178,28 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2018AJ....156..123A},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }"""],
-    "nirspec": 
+    "nirspec":
         [r"""@ARTICLE{birkmann2022,
-            author = {{Birkmann}, S.~M. and {Ferruit}, P. and {Giardino}, G. 
-            and {Nielsen}, L.~D. and {Garc{\'\i}a Mu{\~n}oz}, A. and {Kendrew}, 
-            S. and {Rauscher}, B.~J. and {Beck}, T.~L. and {Keyes}, C. and 
-            {Valenti}, J.~A. and {Jakobsen}, P. and {Dorner}, B. and {Alves de 
-            Oliveira}, C. and {Arribas}, S. and {B{\"o}ker}, T. and {Bunker}, 
-            A.~J. and {Charlot}, S. and {de Marchi}, G. and {Kumari}, N. and 
-            {L{\'o}pez-Caniego}, M. and {L{\"u}tzgendorf}, N. and {Maiolino}, 
-            R. and {Manjavacas}, E. and {Marston}, A. and {Moseley}, S.~H. and 
-            {Prizkal}, N. and {Proffitt}, C. and {Rawle}, T. and {Rix}, H. -W. 
-            and {te Plate}, M. and {Sabbi}, E. and {Sirianni}, M. and 
+            author = {{Birkmann}, S.~M. and {Ferruit}, P. and {Giardino}, G.
+            and {Nielsen}, L.~D. and {Garc{\'\i}a Mu{\~n}oz}, A. and {Kendrew},
+            S. and {Rauscher}, B.~J. and {Beck}, T.~L. and {Keyes}, C. and
+            {Valenti}, J.~A. and {Jakobsen}, P. and {Dorner}, B. and {Alves de
+            Oliveira}, C. and {Arribas}, S. and {B{\"o}ker}, T. and {Bunker},
+            A.~J. and {Charlot}, S. and {de Marchi}, G. and {Kumari}, N. and
+            {L{\'o}pez-Caniego}, M. and {L{\"u}tzgendorf}, N. and {Maiolino},
+            R. and {Manjavacas}, E. and {Marston}, A. and {Moseley}, S.~H. and
+            {Prizkal}, N. and {Proffitt}, C. and {Rawle}, T. and {Rix}, H. -W.
+            and {te Plate}, M. and {Sabbi}, E. and {Sirianni}, M. and
             {Willott}, C.~J. and {Zeidler}, P.},
-                title = "{The Near-Infrared Spectrograph (NIRSpec) on the James 
-                        Webb Space Telescope. IV. Capabilities and predicted 
+                title = "{The Near-Infrared Spectrograph (NIRSpec) on the James
+                        Webb Space Telescope. IV. Capabilities and predicted
                         performance for exoplanet characterization}",
             journal = {\aap},
-            keywords = {space vehicles: instruments, instrumentation: 
-                        spectrographs, techniques: spectroscopic, 
-                        planets and satellites: atmospheres, methods: 
-                        observational, Astrophysics - Instrumentation and 
-                        Methods for Astrophysics, Astrophysics - Earth and 
+            keywords = {space vehicles: instruments, instrumentation:
+                        spectrographs, techniques: spectroscopic,
+                        planets and satellites: atmospheres, methods:
+                        observational, Astrophysics - Instrumentation and
+                        Methods for Astrophysics, Astrophysics - Earth and
                         Planetary Astrophysics},
                 year = 2022,
                 month = may,
@@ -214,34 +214,34 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
             r"""@ARTICLE{jakobsen2022,
-            author = {{Jakobsen}, P. and {Ferruit}, P. and {Alves de Oliveira}, 
-            C. and {Arribas}, S. and {Bagnasco}, G. and {Barho}, R. and {Beck}, 
-            T.~L. and {Birkmann}, S. and {B{\"o}ker}, T. and {Bunker}, A.~J. 
-            and {Charlot}, S. and {de Jong}, P. and {de Marchi}, G. and 
+            author = {{Jakobsen}, P. and {Ferruit}, P. and {Alves de Oliveira},
+            C. and {Arribas}, S. and {Bagnasco}, G. and {Barho}, R. and {Beck},
+            T.~L. and {Birkmann}, S. and {B{\"o}ker}, T. and {Bunker}, A.~J.
+            and {Charlot}, S. and {de Jong}, P. and {de Marchi}, G. and
             {Ehrenwinkler}, R. and {Falcolini}, M. and {Fels}, R. and {Franx},
-             M. and {Franz}, D. and {Funke}, M. and {Giardino}, G. and {Gnata}, 
-             X. and {Holota}, W. and {Honnen}, K. and {Jensen}, P.~L. and 
-             {Jentsch}, M. and {Johnson}, T. and {Jollet}, D. and {Karl}, H. 
-             and {Kling}, G. and {K{\"o}hler}, J. and {Kolm}, M. -G. and 
-             {Kumari}, N. and {Lander}, M.~E. and {Lemke}, R. and 
-             {L{\'o}pez-Caniego}, M. and {L{\"u}tzgendorf}, N. and {Maiolino}, 
-             R. and {Manjavacas}, E. and {Marston}, A. and {Maschmann}, M. and 
-             {Maurer}, R. and {Messerschmidt}, B. and {Moseley}, S.~H. and 
-             {Mosner}, P. and {Mott}, D.~B. and {Muzerolle}, J. and {Pirzkal}, 
-             N. and {Pittet}, J. -F. and {Plitzke}, A. and {Posselt}, W. and 
-             {Rapp}, B. and {Rauscher}, B.~J. and {Rawle}, T. and {Rix}, H. -W. 
-             and {R{\"o}del}, A. and {Rumler}, P. and {Sabbi}, E. and 
-             {Salvignol}, J. -C. and {Schmid}, T. and {Sirianni}, M. and 
-             {Smith}, C. and {Strada}, P. and {te Plate}, M. and {Valenti}, 
-             J. and {Wettemann}, T. and {Wiehe}, T. and {Wiesmayer}, M. and 
-             {Willott}, C.~J. and {Wright}, R. and {Zeidler}, P. and 
+             M. and {Franz}, D. and {Funke}, M. and {Giardino}, G. and {Gnata},
+             X. and {Holota}, W. and {Honnen}, K. and {Jensen}, P.~L. and
+             {Jentsch}, M. and {Johnson}, T. and {Jollet}, D. and {Karl}, H.
+             and {Kling}, G. and {K{\"o}hler}, J. and {Kolm}, M. -G. and
+             {Kumari}, N. and {Lander}, M.~E. and {Lemke}, R. and
+             {L{\'o}pez-Caniego}, M. and {L{\"u}tzgendorf}, N. and {Maiolino},
+             R. and {Manjavacas}, E. and {Marston}, A. and {Maschmann}, M. and
+             {Maurer}, R. and {Messerschmidt}, B. and {Moseley}, S.~H. and
+             {Mosner}, P. and {Mott}, D.~B. and {Muzerolle}, J. and {Pirzkal},
+             N. and {Pittet}, J. -F. and {Plitzke}, A. and {Posselt}, W. and
+             {Rapp}, B. and {Rauscher}, B.~J. and {Rawle}, T. and {Rix}, H. -W.
+             and {R{\"o}del}, A. and {Rumler}, P. and {Sabbi}, E. and
+             {Salvignol}, J. -C. and {Schmid}, T. and {Sirianni}, M. and
+             {Smith}, C. and {Strada}, P. and {te Plate}, M. and {Valenti},
+             J. and {Wettemann}, T. and {Wiehe}, T. and {Wiesmayer}, M. and
+             {Willott}, C.~J. and {Wright}, R. and {Zeidler}, P. and
              {Zincke}, C.},
-                title = "{The Near-Infrared Spectrograph (NIRSpec) on the James 
-                            Webb Space Telescope. I. Overview of the instrument 
+                title = "{The Near-Infrared Spectrograph (NIRSpec) on the James
+                            Webb Space Telescope. I. Overview of the instrument
                             and its capabilities}",
             journal = {\aap},
-            keywords = {instrumentation: spectrographs, space vehicles: 
-                        instruments, Astrophysics - Instrumentation and Methods 
+            keywords = {instrumentation: spectrographs, space vehicles:
+                        instruments, Astrophysics - Instrumentation and Methods
                         for Astrophysics},
                 year = 2022,
                 month = may,
@@ -255,16 +255,16 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2022A&A...661A..80J},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""", ],
-    "nircam": 
+    "nircam":
         [r"""@ARTICLE{greene2017,
-            author = {{Greene}, Thomas P. and {Kelly}, Douglas M. and 
-            {Stansberry}, John and {Leisenring}, Jarron and {Egami}, Eiichi 
-            and {Schlawin}, Everett and {Chu}, Laurie and {Hodapp}, Klaus W. 
+            author = {{Greene}, Thomas P. and {Kelly}, Douglas M. and
+            {Stansberry}, John and {Leisenring}, Jarron and {Egami}, Eiichi
+            and {Schlawin}, Everett and {Chu}, Laurie and {Hodapp}, Klaus W.
             and {Rieke}, Marcia},
-                title = "{{\ensuremath{\lambda}} = 2.4 to 5 {\ensuremath{\mu}}m 
-                        spectroscopy with the James Webb Space Telescope 
+                title = "{{\ensuremath{\lambda}} = 2.4 to 5 {\ensuremath{\mu}}m
+                        spectroscopy with the James Webb Space Telescope
                         NIRCam instrument}",
-            journal = {Journal of Astronomical Telescopes, Instruments, and 
+            journal = {Journal of Astronomical Telescopes, Instruments, and
                         Systems},
                 year = 2017,
                 month = jul,
@@ -277,22 +277,22 @@ CITATIONS = {
         }"""],
     "nircam_photometry":
         [r"""@ARTICLE{schlawin2023,
-            author = {{Schlawin}, Everett and {Beatty}, Thomas and {Brooks}, 
-            Brian and {Nikolov}, Nikolay K. and {Greene}, Thomas P. and 
-            {Espinoza}, N{\'e}stor and {Glidic}, Kayli and {Baka}, Keith and 
-            {Egami}, Eiichi and {Stansberry}, John and {Boyer}, Martha and 
-            {Gennaro}, Mario and {Leisenring}, Jarron and {Hilbert}, Bryan and 
-            {Misselt}, Karl and {Kelly}, Doug and {Canipe}, Alicia and 
-            {Beichman}, Charles and {Correnti}, Matteo and {Knight}, J. Scott 
-            and {Jurling}, Alden and {Perrin}, Marshall D. and {Feinberg}, 
-            Lee D. and {McElwain}, Michael W. and {Bond}, Nicholas and 
+            author = {{Schlawin}, Everett and {Beatty}, Thomas and {Brooks},
+            Brian and {Nikolov}, Nikolay K. and {Greene}, Thomas P. and
+            {Espinoza}, N{\'e}stor and {Glidic}, Kayli and {Baka}, Keith and
+            {Egami}, Eiichi and {Stansberry}, John and {Boyer}, Martha and
+            {Gennaro}, Mario and {Leisenring}, Jarron and {Hilbert}, Bryan and
+            {Misselt}, Karl and {Kelly}, Doug and {Canipe}, Alicia and
+            {Beichman}, Charles and {Correnti}, Matteo and {Knight}, J. Scott
+            and {Jurling}, Alden and {Perrin}, Marshall D. and {Feinberg},
+            Lee D. and {McElwain}, Michael W. and {Bond}, Nicholas and
             {Ciardi}, David and {Kendrew}, Sarah and {Rieke}, Marcia},
-                title = "{JWST NIRCam Defocused Imaging: Photometric Stability 
+                title = "{JWST NIRCam Defocused Imaging: Photometric Stability
                 Performance and How It Can Sense Mirror Tilts}",
             journal = {\pasp},
-            keywords = {Exoplanet atmospheres, Space vehicle instruments, 
-            Time series analysis, Multiple mirror telescopes, 487, 1548, 
-            1916, 1080, Astrophysics - Instrumentation and Methods for 
+            keywords = {Exoplanet atmospheres, Space vehicle instruments,
+            Time series analysis, Multiple mirror telescopes, 487, 1548,
+            1916, 1080, Astrophysics - Instrumentation and Methods for
             Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
                 year = 2023,
                 month = jan,
@@ -307,25 +307,25 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2023PASP..135a8001S},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }"""],
-    "niriss": 
+    "niriss":
         [r"""@ARTICLE{willott2022,
-            author = {{Willott}, Chris J. and {Doyon}, Ren{\'e} and {Albert}, 
-            Loic and {Brammer}, Gabriel B. and {Dixon}, William V. and {Muzic}, 
-            Koraljka and {Ravindranath}, Swara and {Scholz}, Aleks and 
-            {Abraham}, Roberto and {Artigau}, {\'E}tienne and {Brada{\v{c}}}, 
-            Maru{\v{s}}a and {Goudfrooij}, Paul and {Hutchings}, John B. and 
-            {Iyer}, Kartheik G. and {Jayawardhana}, Ray and {LaMassa}, 
-            Stephanie and {Martis}, Nicholas and {Meyer}, Michael R. and 
-            {Morishita}, Takahiro and {Mowla}, Lamiya and {Muzzin}, Adam and 
-            {Noirot}, Ga{\"e}l and {Pacifici}, Camilla and {Rowlands}, Neil and 
-            {Sarrouh}, Ghassan and {Sawicki}, Marcin and {Taylor}, Joanna M. 
+            author = {{Willott}, Chris J. and {Doyon}, Ren{\'e} and {Albert},
+            Loic and {Brammer}, Gabriel B. and {Dixon}, William V. and {Muzic},
+            Koraljka and {Ravindranath}, Swara and {Scholz}, Aleks and
+            {Abraham}, Roberto and {Artigau}, {\'E}tienne and {Brada{\v{c}}},
+            Maru{\v{s}}a and {Goudfrooij}, Paul and {Hutchings}, John B. and
+            {Iyer}, Kartheik G. and {Jayawardhana}, Ray and {LaMassa},
+            Stephanie and {Martis}, Nicholas and {Meyer}, Michael R. and
+            {Morishita}, Takahiro and {Mowla}, Lamiya and {Muzzin}, Adam and
+            {Noirot}, Ga{\"e}l and {Pacifici}, Camilla and {Rowlands}, Neil and
+            {Sarrouh}, Ghassan and {Sawicki}, Marcin and {Taylor}, Joanna M.
             and {Volk}, Kevin and {Zabl}, Johannes},
-                title = "{The Near-infrared Imager and Slitless Spectrograph 
-                        for the James Webb Space Telescope. II. Wide Field 
+                title = "{The Near-infrared Imager and Slitless Spectrograph
+                        for the James Webb Space Telescope. II. Wide Field
                         Slitless Spectroscopy}",
             journal = {\pasp},
-            keywords = {Astronomical instrumentation, Infrared telescopes, 
-                        Spectrometers, Astrophysics - Instrumentation and 
+            keywords = {Astronomical instrumentation, Infrared telescopes,
+                        Spectrometers, Astrophysics - Instrumentation and
                         Methods for Astrophysics},
                 year = 2022,
                 month = feb,
@@ -341,23 +341,23 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
             r"""@INPROCEEDINGS{doyon2012,
-            author = {{Doyon}, Ren{\'e} and {Hutchings}, John B. and 
-                    {Beaulieu}, Mathilde and {Albert}, Loic and 
-                    {Lafreni{\`e}re}, David and {Willott}, Chris and {Touahri}, 
-                    Driss and {Rowlands}, Neil and {Maszkiewicz}, Micheal and 
-                    {Fullerton}, Alex W. and {Volk}, Kevin and {Martel}, 
-                    Andr{\'e} R. and {Chayer}, Pierre and {Sivaramakrishnan}, 
-                    Anand and {Abraham}, Roberto and {Ferrarese}, Laura and 
-                    {Jayawardhana}, Ray and {Johnstone}, Doug and {Meyer}, 
+            author = {{Doyon}, Ren{\'e} and {Hutchings}, John B. and
+                    {Beaulieu}, Mathilde and {Albert}, Loic and
+                    {Lafreni{\`e}re}, David and {Willott}, Chris and {Touahri},
+                    Driss and {Rowlands}, Neil and {Maszkiewicz}, Micheal and
+                    {Fullerton}, Alex W. and {Volk}, Kevin and {Martel},
+                    Andr{\'e} R. and {Chayer}, Pierre and {Sivaramakrishnan},
+                    Anand and {Abraham}, Roberto and {Ferrarese}, Laura and
+                    {Jayawardhana}, Ray and {Johnstone}, Doug and {Meyer},
                     Michael and {Pipher}, Judith L. and {Sawicki}, Marcin},
-                title = "{The JWST Fine Guidance Sensor (FGS) and Near-Infrared 
+                title = "{The JWST Fine Guidance Sensor (FGS) and Near-Infrared
                         Imager and Slitless Spectrograph (NIRISS)}",
-            booktitle = {Space Telescopes and Instrumentation 2012: Optical, 
+            booktitle = {Space Telescopes and Instrumentation 2012: Optical,
                         Infrared, and Millimeter Wave},
                 year = 2012,
-            editor = {{Clampin}, Mark C. and {Fazio}, Giovanni G. and 
+            editor = {{Clampin}, Mark C. and {Fazio}, Giovanni G. and
                     {MacEwen}, Howard A. and {Oschmann}, Jacobus M., Jr.},
-            series = {Society of Photo-Optical Instrumentation Engineers (SPIE) 
+            series = {Society of Photo-Optical Instrumentation Engineers (SPIE)
                     Conference Series},
             volume = {8442},
                 month = sep,
@@ -367,19 +367,19 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2012SPIE.8442E..2RD},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""", ],
-    "miri": 
+    "miri":
         [r"""@ARTICLE{rieke2015,
-            author = {{Rieke}, G.~H. and {Wright}, G.~S. and {B{\"o}ker}, T. 
-            and {Bouwman}, J. and {Colina}, L. and {Glasse}, Alistair and 
-            {Gordon}, K.~D. and {Greene}, T.~P. and {G{\"u}del}, Manuel and 
-            {Henning}, Th. and {Justtanont}, K. and {Lagage}, P. -O. and 
-            {Meixner}, M.~E. and {N{\o}rgaard-Nielsen}, H. -U. and {Ray}, 
-            T.~P. and {Ressler}, M.~E. and {van Dishoeck}, E.~F. and 
+            author = {{Rieke}, G.~H. and {Wright}, G.~S. and {B{\"o}ker}, T.
+            and {Bouwman}, J. and {Colina}, L. and {Glasse}, Alistair and
+            {Gordon}, K.~D. and {Greene}, T.~P. and {G{\"u}del}, Manuel and
+            {Henning}, Th. and {Justtanont}, K. and {Lagage}, P. -O. and
+            {Meixner}, M.~E. and {N{\o}rgaard-Nielsen}, H. -U. and {Ray},
+            T.~P. and {Ressler}, M.~E. and {van Dishoeck}, E.~F. and
             {Waelkens}, C.},
-                title = "{The Mid-Infrared Instrument for the James Webb Space 
+                title = "{The Mid-Infrared Instrument for the James Webb Space
                         Telescope, I: Introduction}",
             journal = {\pasp},
-            keywords = {Astrophysics - Instrumentation and Methods for 
+            keywords = {Astrophysics - Instrumentation and Methods for
                         Astrophysics},
                 year = 2015,
                 month = jul,
@@ -394,13 +394,13 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
             r"""@ARTICLE{kendrew2015,
-            author = {{Kendrew}, Sarah and {Scheithauer}, Silvia and {Bouchet}, 
-            Patrice and {Amiaux}, Jerome and {Azzollini}, Ruym{\'a}n and 
-            {Bouwman}, Jeroen and {Chen}, C.~H. and {Dubreuil}, D. and 
-            {Fischer}, Sebastian and {Glasse}, Alistair and {Greene}, T.~P. 
-            and {Lagage}, P. -O. and {Lahuis}, Fred and {Ronayette}, Samuel 
+            author = {{Kendrew}, Sarah and {Scheithauer}, Silvia and {Bouchet},
+            Patrice and {Amiaux}, Jerome and {Azzollini}, Ruym{\'a}n and
+            {Bouwman}, Jeroen and {Chen}, C.~H. and {Dubreuil}, D. and
+            {Fischer}, Sebastian and {Glasse}, Alistair and {Greene}, T.~P.
+            and {Lagage}, P. -O. and {Lahuis}, Fred and {Ronayette}, Samuel
             and {Wright}, David and {Wright}, G.~S.},
-                title = "{The Mid-Infrared Instrument for the James Webb Space 
+                title = "{The Mid-Infrared Instrument for the James Webb Space
                 Telescope, IV: The Low-Resolution Spectrometer}",
             journal = {\pasp},
             keywords = {Astrophysics - Instrumentation and Methods for
@@ -418,24 +418,24 @@ CITATIONS = {
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""",
             r"""@ARTICLE{wells2015,
-            author = {{Wells}, Martyn and {Pel}, J. -W. and {Glasse}, Alistair 
-            and {Wright}, G.~S. and {Aitink-Kroes}, Gabby and {Azzollini}, 
-            Ruym{\'a}n and {Beard}, Steven and {Brandl}, B.~R. and {Gallie}, 
-            Angus and {Geers}, V.~C. and {Glauser}, A.~M. and {Hastings}, Peter 
-            and {Henning}, Th. and {Jager}, Rieks and {Justtanont}, K. and 
-            {Kruizinga}, Bob and {Lahuis}, Fred and {Lee}, David and 
-            {Martinez-Delgado}, I. and {Mart{\'\i}nez-Galarza}, J.~R. and 
-            {Meijers}, M. and {Morrison}, Jane E. and {M{\"u}ller}, Friedrich 
-            and {Nakos}, Thodori and {O'Sullivan}, Brian and {Oudenhuysen}, 
-            Ad and {Parr-Burman}, P. and {Pauwels}, Evert and {Rohloff}, R. -R. 
-            and {Schmalzl}, Eva and {Sykes}, Jon and {Thelen}, M.~P. and 
-            {van Dishoeck}, E.~F. and {Vandenbussche}, Bart and {Venema}, 
-            Lars B. and {Visser}, Huib and {Waters}, L.~B.~F.~M. and {Wright}, 
+            author = {{Wells}, Martyn and {Pel}, J. -W. and {Glasse}, Alistair
+            and {Wright}, G.~S. and {Aitink-Kroes}, Gabby and {Azzollini},
+            Ruym{\'a}n and {Beard}, Steven and {Brandl}, B.~R. and {Gallie},
+            Angus and {Geers}, V.~C. and {Glauser}, A.~M. and {Hastings}, Peter
+            and {Henning}, Th. and {Jager}, Rieks and {Justtanont}, K. and
+            {Kruizinga}, Bob and {Lahuis}, Fred and {Lee}, David and
+            {Martinez-Delgado}, I. and {Mart{\'\i}nez-Galarza}, J.~R. and
+            {Meijers}, M. and {Morrison}, Jane E. and {M{\"u}ller}, Friedrich
+            and {Nakos}, Thodori and {O'Sullivan}, Brian and {Oudenhuysen},
+            Ad and {Parr-Burman}, P. and {Pauwels}, Evert and {Rohloff}, R. -R.
+            and {Schmalzl}, Eva and {Sykes}, Jon and {Thelen}, M.~P. and
+            {van Dishoeck}, E.~F. and {Vandenbussche}, Bart and {Venema},
+            Lars B. and {Visser}, Huib and {Waters}, L.~B.~F.~M. and {Wright},
             David},
-            title = "{The Mid-Infrared Instrument for the James Webb Space 
+            title = "{The Mid-Infrared Instrument for the James Webb Space
                     Telescope, VI: The Medium Resolution Spectrometer}",
             journal = {\pasp},
-            keywords = {Astrophysics - Instrumentation and Methods for 
+            keywords = {Astrophysics - Instrumentation and Methods for
                         Astrophysics},
                 year = 2015,
                 month = jul,
@@ -449,14 +449,14 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127..646W},
             adsnote = {Provided by the SAO/NASA Astrophysics Data System}
         }""", ],
-    "emcee": 
+    "emcee":
         [r"""@ARTICLE{Foreman-Mackey2013,
-                author = {{Foreman-Mackey}, Daniel and {Hogg}, David W. and 
+                author = {{Foreman-Mackey}, Daniel and {Hogg}, David W. and
                 {Lang}, Dustin and {Goodman}, Jonathan},
                     title = "{emcee: The MCMC Hammer}",
                 journal = {\pasp},
-                keywords = {Astrophysics - Instrumentation and Methods for 
-                Astrophysics, Physics - Computational Physics, Statistics - 
+                keywords = {Astrophysics - Instrumentation and Methods for
+                Astrophysics, Physics - Computational Physics, Statistics -
                 Computation},
                     year = 2013,
                     month = mar,
@@ -470,14 +470,14 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2013PASP..125..306F},
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
-    "dynesty": 
+    "dynesty":
         [r"""@ARTICLE{Speagle2020,
                 author = {{Speagle}, Joshua S.},
-                    title = "{DYNESTY: a dynamic nested sampling package for 
+                    title = "{DYNESTY: a dynamic nested sampling package for
                     estimating Bayesian posteriors and evidences}",
                 journal = {\mnras},
-                keywords = {methods: data analysis, methods: statistical, 
-                Astrophysics - Instrumentation and Methods for Astrophysics, 
+                keywords = {methods: data analysis, methods: statistical,
+                Astrophysics - Instrumentation and Methods for Astrophysics,
                 Statistics - Computation},
                     year = 2020,
                     month = apr,
@@ -491,10 +491,10 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2020MNRAS.493.3132S},
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
-    "batman": 
+    "batman":
         [r"""@ARTICLE{Kreidberg2015,
                 author = {{Kreidberg}, Laura},
-                    title = "{batman: BAsic Transit Model cAlculatioN in 
+                    title = "{batman: BAsic Transit Model cAlculatioN in
                     Python}",
                 journal = {\pasp},
                 keywords = {Astrophysics - Earth and Planetary Astrophysics},
@@ -510,14 +510,14 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2015PASP..127.1161K},
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
-    "celerite": 
+    "celerite":
         [r"""@ARTICLE{Foreman-Mackey2018,
                 author = {{Foreman-Mackey}, Daniel},
-                title = "{Scalable Backpropagation for Gaussian Processes 
+                title = "{Scalable Backpropagation for Gaussian Processes
                     using Celerite}",
-                journal = {Research Notes of the American Astronomical 
+                journal = {Research Notes of the American Astronomical
                             Society},
-                keywords = {Astrophysics - Instrumentation and Methods for 
+                keywords = {Astrophysics - Instrumentation and Methods for
                             Astrophysics},
                     year = 2018,
                     month = feb,
@@ -532,12 +532,12 @@ CITATIONS = {
             adsurl = {https://ui.adsabs.harvard.edu/abs/2018RNAAS...2...31F},
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
             }"""],
-    "george": 
+    "george":
         [r"""@MISC{Foreman-Mackey2015,
             author = {{Foreman-Mackey}, Daniel},
             title = "{George: Gaussian Process regression}",
             keywords = {Software},
-            howpublished = {Astrophysics Source Code Library, 
+            howpublished = {Astrophysics Source Code Library,
                                 record ascl:1511.015},
             year = 2015,
             month = nov,
@@ -551,7 +551,7 @@ CITATIONS = {
     "astraeus":
         [r"""@misc{astraeus,
             author = {{Stevenson}, Kevin B.},
-            title = "{{Astraeus}: A tool for standardizing I/O when reducing 
+            title = "{{Astraeus}: A tool for standardizing I/O when reducing
                     and analyzing exoplanet data}",
             year = {2022},
             publisher = {GitHub},
@@ -560,7 +560,7 @@ CITATIONS = {
             }""", ],
     "jwst": [r"""@misc{jwst,
             author = {{JWST calibration pipeline developers}},
-            title = "{{jwst}: Python library for science observations from 
+            title = "{{jwst}: Python library for science observations from
                     the James Webb Space Telescope}",
             year = {2022},
             publisher = {GitHub},
@@ -569,7 +569,7 @@ CITATIONS = {
             }""", ],
     "crds": [r"""@misc{crds,
             author = {{CRDS developers}},
-            title = "{{CRDS}: Calibration Reference Data System 
+            title = "{{CRDS}: Calibration Reference Data System
                     for HST and JWST}",
             year = {2022},
             publisher = {GitHub},
@@ -584,16 +584,16 @@ CITATIONS = {
                     publisher   = {Zenodo},
                     version     = {latest},
                     doi         = {10.5281/zenodo.3509134},
-                    url         = {https://doi.org/10.5281/zenodo.3509134}}""", 
+                    url         = {https://doi.org/10.5281/zenodo.3509134}}""",
                r"""@InProceedings{ mckinney-proc-scipy-2010,
                     author    = { {W}es {M}c{K}inney },
-                    title     = { {D}ata {S}tructures for {S}tatistical 
+                    title     = { {D}ata {S}tructures for {S}tatistical
                                 {C}omputing in {P}ython },
-                    booktitle = { {P}roceedings of the 9th {P}ython in 
+                    booktitle = { {P}roceedings of the 9th {P}ython in
                                     {S}cience {C}onference },
                     pages     = { 56 - 61 },
                     year      = { 2010 },
-                    editor    = { {S}t\'efan van der {W}alt and 
+                    editor    = { {S}t\'efan van der {W}alt and
                                 {J}arrod {M}illman },
                     doi       = { 10.25080/Majora-92bf1922-00a }
                     }"""],
@@ -606,7 +606,7 @@ CITATIONS = {
             url = {https://github.com/h5py/h5py}
             }""", ],
     "xarray": [r"""@article{hoyer2017xarray,
-                    title     = {xarray: {N-D} labeled arrays and datasets in 
+                    title     = {xarray: {N-D} labeled arrays and datasets in
                                 {Python}},
                     author    = {Hoyer, S. and J. Hamman},
                     journal   = {Journal of Open Research Software},
@@ -616,7 +616,7 @@ CITATIONS = {
                     publisher = {Ubiquity Press},
                     doi       = {10.5334/jors.148},
                     url       = {https://doi.org/10.5334/jors.148}
-                    }""", 
+                    }""",
                r"""@software{hoyer_stephan_2022_7195919,
                     author       = {Hoyer, Stephan and
                                     Roos, Maximilian and
@@ -653,23 +653,23 @@ CITATIONS = {
                     url          = {https://doi.org/10.5281/zenodo.598201}
                     }""", ],
     "wfc3": [r"""@INPROCEEDINGS{Kimble2008,
-                author = {{Kimble}, Randy A. and {MacKenty}, John W. and 
+                author = {{Kimble}, Randy A. and {MacKenty}, John W. and
                         {O'Connell}, Robert W. and {Townsend}, Jacqueline A.},
-                title = "{Wide Field Camera 3: a powerful new imager for 
+                title = "{Wide Field Camera 3: a powerful new imager for
                         the Hubble Space Telescope}",
-                booktitle = {Space Telescopes and Instrumentation 2008: 
+                booktitle = {Space Telescopes and Instrumentation 2008:
                             Optical, Infrared, and Millimeter},
                 year = 2008,
-                editor = {{Oschmann}, Jacobus M., Jr. and {de Graauw}, 
+                editor = {{Oschmann}, Jacobus M., Jr. and {de Graauw},
                          Mattheus W.~M. and {MacEwen}, Howard A.},
-                series = {Society of Photo-Optical Instrumentation Engineers 
+                series = {Society of Photo-Optical Instrumentation Engineers
                          (SPIE) Conference Series},
                 volume = {7010},
                 month = jul,
                 eid = {70101E},
                 pages = {70101E},
                 doi = {10.1117/12.789581},
-                adsurl = 
+                adsurl =
                     {https://ui.adsabs.harvard.edu/abs/2008SPIE.7010E..1EK},
                 adsnote = {Provided by the SAO/NASA Astrophysics Data System}
                 }""",

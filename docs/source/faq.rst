@@ -122,7 +122,7 @@ Some more permanent solutions would be to:
 My question isn't listed here!
 ''''''''''''''''''''''''''''''
 
-First check to see if your question/concern is already addressed in an open or closed issue on the Eureka! 
+First check to see if your question/concern is already addressed in an open or closed issue on the Eureka!
 `GitHub Issues <https://github.com/kevin218/Eureka/issues>`__ page. If not, please open a new issue and paste the
 full error message you are getting along with details about which python version and operating system you
 are using, and ideally the ecf you used to get your error (ideally copy-paste it into the issue in a

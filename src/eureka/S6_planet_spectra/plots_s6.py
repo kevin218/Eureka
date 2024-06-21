@@ -47,7 +47,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
     model_y = deepcopy(model_y)
 
     # Trim repeated wavelengths for multwhite fits
-    if len(set(wavelength)) == 1: 
+    if len(set(wavelength)) == 1:
         wavelength = wavelength[0]
         wavelength_error = wavelength_error[0]
 
@@ -93,7 +93,7 @@ def plot_spectrum(meta, model_x=None, model_y=None,
             expFactor = 1
 
         if planet_R0 is None:
-            H_0 = np.mean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
+            H_0 = np.nanmean(spectrum/y_scalar)**(1/expFactor)/scaleHeight
         else:
             H_0 = planet_R0/scaleHeight
 
