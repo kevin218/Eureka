@@ -69,10 +69,6 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
                   'mathtext.it': 'serif:italic',
                   'mathtext.rm': 'serif', 'mathtext.sf': 'serif',
                   'mathtext.bf': 'serif:bold'}
-        if layout == 'constrained':
-            params['figure.constrained_layout.use'] = True
-        elif layout == 'tight':
-            params['figure.autolayout'] = True
         rcParams.update(params)
     elif style == 'default':
         # Use default matplotlib settings
@@ -86,6 +82,11 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
     # TeX fonts may not work on all machines
     if usetex is not None:
         rcParams.update({'text.usetex': usetex})
+
+    if layout == 'constrained':
+        rcParams.update({'figure.constrained_layout.use': True})
+    elif layout == 'tight':
+        rcParams.update({'figure.autolayout': True})
 
     if backend is not None:
         matplotlib.use(backend)
