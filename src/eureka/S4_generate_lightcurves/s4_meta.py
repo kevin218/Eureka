@@ -66,12 +66,16 @@ class S4MetaClass(MetaClass):
             # The user indicated in the ecf that they only want to consider one
             # aperture in which case the code will consider only the one which
             # made s3_meta.
-            if self.photometry:
-                self.spec_hw_range = [self.spec_hw, ]
-                self.bg_hw_range = [self.bg_hw, ]
-            else:
-                self.spec_hw_range = [self.spec_hw, ]
-                self.bg_hw_range = [self.bg_hw, ]
+            self.spec_hw_range = [self.spec_hw, ]
+            self.bg_hw_range = [self.bg_hw, ]
+        else:
+            self.spec_hw_range = getattr(self, 'spec_hw_range', [self.spec_hw,])
+            self.bg_hw_range = getattr(self, 'bg_hw_range', [self.spec_hw,])
+        # Make sure hw_range attributes are lists
+        if not isinstance(self.spec_hw_range, list):
+            self.spec_hw_range = [self.spec_hw_range, ]
+        if not isinstance(self.bg_hw_range, list):
+            self.bg_hw_range = [self.bg_hw_range, ]
 
         # Make sure the inst and filt attributes are at least initialized
         self.inst = getattr(self, 'inst', None)
