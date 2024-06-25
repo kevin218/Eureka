@@ -91,7 +91,7 @@ class S4MetaClass(MetaClass):
         self.wave_min = getattr(self, 'wave_min', None)
         self.wave_max = getattr(self, 'wave_max', None)
         self.wave_hi = getattr(self, 'wave_hi', None)
-        self.wave_low = getattr(self, 'wave_hi', None)
+        self.wave_low = getattr(self, 'wave_low', None)
 
         # Manually mask pixel columns by index number
         self.mask_columns = getattr(self, 'mask_columns', [])
