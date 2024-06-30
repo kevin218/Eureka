@@ -133,7 +133,7 @@ class AstroModel(PyMC3Model):
 
                     for model in self.phasevariation_models:
                         planetFlux *= model.eval(channel=chan, pid=pid,
-                                                    eval=eval, **kwargs)
+                                                 eval=eval, **kwargs)
                 else:
                     # There is no exoplanet emission being treated
                     planetFlux = 0
