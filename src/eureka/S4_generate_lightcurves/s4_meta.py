@@ -69,8 +69,10 @@ class S4MetaClass(MetaClass):
             self.spec_hw_range = [self.spec_hw, ]
             self.bg_hw_range = [self.bg_hw, ]
         else:
-            self.spec_hw_range = getattr(self, 'spec_hw_range', [self.spec_hw,])
-            self.bg_hw_range = getattr(self, 'bg_hw_range', [self.spec_hw,])
+            self.spec_hw_range = getattr(self, 'spec_hw_range',
+                                         [self.spec_hw,])
+            self.bg_hw_range = getattr(self, 'bg_hw_range',
+                                       [self.spec_hw,])
         # Make sure hw_range attributes are lists
         if not isinstance(self.spec_hw_range, list):
             self.spec_hw_range = [self.spec_hw_range, ]
