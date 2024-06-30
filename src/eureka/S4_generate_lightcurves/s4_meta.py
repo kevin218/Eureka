@@ -1,3 +1,4 @@
+import numpy as np
 from glob import glob
 from ..lib.readECF import MetaClass
 
@@ -72,9 +73,9 @@ class S4MetaClass(MetaClass):
             self.spec_hw_range = getattr(self, 'spec_hw_range', [self.spec_hw,])
             self.bg_hw_range = getattr(self, 'bg_hw_range', [self.spec_hw,])
         # Make sure hw_range attributes are lists
-        if not isinstance(self.spec_hw_range, list):
+        if not isinstance(self.spec_hw_range, (list, np.ndarray)):
             self.spec_hw_range = [self.spec_hw_range, ]
-        if not isinstance(self.bg_hw_range, list):
+        if not isinstance(self.bg_hw_range, (list, np.ndarray)):
             self.bg_hw_range = [self.bg_hw_range, ]
 
         # Make sure the inst and filt attributes are at least initialized

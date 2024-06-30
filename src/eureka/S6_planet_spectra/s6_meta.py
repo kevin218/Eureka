@@ -62,6 +62,22 @@ class S6MetaClass(MetaClass):
         # Repeat Stage 6 for each of the aperture sizes run from Stage 3?
         self.allapers = getattr(self, 'allapers', False)
 
+        if not self.allapers:
+            # The user indicated in the ecf that they only want to consider one
+            # aperture in which case the code will consider only the one which
+            # made s5_meta. Alternatively, if S4 or S5 were run without
+            # allapers, S6 will already only consider that one
+            self.spec_hw_range = [self.spec_hw, ]
+            self.bg_hw_range = [self.bg_hw, ]
+        else:
+            self.spec_hw_range = getattr(self, 'spec_hw_range', [self.spec_hw,])
+            self.bg_hw_range = getattr(self, 'bg_hw_range', [self.spec_hw,])
+        # Make sure hw_range attributes are lists
+        if not isinstance(self.spec_hw_range, (list, np.ndarray)):
+            self.spec_hw_range = [self.spec_hw_range, ]
+        if not isinstance(self.bg_hw_range, (list, np.ndarray)):
+            self.bg_hw_range = [self.bg_hw_range, ]
+
         # Which parameters are being plotted? Must be specified in ECF
         self.y_params = getattr(self, 'y_params')
         # The formatted string you want on the y-label
