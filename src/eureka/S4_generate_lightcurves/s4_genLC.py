@@ -104,12 +104,6 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
     meta = S4MetaClass(**me.mergeevents(meta, s3_meta).__dict__)
     meta.set_defaults()
 
-    if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider
-        # one aperture
-        meta.spec_hw_range = [meta.spec_hw, ]
-        meta.bg_hw_range = [meta.bg_hw, ]
-
     # Create directories for Stage 5 outputs
     meta.run_s4 = None
     for spec_hw_val in meta.spec_hw_range:
