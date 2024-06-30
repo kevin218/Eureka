@@ -188,13 +188,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax],
                                           scandir=scandir)
 
-    if not hasattr(meta, 'vmin') or meta.vmin is None:
-        meta.vmin = 0.97
-    if not hasattr(meta, 'vmax') or meta.vmin is None:
-        meta.vmax = 1.03
-    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
-        meta.time_axis = 'y'
-    elif meta.time_axis not in ['y', 'x']:
+    if meta.time_axis not in ['y', 'x']:
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
               " Using 'y' by default.")
         meta.time_axis = 'y'

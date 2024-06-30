@@ -237,7 +237,7 @@ def findevent(meta, stage, allowFail=False):
         # There were no metafiles in the inputdir or its children - raise an
         # error and give a helpful message
         raise AssertionError(f'WARNING: Unable to find an output metadata file'
-                             f' of kind {file_suffix }from Eureka!\'s {stage}'
+                             f' of kind {file_suffix} from Eureka!\'s {stage}'
                              f' in the folder:\n"{meta.inputdir}"')
     elif len(fnames) > 1:
         # get the folder with the latest modified time

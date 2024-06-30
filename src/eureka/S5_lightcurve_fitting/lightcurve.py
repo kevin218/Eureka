@@ -201,8 +201,7 @@ class LightCurve(m.Model):
                                         meta.nints, channel)
 
             # Get binned data and times
-            if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-               meta.nbin_plot > len(time):
+            if not meta.nbin_plot or meta.nbin_plot > len(time):
                 nbin_plot = len(time)
                 binned_time = time
                 binned_flux = flux

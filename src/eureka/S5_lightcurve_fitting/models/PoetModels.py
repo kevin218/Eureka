@@ -78,9 +78,8 @@ class PoetPCModel(Model):
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check if should enforce positivity
-        if not hasattr(self, 'force_positivity'):
-            self.force_positivity = False
+        # Set default to not force positivity
+        self.force_positivity = getattr(self, 'force_positivity', False)
 
     @property
     def time(self):
