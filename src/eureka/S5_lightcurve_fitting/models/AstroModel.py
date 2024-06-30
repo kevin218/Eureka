@@ -338,11 +338,16 @@ class AstroModel(Model):
                 if self.eclipse_model is not None:
                     planetFlux = self.eclipse_model.eval(channel=chan, pid=pid,
                                                          **kwargs)
-                else:
+                elif len(self.phasevariation_models) > 0:
+                    # User is dealing with phase variations of a
+                    # non-eclipsing object
                     planetFlux = np.ma.ones(len(time))
-
-                for model in self.phasevariation_models:
-                    planetFlux *= model.eval(channel=chan, pid=pid, **kwargs)
+                    for model in self.phasevariation_models:
+                        planetFlux *= model.eval(channel=chan, pid=pid,
+                                                 **kwargs)
+                else:
+                    # There is no exoplanet emission being treated
+                    planetFlux = 0
 
                 planetFluxes += planetFlux
 

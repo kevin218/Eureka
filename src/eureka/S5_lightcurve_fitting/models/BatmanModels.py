@@ -118,7 +118,7 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.zeros(len(time))
+            light_curve = np.ma.ones(len(time))
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -296,11 +296,12 @@ class BatmanEclipseModel(Model):
 
                 # Enforce physicality to avoid crashes
                 if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
-                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                        (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                        (-1 <= pl_params.esinw <= 1)):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
-                    continue
+                    break
 
                 # Compute light travel time
                 if self.compute_ltt:
@@ -319,7 +320,7 @@ class BatmanEclipseModel(Model):
                 m_eclipse = self.transit_model(pl_params,
                                                self.adjusted_time,
                                                transittype='secondary')
-                light_curve += m_eclipse.light_curve(pl_params)
+                light_curve += m_eclipse.light_curve(pl_params)-1
 
             lcfinal = np.ma.append(lcfinal, light_curve)
 

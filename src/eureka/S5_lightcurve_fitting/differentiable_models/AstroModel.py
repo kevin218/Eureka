@@ -126,12 +126,17 @@ class AstroModel(PyMC3Model):
             for pid in pid_iter:
                 if self.starry_model is not None:
                     planetFlux = eclipses[pid]
-                else:
+                elif len(self.phasevariation_models) > 0:
+                    # User is dealing with phase variations of a
+                    # non-eclipsing object
                     planetFlux = lib.ones(len(time))
 
-                for model in self.phasevariation_models:
-                    planetFlux *= model.eval(channel=chan, pid=pid,
-                                             eval=eval, **kwargs)
+                    for model in self.phasevariation_models:
+                        planetFlux *= model.eval(channel=chan, pid=pid,
+                                                    eval=eval, **kwargs)
+                else:
+                    # There is no exoplanet emission being treated
+                    planetFlux = 0
 
                 planetFluxes += planetFlux
 
