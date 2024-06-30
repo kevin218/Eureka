@@ -88,13 +88,6 @@ def get_reference_frames(meta, log):
     meta.int_end = 0
     meta.files_per_batch = 1
 
-    # Use the first two files by default
-    if not hasattr(meta, 'iref'):
-        raise AttributeError(
-            'You must set the meta.iref parameter in your ECF for WFC3 '
-            'observations. The recommended setting is [2, 3].'
-        )
-
     # Make sure that the scan directions are in the right order
     if meta.iref[0] % 2 != 0:
         meta.iref = meta.iref[::-1]
@@ -115,7 +108,7 @@ def get_reference_frames(meta, log):
                                        log, name='ERR')
         data['mask'] = util.check_nans(data['v0'], data['mask'],
                                        log, name='V0')
-        if hasattr(meta, 'manmask'):
+        if meta.manmask is not None:
             util.manmask(data, meta, log)
         # Need to add guess after trimming and before cut_aperture
         meta.guess.append(data.guess)
@@ -397,7 +390,7 @@ def read(filename, data, meta, log):
         data.attrs['shdr'] = hdulist[1].header
         meta.nx = data.attrs['shdr']['NAXIS1']
         meta.ny = data.attrs['shdr']['NAXIS2']
-        meta.grism = data.attrs['mhdr']['FILTER']
+        meta.filter = data.attrs['mhdr']['FILTER']
         meta.detector = data.attrs['mhdr']['DETECTOR']
         meta.flatoffset = [[-1*data.attrs['shdr']['LTV2'],
                             -1*data.attrs['shdr']['LTV1']]]
@@ -437,20 +430,16 @@ def read(filename, data, meta, log):
         bjdutc = jd + bjd_corr/86400.
         # FINDME: this was utc_tt, but I believe it should have
         # been utc_tdb instead
-        if not hasattr(meta, 'leapdir') or meta.leapdir is None:
-            meta.leapdir = 'leapdir'
         leapdir_path = os.path.join(meta.hst_cal,
                                     *meta.leapdir.split(os.sep))
-        if leapdir_path[-1] != os.sep:
-            leapdir_path += os.sep
         time = utc_tt.utc_tdb(bjdutc, leapdir_path, log)
         frametime = utc_tt.utc_tdb(frametime+bjd_corr/86400., leapdir_path,
                                    log)
         time_units = 'BJD_TDB'
     else:
         if meta.firstFile:
-            print("WARNING: No Horizons file found. Using JD rather than "
-                  "BJD_TDB.")
+            log.writelog("WARNING: No Horizons file found. Using HJD_UTC "
+                         "rather than BJD_TDB.")
         time = jd
         time_units = 'HJD_UTC'
     data.attrs['frametime'] = frametime
@@ -475,11 +464,11 @@ def read(filename, data, meta, log):
 
     # Calculate trace
     if meta.firstInBatch:
-        log.writelog(f"  Calculating wavelength assuming {meta.grism} "
+        log.writelog(f"\n  Calculating wavelength assuming {meta.filter} "
                      f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
-    wave = hst.calibrateLambda(xrange, centroids[0], meta.grism)/1e4
+    wave = hst.calibrateLambda(xrange, centroids[0], meta.filter)/1e4
     # Assume no skew over the detector
     wave_2d = wave*np.ones((meta.ny, 1))
     wave_units = 'microns'
@@ -718,7 +707,7 @@ def flag_bg(data, meta, log):
                 bgmask1 = data.flux[iscan, :x1]
                 bgdata2 = data.flux[iscan, x2:]
                 bgmask2 = data.flux[iscan, x2:]
-                if hasattr(meta, 'use_estsig') and meta.use_estsig:
+                if meta.use_estsig:
                     bgerr1 = np.median(data.err[iscan, :x1])
                     bgerr2 = np.median(data.err[iscan, x2:])
                     estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
@@ -776,7 +765,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
 
     bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
                                 deg=meta.bg_deg, threshold=meta.p3thresh,
-                                isrotate=2, isplots=isplots)
+                                isrotate=meta.isrotate, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated

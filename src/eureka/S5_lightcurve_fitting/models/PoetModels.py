@@ -2,8 +2,8 @@ import numpy as np
 import batman as bm
 
 from .Model import Model
-from .BatmanModels import BatmanTransitModel, BatmanEclipseModel, \
-    PlanetParams, get_ecl_midpt
+from .AstroModel import PlanetParams, get_ecl_midpt
+from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from ...lib.split_channels import split
 
 
@@ -20,8 +20,9 @@ class PoetTransitModel(BatmanTransitModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model class
+        # Inherit from BatmanTransitModel class
         super().__init__(**kwargs)
+        self.name = 'poet transit'
         # Define transit model to be used
         self.transit_model = TransitModel
 
@@ -39,102 +40,46 @@ class PoetEclipseModel(BatmanEclipseModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model class
+        # Inherit from BatmanEclipseModel class
         super().__init__(**kwargs)
+        self.name = 'poet eclipse'
         # Define transit model to be used
         self.transit_model = TransitModel
 
 
 class PoetPCModel(Model):
     """Phase Curve Model"""
-    def __init__(self, transit_model=None, eclipse_model=None, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the phase curve model
 
         Parameters
         ----------
-        transit_model : eureka.S5_lightcurve_fitting.models.Model; optional
-            The transit model to use for this phase curve model.
-            Defaults to None.
-        eclipse_model : eureka.S5_lightcurve_fitting.models.Model; optional
-            The eclipse model to use for this phase curve model.
-            Defaults to None.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        self.components = []
-        self.transit_model = transit_model
-        self.eclipse_model = eclipse_model
-        if transit_model is not None:
-            self.components.append(self.transit_model)
-        if eclipse_model is not None:
-            self.components.append(self.eclipse_model)
-
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'poet phase curve'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check if should enforce positivity
-        if not hasattr(self, 'force_positivity'):
-            self.force_positivity = False
+        # Set default to not force positivity
+        self.force_positivity = getattr(self, 'force_positivity', False)
 
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time."""
-        time_array = np.ma.masked_array(time_array)
-        self._time = time_array
-        if self.transit_model is not None:
-            self.transit_model.time = time_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.time = time_array
-
-    @property
-    def nints(self):
-        """A getter for the nints."""
-        return self._nints
-
-    @nints.setter
-    def nints(self, nints_array):
-        """A setter for the nints."""
-        self._nints = nints_array
-        if self.transit_model is not None:
-            self.transit_model.nints = nints_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.nints = nints_array
-
-    def update(self, newparams, **kwargs):
-        """Update the model with new parameter values.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        super().update(newparams, **kwargs)
-        if self.transit_model is not None:
-            self.transit_model.update(newparams, **kwargs)
-        if self.eclipse_model is not None:
-            self.eclipse_model.update(newparams, **kwargs)
-
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -149,6 +94,11 @@ class PoetPCModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
@@ -167,13 +117,9 @@ class PoetPCModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.zeros(time.shape)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize planet
                 poet_params = PlanetParams(self, pid, chan)
-
-                poet_params.limb_dark = 'uniform'
-                poet_params.u = []
 
                 if poet_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
@@ -197,25 +143,11 @@ class PoetPCModel(Model):
                 if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ma.ones(time.shape)
+                    phaseVars = 1e8*np.ma.ones(time.shape)
 
-                # Compute eclipse model
-                if self.eclipse_model is None:
-                    eclipse = 1
-                else:
-                    eclipse = self.eclipse_model.eval(channel=chan,
-                                                      pid=pid) - 1
+            lcfinal = np.ma.append(lcfinal, phaseVars)
 
-                light_curve += eclipse*phaseVars
-
-            lcfinal = np.ma.append(lcfinal, light_curve)
-
-        if self.transit_model is None:
-            transit = 1
-        else:
-            transit = self.transit_model.eval(channel=channel)
-
-        return transit + lcfinal
+        return lcfinal
 
 
 class TransitModel():

@@ -5,8 +5,8 @@ from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
 
-class SinusoidPhaseCurveModel(Model):
-    """A sinusoidal phase curve model"""
+class QuasiLambertianPhaseCurve(Model):
+    """Quasi-Lambertian phase curve based on Agol+2007 for airless planets."""
     def __init__(self, **kwargs):
         """Initialize the phase curve model.
 
@@ -19,14 +19,9 @@ class SinusoidPhaseCurveModel(Model):
             paramtitles arguments here.
         """
         # Inherit from Model class
-        super().__init__(**kwargs)
-        self.name = 'sinusoid phase curve'
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
-
-        # Set default to not force positivity
-        self.force_positivity = getattr(self, 'force_positivity', False)
+        super().__init__(**kwargs,
+                         name='quasi-lambertian phase curve',
+                         modeltype='physical')
 
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
@@ -79,8 +74,7 @@ class SinusoidPhaseCurveModel(Model):
                 # Initialize model
                 pl_params = PlanetParams(self, pid, chan)
 
-                if (pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0 and
-                        pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
+                if pl_params.gamma == 0:
                     # Don't waste time running the following code
                     phaseVars = np.ma.ones_like(time)
                     continue
@@ -100,38 +94,8 @@ class SinusoidPhaseCurveModel(Model):
                     anom = true_anomaly(pl_params, time)
                     phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
-                if self.force_positivity:
-                    # Check a finely sampled phase range
-                    phi2 = np.linspace(0, 2*np.pi, 1000)
-
                 # calculate the phase variations
-                if pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0:
-                    # Skip multiplying by a bunch of zeros to speed up fitting
-                    phaseVars = (1 +
-                                 pl_params.AmpCos1*(np.ma.cos(phi)-1) +
-                                 pl_params.AmpSin1*np.ma.sin(phi))
-                    if self.force_positivity:
-                        phaseVars2 = (1 +
-                                      pl_params.AmpCos1*(np.ma.cos(phi2)-1) +
-                                      pl_params.AmpSin1*np.ma.sin(phi2))
-                else:
-                    phaseVars = (1 +
-                                 pl_params.AmpCos1*(np.ma.cos(phi)-1) +
-                                 pl_params.AmpSin1*np.ma.sin(phi) +
-                                 pl_params.AmpCos2*(np.ma.cos(2*phi)-1) +
-                                 pl_params.AmpSin2*np.ma.sin(2*phi))
-                    if self.force_positivity:
-                        phaseVars2 = (1 +
-                                      pl_params.AmpCos1*(np.ma.cos(phi2)-1) +
-                                      pl_params.AmpSin1*np.ma.sin(phi2) +
-                                      pl_params.AmpCos2*(np.ma.cos(2*phi2)-1) +
-                                      pl_params.AmpSin2*np.ma.sin(2*phi2))
-
-                # If requested, force positive phase variations
-                if self.force_positivity and np.ma.any(phaseVars2 <= 0):
-                    # Returning nans or infs breaks the fits, so this was
-                    # the best I could think of
-                    phaseVars = 1e6*np.ma.ones(time.shape)
+                phaseVars = np.abs(np.cos(phi/2))**pl_params.gamma
 
             lcfinal = np.ma.append(lcfinal, phaseVars)
 

@@ -20,8 +20,11 @@ class Model:
             Model object as Logedit objects cannot be pickled
             which is required for multiprocessing.
         """
+        self.default_name = 'New Model'
+
         # Set up default model attributes
-        self.name = kwargs.get('name', 'New Model')
+        self.components = kwargs.get('components', [])
+        self.name = kwargs.get('name', self.default_name)
         self.nchannel = kwargs.get('nchannel', 1)
         self.nchannel_fitted = kwargs.get('nchannel_fitted', 1)
         self.fitted_channels = kwargs.get('fitted_channels', [0, ])
@@ -109,6 +112,10 @@ class Model:
         # Set the array
         self._time = np.ma.masked_array(time_array)
 
+        # Set the array for the components
+        for component in self.components:
+            component.time = time_array
+
     @property
     def parameters(self):
         """A getter for the parameters."""
@@ -130,7 +137,39 @@ class Model:
         # Set the parameters attribute
         self._parameters = params
 
-    def interp(self, new_time, nints, **kwargs):
+        # Set the attribute for the components
+        for component in self.components:
+            component.parameters = params
+
+    @property
+    def freenames(self):
+        """A getter for the freenames."""
+        return self._freenames
+
+    @freenames.setter
+    def freenames(self, freenames):
+        """A setter for the freenames."""
+        # Set the freenames attribute
+        self._freenames = freenames
+
+        # Update the components' freenames
+        for component in self.components:
+            component.freenames = freenames
+
+    @property
+    def nints(self):
+        """A getter for the nints."""
+        return self._nints
+
+    @nints.setter
+    def nints(self, nints_array):
+        """A setter for the nints."""
+        self._nints = nints_array
+        # Update the components' nints
+        for component in self.components:
+            component.nints = nints_array
+
+    def interp(self, new_time, nints, channel=None, **kwargs):
         """Evaluate the model over a different time array.
 
         Parameters
@@ -140,6 +179,8 @@ class Model:
         nints : list
             The number of integrations for each channel, for the new
             time array.
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Additional parameters to pass to self.eval().
         """
@@ -150,7 +191,7 @@ class Model:
         # Evaluate the model on the new time array
         self.time = new_time
         self.nints = nints
-        interp_flux = self.eval(**kwargs)
+        interp_flux = self.eval(channel=channel, **kwargs)
 
         # Reset the old values
         self.time = old_time
@@ -174,7 +215,9 @@ class Model:
             self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
         self._parse_coeffs()
-        return
+
+        for component in self.components:
+            component.update(newparams, **kwargs)
 
     def _parse_coeffs(self):
         """A placeholder function to do any additional processing when
@@ -212,7 +255,7 @@ class Model:
 
         # Plot the model
         label = self.fitter
-        if self.name != 'New Model':
+        if self.name != self.default_name:
             label += ': '+self.name
 
         if not share:
@@ -231,7 +274,7 @@ class Model:
 
         if components and self.components is not None:
             for component in self.components:
-                component.plot(self.time, ax=ax, draw=False,
+                component.plot(components=components, ax=ax, draw=False,
                                color=next(COLORS), zorder=zorder, share=share,
                                chan=chan, **kwargs)
 
@@ -247,22 +290,19 @@ class Model:
 
 class CompositeModel(Model):
     """A class to create composite models."""
-    def __init__(self, models, **kwargs):
+    def __init__(self, components, **kwargs):
         """Initialize the composite model.
 
         Parameters
         ----------
-        models : sequence
-            The list of models.
+        components : sequence
+            The list of model components.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Store the models
-        self.components = models
-
         # Inherit from Model class
-        super().__init__(**kwargs)
+        super().__init__(components=components, **kwargs)
 
         self.GP = False
         for component in self.components:
@@ -284,16 +324,16 @@ class CompositeModel(Model):
         # Set the freenames attribute
         self._freenames = freenames
 
-    def eval(self, incl_GP=False, channel=None, **kwargs):
+    def eval(self, channel=None, incl_GP=False, **kwargs):
         """Evaluate the model components.
 
         Parameters
         ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
         incl_GP : bool; optional
             Whether or not to include the GP's predictions in the
             evaluated model predictions.
-        channel : int; optional
-            If not None, only consider one of the channels. Defaults to None.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -304,6 +344,7 @@ class CompositeModel(Model):
         """
         # Get the time
         if self.time is None:
+            # This also updates all components
             self.time = kwargs.get('time')
 
         if channel is None:
@@ -311,19 +352,19 @@ class CompositeModel(Model):
         else:
             nchan = 1
 
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ma.ones(len(time))
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
         else:
-            flux = np.ma.ones(len(self.time)*nchan)
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        flux = np.ma.ones(flux_length)
 
         # Evaluate flux of each component
         for component in self.components:
-            if component.time is None:
-                component.time = self.time
             if component.modeltype != 'GP':
                 flux *= component.eval(channel=channel, **kwargs)
 
@@ -359,14 +400,16 @@ class CompositeModel(Model):
         else:
             nchan = 1
 
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ma.ones(len(time))
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
         else:
-            flux = np.ma.ones(len(self.time)*nchan)
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        flux = np.ma.ones(flux_length)
 
         # Evaluate flux at each component
         for component in self.components:
@@ -406,14 +449,16 @@ class CompositeModel(Model):
         else:
             nchan = 1
 
-        if self.multwhite:
-            time = self.time
-            if channel is not None:
-                # Split the arrays that have lengths of the original time axis
-                time = split([time, ], self.nints, channel)[0]
-            flux = np.ma.zeros(len(time))
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
         else:
-            flux = np.ma.zeros(len(self.time)*nchan)
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+        flux = np.ma.zeros(flux_length)
 
         # Evaluate flux
         for component in self.components:
@@ -511,24 +556,9 @@ class CompositeModel(Model):
         # Evaluate flux at each component
         for component in self.components:
             if component.modeltype == 'physical':
-                if component.time is None:
-                    component.time = self.time
                 if interp:
-                    flux *= component.interp(new_time, nints_interp, **kwargs)
+                    flux *= component.interp(new_time, nints_interp,
+                                             channel=channel, **kwargs)
                 else:
                     flux *= component.eval(channel=channel, **kwargs)
         return flux, new_time, nints_interp
-
-    def update(self, newparams, **kwargs):
-        """Update parameters in the model components.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        for component in self.components:
-            component.update(newparams, **kwargs)

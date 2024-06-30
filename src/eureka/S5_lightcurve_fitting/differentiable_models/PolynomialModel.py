@@ -10,7 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class PolynomialModel(PyMC3Model):
@@ -25,6 +25,7 @@ class PolynomialModel(PyMC3Model):
         """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
+        self.name = 'polynomial'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -37,19 +38,19 @@ class PolynomialModel(PyMC3Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
+        self._time = np.ma.masked_invalid(time_array)
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time.mean())
-                self.time_local = np.array(self.time_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time.mean()
             else:
-                self.time_local = self.time - self.time.mean()
+                self.time_local = self.time - np.ma.mean(self.time)
 
     def eval(self, eval=True, channel=None, **kwargs):
         """Evaluate the function with the given values.
@@ -79,7 +80,7 @@ class PolynomialModel(PyMC3Model):
         poly_coeffs = np.zeros((nchan, 10)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt
@@ -92,14 +93,11 @@ class PolynomialModel(PyMC3Model):
             else:
                 chan = 0
             for i in range(10):
-                try:
-                    if chan == 0:
-                        poly_coeffs[c][i] = getattr(model, f'c{i}')
-                    else:
-                        poly_coeffs[c][i] = getattr(model,
-                                                    f'c{i}_{chan}')
-                except AttributeError:
-                    pass
+                if chan == 0:
+                    parname = f'c{i}'
+                else:
+                    parname = f'c{i}_ch{chan}'
+                poly_coeffs[c][i] = getattr(model, parname, 0)
 
         poly_flux = lib.zeros(0)
         for c in range(nchan):
