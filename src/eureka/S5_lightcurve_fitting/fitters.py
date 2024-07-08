@@ -1221,9 +1221,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     """
     fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
-    full_keys = np.array(fitted_values.keys())
-    # Remove the " " from the start of the first key
-    full_keys[0] = full_keys[0][1:]
+    full_keys = np.array(fitted_values['Parameter'])
 
     if np.all(full_keys != freenames):
         log.writelog('Old fit does not have the same fitted parameters and '
@@ -1237,7 +1235,14 @@ def load_old_fitparams(meta, log, channel, freenames):
                              ']\nThe new fit included:\n['+','.join(freenames)
                              + ']')
 
-    return np.array(fitted_values)[0]
+    if '50th' in fitted_values.keys():
+        # A sampler was used, so use the (more reliable) median
+        oldfitparam = fitted_values['50th'].to_numpy()
+    else:
+        # An optimizer was used, so only the Mean column will be populated
+        oldfitparam = fitted_values['Mean'].to_numpy()
+
+    return oldfitparam
 
 
 def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):
