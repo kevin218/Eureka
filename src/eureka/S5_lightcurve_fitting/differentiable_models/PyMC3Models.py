@@ -47,6 +47,7 @@ class PyMC3Model(Model):
         # Initialize fit with all parameters (including fixed and independent)
         # which won't get changed throughout the fit
         self.fit = fit_class()
+        self.fit.parameters = self.parameters
         for key in self.parameters.dict.keys():
             setattr(self.fit, key, getattr(self.parameters, key).value)
 
@@ -173,6 +174,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
 
         # Setup PyMC3 model (which will also be stored in components)
         self.model = pm.Model()
+        self.model.parameters = self.parameters
 
         self.GP = False
         for component in self.components:

@@ -32,11 +32,7 @@ class StarryModel(PyMC3Model):
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """
         # Inherit from PyMC3Model class
-        super().__init__(**kwargs)
-        self.name = 'starry'
-
-        # Define model type (physical, systematic, other)
-        self.modeltype = 'physical'
+        super().__init__(name='starry', modeltype='physical', **kwargs)
 
         # Set default to turn light-travel correction on if not specified
         if self.compute_ltt is None:

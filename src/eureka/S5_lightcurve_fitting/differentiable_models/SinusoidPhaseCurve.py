@@ -15,25 +15,19 @@ from ...lib.split_channels import split
 
 
 class SinusoidPhaseCurveModel(PyMC3Model):
-    def __init__(self, starry_model=None, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the model.
 
         Parameters
         ----------
-        starry_model : eureka.S5_lightcurve_fitting.differentiable_models.StarryModel
-            The starry model to combined with this phase curve model.
-            Defaults to None.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
         """  # NOQA: E501
         # Inherit from PyMC3Model class
         super().__init__(**kwargs,
-                         components=[starry_model,],
-                         modeltype='physical')
-
-        # Temporary code to switch between different starry models
-        self.starry_model_name = starry_model.name
+                         modeltype='physical',
+                         name='sinusoid phase curve')
 
     def eval(self, eval=True, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
@@ -126,9 +120,6 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                                  pl_params.AmpCos2*(lib.cos(2*phi)-1) +
                                  pl_params.AmpSin2*lib.sin(2*phi))
 
-            if eval:
-                # Evaluate if needed
-                phaseVars = phaseVars.eval()
             lcfinal = lib.concatenate([lcfinal, phaseVars])
 
         return lcfinal

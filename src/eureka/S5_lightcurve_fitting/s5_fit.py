@@ -709,11 +709,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   num_planets=meta.num_planets)
         modellist.append(t_poet_pc)
     if 'sinusoid_pc' in meta.run_myfuncs and use_starry:
-        model_names = np.array([model.name for model in modellist])
-        # Nest the starry model inside of the phase curve model
-        starry_model = modellist.pop(np.where(model_names == 'starry')[0][0])
-        t_phase = SinusoidModel(starry_model,
-                                parameters=params,
+        t_phase = SinusoidModel(parameters=params,
                                 fmt='r--', log=log, time=time,
                                 time_units=time_units,
                                 freenames=freenames,
