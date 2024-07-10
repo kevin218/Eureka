@@ -1,7 +1,8 @@
 from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
+
+from . import plots_s4
 
 
 def exotic_ld(meta, spec, log, white=False):
@@ -112,46 +113,77 @@ def exotic_ld(meta, spec, log, white=False):
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
 
+    if mode != 'custom':
+        # Figure out if we need to extrapolate the throughput, since the
+        # ExoTiC-LD throughput files don't go close enought to the edges of
+        # some filters
+        throughput_wavelengths, throughput = sld._read_sensitivity_data(mode)
+        throughput_edges = throughput_wavelengths[[0, -1]]
+        if (mode == 'JWST_NIRCam_F444' and
+                wavelength_range[-1][-1] > throughput_edges[1]):
+            # Extrapolate throughput to the red edge of the filter if needed
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the red edge of the filter. "
+                         "Fig4303 shows the extrapolated throughput curve.")
+
+            # The following polynomial was estimated by TJB on July 10, 2024
+            ind_use = throughput_wavelengths > 42000
+            poly = np.polyfit(throughput_wavelengths[ind_use],
+                              throughput[ind_use], deg=7)
+            wav_poly = np.linspace(throughput_wavelengths[-1], 50450, 1000)
+            throughput_poly = np.polyval(poly, wav_poly)
+            # Make sure the throughput is always > 0
+            throughput_poly[throughput_poly < 0] = 0
+            # Append extrapolated throughput and then switch to custom
+            # throughput mode
+            custom_wavelengths = np.append(throughput_wavelengths, wav_poly)
+            custom_throughput = np.append(throughput, throughput_poly)
+            mode = 'custom'
+        elif (mode == 'JWST_NIRSpec_G395H' and
+                wavelength_range[0][0] > throughput_edges[0]):
+            # Extrapolate throughput to the blue edge of the filter if needed
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the blue edge of the filter.")
+
+            # The following polynomial was estimated by TJB on July 10, 2024
+            ind_use = np.logical_or(throughput_wavelengths > 32000,
+                                    throughput_wavelengths < 30000)
+            poly = np.polyfit(throughput_wavelengths[ind_use],
+                              throughput[ind_use], deg=7)
+            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0], 10000)
+            throughput_poly = np.polyval(poly, wav_poly) - 0.015
+            # Make sure the throughput is always > 0
+            throughput_poly[throughput_poly < 0] = 0
+            # Prepend extrapolated throughput and then switch to custom
+            # throughput mode
+            custom_wavelengths = np.append(wav_poly, throughput_wavelengths)
+            custom_throughput = np.append(throughput_poly, throughput)
+            mode = 'custom'
+
+        if mode == 'custom' and meta.isplots_S4 > 3:
+            plots_s4.plot_extrapolated_throughput(meta, throughput_wavelengths,
+                                                  throughput, wav_poly,
+                                                  throughput_poly, mode)
+
     lin_c1 = np.zeros((meta.nspecchan, 1))
     quad = np.zeros((meta.nspecchan, 2))
     nonlin_3 = np.zeros((meta.nspecchan, 3))
     nonlin_4 = np.zeros((meta.nspecchan, 4))
-    extrapNeeded = False
     for i in range(meta.nspecchan):
-        try:
-            # generate limb-darkening coefficients for each bin
-            lin_c1[i] = sld.compute_linear_ld_coeffs(
-                wavelength_range[i], mode, custom_wavelengths,
-                custom_throughput)[0]
-            quad[i] = sld.compute_quadratic_ld_coeffs(
-                wavelength_range[i], mode, custom_wavelengths,
-                custom_throughput)
-            nonlin_3[i] = sld.compute_3_parameter_non_linear_ld_coeffs(
-                wavelength_range[i], mode, custom_wavelengths,
-                custom_throughput)
-            nonlin_4[i] = sld.compute_4_parameter_non_linear_ld_coeffs(
-                wavelength_range[i], mode, custom_wavelengths,
-                custom_throughput)
-        except ValueError:
-            # Log a warning the first time
-            if not extrapNeeded:
-                log.writelog("WARNING: Extrapolating LD model to wavelengths "
-                             "outside the bandpass.")
+        # generate limb-darkening coefficients for each bin
+        lin_c1[i] = sld.compute_linear_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)[0]
+        quad[i] = sld.compute_quadratic_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        nonlin_3[i] = sld.compute_3_parameter_non_linear_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        nonlin_4[i] = sld.compute_4_parameter_non_linear_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
 
-            extrapNeeded = True
-            lin_c1[i] = np.nan
-            quad[i] = np.nan
-            nonlin_3[i] = np.nan
-            nonlin_4[i] = np.nan
-    
-    if extrapNeeded != 0:
-        x = np.copy(meta.wave)
-        for y in [lin_c1, quad, nonlin_3, nonlin_4]:
-            for c in range(y.shape[1]):
-                good = np.isfinite(y[:, c])
-                f = interp1d(x[good], y[good, c], fill_value="extrapolate")
-                y[:, c] = f(x)
-        
     return lin_c1, quad, nonlin_3, nonlin_4
 
 
