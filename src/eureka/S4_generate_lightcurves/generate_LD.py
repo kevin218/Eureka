@@ -160,7 +160,7 @@ def exotic_ld(meta, spec, log, white=False):
             custom_throughput = np.append(throughput_poly, throughput)
             mode = 'custom'
 
-        if mode == 'custom' and meta.isplots_S4 > 3:
+        if mode == 'custom' and meta.isplots_S4 >= 3:
             plots_s4.plot_extrapolated_throughput(meta, throughput_wavelengths,
                                                   throughput, wav_poly,
                                                   throughput_poly, mode)
