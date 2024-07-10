@@ -13,7 +13,7 @@ skip_photom             True	# Recommended to skip to get better uncertainties o
 skip_extract_1d         True
 
 # Diagnostics
-hide_plots              False   # If True, plots will automatically be closed rather than popping up
+hide_plots              True    # If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir                  /home/User/Data/JWST-Sim/NIRCam/

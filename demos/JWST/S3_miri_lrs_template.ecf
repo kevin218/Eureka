@@ -45,7 +45,7 @@ nplots          5           # How many of each type of figure do you want to mak
 vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
 vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
 time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
-hide_plots      False       # If True, plots will automatically be closed rather than popping up
+hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
 save_fluxdata   False       # Save the much larger FluxData.h5 outputs which can be useful for debugging or comparisons between different pipelines
 verbose         True        # If True, more details will be printed about steps

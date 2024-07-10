@@ -61,7 +61,7 @@ interp          False   # Should astrophysical model be interpolated (useful for
 # Diagnostics
 isplots_S5      5       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 nbin_plot       None    # The number of bins that should be used for figures 5104 and 5304
-hide_plots      False   # If True, plots will automatically be closed rather than popping up
+hide_plots      True    # If True, plots will automatically be closed rather than popping up
 verbose         True    # If True, more details will be printed about steps
 
 # Project directory

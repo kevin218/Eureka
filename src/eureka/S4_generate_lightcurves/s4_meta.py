@@ -157,7 +157,7 @@ class S4MetaClass(MetaClass):
             print("WARNING: meta.time_axis is not one of ['y', 'x']!"
                   " Using 'y' by default.")
             self.time_axis = 'y'
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
         self.verbose = getattr(self, 'verbose', True)
 
         # Project directory

@@ -37,7 +37,7 @@ p3thresh            5
 # Diagnostics
 isplots_S1          1
 nplots              5
-hide_plots          False
+hide_plots          True
 verbose             True
 
 # Project directory

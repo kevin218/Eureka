@@ -85,7 +85,7 @@ class S2MetaClass(MetaClass):
 
         # Diagnostics
         self.testing_S2 = getattr(self, 'testing_S2', False)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
 
         # Project directory
         # Must be provided in the ECF

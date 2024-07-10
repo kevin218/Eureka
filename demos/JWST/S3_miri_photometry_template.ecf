@@ -38,7 +38,7 @@ gauss_frame     15          # (mgmc method param) Half-width away from second ce
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 nplots          5           # How many of each type of figure do you want to make per file?
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
-hide_plots      False       # If True, plots will automatically be closed rather than popping up
+hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
 save_fluxdata   False       # Save the much larger FluxData.h5 outputs which can be useful for debugging or comparisons between different pipelines
 verbose         True        # If True, more details will be printed about steps

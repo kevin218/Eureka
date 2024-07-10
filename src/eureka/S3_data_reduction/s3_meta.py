@@ -107,7 +107,7 @@ class S3MetaClass(MetaClass):
                   " Using 'y' by default.")
             self.time_axis = 'y'
         self.testing_S3 = getattr(self, 'testing_S3', False)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
         self.save_output = getattr(self, 'save_output', True)
         self.save_fluxdata = getattr(self, 'save_fluxdata', False)
         self.verbose = getattr(self, 'verbose', True)

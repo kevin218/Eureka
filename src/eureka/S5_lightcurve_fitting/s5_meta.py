@@ -150,7 +150,7 @@ class S5MetaClass(MetaClass):
         self.nbin_plot = getattr(self, 'nbin_plot', None)
         self.testing_S5 = getattr(self, 'testing_S5', False)
         self.testing_model = getattr(self, 'testing_model', False)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
         self.verbose = getattr(self, 'verbose', True)
 
         # Project directory

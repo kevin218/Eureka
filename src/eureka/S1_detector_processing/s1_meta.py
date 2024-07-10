@@ -179,7 +179,7 @@ class S1MetaClass(MetaClass):
         # Diagnostics
         self.isplots_S1 = getattr(self, 'isplots_S1', 1)
         self.nplots = getattr(self, 'nplots', 5)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
         self.testing_S1 = getattr(self, 'testing_S1', False)
         self.verbose = getattr(self, 'verbose', True)
 
