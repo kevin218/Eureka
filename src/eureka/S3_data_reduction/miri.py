@@ -98,7 +98,7 @@ def read(filename, data, meta, log):
             meta.phot_wave = 18.00
         elif meta.filter == 'F2100W':
             meta.phot_wave = 21.00
-        elif meta.filter in ['F2550W','F2550WR']:
+        elif meta.filter in ['F2550W', 'F2550WR']:
             meta.phot_wave = 25.50
 
         wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
