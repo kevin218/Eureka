@@ -30,15 +30,15 @@ class MetaClass:
         Significantly modified for Eureka
     '''
 
-    def __init__(self, folder=None, file=None, eventlabel=None, stage=None,
-                 **kwargs):
+    def __init__(self, folder='.'+os.sep, file=None, eventlabel=None,
+                 stage=None, **kwargs):
         '''Initialize the MetaClass object.
 
         Parameters
         ----------
         folder : str; optional
-            The folder containing an ECF file to be read in. Defaults to None
-            which resolves to './'.
+            The folder containing an ECF file to be read in. Defaults to
+            '.'+os.sep.
         file : str; optional
             The ECF filename to be read in. Defaults to None which first tries
             to find the filename using eventlabel and stage, and if that fails
@@ -60,7 +60,7 @@ class MetaClass:
         '''
         if folder is None:
             folder = '.'+os.sep
-        
+
         if file is None and eventlabel is not None and stage is not None:
             file = f'S{stage}_{eventlabel}.ecf'
 
@@ -78,7 +78,7 @@ class MetaClass:
             # Store each as an attribute
             for param, value in kwargs.items():
                 setattr(self, param, value)
-        
+
         self.version = version
         self.eventlabel = eventlabel
         self.datetime = time_pkg.strftime('%Y-%m-%d')

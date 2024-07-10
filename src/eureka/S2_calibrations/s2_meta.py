@@ -55,14 +55,6 @@ class S2MetaClass(MetaClass):
         # Data file suffix
         self.suffix = getattr(self, 'suffix', 'rateints')
 
-        # Control subarray cropping
-        self.slit_y_low = getattr(self, 'slit_y_low', None)
-        self.slit_y_high = getattr(self, 'slit_y_high', None)
-        self.tsgrism_extract_height = getattr(self, 'tsgrism_extract_height',
-                                              None)
-        self.waverange_start = getattr(self, 'waverange_start', None)
-        self.waverange_end = getattr(self, 'waverange_end', None)
-
         # Generic pipeline steps that'd usually be run for TSO data
         # Run by default for instruments that call the function, but not all
         # instruments call it so True is a safe default
@@ -134,13 +126,14 @@ class S2MetaClass(MetaClass):
         -----
         History:
 
-        - 2024-03 Taylor J Bell
-            Initial empty version setting defaults for NIRSpec.
+        - 2024-07 Taylor J Bell
+            Initial version setting defaults for NIRSpec.
         '''
         self.slit_y_low = getattr(self, 'slit_y_low', 0)
         self.slit_y_high = getattr(self, 'slit_y_high', 32)
         self.waverange_start = getattr(self, 'waverange_start', 6e-08)
         self.waverange_end = getattr(self, 'waverange_end', 6e-06)
+        self.skip_wavecorr = getattr(self, 'skip_wavecorr', False)
         return
 
     def set_NIRISS_defaults(self):

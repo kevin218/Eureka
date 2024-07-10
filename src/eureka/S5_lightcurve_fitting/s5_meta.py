@@ -73,19 +73,15 @@ class S5MetaClass(MetaClass):
             self.spec_hw_range = [self.spec_hw, ]
             self.bg_hw_range = [self.bg_hw, ]
         else:
-            self.spec_hw_range = getattr(self, 'spec_hw_range', [self.spec_hw,])
-            self.bg_hw_range = getattr(self, 'bg_hw_range', [self.spec_hw,])
+            self.spec_hw_range = getattr(self, 'spec_hw_range',
+                                         [self.spec_hw,])
+            self.bg_hw_range = getattr(self, 'bg_hw_range',
+                                       [self.spec_hw,])
         # Make sure hw_range attributes are lists
         if not isinstance(self.spec_hw_range, (list, np.ndarray)):
             self.spec_hw_range = [self.spec_hw_range, ]
         if not isinstance(self.bg_hw_range, (list, np.ndarray)):
             self.bg_hw_range = [self.bg_hw_range, ]
-
-        # Rescale uncertainties after fit to have reduced chi-squared of unity.
-        # *NOT* recommended, since that rescaling does not inflate
-        # uncertainties in the fitted parameters.
-        # FINDME: we should consider removing support for this feature.
-        self.rescale_err = getattr(self, 'rescale_err', False)
 
         # Manual clipping in time
         self.manual_clip = getattr(self, 'manual_clip', None)
