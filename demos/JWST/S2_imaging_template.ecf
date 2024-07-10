@@ -5,13 +5,10 @@
 suffix              rateints     # Data file suffix
 
 # Note: different instruments and modes will use different steps by default
-skip_bkg_subtract   True    # Not run for TSO observations
 skip_flat_field     False
 skip_photom         True	# Recommended to skip to get better uncertainties out of Stage 3.
-skip_resample       True    # Not run for TSO observations
 
 # Diagnostics
-testing_S2          False
 hide_plots          False   # If True, plots will automatically be closed rather than popping up
 
 # Project directory
