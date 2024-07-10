@@ -298,10 +298,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                 calling_function='emcee_lsq', **kwargs)
 
             freepars = lsq_sol.fit_params
-
-            # SCALE UNCERTAINTIES WITH REDUCED CHI2
-            if meta.rescale_err:
-                lc.unc *= np.sqrt(lsq_sol.chi2red)
         else:
             lsq_sol = None
         pos, nwalkers = initialize_emcee_walkers(meta, log, ndim, lsq_sol,

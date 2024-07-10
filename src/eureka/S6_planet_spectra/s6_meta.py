@@ -70,8 +70,10 @@ class S6MetaClass(MetaClass):
             self.spec_hw_range = [self.spec_hw, ]
             self.bg_hw_range = [self.bg_hw, ]
         else:
-            self.spec_hw_range = getattr(self, 'spec_hw_range', [self.spec_hw,])
-            self.bg_hw_range = getattr(self, 'bg_hw_range', [self.spec_hw,])
+            self.spec_hw_range = getattr(self, 'spec_hw_range',
+                                         [self.spec_hw,])
+            self.bg_hw_range = getattr(self, 'bg_hw_range',
+                                       [self.spec_hw,])
         # Make sure hw_range attributes are lists
         if not isinstance(self.spec_hw_range, (list, np.ndarray)):
             self.spec_hw_range = [self.spec_hw_range, ]
@@ -133,7 +135,7 @@ class S6MetaClass(MetaClass):
 
         # Diagnostics
         self.isplots_S6 = getattr(self, 'isplots_S6', 5)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
 
         # Project directory
         self.topdir = getattr(self, 'topdir')  # Must be provided in the ECF

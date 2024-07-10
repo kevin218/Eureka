@@ -98,7 +98,7 @@ class S3MetaClass(MetaClass):
 
         # Diagnostics
         self.isplots_S3 = getattr(self, 'isplots_S3', 3)
-        self.nplots = getattr(self, 'nplots', None)
+        self.nplots = getattr(self, 'nplots', 5)
         self.vmin = getattr(self, 'vmin', 0.97)
         self.vmax = getattr(self, 'vmax', 1.03)
         self.time_axis = getattr(self, 'time_axis', 'y')
@@ -107,7 +107,7 @@ class S3MetaClass(MetaClass):
                   " Using 'y' by default.")
             self.time_axis = 'y'
         self.testing_S3 = getattr(self, 'testing_S3', False)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
         self.save_output = getattr(self, 'save_output', True)
         self.save_fluxdata = getattr(self, 'save_fluxdata', False)
         self.verbose = getattr(self, 'verbose', True)
@@ -145,7 +145,7 @@ class S3MetaClass(MetaClass):
             self.p5thresh = getattr(self, 'p5thresh')
         else:
             # Set it to None if not relevant
-            self.p5thresh = getattr(self, 'p5thresh', None)
+            self.p5thresh = None
         # Require this parameter to be set
         self.p7thresh = getattr(self, 'p7thresh')
 

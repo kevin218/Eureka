@@ -253,17 +253,8 @@ def profile_meddata(meddata):
 
     Parameters
     ----------
-    data : ndarray
-        Unused. Image data.
-    mask : ndarray
-        Unused. Outlier mask.
     meddata : ndarray
         The median of all data frames.
-    threshold : float; optional
-        Unused. Sigma threshold for outlier rejection while constructing
-        spatial profile. Defaults to 10.
-    isplots : int; optional
-        Unused. The plotting verbosity. Defaults to 0.
 
     Returns
     -------

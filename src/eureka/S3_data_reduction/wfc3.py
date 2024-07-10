@@ -88,8 +88,21 @@ def get_reference_frames(meta, log):
     meta.int_end = 0
     meta.files_per_batch = 1
 
+    # Only have one reference frame for forward-only scans
+    if (len(meta.iref) > 1 and
+            (meta.n_scan0 == 0 or meta.n_scan1 == 0)):
+        meta.iref = [meta.iref[0],]
+
+    # Make sure reference frames exist
+    for i in range(len(meta.iref)):
+        while meta.iref[i] >= len(meta.segment_list):
+            if len(meta.iref) > 1:
+                meta.iref[i] -= 2
+            else:
+                meta.iref[i] -= 1
+
     # Make sure that the scan directions are in the right order
-    if meta.iref[0] % 2 != 0:
+    if len(meta.iref) > 1 and meta.iref[0] % 2 != 0:
         meta.iref = meta.iref[::-1]
 
     # Save the reference frame for each scan direction
@@ -316,26 +329,20 @@ def separate_scan_direction(meta, log):
     log : logedit.Logedit
         The updated log.
     """
-    if meta.num_data_files == 1:
-        # There is only one image
-        meta.scandir = np.zeros(meta.num_data_files, dtype=int)
-        meta.n_scan0 = 1
-        meta.n_scan1 = 0
-    else:
-        # Assign scan direction
-        meta.scandir = np.zeros(meta.num_data_files, dtype=int)
-        meta.n_scan0 = 0
-        meta.n_scan1 = 0
-        scan0 = meta.postarg2[0]
-        scan1 = meta.postarg2[1]
-        for m in range(meta.num_data_files):
-            if meta.postarg2[m] == scan0:
-                meta.n_scan0 += 1
-            elif meta.postarg2[m] == scan1:
-                meta.scandir[m] = 1
-                meta.n_scan1 += 1
-            else:
-                log.writelog(f'WARNING: Unknown scan direction for file {m}.')
+    # Assign scan direction
+    meta.scandir = np.zeros(meta.num_data_files, dtype=int)
+    meta.n_scan0 = 0
+    meta.n_scan1 = 0
+    scan0 = meta.postarg2[0]
+    scan1 = meta.postarg2[1]
+    for m in range(meta.num_data_files):
+        if meta.postarg2[m] == scan0:
+            meta.n_scan0 += 1
+        elif meta.postarg2[m] == scan1:
+            meta.scandir[m] = 1
+            meta.n_scan1 += 1
+        else:
+            log.writelog(f'WARNING: Unknown scan direction for file {m}.')
 
     log.writelog(f"# of files in scan direction 0: {meta.n_scan0}",
                  mute=(not meta.verbose))

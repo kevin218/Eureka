@@ -53,15 +53,21 @@ def exotic_ld(meta, spec, log, white=False):
                          "Converting to Angstroms.")
             custom_wavelengths *= 1e4
     elif meta.inst == 'miri':
-        mode = 'JWST_MIRI_' + meta.inst_filter
+        mode = 'JWST_MIRI_' + meta.filter
     elif meta.inst == 'nircam':
-        mode = 'JWST_NIRCam_' + meta.inst_filter
+        filter = meta.filter
+        if filter.lower() == 'f444w':
+            filter = 'f444'
+        mode = 'JWST_NIRCam_' + meta.filter
     elif meta.inst == 'nirspec':
-        mode = 'JWST_NIRSpec_' + meta.inst_filter
+        filter = meta.filter
+        if filter.lower() == 'prism':
+            filter = 'prism'
+        mode = 'JWST_NIRSpec_' + meta.filter
     elif meta.inst == 'niriss':
-        mode = 'JWST_NIRISS_' + meta.inst_filter
+        mode = 'JWST_NIRISS_' + meta.filter
     elif meta.inst == 'wfc3':
-        mode = 'HST_WFC3_' + meta.inst_filter
+        mode = 'HST_WFC3_' + meta.filter
 
     # Compute wavelength ranges
     if white:

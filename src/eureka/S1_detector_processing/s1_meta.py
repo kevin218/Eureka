@@ -167,8 +167,8 @@ class S1MetaClass(MetaClass):
             # Options: std (Standard Deviation),
             # median (Median Absolute Deviation), or
             # mean (Mean Absolute Deviation)
-            self.bg_method = getattr(self, 'bg_method', 'mean')
-            self.p3thresh = getattr(self, 'p3thresh', 5)
+            self.bg_method = getattr(self, 'bg_method', 'median')
+            self.p3thresh = getattr(self, 'p3thresh', 3)
             # Row-by-row BG subtraction (only useful for NIRCam)
             self.bg_disp = getattr(self, 'bg_disp', False)
             # Left edge of exclusion region for row-by-row BG subtraction
@@ -179,7 +179,7 @@ class S1MetaClass(MetaClass):
         # Diagnostics
         self.isplots_S1 = getattr(self, 'isplots_S1', 1)
         self.nplots = getattr(self, 'nplots', 5)
-        self.hide_plots = getattr(self, 'hide_plots', False)
+        self.hide_plots = getattr(self, 'hide_plots', True)
         self.testing_S1 = getattr(self, 'testing_S1', False)
         self.verbose = getattr(self, 'verbose', True)
 

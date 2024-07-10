@@ -768,10 +768,6 @@ compute_ld
 ''''''''''
 Whether or not to compute limb-darkening coefficients using exotic-ld.
 
-inst_filter
-'''''''''''
-Used by exotic-ld if compute_ld=True. The filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html (leave off the observatory and instrument so that JWST_NIRSpec_Prism becomes just Prism).
-
 metallicity
 '''''''''''
 Used by exotic-ld if compute_ld=True. The metallicity of the star.
@@ -853,10 +849,6 @@ Integer. Sets the number of CPUs to use for multiprocessing Stage 5 fitting.
 allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
-
-rescale_err
-'''''''''''
-Boolean to determine whether the uncertainties will be rescaled to have a reduced chi-squared of 1
 
 fit_par
 '''''''

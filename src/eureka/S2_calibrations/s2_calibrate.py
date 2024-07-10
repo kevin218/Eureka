@@ -137,8 +137,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         # (or someone is putting weird files into Eureka!)
         pipeline = EurekaSpec2Pipeline()
 
-        if (meta.waverange_start is not None or
-                meta.waverange_end is not None):
+        if (meta.inst == 'nirspec' and
+            (meta.waverange_start is not None or
+             meta.waverange_end is not None)):
             # By default pipeline can trim the dispersion axis,
             # override the function that does this with specific
             # wavelength range that you want to trim to.
@@ -220,15 +221,15 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
             analysis.
         '''
 
-        if meta.slit_y_low is not None:
+        if meta.inst == 'nirspec' and meta.slit_y_low is not None:
             #  NIRSpec subarray lower bound in cross-dispersion direction
             self.assign_wcs.slit_y_low = meta.slit_y_low
 
-        if meta.slit_y_high is not None:
+        if meta.inst == 'nirspec' and meta.slit_y_high is not None:
             #  NIRSpec subarray upper bound in cross-dispersion direction
             self.assign_wcs.slit_y_high = meta.slit_y_high
 
-        if meta.tsgrism_extract_height is not None:
+        if meta.inst == 'nircam' and meta.tsgrism_extract_height is not None:
             # NIRCam grism subarray height in cross-dispersion direction
             self.extract_2d.tsgrism_extract_height = \
                 meta.tsgrism_extract_height
