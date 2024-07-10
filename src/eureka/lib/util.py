@@ -77,27 +77,33 @@ def readfiles(meta, log):
                      f'ending in {meta.suffix}.fits',
                      mute=mute)
 
-        with fits.open(meta.segment_list[-1]) as hdulist:
-            # Figure out which instrument we are using
-            meta.inst = getattr(meta, 'inst',
-                                hdulist[0].header['INSTRUME'].lower())
-            if meta.inst != 'wfc3':
-                # Also figure out which pipeline we need to use
-                # (spectra or images)
-                exp_type = getattr(meta, 'exp_type',
-                                   hdulist[0].header['EXP_TYPE'])
-                
-                if 'IMAGE' in exp_type:
-                    # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE,
-                    # NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
-                    meta.photometry = getattr(meta, 'photometry', True)
-                else:
-                    # EXP_TYPE doesn't say image, so it should be a spectrum
-                    # (or someone is putting weird files into Eureka!)
-                    meta.photometry = getattr(meta, 'photometry', False)
+        meta = get_inst(meta, meta.segment_list[-1])
+
+    return meta
+
+
+def get_inst(meta, file):
+    with fits.open(file) as hdulist:
+        # Figure out which instrument we are using
+        meta.inst = getattr(meta, 'inst',
+                            hdulist[0].header['INSTRUME'].lower())
+        if meta.inst != 'wfc3':
+            # Also figure out which pipeline we need to use
+            # (spectra or images)
+            exp_type = getattr(meta, 'exp_type',
+                               hdulist[0].header['EXP_TYPE'])
+
+            if 'IMAGE' in exp_type:
+                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE,
+                # NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+                meta.photometry = getattr(meta, 'photometry', True)
             else:
-                # WFC3 photometry isn't supported
+                # EXP_TYPE doesn't say image, so it should be a spectrum
+                # (or someone is putting weird files into Eureka!)
                 meta.photometry = getattr(meta, 'photometry', False)
+        else:
+            # WFC3 photometry isn't supported
+            meta.photometry = getattr(meta, 'photometry', False)
 
     return meta
 
@@ -397,25 +403,7 @@ def find_fits(meta):
         meta.inputdir += os.sep
 
     relevant_fnames = [fname for fname in fnames if folder in fname]
-    with fits.open(relevant_fnames[-1]) as hdulist:
-        # Figure out which instrument we are using
-        meta.inst = getattr(meta, 'inst',
-                            hdulist[0].header['INSTRUME'].lower())
-        if meta.inst != 'wfc3':
-            # Also figure out which pipeline we need to use (spectra or images)
-            exp_type = getattr(meta, 'exp_type', hdulist[0].header['EXP_TYPE'])
-            
-            if 'IMAGE' in exp_type:
-                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,
-                # NIS_IMAGE, or NRS_IMAGING
-                meta.photometry = getattr(meta, 'photometry', True)
-            else:
-                # EXP_TYPE doesn't say image, so it should be a spectrum
-                # (or someone is putting weird files into Eureka!)
-                meta.photometry = getattr(meta, 'photometry', False)
-        else:
-            # WFC3 photometry isn't supported
-            meta.photometry = getattr(meta, 'photometry', False)
+    meta = get_inst(meta, relevant_fnames[-1])
 
     return meta
 
