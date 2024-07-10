@@ -768,10 +768,6 @@ compute_ld
 ''''''''''
 Whether or not to compute limb-darkening coefficients using exotic-ld.
 
-inst_filter
-'''''''''''
-Used by exotic-ld if compute_ld=True. The filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html (leave off the observatory and instrument so that JWST_NIRSpec_Prism becomes just Prism).
-
 metallicity
 '''''''''''
 Used by exotic-ld if compute_ld=True. The metallicity of the star.

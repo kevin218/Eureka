@@ -68,7 +68,7 @@ def read(filename, data, meta, log):
         if not meta.poly_wavelength:
             # Use the FITS data
             wave_2d = hdulist['WAVELENGTH', 1].data
-        elif hdulist[0].header['FILTER'] == 'F322W2':
+        elif meta.filter == 'F322W2':
             # The new way, using the polynomial model Everett Schlawin computed
             X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
             Xprime = (X - 1571)/1000
@@ -79,7 +79,7 @@ def read(filename, data, meta, log):
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
-        elif hdulist[0].header['FILTER'] == 'F444W':
+        elif meta.filter == 'F444W':
             # The new way, using the polynomial model Everett Schlawin computed
             X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
             Xprime = (X - 852.0756)/1000
@@ -108,16 +108,15 @@ def read(filename, data, meta, log):
         data.attrs['shdr']['DISPAXIS'] = 1
 
         # FINDME: make this better for all filters
-        if hdulist[0].header['FILTER'] == 'F210M':
+        if meta.filter == 'F210M':
             # will be deleted at the end of S3
             wave_1d = np.ones_like(sci[0, 0]) * 2.095
             # Is used in S4 for plotting.
             meta.phot_wave = 2.095
-        elif hdulist[0].header['FILTER'] == 'F187N':
+        elif meta.filter == 'F187N':
             wave_1d = np.ones_like(sci[0, 0]) * 1.874
             meta.phot_wave = 1.874
-        elif (hdulist[0].header['FILTER'] == 'WLP4'
-              or hdulist[0].header['FILTER'] == 'F212N'):
+        elif meta.filter in ['WLP4', 'F212N']:
             wave_1d = np.ones_like(sci[0, 0]) * 2.121
             meta.phot_wave = 2.121
 

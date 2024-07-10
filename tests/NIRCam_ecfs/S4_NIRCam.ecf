@@ -29,7 +29,6 @@ fill_value		mask	# Either the string 'mask' to mask the outlier values (recommen
 
 # Limb-darkening parameters needed to compute exotic-ld
 compute_ld      False
-inst_filter     F322W2  # filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html
 metallicity     0.1     # metallicity of the star
 teff            6000    # effective temperature of the star in K
 logg            4.0     # surface gravity in log g
