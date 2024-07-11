@@ -106,6 +106,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
     else:
         meta = S3MetaClass(**me.mergeevents(meta, s2_meta).__dict__)
 
+    # Create list of file segments
+    meta = util.readfiles(meta)
+
     # First apply any instrument-specific defaults
     if meta.photometry:
         if meta.inst == 'miri':
@@ -172,13 +175,13 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
             log.writelog("\nStarting Stage 3 Reduction\n")
             log.writelog(f"Eureka! Version: {meta.version}", mute=True)
             log.writelog(f"Input directory: {meta.inputdir}")
+            log.writelog(f'  Found {meta.num_data_files} data file(s) ending '
+                         f'in {meta.suffix}.fits', mute=(not meta.verbose))
             log.writelog(f"Output directory: {meta.outputdir}")
             log.writelog(f"Using ap={spec_hw_val}, " +
                          f"bg={bg_hw_val}, " +
                          f"expand={meta.expand}")
 
-            # Create list of file segments
-            meta = util.readfiles(meta, log)
             log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
 
             # Load instrument module

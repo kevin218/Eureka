@@ -25,15 +25,13 @@ COMMON_IMPORTS = np.array([
 ], dtype=object)
 
 
-def readfiles(meta, log):
+def readfiles(meta):
     """Read in the files saved in topdir + inputdir and save them to a list.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log : logedit.Logedit
-        The current log.
 
     Returns
     -------
@@ -71,13 +69,8 @@ def readfiles(meta, log):
                              f'You likely need to change the inputdir in '
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
-    else:
-        mute = hasattr(meta, 'verbose') and not meta.verbose
-        log.writelog(f'\nFound {meta.num_data_files} data file(s) '
-                     f'ending in {meta.suffix}.fits',
-                     mute=mute)
 
-        meta = get_inst(meta, meta.segment_list[-1])
+    meta = get_inst(meta, meta.segment_list[-1])
 
     return meta
 
