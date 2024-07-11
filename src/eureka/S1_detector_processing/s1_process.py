@@ -64,20 +64,23 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     if not os.path.exists(meta.outputdir+'figs'):
         os.makedirs(meta.outputdir+'figs')
 
+    # Create list of file segments
+    meta = util.readfiles(meta)
+
     # Output S2 log file
     meta.s1_logname = meta.outputdir + 'S1_' + meta.eventlabel + ".log"
     log = logedit.Logedit(meta.s1_logname)
     log.writelog("\nStarting Stage 1 Processing")
     log.writelog(f"Eureka! Version: {meta.version}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
+    log.writelog(f'  Found {meta.num_data_files} data file(s) ending '
+                         f'in {meta.suffix}.fits', mute=(not meta.verbose))
     log.writelog(f"Output directory: {meta.outputdir}")
 
     # Copy ecf
     log.writelog('Copying S1 control file')
     meta.copy_ecf()
 
-    # Create list of file segments
-    meta = util.readfiles(meta, log)
     log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
 
     # First apply any instrument-specific defaults
