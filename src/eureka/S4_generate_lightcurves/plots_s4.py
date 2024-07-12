@@ -334,7 +334,7 @@ def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
     plt.plot(wav_poly/1e4, 100*throughput_poly, zorder=1,
              label='Extrapolated Throughput')
     plt.xlim(min([throughput_wavelengths[0], wav_poly[0]])/1e4,
-             min([throughput_wavelengths[-1], wav_poly[-1]])/1e4,)
+             max([throughput_wavelengths[-1], wav_poly[-1]])/1e4,)
     plt.ylim(0)
     plt.ylabel('Throughput (%)')
     plt.xlabel('Wavelength ($\\mu$m)')
