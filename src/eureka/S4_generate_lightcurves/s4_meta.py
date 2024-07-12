@@ -131,7 +131,7 @@ class S4MetaClass(MetaClass):
         if self.compute_ld == 'spam':
             # Require the file to be specified if relevant
             self.spam_file = getattr(self, 'spam_file')
-        elif self.compute_ld == 'exotic-ld':
+        elif self.compute_ld in ['exotic-ld', True]:
             self.custom_si_grid = getattr(self, 'custom_si_grid', None)
             if self.custom_si_grid is None:
                 self.exotic_ld_file = getattr(self, 'exotic_ld_file', None)

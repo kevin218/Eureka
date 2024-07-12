@@ -82,6 +82,7 @@ class S2MetaClass(MetaClass):
         self.skip_residual_fringe = getattr(self, 'skip_residual_fringe', True)
         self.skip_pixel_replace = getattr(self, 'skip_pixel_replace', True)
         self.skip_resample = getattr(self, 'skip_resample', True)
+        self.skip_cube_build = getattr(self, 'skip_cube_build', True)
 
         # Diagnostics
         self.testing_S2 = getattr(self, 'testing_S2', False)
@@ -129,11 +130,10 @@ class S2MetaClass(MetaClass):
         - 2024-07 Taylor J Bell
             Initial version setting defaults for NIRSpec.
         '''
-        self.slit_y_low = getattr(self, 'slit_y_low', 0)
-        self.slit_y_high = getattr(self, 'slit_y_high', 32)
+        self.slit_y_low = getattr(self, 'slit_y_low', -1)
+        self.slit_y_high = getattr(self, 'slit_y_high', 50)
         self.waverange_start = getattr(self, 'waverange_start', 6e-08)
         self.waverange_end = getattr(self, 'waverange_end', 6e-06)
-        self.skip_wavecorr = getattr(self, 'skip_wavecorr', False)
         return
 
     def set_NIRISS_defaults(self):
