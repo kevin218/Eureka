@@ -67,6 +67,14 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     # Create list of file segments
     meta = util.readfiles(meta)
 
+    # First apply any instrument-specific defaults
+    if meta.inst == 'miri':
+        meta.set_MIRI_defaults()
+    elif meta.inst in ['nircam', 'nirspec', 'niriss']:
+        meta.set_NIR_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
+
     # Output S2 log file
     meta.s1_logname = meta.outputdir + 'S1_' + meta.eventlabel + ".log"
     log = logedit.Logedit(meta.s1_logname)
@@ -82,14 +90,6 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     meta.copy_ecf()
 
     log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
-
-    # First apply any instrument-specific defaults
-    if meta.inst == 'miri':
-        meta.set_MIRI_defaults()
-    elif meta.inst in ['nircam', 'nirspec', 'niriss']:
-        meta.set_NIR_defaults()
-    # Then apply instrument-agnostic defaults
-    meta.set_defaults()
 
     # If testing, only run the last file
     if meta.testing_S1:

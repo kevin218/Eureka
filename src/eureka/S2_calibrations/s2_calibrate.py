@@ -91,6 +91,18 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     # Create list of file segments
     meta = util.readfiles(meta)
 
+    # First apply any instrument-specific defaults
+    if meta.inst == 'miri':
+        meta.set_MIRI_defaults()
+    elif meta.inst == 'nircam':
+        meta.set_NIRCam_defaults()
+    elif meta.inst == 'nirspec':
+        meta.set_NIRSpec_defaults()
+    elif meta.inst == 'niriss':
+        meta.set_NIRISS_defaults()
+    # Then apply instrument-agnostic defaults
+    meta.set_defaults()
+
     run = util.makedirectory(meta, 'S2')
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
 
@@ -118,18 +130,6 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
         istart = meta.num_data_files - 1
     else:
         istart = 0
-
-    # First apply any instrument-specific defaults
-    if meta.inst == 'miri':
-        meta.set_MIRI_defaults()
-    elif meta.inst == 'nircam':
-        meta.set_NIRCam_defaults()
-    elif meta.inst == 'nirspec':
-        meta.set_NIRSpec_defaults()
-    elif meta.inst == 'niriss':
-        meta.set_NIRISS_defaults()
-    # Then apply instrument-agnostic defaults
-    meta.set_defaults()
 
     if meta.photometry:
         # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE, NRC_TSIMAGE,

@@ -30,10 +30,6 @@ def exotic_ld(meta, spec, log, white=False):
     - July 2022, Eva-Maria Ahrer
         Initial version based on exotic_ld documentation.
     '''
-
-    log.writelog("...using exotic-ld package...",
-                 mute=(not meta.verbose))
-
     # Set the observing mode
     custom_wavelengths = None
     custom_throughput = None
