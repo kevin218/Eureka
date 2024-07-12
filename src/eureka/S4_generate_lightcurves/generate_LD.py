@@ -116,7 +116,7 @@ def exotic_ld(meta, spec, log, white=False):
         throughput_wavelengths, throughput = sld._read_sensitivity_data(mode)
         throughput_edges = throughput_wavelengths[[0, -1]]
         if (mode == 'JWST_NIRCam_F444' and
-                wavelength_range[-1][-1] > throughput_edges[1]):
+                wavelength_range[-1][-1] > throughput_edges[1]/1e4):
             # Extrapolate throughput to the red edge of the filter if needed
             log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
                          "get closer to the red edge of the filter. "
@@ -134,9 +134,10 @@ def exotic_ld(meta, spec, log, white=False):
             # throughput mode
             custom_wavelengths = np.append(throughput_wavelengths, wav_poly)
             custom_throughput = np.append(throughput, throughput_poly)
+            old_mode = mode
             mode = 'custom'
         elif (mode == 'JWST_NIRSpec_G395H' and
-                wavelength_range[0][0] > throughput_edges[0]):
+                wavelength_range[0][0] > throughput_edges[0]/1e4):
             # Extrapolate throughput to the blue edge of the filter if needed
             log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
                          "get closer to the blue edge of the filter.")
@@ -154,23 +155,32 @@ def exotic_ld(meta, spec, log, white=False):
             # throughput mode
             custom_wavelengths = np.append(wav_poly, throughput_wavelengths)
             custom_throughput = np.append(throughput_poly, throughput)
+            old_mode = mode
             mode = 'custom'
 
         if mode == 'custom' and meta.isplots_S4 >= 3:
             plots_s4.plot_extrapolated_throughput(meta, throughput_wavelengths,
                                                   throughput, wav_poly,
-                                                  throughput_poly, mode)
+                                                  throughput_poly, old_mode)
 
-    lin_c1 = np.zeros((meta.nspecchan, 1))
+    lin = np.zeros((meta.nspecchan, 1))
     quad = np.zeros((meta.nspecchan, 2))
+    kipping2013 = np.zeros((meta.nspecchan, 2))
+    sqrt = np.zeros((meta.nspecchan, 2))
     nonlin_3 = np.zeros((meta.nspecchan, 3))
     nonlin_4 = np.zeros((meta.nspecchan, 4))
     for i in range(meta.nspecchan):
         # generate limb-darkening coefficients for each bin
-        lin_c1[i] = sld.compute_linear_ld_coeffs(
+        lin[i] = sld.compute_linear_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
             custom_throughput)[0]
         quad[i] = sld.compute_quadratic_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        kipping2013[i] = sld.compute_kipping_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        sqrt[i] = sld.compute_squareroot_ld_coeffs(
             wavelength_range[i], mode, custom_wavelengths,
             custom_throughput)
         nonlin_3[i] = sld.compute_3_parameter_non_linear_ld_coeffs(
@@ -180,7 +190,7 @@ def exotic_ld(meta, spec, log, white=False):
             wavelength_range[i], mode, custom_wavelengths,
             custom_throughput)
 
-    return lin_c1, quad, nonlin_3, nonlin_4
+    return lin, quad, kipping2013, sqrt, nonlin_3, nonlin_4
 
 
 def spam_ld(meta, white=False):
