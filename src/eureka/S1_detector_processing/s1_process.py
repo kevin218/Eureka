@@ -82,7 +82,7 @@ def rampfitJWST(eventlabel, ecf_path=None, input_meta=None):
     log.writelog(f"Eureka! Version: {meta.version}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
     log.writelog(f'  Found {meta.num_data_files} data file(s) ending '
-                         f'in {meta.suffix}.fits', mute=(not meta.verbose))
+                 f'in {meta.suffix}.fits', mute=(not meta.verbose))
     log.writelog(f"Output directory: {meta.outputdir}")
 
     # Copy ecf
