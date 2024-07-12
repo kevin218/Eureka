@@ -88,6 +88,9 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     else:
         meta = S2MetaClass(**me.mergeevents(meta, s1_meta).__dict__)
 
+    # Create list of file segments
+    meta = util.readfiles(meta)
+
     run = util.makedirectory(meta, 'S2')
     meta.outputdir = util.pathdirectory(meta, 'S2', run)
 
@@ -100,14 +103,14 @@ def calibrateJWST(eventlabel, ecf_path=None, s1_meta=None, input_meta=None):
     log.writelog("\nStarting Stage 2 Reduction")
     log.writelog(f"Eureka! Version: {meta.version}", mute=True)
     log.writelog(f"Input directory: {meta.inputdir}")
+    log.writelog(f'  Found {meta.num_data_files} data file(s) ending '
+                 f'in {meta.suffix}.fits', mute=(not meta.verbose))
     log.writelog(f"Output directory: {meta.outputdir}")
 
     # Copy ecf
     log.writelog('Copying S2 control file')
     meta.copy_ecf()
 
-    # Create list of file segments
-    meta = util.readfiles(meta, log)
     log.writelog(f"CRDS Context pmap: {meta.pmap}", mute=True)
 
     # If testing, only run the last file
@@ -235,11 +238,11 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
                 meta.tsgrism_extract_height
 
         # Skip steps according to input ecf file
-        self.msa_flagging.skip = meta.skip_msa_flagging
+        self.msa_flagging.skip = meta.skip_msaflagopen
         if hasattr(self, 'nsclean'):
             # Allowing backwards compatibility with older jwst versions
             self.nsclean.skip = meta.skip_nsclean
-        self.imprint_subtract.skip = meta.skip_imprint_subtract
+        self.imprint_subtract.skip = meta.skip_imprint
         self.bkg_subtract.skip = meta.skip_bkg_subtract
         self.extract_2d.skip = meta.skip_extract_2d
         self.srctype.skip = meta.skip_srctype
