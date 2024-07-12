@@ -31,15 +31,17 @@ dependencies:
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
-    - scipy[version='>=1.4.0,<1.8.0'] # Lower limit needed for scipy.fft, upper limit needed for theano, starry, and pymc3
+    - scipy[version='>=1.4.0'] # Lower limit needed for scipy.fft, upper limit needed for theano, starry, and pymc3
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm
     - pip:
+        - arviz==0.12.1
         - astraeus@git+https://github.com/kevin218/Astraeus@main
         - celerite2 # Needed for GP
         - crds
         - exoplanet
+        - exoplanet-core
         - exotic-ld==3 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.11.4
