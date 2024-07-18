@@ -27,7 +27,7 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
         Defaults to 'constrained' which is known to make nice plots.
         Can also try 'tight' (which uses the tight layout engine)
         or None, which uses the default layout engine, neither of
-        which are untested and not recommended.
+        which are tested or recommended.
     backend : bool; optional
         The Matplotlib backend you want to use. Defaults to None which
         will use whatever the result of `matplotlib.get_backend()` is.
