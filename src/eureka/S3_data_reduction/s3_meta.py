@@ -275,12 +275,7 @@ class S3MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial empty version setting defaults for WFC3.
         '''
-        if not hasattr(self, 'iref'):
-            # Should we just set iref to [2, 3] by default?
-            raise AttributeError(
-                'You must set the meta.iref parameter in your ECF for WFC3 '
-                'observations. The recommended setting is [2, 3].'
-            )
+        self.iref = getattr(self, 'iref', [2, 3])
         self.horizonsfile = getattr(self, 'horizonsfile', None)
         if self.horizonsfile is not None:
             # Require this parameter to be set if relevant
