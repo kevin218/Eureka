@@ -14,7 +14,7 @@ allapers        False       # Run S4 on all of the apertures considered in S3? O
 
 # Parameters for drift correction of 1D spectra
 recordDrift     False   # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
-correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
+correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended)
 
 # Parameters for sigma clipping
 clip_unbinned   False   # Whether or not sigma clipping should be performed on the unbinned 1D time series
