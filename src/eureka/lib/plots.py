@@ -47,7 +47,8 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
         Ensures that input style is one of: "custom", "eureka",
         "preserve", or "default"
     """
-    if not (isinstance(usetex, (bool,type(None))) and isinstance(from_scratch, bool)):
+    if not (isinstance(usetex, (bool, type(None))) and
+            isinstance(from_scratch, bool)):
         raise ValueError('"usetex" and "from_scratch" arguments must '
                          'be boolean.')
 

@@ -128,7 +128,10 @@ e.g. ``/Users/your_name/crds_cache`` for Mac users or ``/home/your_name/crds_cac
 
 		export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
 
-If these environment variables are not set, Stages 1-3 of the pipeline will fail.
+In order for your changes to apply, you must close your current terminal(s) and open a new terminal; alternatively, you can instead do ``source ~/.bashrc``
+(changing .bashrc to whichever filename your system uses) within your currently open terminal(s).
+
+If these environment variables are not set, then Stages 1-3 of the pipeline will fail with an error message that says something like ``No such file or directory: '/grp/crds/cache/config/jwst/server_config'``
 
 Issues with installing the jwst dependency
 ------------------------------------------
