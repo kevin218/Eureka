@@ -10,8 +10,8 @@
 # ------------------
 # ** Transit/eclipse parameters **
 # ------------------
-rp           0.148          'free'         0.15         0.1          N
-# fp           0.008          'free'         0           0.5          U
+rp           0.148          'free'         0            0.5          U
+# fp           0.008          'free'         0            0.5          U
 
 # ------------------
 # ** Orbital parameters **

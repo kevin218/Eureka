@@ -32,6 +32,7 @@ ncpu                8
 bg_y1               6
 bg_y2               26
 bg_deg              0
+bg_method           median  # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
 p3thresh            5
 
 # Diagnostics
