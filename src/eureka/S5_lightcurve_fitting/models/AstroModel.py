@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 from .Model import Model
-from . import KeplerOrbit
+from .KeplerOrbit import KeplerOrbit
 from ...lib.split_channels import split
 
 

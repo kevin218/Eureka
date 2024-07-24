@@ -119,6 +119,7 @@ class S2MetaClass(MetaClass):
         - 2024-03 Taylor J Bell
             Initial empty version setting defaults for NIRCam.
         '''
+        self.tsgrism_extract_height = getattr(self, 'tsgrism_extract_height', None)
         return
 
     def set_NIRSpec_defaults(self):
