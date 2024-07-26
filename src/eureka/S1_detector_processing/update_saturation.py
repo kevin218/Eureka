@@ -71,7 +71,7 @@ def update_sat(input_model, log, meta):
         for i in range(ngrp-1):
             new_sat_mask[i, :, :] += new_sat_mask[i+1, :, :]
 
-    # If flags in the first group, raise warning that columns will not be used
+    # If flags in first group, raise warning that columns will not be used
     if np.count_nonzero(new_sat_mask[0]) > 0:
         log.writelog('  WARNING:')
         log.writelog('    Saturation found in the first group.')
