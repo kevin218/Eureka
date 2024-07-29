@@ -1,11 +1,12 @@
+import matplotlib
 from matplotlib import rcdefaults, rcParams
 
 # Default figure file type
 figure_filetype = '.png'
 
 
-def set_rc(style='preserve', usetex=False, filetype='.png',
-           from_scratch=False, **kwargs):
+def set_rc(style='preserve', usetex=False, layout='constrained',
+           backend=None, filetype='.png', from_scratch=False, **kwargs):
     """Function to adjust matplotlib rcParams for plotting procedures.
 
     Parameters
@@ -19,7 +20,17 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
         uses 'preserve'.
     usetex : bool; optional
         Do you want to use LaTeX fonts (which requires LaTeX to be
-        installed), by default False
+        installed), by default False. Can also set to None to not change
+        the current matplotlib setting.
+    layout : str; optional
+        Specifies the matplotlib.layout_engine that you want to use.
+        Defaults to 'constrained' which is known to make nice plots.
+        Can also try 'tight' (which uses the tight layout engine)
+        or None, which uses the default layout engine, neither of
+        which are tested or recommended.
+    backend : bool; optional
+        The Matplotlib backend you want to use. Defaults to None which
+        will use whatever the result of `matplotlib.get_backend()` is.
     filetype : str
         The file type that all Eureka figures should be saved as
         (e.g. .png, .pdf).
@@ -36,7 +47,8 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
         Ensures that input style is one of: "custom", "eureka",
         "preserve", or "default"
     """
-    if not (isinstance(usetex, bool) and isinstance(from_scratch, bool)):
+    if not (isinstance(usetex, (bool, type(None))) and
+            isinstance(from_scratch, bool)):
         raise ValueError('"usetex" and "from_scratch" arguments must '
                          'be boolean.')
 
@@ -57,8 +69,7 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
                   'mathtext.fontset': 'dejavuserif',
                   'mathtext.it': 'serif:italic',
                   'mathtext.rm': 'serif', 'mathtext.sf': 'serif',
-                  'mathtext.bf': 'serif:bold',
-                  'figure.constrained_layout.use': True}
+                  'mathtext.bf': 'serif:bold'}
         rcParams.update(params)
     elif style == 'default':
         # Use default matplotlib settings
@@ -70,7 +81,16 @@ def set_rc(style='preserve', usetex=False, filetype='.png',
                          '"preserve", or "default".')
 
     # TeX fonts may not work on all machines
-    rcParams.update({'text.usetex': usetex})
+    if usetex is not None:
+        rcParams.update({'text.usetex': usetex})
+
+    if layout == 'constrained':
+        rcParams.update({'figure.constrained_layout.use': True})
+    elif layout == 'tight':
+        rcParams.update({'figure.autolayout': True})
+
+    if backend is not None:
+        matplotlib.use(backend)
 
     # Update the figure filetype
     global figure_filetype
