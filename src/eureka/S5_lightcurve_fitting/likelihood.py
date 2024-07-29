@@ -5,7 +5,7 @@ from scipy.stats import norm
 from ..lib.split_channels import get_trim
 
 
-def update_uncertainty(theta, nints, unc, freenames):
+def update_uncertainty(theta, nints, unc, freenames, nchannel_fitted):
     """Compute updated uncertainty array when inflating errors during fitting.
 
     Parameters
@@ -18,6 +18,8 @@ def update_uncertainty(theta, nints, unc, freenames):
         The initial guessed uncertainty array.
     freenames : list
         The names of the fitted parameters.
+    nchannel_fitted : int
+        The total number of fitted channels.
 
     Returns
     -------
@@ -27,18 +29,24 @@ def update_uncertainty(theta, nints, unc, freenames):
     # Make a copy so we don't edit in place
     unc_fit = copy.deepcopy(unc)
 
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
+    if "scatter_mult" in freenames:
+        for chan in range(nchannel_fitted):
             trim1, trim2 = get_trim(nints, chan)
-            unc_fit[trim1:trim2] = theta[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in range(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        for chan in range(len(ind)):
+            if chan > 0 and f'scatter_mult_ch{chan}' in freenames:
+                loc = np.where(f'scatter_mult_ch{chan}' == np.array(freenames))
+            else:
+                loc = np.where('scatter_mult' == np.array(freenames))
+            scatter_mult = theta[loc]
+            unc_fit[trim1:trim2] *= scatter_mult
+    elif "scatter_ppm" in freenames:
+        for chan in range(nchannel_fitted):
             trim1, trim2 = get_trim(nints, chan)
-            unc_fit[trim1:trim2] = theta[ind[chan]]*unc[trim1:trim2]
+            if chan > 0 and f'scatter_ppm_ch{chan}' in freenames:
+                loc = np.where(f'scatter_ppm_ch{chan}' == np.array(freenames))
+            else:
+                loc = np.where('scatter_ppm' == np.array(freenames))
+            scatter_ppm = theta[loc]
+            unc_fit[trim1:trim2] = scatter_ppm*1e-6
 
     return unc_fit
 
@@ -75,7 +83,8 @@ def ln_like(theta, lc, model, freenames):
     """
     model.update(theta)
     model_lc = model.eval()
-    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(theta, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     if model.GP:
         ln_like_val = 0
