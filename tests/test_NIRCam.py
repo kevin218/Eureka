@@ -85,7 +85,7 @@ def test_NIRCam(capsys):
     assert os.path.exists(name+os.sep+'figs')
 
     s5_cites = np.union1d(s4_cites, COMMON_IMPORTS[4] +
-                          ["emcee", "dynesty", "batman"])
+                          ["emcee", "dynesty", "batman", "celerite"])
     assert np.array_equal(s5_meta.citations, s5_cites)
 
     # run assertions for S6
