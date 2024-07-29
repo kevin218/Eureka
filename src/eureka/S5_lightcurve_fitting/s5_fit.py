@@ -270,8 +270,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     ld_coeffs = None
 
                 # Make a long list of parameters for each channel
-                longparamlist, paramtitles = make_longparamlist(meta, params,
-                                                                1)
+                longparamlist, paramtitles, freenames = \
+                    make_longparamlist(meta, params, 1)
 
                 log.writelog("\nStarting Fit of White-light Light Curve\n")
 
@@ -289,8 +289,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, 1, ld_coeffs,
-                                           xpos, ypos, xwidth, ywidth, True)
+                                           paramtitles, freenames, 1,
+                                           ld_coeffs, xpos, ypos,
+                                           xwidth, ywidth, True)
 
                 # Save results
                 log.writelog('Saving results', mute=(not meta.verbose))
@@ -344,8 +345,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 ld_coeffs = None
 
             # Make a long list of parameters for each channel
-            longparamlist, paramtitles = make_longparamlist(meta, params,
-                                                            chanrng)
+            longparamlist, paramtitles, freenames = \
+                make_longparamlist(meta, params, chanrng)
 
             # Joint White Light Fits (may have different time axis)
             if meta.multwhite:
@@ -406,8 +407,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng, ld_coeffs,
-                                           xpos, ypos, xwidth, ywidth)
+                                           paramtitles, freenames, chanrng,
+                                           ld_coeffs, xpos, ypos,
+                                           xwidth, ywidth)
 
                 # Save results
                 log.writelog('Saving results')
@@ -440,8 +442,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
-                                           paramtitles, chanrng, ld_coeffs,
-                                           xpos, ypos, xwidth, ywidth)
+                                           paramtitles, freenames, chanrng,
+                                           ld_coeffs, xpos, ypos,
+                                           xwidth, ywidth)
 
                 # Save results
                 log.writelog('Saving results')
@@ -470,8 +473,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                     meta, params = fit_channel(meta, time_temp, flux, channel,
                                                flux_err, eventlabel, params,
                                                log, longparamlist, time_units,
-                                               paramtitles, chanrng, ld_coeffs,
-                                               xpos, ypos, xwidth, ywidth)
+                                               paramtitles, freenames, chanrng,
+                                               ld_coeffs, xpos, ypos,
+                                               xwidth, ywidth)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -488,8 +492,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
 
 def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
-                log, longparamlist, time_units, paramtitles, chanrng, ldcoeffs,
-                xpos, ypos, xwidth, ywidth, white=False):
+                log, longparamlist, time_units, paramtitles, freenames,
+                chanrng, ldcoeffs, xpos, ypos, xwidth, ywidth, white=False):
     """Run a fit for one channel or perform a shared fit.
 
     Parameters
@@ -516,7 +520,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     time_units : str
         The units of the time array.
     paramtitles : list
-        The names of the fitted parameters.
+        The generic names of the fitted parameters.
+    freenames : list
+        The specific names of all fitted parameters (e.g., including _ch#)
     chanrng : int
         The number of fitted channels.
     ldcoeffs : list
@@ -539,7 +545,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
 
     # Load the relevant values into the LightCurve model object
     lc_model = lightcurve.LightCurve(time, flux, chan, chanrng, log,
-                                     longparamlist, params,
+                                     longparamlist, params, freenames,
                                      unc=flux_err, time_units=time_units,
                                      name=eventlabel, share=meta.sharedp,
                                      white=white, multwhite=meta.multwhite,
@@ -943,6 +949,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nints=lc_model.nints)
     else:
         model = m.CompositeModel(modellist, parameters=params, time=time,
+                                 freenames=freenames,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
@@ -1056,36 +1063,44 @@ def make_longparamlist(meta, params, chanrng):
     """
     if meta.multwhite:
         nspecchan = int(len(meta.inputdirlist)+1)
-    elif meta.sharedp and not meta.multwhite:
+    elif meta.sharedp:
         nspecchan = chanrng
     else:
         nspecchan = 1
 
     longparamlist = [[] for i in range(nspecchan)]
-    tlist = list(params.dict.keys())
-    for param in tlist:
-        if 'free' in params.dict[param]:
-            longparamlist[0].append(param)
-            for c in np.arange(nspecchan-1):
-                title = param+'_'+str(c+1)
-                if title in tlist:
-                    # The user specifically set this channel's parameter
-                    longparamlist[c+1].append(title)
-                    # Remove this parameter from tlist so we don't set it twice
-                    tlist.remove(title)
-                else:
-                    # Set this parameter based on channel 0's parameter
-                    params.__setattr__(title, params.dict[param])
-                    longparamlist[c+1].append(title)
-        elif 'shared' in params.dict[param]:
-            for c in np.arange(nspecchan):
-                longparamlist[c].append(param)
-        else:
-            for c in np.arange(nspecchan):
-                longparamlist[c].append(param)
-    paramtitles = longparamlist[0]
 
-    return longparamlist, paramtitles
+    order = dict([[par, i] for i, par in enumerate(params.dict.keys())])
+    paramtitles = sorted(np.unique([key.split('_ch')[0]
+                                    for key in params.dict.keys()]),
+                         key=order.get)
+
+    for param in paramtitles:
+        for c in range(nspecchan):
+            name = param
+            if c > 0:
+                name += f'_ch{c}'
+            longparamlist[c].append(name)
+            if (name not in params.dict.keys() and
+                    getattr(params, param).ptype not in ['shared',
+                                                         'independent']):
+                # Set this parameter based on channel 0
+                params.__setattr__(name, params.dict[param])
+
+    freenames = [key for key in params.dict.keys()
+                 if getattr(params, key).ptype in
+                 ['free', 'shared', 'white_fixed', 'white_free']]
+    # Sort the list based on the order input by the user
+    freenames_sorted = []
+    for name in paramtitles:
+        for c in range(nspecchan):
+            key = ''
+            if c > 0:
+                key += f'_ch{c}'
+            if name+key in freenames:
+                freenames_sorted.append(name+key)
+
+    return longparamlist, paramtitles, freenames_sorted
 
 
 def load_specific_s4_meta_info(meta):

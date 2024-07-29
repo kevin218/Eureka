@@ -1,5 +1,4 @@
 import numpy as np
-import copy
 try:
     import pymc3 as pm
     import pymc3_ext as pmx
@@ -8,7 +7,7 @@ except:
     pass
 from astropy import table
 
-from .likelihood import computeRedChiSq
+from .likelihood import computeRedChiSq, update_uncertainty
 from . import plots_s5 as plots
 from .fitters import group_variables, load_old_fitparams, save_fit
 from ..lib.split_channels import get_trim
@@ -47,8 +46,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         Initial version.
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
-        group_variables(model)
+    freenames = lc.freenames
+    freepars = group_variables(model)[0]
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
@@ -75,23 +74,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     # Get the best fit params
     fit_params = np.array([map_soln[name] for name in freenames])
     model.update(fit_params)
-
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     t_results = table.Table([freenames, fit_params],
                             names=("Parameter", "Mean"))
@@ -105,7 +89,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     log.writelog('\nEXOPLANET RESULTS:')
     for i in range(len(freenames)):
         if 'scatter_mult' in freenames[i]:
-            chan = freenames[i].split('_')[-1]
+            chan = freenames[i].split('_ch')[-1].split('_')[0]
             if chan.isnumeric():
                 chan = int(chan)
             else:
@@ -127,7 +111,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or
+                                  'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
@@ -177,8 +162,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         Initial version.
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
-        group_variables(model)
+    freenames = lc.freenames
+    freepars = group_variables(model)[0]
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
@@ -231,22 +216,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    if "scatter_ppm" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:11] == "scatter_ppm"]
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*1e-6
-    elif "scatter_mult" in freenames:
-        ind = [i for i in np.arange(len(freenames))
-               if freenames[i][0:12] == "scatter_mult"]
-        if not hasattr(lc, 'unc_fit'):
-            lc.unc_fit = copy.deepcopy(lc.unc)
-        for chan in range(len(ind)):
-            trim1, trim2 = get_trim(meta.nints, chan)
-            lc.unc_fit[trim1:trim2] = fit_params[ind[chan]]*lc.unc[trim1:trim2]
-    else:
-        lc.unc_fit = lc.unc
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'nuts', t_results, freenames, samples)
@@ -257,7 +228,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     log.writelog('\nPYMC3 NUTS RESULTS:')
     for i in range(ndim):
         if 'scatter_mult' in freenames[i]:
-            chan = freenames[i].split('_')[-1]
+            chan = freenames[i].split('_ch')[-1].split('_')[0]
             if chan.isnumeric():
                 chan = int(chan)
             else:
@@ -284,7 +255,8 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
-    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or
+                                  'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 

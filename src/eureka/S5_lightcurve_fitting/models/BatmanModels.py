@@ -36,13 +36,13 @@ class PlanetParams():
         if pid == 0:
             self.pid_id = ''
         else:
-            self.pid_id = str(self.pid)
+            self.pid_id = f'_pl{self.pid}'
         # Channel ID
         self.channel = channel
         if channel == 0:
             self.channel_id = ''
         else:
-            self.channel_id = f'_{self.channel}'
+            self.channel_id = f'_ch{self.channel}'
         # Set transit/eclipse parameters
         self.t0 = None
         self.rprs = None
@@ -51,8 +51,10 @@ class PlanetParams():
         self.ars = None
         self.a = None
         self.per = None
-        self.ecc = 0.
+        self.ecc = None
         self.w = None
+        self.ecosw = None
+        self.esinw = None
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
@@ -64,6 +66,10 @@ class PlanetParams():
         self.AmpSin1 = 0.
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
+        self.u1 = 0
+        self.u2 = 0
+        self.u3 = 0
+        self.u4 = 0
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
             try:
@@ -71,7 +77,17 @@ class PlanetParams():
                     item0 += self.channel_id
                 setattr(self, item, model.parameters.dict[item0][0])
             except KeyError:
-                pass
+                if item in [f'u{i}' for i in range(1, 5)]:
+                    # Limb darkening probably doesn't vary with planet
+                    try:
+                        item0 = item
+                        if model.parameters.dict[item0][1] == 'free':
+                            item0 += self.channel_id
+                        setattr(self, item, model.parameters.dict[item0][0])
+                    except KeyError:
+                        pass
+                else:
+                    pass
         # Allow for rp or rprs
         if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
             item0 = 'rp' + self.pid_id
@@ -94,6 +110,33 @@ class PlanetParams():
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
             setattr(self, 'a', model.parameters.dict[item0][0])
+        # Allow for (ecc, w) or (ecosw, esinw)
+        if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
+            item0 = 'ecc' + self.pid_id
+            item1 = 'w' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            if model.parameters.dict[item1][1] == 'free':
+                item1 += self.channel_id
+            ecc = model.parameters.dict[item0][0]
+            w = model.parameters.dict[item1][0]
+            ecosw = ecc*np.cos(w*np.pi/180)
+            esinw = ecc*np.sin(w*np.pi/180)
+            setattr(self, 'ecosw', ecosw)
+            setattr(self, 'esinw', esinw)
+        if (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
+            item0 = 'ecosw' + self.pid_id
+            item1 = 'esinw' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            if model.parameters.dict[item1][1] == 'free':
+                item1 += self.channel_id
+            ecosw = model.parameters.dict[item0][0]
+            esinw = model.parameters.dict[item1][0]
+            ecc = np.sqrt(ecosw**2+esinw**2)
+            w = np.arctan2(esinw, ecosw)*180/np.pi
+            setattr(self, 'ecc', ecc)
+            setattr(self, 'w', w)
         # Allow for fp or fpfs
         if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
             item0 = 'fp' + self.pid_id
@@ -115,6 +158,13 @@ class PlanetParams():
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
             setattr(self, 'Rs', model.parameters.dict[item0][0])
+
+        # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
+        if self.ecc is None:
+            self.ecc = 0
+            self.w = None
+            self.ecosw = 0
+            self.esinw = 0
 
 
 class BatmanTransitModel(Model):
@@ -145,7 +195,7 @@ class BatmanTransitModel(Model):
         ld_func = ld_profile(self.parameters.limb_dark.value,
                              use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
-        self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
+        self.coeffs = ['u{}'.format(n) for n in range(1, len_params)]
 
         self.ld_from_file = kwargs.get('ld_from_file')
 
@@ -230,21 +280,19 @@ class BatmanTransitModel(Model):
 
                 # Set limb darkening parameters
                 uarray = []
-                for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[chan][index[0]]
-                        uarray.append(self.parameters.dict[item][0])
+                for uind in range(1, len(self.coeffs)+1):
+                    uarray.append(getattr(pl_params, f'u{uind}'))
                 pl_params.u = uarray
                 pl_params.limb_dark = self.parameters.dict['limb_dark'][0]
 
                 # Enforce physicality to avoid crashes from batman by returning
                 # something that should be a horrible fit
-                if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
-                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                if not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
+                        (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                        (-1 <= pl_params.esinw <= 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
-                    light_curve = 1e12*np.ma.ones(time.shape)
+                    light_curve = 1e6*np.ma.ones(time.shape)
                     continue
 
                 # Use batman ld_profile name
@@ -256,7 +304,7 @@ class BatmanTransitModel(Model):
                     if pl_params.u[0] <= 0:
                         # Returning nans or infs breaks the fits, so this was
                         # the best I could think of
-                        light_curve = 1e12*np.ma.ones(time.shape)
+                        light_curve = 1e6*np.ma.ones(time.shape)
                         continue
                     pl_params.limb_dark = 'quadratic'
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
@@ -298,12 +346,18 @@ class BatmanEclipseModel(Model):
         self.compute_ltt = getattr(self, 'compute_ltt', True)
 
         # Get the parameters relevant to light travel time correction
-        ltt_params = np.array(['per', 'inc', 't0', 'ecc', 'w'])
+        ltt_params = np.array(['per', 'inc', 't0'])
         ltt_par2 = np.array(['a', 'ars'])
+        ltt_par3 = np.array(['ecc', 'w'])
+        ltt_par4 = np.array(['ecosw', 'esinw'])
         # Check if able to do ltt correction
         ltt_params_present = (np.all(np.in1d(ltt_params, self.paramtitles))
                               and 'Rs' in self.parameters.dict.keys()
-                              and np.any(np.in1d(ltt_par2, self.paramtitles)))
+                              and np.any(np.in1d(ltt_par2, self.paramtitles))
+                              and np.any([np.all(np.in1d(ltt_par3,
+                                                         self.paramtitles)),
+                                          np.all(np.in1d(ltt_par4,
+                                                         self.paramtitles))]))
         if self.compute_ltt and not ltt_params_present:
             missing_params = ltt_params[~np.any(ltt_params.reshape(-1, 1) ==
                                                 np.array(self.paramtitles),
@@ -397,7 +451,7 @@ class BatmanEclipseModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    light_curve = 1e12*np.ma.ones(time.shape)
+                    light_curve = 1e6*np.ma.ones(time.shape)
                     continue
 
                 # Compute light travel time

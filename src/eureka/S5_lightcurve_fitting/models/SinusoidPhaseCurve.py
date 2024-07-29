@@ -169,22 +169,37 @@ class SinusoidPhaseCurveModel(Model):
                     w = bm_params.w
                     phi = anom + w*np.pi/180. + np.pi/2.
 
+                if self.force_positivity:
+                    # Check a finely sampled phase range
+                    phi2 = np.linspace(0, 2*np.pi, 1000)
+
                 # calculate the phase variations
                 if bm_params.AmpCos2 == 0. and bm_params.AmpSin2 == 0.:
                     # Skip multiplying by a bunch of zeros to speed up fitting
                     phaseVars = (1. + bm_params.AmpCos1*(np.ma.cos(phi)-1.) +
                                  bm_params.AmpSin1*np.ma.sin(phi))
+                    if self.force_positivity:
+                        phaseVars2 = (1
+                                      + bm_params.AmpCos1*(np.ma.cos(phi2)-1.)
+                                      + bm_params.AmpSin1*np.ma.sin(phi2))
                 else:
                     phaseVars = (1. + bm_params.AmpCos1*(np.ma.cos(phi)-1.) +
                                  bm_params.AmpSin1*np.ma.sin(phi) +
                                  bm_params.AmpCos2*(np.ma.cos(2.*phi)-1.) +
                                  bm_params.AmpSin2*np.ma.sin(2.*phi))
+                    if self.force_positivity:
+                        phaseVars2 = (1
+                                      + bm_params.AmpCos1*(np.ma.cos(phi2)-1)
+                                      + bm_params.AmpSin1*np.ma.sin(phi2)
+                                      + bm_params.AmpCos2*(np.ma.cos(2*phi2)-1)
+                                      + bm_params.AmpSin2*np.ma.sin(2*phi2))
 
                 # If requested, force positive phase variations
-                if self.force_positivity and np.ma.any(phaseVars < 0):
+                if self.force_positivity and np.ma.any(phaseVars2 <= 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ma.ones(time.shape)
+                    light_curve = 1e6*np.ma.ones(time.shape)
+                    continue
 
                 if self.eclipse_model is None:
                     eclipse = 1
