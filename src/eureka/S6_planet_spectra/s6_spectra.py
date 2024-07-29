@@ -267,7 +267,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     elif meta.y_param_basic == 'fn':
                         # Nightside emission
                         suffix = planetSuffix+channelSuffix
-                        meta.y_label = ('$F_{\\rm p'+suffix +',night'
+                        meta.y_label = ('$F_{\\rm p'+suffix + ',night'
                                         '}/F_{\\rm *}$')
                     elif meta.y_param_basic == 't0':
                         # Time of transit
