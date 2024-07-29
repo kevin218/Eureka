@@ -60,7 +60,7 @@ class S2MetaClass(MetaClass):
         # instruments call it so True is a safe default
         self.skip_extract_2d = getattr(self, 'skip_extract_2d', False)
         self.skip_srctype = getattr(self, 'skip_srctype', False)
-        self.skip_flat_field = getattr(self, 'skip_flat_field', False)
+        self.skip_flat_field = getattr(self, 'skip_flat_field', True)
         # Recommended to skip to get better uncertainties out of our Stage 3
         self.skip_photom = getattr(self, 'skip_photom', True)
         # No need to run this time consuming step by default
