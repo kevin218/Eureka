@@ -5,7 +5,7 @@
 suffix                  rateints    # Data file suffix
 
 # Note: different instruments and modes will use different steps by default
-skip_flat_field         False
+skip_flat_field         True    # Set this to False if you want to compute calibrated stellar spectra.
 skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3. Set this to False if you want to compute calibrated stellar spectra.
 skip_extract_1d         True
 

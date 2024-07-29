@@ -199,13 +199,15 @@ class S1MetaClass(MetaClass):
         if self.default_ramp_fit_weighting == 'fixed':
             # Force this to be specified if fixed weighting
             self.default_ramp_fit_fixed_exponent = getattr(
-                self, 'default_ramp_fit_fixed_exponent')
+                self, 'default_ramp_fit_fixed_exponent', 10)
         elif self.default_ramp_fit_weighting == 'custom':
             # Force these to be specified if custom weighting
             self.default_ramp_fit_custom_snr_bounds = getattr(
-                self, 'default_ramp_fit_custom_snr_bounds')
+                self, 'default_ramp_fit_custom_snr_bounds',
+                [5, 10, 20, 50, 100])
             self.default_ramp_fit_custom_exponents = getattr(
-                self, 'default_ramp_fit_custom_exponents')
+                self, 'default_ramp_fit_custom_exponents',
+                [0.4, 1, 3, 6, 10])
 
     def set_MIRI_defaults(self):
         '''Set Stage 1 specific defaults for MIRI.
