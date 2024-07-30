@@ -1,0 +1,328 @@
+import numpy as np
+import astropy.units as unit
+import inspect
+
+import fleck
+
+from .Model import Model
+from ..limb_darkening_fit import ld_profile
+from ...lib.split_channels import split
+
+
+class PlanetParams():
+    """
+    Define planet parameters.
+    """
+    def __init__(self, model, pid=0, channel=0):
+        """ 
+        Set attributes to PlanetParams object.
+
+        Parameters
+        ----------
+        model : object
+            The model.eval object that contains a dictionary of parameter names 
+            and their current values.
+        pid : int; optional
+            Planet ID, default is 0.
+        channel : int, optional
+            The channel number for multi-wavelength fits or mutli-white fits.
+            Defaults to 0.
+        """
+        # Planet ID
+        self.pid = pid
+        if pid == 0:
+            self.pid_id = ''
+        else:
+            self.pid_id = str(self.pid)
+        # Channel ID
+        self.channel = channel
+        if channel == 0:
+            self.channel_id = ''
+        else:
+            self.channel_id = f'_{self.channel}'
+        # Set transit/eclipse parameters
+        self.t0 = None
+        self.rprs = None
+        self.rp = None
+        self.inc = None
+        self.ars = None
+        self.a = None
+        self.per = None
+        self.ecc = 0.
+        self.w = None
+        self.fpfs = None
+        self.fp = None
+        self.t_secondary = None
+        self.cos1_amp = 0.
+        self.cos1_off = 0.
+        self.cos2_amp = 0.
+        self.cos2_off = 0.
+        self.AmpCos1 = 0.
+        self.AmpSin1 = 0.
+        self.AmpCos2 = 0.
+        self.AmpSin2 = 0.
+        for item in self.__dict__.keys():
+            item0 = item+self.pid_id
+            try:
+                if model.parameters.dict[item0][1] == 'free':
+                    item0 += self.channel_id
+                setattr(self, item, model.parameters.dict[item0][0])
+            except KeyError:
+                pass
+        # Allow for rp or rprs
+        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
+            item0 = 'rp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'rprs', model.parameters.dict[item0][0])
+        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
+            item0 = 'rprs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'rp', model.parameters.dict[item0][0])
+        # Allow for a or ars
+        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
+            item0 = 'a' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'ars', model.parameters.dict[item0][0])
+        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
+            item0 = 'ars' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'a', model.parameters.dict[item0][0])
+        # Allow for fp or fpfs
+        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
+            item0 = 'fp' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'fpfs', model.parameters.dict[item0][0])
+        elif self.fpfs is None:
+            setattr(self, 'fpfs', 0.)
+        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
+            item0 = 'fpfs' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'fp', model.parameters.dict[item0][0])
+        elif self.fp is None:
+            setattr(self, 'fp', 0.)
+        # Set stellar radius
+        if 'Rs' in model.parameters.dict.keys():
+            item0 = 'Rs'
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            setattr(self, 'Rs', model.parameters.dict[item0][0])
+
+
+class FleckTransitModel(Model):
+    """Transit Model with Star Spots"""
+    def __init__(self, **kwargs):
+        """Initialize the fleck model
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional parameters to pass to
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
+        """
+        # Inherit from Model class
+        super().__init__(**kwargs)
+
+        # Define model type (physical, systematic, other)
+        self.modeltype = 'physical'
+
+        log = kwargs.get('log')
+
+        # Store the ld_profile
+        self.ld_from_S4 = kwargs.get('ld_from_S4')
+        ld_func = ld_profile(self.parameters.limb_dark.value, 
+                             use_gen_ld=self.ld_from_S4)
+        len_params = len(inspect.signature(ld_func).parameters)
+        self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
+
+        self.ld_from_file = kwargs.get('ld_from_file')
+        
+        # Replace u parameters with generated limb-darkening values
+        if self.ld_from_S4 or self.ld_from_file:
+            log.writelog("Using the following limb-darkening values:")
+            self.ld_array = kwargs.get('ld_coeffs')
+            for c in range(self.nchannel_fitted):
+                chan = self.fitted_channels[c]
+                if self.ld_from_S4:
+                    ld_array = self.ld_array[len_params-2]
+                else:
+                    ld_array = self.ld_array
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[c][index[0]]
+                        param = int(item.split('_')[0][-1])
+                        ld_val = ld_array[chan][param-1]
+                        log.writelog(f"{item}, {ld_val}")
+                        # Use the file value as the starting guess
+                        self.parameters.dict[item][0] = ld_val
+                        # In a normal prior, center at the file value
+                        if (self.parameters.dict[item][-1] == 'N' and
+                                self.recenter_ld_prior):
+                            self.parameters.dict[item][-3] = ld_val
+                        # Update the non-dictionary form as well
+                        setattr(self.parameters, item,
+                                self.parameters.dict[item])
+                                
+        # Get relevant spot parameters
+        self.spotrad = np.zeros((self.nchannel_fitted, 10))
+        self.spotlat = np.zeros((self.nchannel_fitted, 10))
+        self.spotlon = np.zeros((self.nchannel_fitted, 10))
+        self.keys = list(self.parameters.dict.keys())
+        self.keys = [key for key in self.keys if key.startswith('spot')]
+
+    def eval(self, channel=None, pid=None, **kwargs):
+        """Evaluate the function with the given values.
+
+        Parameters
+        ----------
+        channel : int; optional
+            If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the eclipse models from
+            all planets.
+        **kwargs : dict
+            Must pass in the time array here if not already set.
+
+        Returns
+        -------
+        lcfinal : ndarray
+            The value of the model at the times self.time.
+        """
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel, ]
+            
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
+
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        # Set all parameters
+        lcfinal = np.array([])
+        for c in range(nchan):
+            if self.nchannel_fitted > 1:
+                chan = channels[c]
+            else:
+                chan = 0
+
+            time = self.time
+            if self.multwhite:
+                # Split the arrays that have lengths of the original time axis
+                time = split([time, ], self.nints, chan)[0]
+                
+            light_curve = np.ma.ones(time.shape)
+            for pid in pid_iter:
+                # Initialize planet
+                pl_params = PlanetParams(self, pid, chan)
+
+                # Set spot/fleck parameters
+                nspots = 0
+                # set a star rotation for the star object
+                # not actually used in fast mode. 
+                # overwritten if user supplies and runs slow mode
+                star_rotation = 100 
+                fleck_fast = True
+                for key in self.keys:
+                    split_key = key.split('_')
+                    if len(split_key) == 1:
+                        chan = 0
+                    else:
+                        chan = int(split_key[1])
+                    if 'rad' in split_key[0]:
+                        # Get the spot number and update self.spotrad
+                        self.spotrad[chan, int(split_key[0][7:])] = \
+                            np.array([self.parameters.dict[key][0]])
+                        nspots += 1
+                    elif 'lat' in split_key[0]:
+                        # Get the spot lat and update self.spotlat
+                        self.spotlat[chan, int(split_key[0][7:])] = \
+                            np.array([self.parameters.dict[key][0]])
+                    elif 'lon' in split_key[0]:
+                        # Get the spot lon and update self.spotlon
+                        self.spotlon[chan, int(split_key[0][7:])] = \
+                            np.array([self.parameters.dict[key][0]])
+                    elif 'con' in split_key[0]:
+                        # Get the spot constrast and assign
+                        spot_contrast = self.parameters.dict[key][0]
+                    elif 'rot' in split_key[0]:
+                        # Get the stellar rotation and assign
+                        star_rotation = self.parameters.dict[key][0]
+                        fleck_fast = False
+                    elif 'stari' in split_key[0]:
+                        # Get the stellar inclination and assign
+                        star_inc = self.parameters.dict[key][0]
+                    elif 'npts' in split_key[0]:
+                        # it's the number of points to evaluate
+                        npoints = self.parameters.dict[key][0]
+            
+                # Set limb darkening parameters
+                uarray = []
+                for u in self.coeffs:
+                    index = np.where(np.array(self.paramtitles) == u)[0]
+                    if len(index) != 0:
+                        item = self.longparamlist[chan][index[0]]
+                        uarray.append(self.parameters.dict[item][0])
+                pl_params.u = uarray
+                pl_params.limb_dark = self.parameters.dict['limb_dark'][0]
+
+                # Enforce physicality to avoid crashes from batman by returning
+                # something that should be a horrible fit
+                if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
+                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                    # Returning nans or infs breaks the fits, so this was the
+                    # best I could think of
+                    light_curve = 1e12*np.ma.ones(time.shape)
+                    continue
+
+                # Use batman ld_profile name
+                if self.parameters.limb_dark.value == '4-parameter':
+                    pl_params.limb_dark = 'nonlinear'
+                elif self.parameters.limb_dark.value == 'kipping2013':
+                    # Enforce physicality to avoid crashes from batman by
+                    # returning something that should be a horrible fit
+                    if pl_params.u[0] <= 0:
+                        # Returning nans or infs breaks the fits, so this was
+                        # the best I could think of
+                        lcfinal = 1e12*np.ma.ones(time.shape)
+                        continue
+                    pl_params.limb_dark = 'quadratic'
+                    u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
+                    u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
+                    pl_params.u = np.array([u1, u2])
+
+                # Make the star object
+                star = fleck.Star(spot_contrast=spot_contrast, 
+                                  u_ld=pl_params.u, 
+                                  rotation_period=star_rotation)
+                # Make the transit model
+                fleck_times = np.linspace(time[0], time[-1], npoints)
+                fleck_transit = star.light_curve(
+                    self.spotlon[chan][:nspots, None]*unit.deg, 
+                    self.spotlat[chan][:nspots, None]*unit.deg, 
+                    self.spotrad[chan][:nspots, None],
+                    star_inc*unit.deg, 
+                    planet=pl_params, times=fleck_times).flatten()
+                m_transit = np.interp(time, fleck_times, fleck_transit)
+                
+                light_curve *= m_transit/m_transit[0]
+
+            lcfinal = np.append(lcfinal, light_curve)
+
+        return lcfinal
+
+

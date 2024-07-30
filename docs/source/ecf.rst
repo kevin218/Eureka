@@ -1117,6 +1117,19 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``osc_t1`` - This offset determined the start phase of the sinusoidal function.
 
          The time-dependent amplitude and period are defined as follows: ``amp = osc_amp * np.exp(-osc_amp_decay * (time - osc_t0))`` and ``per = osc_per * np.exp(-osc_per_decay * (time - osc_t0))``.  The damped oscillator model is then defined as: ``osc = 1 + amp * np.sin(2 * np.pi * (time - osc_t1) / per)``.  Note that ``osc[time < osc_t0] = 1``.
+         
+   - Star Spot Parameters
+      - ``spotstari`` - The stellar inclination in degrees.
+      - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise Eureka! will use fleck's fast mode which assumes the stellar rotation is >> transit time and spots are stationary)
+      - ``spotcon#`` - The spot contrast ratio. For fleck only assign one, for starry assign one per spot
+      - ``spotrad#`` - The spot radius. For fleck it is relative to the star, for starry it is in degrees
+      - ``spotlat#`` - The spot latitude. 
+      - ``spotlon#`` - The spot longitude. 
+      Fleck specific parameters:
+      - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good. 
+      Starry specific parameters:
+      - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
+   
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
 
