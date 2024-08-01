@@ -146,7 +146,7 @@ hide_plots
 ''''''''''
 See Stage 3 inputs
 
-bg_disp
+bg_row_by_row
 '''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
@@ -494,7 +494,7 @@ bg_method
 '''''''''
 Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
-bg_disp
+bg_row_by_row
 '''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
