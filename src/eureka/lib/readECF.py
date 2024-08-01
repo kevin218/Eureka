@@ -1,7 +1,11 @@
 import os
+import time as time_pkg
+import crds
 import shlex
 # Required in case user passes in a numpy object (e.g. np.inf)
 import numpy as np
+
+from ..version import version
 
 
 class MetaClass:
@@ -26,17 +30,23 @@ class MetaClass:
         Significantly modified for Eureka
     '''
 
-    def __init__(self, folder=None, file=None, **kwargs):
+    def __init__(self, folder='.'+os.sep, file=None, eventlabel=None,
+                 stage=None, **kwargs):
         '''Initialize the MetaClass object.
 
         Parameters
         ----------
         folder : str; optional
-            The folder containing an ECF file to be read in. Defaults to None
-            which resolves to './'.
+            The folder containing an ECF file to be read in. Defaults to
+            '.'+os.sep.
         file : str; optional
-            The ECF filename to be read in. Defaults to None which results
-            in an empty MetaClass object.
+            The ECF filename to be read in. Defaults to None which first tries
+            to find the filename using eventlabel and stage, and if that fails
+            results in an empty MetaClass object.
+        eventlabel : str; optional
+            The unique identifier for these data.
+        stage : int; optional
+            The current analysis stage number.
         **kwargs : dict
             Any additional parameters to be loaded into the MetaClass after
             the ECF has been read in
@@ -51,13 +61,15 @@ class MetaClass:
         if folder is None:
             folder = '.'+os.sep
 
+        if file is None and eventlabel is not None and stage is not None:
+            file = f'S{stage}_{eventlabel}.ecf'
+
         self.params = {}
-        if file is not None and folder is not None:
-            if os.path.exists(os.path.join(folder, file)):
-                self.read(folder, file)
-            else:
-                raise ValueError(f"The file {os.path.join(folder,file)} "
-                                 f"does not exist.")
+        if file is not None and os.path.exists(os.path.join(folder, file)):
+            self.read(folder, file)
+        elif file is not None:
+            raise ValueError(f"The file {os.path.join(folder, file)} "
+                             "does not exist.")
 
         if kwargs is not None:
             # Add any kwargs to the parameter dict
@@ -66,6 +78,10 @@ class MetaClass:
             # Store each as an attribute
             for param, value in kwargs.items():
                 setattr(self, param, value)
+
+        self.version = version
+        self.eventlabel = eventlabel
+        self.datetime = time_pkg.strftime('%Y-%m-%d')
 
         # If the data format hasn't been specified, must be eureka output
         self.data_format = getattr(self, 'data_format', 'eureka')
@@ -137,6 +153,39 @@ class MetaClass:
         if item in ['lines', 'params', 'filename', 'folder']:
             self.__dict__[item] = value
             return
+
+        if item == 'inst' and value == 'wfc3':
+            # Fix issues with CRDS server set for JWST
+            if 'jwst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                print('CRDS_SERVER_URL is set for JWST and not HST.'
+                      ' Automatically adjusting it up for HST.')
+                url = 'https://hst-crds.stsci.edu'
+                os.environ['CRDS_SERVER_URL'] = url
+                crds.client.api.set_crds_server(url)
+                crds.client.api.get_server_info.cache.clear()
+
+            # If a specific CRDS context is entered in the ECF, apply it.
+            # Otherwise, log and fix the default CRDS context to make sure
+            # it doesn't change between different segments.
+            self.pmap = getattr(self, 'pmap',
+                                crds.get_context_name('hst')[4:-5])
+            os.environ['CRDS_CONTEXT'] = f'hst_{self.pmap}.pmap'
+        elif item == 'inst' and value is not None:
+            # Fix issues with CRDS server set for HST
+            if 'hst-crds.stsci.edu' in os.environ['CRDS_SERVER_URL']:
+                print('CRDS_SERVER_URL is set for HST and not JWST.'
+                      ' Automatically adjusting it up for JWST.')
+                url = 'https://jwst-crds.stsci.edu'
+                os.environ['CRDS_SERVER_URL'] = url
+                crds.client.api.set_crds_server(url)
+                crds.client.api.get_server_info.cache.clear()
+
+            # If a specific CRDS context is entered in the ECF, apply it.
+            # Otherwise, log and fix the default CRDS context to make sure
+            # it doesn't change between different segments.
+            self.pmap = getattr(self, 'pmap',
+                                crds.get_context_name('jwst')[5:-5])
+            os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value)):

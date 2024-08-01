@@ -5,11 +5,7 @@ from glob import glob
 from copy import deepcopy
 import astraeus.xarrayIO as xrio
 
-from ..lib import manageevent as me
-from ..lib import readECF
-from ..lib import util, logedit
-from ..lib.readEPF import Parameters
-from ..version import version
+from .s5_meta import S5MetaClass
 from . import lightcurve
 from . import models as m
 try:
@@ -17,6 +13,10 @@ try:
 except:
     # PyMC3 hasn't been installed
     dm = None
+from ..lib import manageevent as me
+from ..lib import util, logedit
+from ..lib.readEPF import Parameters
+from ..version import version
 
 
 def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
@@ -64,16 +64,13 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     if input_meta is None:
         # Load Eureka! control file and store values in Event object
         ecffile = 'S5_' + eventlabel + '.ecf'
-        meta = readECF.MetaClass(ecf_path, ecffile)
+        meta = S5MetaClass(ecf_path, ecffile)
     else:
-        meta = input_meta
+        meta = S5MetaClass(**input_meta.__dict__)
 
     meta.version = version
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
-
-    if not hasattr(meta, 'multwhite'):
-        meta.multwhite = False
 
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
@@ -86,7 +83,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
         meta.inputdir = s4_meta.outputdir
         meta.inputdir_raw = meta.inputdir[len(meta.topdir):]
 
-    meta = me.mergeevents(meta, s4_meta)
+    meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
+    meta.set_defaults()
 
     # Check to make sure that dm is accessible if using dm models/fitters
     if (dm is None and ('starry' in meta.fit_method or
@@ -95,14 +93,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                              "could not import starry and/or pymc3 related "
                              "packages. Ensure that you have installed the "
                              "pymc3-related packages when installing Eureka!.")
-
-    if not meta.allapers:
-        # The user indicated in the ecf that they only want to consider one
-        # aperture in which case the code will consider only the one which
-        # made s4_meta. Alternatively, if S4 was run without allapers, S5
-        # will already only consider that one
-        meta.spec_hw_range = [meta.spec_hw, ]
-        meta.bg_hw_range = [meta.bg_hw, ]
 
     if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
@@ -115,8 +105,6 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
     # Create directories for Stage 5 outputs
     meta.run_s5 = None
-    if not hasattr(meta, 'expand'):
-        meta.expand = 1
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -214,7 +202,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             if meta.sharedp and meta.testing_S5:
                 chanrng = min([2, meta.nspecchan])
 
-            if hasattr(meta, 'manual_clip') and meta.manual_clip is not None:
+            if meta.manual_clip is not None:
                 # Remove requested data points
                 if meta.multwhite:
                     for p in range(len(meta.inputdirlist)+1):
@@ -566,7 +554,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
 
-    if hasattr(meta, 'testing_model') and meta.testing_model:
+    if meta.testing_model:
         # FINDME: Use this area to add systematics into the data
         # when testing new systematics models. In this case, I'm
         # introducing an exponential ramp to test m.ExpRampModel().
@@ -583,13 +571,12 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         flux *= fakeramp.eval(time=time)
         lc_model.flux = flux
 
-    if not hasattr(meta, 'recenter_ld_prior'):
-        meta.recenter_ld_prior = True
-    if not hasattr(meta, 'num_planets'):
-        meta.num_planets = 1
-    if not hasattr(meta, 'compute_ltt'):
-        # Let each model have its own default
-        meta.compute_ltt = None
+    freenames = []
+    for key in params.dict:
+        if params.dict[key][1] in ['free', 'shared', 'white_free',
+                                   'white_fixed']:
+            freenames.append(key)
+    freenames = np.array(freenames)
 
     # Make the astrophysical and detector models
     modellist = []
@@ -700,9 +687,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         if 'poet_ecl' in model_names:
             e_model = modellist.pop(np.where(model_names == 'poet_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
-        # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
         t_poet_pc = m.PoetPCModel(parameters=params, name='phasecurve',
                                   fmt='r--', log=log, time=time,
                                   time_units=time_units,
@@ -753,8 +737,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                 np.where(model_names == 'batman_ecl')[0][0])
             model_names = np.array([model.name for model in modellist])
         # Check if should enforce positivity
-        if not hasattr(meta, 'force_positivity'):
-            meta.force_positivity = False
         t_phase = \
             m.SinusoidPhaseCurveModel(parameters=params, name='phasecurve',
                                       fmt='r--', log=log, time=time,
@@ -933,8 +915,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                nints=lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
-        if not hasattr(meta, 'useHODLR'):
-            meta.useHODLR = False
         if 'starry' in meta.run_myfuncs:
             GPModel = dm.GPModel
         else:
@@ -1151,7 +1131,7 @@ def load_specific_s4_meta_info(meta):
         me.findevent(meta, 'S4', allowFail=False)
     filename_S4_LCData = s4_meta.filename_S4_LCData
     # Merge S5 meta into old S4 meta
-    meta = me.mergeevents(meta, s4_meta)
+    meta = S5MetaClass(**me.mergeevents(meta, s4_meta).__dict__)
 
     # Make sure the filename_S4_LCData is kept
     meta.filename_S4_LCData = filename_S4_LCData

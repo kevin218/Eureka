@@ -48,7 +48,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     # Group the different variable types
     freenames = lc.freenames
     freepars = group_variables(model)[0]
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
+    if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     model.setup(lc.time, lc.flux, lc.unc)
@@ -164,7 +164,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     # Group the different variable types
     freenames = lc.freenames
     freepars = group_variables(model)[0]
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
+    if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
 
@@ -183,9 +183,6 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         if model.GP:
             plots.plot_GP_components(lc, model, meta,
                                      fitter='nutsStartingPoint')
-
-    if not hasattr(meta, 'target_accept'):
-        meta.target_accept = 0.85
 
     log.writelog('Running PyMC3 NUTS sampler...')
     with model.model:

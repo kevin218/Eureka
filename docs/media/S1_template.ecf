@@ -6,32 +6,25 @@ suffix              uncal
 
 maximum_cores       'half'  #Options are 'none', quarter', 'half', 'all'
 
-# Control ramp fitting method
-ramp_fit_algorithm  'default'   #Options are 'default', 'mean', or 'differenced'
-
 # Pipeline stages
-skip_group_scale    False
-skip_dq_init        False
 skip_saturation     False
-skip_ipc            True    #Skipped by default for all instruments
 skip_superbias      False
 skip_refpix         False
 skip_linearity      False
-skip_persistence    True    #Skipped by default for Near-IR TSO
 skip_dark_current   False
 skip_jump           False
 skip_ramp_fitting   False
 skip_gain_scale     False
 
 #Pipeline stages parameters
-jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
+jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold. Usually recommend a larger value for TSO data.
 
 # Custom linearity reference file
 custom_linearity    False
 linearity_file      /path/to/custom/linearity/fits/file
 
 # Custom bias when using NIRSpec G395H
-bias_correction     None    # Bias correction options: [mean, group_level, smooth, None]
+bias_correction     None    # Bias correction options: [mean, group_level, smooth, None], requires masktrace=True
 bias_group          1       # Group number options: [1, 2, ..., each]
 bias_smooth_length  201     # Window length when using 'smooth' bias correction
 custom_bias         False
@@ -50,11 +43,11 @@ ncpu                6
 bg_y1               6
 bg_y2               26
 bg_deg              0
+bg_method           median  # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
 p3thresh            5
-verbose             True
-isplots_S1          3
-nplots              5
-hide_plots          True
+bg_row_by_row       False   # Row-by-row BG subtraction (only useful for NIRCam)
+bg_x1               None    # Left edge of exclusion region for row-by-row BG subtraction
+bg_x2               None    # Right edge of exclusion region for row-by-row BG subtraction
 
 # Mask curved traces
 masktrace           True
@@ -68,20 +61,15 @@ refpix_corr         False
 npix_top            8
 npix_bot            8
 
+# Diagnostics
+isplots_S1          1
+nplots              5
+hide_plots          True
+verbose             True
+
 # Project directory
 topdir              /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
 inputdir            Uncalibrated
 outputdir           Stage1
-
-# Diagnostics
-testing_S1          False
-
-#####
-
-# "Default" ramp fitting settings
-default_ramp_fit_weighting          default             #Options are "default", "fixed", "interpolated", "flat", or "custom"
-default_ramp_fit_fixed_exponent     10                  #Only used for "fixed" weighting
-default_ramp_fit_custom_snr_bounds  [5,10,20,50,100]    # Only used for "custom" weighting, array no spaces
-default_ramp_fit_custom_exponents   [0.4,1,3,6,10]      # Only used for "custom" weighting, array no spaces

@@ -86,19 +86,19 @@ def dn2electrons(data, meta, log):
     nx = data.attrs['mhdr']['SUBSIZE1']
     ny = data.attrs['mhdr']['SUBSIZE2']
 
-    if hasattr(meta, 'gain') and meta.gain is not None:
+    if meta.gain is not None:
         # Load gain array or value
         gain = np.array(meta.gain)
     else:
         # Find the required gainfile
-        if hasattr(meta, 'gainfile') and meta.gainfile is not None:
+        if meta.gainfile is not None:
             log.writelog(f'  Using provided gainfile={meta.gainfile} to '
                          'convert units to DN...',
                          mute=(not meta.verbose))
         else:
             # Retrieve the required reference files if not manually specified
-            log.writelog('  Automatically getting reference files to reverse'
-                         ' the PHOTOM step...', mute=(not meta.verbose))
+            log.writelog('  Automatically getting reference files...',
+                         mute=(not meta.verbose))
             if data.attrs['mhdr']['TELESCOP'] != 'JWST':
                 message = ('Error: Currently unable to automatically download '
                            'reference files for non-JWST observations!')
@@ -174,7 +174,7 @@ def bright2dn(data, meta, log, mjy=False):
         Convert to using Xarray Dataset
     """
     # Find the required photfile
-    if hasattr(meta, 'photfile') and meta.photfile is not None:
+    if meta.photfile is not None:
         log.writelog(f'  Using provided photfile={meta.photfile} to '
                      'convert units to DN...',
                      mute=(not meta.verbose))

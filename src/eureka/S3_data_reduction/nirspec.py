@@ -54,7 +54,7 @@ def read(filename, data, meta, log):
         print('  WARNING: Manually setting INTSTART to 1 and INTEND to NINTS')
         data.attrs['intstart'] = 0
         data.attrs['intend'] = data.attrs['mhdr']['NINTS']
-    meta.grating = data.attrs['mhdr']['GRATING']
+    meta.filter = data.attrs['mhdr']['GRATING']
 
     sci = hdulist['SCI', 1].data
     err = hdulist['ERR', 1].data
@@ -66,7 +66,7 @@ def read(filename, data, meta, log):
     meta.photometry = False  # Photometry for NIRSpec not implemented yet.
 
     # Increase pixel resolution along cross-dispersion direction
-    if hasattr(meta, 'expand') and meta.expand > 1:
+    if meta.expand > 1:
         log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
                      f'to {sci.shape[1]*meta.expand} pixels...',
                      mute=(not meta.verbose))
@@ -77,7 +77,7 @@ def read(filename, data, meta, log):
         wave_2d = supersample(wave_2d, meta.expand, 'wave', axis=0)
 
     # Record integration mid-times in BMJD_TDB
-    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+    if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
@@ -139,7 +139,7 @@ def flag_bg(data, meta, log):
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+    if meta.use_estsig:
         # This might not be necessary for real data
         bgerr1 = np.ma.median(np.ma.masked_equal(data.err[:, :meta.bg_y1], 0))
         bgerr2 = np.ma.median(np.ma.masked_equal(data.err[:, meta.bg_y2:], 0))

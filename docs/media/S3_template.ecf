@@ -2,7 +2,7 @@
 
 # Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
 
-ncpu            1           # Number of CPUs
+ncpu            4           # Number of CPUs
 nfiles          1           # The number of data files to analyze simultaneously
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 indep_batches   False       # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
@@ -14,7 +14,7 @@ calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photo
 # Subarray region of interest
 ywindow         [2,28]      # Vertical axis as seen in DS9
 xwindow         [60,410]    # Horizontal axis as seen in DS9
-src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
+src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, hst, or a numeric value)
 record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
 dqmask          True        # Mask pixels with an odd entry in the DQ array
 expand          1           # Super-sampling factor along cross-dispersion direction
@@ -39,8 +39,8 @@ prof_deg        3           # Polynomial degree, when fittype = poly
 p5thresh        10          # X-sigma threshold for outlier rejection while constructing spatial profile
 p7thresh        60          # X-sigma threshold for outlier rejection during optimal spectral extraction
 
-# G395H curvature treatment
-curvature       None        # How to manage the curved trace on the detector (Options: None, correct). Use correct for NIRSpec/G395.
+# Curvature treatment
+curvature       correct     # How to manage the curved trace on the detector (Options: None, correct)
 
 # Diagnostics
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
@@ -49,13 +49,14 @@ vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
 vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
 time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
-hide_plots      False       # If True, plots will automatically be closed rather than popping up
+hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
+save_fluxdata   False       # Save the much larger FluxData.h5 outputs which can be useful for debugging or comparisons between different pipelines
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory
 topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir        Stage2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+inputdir        Stage2      # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
 outputdir       Stage3

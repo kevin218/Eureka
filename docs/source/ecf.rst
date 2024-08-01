@@ -30,9 +30,16 @@ Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. 
 
 
 maximum_cores
-''''''''''''''''''
+'''''''''''''
 Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
+jump_rejection_threshold
+''''''''''''''''''''''''
+A floating-point value that sets the sigma threshold for jump detection. The default is 4.0, but it is often best to increase this number for time-series observations to avoid excessively high false-positives. The optimal value will vary between different datasets and different instruments, but from experience we have found that values around 6.0--8.0 are often reasonable.
+
+minimum_sigclip_groups
+''''''''''''''''''''''
+The minimum number of groups to switch the jump detection to use sigma clipping. The default is 100.
 
 skip_*
 ''''''
@@ -50,13 +57,13 @@ linearity_file
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
 bias_correction
-'''''''''''''''''
+'''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
 
 Note that this routine requires masking the trace; therefore, ``masktrace`` must be set to True.
 
 bias_group
-'''''''''''''''''
+''''''''''
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
 
 bias_smooth_length
@@ -80,7 +87,7 @@ expand_prev_group
 Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
-'''''''''''''''''
+'''''''''''
 Method to use for updating the saturation flags. Options are percentile (a pixel must be saturated in this percent of integrations to be marked as saturated), min, and defined (user can define which columns are saturated in a given group)
 
 dq_sat_percentile
@@ -116,7 +123,7 @@ bg_deg
 See Stage 3 inputs
 
 bg_method
-''''''
+'''''''''
 See Stage 3 inputs
 
 p3thresh
@@ -139,8 +146,8 @@ hide_plots
 ''''''''''
 See Stage 3 inputs
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -160,7 +167,7 @@ window_len
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''''''''
+'''''''''''
 Aperture (in pixels) around the trace to mask
 
 ignore_low
@@ -253,6 +260,9 @@ Modify the existing file to change the dispersion extraction (DO NOT CHANGE).
 skip_*
 ''''''
 If True, skip the named step.
+
+.. note::
+   To produce flux-calibrated stellar spectra, it is recommended to set ``skip_flat_field`` and ``skip_photom`` to ``False``.
 
 .. note::
 	Note that some instruments and observing modes might skip a step either way! See the `calwebb_spec2 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
@@ -481,11 +491,11 @@ Possible values:
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
 bg_method
-''''''
+'''''''''
 Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -761,10 +771,6 @@ compute_ld
 ''''''''''
 Whether or not to compute limb-darkening coefficients using exotic-ld.
 
-inst_filter
-'''''''''''
-Used by exotic-ld if compute_ld=True. The filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html (leave off the observatory and instrument so that JWST_NIRSpec_Prism becomes just Prism).
-
 metallicity
 '''''''''''
 Used by exotic-ld if compute_ld=True. The metallicity of the star.
@@ -846,10 +852,6 @@ Integer. Sets the number of CPUs to use for multiprocessing Stage 5 fitting.
 allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
-
-rescale_err
-'''''''''''
-Boolean to determine whether the uncertainties will be rescaled to have a reduced chi-squared of 1
 
 fit_par
 '''''''
@@ -940,7 +942,7 @@ lsq_tolerance
 Float to determine the tolerance of the scipy.optimize.minimize method.
 
 lsq_maxiter
-^^^^^^^^^^^^^
+^^^^^^^^^^^
 Integer.  Maximum number of iterations to perform.  Set to None to use the default value for the given scipy.optimize.minimize method.
 
 

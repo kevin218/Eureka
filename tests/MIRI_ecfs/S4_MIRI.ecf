@@ -30,7 +30,6 @@ fill_value		mask	# Either the string 'mask' to mask the outlier values (recommen
 
 # Limb-darkening parameters needed to compute exotic-ld
 compute_ld      False
-inst_filter     LRS     # filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html
 metallicity     0.1     # metallicity of the star
 teff            6000    # effective temperature of the star in K
 logg            4.0     # surface gravity in log g
@@ -45,7 +44,7 @@ vmin            0.97        # Sets the vmin of the color bar for Figure 4101.
 vmax            1.03        # Sets the vmax of the color bar for Figure 4101.
 time_axis       'y'         # Determines whether the time axis in Figure 4101 is along the y-axis ('y') or the x-axis ('x')
 hide_plots		True        # If True, plots will automatically be closed rather than popping up
-verbose         False       # If True, more details will be printed about steps
+verbose         True        # If True, more details will be printed about steps
 
 # Project directory
 topdir                  ../tests

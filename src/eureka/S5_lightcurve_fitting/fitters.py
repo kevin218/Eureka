@@ -70,7 +70,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     freenames = lc.freenames
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
+    if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
@@ -102,15 +102,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         return callback_full(theta, lc, model, prior1, prior2, priortype,
                              freenames)
 
-    if not hasattr(meta, 'lsq_method'):
-        log.writelog('No lsq optimization method specified - using Powell'
-                     ' by default.')
-        meta.lsq_method = 'Powell'
-    if not hasattr(meta, 'lsq_tol'):
-        log.writelog('No lsq tolerance specified - using 1e-6 by default.')
-        meta.lsq_tol = 1e-6
-    if not hasattr(meta, 'lsq_maxiter'):
-        meta.lsq_maxiter = None
     results = minimize(neg_lnprob, freepars,
                        args=(lc, model, prior1, prior2, priortype, freenames),
                        method=meta.lsq_method, tol=meta.lsq_tol,
@@ -288,13 +279,15 @@ def emceefitter(lc, model, meta, log, **kwargs):
     freenames = lc.freenames
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
+    if meta.old_fitparams is not None:
+        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
 
-    if hasattr(meta, 'old_chain') and meta.old_chain is not None:
+    if meta.old_chain is not None:
         pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
                                                   freenames)
     else:
-        if not hasattr(meta, 'lsq_first') or meta.lsq_first:
+        if meta.lsq_first:
             # Only call lsq fitter first if asked or lsq_first option wasn't
             # passed (allowing backwards compatibility)
             log.writelog('\nCalling lsqfitter first...')
@@ -303,10 +296,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                 calling_function='emcee_lsq', **kwargs)
 
             freepars = lsq_sol.fit_params
-
-            # SCALE UNCERTAINTIES WITH REDUCED CHI2
-            if meta.rescale_err:
-                lc.unc *= np.sqrt(lsq_sol.chi2red)
         else:
             lsq_sol = None
         pos, nwalkers = initialize_emcee_walkers(meta, log, ndim, lsq_sol,
@@ -327,7 +316,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                      fitter='emceeStartingPoint')
 
     # Initialize tread pool
-    if hasattr(meta, 'ncpu') and meta.ncpu > 1:
+    if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
     else:
         meta.ncpu = 1
@@ -781,6 +770,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     freenames = lc.freenames
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
+    if meta.old_fitparams is not None:
+        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     # DYNESTY
     nlive = meta.run_nlive  # number of live points
@@ -814,7 +805,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         log.writelog(f'**** WARNING: You should set run_nlive to at least '
                      f'{min_nlive} ****')
 
-    if hasattr(meta, 'ncpu') and meta.ncpu > 1:
+    if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
         queue_size = meta.ncpu
     else:

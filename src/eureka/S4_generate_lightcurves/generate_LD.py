@@ -30,15 +30,11 @@ def exotic_ld(meta, spec, log, white=False):
     - July 2022, Eva-Maria Ahrer
         Initial version based on exotic_ld documentation.
     '''
-
-    log.writelog("...using exotic-ld package...",
-                 mute=(not meta.verbose))
-
     # Set the observing mode
     custom_wavelengths = None
     custom_throughput = None
 
-    if hasattr(meta, 'exotic_ld_file') and meta.exotic_ld_file is not None:
+    if meta.exotic_ld_file is not None:
         mode = 'custom'
         log.writelog("Using custom throughput file " +
                      meta.exotic_ld_file,
@@ -52,15 +48,21 @@ def exotic_ld(meta, spec, log, white=False):
                          "Converting to Angstroms.")
             custom_wavelengths *= 1e4
     elif meta.inst == 'miri':
-        mode = 'JWST_MIRI_' + meta.inst_filter
+        mode = 'JWST_MIRI_' + meta.filter
     elif meta.inst == 'nircam':
-        mode = 'JWST_NIRCam_' + meta.inst_filter
+        filter = meta.filter
+        if filter.lower() == 'f444w':
+            filter = 'f444'
+        mode = 'JWST_NIRCam_' + meta.filter
     elif meta.inst == 'nirspec':
-        mode = 'JWST_NIRSpec_' + meta.inst_filter
+        filter = meta.filter
+        if filter.lower() == 'prism':
+            filter = 'prism'
+        mode = 'JWST_NIRSpec_' + meta.filter
     elif meta.inst == 'niriss':
-        mode = 'JWST_NIRISS_' + meta.inst_filter
+        mode = 'JWST_NIRISS_' + meta.filter
     elif meta.inst == 'wfc3':
-        mode = 'HST_WFC3_' + meta.inst_filter
+        mode = 'HST_WFC3_' + meta.filter
 
     # Compute wavelength ranges
     if white:
@@ -81,7 +83,7 @@ def exotic_ld(meta, spec, log, white=False):
         wavelength_range *= 1e4
 
     # compute stellar limb darkening model
-    if hasattr(meta, "custom_si_grid") and meta.exotic_ld_grid == 'custom':
+    if meta.exotic_ld_grid == 'custom':
         # read the wavelengths, Mus, and intensity grid from file
         # 1st column is the wavelengths. Skip the header and row of Mus
         # also convert to angstrom!
