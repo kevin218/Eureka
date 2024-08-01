@@ -7,10 +7,10 @@ rescale_err     False    # Rescale uncertainties to have reduced chi-squared of 
 fit_par         ./S5_fit_par.epf # What fitting epf do you want to use?
 verbose         True # If True, more details will be printed about steps
 fit_method      [lsq, emcee, dynesty] #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr, polynomial] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
+run_myfuncs     [batman_tr, polynomial, GP] #options are: batman_tr, batman_ecl, sinusoid_pc, expramp, polynomial, step, and GP (can list multiple types separated by commas)
 
 # Manual clipping in time
-manual_clip     [[None,1],]    # A list of lists specifying the start and end integration numbers for manual removal.
+manual_clip     [[None,2],]    # A list of lists specifying the start and end integration numbers for manual removal.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
