@@ -151,6 +151,9 @@ class S1MetaClass(MetaClass):
         # subtracting BG
         self.refpix_corr = getattr(self, 'refpix_corr', False)
         if self.refpix_corr:
+            if self.grouplevel_bg:
+                print('WARNING: Performing GLBS and reference pixel correction'
+                      ' is redundant and not recommended.')
             # Force these to be specified if refpix_corr is True
             self.npix_top = getattr(self, 'npix_top')
             self.npix_bot = getattr(self, 'npix_bot')
@@ -170,7 +173,7 @@ class S1MetaClass(MetaClass):
             self.bg_method = getattr(self, 'bg_method', 'median')
             self.p3thresh = getattr(self, 'p3thresh', 3)
             # Row-by-row BG subtraction (only useful for NIRCam)
-            self.bg_disp = getattr(self, 'bg_disp', False)
+            self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
             # Left edge of exclusion region for row-by-row BG subtraction
             self.bg_x1 = getattr(self, 'bg_x1', None)
             # Right edge of exclusion region for row-by-row BG subtraction

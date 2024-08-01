@@ -84,7 +84,7 @@ def GLBS(input_model, log, meta):
 
         # Perform BG subtraction along dispersion direction
         # (only useful for NIRCam data)
-        if meta.bg_disp:
+        if meta.bg_row_by_row:
             meta.bg_dir = 'RxR'
             if ngrp == all_data.shape[1]-1:
                 isplots_S1 = meta.isplots_S1

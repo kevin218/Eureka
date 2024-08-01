@@ -299,14 +299,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
 
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
-                if meta.bg_disp:
+                if meta.bg_row_by_row:
                     meta.bg_dir = 'RxR'
                     # Create bad pixel mask (1 = good, 0 = bad)
                     data['mask'] = (['time', 'y', 'x'],
                                     np.ones(data.flux.shape, dtype=bool))
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
-                    meta.bg_disp = False
+                    meta.bg_row_by_row = False
                     meta.bg_deg = None
                 # Specify direction = CxC to perform standard BG subtraction
                 # later on in Stage 3. This needs to be set independent of

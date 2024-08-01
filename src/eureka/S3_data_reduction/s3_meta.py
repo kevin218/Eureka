@@ -86,7 +86,7 @@ class S3MetaClass(MetaClass):
         self.dqmask = getattr(self, 'dqmask', True)
         self.manmask = getattr(self, 'manmask', None)
         self.expand = getattr(self, 'expand', 1)
-        # FINDME: I think bg_disp, bg_dir, and isrotate all control
+        # FINDME: I think bg_row_by_row, bg_dir, and isrotate all control
         # the same thing...
         self.isrotate = getattr(self, 'isrotate', 0)
 
@@ -156,9 +156,9 @@ class S3MetaClass(MetaClass):
         # Background parameters
         self.bg_hw = getattr(self, 'bg_hw')  # Require this parameter to be set
         self.bg_deg = getattr(self, 'bg_deg', 0)
-        # FINDME: I think bg_disp, bg_dir, and isrotate all control
+        # FINDME: I think bg_row_by_row, bg_dir, and isrotate all control
         # the same thing...
-        self.bg_disp = getattr(self, 'bg_disp', False)
+        self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_dir = getattr(self, 'bg_dir', 'CxC')
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)
@@ -199,9 +199,9 @@ class S3MetaClass(MetaClass):
         self.skyin = getattr(self, 'skyin')
         self.skywidth = getattr(self, 'skywidth')
 
-        # FINDME: I think bg_disp, bg_dir, and isrotate all control
+        # FINDME: I think bg_row_by_row, bg_dir, and isrotate all control
         # the same thing...
-        self.bg_disp = getattr(self, 'bg_disp', False)
+        self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
         self.bg_dir = getattr(self, 'bg_dir', 'CxC')
         self.bg_x1 = getattr(self, 'bg_x1', None)
         self.bg_x2 = getattr(self, 'bg_x2', None)

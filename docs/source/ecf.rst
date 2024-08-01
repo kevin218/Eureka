@@ -146,8 +146,8 @@ hide_plots
 ''''''''''
 See Stage 3 inputs
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -262,7 +262,7 @@ skip_*
 If True, skip the named step.
 
 .. note::
-   To produce flux-calibrated stellar spectra, it is recommended to set ``skip_flat_field`` and ``skip_photom`` to ``False``, and potentially to also set ``skip_extract_1d`` to ``False`` as well.
+   To produce flux-calibrated stellar spectra, it is recommended to set ``skip_flat_field`` and ``skip_photom`` to ``False``.
 
 .. note::
 	Note that some instruments and observing modes might skip a step either way! See the `calwebb_spec2 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
@@ -494,8 +494,8 @@ bg_method
 '''''''''
 Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
