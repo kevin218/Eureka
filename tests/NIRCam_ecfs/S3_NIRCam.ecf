@@ -24,7 +24,7 @@ bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rej
 bg_hw           12          # Half-width of exclusion region for BG subtraction (relative to source position)
 bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
 p3thresh        5           # X-sigma threshold for outlier rejection during background subtraction
-bg_disp         True        # Row-by-row BG subtraction (only useful for NIRCam)
+bg_row_by_row   True        # Row-by-row BG subtraction (only useful for NIRCam)
 bg_x1           28          # Left edge of exclusion region for row-by-row BG subtraction
 bg_x2           1840        # Right edge of exclusion region for row-by-row BG subtraction
 
