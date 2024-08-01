@@ -151,6 +151,9 @@ class S1MetaClass(MetaClass):
         # subtracting BG
         self.refpix_corr = getattr(self, 'refpix_corr', False)
         if self.refpix_corr:
+            if self.grouplevel_bg:
+                print('WARNING: Performing GLBS and reference pixel correction'
+                      ' is redundant and not recommended.')
             # Force these to be specified if refpix_corr is True
             self.npix_top = getattr(self, 'npix_top')
             self.npix_bot = getattr(self, 'npix_bot')
