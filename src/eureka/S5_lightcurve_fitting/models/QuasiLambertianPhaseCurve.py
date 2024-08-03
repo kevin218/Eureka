@@ -95,7 +95,8 @@ class QuasiLambertianPhaseCurve(Model):
                     phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
                 # calculate the phase variations
-                phaseVars = np.abs(np.cos(phi/2))**pl_params.gamma
+                phaseVars = np.abs(np.cos((phi-self.quasi_offset*np.pi/180)/2)
+                                   )**pl_params.gamma
 
             lcfinal = np.ma.append(lcfinal, phaseVars)
 

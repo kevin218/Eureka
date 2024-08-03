@@ -110,7 +110,8 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
                     phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
                 # calculate the phase variations
-                phaseVars = abs(lib.cos(phi/2))**pl_params.gamma
+                phaseVars = abs(lib.cos((phi-self.quasi_offset*np.pi/180)/2)
+                                )**pl_params.gamma
 
             if eval:
                 # Evaluate if needed
