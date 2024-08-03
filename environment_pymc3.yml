@@ -31,7 +31,7 @@ dependencies:
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
-    - scipy[version='>=1.4.0'] # Lower limit needed for scipy.fft, upper limit needed for theano, starry, and pymc3
+    - scipy[version='>=1.4.0'] # Lower limit needed for scipy.fft
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm

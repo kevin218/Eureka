@@ -16,7 +16,7 @@ from ...lib.split_channels import split
 
 
 class AstroModel(PyMC3Model):
-    """A model which combines all astrophysical components."""
+    """A model that combines all astrophysical components."""
     def __init__(self, components, **kwargs):
         """Initialize the phase curve model.
 

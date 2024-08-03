@@ -65,11 +65,9 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         if eval:
             lib = np.ma
             model = self.fit
-            # systems = self.components[0].fit.systems
         else:
             lib = tt
             model = self.model
-            # systems = self.components[0].systems
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):

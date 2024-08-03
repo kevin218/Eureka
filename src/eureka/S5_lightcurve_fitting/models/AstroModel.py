@@ -226,7 +226,7 @@ class PlanetParams():
 
 
 class AstroModel(Model):
-    """A model which combines all astrophysical components."""
+    """A model that combines all astrophysical components."""
     def __init__(self, components, **kwargs):
         """Initialize the phase curve model.
 
