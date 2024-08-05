@@ -530,29 +530,34 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                     (meta.compute_ld is True):
                 log.writelog("Computing ExoTiC limb-darkening coefficients...",
                              mute=(not meta.verbose))
-                ld_lin, ld_quad, ld_3para, ld_4para = \
-                    generate_LD.exotic_ld(meta, spec, log)
+                (ld_lin, ld_quad, ld_kipping2013, ld_sqrt, ld_3para,
+                 ld_4para) = generate_LD.exotic_ld(meta, spec, log)
                 lc['exotic-ld_lin'] = (['wavelength', 'exotic-ld_1'], ld_lin)
                 lc['exotic-ld_quad'] = (['wavelength', 'exotic-ld_2'], ld_quad)
+                lc['exotic-ld_kipping2013'] = (['wavelength', 'exotic-ld_2'],
+                                               ld_kipping2013)
+                lc['exotic-ld_sqrt'] = (['wavelength', 'exotic-ld_2'], ld_sqrt)
                 lc['exotic-ld_nonlin_3para'] = (['wavelength', 'exotic-ld_3'],
                                                 ld_3para)
                 lc['exotic-ld_nonlin_4para'] = (['wavelength', 'exotic-ld_4'],
                                                 ld_4para)
 
                 if meta.compute_white:
-                    ld_lin_w, ld_quad_w, ld_3para_w, ld_4para_w = \
-                        generate_LD.exotic_ld(meta, spec, log, white=True)
-                    lc['exotic-ld_lin_white'] = (['wavelength', 'exotic-ld_1'],
-                                                 ld_lin_w)
-                    lc['exotic-ld_quad_white'] = (['wavelength',
-                                                   'exotic-ld_2'],
-                                                  ld_quad_w)
-                    lc['exotic-ld_nonlin_3para_white'] = (['wavelength',
-                                                           'exotic-ld_3'],
-                                                          ld_3para_w)
-                    lc['exotic-ld_nonlin_4para_white'] = (['wavelength',
-                                                           'exotic-ld_4'],
-                                                          ld_4para_w)
+                    (ld_lin_w, ld_quad_w, ld_kipping2013_w, ld_sqrt_w,
+                     ld_3para_w, ld_4para_w) = generate_LD.exotic_ld(
+                         meta, spec, log, white=True)
+                    lc['exotic-ld_lin_white'] = \
+                        (['wavelength', 'exotic-ld_1'], ld_lin_w)
+                    lc['exotic-ld_quad_white'] = \
+                        (['wavelength', 'exotic-ld_2'], ld_quad_w)
+                    lc['exotic-ld_kipping2013_white'] = \
+                        (['wavelength', 'exotic-ld_2'], ld_kipping2013_w)
+                    lc['exotic-ld_sqrt_white'] = \
+                        (['wavelength', 'exotic-ld_2'], ld_sqrt_w)
+                    lc['exotic-ld_nonlin_3para_white'] = \
+                        (['wavelength', 'exotic-ld_3'], ld_3para_w)
+                    lc['exotic-ld_nonlin_4para_white'] = \
+                        (['wavelength', 'exotic-ld_4'], ld_4para_w)
 
             # Generate SPAM limb-darkening coefficients
             elif meta.compute_ld == 'spam':

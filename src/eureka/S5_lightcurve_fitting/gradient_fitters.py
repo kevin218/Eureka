@@ -51,12 +51,12 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
     if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
-    model.setup(lc.time, lc.flux, lc.unc)
+    model.setup(lc.time, lc.flux, lc.unc, freepars)
+    model.update(freepars)
 
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
-    model.update(freepars)
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -111,8 +111,7 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_GP_components(lc, model, meta, fitter=calling_function)
 
     # Zoom in on phase variations
-    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or
-                                  'Y11' in freenames or
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
@@ -168,12 +167,12 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
 
-    model.setup(lc.time, lc.flux, lc.unc)
+    model.setup(lc.time, lc.flux, lc.unc, freepars)
+    model.update(freepars)
 
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
-    model.update(freepars)
 
     # Plot starting point
     if meta.isplots_S5 >= 1:
@@ -255,8 +254,7 @@ def nutsfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='nuts')
 
     # Zoom in on phase variations
-    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or
-                                  'Y11' in freenames or
+    if (meta.isplots_S5 >= 1 and ('Y10' in freenames or 'Y11' in freenames or
                                   'sinusoid_pc' in meta.run_myfuncs)):
         plots.plot_phase_variations(lc, model, meta, fitter='nuts')
 

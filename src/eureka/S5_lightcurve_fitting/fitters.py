@@ -285,7 +285,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     if meta.old_chain is not None:
         pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
-                                                  freenames)
+                                                  freenames, freepars,
+                                                  prior1, prior2,
+                                                  priortype)
     else:
         if meta.lsq_first:
             # Only call lsq fitter first if asked or lsq_first option wasn't
@@ -327,7 +329,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
                                     pool=pool)
-    log.writelog('Running emcee sampler...')
+    log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # log.writelog('Running emcee burn-in...')
     # state = sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
@@ -464,7 +466,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
-def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
+def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
+                              prior1, prior2, priortype):
     """Restart emcee using the ending point of an old chain.
 
     Parameters
@@ -479,6 +482,14 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         The number of fitted parameters.
     freenames : list
         The names of the fitted parameters.
+    freepars : list
+        The starting values of the fitted parameters.
+    prior1 : list
+        The list of prior1 values.
+    prior2 : list
+        The list of prior2 values.
+    priortype : list
+        The types of each prior (to determine meaning of prior1 and prior2).
 
     Returns
     -------
@@ -509,15 +520,6 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
 
-    # Make sure at least all the currently fitted parameters were present
-    if not np.all([key in full_keys for key in freenames]):
-        message = ('Old chain does not have the same fitted parameters and '
-                   'cannot be used to initialize the new fit.\n'
-                   'The old chain included:\n['+','.join(full_keys)+']\n'
-                   'The new chain included:\n['+','.join(freenames)+']')
-        log.writelog(message, mute=True)
-        raise AssertionError(message)
-
     fname = f'S5_emcee_samples{channel_tag}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
@@ -529,6 +531,17 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     else:
         samples = ds.to_array().T.values
     log.writelog(f'Old chain path: {full_fname}')
+
+    if not np.all([key in freenames for key in full_keys]):
+        # There were extra free parameters before - just get the relevant ones
+        relevant_inds = np.array([key in freenames for key in full_keys])
+        removed_inds = full_keys[~relevant_inds]
+        full_keys = full_keys[relevant_inds]
+        samples = samples[:, relevant_inds]
+        message = ('Old chain had extra fitted parameters. '
+                   'Removing the previously fitted parameters:\n'
+                   f'    {removed_inds}')
+        log.writelog(message, mute=(not meta.verbose))
 
     # Initialize the walkers using samples from the old chain
     nwalkers = meta.run_nwalkers
@@ -567,6 +580,32 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         log.writelog(message, mute=True)
         raise AssertionError(message)
 
+    if not np.all([key in full_keys for key in freenames]):
+        # There are now extra free parameters
+        # Populate them using initialize_emcee_walkers
+        missing_freenames = np.array([key for key in freenames
+                                      if key not in full_keys])
+        message = ('Old chain was missing some fitted parameters. '
+                   'Adding the new fitted parameters:\n'
+                   f'    {missing_freenames}')
+        log.writelog(message, mute=(not meta.verbose))
+
+        meta.run_nwalkers = nwalkers
+        temp_pos, nwalkers = initialize_emcee_walkers(
+            meta, log, ndim, None, freepars, prior1, prior2, priortype)
+
+        new_pos = np.zeros((nwalkers, len(freenames)))
+        for i, key in enumerate(freenames):
+            if key not in full_keys:
+                # There are now extra free parameters
+                # Populate them using initialize_emcee_walkers
+                new_pos[:, i] = temp_pos[:, i]
+            else:
+                # This variable already existed, so just add it
+                new_pos[:, i] = pos[:, np.where(full_keys == key)[0][0]]
+
+        pos = new_pos
+
     return pos, nwalkers
 
 
@@ -585,7 +624,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     lsq_sol : The results from the lsqfitter.
         The results from the lsqfitter.
     freepars : list
-        The names of the fitted parameters.
+        The initial values of the fitted parameters.
     prior1 : list
         The list of prior1 values.
     prior2 : list
@@ -630,7 +669,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
         # the prior range can work best for precisely known values like
         # t0 and period
         log.writelog('No covariance matrix from LSQ - falling back on a step '
-                     'size based on the prior range')
+                     'size based on the prior range', mute=(not meta.verbose))
         step_size = np.ones(ndim)
         step_size[u] = 0.001*(prior2[u] - prior1[u])
         step_size[lu] = 0.001*(np.exp(prior2[lu]) - np.exp(prior1[lu]))
@@ -801,6 +840,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
     if nlive == 'min':
         nlive = min_nlive
+        log.writelog(f'Using {nlive} live points...')
     elif nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least '
                      f'{min_nlive} ****')
@@ -1177,9 +1217,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     """
     fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
-    full_keys = np.array(fitted_values.keys())
-    # Remove the " " from the start of the first key
-    full_keys[0] = full_keys[0][1:]
+    full_keys = np.array(fitted_values['Parameter'])
 
     if np.all(full_keys != freenames):
         log.writelog('Old fit does not have the same fitted parameters and '
@@ -1193,7 +1231,14 @@ def load_old_fitparams(meta, log, channel, freenames):
                              ']\nThe new fit included:\n['+','.join(freenames)
                              + ']')
 
-    return np.array(fitted_values)[0]
+    if '50th' in fitted_values.keys():
+        # A sampler was used, so use the (more reliable) median
+        oldfitparam = fitted_values['50th'].to_numpy()
+    else:
+        # An optimizer was used, so only the Mean column will be populated
+        oldfitparam = fitted_values['Mean'].to_numpy()
+
+    return oldfitparam
 
 
 def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):

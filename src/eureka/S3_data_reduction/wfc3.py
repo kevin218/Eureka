@@ -604,13 +604,15 @@ def difference_frames(data, meta, log):
     if meta.nreads > 1:
         # Subtract pairs of subframes
         meta.nreads -= 1
+        difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
         diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
         differr = np.zeros((meta.nreads, meta.ny, meta.nx))
         for n in range(meta.nreads):
             diffflux[n] = data.flux[n+1]-data.flux[n]
-            differr[n-1] = np.sqrt(data.err[n]**2+data.err[n-1]**2)
+            differr[n] = np.sqrt(data.err[n+1]**2+data.err[n]**2)
     else:
         # FLT data has already been differenced
+        difftime = data.time
         diffflux = data.flux
         differr = data.err
 
@@ -658,11 +660,6 @@ def difference_frames(data, meta, log):
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
     time_units = data.flux.attrs['time_units']
-    if meta.nreads > 1:
-        difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
-    else:
-        # FLT data has already been differenced
-        difftime = data.time
     diffdata = xrio.makeDataset()
     diffdata['flux'] = xrio.makeFluxLikeDA(diffflux, difftime, flux_units,
                                            time_units, name='flux')

@@ -1,170 +1,14 @@
 import numpy as np
-import astropy.constants as const
 import inspect
 try:
     import batman
 except ImportError:
     print("Could not import batman. Functionality may be limited.")
 
-from .Model import Model
-from .KeplerOrbit import KeplerOrbit
+from . import Model
+from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
-
-
-class PlanetParams():
-    """
-    Define planet parameters.
-    """
-    def __init__(self, model, pid=0, channel=0):
-        """
-        Set attributes to PlanetParams object.
-
-        Parameters
-        ----------
-        model : object
-            The model.eval object that contains a dictionary of parameter names
-            and their current values.
-        pid : int; optional
-            Planet ID, default is 0.
-        channel : int, optional
-            The channel number for multi-wavelength fits or mutli-white fits.
-            Defaults to 0.
-        """
-        # Planet ID
-        self.pid = pid
-        if pid == 0:
-            self.pid_id = ''
-        else:
-            self.pid_id = f'_pl{self.pid}'
-        # Channel ID
-        self.channel = channel
-        if channel == 0:
-            self.channel_id = ''
-        else:
-            self.channel_id = f'_ch{self.channel}'
-        # Set transit/eclipse parameters
-        self.t0 = None
-        self.rprs = None
-        self.rp = None
-        self.inc = None
-        self.ars = None
-        self.a = None
-        self.per = None
-        self.ecc = None
-        self.w = None
-        self.ecosw = None
-        self.esinw = None
-        self.fpfs = None
-        self.fp = None
-        self.t_secondary = None
-        self.cos1_amp = 0.
-        self.cos1_off = 0.
-        self.cos2_amp = 0.
-        self.cos2_off = 0.
-        self.AmpCos1 = 0.
-        self.AmpSin1 = 0.
-        self.AmpCos2 = 0.
-        self.AmpSin2 = 0.
-        self.u1 = 0
-        self.u2 = 0
-        self.u3 = 0
-        self.u4 = 0
-        for item in self.__dict__.keys():
-            item0 = item+self.pid_id
-            try:
-                if model.parameters.dict[item0][1] == 'free':
-                    item0 += self.channel_id
-                setattr(self, item, model.parameters.dict[item0][0])
-            except KeyError:
-                if item in [f'u{i}' for i in range(1, 5)]:
-                    # Limb darkening probably doesn't vary with planet
-                    try:
-                        item0 = item
-                        if model.parameters.dict[item0][1] == 'free':
-                            item0 += self.channel_id
-                        setattr(self, item, model.parameters.dict[item0][0])
-                    except KeyError:
-                        pass
-                else:
-                    pass
-        # Allow for rp or rprs
-        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
-            item0 = 'rp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'rprs', model.parameters.dict[item0][0])
-        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
-            item0 = 'rprs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'rp', model.parameters.dict[item0][0])
-        # Allow for a or ars
-        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
-            item0 = 'a' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'ars', model.parameters.dict[item0][0])
-        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
-            item0 = 'ars' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'a', model.parameters.dict[item0][0])
-        # Allow for (ecc, w) or (ecosw, esinw)
-        if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
-            item0 = 'ecc' + self.pid_id
-            item1 = 'w' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            if model.parameters.dict[item1][1] == 'free':
-                item1 += self.channel_id
-            ecc = model.parameters.dict[item0][0]
-            w = model.parameters.dict[item1][0]
-            ecosw = ecc*np.cos(w*np.pi/180)
-            esinw = ecc*np.sin(w*np.pi/180)
-            setattr(self, 'ecosw', ecosw)
-            setattr(self, 'esinw', esinw)
-        if (self.ecc is None) and ('ecosw' in model.parameters.dict.keys()):
-            item0 = 'ecosw' + self.pid_id
-            item1 = 'esinw' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            if model.parameters.dict[item1][1] == 'free':
-                item1 += self.channel_id
-            ecosw = model.parameters.dict[item0][0]
-            esinw = model.parameters.dict[item1][0]
-            ecc = np.sqrt(ecosw**2+esinw**2)
-            w = np.arctan2(esinw, ecosw)*180/np.pi
-            setattr(self, 'ecc', ecc)
-            setattr(self, 'w', w)
-        # Allow for fp or fpfs
-        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
-            item0 = 'fp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'fpfs', model.parameters.dict[item0][0])
-        elif self.fpfs is None:
-            setattr(self, 'fpfs', 0.)
-        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
-            item0 = 'fpfs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'fp', model.parameters.dict[item0][0])
-        elif self.fp is None:
-            setattr(self, 'fp', 0.)
-        # Set stellar radius
-        if 'Rs' in model.parameters.dict.keys():
-            item0 = 'Rs'
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'Rs', model.parameters.dict[item0][0])
-
-        # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
-        if self.ecc is None:
-            self.ecc = 0
-            self.w = None
-            self.ecosw = 0
-            self.esinw = 0
 
 
 class BatmanTransitModel(Model):
@@ -182,6 +26,7 @@ class BatmanTransitModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'batman transit'
         # Define transit model to be used
         self.transit_model = batman.TransitModel
 
@@ -234,7 +79,7 @@ class BatmanTransitModel(Model):
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
+            Planet ID, default is None which combines the models from
             all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -273,7 +118,7 @@ class BatmanTransitModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.ones(time.shape)
+            light_curve = np.ma.ones(len(time))
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -332,8 +177,9 @@ class BatmanEclipseModel(Model):
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'batman eclipse'
         # Define transit model to be used
         self.transit_model = batman.TransitModel
 
@@ -398,7 +244,7 @@ class BatmanEclipseModel(Model):
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         pid : int; optional
-            Planet ID, default is None which combines the eclipse models from
+            Planet ID, default is None which combines the models from
             all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
@@ -437,7 +283,7 @@ class BatmanEclipseModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.ones(time.shape)
+            light_curve = np.ma.zeros(len(time))
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
@@ -448,11 +294,12 @@ class BatmanEclipseModel(Model):
 
                 # Enforce physicality to avoid crashes
                 if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
-                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                        (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                        (-1 <= pl_params.esinw <= 1)):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
-                    continue
+                    break
 
                 # Compute light travel time
                 if self.compute_ltt:
@@ -476,93 +323,3 @@ class BatmanEclipseModel(Model):
             lcfinal = np.ma.append(lcfinal, light_curve)
 
         return lcfinal
-
-
-def get_ecl_midpt(params):
-    """
-    Return the time of secondary eclipse center.
-
-    Parameters
-    ----------
-    params : object
-        Contains the physical parameters for the transit model.
-
-    Returns
-    -------
-    t_secondary : float
-        The time of secondary eclipse.
-    """
-
-    # Start with primary transit
-    TA = np.pi / 2. - params.w * np.pi / 180.
-    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc))
-                       * np.tan(TA / 2.))
-    M = E - params.ecc * np.sin(E)
-    phase_tr = M / 2. / np.pi
-
-    # Now do secondary eclipse
-    TA = 3. * np.pi / 2. - params.w * np.pi / 180.
-    E = 2. * np.arctan(np.sqrt((1. - params.ecc) / (1. + params.ecc))
-                       * np.tan(TA / 2.))
-    M = E - params.ecc * np.sin(E)
-    phase_ecl = M / 2. / np.pi
-
-    return params.t0 + params.per * (phase_ecl - phase_tr)
-
-
-def correct_light_travel_time(time, pl_params):
-    '''Correct for the finite light travel speed.
-
-    This function uses the KeplerOrbit.py file from the Bell_EBM package
-    as that code includes a newer, faster method of solving Kepler's equation
-    based on Tommasini+2018.
-
-    Parameters
-    ----------
-    time : ndarray
-        The times at which observations were collected
-    pl_params : batman.TransitParams or poet.TransitParams
-        The TransitParams object that contains information on the orbit.
-
-    Returns
-    -------
-    time : ndarray
-        Updated times that can be put into batman transit and eclipse functions
-        that will give the expected results assuming a finite light travel
-        speed.
-
-    Notes
-    -----
-    History:
-
-    - 2022-03-31 Taylor J Bell
-        Initial version based on the Bell_EMB KeplerOrbit.py file by
-        Taylor J Bell and the light travel time calculations of SPIDERMAN's
-        web.c file by Tom Louden
-    '''
-    # Need to convert from a/Rs to a in meters
-    a = pl_params.a * (pl_params.Rs*const.R_sun.value)
-
-    if pl_params.ecc > 0:
-        # Need to solve Kepler's equation, so use the KeplerOrbit class
-        # for rapid computation. In the SPIDERMAN notation z is the radial
-        # coordinate, while for Bell_EBM the radial coordinate is x
-        orbit = KeplerOrbit(a=a, Porb=pl_params.per, inc=pl_params.inc,
-                            t0=pl_params.t0, e=pl_params.ecc, argp=pl_params.w)
-        old_x, _, _ = orbit.xyz(time)
-        transit_x, _, _ = orbit.xyz(pl_params.t0)
-    else:
-        # No need to solve Kepler's equation for circular orbits, so save
-        # some computation time
-        transit_x = a*np.sin(pl_params.inc)
-        old_x = transit_x*np.cos(2*np.pi*(time-pl_params.t0)/pl_params.per)
-
-    # Get the radial distance variations of the planet
-    delta_x = transit_x - old_x
-
-    # Compute for light travel time (and convert to days)
-    delta_t = (delta_x/const.c.value)/(3600.*24.)
-
-    # Subtract light travel time as a first-order correction
-    # Batman will then calculate the model at a slightly earlier time
-    return time-delta_t.flatten()

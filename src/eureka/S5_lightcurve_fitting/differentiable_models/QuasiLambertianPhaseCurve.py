@@ -14,7 +14,8 @@ from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
 
-class SinusoidPhaseCurveModel(PyMC3Model):
+class QuasiLambertianPhaseCurve(PyMC3Model):
+    """Quasi-Lambertian phase curve based on Agol+2007 for airless planets."""
     def __init__(self, **kwargs):
         """Initialize the model.
 
@@ -26,8 +27,8 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         """  # NOQA: E501
         # Inherit from PyMC3Model class
         super().__init__(**kwargs,
-                         modeltype='physical',
-                         name='sinusoid phase curve')
+                         name='quasi-lambertian phase curve',
+                         modeltype='physical')
 
     def eval(self, eval=True, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
@@ -65,9 +66,11 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         if eval:
             lib = np.ma
             model = self.fit
+            abs = np.ma.abs
         else:
             lib = tt
             model = self.model
+            abs = tt.abs_
 
         lcfinal = lib.zeros(0)
         for c in range(nchan):
@@ -85,8 +88,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                 # Initialize model
                 pl_params = PlanetParams(model, pid, chan, eval=eval)
 
-                if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
-                        and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
+                if (eval and pl_params.quasi_gamma == 0):
                     # Don't waste time running the following code
                     phaseVars = np.ma.ones_like(time)
                     continue
@@ -95,7 +97,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
-                    pl_params.t_secondary = get_ecl_midpt(pl_params)
+                    pl_params.t_secondary = get_ecl_midpt(pl_params, lib)
 
                 # Compute orbital phase
                 if pl_params.ecc == 0:
@@ -104,20 +106,16 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                     phi = 2*np.pi/pl_params.per*t
                 else:
                     # the planet is on an eccentric orbit
-                    anom = true_anomaly(pl_params, self.time, lib)
+                    anom = true_anomaly(pl_params, time, lib)
                     phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
                 # calculate the phase variations
-                if eval and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0:
-                    # Skip multiplying by a bunch of zeros to speed up fitting
-                    phaseVars = (1 + pl_params.AmpCos1*(lib.cos(phi)-1) +
-                                 pl_params.AmpSin1*lib.sin(phi))
-                else:
-                    phaseVars = (1 + pl_params.AmpCos1*(lib.cos(phi)-1) +
-                                 pl_params.AmpSin1*lib.sin(phi) +
-                                 pl_params.AmpCos2*(lib.cos(2*phi)-1) +
-                                 pl_params.AmpSin2*lib.sin(2*phi))
+                phaseVars = abs(lib.cos((phi-self.quasi_offset*np.pi/180)/2)
+                                )**pl_params.quasi_gamma
 
+            if eval:
+                # Evaluate if needed
+                phaseVars = phaseVars.eval()
             lcfinal = lib.concatenate([lcfinal, phaseVars])
 
         return lcfinal

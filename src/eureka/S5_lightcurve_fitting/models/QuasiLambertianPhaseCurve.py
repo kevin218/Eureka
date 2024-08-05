@@ -1,42 +1,33 @@
 import numpy as np
 
-import theano
-theano.config.gcc__cxxflags += " -fexceptions"
-import theano.tensor as tt
-
-# Avoid tonnes of "Cannot construct a scalar test value" messages
-import logging
-logger = logging.getLogger("theano.tensor.opt")
-logger.setLevel(logging.ERROR)
-
-from . import PyMC3Model
+from .Model import Model
 from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
 
-class SinusoidPhaseCurveModel(PyMC3Model):
+class QuasiLambertianPhaseCurve(Model):
+    """Quasi-Lambertian phase curve based on Agol+2007 for airless planets."""
     def __init__(self, **kwargs):
-        """Initialize the model.
+        """Initialize the phase curve model.
 
         Parameters
         ----------
         **kwargs : dict
             Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.differentiable_models.PyMC3Model.__init__().
-        """  # NOQA: E501
-        # Inherit from PyMC3Model class
+            eureka.S5_lightcurve_fitting.models.Model.__init__().
+            Can pass in the parameters, longparamlist, nchan, and
+            paramtitles arguments here.
+        """
+        # Inherit from Model class
         super().__init__(**kwargs,
-                         modeltype='physical',
-                         name='sinusoid phase curve')
+                         name='quasi-lambertian phase curve',
+                         modeltype='physical')
 
-    def eval(self, eval=True, channel=None, pid=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
-        eval : bool; optional
-            If true evaluate the model, otherwise simply compile the model.
-            Defaults to True.
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
         pid : int; optional
@@ -47,7 +38,7 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
         Returns
         -------
-        ndarray
+        lcfinal : ndarray
             The value of the model at the times self.time.
         """
         if channel is None:
@@ -62,14 +53,12 @@ class SinusoidPhaseCurveModel(PyMC3Model):
         else:
             pid_iter = [pid,]
 
-        if eval:
-            lib = np.ma
-            model = self.fit
-        else:
-            lib = tt
-            model = self.model
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
 
-        lcfinal = lib.zeros(0)
+        # Set all parameters
+        lcfinal = np.ma.array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -83,10 +72,9 @@ class SinusoidPhaseCurveModel(PyMC3Model):
 
             for pid in pid_iter:
                 # Initialize model
-                pl_params = PlanetParams(model, pid, chan, eval=eval)
+                pl_params = PlanetParams(self, pid, chan)
 
-                if (eval and pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0
-                        and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
+                if pl_params.quasi_gamma == 0:
                     # Don't waste time running the following code
                     phaseVars = np.ma.ones_like(time)
                     continue
@@ -97,27 +85,19 @@ class SinusoidPhaseCurveModel(PyMC3Model):
                     # eccentricity, and argument of periastron
                     pl_params.t_secondary = get_ecl_midpt(pl_params)
 
-                # Compute orbital phase
-                if pl_params.ecc == 0:
+                if pl_params.ecc == 0.:
                     # the planet is on a circular orbit
                     t = time - pl_params.t_secondary
                     phi = 2*np.pi/pl_params.per*t
                 else:
                     # the planet is on an eccentric orbit
-                    anom = true_anomaly(pl_params, self.time, lib)
+                    anom = true_anomaly(pl_params, time)
                     phi = anom + pl_params.w*np.pi/180 + np.pi/2
 
                 # calculate the phase variations
-                if eval and pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0:
-                    # Skip multiplying by a bunch of zeros to speed up fitting
-                    phaseVars = (1 + pl_params.AmpCos1*(lib.cos(phi)-1) +
-                                 pl_params.AmpSin1*lib.sin(phi))
-                else:
-                    phaseVars = (1 + pl_params.AmpCos1*(lib.cos(phi)-1) +
-                                 pl_params.AmpSin1*lib.sin(phi) +
-                                 pl_params.AmpCos2*(lib.cos(2*phi)-1) +
-                                 pl_params.AmpSin2*lib.sin(2*phi))
+                phaseVars = np.abs(np.cos((phi-self.quasi_offset*np.pi/180)/2)
+                                   )**pl_params.quasi_gamma
 
-            lcfinal = lib.concatenate([lcfinal, phaseVars])
+            lcfinal = np.ma.append(lcfinal, phaseVars)
 
         return lcfinal

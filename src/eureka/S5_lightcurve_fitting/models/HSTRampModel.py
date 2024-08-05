@@ -20,6 +20,7 @@ class HSTRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'hst ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -56,7 +57,7 @@ class HSTRampModel(Model):
                     # of the original time axis
                     trim1, trim2 = get_trim(self.nints, chan)
                     time = self.time[trim1:trim2]
-                    self.time_local[trim1:trim2] = time - time[0]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
                 self.time_local = self.time - self.time[0]
 

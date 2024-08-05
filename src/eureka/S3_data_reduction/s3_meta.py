@@ -233,6 +233,7 @@ class S3MetaClass(MetaClass):
             Initial empty version setting defaults for NIRCam.
         '''
         self.poly_wavelength = getattr(self, 'poly_wavelength', False)
+        self.wave_pixel_offset = getattr(self, 'wave_pixel_offset', None)
         self.curvature = getattr(self, 'curvature', True)
 
         self.set_spectral_defaults()
