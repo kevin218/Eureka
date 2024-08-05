@@ -74,7 +74,7 @@ class QuasiLambertianPhaseCurve(Model):
                 # Initialize model
                 pl_params = PlanetParams(self, pid, chan)
 
-                if pl_params.gamma == 0:
+                if pl_params.quasi_gamma == 0:
                     # Don't waste time running the following code
                     phaseVars = np.ma.ones_like(time)
                     continue
@@ -96,7 +96,7 @@ class QuasiLambertianPhaseCurve(Model):
 
                 # calculate the phase variations
                 phaseVars = np.abs(np.cos((phi-self.quasi_offset*np.pi/180)/2)
-                                   )**pl_params.gamma
+                                   )**pl_params.quasi_gamma
 
             lcfinal = np.ma.append(lcfinal, phaseVars)
 

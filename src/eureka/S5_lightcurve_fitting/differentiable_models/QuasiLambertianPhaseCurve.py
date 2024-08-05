@@ -88,7 +88,7 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
                 # Initialize model
                 pl_params = PlanetParams(model, pid, chan, eval=eval)
 
-                if (eval and pl_params.gamma == 0):
+                if (eval and pl_params.quasi_gamma == 0):
                     # Don't waste time running the following code
                     phaseVars = np.ma.ones_like(time)
                     continue
@@ -111,7 +111,7 @@ class QuasiLambertianPhaseCurve(PyMC3Model):
 
                 # calculate the phase variations
                 phaseVars = abs(lib.cos((phi-self.quasi_offset*np.pi/180)/2)
-                                )**pl_params.gamma
+                                )**pl_params.quasi_gamma
 
             if eval:
                 # Evaluate if needed

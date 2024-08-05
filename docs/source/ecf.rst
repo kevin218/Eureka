@@ -1091,9 +1091,9 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``cos2_amp`` - Amplitude of the second cosine with period, per/2. The units are in fractions of the eclipse depth.
       - ``cos2_off`` - Offset (in degrees) of the second cosine, relative to the time of secondary eclipse.
    - Quasi-Lambertian Phase Curve Parameters
-      The quasilambert_pc phase curve model allows modelling of thermal phase variations of airless planets following the formalism of `Agol+2007 <https://ui.adsabs.harvard.edu/abs/2007MNRAS.374.1271A/abstract>`__. The phase function has the form ``np.abs(np.cos((phi-quasi_offset*np.pi/180)/2))**gamma``, where ``phi`` is the orbital phase in radians with a value of zero at mid-eclipse.
+      The quasilambert_pc phase curve model allows modelling of thermal phase variations of airless planets following the formalism of `Agol+2007 <https://ui.adsabs.harvard.edu/abs/2007MNRAS.374.1271A/abstract>`__. The phase function has the form ``np.abs(np.cos((phi-quasi_offset*np.pi/180)/2))**quasi_gamma``, where ``phi`` is the orbital phase in radians with a value of zero at mid-eclipse.
 
-      - ``gamma`` - The exponential coefficient of the quasi-Lambertian phase function. A true Lambertian phase function is closely approximated with a value of 3.285.
+      - ``quasi_gamma`` - The exponential coefficient of the quasi-Lambertian phase function. A true Lambertian phase function is closely approximated with a value of 3.285.
       - ``quasi_offset`` - Offset (in degrees) of the quasi-Lambertian phase function, relative to the time of secondary eclipse.
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map

@@ -85,7 +85,7 @@ class PlanetParams():
         self.AmpSin1 = 0.
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
-        self.gamma = 0.
+        self.quasi_gamma = 0.
         self.quasi_offset = 0.
         self.u1 = 0.
         self.u2 = 0.
