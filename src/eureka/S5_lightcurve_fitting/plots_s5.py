@@ -845,3 +845,5 @@ def plot_fleck_star(lc, model, meta, fitter):
               planet=bm_params, time=0)
     fname = (f'figs{os.sep}fig5306_fleck_star_{fitter}')
     fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
