@@ -74,7 +74,7 @@ u2          0.84            'free'          0           1           U
 # ** Star Spot parameters **
 # each spot needs rad, lat, lon. see docs for details!
 # for fleck: can only have one spot contrast (spotcon0), spotnpts is the number of temporal points to evaluate at, spotrad is relative to star
-# for starry: assign one spotcon per spot (spotcon0, spotcon1, etc), spotres is the ydeg of the star map, spotrad is in degrees
+# for starry: assign one spotcon per spot (spotcon0, spotcon1, etc), spotnpts is the ydeg of the star map, spotrad is in degrees
 # NOTE: fleck contrast = 1 - starry contrast
 # ------------------
 # spotstari    90       'fixed'         90        1       N
