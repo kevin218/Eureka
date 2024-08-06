@@ -163,7 +163,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5:
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
