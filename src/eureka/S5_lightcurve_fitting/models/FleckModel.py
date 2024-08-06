@@ -5,113 +5,11 @@ import inspect
 import fleck
 
 from .Model import Model
+from .BatmanModels import PlanetParams
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
-class PlanetParams():
-    """
-    Define planet parameters.
-    """
-    def __init__(self, model, pid=0, channel=0):
-        """ 
-        Set attributes to PlanetParams object.
-
-        Parameters
-        ----------
-        model : object
-            The model.eval object that contains a dictionary of parameter names 
-            and their current values.
-        pid : int; optional
-            Planet ID, default is 0.
-        channel : int, optional
-            The channel number for multi-wavelength fits or mutli-white fits.
-            Defaults to 0.
-        """
-        # Planet ID
-        self.pid = pid
-        if pid == 0:
-            self.pid_id = ''
-        else:
-            self.pid_id = str(self.pid)
-        # Channel ID
-        self.channel = channel
-        if channel == 0:
-            self.channel_id = ''
-        else:
-            self.channel_id = f'_{self.channel}'
-        # Set transit/eclipse parameters
-        self.t0 = None
-        self.rprs = None
-        self.rp = None
-        self.inc = None
-        self.ars = None
-        self.a = None
-        self.per = None
-        self.ecc = 0.
-        self.w = None
-        self.fpfs = None
-        self.fp = None
-        self.t_secondary = None
-        self.cos1_amp = 0.
-        self.cos1_off = 0.
-        self.cos2_amp = 0.
-        self.cos2_off = 0.
-        self.AmpCos1 = 0.
-        self.AmpSin1 = 0.
-        self.AmpCos2 = 0.
-        self.AmpSin2 = 0.
-        for item in self.__dict__.keys():
-            item0 = item+self.pid_id
-            try:
-                if model.parameters.dict[item0][1] == 'free':
-                    item0 += self.channel_id
-                setattr(self, item, model.parameters.dict[item0][0])
-            except KeyError:
-                pass
-        # Allow for rp or rprs
-        if (self.rprs is None) and ('rp' in model.parameters.dict.keys()):
-            item0 = 'rp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'rprs', model.parameters.dict[item0][0])
-        if (self.rp is None) and ('rprs' in model.parameters.dict.keys()):
-            item0 = 'rprs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'rp', model.parameters.dict[item0][0])
-        # Allow for a or ars
-        if (self.ars is None) and ('a' in model.parameters.dict.keys()):
-            item0 = 'a' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'ars', model.parameters.dict[item0][0])
-        if (self.a is None) and ('ars' in model.parameters.dict.keys()):
-            item0 = 'ars' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'a', model.parameters.dict[item0][0])
-        # Allow for fp or fpfs
-        if (self.fpfs is None) and ('fp' in model.parameters.dict.keys()):
-            item0 = 'fp' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'fpfs', model.parameters.dict[item0][0])
-        elif self.fpfs is None:
-            setattr(self, 'fpfs', 0.)
-        if (self.fp is None) and ('fpfs' in model.parameters.dict.keys()):
-            item0 = 'fpfs' + self.pid_id
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'fp', model.parameters.dict[item0][0])
-        elif self.fp is None:
-            setattr(self, 'fp', 0.)
-        # Set stellar radius
-        if 'Rs' in model.parameters.dict.keys():
-            item0 = 'Rs'
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += self.channel_id
-            setattr(self, 'Rs', model.parameters.dict[item0][0])
 
 
 class FleckTransitModel(Model):
@@ -132,6 +30,7 @@ class FleckTransitModel(Model):
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
+        self.name = 'fleck transit'
 
         log = kwargs.get('log')
 
