@@ -10,8 +10,6 @@ from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
-
-
 class FleckTransitModel(Model):
     """Transit Model with Star Spots"""
     def __init__(self, **kwargs):
@@ -74,8 +72,9 @@ class FleckTransitModel(Model):
         self.spotrad = np.zeros((self.nchannel_fitted, 10))
         self.spotlat = np.zeros((self.nchannel_fitted, 10))
         self.spotlon = np.zeros((self.nchannel_fitted, 10))
-        self.keys = list(self.parameters.dict.keys())
-        self.keys = [key for key in self.keys if key.startswith('spot')]
+        self.spotcon = np.zeros((self.nchannel_fitted))
+        self.starrot = np.zeros((self.nchannel_fitted))
+        self.starinc = np.zeros((self.nchannel_fitted))
 
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
@@ -107,6 +106,11 @@ class FleckTransitModel(Model):
         else:
             pid_iter = [pid,]
 
+        if pid is None or pid == 0:
+            pid_id = ''
+        else:
+            pid_id = f'_pl{pid}'
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -118,6 +122,12 @@ class FleckTransitModel(Model):
                 chan = channels[c]
             else:
                 chan = 0
+
+            # channel ID
+            if c == 0:
+                channel_id = ''
+            else:
+                channel_id = f'_{chan}'
 
             time = self.time
             if self.multwhite:
@@ -134,40 +144,54 @@ class FleckTransitModel(Model):
                 # set a star rotation for the star object
                 # not actually used in fast mode. 
                 # overwritten if user supplies and runs slow mode
-                star_rotation = 100 
+                self.starrot[:] = 100
                 fleck_fast = True
-                for key in self.keys:
-                    split_key = key.split('_')
-                    if len(split_key) == 1:
-                        chan = 0
-                    else:
-                        chan = int(split_key[1])
-                    if 'rad' in split_key[0]:
-                        # Get the spot number and update self.spotrad
-                        self.spotrad[chan, int(split_key[0][7:])] = \
-                            np.array([self.parameters.dict[key][0]])
-                        nspots += 1
-                    elif 'lat' in split_key[0]:
-                        # Get the spot lat and update self.spotlat
-                        self.spotlat[chan, int(split_key[0][7:])] = \
-                            np.array([self.parameters.dict[key][0]])
-                    elif 'lon' in split_key[0]:
-                        # Get the spot lon and update self.spotlon
-                        self.spotlon[chan, int(split_key[0][7:])] = \
-                            np.array([self.parameters.dict[key][0]])
-                    elif 'con' in split_key[0]:
-                        # Get the spot constrast and assign
-                        spot_contrast = self.parameters.dict[key][0]
-                    elif 'rot' in split_key[0]:
-                        # Get the stellar rotation and assign
-                        star_rotation = self.parameters.dict[key][0]
-                        fleck_fast = False
-                    elif 'stari' in split_key[0]:
-                        # Get the stellar inclination and assign
-                        star_inc = self.parameters.dict[key][0]
-                    elif 'npts' in split_key[0]:
-                        # it's the number of points to evaluate
-                        npoints = self.parameters.dict[key][0]
+
+                # find number of spots
+                spotinds = [s for s in self.parameters.dict.keys() if 'spotrad' in s]   
+                counter = 0
+                for s in spotinds:
+                    if '_' in s:
+                        counter += 1
+                nspots = len(spotinds) - counter
+
+                for n in range(nspots):
+                    # read radii
+                    item0 = 'spotrad' + str(n) + pid_id
+                    if self.parameters.dict[item0][1] == 'free':
+                        item0 += channel_id
+                    value = self.parameters.dict[item0][0]
+                    self.spotrad[chan,n] = value
+                    # read latitudes
+                    item0 = 'spotlat' + str(n) + pid_id
+                    if self.parameters.dict[item0][1] == 'free':
+                        item0 += channel_id
+                    value = self.parameters.dict[item0][0]
+                    self.spotlat[chan,n] = value
+                    # read longitudes
+                    item0 = 'spotlon' + str(n) + pid_id
+                    if self.parameters.dict[item0][1] == 'free':
+                        item0 += channel_id
+                    value = self.parameters.dict[item0][0]
+                    self.spotlon[chan,n] = value
+                # read contrasts (same for all spots)
+                item0 = 'spotcon0' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                value = self.parameters.dict[item0][0]
+                self.spotcon[chan] = value
+                # read stellar inclination
+                item0 = 'spotstari' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                value = self.parameters.dict[item0][0]
+                self.starinc[chan] = value
+                # read number of points
+                npoints = self.parameters.dict['spotnpts'][0]
+                # read stellar rotation (if provided)
+                if 'spotrot' in self.parameters.dict.keys():
+                    self.starrot[chan] = self.parameters.dict['spotrot'][0]
+                    fleck_fast = False
             
                 # Set limb darkening parameters
                 uarray = []
@@ -205,17 +229,18 @@ class FleckTransitModel(Model):
                     pl_params.u = np.array([u1, u2])
 
                 # Make the star object
-                star = fleck.Star(spot_contrast=spot_contrast, 
+                star = fleck.Star(spot_contrast=self.spotcon[chan], 
                                   u_ld=pl_params.u, 
-                                  rotation_period=star_rotation)
+                                  rotation_period=self.starrot[chan])
                 # Make the transit model
                 fleck_times = np.linspace(time[0], time[-1], npoints)
                 fleck_transit = star.light_curve(
                     self.spotlon[chan][:nspots, None]*unit.deg, 
                     self.spotlat[chan][:nspots, None]*unit.deg, 
                     self.spotrad[chan][:nspots, None],
-                    star_inc*unit.deg, 
-                    planet=pl_params, times=fleck_times).flatten()
+                    self.starinc[chan]*unit.deg, 
+                    planet=pl_params, times=fleck_times,
+                    fast=fleck_fast).flatten()
                 m_transit = np.interp(time, fleck_times, fleck_transit)
                 
                 light_curve *= m_transit/m_transit[0]

@@ -9,7 +9,7 @@ except:
 import corner
 from scipy import stats
 import fleck
-import batman
+from .models.BatmanModels import PlanetParams
 import astropy.units as unit
 try:
     import arviz as az
@@ -801,49 +801,106 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
 def plot_fleck_star(lc, model, meta, fitter):
     
-    spotrad = np.array([])
-    spotlat = np.array([])
-    spotlon = np.array([])
-    uarray = np.array([])
+    # find number of spots
+    spotinds = [s for s in model.parameters.dict.keys() if 'spotrad' in s]   
+    counter = [s for s in spotinds if '_' in s]
+    nspots = len(spotinds) - len(counter)
+
+    # find number of limb darkening parametesr
+    limbdarks = [s for s in model.parameters.dict.keys() if 'u' in s] 
+    counter = [s for s in limbdarks if '_' in s]
+    nus = len(limbdarks) - len(counter)
+    print(nus)
     
-    bm_params = batman.TransitParams()
+    spotrad = np.zeros((lc.nchannel_fitted, nspots))
+    spotlat = np.zeros((lc.nchannel_fitted, nspots))
+    spotlon = np.zeros((lc.nchannel_fitted, nspots))
+    spotcon = np.zeros((lc.nchannel_fitted))
+    starrot = np.zeros((lc.nchannel_fitted))
+    starinc = np.zeros((lc.nchannel_fitted))
+
+    uarray = np.zeros((lc.nchannel_fitted, nus))
+
     # Set spot/fleck parameters
-    nspots = 0
     # set a star rotation for the star object
     # not actually used in fast mode. 
     # overwritten if user supplies and runs slow mode
-    star_rotation = 100 
-    fleck_fast = True
-    for attr in model.parameters.dict:
-        if attr.startswith('spot'):
-            if 'rad' in attr:
-                spotrad = np.append(spotrad, model.parameters.dict[attr][0])
-            elif 'lat' in attr:
-                spotlat = np.append(spotlat, model.parameters.dict[attr][0])
-            elif 'lon' in attr:
-                spotlon = np.append(spotlon, model.parameters.dict[attr][0])
-            elif 'con' in attr:
-                spot_contrast = model.parameters.dict[attr][0]
-            elif 'rot' in attr:
-                star_rotation = model.parameters.dict[attr][0]
-                fleck_fast = True
-            elif 'stari' in attr:
-                star_inc = model.parameters.dict[attr][0]
-        elif attr.startswith('u'):
-            uarray = np.append(uarray, model.parameters.dict[attr][0])
+    starrot[:] = 100 
+
+    pid_id = ''
+
+    for channel in lc.fitted_channels:
+
+        # Initialize planet
+        pl_params = PlanetParams(model, 0, channel)
+
+        # channel ID
+        if channel == 0:
+            channel_id = ''
         else:
-            setattr(bm_params, attr, model.parameters.dict[attr][0])
-    bm_params.u = uarray
+            channel_id = f'_{channel}'
+
+        for n in range(nspots):
+            # read radii
+            item0 = 'spotrad' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotrad[channel, n] = value
+            # read latitudes
+            item0 = 'spotlat' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotlat[channel, n] = value
+            # read longitudes
+            item0 = 'spotlon' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotlon[channel, n] = value
+        # read contrasts (same for all spots)
+        item0 = 'spotcon0' + pid_id
+        if model.parameters.dict[item0][1] == 'free':
+            item0 += channel_id
+        value = model.parameters.dict[item0][0]
+        spotcon[channel] = value
+        # read stellar inclination
+        item0 = 'spotstari' + pid_id
+        if model.parameters.dict[item0][1] == 'free':
+            item0 += channel_id
+        value = model.parameters.dict[item0][0]
+        starinc[channel] = value
+        # read stellar rotation (if provided)
+        if 'spotrot' in model.parameters.dict.keys():
+            starrot[channel] = model.parameters.dict['spotrot'][0]
+
+        for ui in range(nus):   
+            item0 = 'u' + str(ui+1) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            uarray[channel, ui] = model.parameters.dict[item0][0]
+
+        pl_params.u = uarray[channel]
     
-    fig = plt.figure(5306, figsize=(8, 6))
-    plt.clf()
-    star = fleck.Star(spot_contrast=spot_contrast, 
-                      u_ld=bm_params.u,
-                      rotation_period=star_rotation)
-    star.plot(spotlon[:, None]*unit.deg, spotlat[:, None]*unit.deg, 
-              spotrad[:, None], star_inc*unit.deg, 
-              planet=bm_params, time=0)
-    fname = (f'figs{os.sep}fig5306_fleck_star_{fitter}')
-    fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
-    if not meta.hide_plots:
-        plt.pause(0.2)
+        fig = plt.figure(5306, figsize=(8, 6))
+        plt.clf()
+        star = fleck.Star(spot_contrast=spotcon[channel], 
+                          u_ld=pl_params.u,
+                          rotation_period=starrot[channel])
+        star.plot(spotlon[channel][:nspots, None]*unit.deg, 
+                  spotlat[channel][:nspots, None]*unit.deg, 
+                  spotrad[channel][:nspots, None], 
+                  starinc[channel]*unit.deg, 
+                  planet=pl_params, time=0.0)
+        
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5306_{fname_tag}_fleck_star_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
