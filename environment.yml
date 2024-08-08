@@ -5,6 +5,7 @@ channels:
 dependencies:
     - python==3.10.14
     - astropy
+    - astroquery
     - batman-package
     - bokeh[version='<3.0']
     - ccdproc
@@ -29,7 +30,7 @@ dependencies:
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
-    - scipy[version='>=1.4.0'] # Lower limit needed for scipy.fft
+    - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm

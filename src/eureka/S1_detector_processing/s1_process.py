@@ -197,12 +197,12 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.gain_scale.skip = meta.skip_gain_scale
 
         # Instrument Specific Steps
-        if meta.inst in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
+        if meta.inst in ['nircam', 'niriss', 'nirspec']:
             self.persistence.skip = meta.skip_persistence
             self.superbias.skip = meta.skip_superbias
             if meta.custom_bias:
                 self.superbias.override_superbias = meta.superbias_file
-        elif meta.inst in ['MIRI']:
+        elif meta.inst in ['miri']:
             if meta.remove_390hz:
                 # Need to apply these steps later to be able to remove 390 Hz
                 self.firstframe.skip = True

@@ -976,7 +976,7 @@ def load_attrs_from_xarray(data):
     attrs = data.attrs
     for attr in attrs.keys():
         # Convert None strings back to None
-        if attrs[attr] == 'None':
+        if isinstance(attrs[attr], str) and attrs[attr] == 'None':
             attrs[attr] = None
         # Restructure bibliography correctly
         if attr == 'bibliography':
