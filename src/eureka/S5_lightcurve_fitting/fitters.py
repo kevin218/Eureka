@@ -161,7 +161,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Zoom in on phase variations
     if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
-                                 or 'poet_pc' in meta.run_myfuncs):
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
@@ -434,7 +435,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='emcee')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
     # Plot Allan plot
@@ -939,7 +942,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='dynesty')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
 
     # Plot Allan plot
@@ -1053,7 +1058,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='lmfitter')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='lmfitter')
 
     # Plot Allan plot

@@ -21,14 +21,14 @@ if __name__ == '__main__':
     # To skip one or more stages that were already run,
     # just comment them out below
 
-    # s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
+    meta = s1.rampfitJWST(eventlabel, ecf_path=ecf_path)
 
-    s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
+    meta = s2.calibrateJWST(eventlabel, ecf_path=ecf_path)
 
-    s3.reduce(eventlabel, ecf_path=ecf_path)
+    spec, meta = s3.reduce(eventlabel, ecf_path=ecf_path)
 
-    s4.genlc(eventlabel, ecf_path=ecf_path)
+    spec, lc, meta = s4.genlc(eventlabel, ecf_path=ecf_path)
 
-    s5.fitlc(eventlabel, ecf_path=ecf_path)
+    meta = s5.fitlc(eventlabel, ecf_path=ecf_path)
 
-    s6.plot_spectra(eventlabel, ecf_path=ecf_path)
+    meta = s6.plot_spectra(eventlabel, ecf_path=ecf_path)
