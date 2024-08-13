@@ -241,6 +241,12 @@ where ``[60]`` can be replaced with a list of the visit numbers you want to
 download, e.g. ``[60, 61, 62, 63, 64]`` if you want the entire transit
 observation.
 
+.. warning::
+	HST planning is usually consistent between orbits, but may sometimes modify 
+	the number of exposures in a scan for observation timing purposes. Ensure 
+	that your datasets have consistent numbers of exposures, or exclude 
+	trailing exposures at the end of orbits if needed.
+
 You'll also need to change the ``final_dir`` variable to a more appropriate
 location for your data, similar to how we made a new directory for the JWST
 data above.
