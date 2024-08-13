@@ -321,7 +321,7 @@ def source_position(meta, x_dim, pos_max, m, n,
         plt.axvline(y_pos, ls='-', label='Weighted Row')
     plt.axvline(pos_max, ls='--', label='Brightest Row', c='C3')
     plt.ylabel('Row Flux')
-    plt.xlabel('Row Pixel Position')
+    plt.xlabel('Row Relative Pixel Position')
     plt.legend()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
