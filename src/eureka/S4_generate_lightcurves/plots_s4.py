@@ -338,7 +338,7 @@ def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
     plt.ylim(0)
     plt.ylabel('Throughput (%)')
     plt.xlabel('Wavelength ($\\mu$m)')
-    plt.legend(loc=8)
+    plt.legend(loc='best')
 
     fname = ('figs'+os.sep+'fig4303_ExtrapolatedThroughput' +
              plots.figure_filetype)
