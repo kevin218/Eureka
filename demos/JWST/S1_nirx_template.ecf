@@ -62,7 +62,7 @@ npix_top            8
 npix_bot            8
 
 # Diagnostics
-isplots_S1          1
+isplots_S1          3
 nplots              5
 hide_plots          True
 verbose             True
@@ -71,5 +71,5 @@ verbose             True
 topdir              /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
-inputdir            Uncalibrated
+inputdir            Stage0
 outputdir           Stage1
