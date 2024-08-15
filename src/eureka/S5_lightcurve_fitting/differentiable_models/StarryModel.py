@@ -42,7 +42,10 @@ class StarryModel(PyMC3Model):
         missing = np.array([name not in self.paramtitles for name in required])
         if np.any(missing):
             message = (f'Missing required params {required[missing]} in your '
-                       f'EPF.')
+                       'EPF. Make sure it is not set to \'independent\' as '
+                       'this is no longer a supported option; you can set '
+                       'these parameters to fixed if you want to maintain the '
+                       'old \'independent\' behavior.')
             raise AssertionError(message)
 
         if 'u2' in self.paramtitles:
@@ -135,7 +138,7 @@ class StarryModel(PyMC3Model):
             planets = []
             for pid in range(self.num_planets):
                 # Initialize PlanetParams object for this planet
-                pl_params = PlanetParams(self, pid, chan)
+                pl_params = PlanetParams(self, pid, chan, eval=False)
 
                 if not hasattr(pl_params, 'fp'):
                     planet_map = starry.Map(ydeg=self.ydeg, amp=0)
@@ -276,11 +279,8 @@ class StarryModel(PyMC3Model):
                 # Return the system lightcurve
                 lcpiece = lib.zeros(len(time))
                 for piece in result:
-                    lcpiece = lcpiece+piece
-                if c == 0:
-                    returnVal = lcpiece
-                else:
-                    returnVal = lib.concatenate([returnVal, lcpiece])
+                    lcpiece += piece
+                returnVal = lib.concatenate([returnVal, lcpiece])
 
         return returnVal
 
