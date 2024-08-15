@@ -291,8 +291,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                                   priortype)
     else:
         if meta.lsq_first:
-            # Only call lsq fitter first if asked or lsq_first option wasn't
-            # passed (allowing backwards compatibility)
+            # Only call lsq fitter first if asked
             log.writelog('\nCalling lsqfitter first...')
             # RUN LEAST SQUARES
             lsq_sol = lsqfitter(lc, model, meta, log,

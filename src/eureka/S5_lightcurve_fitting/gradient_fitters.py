@@ -172,6 +172,16 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     model.setup(lc.time, lc.flux, lc.unc, freepars)
     model.update(freepars)
 
+    if meta.exoplanet_first:
+        # Only call exoplanet fitter first if asked
+        log.writelog('\nCalling exoplanetfitter first...')
+        # RUN exoplanet optimizer
+        exo_sol = exoplanetfitter(lc, model, meta, log,
+                                  calling_function='nuts_exoplanet', **kwargs)
+
+        freepars = exo_sol.fit_params
+        model.update(freepars)
+
     start = {}
     for name, val in zip(freenames, freepars):
         start[name] = val
