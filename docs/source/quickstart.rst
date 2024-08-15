@@ -241,14 +241,6 @@ where ``[60]`` can be replaced with a list of the visit numbers you want to
 download, e.g. ``[60, 61, 62, 63, 64]`` if you want the entire transit
 observation.
 
-.. warning::
-	HST observations are usually consistent between scans (i.e. all the spatial 
-	scans are the same number of reads), but some observations may modify 
-	the number of reads in a scan for timing purposes. Ensure that your 
-	datasets have scans of consistent length, or exclude the shorter 
-	scans at the end of orbits if needed (e.g. by removing those FITS 
-	files from your input data directory).
-
 You'll also need to change the ``final_dir`` variable to a more appropriate
 location for your data, similar to how we made a new directory for the JWST
 data above.
