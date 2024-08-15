@@ -242,10 +242,12 @@ download, e.g. ``[60, 61, 62, 63, 64]`` if you want the entire transit
 observation.
 
 .. warning::
-	HST planning is usually consistent between orbits, but may sometimes modify 
-	the number of exposures in a scan for observation timing purposes. Ensure 
-	that your datasets have consistent numbers of exposures, or exclude 
-	trailing exposures at the end of orbits if needed.
+	HST observations are usually consistent between scans (i.e. all the spatial 
+	scans are the same number of reads), but some observations may modify 
+	the number of reads in a scan for timing purposes. Ensure that your 
+	datasets have scans of consistent length, or exclude the shorter 
+	scans at the end of orbits if needed (e.g. by removing those FITS 
+	files from your input data directory).
 
 You'll also need to change the ``final_dir`` variable to a more appropriate
 location for your data, similar to how we made a new directory for the JWST
