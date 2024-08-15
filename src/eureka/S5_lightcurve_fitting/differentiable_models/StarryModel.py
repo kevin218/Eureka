@@ -248,10 +248,7 @@ class StarryModel(PyMC3Model):
             if self.mutualOccultations:
                 result = temp_system.flux(time, total=False)
                 fstar = result.pop(0)
-                if self.num_planets == 0:
-                    fplanets = []
-                else:
-                    fplanets = result
+                fplanets = result
             else:
                 fstar = lib.ones(len(time))
                 fplanets = []
