@@ -219,7 +219,16 @@ class PlanetParams():
             item0 = 'Rs'
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
-            value = getattr(parameterObject, item0)
+            try:
+                value = getattr(parameterObject, item0)
+            except AttributeError as e:
+                if not eval:
+                    message = (f'Missing required parameter Rs in your '
+                       'EPF. Make sure it is not set to \'independent\' as '
+                       'this is no longer a supported option; you can set '
+                       'these parameters to fixed if you want to maintain the '
+                       'old \'independent\' behavior.')
+                raise AssertionError(message)
             if eval:
                 value = value.value
             setattr(self, 'Rs', value)
