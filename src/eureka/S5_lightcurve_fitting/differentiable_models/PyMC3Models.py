@@ -519,9 +519,9 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             flux_length = len(self.time)*nchan
 
         if eval:
-            flux = np.ma.ones(flux_length)
+            flux = np.ma.zeros(flux_length)
         else:
-            flux = tt.ones(flux_length)
+            flux = tt.zeros(flux_length)
 
         # Evaluate flux
         for component in self.components:
