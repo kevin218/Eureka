@@ -604,13 +604,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         AstroModel = m.AstroModel
         CompositeModel = m.CompositeModel
 
-    freenames = []
-    for key in params.dict:
-        if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                   'white_fixed']:
-            freenames.append(key)
-    freenames = np.array(freenames)
-
     # Make the astrophysical and detector models
     modellist = []
     if use_starry:
