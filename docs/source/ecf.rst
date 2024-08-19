@@ -57,11 +57,11 @@ linearity_file
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
 custom_mask
-''''''''''''''''
+'''''''''''
 Boolean. If True, allows user to supply a custom bad pixel mask file and overwrite the default file.
 
 mask_file
-''''''''''''''
+'''''''''
 The fully qualified path to the custom bad pixel mask file to use if custom_mask is True.
 
 bias_correction
