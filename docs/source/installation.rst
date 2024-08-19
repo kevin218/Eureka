@@ -73,11 +73,12 @@ There are also several optional dependency collections that can be installed wit
 
 In the installation instructions above, the ``jwst`` optional dependency is used as we strongly recommend users run Stages 1 and 2 locally, but we wanted to give users the ability to opt-out of installing the dependencies installed with ``jwst`` if they didn't work on their system.
 
-To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``.
+To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``. 
 
 .. warning::
-	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``.
-
+	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``. 
+	
+	In addition, attempting to specify ``[jwst,pymc3]`` when installing ``Eureka!`` will fail with a dependency conflict, as the newest version of the ``jwst`` pipeline is incompatible with ``pymc3``. Optional NUTS users should only specify ``[pymc3]`` in their installs, which will default to a slightly older version of the ``jwst`` pipeline. Other optional dependencies are currently compatible.
 
 Installing with a ``conda`` environment.yml file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,7 +129,10 @@ e.g. ``/Users/your_name/crds_cache`` for Mac users or ``/home/your_name/crds_cac
 
 		export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
 
-If these environment variables are not set, Stages 1-3 of the pipeline will fail.
+In order for your changes to apply, you must close your current terminal(s) and open a new terminal; alternatively, you can instead do ``source ~/.bashrc``
+(changing .bashrc to whichever filename your system uses) within your currently open terminal(s).
+
+If these environment variables are not set, then Stages 1-3 of the pipeline will fail with an error message that says something like ``No such file or directory: '/grp/crds/cache/config/jwst/server_config'``
 
 Issues with installing the jwst dependency
 ------------------------------------------

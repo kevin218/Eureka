@@ -2,64 +2,67 @@
 
 # Stage 5 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-5
 
-ncpu            1 # The number of CPU threads to use when running emcee or dynesty in parallel
+ncpu            4 # The number of CPU threads to use when running emcee or dynesty in parallel
 
-allapers        False                   # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
-rescale_err     False                   # Rescale uncertainties to have reduced chi-squared of unity
-fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to use?
-verbose         True                    # If True, more details will be printed about steps
-fit_method      [dynesty]               #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
-run_myfuncs     [batman_tr, polynomial]  # options are: batman_tr, batman_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, and GP (can list multiple types separated by commas)
-compute_ltt     False                   # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
-force_positivity False                  # Optional boolean for sinusoid_pc and poet_pc models.  Set True to force positive phase variations.
-num_planets     1                       # Number of planets in the fit. Default is 1.
+multwhite       False  # Are you simultaneously fitting multiple white lightcurves?
+
+allapers        False  # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 
 # Manual clipping in time
-manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal (done before summing reads).
+manual_clip     None    # A list of lists specifying the start and end integration numbers for manual removal.
 
+fit_par         ./S5_fit_par_template.epf   # What fitting epf do you want to use?
+fit_method      [dynesty]                   #options are: lsq, emcee, dynesty (can list multiple types separated by commas)
+run_myfuncs     [batman_tr,polynomial]      # options are: batman_tr, batman_ecl, sinusoid_pc, poet_tr, poet_ecl, poet_pc, expramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, and GP (can list multiple types separated by commas)
+compute_ltt     False                       # options are: True (correct model for the light travel time effect), or False (ignore the light travel time effect)
+force_positivity False                      # Optional boolean for sinusoid_pc and poet_pc models.  Set True to force positive phase variations.
 
 # Limb darkening controls
 # IMPORTANT: limb-darkening coefficients are not automatically fixed then, change to 'fixed' in .epf file whether they should be fixed or fitted!
-use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, None. For exotic-ld, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
+use_generate_ld  None  # use the generated limb-darkening coefficients from Stage 4? Options: exotic-ld, spam, None. For exotic-ld and spam, the limb-darkening laws available are linear, quadratic, 3-parameter and 4-parameter non-linear.
 ld_file          None  # Fully qualified path to the location of a limb darkening file that you want to use
 ld_file_white    None  # Fully qualified path to the location of a limb darkening file that you want to use for the white-light light curve (required if ld_file is not None and any EPF parameters are set to white_free or white_fixed).
 
 # General fitter
 old_fitparams   None # filename relative to topdir that points to a fitparams csv to resume where you left off (set to None to start from scratch)
 
-#lsq
-lsq_method      'Nelder-Mead' # The scipy.optimize.minimize optimization method to use
-lsq_tol         1e-6    # The tolerance for the scipy.optimize.minimize optimization method
+# lsq fitter
+lsq_method      Powell  # The scipy.optimize.minimize optimization method to use
+lsq_tol         1e-7    # The tolerance for the scipy.optimize.minimize optimization method
 lsq_maxiter     None    # Maximum number of iterations to perform. Depending on the method each iteration may use several function evaluations. Set to None to use the default value
 
-#mcmc
+# emcee fitter
 old_chain       None    # Output folder relative to topdir that contains an old emcee chain to resume where you left off (set to None to start from scratch)
 lsq_first       True    # Initialize with an initial lsq call (can help shorten burn-in, but turn off if lsq fails). Only used if old_chain is None
 run_nsteps      1000
 run_nwalkers    200
 run_nburn       500     # How many of run_nsteps should be discarded as burn-in steps
 
-#dynesty
-run_nlive       1024    # Must be > ndim * (ndim + 1) // 2
+# dynesty fitter
+run_nlive       'min'    # Must be > ndim * (ndim + 1) // 2
 run_bound       'multi'
 run_sample      'auto'
 run_tol         0.1
+
+# PyMC3 NUTS fitter
+tune            3000
+draws           1500
+chains          3
+target_accept   0.85
 
 #GP inputs
 kernel_inputs   ['time'] #options: time
 kernel_class    ['Matern32'] #options: ExpSquared, Matern32, Exp, RationalQuadratic for george, Matern32 for celerite (sums of kernels possible for george separated by commas)
 GP_package      'celerite' #options: george, celerite
-useHODLR        False  # Set to True to use the HODLRSolver when using the george GP
 
 # Plotting controls
 interp          False   # Should astrophysical model be interpolated (useful for uneven sampling like that from HST)
 
 # Diagnostics
 isplots_S5      5       # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
-nbin_plot       100     # The number of bins that should be used for figures 5104 and 5304. Defaults to 100.
-testing_S5      False   # Boolean, set True to only use the first spectral channel
-testing_model   False   # Boolean, set True to only inject a model source of systematics
-hide_plots      False   # If True, plots will automatically be closed rather than popping up
+nbin_plot       None    # The number of bins that should be used for figures 5104 and 5304
+hide_plots      True    # If True, plots will automatically be closed rather than popping up
+verbose         True    # If True, more details will be printed about steps
 
 # Project directory
 topdir          /home/User/Data/JWST-Sim/NIRSpec/
@@ -67,3 +70,5 @@ topdir          /home/User/Data/JWST-Sim/NIRSpec/
 # Directories relative to topdir
 inputdir        Stage4   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
 outputdir       Stage5
+
+# inputdirlist    []       # A list of additional Stage 4 input folders to use in a joint white lightcurve fit (e.g., NIRSpec NRS1+NRS2, or NIRCam+MIRI). Only relevant if multwhite is set to True

@@ -17,14 +17,14 @@ Up-to-date installation instructions can be found at
 
 ## Quickstart
 
-Once Eureka! has been installed, you can learn how to use some aspects of the package using our 
+Once Eureka! has been installed, you can learn how to use some aspects of the package using our
 [quickstart guide](https://eurekadocs.readthedocs.io/en/latest/quickstart.html).
 
 ## Issues and FAQ
 
 If you experience an issue when installing or using Eureka!, first check out our
 [FAQ page](https://eurekadocs.readthedocs.io/en/latest/faq.html).
-If the answer to your question is not there, try looking searching for an open or closed issue on 
+If the answer to your question is not there, try looking searching for an open or closed issue on
 [GitHub](https://github.com/kevin218/Eureka/issues?q=is%3Aissue).
 If you still can't find the solution to your issue, please open a new issue on GitHub at
 [GitHub](https://github.com/kevin218/Eureka/issues)

@@ -5,6 +5,7 @@ channels:
 dependencies:
     - python==3.10.14
     - astropy
+    - astroquery
     - batman-package
     - bokeh[version='<3.0']
     - ccdproc
@@ -29,7 +30,7 @@ dependencies:
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
-    - scipy[version='>=1.4.0'] # Lower limit needed for scipy.fft
+    - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm
@@ -37,9 +38,9 @@ dependencies:
         - astraeus@git+https://github.com/kevin218/Astraeus@main
         - celerite2 # Needed for GP
         - crds
-        - exotic-ld==3 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
+        - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
-        - jwst==1.14.0
+        - jwst==1.15.1
         - mc3 # Needed for uncertainties in the Allan variance plots in S5
         - myst-parser # Needed for documentation
         - setuptools_scm # Needed for version number

@@ -18,5 +18,6 @@ from . import modelgrid
 from . import models
 from . import plots_s5
 from . import s5_fit
+from . import s5_meta
 from . import simulations
 from . import utils

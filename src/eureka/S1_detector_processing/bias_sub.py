@@ -30,7 +30,8 @@ def do_correction(input_model, bias_model, meta, log):
     output_model: data model object
         bias-subtracted science data
     """
-    log.writelog('Doing super-bias subtraction.')
+    if meta.bias_correction is not None:
+        log.writelog('Doing super-bias subtraction with correction.')
 
     # Check for subarray mode and extract subarray from the
     # bias reference data if necessary
@@ -133,7 +134,10 @@ def do_correction(input_model, bias_model, meta, log):
                                  f'{meta.bias_group}. Should be ' +
                                  '[1, 2, ..., each].')
         else:
-            log.writelog('  No bias correction applied.')
+            if meta.bias_correction is not None:
+                log.writelog('  WARNING: Unrecognized meta.bias_correction '
+                             f'value of {meta.bias_correction}... '
+                             'No bias correction was applied.')
             bias_data = None
     except Exception as error:
         log.writelog(repr(error))

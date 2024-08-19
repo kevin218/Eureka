@@ -19,16 +19,16 @@ t0   		55528.353027	'shared'		55528.34		55528.36		U
 time_offset	0				'independent'
 inc  		82.109	 		'shared'		82.109			0.088			N
 a    		4.97			'shared'		4.97			0.14			N
-ecc  		0.0	 			'fixed' 		0 				1				U
-w    		90.				'fixed' 		0 				180				U
+ecc  		0.0	 			'fixed'
+w    		90.				'fixed'
 # -------------------------
 # ** Limb darkening parameters **
 # Choose limb_dark from ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot', 'logarithmic', 'exponential','3-parameter', '4-parameter']
 # When using generated limb-darkening coefficients from exotic-ld choose from ['linear', 'quadratic', '3-parameter', '4-parameter']
 # -------------------------
 limb_dark	'kipping2013' 	'independent'
-u1			0.3				'fixed'			0				1				U
-u2			0.1				'fixed'			0				1				U
+u1			0.3				'fixed'
+u2			0.1				'fixed'
 # --------------------
 # ** Systematic variables **
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
@@ -38,13 +38,10 @@ u2			0.1				'fixed'			0				1				U
 # Drift model variables (xpos, ypos, xwidth, ywidth)
 # --------------------
 c0			1.009			'free'			0.95			1.05			U
-# GP Parameters
-A			-15				'free'			-25				-5			U
-m			-4				'free'			-8				0			U
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
 # Use scatter_ppm to fit the noise level in ppm
 # -----------
-scatter_mult 1.1            'free'         1            0.1          N
+scatter_mult 1.1            'free'         0.8            10          U
 #scatter_ppm  500            'free'         500          100          N
