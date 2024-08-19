@@ -407,7 +407,7 @@ def do_oneoverf_corr(data, meta, i, star_pos_x, log):
         The updated Dataset object after the 1/f correction has been completed.
     """
     if i == 0:
-        log.writelog('Correcting for 1/f noise...', mute=(not meta.verbose))
+        log.writelog('  Correcting for 1/f noise...', mute=(not meta.verbose))
 
     # Let's first determine which amplifier regions are left in the frame.
     # For NIRCam: 4 amplifiers, 512 pixels in x dimension per amplifier
