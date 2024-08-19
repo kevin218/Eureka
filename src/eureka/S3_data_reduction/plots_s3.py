@@ -1157,7 +1157,8 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     """
     plt.figure(3307)
     plt.clf()
-    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2), gridspec_kw={'hspace': 0.0})
+    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2),
+                           gridspec_kw={'hspace': 0.0})
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
