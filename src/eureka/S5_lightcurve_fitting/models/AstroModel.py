@@ -221,13 +221,12 @@ class PlanetParams():
                 item0 += self.channel_id
             try:
                 value = getattr(parameterObject, item0)
-            except AttributeError as e:
-                if not eval:
-                    message = (f'Missing required parameter Rs in your '
-                       'EPF. Make sure it is not set to \'independent\' as '
-                       'this is no longer a supported option; you can set '
-                       'these parameters to fixed if you want to maintain the '
-                       'old \'independent\' behavior.')
+            except AttributeError as message:
+                message = ('Missing required parameter Rs in your EPF. Make'
+                           ' sure it is not set to \'independent\' as'
+                           ' this is no longer a supported option; you can set'
+                           ' these parameters to fixed if you want to maintain'
+                           ' the old \'independent\' behavior.')
                 raise AssertionError(message)
             if eval:
                 value = value.value

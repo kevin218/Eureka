@@ -627,9 +627,11 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             if component.modeltype == 'physical':
                 if interp:
                     flux *= component.interp(new_time, nints_interp,
-                                             channel=channel, eval=eval, **kwargs)
+                                             channel=channel, eval=eval,
+                                             **kwargs)
                 else:
-                    flux *= component.eval(channel=channel, eval=eval, **kwargs)
+                    flux *= component.eval(channel=channel, eval=eval,
+                                           **kwargs)
         return flux, new_time, nints_interp
 
     def compute_fp(self, theta=0):

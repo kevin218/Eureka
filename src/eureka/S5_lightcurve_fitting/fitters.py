@@ -71,7 +71,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(lc, meta, log, freenames, calling_function)
+        freepars = load_old_fitparams(lc, meta, log, freenames,
+                                      calling_function)
 
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
                           freenames)
