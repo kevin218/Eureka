@@ -73,11 +73,12 @@ There are also several optional dependency collections that can be installed wit
 
 In the installation instructions above, the ``jwst`` optional dependency is used as we strongly recommend users run Stages 1 and 2 locally, but we wanted to give users the ability to opt-out of installing the dependencies installed with ``jwst`` if they didn't work on their system.
 
-To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``.
+To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``. 
 
 .. warning::
-	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``.
-
+	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``. 
+	
+	In addition, attempting to specify ``[jwst,pymc3]`` when installing ``Eureka!`` will fail with a dependency conflict, as the newest version of the ``jwst`` pipeline is incompatible with ``pymc3``. Optional NUTS users should only specify ``[pymc3]`` in their installs, which will default to a slightly older version of the ``jwst`` pipeline. Other optional dependencies are currently compatible.
 
 Installing with a ``conda`` environment.yml file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
