@@ -1139,16 +1139,17 @@ This file describes the transit/eclipse and systematics parameters and their pri
          The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``,
          where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset.
          If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
-         Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the ``r0`` and ``r2`` parameters (and ``r3`` and ``r5`` parameters).
-         One option is to set ``r0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``r0--r1`` and set ``r2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
+         .. note::
+            Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the ``r0`` and ``r2`` parameters (and ``r3`` and ``r5`` parameters).
+            One option is to set ``r0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``r0--r1`` and set ``r2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
       - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
          where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.
          If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
-         Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.
-         One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
-
+         .. note::
+            Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.
+            One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
       - ``step0`` and ``steptime0`` - The step size and time for the first step function (useful for removing mirror segment tilt events).
 
          For additional steps, simply increment the integer at the end (e.g. ``step1`` and ``steptime1``).  The change in flux is relative to the flux from the previous step.
