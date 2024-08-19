@@ -670,6 +670,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 success = xrio.writeXR(meta.filename_S3_SpecData, spec,
                                        verbose=True)
 
+                if not success:
+                    raise OSError('Failed to write S3_SpecData.')
+
             # Compute MAD value
             if not meta.photometry:
                 meta.mad_s3 = util.get_mad(meta, log, spec.wave_1d.values,

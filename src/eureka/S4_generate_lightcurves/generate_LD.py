@@ -54,13 +54,13 @@ def exotic_ld(meta, spec, log, white=False):
     elif meta.inst == 'nircam':
         filter = meta.filter
         if filter.lower() == 'f444w':
-            filter = 'f444'
-        mode = 'JWST_NIRCam_' + meta.filter
+            filter = 'F444'
+        mode = 'JWST_NIRCam_' + filter
     elif meta.inst == 'nirspec':
         filter = meta.filter
         if filter.lower() == 'prism':
             filter = 'prism'
-        mode = 'JWST_NIRSpec_' + meta.filter
+        mode = 'JWST_NIRSpec_' + filter
     elif meta.inst == 'niriss':
         mode = 'JWST_NIRISS_' + meta.filter
     elif meta.inst == 'wfc3':
