@@ -379,8 +379,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     """
     bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
                                 meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh,
-                                isrotate=meta.isrotate,
+                                threshold=meta.p3thresh, isrotate=2,
                                 isplots=isplots)
     return bg, mask, n
 

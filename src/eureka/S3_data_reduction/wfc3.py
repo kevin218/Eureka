@@ -769,7 +769,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
 
     bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
                                 deg=meta.bg_deg, threshold=meta.p3thresh,
-                                isrotate=meta.isrotate, isplots=isplots)
+                                isrotate=2, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
