@@ -1000,6 +1000,10 @@ NUTS Fitting Parameters
 '''''''''''''''''''''''
 The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
 
+exoplanet_first
+'''''''''''''''
+Boolean to determine whether to run exoplanet optimizer before NUTS. This is generally not recommended, but it can sometimes be helpful if your initial manual guess is quite poor.
+
 tune
 ^^^^
 Number of iterations to tune. Samplers adjust the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition to the number specified in the draws argument.
