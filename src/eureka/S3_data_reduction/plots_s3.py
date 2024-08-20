@@ -1207,7 +1207,12 @@ def phot_2d_frame_diff(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    for i in range(meta.nplots-1):
+    nplots = meta.nplots
+    if nplots == meta.n_int:
+        # Need to reduce by 1 since we're doing differences
+        nplots -= 1
+
+    for i in range(nplots):
         plt.figure(3505)
         plt.clf()
         flux1 = data.flux.values[i]
