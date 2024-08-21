@@ -67,9 +67,10 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         Record an astropy table for param values
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
+    freenames = lc.freenames
+    freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
+    if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
@@ -101,15 +102,6 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
         return callback_full(theta, lc, model, prior1, prior2, priortype,
                              freenames)
 
-    if not hasattr(meta, 'lsq_method'):
-        log.writelog('No lsq optimization method specified - using Powell'
-                     ' by default.')
-        meta.lsq_method = 'Powell'
-    if not hasattr(meta, 'lsq_tol'):
-        log.writelog('No lsq tolerance specified - using 1e-6 by default.')
-        meta.lsq_tol = 1e-6
-    if not hasattr(meta, 'lsq_maxiter'):
-        meta.lsq_maxiter = None
     results = minimize(neg_lnprob, freepars,
                        args=(lc, model, prior1, prior2, priortype, freenames),
                        method=meta.lsq_method, tol=meta.lsq_tol,
@@ -130,7 +122,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, calling_function, t_results, freenames)
@@ -168,7 +161,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Zoom in on phase variations
     if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
-                                 or 'poet_pc' in meta.run_myfuncs):
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter=calling_function)
 
     # Plot Allan plot
@@ -283,17 +277,20 @@ def emceefitter(lc, model, meta, log, **kwargs):
         +/- 1 sigma, all params
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
+    freenames = lc.freenames
+    freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
+    if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
     ndim = len(freenames)
 
-    if hasattr(meta, 'old_chain') and meta.old_chain is not None:
+    if meta.old_chain is not None:
         pos, nwalkers = start_from_oldchain_emcee(lc, meta, log, ndim,
-                                                  freenames)
+                                                  freenames, freepars,
+                                                  prior1, prior2,
+                                                  priortype)
     else:
-        if not hasattr(meta, 'lsq_first') or meta.lsq_first:
+        if meta.lsq_first:
             # Only call lsq fitter first if asked or lsq_first option wasn't
             # passed (allowing backwards compatibility)
             log.writelog('\nCalling lsqfitter first...')
@@ -302,10 +299,6 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                 calling_function='emcee_lsq', **kwargs)
 
             freepars = lsq_sol.fit_params
-
-            # SCALE UNCERTAINTIES WITH REDUCED CHI2
-            if meta.rescale_err:
-                lc.unc *= np.sqrt(lsq_sol.chi2red)
         else:
             lsq_sol = None
         pos, nwalkers = initialize_emcee_walkers(meta, log, ndim, lsq_sol,
@@ -326,7 +319,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                      fitter='emceeStartingPoint')
 
     # Initialize tread pool
-    if hasattr(meta, 'ncpu') and meta.ncpu > 1:
+    if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
     else:
         meta.ncpu = 1
@@ -337,8 +330,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                     args=(lc, model, prior1, prior2,
                                           priortype, freenames),
                                     pool=pool)
-    log.writelog('Running emcee burn-in...')
+    log.writelog('Running emcee burn-in and production steps...')
     sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
+    # log.writelog('Running emcee burn-in...')
     # state = sampler.run_mcmc(pos, meta.run_nsteps, progress=True)
     # # Log some details about the burn-in phase
     # acceptance_fraction = np.mean(sampler.acceptance_fraction)
@@ -387,7 +381,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'emcee', t_results, freenames, samples)
@@ -440,7 +435,9 @@ def emceefitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='emcee')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='emcee')
 
     # Plot Allan plot
@@ -472,7 +469,8 @@ def emceefitter(lc, model, meta, log, **kwargs):
     return best_model
 
 
-def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
+def start_from_oldchain_emcee(lc, meta, log, ndim, freenames, freepars,
+                              prior1, prior2, priortype):
     """Restart emcee using the ending point of an old chain.
 
     Parameters
@@ -487,6 +485,14 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         The number of fitted parameters.
     freenames : list
         The names of the fitted parameters.
+    freepars : list
+        The starting values of the fitted parameters.
+    prior1 : list
+        The list of prior1 values.
+    prior2 : list
+        The list of prior2 values.
+    priortype : list
+        The types of each prior (to determine meaning of prior1 and prior2).
 
     Returns
     -------
@@ -517,15 +523,6 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
                                 escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
 
-    # Make sure at least all the currently fitted parameters were present
-    if not np.all([key in full_keys for key in freenames]):
-        message = ('Old chain does not have the same fitted parameters and '
-                   'cannot be used to initialize the new fit.\n'
-                   'The old chain included:\n['+','.join(full_keys)+']\n'
-                   'The new chain included:\n['+','.join(freenames)+']')
-        log.writelog(message, mute=True)
-        raise AssertionError(message)
-
     fname = f'S5_emcee_samples{channel_tag}'
     # Load HDF5 files
     full_fname = os.path.join(foldername, fname)+'.h5'
@@ -537,6 +534,17 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
     else:
         samples = ds.to_array().T.values
     log.writelog(f'Old chain path: {full_fname}')
+
+    if not np.all([key in freenames for key in full_keys]):
+        # There were extra free parameters before - just get the relevant ones
+        relevant_inds = np.array([key in freenames for key in full_keys])
+        removed_inds = full_keys[~relevant_inds]
+        full_keys = full_keys[relevant_inds]
+        samples = samples[:, relevant_inds]
+        message = ('Old chain had extra fitted parameters. '
+                   'Removing the previously fitted parameters:\n'
+                   f'    {removed_inds}')
+        log.writelog(message, mute=(not meta.verbose))
 
     # Initialize the walkers using samples from the old chain
     nwalkers = meta.run_nwalkers
@@ -575,6 +583,32 @@ def start_from_oldchain_emcee(lc, meta, log, ndim, freenames):
         log.writelog(message, mute=True)
         raise AssertionError(message)
 
+    if not np.all([key in full_keys for key in freenames]):
+        # There are now extra free parameters
+        # Populate them using initialize_emcee_walkers
+        missing_freenames = np.array([key for key in freenames
+                                      if key not in full_keys])
+        message = ('Old chain was missing some fitted parameters. '
+                   'Adding the new fitted parameters:\n'
+                   f'    {missing_freenames}')
+        log.writelog(message, mute=(not meta.verbose))
+
+        meta.run_nwalkers = nwalkers
+        temp_pos, nwalkers = initialize_emcee_walkers(
+            meta, log, ndim, None, freepars, prior1, prior2, priortype)
+
+        new_pos = np.zeros((nwalkers, len(freenames)))
+        for i, key in enumerate(freenames):
+            if key not in full_keys:
+                # There are now extra free parameters
+                # Populate them using initialize_emcee_walkers
+                new_pos[:, i] = temp_pos[:, i]
+            else:
+                # This variable already existed, so just add it
+                new_pos[:, i] = pos[:, np.where(full_keys == key)[0][0]]
+
+        pos = new_pos
+
     return pos, nwalkers
 
 
@@ -593,7 +627,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
     lsq_sol : The results from the lsqfitter.
         The results from the lsqfitter.
     freepars : list
-        The names of the fitted parameters.
+        The initial values of the fitted parameters.
     prior1 : list
         The list of prior1 values.
     prior2 : list
@@ -638,7 +672,7 @@ def initialize_emcee_walkers(meta, log, ndim, lsq_sol, freepars, prior1,
         # the prior range can work best for precisely known values like
         # t0 and period
         log.writelog('No covariance matrix from LSQ - falling back on a step '
-                     'size based on the prior range')
+                     'size based on the prior range', mute=(not meta.verbose))
         step_size = np.ones(ndim)
         step_size[u] = 0.001*(prior2[u] - prior1[u])
         step_size[lu] = 0.001*(np.exp(prior2[lu]) - np.exp(prior1[lu]))
@@ -775,9 +809,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         +/- 1 sigma, all params
     """
     # Group the different variable types
-    freenames, freepars, prior1, prior2, priortype, indep_vars = \
+    freenames = lc.freenames
+    freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
-    if hasattr(meta, 'old_fitparams') and meta.old_fitparams is not None:
+    if meta.old_fitparams is not None:
         freepars = load_old_fitparams(meta, log, lc.channel, freenames)
 
     # DYNESTY
@@ -808,11 +843,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     min_nlive = int(np.ceil(ndims*(ndims+1)//2))
     if nlive == 'min':
         nlive = min_nlive
+        log.writelog(f'Using {nlive} live points...')
     elif nlive < min_nlive:
         log.writelog(f'**** WARNING: You should set run_nlive to at least '
                      f'{min_nlive} ****')
 
-    if hasattr(meta, 'ncpu') and meta.ncpu > 1:
+    if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
         queue_size = meta.ncpu
     else:
@@ -863,7 +899,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     model.update(fit_params)
     model.errs = dict(zip(freenames, errs))
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP so plotting errors don't make you lose everything
     save_fit(meta, lc, model, 'dynesty', t_results, freenames, samples)
@@ -905,7 +942,9 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='dynesty')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='dynesty')
 
     # Plot Allan plot
@@ -966,9 +1005,10 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # TODO: Do something so that duplicate param names can all be handled
     # (e.g. two Polynomail models with c0). Perhaps append something to the
     # parameter name like c0_1 and c0_2?)
+    freenames = lc.freenames
 
     # Group the different variable types
-    param_list, freenames, indep_vars = group_variables_lmfit(model)
+    param_list, indep_vars = group_variables_lmfit(model)
 
     # Add the time as an independent variable
     indep_vars['time'] = lc.time
@@ -997,7 +1037,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
                             names=("Parameter", "Mean"))
 
     model.update(fit_params)
-    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames)
+    lc.unc_fit = update_uncertainty(fit_params, lc.nints, lc.unc, freenames,
+                                    lc.nchannel_fitted)
 
     # Save the fit ASAP
     save_fit(meta, lc, model, 'lmfitter', t_results, freenames)
@@ -1017,7 +1058,9 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_GP_components(lc, model, meta, fitter='lmfitter')
 
     # Zoom in on phase variations
-    if meta.isplots_S5 >= 1 and 'sinusoid_pc' in meta.run_myfuncs:
+    if meta.isplots_S5 >= 1 and ('sinusoid_pc' in meta.run_myfuncs
+                                 or 'poet_pc' in meta.run_myfuncs
+                                 or 'quasilambert_pc' in meta.run_myfuncs):
         plots.plot_phase_variations(lc, model, meta, fitter='lmfitter')
 
     # Plot Allan plot
@@ -1049,8 +1092,6 @@ def group_variables(model):
 
     Returns
     -------
-    freenames : np.array
-        The names of fitted variables.
     freepars : np.array
         The fitted variables.
     prior1 : np.array
@@ -1075,32 +1116,19 @@ def group_variables(model):
     - February 23-25, 2022 Megan Mansfield
         Added log-uniform and Gaussian priors.
     """
-    all_params = []
-    alreadylist = []
-    for c in range(model.components[0].nchannel_fitted):
-        temp = model.components[0].longparamlist[c]
-        for par in list(model.components[0].parameters.dict.items()):
-            if par[0] in temp:
-                if not all_params:
-                    all_params.append(par)
-                    alreadylist.append(par[0])
-                if par[0] not in alreadylist:
-                    all_params.append(par)
-                    alreadylist.append(par[0])
+    parameters_dict = model.components[0].parameters.dict
+    freenames = model.components[0].freenames
 
     # Group the different variable types
-    freenames = []
     freepars = []
     prior1 = []
     prior2 = []
     priortype = []
-    indep_vars = {}
-    for ii, item in enumerate(all_params):
-        name, param = item
+    for ii, name in enumerate(freenames):
+        param = parameters_dict[name]
         # param = list(param)
         if ((param[1] == 'free') or (param[1] == 'shared')
                 or ('white' in param[1])):
-            freenames.append(name)
             freepars.append(param[0])
             if len(param) == 5:  # If prior is specified.
                 prior1.append(param[2])
@@ -1117,17 +1145,15 @@ def group_variables(model):
                 prior1.append(-np.inf)
                 prior2.append(np.inf)
                 priortype.append('U')
-        elif param[1] == 'independent':
-            indep_vars[name] = param[0]
-    freenames = np.array(freenames)
     freepars = np.array(freepars)
     prior1 = np.array(prior1)
     prior2 = np.array(prior2)
     priortype = np.array(priortype)
+    indep_vars = dict([[key, parameters_dict[key][0]]
+                       for key in parameters_dict.keys()
+                       if key not in freenames])
 
-    model.freenames = freenames
-
-    return freenames, freepars, prior1, prior2, priortype, indep_vars
+    return freepars, prior1, prior2, priortype, indep_vars
 
 
 def group_variables_lmfit(model):
@@ -1142,8 +1168,6 @@ def group_variables_lmfit(model):
     -------
     paramlist : list
         The fitted variables.
-    freenames : np.array
-        The names of fitted variables.
     indep_vars : dict
         The frozen variables.
 
@@ -1159,12 +1183,10 @@ def group_variables_lmfit(model):
 
     # Group the different variable types
     param_list = []
-    freenames = []
     indep_vars = {}
     for param in all_params:
         param = list(param)
         if param[1][1] == 'free':
-            freenames.append(param[0])
             param[1][1] = True
             param_list.append(tuple(param))
         elif param[1][1] == 'fixed':
@@ -1172,9 +1194,8 @@ def group_variables_lmfit(model):
             param_list.append(tuple(param))
         else:
             indep_vars[param[0]] = param[1]
-    freenames = np.array(freenames)
 
-    return param_list, freenames, indep_vars
+    return param_list, indep_vars
 
 
 def load_old_fitparams(meta, log, channel, freenames):
@@ -1203,9 +1224,7 @@ def load_old_fitparams(meta, log, channel, freenames):
     """
     fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
     fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
-    full_keys = np.array(fitted_values.keys())
-    # Remove the " " from the start of the first key
-    full_keys[0] = full_keys[0][1:]
+    full_keys = np.array(fitted_values['Parameter'])
 
     if np.all(full_keys != freenames):
         log.writelog('Old fit does not have the same fitted parameters and '
@@ -1219,7 +1238,14 @@ def load_old_fitparams(meta, log, channel, freenames):
                              ']\nThe new fit included:\n['+','.join(freenames)
                              + ']')
 
-    return np.array(fitted_values)[0]
+    if '50th' in fitted_values.keys():
+        # A sampler was used, so use the (more reliable) median
+        oldfitparam = fitted_values['50th'].to_numpy()
+    else:
+        # An optimizer was used, so only the Mean column will be populated
+        oldfitparam = fitted_values['Mean'].to_numpy()
+
+    return oldfitparam
 
 
 def save_fit(meta, lc, model, fitter, results_table, freenames, samples=[]):

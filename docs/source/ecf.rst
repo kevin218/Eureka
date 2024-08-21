@@ -30,9 +30,16 @@ Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. 
 
 
 maximum_cores
-''''''''''''''''''
+'''''''''''''
 Fraction of processor cores to use when computing the jump step and the ramp fits. Options are ``''none'``, ``'quarter'``, ``'half'``, or ``'all'``.
 
+jump_rejection_threshold
+''''''''''''''''''''''''
+A floating-point value that sets the sigma threshold for jump detection. The default is 4.0, but it is often best to increase this number for time-series observations to avoid excessively high false-positives. The optimal value will vary between different datasets and different instruments, but from experience we have found that values around 6.0--8.0 are often reasonable.
+
+minimum_sigclip_groups
+''''''''''''''''''''''
+The minimum number of groups to switch the jump detection to use sigma clipping. The default is 100.
 
 skip_*
 ''''''
@@ -50,13 +57,13 @@ linearity_file
 The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
 
 bias_correction
-'''''''''''''''''
+'''''''''''''''
 Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec).  Here, SF = (median of group)/(median of superbias), using a background region that is ``expand_mask`` pixels from the measured trace.  The default option ``None`` applies no correction; ``group_level`` computes SF for every integration in ``bias_group``; ``smooth`` applies a smoothing filter of length ``bias_smooth_length`` to the ``group_level`` SF values; and ``mean`` uses the mean SF over all integrations.  For NIRSpec, we currently recommend using ``smooth`` with a ``bias_smooth_length`` that is ~15 minutes.
 
 Note that this routine requires masking the trace; therefore, ``masktrace`` must be set to True.
 
 bias_group
-'''''''''''''''''
+''''''''''
 Integer or string.  Specifies which group number should be used when applying the bias correction.  For NIRSpec, we currently recommend using the first group (``bias_group`` = 1).  There is no group 0.  Users can also specify ``each``, which computes a unique bias correction for each group.
 
 bias_smooth_length
@@ -80,7 +87,7 @@ expand_prev_group
 Boolean, if a given group is saturated, this option will mark the previous group as saturated as well.
 
 dq_sat_mode
-'''''''''''''''''
+'''''''''''
 Method to use for updating the saturation flags. Options are percentile (a pixel must be saturated in this percent of integrations to be marked as saturated), min, and defined (user can define which columns are saturated in a given group)
 
 dq_sat_percentile
@@ -116,7 +123,7 @@ bg_deg
 See Stage 3 inputs
 
 bg_method
-''''''
+'''''''''
 See Stage 3 inputs
 
 p3thresh
@@ -139,8 +146,8 @@ hide_plots
 ''''''''''
 See Stage 3 inputs
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -160,7 +167,7 @@ window_len
 Smoothing length for the trace location
 
 expand_mask
-'''''''''''''''''
+'''''''''''
 Aperture (in pixels) around the trace to mask
 
 ignore_low
@@ -253,6 +260,9 @@ Modify the existing file to change the dispersion extraction (DO NOT CHANGE).
 skip_*
 ''''''
 If True, skip the named step.
+
+.. note::
+   To produce flux-calibrated stellar spectra, it is recommended to set ``skip_flat_field`` and ``skip_photom`` to ``False``.
 
 .. note::
 	Note that some instruments and observing modes might skip a step either way! See the `calwebb_spec2 docs <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html>`__ for the list of steps run for each instrument/mode by the STScI's JWST pipeline.
@@ -481,11 +491,11 @@ Possible values:
 6. Calculate the flux of the polynomial of degree  ``bg_deg`` (calculated in Step 2) at the spectrum and subtract it.
 
 bg_method
-''''''
+'''''''''
 Sets the method for calculating the sigma for use in outlier rejection. Options: 'std', 'median', 'mean'. Defaults to 'std'.
 
-bg_disp
-'''''''
+bg_row_by_row
+'''''''''''''
 Set True to perform row-by-row background subtraction (only useful for NIRCam).
 
 bg_x1
@@ -761,10 +771,6 @@ compute_ld
 ''''''''''
 Whether or not to compute limb-darkening coefficients using exotic-ld.
 
-inst_filter
-'''''''''''
-Used by exotic-ld if compute_ld=True. The filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html (leave off the observatory and instrument so that JWST_NIRSpec_Prism becomes just Prism).
-
 metallicity
 '''''''''''
 Used by exotic-ld if compute_ld=True. The metallicity of the star.
@@ -847,10 +853,6 @@ allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
 
-rescale_err
-'''''''''''
-Boolean to determine whether the uncertainties will be rescaled to have a reduced chi-squared of 1
-
 fit_par
 '''''''
 Path to Stage 5 priors and fit parameter file.
@@ -869,9 +871,9 @@ run_myfuncs
 '''''''''''
 Determines the astrophysical and systematics models used in the Stage 5 fitting.
 For standard numpy functions, this can be one or more (separated by commas) of the following:
-[batman_tr, batman_ecl, poet_tr, poet_ecl, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
+[batman_tr, batman_ecl, poet_tr, poet_ecl, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth, lorentzian, damped_osc, GP].
 For theano-based differentiable functions, this can be one or more of the following:
-[starry, sinusoid_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
+[starry, sinusoid_pc, quasilambert_pc, expramp, hstramp, polynomial, step, xpos, ypos, xwidth, ywidth],
 where starry replaces both the batman_tr and batman_ecl models and offers a more complicated phase variation model than sinusoid_pc that accounts for eclipse mapping signals.
 The POET transit and eclipse models assume a symmetric transit shape and, thus, are best-suited for planets with small eccentricities (e < 0.2).  POET has a fast implementation of the 4-parameter limb darkening model that is valid for small planets (Rp/Rs < 0.1)
 
@@ -884,6 +886,10 @@ Unless specified, compute_ltt is set to True for batman_ecl and starry models bu
 force_positivity
 ''''''''''''''''
 Optional boolean. Used by the sinusoid_pc and poet_pc models. If True, force positive phase variations (phase variations that never go below the bottom of the eclipse). Physically speaking, a negative phase curve is impossible, but strictly enforcing this can hide issues with the decorrelation or potentially bias your measured minimum flux level. Either way, use caution when choosing the value of this parameter.
+
+mutualOccultations
+''''''''''''''''''
+Optional boolean, only relevant for starry astrophysical models. If True (default), then the model will account for planet-planet occultations; if False, then the model will not include planet-planet occultations (and will likely take longer since each planet needs to be modelled separately).
 
 manual_clip
 '''''''''''
@@ -940,7 +946,7 @@ lsq_tolerance
 Float to determine the tolerance of the scipy.optimize.minimize method.
 
 lsq_maxiter
-^^^^^^^^^^^^^
+^^^^^^^^^^^
 Integer.  Maximum number of iterations to perform.  Set to None to use the default value for the given scipy.optimize.minimize method.
 
 
@@ -1084,6 +1090,11 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``cos1_off`` - Offset (in degrees) of the first cosine, relative to the time of secondary eclipse.
       - ``cos2_amp`` - Amplitude of the second cosine with period, per/2. The units are in fractions of the eclipse depth.
       - ``cos2_off`` - Offset (in degrees) of the second cosine, relative to the time of secondary eclipse.
+   - Quasi-Lambertian Phase Curve Parameters
+      The quasilambert_pc phase curve model allows modelling of thermal phase variations of airless planets or reflected light due to aerosols. The phase function follows the formalism of `Agol+2007 <https://ui.adsabs.harvard.edu/abs/2007MNRAS.374.1271A/abstract>`__ and has the form ``np.abs(np.cos((phi+quasi_offset*np.pi/180)/2))**quasi_gamma``, where ``phi`` is the orbital phase in radians with a value of zero at mid-eclipse.
+
+      - ``quasi_gamma`` - The exponential coefficient of the quasi-Lambertian phase function. A true Lambertian phase function is closely approximated with a value of 3.285.  A value below 2 produces unphysical results.
+      - ``quasi_offset`` - Offset in degrees East (i.e., before eclipse) of the quasi-Lambertian phase function, relative to the time of secondary eclipse.
    - Starry Phase Curve and Eclipse Mapping Parameters
       The starry model allows for the modelling of an arbitrarily complex phase curve by fitting the phase curve using spherical harmonics terms for the planet's brightness map
 
@@ -1130,7 +1141,7 @@ This file describes the transit/eclipse and systematics parameters and their pri
          If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
          Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the ``r0`` and ``r2`` parameters (and ``r3`` and ``r5`` parameters).
          One option is to set ``r0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``r0--r1`` and set ``r2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
-      - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
+      - ``h0--h6`` - Coefficients for the HST exponential + polynomial ramp model.
 
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
          where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.

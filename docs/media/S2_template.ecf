@@ -4,38 +4,14 @@
 
 suffix                  rateints    # Data file suffix
 
-# Subarray height in cross-dispersion direction
-# NIRSpec
-slit_y_low              0       # Use None for default parameter (0)
-slit_y_high             32      # Use None for default parameter (16)
-# NIRCam grism
-tsgrism_extract_height  128     # Use None for default parameter (64)
-
-# Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
-waverange_start         6e-08   # Use None to rely on the default parameters
-waverange_end           6e-06   # Use None to rely on the default parameters
-
 # Note: different instruments and modes will use different steps by default
-skip_bkg_subtract       True    # Not run for TSO observations
-skip_imprint_subtract   True    # Not run for NIRSpec Fixed Slit
-skip_msa_flagging       True    # Not run for NIRSpec Fixed Slit
-skip_extract_2d         False
-skip_srctype            False
-skip_master_background  True    # Not run for NIRSpec Fixed Slit
-skip_wavecorr           False
-skip_flat_field         True    # ***NOTE*** At the time the NIRSpec ERS Hackathon simulated data was created, this step did not work correctly and is by default turned off.
-skip_straylight         True    # Not run for NIRSpec Fixed Slit
-skip_fringe             True    # Not run for NIRSpec Fixed Slit
-skip_pathloss           True    # Not run for TSO observations
-skip_barshadow          True    # Not run for NIRSpec Fixed Slit
-skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3.
-skip_resample           True    # Not run for TSO observations
-skip_cube_build         True    # Not run for NIRSpec Fixed Slit
-skip_extract_1d         False
+skip_wavecorr           True    # By default is skipped for TSO data
+skip_flat_field         True    # Set this to False if you want to compute calibrated stellar spectra.
+skip_photom             True    # Recommended to skip to get better uncertainties out of Stage 3.
+skip_extract_1d         True
 
 # Diagnostics
-testing_S2              False
-hide_plots              False   # If True, plots will automatically be closed rather than popping up
+hide_plots              True    # If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir                  /home/User/Data/JWST-Sim/NIRSpec/

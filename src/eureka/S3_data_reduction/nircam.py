@@ -60,15 +60,23 @@ def read(filename, data, meta, log):
     v0 = hdulist['VAR_RNOISE', 1].data
     int_times = hdulist['INT_TIMES', 1].data
 
+    meta.filter = data.attrs['mhdr']['FILTER']
+
     if hdulist[0].header['CHANNEL'] == 'LONG':
         # Spectroscopy will have "LONG" as CHANNEL
         meta.photometry = False
-        if not hasattr(meta, 'poly_wavelength') or not meta.poly_wavelength:
+        if not meta.poly_wavelength:
             # Use the FITS data
             wave_2d = hdulist['WAVELENGTH', 1].data
-        elif hdulist[0].header['FILTER'] == 'F322W2':
+        elif meta.filter == 'F322W2':
             # The new way, using the polynomial model Everett Schlawin computed
-            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1], dtype=float)
+            if meta.wave_pixel_offset is not None:
+                if meta.firstFile:
+                    log.writelog('\n  Offsetting polynomial wavelength '
+                                 f'solution by {meta.wave_pixel_offset} '
+                                 'pixels.')
+                X += meta.wave_pixel_offset
             Xprime = (X - 1571)/1000
             wave_2d = (3.9269369110332657
                        + 0.9811653393151226*Xprime
@@ -77,9 +85,15 @@ def read(filename, data, meta, log):
             # Convert 1D array to 2D
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
-        elif hdulist[0].header['FILTER'] == 'F444W':
+        elif meta.filter == 'F444W':
             # The new way, using the polynomial model Everett Schlawin computed
-            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1])
+            X = np.arange(hdulist['WAVELENGTH', 1].data.shape[1], dtype=float)
+            if meta.wave_pixel_offset is not None:
+                if meta.firstFile:
+                    log.writelog('\n  Offsetting polynomial wavelength '
+                                 f'solution by {meta.wave_pixel_offset} '
+                                 'pixels.')
+                X += meta.wave_pixel_offset
             Xprime = (X - 852.0756)/1000
             wave_2d = (3.928041104137344
                        + 0.979649332832983*Xprime)
@@ -87,7 +101,7 @@ def read(filename, data, meta, log):
             wave_2d = np.repeat(wave_2d[np.newaxis],
                                 hdulist['WAVELENGTH', 1].data.shape[0], axis=0)
         # Increase pixel resolution along cross-dispersion direction
-        if hasattr(meta, 'expand') and meta.expand > 1:
+        if meta.expand > 1:
             log.writelog(f'    Super-sampling y axis from {sci.shape[1]} ' +
                          f'to {sci.shape[1]*meta.expand} pixels...',
                          mute=(not meta.verbose))
@@ -106,21 +120,20 @@ def read(filename, data, meta, log):
         data.attrs['shdr']['DISPAXIS'] = 1
 
         # FINDME: make this better for all filters
-        if hdulist[0].header['FILTER'] == 'F210M':
+        if meta.filter == 'F210M':
             # will be deleted at the end of S3
             wave_1d = np.ones_like(sci[0, 0]) * 2.095
             # Is used in S4 for plotting.
             meta.phot_wave = 2.095
-        elif hdulist[0].header['FILTER'] == 'F187N':
+        elif meta.filter == 'F187N':
             wave_1d = np.ones_like(sci[0, 0]) * 1.874
             meta.phot_wave = 1.874
-        elif (hdulist[0].header['FILTER'] == 'WLP4'
-              or hdulist[0].header['FILTER'] == 'F212N'):
+        elif meta.filter in ['WLP4', 'F212N']:
             wave_1d = np.ones_like(sci[0, 0]) * 2.121
             meta.phot_wave = 2.121
 
     # Record integration mid-times in BMJD_TDB
-    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+    if meta.time_file is not None:
         time = read_time(meta, data, log)
     else:
         time = int_times['int_mid_BJD_TDB']
@@ -181,7 +194,7 @@ def flag_bg(data, meta, log):
     bgmask1 = data.mask[:, :meta.bg_y1]
     bgdata2 = data.flux[:, meta.bg_y2:]
     bgmask2 = data.mask[:, meta.bg_y2:]
-    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+    if meta.use_estsig:
         bgerr1 = np.median(data.err[:, :meta.bg_y1])
         bgerr2 = np.median(data.err[:, meta.bg_y2:])
         estsig1 = [bgerr1 for j in range(len(meta.bg_thresh))]
@@ -260,7 +273,7 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    if hasattr(meta, 'bg_dir') and meta.bg_dir == 'RxR':
+    if meta.bg_dir == 'RxR':
         bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_x1,
                                     meta.bg_x2, deg=meta.bg_deg,
                                     threshold=meta.p3thresh, isrotate=0,
@@ -345,7 +358,7 @@ def flag_bg_phot(data, meta, log):
     mask = data.mask.values
     # FINDME: KBS removed estsig from inputs to speed up outlier detection.
     # Need to test performance with and without estsig on real data.
-    if hasattr(meta, 'use_estsig') and meta.use_estsig:
+    if meta.use_estsig:
         bgerr = np.median(data.err)
         estsig = [bgerr for j in range(len(meta.bg_thresh))]
     else:

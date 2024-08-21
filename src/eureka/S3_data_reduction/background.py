@@ -160,7 +160,7 @@ def BGsubtraction(data, meta, log, m, isplots=0):
     return data
 
 
-def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
+def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
           isplots=0):
     '''Fit sky background with out-of-spectra data.
 
@@ -180,8 +180,8 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     threshold : int; optional
         Sigma threshold for outlier rejection during background subtraction.
         Defaullt is 5.
-    isrotate : bool; optional
-        Default is False.
+    isrotate : int; optional
+        Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
 
@@ -205,9 +205,9 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
 
     # Convert x1 and x2 to array, if need be
     ny, nx = np.shape(dataim)
-    if isinstance(x1, (int, np.int64)):
+    if isinstance(x1, (int, np.int32, np.int64)):
         x1 = np.zeros(ny, dtype=int)+x1
-    if isinstance(x2, (int, np.int64)):
+    if isinstance(x2, (int, np.int32, np.int64)):
         x2 = np.zeros(ny, dtype=int)+x2
 
     if deg < 0:
@@ -260,20 +260,15 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
                     # Calculate residuals and number of sigma from the model
                     residuals = dataslice - model
                     # Choose method for finding bad pixels
-                    if (hasattr(meta, 'bg_method') and
-                            meta.bg_method == 'std'):
-                        # Simple standard deviation (faster but prone to
-                        # missing scanned background stars)
-                        stdres = np.std(residuals)
-                    elif (hasattr(meta, 'bg_method') and
-                            meta.bg_method == 'median'):
+                    if meta.bg_method == 'median':
                         # Median Absolute Deviation (slower but more robust)
                         stdres = np.median(np.abs(np.ediff1d(residuals)))
-                    elif (hasattr(meta, 'bg_method') and
-                            meta.bg_method == 'mean'):
+                    elif meta.bg_method == 'mean':
                         # Mean Absolute Deviation (good compromise)
                         stdres = np.mean(np.abs(np.ediff1d(residuals)))
                     else:
+                        # Simple standard deviation (faster but prone to
+                        # missing scanned background stars)
                         # Default to standard deviation with no input
                         stdres = np.std(residuals)
                     if stdres == 0:
@@ -311,7 +306,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=False,
     return bg, mask
 
 
-def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
+def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
            isplots=0):
     '''Fit sky background with out-of-spectra data.
 
@@ -335,8 +330,8 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=False,
     threshold : int; optional
         Sigma threshold for outlier rejection during background subtraction.
         Default is 5.
-    isrotate : bool; optional
-        Default is False.
+    isrotate : int; optional
+        Default is 0 (no rotation).
     isplots : int; optional
         The amount of plots saved; set in ecf. Default is 0.
 

@@ -1,107 +1,43 @@
 import numpy as np
-try:
-    import batman
-except ImportError:
-    print("Could not import batman. Functionality may be limited.")
 
 from .Model import Model
-from .BatmanModels import PlanetParams
+from .AstroModel import PlanetParams, get_ecl_midpt, true_anomaly
 from ...lib.split_channels import split
 
 
 class SinusoidPhaseCurveModel(Model):
     """A sinusoidal phase curve model"""
-    def __init__(self, transit_model=None, eclipse_model=None, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the phase curve model.
 
         Parameters
         ----------
-        transit_model : eureka.S5_lightcurve_fitting.models.Model; optional
-            The transit model to use for this phase curve model.
-            Defaults to None.
-        eclipse_model : eureka.S5_lightcurve_fitting.models.Model; optional
-            The eclipse model to use for this phase curve model.
-            Defaults to None.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        self.components = None
-        self.transit_model = transit_model
-        self.eclipse_model = eclipse_model
-        if transit_model is not None:
-            self.components = [self.transit_model, ]
-        if eclipse_model is not None:
-            if self.components is None:
-                self.components = [self.eclipse_model, ]
-            else:
-                self.components.append(self.eclipse_model)
-
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'sinusoid phase curve'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check if should enforce positivity
-        if not hasattr(self, 'force_positivity'):
-            self.force_positivity = False
+        # Set default to not force positivity
+        self.force_positivity = getattr(self, 'force_positivity', False)
 
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time."""
-        time_array = np.ma.masked_array(time_array)
-        self._time = time_array
-        if self.transit_model is not None:
-            self.transit_model.time = time_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.time = time_array
-
-    @property
-    def nints(self):
-        """A getter for the nints."""
-        return self._nints
-
-    @nints.setter
-    def nints(self, nints_array):
-        """A setter for the nints."""
-        self._nints = nints_array
-        if self.transit_model is not None:
-            self.transit_model.nints = nints_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.nints = nints_array
-
-    def update(self, newparams, **kwargs):
-        """Update the model with new parameter values.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        super().update(newparams, **kwargs)
-        if self.transit_model is not None:
-            self.transit_model.update(newparams, **kwargs)
-        if self.eclipse_model is not None:
-            self.eclipse_model.update(newparams, **kwargs)
-
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -116,6 +52,11 @@ class SinusoidPhaseCurveModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
+
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
 
         # Get the time
         if self.time is None:
@@ -134,71 +75,64 @@ class SinusoidPhaseCurveModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.zeros(time.shape)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize model
-                bm_params = PlanetParams(self, pid, chan)
+                pl_params = PlanetParams(self, pid, chan)
 
-                bm_params.limb_dark = 'uniform'
-                bm_params.u = []
+                if (pl_params.AmpCos1 == 0 and pl_params.AmpSin1 == 0 and
+                        pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0):
+                    # Don't waste time running the following code
+                    phaseVars = np.ma.ones_like(time)
+                    continue
 
-                m_transit = None
-                if not np.any(['t_secondary' in key
-                              for key in self.longparamlist[chan]]):
+                if pl_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
                     # the time of eclipse from the time of transit, period,
                     # eccentricity, and argument of periastron
-                    m_transit = batman.TransitModel(bm_params, time,
-                                                    transittype='primary')
-                    t_secondary = m_transit.get_t_secondary(bm_params)
-                else:
-                    t_secondary = self.parameters.dict['t_secondary'][0]
+                    pl_params.t_secondary = get_ecl_midpt(pl_params)
 
-                if bm_params.ecc == 0.:
+                if pl_params.ecc == 0.:
                     # the planet is on a circular orbit
-                    t = time - t_secondary
-                    freq = 2.*np.pi/bm_params.per
-                    phi = (freq*t)
+                    t = time - pl_params.t_secondary
+                    phi = 2*np.pi/pl_params.per*t
                 else:
                     # the planet is on an eccentric orbit
-                    if m_transit is None:
-                        # Avoid overhead of making a new transit model,
-                        # if avoidable
-                        m_transit = batman.TransitModel(bm_params, time,
-                                                        transittype='primary')
-                    anom = m_transit.get_true_anomaly()
-                    w = bm_params.w
-                    phi = anom + w*np.pi/180. + np.pi/2.
+                    anom = true_anomaly(pl_params, time)
+                    phi = anom + pl_params.w*np.pi/180 + np.pi/2
+
+                if self.force_positivity:
+                    # Check a finely sampled phase range
+                    phi2 = np.linspace(0, 2*np.pi, 1000)
 
                 # calculate the phase variations
-                if bm_params.AmpCos2 == 0. and bm_params.AmpSin2 == 0.:
+                if pl_params.AmpCos2 == 0 and pl_params.AmpSin2 == 0:
                     # Skip multiplying by a bunch of zeros to speed up fitting
-                    phaseVars = (1. + bm_params.AmpCos1*(np.ma.cos(phi)-1.) +
-                                 bm_params.AmpSin1*np.ma.sin(phi))
+                    phaseVars = (1 +
+                                 pl_params.AmpCos1*(np.ma.cos(phi)-1) +
+                                 pl_params.AmpSin1*np.ma.sin(phi))
+                    if self.force_positivity:
+                        phaseVars2 = (1 +
+                                      pl_params.AmpCos1*(np.ma.cos(phi2)-1) +
+                                      pl_params.AmpSin1*np.ma.sin(phi2))
                 else:
-                    phaseVars = (1. + bm_params.AmpCos1*(np.ma.cos(phi)-1.) +
-                                 bm_params.AmpSin1*np.ma.sin(phi) +
-                                 bm_params.AmpCos2*(np.ma.cos(2.*phi)-1.) +
-                                 bm_params.AmpSin2*np.ma.sin(2.*phi))
+                    phaseVars = (1 +
+                                 pl_params.AmpCos1*(np.ma.cos(phi)-1) +
+                                 pl_params.AmpSin1*np.ma.sin(phi) +
+                                 pl_params.AmpCos2*(np.ma.cos(2*phi)-1) +
+                                 pl_params.AmpSin2*np.ma.sin(2*phi))
+                    if self.force_positivity:
+                        phaseVars2 = (1 +
+                                      pl_params.AmpCos1*(np.ma.cos(phi2)-1) +
+                                      pl_params.AmpSin1*np.ma.sin(phi2) +
+                                      pl_params.AmpCos2*(np.ma.cos(2*phi2)-1) +
+                                      pl_params.AmpSin2*np.ma.sin(2*phi2))
 
                 # If requested, force positive phase variations
-                if self.force_positivity and np.ma.any(phaseVars < 0):
+                if self.force_positivity and np.ma.any(phaseVars2 <= 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ma.ones(time.shape)
+                    phaseVars = 1e6*np.ma.ones(time.shape)
 
-                if self.eclipse_model is None:
-                    eclipse = 1
-                else:
-                    eclipse = self.eclipse_model.eval(channel=chan,
-                                                      pid=pid) - 1
-                light_curve += eclipse*phaseVars
+            lcfinal = np.ma.append(lcfinal, phaseVars)
 
-            lcfinal = np.ma.append(lcfinal, light_curve)
-
-        if self.transit_model is None:
-            transit = 1
-        else:
-            transit = self.transit_model.eval(channel=channel)
-
-        return transit + lcfinal
+        return lcfinal

@@ -72,38 +72,39 @@ def read(filename, data, meta, log):
     dq = hdulist['DQ', 1].data
     v0 = hdulist['VAR_RNOISE', 1].data
 
-    if data.attrs['mhdr']['EXP_TYPE'] == 'MIR_IMAGE':
+    if meta.photometry:
         # Working on photometry data
-        meta.photometry = True
+        meta.filter = hdulist[0].header['FILTER']
+
         # The DISPAXIS argument does not exist in the header of the photometry
         # data. Added it here so that code in other sections doesn't have to
         # be changed
         data.attrs['shdr']['DISPAXIS'] = 1
 
         # FINDME: make this better for all filters
-        if hdulist[0].header['FILTER'] == 'F560W':
+        if meta.filter == 'F560W':
             meta.phot_wave = 5.60
-        elif hdulist[0].header['FILTER'] == 'F770W':
+        elif meta.filter == 'F770W':
             meta.phot_wave = 7.70
-        elif hdulist[0].header['FILTER'] == 'F1000W':
+        elif meta.filter == 'F1000W':
             meta.phot_wave = 10.00
-        elif hdulist[0].header['FILTER'] == 'F1130W':
+        elif meta.filter == 'F1130W':
             meta.phot_wave = 11.30
-        elif hdulist[0].header['FILTER'] == 'F1280W':
+        elif meta.filter == 'F1280W':
             meta.phot_wave = 12.80
-        elif hdulist[0].header['FILTER'] == 'F1500W':
+        elif meta.filter == 'F1500W':
             meta.phot_wave = 15.00
-        elif hdulist[0].header['FILTER'] == 'F1800W':
+        elif meta.filter == 'F1800W':
             meta.phot_wave = 18.00
-        elif hdulist[0].header['FILTER'] == 'F2100W':
+        elif meta.filter == 'F2100W':
             meta.phot_wave = 21.00
-        elif (hdulist[0].header['FILTER'] == 'F2550W' or
-              hdulist[0].header['FILTER'] == 'F2550WR'):
+        elif meta.filter in ['F2550W', 'F2550WR']:
             meta.phot_wave = 25.50
 
         wave_1d = np.ones_like(sci[0, 0]) * meta.phot_wave
     else:
-        meta.photometry = False
+        # Working on spectroscopic data
+        meta.filter = 'LRS'
 
         # If wavelengths are all zero or missing --> use jwst to get
         # wavelengths. Otherwise use the wavelength array from the header
@@ -122,7 +123,7 @@ def read(filename, data, meta, log):
             wave_2d = hdulist['WAVELENGTH', 1].data
 
         # Increase pixel resolution along cross-dispersion direction
-        if hasattr(meta, 'expand') and meta.expand > 1:
+        if meta.expand > 1:
             log.writelog(f'    Super-sampling x axis from {sci.shape[2]} ' +
                          f'to {sci.shape[2]*meta.expand} pixels...',
                          mute=(not meta.verbose))
@@ -134,7 +135,7 @@ def read(filename, data, meta, log):
 
     # Record integration mid-times in BMJD_TDB
     int_times = hdulist['INT_TIMES', 1].data
-    if (hasattr(meta, 'time_file') and meta.time_file is not None):
+    if meta.time_file is not None:
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         if meta.firstFile:
@@ -376,13 +377,10 @@ def fit_bg(dataim, datamask, n, meta, isplots=0):
     n : int
         The current integration number.
     """
-    if hasattr(meta, 'isrotate'):
-        isrotate = meta.isrotate
-    else:
-        isrotate = 2
     bg, mask = background.fitbg(dataim, meta, datamask, meta.bg_y1,
                                 meta.bg_y2, deg=meta.bg_deg,
-                                threshold=meta.p3thresh, isrotate=isrotate,
+                                threshold=meta.p3thresh,
+                                isrotate=meta.isrotate,
                                 isplots=isplots)
     return bg, mask, n
 

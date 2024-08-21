@@ -13,30 +13,21 @@ allapers        False       # Run S4 on all of the apertures considered in S3? O
 # mask_columns  []
 
 # Parameters for drift correction of 1D spectra
-recordDrift     False    # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
-correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended for simulated data)
-drift_preclip   0       # Ignore first drift_preclip points of spectrum
-drift_postclip  100     # Ignore last drift_postclip points of spectrum, None = no clipping
-drift_range     11      # Trim spectra by +/-X pixels to compute valid region of cross correlation
-drift_hw        5       # Half-width in pixels used when fitting Gaussian, must be smaller than drift_range
-drift_iref      -1      # Index of reference spectrum used for cross correlation, -1 = last spectrum
-sub_mean        True    # Set True to subtract spectrum mean during cross correlation
-sub_continuum   True    # Set True to subtract the continuum from the spectra using a highpass filter
-highpassWidth   10      # The integer width of the highpass filter when subtracting the continuum
+recordDrift     False   # Set True to record drift/jitter in 1D spectra (always recorded if correctDrift is True)
+correctDrift    False   # Set True to correct drift/jitter in 1D spectra (not recommended)
 
 # Parameters for sigma clipping
 clip_unbinned   False   # Whether or not sigma clipping should be performed on the unbinned 1D time series
 clip_binned     True    # Whether or not sigma clipping should be performed on the binned 1D time series
 sigma           10      # The number of sigmas a point must be from the rolling median to be considered an outlier
-box_width       10      # The width of the box-car filter (used to calculated the rolling median) in units of number of data points
+box_width       30      # The width of the box-car filter (used to calculated the rolling median) in units of number of data points
 maxiters        5       # The number of iterations of sigma clipping that should be performed.
-boundary        'fill'  # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
+boundary        fill    # Use 'fill' to extend the boundary values by the median of all data points (recommended), 'wrap' to use a periodic boundary, or 'extend' to use the first/last data points
 fill_value      mask    # Either the string 'mask' to mask the outlier values (recommended), 'boxcar' to replace data with the mean from the box-car filter, or a constant float-type fill value.
 
 # Limb-darkening parameters
 compute_ld      False   # Options: exotic-ld, spam, False
 # Options for ExoTiC-LD
-inst_filter     prism   # Filter of JWST/HST instrument, supported list see https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html
 metallicity     0.1     # Metallicity of the star
 teff            6000    # Effective temperature of the star in K
 logg            4.0     # Surface gravity in log g
@@ -52,7 +43,7 @@ isplots_S4      3       # Generate few (1), some (3), or many (5) figures (Optio
 vmin            0.97    # Sets the vmin of the color bar for Figure 4101.
 vmax            1.03    # Sets the vmax of the color bar for Figure 4101.
 time_axis       'y'     # Determines whether the time axis in Figure 4101 is along the y-axis ('y') or the x-axis ('x')
-hide_plots      False   # If True, plots will automatically be closed rather than popping up
+hide_plots      True    # If True, plots will automatically be closed rather than popping up
 verbose         True    # If True, more details will be printed about steps
 
 # Project directory

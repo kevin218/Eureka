@@ -33,3 +33,7 @@ PACAKGEDIR = os.path.abspath(os.path.dirname(__file__))
 __all__ = ["lib", "S1_detector_processing", "S2_calibrations",
            "S3_data_reduction", "S4_generate_lightcurves",
            "S5_lightcurve_fitting", "S6_planet_spectra"]
+
+# Make sure the required plotting setup is done even if the user doesn't
+# manually run the function
+lib.plots.set_rc(usetex=None)

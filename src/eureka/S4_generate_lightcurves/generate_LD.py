@@ -2,6 +2,8 @@ from exotic_ld import StellarLimbDarkening
 import numpy as np
 import pandas as pd
 
+from . import plots_s4
+
 
 def exotic_ld(meta, spec, log, white=False):
     '''Generate limb-darkening coefficients using the exotic_ld package.
@@ -30,15 +32,11 @@ def exotic_ld(meta, spec, log, white=False):
     - July 2022, Eva-Maria Ahrer
         Initial version based on exotic_ld documentation.
     '''
-
-    log.writelog("...using exotic-ld package...",
-                 mute=(not meta.verbose))
-
     # Set the observing mode
     custom_wavelengths = None
     custom_throughput = None
 
-    if hasattr(meta, 'exotic_ld_file') and meta.exotic_ld_file is not None:
+    if meta.exotic_ld_file is not None:
         mode = 'custom'
         log.writelog("Using custom throughput file " +
                      meta.exotic_ld_file,
@@ -52,15 +50,21 @@ def exotic_ld(meta, spec, log, white=False):
                          "Converting to Angstroms.")
             custom_wavelengths *= 1e4
     elif meta.inst == 'miri':
-        mode = 'JWST_MIRI_' + meta.inst_filter
+        mode = 'JWST_MIRI_' + meta.filter
     elif meta.inst == 'nircam':
-        mode = 'JWST_NIRCam_' + meta.inst_filter
+        filter = meta.filter
+        if filter.lower() == 'f444w':
+            filter = 'F444'
+        mode = 'JWST_NIRCam_' + filter
     elif meta.inst == 'nirspec':
-        mode = 'JWST_NIRSpec_' + meta.inst_filter
+        filter = meta.filter
+        if filter.lower() == 'prism':
+            filter = 'prism'
+        mode = 'JWST_NIRSpec_' + filter
     elif meta.inst == 'niriss':
-        mode = 'JWST_NIRISS_' + meta.inst_filter
+        mode = 'JWST_NIRISS_' + meta.filter
     elif meta.inst == 'wfc3':
-        mode = 'HST_WFC3_' + meta.inst_filter
+        mode = 'HST_WFC3_' + meta.filter
 
     # Compute wavelength ranges
     if white:
@@ -81,7 +85,7 @@ def exotic_ld(meta, spec, log, white=False):
         wavelength_range *= 1e4
 
     # compute stellar limb darkening model
-    if hasattr(meta, "custom_si_grid") and meta.exotic_ld_grid == 'custom':
+    if meta.exotic_ld_grid == 'custom':
         # read the wavelengths, Mus, and intensity grid from file
         # 1st column is the wavelengths. Skip the header and row of Mus
         # also convert to angstrom!
@@ -105,29 +109,88 @@ def exotic_ld(meta, spec, log, white=False):
         sld = StellarLimbDarkening(meta.metallicity, meta.teff, meta.logg,
                                    meta.exotic_ld_grid, meta.exotic_ld_direc)
 
-    lin_c1 = np.zeros((meta.nspecchan, 1))
+    if mode != 'custom':
+        # Figure out if we need to extrapolate the throughput, since the
+        # ExoTiC-LD throughput files don't go close enought to the edges of
+        # some filters
+        throughput_wavelengths, throughput = sld._read_sensitivity_data(mode)
+        throughput_edges = throughput_wavelengths[[0, -1]]
+        if (mode == 'JWST_NIRCam_F444' and
+                wavelength_range[-1][-1] > throughput_edges[1]/1e4):
+            # Extrapolate throughput to the red edge of the filter if needed
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the red edge of the filter. "
+                         "Fig4303 shows the extrapolated throughput curve.")
+
+            # The following polynomial was estimated by TJB on July 10, 2024
+            ind_use = throughput_wavelengths > 42000
+            poly = np.polyfit(throughput_wavelengths[ind_use],
+                              throughput[ind_use], deg=7)
+            wav_poly = np.linspace(throughput_wavelengths[-1], 50450, 1000)
+            throughput_poly = np.polyval(poly, wav_poly)
+            # Make sure the throughput is always > 0
+            throughput_poly[throughput_poly < 0] = 0
+            # Append extrapolated throughput and then switch to custom
+            # throughput mode
+            custom_wavelengths = np.append(throughput_wavelengths, wav_poly)
+            custom_throughput = np.append(throughput, throughput_poly)
+            old_mode = mode
+            mode = 'custom'
+        elif (mode == 'JWST_NIRSpec_G395H' and
+                wavelength_range[0][0] > throughput_edges[0]/1e4):
+            # Extrapolate throughput to the blue edge of the filter if needed
+            log.writelog("WARNING: Extrapolating ExoTiC-LD throughput file to "
+                         "get closer to the blue edge of the filter.")
+
+            # The following polynomial was estimated by TJB on July 10, 2024
+            ind_use = np.logical_or(throughput_wavelengths > 32000,
+                                    throughput_wavelengths < 30000)
+            poly = np.polyfit(throughput_wavelengths[ind_use],
+                              throughput[ind_use], deg=7)
+            wav_poly = np.linspace(2.733*1e4, throughput_wavelengths[0], 10000)
+            throughput_poly = np.polyval(poly, wav_poly) - 0.015
+            # Make sure the throughput is always > 0
+            throughput_poly[throughput_poly < 0] = 0
+            # Prepend extrapolated throughput and then switch to custom
+            # throughput mode
+            custom_wavelengths = np.append(wav_poly, throughput_wavelengths)
+            custom_throughput = np.append(throughput_poly, throughput)
+            old_mode = mode
+            mode = 'custom'
+
+        if mode == 'custom' and meta.isplots_S4 >= 3:
+            plots_s4.plot_extrapolated_throughput(meta, throughput_wavelengths,
+                                                  throughput, wav_poly,
+                                                  throughput_poly, old_mode)
+
+    lin = np.zeros((meta.nspecchan, 1))
     quad = np.zeros((meta.nspecchan, 2))
+    kipping2013 = np.zeros((meta.nspecchan, 2))
+    sqrt = np.zeros((meta.nspecchan, 2))
     nonlin_3 = np.zeros((meta.nspecchan, 3))
     nonlin_4 = np.zeros((meta.nspecchan, 4))
     for i in range(meta.nspecchan):
         # generate limb-darkening coefficients for each bin
-        lin_c1[i] = sld.compute_linear_ld_coeffs(wavelength_range[i],
-                                                 mode, custom_wavelengths,
-                                                 custom_throughput)[0]
-        quad[i] = sld.compute_quadratic_ld_coeffs(wavelength_range[i], mode,
-                                                  custom_wavelengths,
-                                                  custom_throughput)
-        nonlin_3[i] = \
-            sld.compute_3_parameter_non_linear_ld_coeffs(wavelength_range[i],
-                                                         mode,
-                                                         custom_wavelengths,
-                                                         custom_throughput)
-        nonlin_4[i] = \
-            sld.compute_4_parameter_non_linear_ld_coeffs(wavelength_range[i],
-                                                         mode,
-                                                         custom_wavelengths,
-                                                         custom_throughput)
-    return lin_c1, quad, nonlin_3, nonlin_4
+        lin[i] = sld.compute_linear_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)[0]
+        quad[i] = sld.compute_quadratic_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        kipping2013[i] = sld.compute_kipping_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        sqrt[i] = sld.compute_squareroot_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        nonlin_3[i] = sld.compute_3_parameter_non_linear_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+        nonlin_4[i] = sld.compute_4_parameter_non_linear_ld_coeffs(
+            wavelength_range[i], mode, custom_wavelengths,
+            custom_throughput)
+
+    return lin, quad, kipping2013, sqrt, nonlin_3, nonlin_4
 
 
 def spam_ld(meta, white=False):

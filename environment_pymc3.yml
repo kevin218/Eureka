@@ -6,6 +6,7 @@ dependencies:
     - python==3.10.14
     - asdf[version='>=2.15.0'] # Lower limit needed when installing theano, starry, and pymc3
     - astropy
+    - astroquery
     - batman-package
     - bokeh[version='<3.0']
     - ccdproc
@@ -31,22 +32,26 @@ dependencies:
     - pytest-cov # Needed for testing
     - pytest-doctestplus # Needed for testing
     - requests
-    - scipy[version='>=1.4.0,<1.8.0'] # Lower limit needed for scipy.fft, upper limit needed for theano, starry, and pymc3
+    - scipy[version='>=1.8.0'] # Lower limit needed for scipy.spatial.QhullError
     - sphinx # Needed for documentation
     - sphinx-automodapi # Needed for documentation
     - tqdm
     - pip:
+        - arviz==0.12.1
         - astraeus@git+https://github.com/kevin218/Astraeus@main
         - celerite2 # Needed for GP
         - crds
         - exoplanet
-        - exotic-ld==3 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
+        - exoplanet-core
+        - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes
         - image_registration@git+https://github.com/keflavich/image_registration@master # Need GitHub version to avoid np.float issue
         - jwst==1.11.4
         - mc3 # Needed for uncertainties in the Allan variance plots in S5
         - myst-parser # Needed for documentation
+        - numpy>=1.20.0,<1.22 # Upper limit needed for Apple silicon and for theano, starry, and pymc3
         - opencv-python-headless<4.8 # Upper limit needed for numpy<1.22
         - pymc3
+        - scipy>=1.8.0 # Lower limit needed for scipy.spatial.QhullError
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
         - starry>=1,<2
@@ -54,3 +59,4 @@ dependencies:
         - stdatamodels
         - svo_filters
         - theano-pymc
+        - xarray<2023.10.0 # Upper limit needed for numpy<1.22

@@ -44,8 +44,9 @@ class DampedOscillatorModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'damped oscillator'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
@@ -77,7 +78,7 @@ class DampedOscillatorModel(Model):
             self.time = kwargs.get('time')
 
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.masked_array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -100,6 +101,6 @@ class DampedOscillatorModel(Model):
             osc = 1 + amp * np.sin(2 * np.pi * (time - params.osc_t1) / per)
             osc[time < params.osc_t0] = 1
 
-            lcfinal = np.append(lcfinal, osc)
+            lcfinal = np.ma.append(lcfinal, osc)
 
         return lcfinal

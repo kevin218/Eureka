@@ -7,31 +7,13 @@ suffix                  rateints     # Data file suffix
 # Controls the cross-dispersion extraction
 tsgrism_extract_height  None    # Use None to rely on the default parameters
 
-# Modify the existing file to change the dispersion extraction - FIX: DOES NOT WORK CURRENTLY
-waverange_start         None    # Use None to rely on the default parameters
-waverange_end           None    # Use None to rely on the default parameters
-
 # Note: different instruments and modes will use different steps by default
-skip_bkg_subtract       True   # Not run for TSO observations
-skip_imprint_subtract   True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_msa_flagging       True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_extract_2d         False
-skip_srctype            True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_master_background  True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_wavecorr           True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
 skip_flat_field         False
-skip_straylight         True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_fringe             True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_pathloss           True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_barshadow          True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3.
-skip_resample           True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_cube_build         True    # Not run for NIRCam Wide-Field Slitless Spectroscopy
-skip_extract_1d         False
+skip_photom             True	# Recommended to skip to get better uncertainties out of Stage 3. Set this to False if you want to compute calibrated stellar spectra.
+skip_extract_1d         True
 
 # Diagnostics
-testing_S2              False
-hide_plots              False   # If True, plots will automatically be closed rather than popping up
+hide_plots              True    # If True, plots will automatically be closed rather than popping up
 
 # Project directory
 topdir                  /home/User/Data/JWST-Sim/NIRCam/

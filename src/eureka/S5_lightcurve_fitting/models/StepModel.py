@@ -20,6 +20,7 @@ class StepModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'step'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -106,7 +107,7 @@ class StepModel(Model):
             self.time = kwargs.get('time')
 
         # Create the ramp from the coeffs
-        lcfinal = np.ones((nchan, len(self.time)))
+        lcfinal = np.ma.ones((nchan, len(self.time)))
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]

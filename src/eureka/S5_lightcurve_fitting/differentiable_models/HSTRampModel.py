@@ -10,7 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class HSTRampModel(PyMC3Model):
@@ -26,6 +26,7 @@ class HSTRampModel(PyMC3Model):
         """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
+        self.name = 'hst ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -38,17 +39,17 @@ class HSTRampModel(PyMC3Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
+        self._time = np.ma.masked_invalid(time_array)
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time[0])
-                self.time_local = np.array(self.time_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
                 self.time_local = self.time - self.time[0]
 
@@ -71,8 +72,8 @@ class HSTRampModel(PyMC3Model):
             The value of the model at the times self.time.
         """
         if channel is None:
-            nchan = self.nchan
-            channels = np.arange(nchan)
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
         else:
             nchan = 1
             channels = [channel, ]
@@ -80,7 +81,7 @@ class HSTRampModel(PyMC3Model):
         hst_coeffs = np.zeros((nchan, 6)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt
@@ -94,14 +95,10 @@ class HSTRampModel(PyMC3Model):
                 chan = 0
 
             for i in range(6):
-                try:
-                    if chan == 0:
-                        hst_coeffs[c][i] = getattr(model, f'h{i}')
-                    else:
-                        hst_coeffs[c][i] = getattr(model,
-                                                   f'h{i}_{chan}')
-                except AttributeError:
-                    pass
+                if chan == 0:
+                    hst_coeffs[c][i] = getattr(model, f'h{i}', 0)
+                else:
+                    hst_coeffs[c][i] = getattr(model, f'h{i}_ch{chan}', 0)
 
         hst_flux = lib.zeros(0)
         for c in range(nchan):

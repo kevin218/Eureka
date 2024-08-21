@@ -10,8 +10,8 @@
 # ------------------
 # ** Transit/eclipse parameters **
 # ------------------
-rp           0.148          'free'         0.15         0.1          N
-# fp           0.008          'free'         0           0.5          U
+rp           0.148          'free'         0            0.5          U
+# fp           0.008          'free'         0            0.5          U
 
 # ------------------
 # ** Orbital parameters **
@@ -24,7 +24,7 @@ a            10.9           'free'         10.9         1            N
 ecc          0.0            'fixed'        0            1            U
 w            90.            'fixed'        0            180          U
 # t_secondary  0.25           'free'         0.25         0.05         N
-# Rs           0.12           'independent'
+# Rs           0.12           'fixed'
 
 # ----------------------
 # ** Sinusoid_pc Phase Curve Parameters **
@@ -40,6 +40,11 @@ w            90.            'fixed'        0            180          U
 # cos1_off     0.00          'free'         -180         180          U
 # cos2_amp     0.1           'free'         0            1            U
 # cos2_off     0.00          'free'         0            180          U
+# ----------------------
+# ** quasilambert_pc Phase Curve Parameters **
+# ----------------------
+# quasi_gamma  4             'free'         2            40           U
+# quasi_offset 0             'free'         -90          90           U
 
 # -------------------------
 # ** Limb darkening parameters **
@@ -48,8 +53,8 @@ w            90.            'fixed'        0            180          U
 # When using generated limb-darkening coefficients from exotic-ld or spam, choose from ['linear', 'quadratic', '3-parameter', '4-parameter'] and set their state to 'fixed' or use `recenter_ld_prior`.
 # -------------------------
 limb_dark   'kipping2013'   'independent'
-u1          0.59            'free'          0           1           U
-u2          0.84            'free'          0           1           U
+u1          0.2             'free'          0           1           U
+u2          0.2             'free'          0           1           U
 
 # -------------------------
 # ** Stellar variability parameters **
@@ -80,12 +85,12 @@ u2          0.84            'free'          0           1           U
 # --------------------
 c0          1.015           'free'          1           0.05        N
 c1          0               'free'          0           0.01        N
-# A           -7              'free'          -15         0           U
-# m           -4              'free'          -6          0           U
+# A           -15             'free'          -25         0           U
+# m           -4              'free'          -7          0           U
 
 # -----------
 # ** White noise **
 # Use scatter_mult to fit a multiplier to the expected noise level from Stage 3 (recommended)
 # Use scatter_ppm to fit the noise level in ppm
 # -----------
-scatter_mult    1.1         'free'          1.1         1           N
+scatter_mult 1.1            'free'         0.8          10           U

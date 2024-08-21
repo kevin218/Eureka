@@ -248,22 +248,13 @@ def profile_smooth(subdata, mask, threshold=10, window_len=21,
     return profile
 
 
-def profile_meddata(data, mask, meddata, threshold=10, isplots=0):
+def profile_meddata(meddata):
     '''Construct normalized spatial profile using median of all data frames.
 
     Parameters
     ----------
-    data : ndarray
-        Unused. Image data.
-    mask : ndarray
-        Unused. Outlier mask.
     meddata : ndarray
         The median of all data frames.
-    threshold : float; optional
-        Unused. Sigma threshold for outlier rejection while constructing
-        spatial profile. Defaults to 10.
-    isplots : int; optional
-        Unused. The plotting verbosity. Defaults to 0.
 
     Returns
     -------
@@ -586,10 +577,6 @@ def clean_median_flux(data, meta, log, m):
         residuals = (medflux - smoothflux)/smooth_mederr
 
         # Flag outliers
-        if not hasattr(meta, 'median_thresh'):
-            log.writelog('  Using a default value of median_thresh=5',
-                         mute=(not meta.verbose))
-            meta.median_thresh = 5
         outliers = sigma_clip(residuals, sigma=meta.median_thresh, maxiters=5,
                               axis=1, cenfunc=np.ma.median, stdfunc=np.ma.std)
 
@@ -777,9 +764,7 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                                      windowtype=windowtype,
                                      isplots=meta.isplots_S3)
         elif fittype == 'meddata':
-            profile = profile_meddata(subdata, submask, meddata,
-                                      threshold=p5thresh,
-                                      isplots=meta.isplots_S3)
+            profile = profile_meddata(meddata)
         elif fittype == 'wavelet2D':
             profile = profile_wavelet2D(subdata, submask, wavelet='bior5.5',
                                         numlvls=3, isplots=meta.isplots_S3)
