@@ -885,6 +885,9 @@ def correct_drift2D(data, meta, log, m):
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         for n in range(meta.n_int):
+            if np.all(np.isnan(data.flux[n])):
+                # This file had one fewer read, so skip this "filler" read
+                continue
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
