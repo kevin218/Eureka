@@ -108,6 +108,11 @@ class S6MetaClass(MetaClass):
         self.x_unit = getattr(self, 'x_unit', 'um')
         # Get the x-unit as an astropy unit
         self.x_unit = getattr(units, self.x_unit)
+        # Number of time steps used to sample phase variation
+        # when computing the phase curve amplitude and offset
+        self.pc_nstep = getattr(self, 'pc_nstep', 1000)
+        # Sample spacing between independent MCMC steps
+        self.pc_stepsize = getattr(self, 'pc_stepsize', 50)
 
         # Tabulating parameters
         self.ncols = getattr(self, 'ncols', 4)

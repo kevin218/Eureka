@@ -6,6 +6,7 @@ import os
 import time as time_pkg
 from copy import copy
 from glob import glob
+from tqdm import tqdm
 import re
 from matplotlib.pyplot import rcParams
 import h5py
@@ -198,12 +199,18 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 if meta.y_param_basic == 'fn':
                     # Compute nightside flux
                     meta = compute_fn(meta, log, fit_methods)
-                elif 'pc_offset' in meta.y_param:
-                    # Compute phase curve offset
+                elif 'offset_order' in meta.y_param:
+                    # Compute phase curve offset of given order
                     meta = compute_offset(meta, log, fit_methods)
-                elif 'pc_amp' in meta.y_param:
-                    # Compute phase curve amplitude
+                elif 'amp_order' in meta.y_param:
+                    # Compute phase curve amplitude of given order
                     meta = compute_amp(meta, log, fit_methods)
+                elif 'pc_offset' in meta.y_param:
+                    # Compute phase curve offset from all orders
+                    meta = compute_pc_offset(meta, log, fit_methods)
+                elif 'pc_amp' in meta.y_param:
+                    # Compute phase curve amplitude from all orders
+                    meta = compute_pc_amp(meta, log, fit_methods)
                 else:
                     # Just load the parameter
                     if meta.sharedp:
@@ -730,7 +737,7 @@ def load_s5_saves(meta, log, fit_methods):
     return samples
 
 
-def compute_offset(meta, log, fit_methods, nsamp=1e4):
+def compute_offset(meta, log, fit_methods):
     # Save meta.y_param
     y_param = meta.y_param
 
@@ -862,6 +869,180 @@ def compute_amp(meta, log, fit_methods):
 
     for i in range(meta.nspecchan):
         amps = fp[i]*np.sqrt(ampcos[i]**2+ampsin[i]**2)*2
+        amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
+        amp[1] -= amp[0]
+        amp[2] = amp[0]-amp[2]
+        meta.spectrum_median.append(amp[0])
+        meta.spectrum_err.append(amp[1:])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
+
+
+def compute_pc_offset(meta, log, fit_methods):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f'_pl{meta.planetNumber}'
+    if meta.channelNumber > 0:
+        suffix += f'_ch{meta.channelNumber}'
+
+    # Load sine amplitude
+    meta.y_param = 'AmpSin2'+suffix
+    ampsin2 = load_s5_saves(meta, log, fit_methods)
+    meta.y_param = 'AmpSin1'+suffix
+    ampsin1 = load_s5_saves(meta, log, fit_methods)
+    if np.all(ampsin1 == 0):
+        # The parameter could not be found - try a different one
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters.  Attempting to load Y11.')
+        meta.y_param = f'Y21{suffix}'
+        ampsin2 = -load_s5_saves(meta, log, fit_methods)
+        meta.y_param = f'Y11{suffix}'
+        ampsin1 = -load_s5_saves(meta, log, fit_methods)
+        if np.all(ampsin1 == 0):
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters.')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
+
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos2'+suffix
+    ampcos2 = load_s5_saves(meta, log, fit_methods)
+    meta.y_param = 'AmpCos1'+suffix
+    ampcos1 = load_s5_saves(meta, log, fit_methods)
+    if np.all(ampcos1 == 0):
+        # The parameter could not be found - try a different one
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                        'fitted parameters.  Attempting to load Y10.')
+        meta.y_param = f'Y20{suffix}'
+        ampcos2 = load_s5_saves(meta, log, fit_methods)
+        meta.y_param = f'Y10{suffix}'
+        ampcos1 = load_s5_saves(meta, log, fit_methods)
+        if np.all(ampcos1 == 0):
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters.')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    phi = np.linspace(-np.pi, np.pi, meta.pc_nstep)[np.newaxis]
+    deg = np.linspace(180, -180, meta.pc_nstep)
+    ss = meta.pc_stepsize
+    for i in tqdm(range(meta.nspecchan)):
+        # Compute phase curve
+        phaseVars = (1. + ampcos1[i][::ss,np.newaxis]*(np.cos(phi)-1.) +
+                     ampsin1[i][::ss,np.newaxis]*np.sin(phi) +
+                     ampcos2[i][::ss,np.newaxis]*(np.ma.cos(2.*phi)-1.) +
+                     ampsin2[i][::ss,np.newaxis]*np.ma.sin(2.*phi))
+        # Compute offsets in degrees
+        offset_deg = deg[np.argmax(phaseVars, axis=1)]
+        offset = np.percentile(np.array(offset_deg), [16, 50, 84])[[1, 2, 0]]
+        offset[1] -= offset[0]
+        offset[2] = offset[0]-offset[2]
+        meta.spectrum_median.append(offset[0])
+        meta.spectrum_err.append(offset[1:])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
+
+
+def compute_pc_amp(meta, log, fit_methods):
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f'_pl{meta.planetNumber}'
+    if meta.channelNumber > 0:
+        suffix += f'_ch{meta.channelNumber}'
+
+    # Load eclipse depth
+    meta.y_param = 'fp'+suffix
+    fp = load_s5_saves(meta, log, fit_methods)
+    if np.all(fp == 0):
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters.')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Load sine amplitude
+    meta.y_param = 'AmpSin2'+suffix
+    ampsin2 = load_s5_saves(meta, log, fit_methods)
+    meta.y_param = 'AmpSin1'+suffix
+    ampsin1 = load_s5_saves(meta, log, fit_methods)
+    if np.all(ampsin1 == 0):
+        # The parameter could not be found - try a different one
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters.  Attempting to load Y11.')
+        meta.y_param = f'Y21{suffix}'
+        ampsin2 = -load_s5_saves(meta, log, fit_methods)
+        meta.y_param = f'Y11{suffix}'
+        ampsin1 = -load_s5_saves(meta, log, fit_methods)
+        if np.all(ampsin1 == 0):
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters.')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
+
+    # Load cosine amplitude
+    meta.y_param = 'AmpCos2'+suffix
+    ampcos2 = load_s5_saves(meta, log, fit_methods)
+    meta.y_param = 'AmpCos1'+suffix
+    ampcos1 = load_s5_saves(meta, log, fit_methods)
+    if np.all(ampcos1 == 0):
+        # The parameter could not be found - try a different one
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                        'fitted parameters.  Attempting to load Y10.')
+        meta.y_param = f'Y20{suffix}'
+        ampcos2 = load_s5_saves(meta, log, fit_methods)
+        meta.y_param = f'Y10{suffix}'
+        ampcos1 = load_s5_saves(meta, log, fit_methods)
+        if np.all(ampcos1 == 0):
+            # The parameter could not be found - skip it
+            log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                         'fitted parameters.')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    phi = np.linspace(-np.pi, np.pi, meta.pc_nstep)[np.newaxis]
+    ss = meta.pc_stepsize
+    for i in tqdm(range(meta.nspecchan)):
+        # Compute phase curve
+        phaseVars = (1. + ampcos1[i][::ss,np.newaxis]*(np.cos(phi)-1.) +
+                     ampsin1[i][::ss,np.newaxis]*np.sin(phi) +
+                     ampcos2[i][::ss,np.newaxis]*(np.ma.cos(2.*phi)-1.) +
+                     ampsin2[i][::ss,np.newaxis]*np.ma.sin(2.*phi))
+        # Compute PC amplitude
+        amps = fp[i][::ss]*(np.max(phaseVars, axis=1) - 
+                            np.min(phaseVars, axis=1))
         amp = np.percentile(np.array(amps), [16, 50, 84])[[1, 2, 0]]
         amp[1] -= amp[0]
         amp[2] = amp[0]-amp[2]

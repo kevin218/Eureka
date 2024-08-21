@@ -1206,8 +1206,8 @@ timescales. It is also possible to plot
 'fn' (the nightside flux from a sinusoidal phase curve),
 'pc_offset' (the sinusoidal offset of the phase curve),
 'pc_amp' (the sinusoidal amplitude of the phase curve),
-'pc_offset2' (the second order sinusoidal offset of the phase curve), and
-'pc_amp2' (the second order sinusoidal amplitude of the phase curve).
+'offset_order2' (the second order sinusoidal offset of the phase curve), and
+'amp_order2' (the second order sinusoidal amplitude of the phase curve).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
