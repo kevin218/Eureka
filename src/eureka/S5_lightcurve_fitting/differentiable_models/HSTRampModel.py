@@ -114,10 +114,12 @@ class HSTRampModel(PyMC3Model):
 
             h0, h1, h2, h3, h4, h5 = hst_coeffs[c]
             # Batch time is relative to the start of each HST orbit
-            # h5 is the orbital period of HST (~96 minutes)
-            self.time_batch = self.time_local % h5
-            lcpiece = (1+h0*lib.exp(-h1*self.time_batch + h2)
-                       + h3*self.time_batch + h4*self.time_batch**2)
+            # h4 is the orbital period of HST (~96 minutes)
+            self.time_batch = (time - h5) % h4
+            lcpiece = (1 +
+                       h0*lib.exp(-h1*self.time_batch) +
+                       h2*self.time_batch +
+                       h3*self.time_batch**2)
             hst_flux = lib.concatenate([hst_flux, lcpiece])
 
         return hst_flux

@@ -221,8 +221,8 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                                         testval=param.value))
                         elif any(substring in parname
                                  for substring in ['per', 'scatter_mult',
-                                                   'scatter_ppm', 'c0', 'r1',
-                                                   'r4', 'r7', 'r10']):
+                                                   'scatter_ppm', 'c0',
+                                                   'r1', 'r3']):
                             setattr(self.model, parname,
                                     BoundedNormal_0(
                                         parname,
