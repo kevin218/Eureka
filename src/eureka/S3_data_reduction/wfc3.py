@@ -437,27 +437,28 @@ def read(filename, data, meta, log):
 
         # Determine if we are using IMA or FLT files
         if not filename.endswith('flt.fits'):
-            meta.local_nreads = data.attrs['shdr']['SAMPNUM']
+            meta.nreads_local = data.attrs['shdr']['SAMPNUM']
         else:
-            meta.local_nreads = 1
+            meta.nreads_local = 1
 
         start = 0
-        end = meta.local_nreads
-        if meta.local_nreads != meta.nreads_full:
+        end = meta.nreads_local
+        if meta.nreads_local != meta.nreads_full:
             # File had one fewer read, figure out which side to pad with NaN
             if temp_scandir == 0:
                 start = 0
-                end = meta.local_nreads
+                end = meta.nreads_local
             else:
                 start = 1
-                end = meta.local_nreads+1
+                end = meta.nreads_local+1
 
-        sci = np.nan*np.ones((meta.nreads_full, meta.ny, meta.nx))  # Flux
-        err = np.nan*np.ones((meta.nreads_full, meta.ny, meta.nx))  # Error
-        dq = np.nan*np.ones((meta.nreads_full, meta.ny, meta.nx))  # Flags
-        jd = np.nan*np.ones(meta.nreads_full)
-        # Important to use local_nreads instead of nreads below
-        for j, rd in zip(range(start, end), range(meta.local_nreads, 0, -1)):
+        shape = (meta.nreads_full, meta.ny, meta.nx)
+        sci = np.full(shape, np.nan)  # Flux
+        err = np.full(shape, np.nan)  # Error
+        dq = np.full(shape, np.nan)  # Flags
+        jd = np.full(meta.nreads_full, np.nan)  # Time
+        # Important to use nreads_local instead of nreads below
+        for j, rd in zip(range(start, end), range(meta.nreads_local, 0, -1)):
             sci[j] = hdulist['SCI', rd].data
             err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
@@ -510,7 +511,7 @@ def read(filename, data, meta, log):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.nan*np.ones((meta.nreads_full, 2))
+    centroids = np.full((meta.nreads_full, 2), np.nan)
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
@@ -865,7 +866,7 @@ def correct_drift2D(data, meta, log, m):
         return
 
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
-    drift2D = np.nan*np.ones((meta.n_int, 2))
+    drift2D = np.full((meta.n_int, 2), np.nan)
     if meta.ncpu == 1:
         # Only 1 CPU
         for n in range(meta.n_int):
