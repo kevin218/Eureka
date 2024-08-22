@@ -903,7 +903,7 @@ def compute_pc_offset(meta, log, fit_methods):
     if np.all(ampsin1 == 0):
         # The parameter could not be found - try a different one
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                         'fitted parameters.  Attempting to load Y11.')
+                     'fitted parameters.  Attempting to load Y11.')
         meta.y_param = f'Y21{suffix}'
         ampsin2 = -load_s5_saves(meta, log, fit_methods)
         meta.y_param = f'Y11{suffix}'
@@ -923,7 +923,7 @@ def compute_pc_offset(meta, log, fit_methods):
     if np.all(ampcos1 == 0):
         # The parameter could not be found - try a different one
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters.  Attempting to load Y10.')
+                     'fitted parameters.  Attempting to load Y10.')
         meta.y_param = f'Y20{suffix}'
         ampcos2 = load_s5_saves(meta, log, fit_methods)
         meta.y_param = f'Y10{suffix}'
@@ -945,10 +945,10 @@ def compute_pc_offset(meta, log, fit_methods):
     ss = meta.pc_stepsize
     for i in tqdm(range(meta.nspecchan)):
         # Compute phase curve
-        phaseVars = (1. + ampcos1[i][::ss,np.newaxis]*(np.cos(phi)-1.) +
-                     ampsin1[i][::ss,np.newaxis]*np.sin(phi) +
-                     ampcos2[i][::ss,np.newaxis]*(np.ma.cos(2.*phi)-1.) +
-                     ampsin2[i][::ss,np.newaxis]*np.ma.sin(2.*phi))
+        phaseVars = (1. + ampcos1[i][::ss, np.newaxis]*(np.cos(phi)-1.) +
+                     ampsin1[i][::ss, np.newaxis]*np.sin(phi) +
+                     ampcos2[i][::ss, np.newaxis]*(np.ma.cos(2.*phi)-1.) +
+                     ampsin2[i][::ss, np.newaxis]*np.ma.sin(2.*phi))
         # Compute offsets in degrees
         offset_deg = deg[np.argmax(phaseVars, axis=1)]
         offset = np.percentile(np.array(offset_deg), [16, 50, 84])[[1, 2, 0]]
@@ -995,7 +995,7 @@ def compute_pc_amp(meta, log, fit_methods):
     if np.all(ampsin1 == 0):
         # The parameter could not be found - try a different one
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                         'fitted parameters.  Attempting to load Y11.')
+                     'fitted parameters.  Attempting to load Y11.')
         meta.y_param = f'Y21{suffix}'
         ampsin2 = -load_s5_saves(meta, log, fit_methods)
         meta.y_param = f'Y11{suffix}'
@@ -1015,7 +1015,7 @@ def compute_pc_amp(meta, log, fit_methods):
     if np.all(ampcos1 == 0):
         # The parameter could not be found - try a different one
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters.  Attempting to load Y10.')
+                     'fitted parameters.  Attempting to load Y10.')
         meta.y_param = f'Y20{suffix}'
         ampcos2 = load_s5_saves(meta, log, fit_methods)
         meta.y_param = f'Y10{suffix}'
@@ -1036,10 +1036,10 @@ def compute_pc_amp(meta, log, fit_methods):
     ss = meta.pc_stepsize
     for i in tqdm(range(meta.nspecchan)):
         # Compute phase curve
-        phaseVars = (1. + ampcos1[i][::ss,np.newaxis]*(np.cos(phi)-1.) +
-                     ampsin1[i][::ss,np.newaxis]*np.sin(phi) +
-                     ampcos2[i][::ss,np.newaxis]*(np.ma.cos(2.*phi)-1.) +
-                     ampsin2[i][::ss,np.newaxis]*np.ma.sin(2.*phi))
+        phaseVars = (1. + ampcos1[i][::ss, np.newaxis]*(np.cos(phi)-1.) +
+                     ampsin1[i][::ss, np.newaxis]*np.sin(phi) +
+                     ampcos2[i][::ss, np.newaxis]*(np.ma.cos(2.*phi)-1.) +
+                     ampsin2[i][::ss, np.newaxis]*np.ma.sin(2.*phi))
         # Compute PC amplitude
         amps = fp[i][::ss]*(np.max(phaseVars, axis=1) - 
                             np.min(phaseVars, axis=1))
