@@ -555,7 +555,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     fitted_channels = lc_model.fitted_channels
 
     if 'starry' in meta.run_myfuncs:
-        use_starry = True
         StarryModel = dm.StarryModel
         SinusoidModel = dm.SinusoidPhaseCurveModel
         QuasiLambertianPhaseCurve = dm.QuasiLambertianPhaseCurve
@@ -568,7 +567,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         AstroModel = dm.AstroModel
         CompositeModel = dm.CompositePyMC3Model
     else:
-        use_starry = False
         BatmanTransitModel = m.BatmanTransitModel
         BatmanEclipseModel = m.BatmanEclipseModel
         PoetTransitModel = m.PoetTransitModel
@@ -609,7 +607,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
 
     # Make the astrophysical and detector models
     modellist = []
-    if use_starry:
+    if 'starry' in meta.run_myfuncs:
         # Fixed any masked uncertainties
         masked = np.logical_or(np.ma.getmaskarray(flux),
                                np.ma.getmaskarray(flux_err))
@@ -721,21 +719,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 nints=lc_model.nints,
                                 num_planets=meta.num_planets)
         modellist.append(t_poet_pc)
-    if 'sinusoid_pc' in meta.run_myfuncs and use_starry:
-        t_phase = SinusoidModel(parameters=params,
-                                fmt='r--', log=log, time=time,
-                                time_units=time_units,
-                                freenames=freenames,
-                                longparamlist=lc_model.longparamlist,
-                                nchannel=chanrng,
-                                nchannel_fitted=nchannel_fitted,
-                                fitted_channels=fitted_channels,
-                                paramtitles=paramtitles,
-                                multwhite=lc_model.multwhite,
-                                nints=lc_model.nints,
-                                num_planets=meta.num_planets)
-        modellist.append(t_phase)
-    elif 'sinusoid_pc' in meta.run_myfuncs:
+    if 'sinusoid_pc' in meta.run_myfuncs:
         t_phase = SinusoidModel(parameters=params,
                                 fmt='r--', log=log, time=time,
                                 time_units=time_units,

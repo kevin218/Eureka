@@ -76,7 +76,7 @@ class QuasiLambertianPhaseCurve(Model):
 
                 if pl_params.quasi_gamma == 0:
                     # Don't waste time running the following code
-                    phaseVars = np.ma.ones_like(time)
+                    phaseVars = np.ma.ones(time.shape)
                     continue
 
                 if pl_params.t_secondary is None:
