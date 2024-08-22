@@ -54,7 +54,7 @@ Boolean. If True, allows user to supply a custom linearity correction file and o
 
 linearity_file
 ''''''''''''''
-The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True. The linearity file should be a FITS file that is formatted like the ``linearity`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/linearity/reference_files.html#linearity-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__, with any desired changes made to the values of the file.
 
 custom_mask
 '''''''''''
@@ -62,7 +62,7 @@ Boolean. If True, allows user to supply a custom bad pixel mask file and overwri
 
 mask_file
 '''''''''
-The fully qualified path to the custom bad pixel mask file to use if custom_mask is True.
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
 
 bias_correction
 '''''''''''''''
