@@ -554,23 +554,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
 
-    if meta.testing_model:
-        # FINDME: Use this area to add systematics into the data
-        # when testing new systematics models. In this case, I'm
-        # introducing an exponential ramp to test m.ExpRampModel().
-        log.writelog('***Adding exponential ramp systematic to light curve***')
-        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                  log=log, time=time,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchannel=chanrng,
-                                  nchannel_fitted=nchannel_fitted,
-                                  fitted_channels=fitted_channels,
-                                  paramtitles=paramtitles)
-        fakeramp.coeffs = (np.array([-1, 40, -3, 0, 0, 0]).reshape(1, -1)
-                           * np.ones(nchannel_fitted))
-        flux *= fakeramp.eval(time=time)
-        lc_model.flux = flux
-
     if 'starry' in meta.run_myfuncs:
         use_starry = True
         StarryModel = dm.StarryModel
@@ -603,6 +586,26 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         GPModel = m.GPModel
         AstroModel = m.AstroModel
         CompositeModel = m.CompositeModel
+
+    if meta.testing_model:
+        # FINDME: Use this area to add systematics into the data
+        # when testing new systematics models. In this case, I'm
+        # introducing an exponential ramp to test m.ExpRampModel().
+        log.writelog('***Adding exponential ramp systematic to light curve***')
+        fakeramp = ExpRampModel(parameters=params, fmt='r--',
+                                log=log, time=time, time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                paramtitles=paramtitles,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints)
+        fakeramp.coeffs = (np.array([-1, 40, 0, 0]).reshape(1, -1)
+                           * np.ones(nchannel_fitted))
+        flux *= fakeramp.eval(time=time)
+        lc_model.flux = flux
 
     # Make the astrophysical and detector models
     modellist = []
