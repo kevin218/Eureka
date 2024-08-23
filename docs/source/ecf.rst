@@ -54,7 +54,15 @@ Boolean. If True, allows user to supply a custom linearity correction file and o
 
 linearity_file
 ''''''''''''''
-The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True. The linearity file should be a FITS file that is formatted like the ``linearity`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/linearity/reference_files.html#linearity-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__, with any desired changes made to the values of the file.
+
+custom_mask
+'''''''''''
+Boolean. If True, allows user to supply a custom bad pixel mask file and overwrite the default file.
+
+mask_file
+'''''''''
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
 
 bias_correction
 '''''''''''''''
@@ -676,6 +684,10 @@ wave_min & wave_max
 '''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
+wave_input
+'''''''''''''''''''
+Path to a user supplied txt file with pre-defined wavelength bins. Two columns (separated by whitespace): first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
+
 
 allapers
 ''''''''
@@ -852,6 +864,10 @@ Integer. Sets the number of CPUs to use for multiprocessing Stage 5 fitting.
 allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
+
+multwhite
+'''''''''
+Boolean to determine whether to run a joint fit of multiple white light curves. If True, must use inputdirlist.
 
 fit_par
 '''''''
@@ -1039,6 +1055,12 @@ If True, plots will automatically be closed rather than popping up on the screen
 topdir + inputdir
 '''''''''''''''''
 The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + inputdirlist
+'''''''''''''''''''''
+List of paths to the additional white lightcurve directories. topdir + inputdir contains the first white lightcurve, while this list contains additional lightcurves. Each item must be enclosed in quotation marks. Ensure there are brakets around the list.
+For example, to simultaneously fit white light curves of WASP-39b from NIRSpec/G395H NRS1 & NRS2 and MIRI/LRS, you might set ``topdir`` to ``/home/User/Data/WASP-39b``, ``inputdir`` to ``NIRSpec/NRS1/Stage4_white/S4_2024-06-04_nirspec_fs_template_run1/``, and ``inputdirlist`` to ``['NIRSpec/NRS2/Stage4_white/S4_2024-06-04_nirspec_fs_template_run1/','MIRI/LRS/Stage4_white/S4_2024-06-04_miri_lrs_template_run1/']``.
 
 
 topdir + outputdir

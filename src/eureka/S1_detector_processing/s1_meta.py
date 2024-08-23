@@ -96,6 +96,11 @@ class S1MetaClass(MetaClass):
             # Force this to be specified if custom_linearity is True
             self.linearity_file = getattr(self, 'linearity_file')
 
+        self.custom_mask = getattr(self, 'custom_mask', False)
+        if self.custom_mask:
+            # Force this to be specified if custom_mask is True
+            self.mask_file = getattr(self, 'mask_file')
+
         # Custom bias when using NIRSpec G395H
         # Options: [mean, group_level, smooth, None].
         # If not None, requires masktrace=True

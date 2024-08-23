@@ -7,6 +7,7 @@ nspecchan       6           # Number of spectroscopic channels spread evenly ove
 compute_white   True        # Also compute the white-light lightcurve
 wave_min        0.8         # Minimum wavelength. Set to None to use the shortest extracted wavelength from Stage 3.
 wave_max        1.15        # Maximum wavelength. Set to None to use the longest extracted wavelength from Stage 3.
+wave_input      None        # Full path to a txt file with pre-defined wavelength bins in two columns separated by whitespace.
 allapers        True        # Run S4 on all of the apertures considered in S3? Otherwise will use newest output in the inputdir
 
 # Manually mask pixel columns by index number

@@ -183,6 +183,8 @@ class EurekaS1Pipeline(Detector1Pipeline):
         # Instrument Non-Specific Steps
         self.group_scale.skip = meta.skip_group_scale
         self.dq_init.skip = meta.skip_dq_init
+        if meta.custom_mask:
+            self.dq_init.override_mask = meta.mask_file
         self.saturation.skip = meta.skip_saturation
         self.ipc.skip = meta.skip_ipc
         self.refpix.skip = meta.skip_refpix
