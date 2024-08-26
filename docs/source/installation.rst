@@ -6,8 +6,8 @@ Installation methods
 --------------------
 
 In order to have consistent, repeatable results across the ``Eureka!`` user community, we recommend that all general users install
-the most recent stable release of ``Eureka!``, v0.10. The following installation instructions are written with this in mind,
-and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v0.10>`_.
+the most recent stable release of ``Eureka!``, v1.0. The following installation instructions are written with this in mind,
+and the most recent stable release is also available as a zipped archive `here <https://github.com/kevin218/Eureka/releases/tag/v1.0>`_.
 Also note that if you are using a macOS device with an Apple Silicon processor (e.g., M1), you may need to use the ``conda`` environment.yml file
 installation instructions below as the ``pip`` dependencies have been reported to fail to build on Apple Silicon processors.
 
@@ -24,6 +24,10 @@ new environment by doing:
 	conda create -n eureka python==3.10.14
 	conda activate eureka
 
+Alternatively, if you are following the "Installing with a ``conda`` environment.yml file" instructions below,
+you will not need to manually make a new ``conda`` environment as the ``conda env create --file environment.yml --force``
+line will make a new one for you (or replace your old one if you already had one).
+
 Option 1) With ``git`` and ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once in your new conda environment, you can install ``Eureka!`` directly from source on
@@ -31,16 +35,10 @@ Once in your new conda environment, you can install ``Eureka!`` directly from so
 
 .. code-block:: bash
 
-	git clone -b v0.10 https://github.com/kevin218/Eureka.git
+	git clone -b v1.0 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	pip install -e '.[jwst]'
 
-To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder:
-
-.. code-block:: bash
-
-	git pull
-	pip install --upgrade '.[jwst]'
 
 Option 2) With ``pip`` only
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,7 +47,7 @@ Once in your new conda environment, you can install the ``Eureka!`` package with
 
 .. code-block:: bash
 
-	pip install -e 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v0.10'
+	pip install -e 'eureka[jwst]@git+https://github.com/kevin218/Eureka.git@v1.0'
 
 Other specific branches can be installed using:
 
@@ -73,11 +71,11 @@ There are also several optional dependency collections that can be installed wit
 
 In the installation instructions above, the ``jwst`` optional dependency is used as we strongly recommend users run Stages 1 and 2 locally, but we wanted to give users the ability to opt-out of installing the dependencies installed with ``jwst`` if they didn't work on their system.
 
-To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``. 
+To install with one or more optional dependency collections, the above examples can be generalized upon. For example, to install with just the ``hst`` dependencies, one can replace ``[jwst]`` with ``[hst]``. Or if you want to install with multiple options, you can do things like ``[jwst,hst]``.
 
 .. warning::
-	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``. 
-	
+	To install the ``pymc3`` optional dependencies, you also need to install ``mkl-service`` which can only be installed from conda using ``conda install mkl-service``.
+
 	In addition, attempting to specify ``[jwst,pymc3]`` when installing ``Eureka!`` will fail with a dependency conflict, as the newest version of the ``jwst`` pipeline is incompatible with ``pymc3``. Optional NUTS users should only specify ``[pymc3]`` in their installs, which will default to a slightly older version of the ``jwst`` pipeline. Other optional dependencies are currently compatible.
 
 Installing with a ``conda`` environment.yml file
@@ -90,19 +88,18 @@ To install using conda:
 
 .. code-block:: bash
 
-	git clone -b v0.10 https://github.com/kevin218/Eureka.git
+	git clone -b v1.0 https://github.com/kevin218/Eureka.git
 	cd Eureka
 	conda env create --file environment.yml --force
 	conda activate eureka
 	pip install --no-deps .
 
-To update your ``Eureka!`` installation to the most recent version, you can do the following within that Eureka folder:
 
-.. code-block:: bash
-
-	git pull
-	conda env update --file environment.yml --prune
-	pip install --no-deps --upgrade .
+Upgrading your Eureka! installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The safest and most reliable way of upgrading your Eurkea! installation from one version to another is to start from scratch by creating a new ``conda`` environment
+and installing the new Eureka! version in that fresh environment. Trying to upgrade your Eureka! installation within an existing environment
+(i.e., without first making a new conda environment) can lead to dependency mismatches, and we cannot provide support to users trying to upgrade Eureka! in this manner.
 
 
 Additional ExoTiC-LD Downloads

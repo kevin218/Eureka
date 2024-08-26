@@ -77,7 +77,7 @@ class ExpRampModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        ramp_coeffs = np.zeros((nchan, 12)).tolist()
+        ramp_coeffs = np.zeros((nchan, 4)).tolist()
 
         if eval:
             lib = np.ma
@@ -93,7 +93,7 @@ class ExpRampModel(PyMC3Model):
             else:
                 chan = 0
 
-            for i in range(12):
+            for i in range(4):
                 if chan == 0:
                     ramp_coeffs[c][i] = getattr(model, f'r{i}', 0)
                 else:
@@ -111,12 +111,8 @@ class ExpRampModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11 = ramp_coeffs[c]
-            lcpiece = (r0*lib.exp(-r1*time + r2) +
-                       r3*lib.exp(-r4*time + r5) +
-                       r6*lib.exp(-r7*time + r8) +
-                       r9*lib.exp(-r10*time + r11) +
-                       1)
+            r0, r1, r2, r3 = ramp_coeffs[c]
+            lcpiece = (1 + r0*lib.exp(-r1*time) + r2*lib.exp(-r3*time))
             ramp_flux = lib.concatenate([ramp_flux, lcpiece])
 
         return ramp_flux

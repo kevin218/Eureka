@@ -44,6 +44,7 @@ run_sample      'auto'
 run_tol         0.1
 
 # PyMC3 NUTS fitter
+exoplanet_first False   # Initialize with an initial exoplanet optimizer call (generally not recommended, but can sometimes be helpful if your initial manual guess is quite poor)
 tune            3000
 draws           1500
 chains          3

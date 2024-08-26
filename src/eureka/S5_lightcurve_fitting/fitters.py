@@ -71,7 +71,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
+        freepars = load_old_fitparams(lc, meta, log, freenames,
+                                      calling_function)
 
     start_lnprob = lnprob(freepars, lc, model, prior1, prior2, priortype,
                           freenames)
@@ -281,7 +282,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
+        freepars = load_old_fitparams(lc, meta, log, freenames, 'emcee')
     ndim = len(freenames)
 
     if meta.old_chain is not None:
@@ -291,8 +292,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
                                                   priortype)
     else:
         if meta.lsq_first:
-            # Only call lsq fitter first if asked or lsq_first option wasn't
-            # passed (allowing backwards compatibility)
+            # Only call lsq fitter first if asked
             log.writelog('\nCalling lsqfitter first...')
             # RUN LEAST SQUARES
             lsq_sol = lsqfitter(lc, model, meta, log,
@@ -813,7 +813,7 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     freepars, prior1, prior2, priortype, indep_vars = \
         group_variables(model)
     if meta.old_fitparams is not None:
-        freepars = load_old_fitparams(meta, log, lc.channel, freenames)
+        freepars = load_old_fitparams(lc, meta, log, freenames, 'dynesty')
 
     # DYNESTY
     nlive = meta.run_nlive  # number of live points
@@ -1198,19 +1198,21 @@ def group_variables_lmfit(model):
     return param_list, indep_vars
 
 
-def load_old_fitparams(meta, log, channel, freenames):
+def load_old_fitparams(lc, meta, log, freenames, fitter):
     """Load in the best-fit values from a previous fit.
 
     Parameters
     ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     log : logedit.Logedit
         The open log in which notes from this step can be added.
-    channel : int
-        Unused. The current channel.
     freenames : list
         The names of the fitted parameters.
+    fitter : str
+        The name of the fitter, to figure out the old fitparams filename name.
 
     Returns
     -------
@@ -1222,8 +1224,18 @@ def load_old_fitparams(meta, log, channel, freenames):
     AssertionError
         The old fit is incompatible with the current fit.
     """
-    fname = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
-    fitted_values = pd.read_csv(fname, escapechar='#', skipinitialspace=True)
+    if lc.white:
+        channel_tag = '_white'
+    elif lc.share:
+        channel_tag = '_shared'
+    else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        channel_tag = f'_ch{ch_number}'
+
+    foldername = os.path.join(meta.topdir, *meta.old_fitparams.split(os.sep))
+    fname = f'S5_{fitter}_fitparams{channel_tag}.csv'
+    fitted_values = pd.read_csv(os.path.join(foldername, fname),
+                                escapechar='#', skipinitialspace=True)
     full_keys = np.array(fitted_values['Parameter'])
 
     if np.all(full_keys != freenames):

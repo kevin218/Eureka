@@ -134,6 +134,7 @@ class S5MetaClass(MetaClass):
         self.run_tol = getattr(self, 'run_tol', 0.1)
 
         # PyMC3 NUTS sampler settings
+        self.exoplanet_first = getattr(self, 'exoplanet_first', False)
         self.chains = getattr(self, 'chains', 3)
         self.target_accept = getattr(self, 'target_accept', 0.85)
         if 'nuts' in self.fit_method:

@@ -32,7 +32,7 @@ u2			0.1				'fixed'
 # --------------------
 # ** Systematic variables **
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
-# Exponential ramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# Exponential ramp model variables (r0--r1 for one exponential ramp, r2--r3 for a second exponential ramp)
 # GP model parameters (A, m for the first kernel; A1, m1 for the second kernel; etc.) in log scale
 # Step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
 # Drift model variables (xpos, ypos, xwidth, ywidth)

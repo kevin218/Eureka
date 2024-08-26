@@ -101,6 +101,8 @@ class AstroModel(PyMC3Model):
         else:
             lib = tt
 
+        # Set all parameters
+        lcfinal = lib.zeros(0)
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -141,8 +143,5 @@ class AstroModel(PyMC3Model):
 
                 planetFluxes += planetFlux
 
-            if c == 0:
-                lcfinal = starFlux+planetFluxes
-            else:
-                lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
+            lcfinal = lib.concatenate([lcfinal, starFlux+planetFluxes])
         return lcfinal

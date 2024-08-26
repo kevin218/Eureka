@@ -69,7 +69,8 @@ def set_rc(style='preserve', usetex=False, layout='constrained',
                   'mathtext.fontset': 'dejavuserif',
                   'mathtext.it': 'serif:italic',
                   'mathtext.rm': 'serif', 'mathtext.sf': 'serif',
-                  'mathtext.bf': 'serif:bold'}
+                  'mathtext.bf': 'serif:bold',
+                  'savefig.bbox': 'tight'}
         rcParams.update(params)
     elif style == 'default':
         # Use default matplotlib settings

@@ -226,7 +226,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 # Manipulate fitted values if needed
                 if meta.y_param_basic in ['rp^2', 'rprs^2']:
                     meta = compute_transit_depth(meta)
-                elif meta.y_param_basic in ['1/r1', '1/r4']:
+                elif meta.y_param_basic in ['1/r1', '1/r3']:
                     meta = compute_timescale(meta)
 
                 planetSuffix = getPlanetSuffix(meta)
@@ -317,7 +317,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         suffix = channelSuffix
                         meta.y_label = ('$r_{\\rm '+meta.y_param_basic[1:] +
                                         '}$'+suffix)
-                    elif meta.y_param_basic in ['1/r1', '1/r4']:
+                    elif meta.y_param_basic in ['1/r1', '1/r3']:
                         # Exponential ramp timescales
                         suffix = channelSuffix
                         meta.y_label = ('$1/r_{\\rm '+meta.y_param_basic[-1] +
@@ -415,7 +415,7 @@ def parse_s5_saves(meta, log, fit_methods, channel_key='shared'):
     """
     if meta.y_param_basic in ['rp^2', 'rprs^2']:
         y_param = meta.y_param[:-2]
-    elif meta.y_param_basic in ['1/r1', '1/r4']:
+    elif meta.y_param_basic in ['1/r1', '1/r3']:
         y_param = meta.y_param[2:]
     else:
         y_param = meta.y_param
@@ -574,7 +574,7 @@ def compute_transit_depth(meta):
 
 
 def compute_timescale(meta):
-    """Convert the fitted r1 or r4 value to a timescale.
+    """Convert the fitted r1 or r3 value to a timescale.
 
     Parameters
     ----------
