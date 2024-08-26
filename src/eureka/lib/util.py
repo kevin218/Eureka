@@ -455,11 +455,16 @@ def binData_time(data, time, nbin=100, err=False):
     data = np.ma.copy(data)
     data = np.ma.masked_invalid(data)
 
-    binned, _, _ = binned_statistic(time, data,
-                                    statistic=np.ma.mean,
+    # Binned_statistic will copy data without keeping it a masked array
+    # so we have to manually remove invalid points
+    good_time = time[~data.mask]
+    good_data = data[~data.mask]
+
+    binned, _, _ = binned_statistic(good_time, good_data,
+                                    statistic='mean',
                                     bins=nbin)
     if err:
-        binned_count, _, _ = binned_statistic(time, data,
+        binned_count, _, _ = binned_statistic(good_time, good_data,
                                               statistic='count',
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
