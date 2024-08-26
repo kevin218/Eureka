@@ -1244,7 +1244,7 @@ The number of time steps used to sample the phase variation when computing the p
 
 pc_stepsize
 '''''''''''
-The sample spacing between independent MCMC steps.  Defaults to 50.
+Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
 
 ncol
 ''''
