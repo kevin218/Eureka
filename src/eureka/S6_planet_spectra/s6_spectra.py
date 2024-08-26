@@ -906,7 +906,7 @@ def compute_pc_offset_poet(meta, log, fit_methods):
     if all(np.all(v == 0) for v in cos1_off):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters.')
+                     'fitted parameters.')
         log.writelog(f'  Skipping {y_param}')
         return meta
 
@@ -918,7 +918,7 @@ def compute_pc_offset_poet(meta, log, fit_methods):
     if all(np.all(v == 0) for v in cos1_amp):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters.')
+                     'fitted parameters.')
         log.writelog(f'  Skipping {y_param}')
         return meta
 
@@ -956,7 +956,7 @@ def compute_pc_offset_poet(meta, log, fit_methods):
 
 def compute_pc_offset(meta, log, fit_methods):
     if ('poet_pc' in meta.run_myfuncs and 
-        'sinusoid_pc' not in meta.run_myfuncs):
+            'sinusoid_pc' not in meta.run_myfuncs):
         return compute_pc_offset_poet(meta, log, fit_methods)
     
     # Save meta.y_param
@@ -1071,7 +1071,7 @@ def compute_pc_amp_poet(meta, log, fit_methods):
     if all(np.all(v == 0) for v in cos1_off):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters.')
+                     'fitted parameters.')
         log.writelog(f'  Skipping {y_param}')
         return meta
 
@@ -1083,7 +1083,7 @@ def compute_pc_amp_poet(meta, log, fit_methods):
     if all(np.all(v == 0) for v in cos1_amp):
         # The parameter could not be found - skip it
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
-                        'fitted parameters.')
+                     'fitted parameters.')
         log.writelog(f'  Skipping {y_param}')
         return meta
 
@@ -1122,7 +1122,7 @@ def compute_pc_amp_poet(meta, log, fit_methods):
 
 def compute_pc_amp(meta, log, fit_methods):
     if ('poet_pc' in meta.run_myfuncs and 
-        'sinusoid_pc' not in meta.run_myfuncs):
+            'sinusoid_pc' not in meta.run_myfuncs):
         return compute_pc_amp_poet(meta, log, fit_methods)
     
     # Save meta.y_param
