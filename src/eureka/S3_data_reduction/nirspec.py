@@ -81,10 +81,10 @@ def read(filename, data, meta, log):
         time = read_time(meta, data, log)
     elif len(int_times['int_mid_BJD_TDB']) == 0:
         # There is no time information in the simulated NIRSpec data
-        print('  WARNING: The timestamps for the simulated NIRSpec data are '
-              'currently\n'
-              '           hardcoded because they are not in the .fits files '
-              'themselves')
+        if meta.firstFile:
+            log.writelog('  WARNING: The timestamps for simulated MIRI data '
+                         'are not in the .fits files, so using integration '
+                         'number as the time value instead.')
         time = np.linspace(data.mhdr['EXPSTART'], data.mhdr['EXPEND'],
                            data.intend)
     else:
