@@ -145,11 +145,13 @@ def image_and_background(data, meta, log, m):
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     intstart = data.attrs['intstart']
-    subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
-    subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
+    subdata = np.ma.masked_invalid(data.flux.values)
+    subbg = np.ma.masked_invalid(data.bg.values)
+    subdata = np.ma.masked_where(~data.mask.values, subdata)
+    subbg = np.ma.masked_where(~data.mask.values, subbg)
 
     # Determine bounds for subdata
-    stddev = np.std(subdata)
+    stddev = np.ma.std(subdata)
     vmin = -3*stddev
     vmax = 5*stddev
     # Determine bounds for BG frame
