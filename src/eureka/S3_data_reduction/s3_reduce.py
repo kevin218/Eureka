@@ -301,9 +301,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # for untrimmed NIRCam spectroscopic data
                 if meta.bg_row_by_row:
                     meta.bg_dir = 'RxR'
-                    # Create bad pixel mask (1 = good, 0 = bad)
+                    # Create bad pixel mask (False = good, True = bad)
                     data['mask'] = (['time', 'y', 'x'],
-                                    np.ones(data.flux.shape, dtype=bool))
+                                    np.zeros(data.flux.shape, dtype=bool))
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
                     meta.bg_row_by_row = False
@@ -317,9 +317,9 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
 
-                # Create bad pixel mask (1 = good, 0 = bad)
+                # Create bad pixel mask (False = good, True = bad)
                 data['mask'] = (['time', 'y', 'x'],
-                                np.ones(data.flux.shape, dtype=bool))
+                                np.zeros(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs/infs
                 log.writelog('  Masking NaNs/infs in data arrays...',
@@ -339,7 +339,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Odd numbers in DQ array are bad pixels. Do not use.
                 if meta.dqmask:
                     dqmask = np.where(data.dq.values % 2 == 1)
-                    data.mask.values[dqmask] = 0
+                    data.mask.values[dqmask] = True
 
                 # Manually mask regions [colstart, colend, rowstart, rowend]
                 if meta.manmask is not None:
@@ -360,7 +360,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             data.wave_2d.attrs['wave_units']
 
                     # Check for bad wavelengths (beyond wavelength solution)
-                    util.check_nans(data.wave_1d.values, np.ones(meta.subnx),
+                    util.check_nans(data.wave_1d.values, np.zeros(meta.subnx),
                                     log, name='wavelength')
 
                     if meta.calibrated_spectra:

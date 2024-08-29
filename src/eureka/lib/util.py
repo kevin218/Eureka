@@ -179,7 +179,7 @@ def check_nans(data, mask, log, name=''):
     data : ndarray
         a data-like array (e.g. data, err, dq, ...).
     mask : ndarray
-        Input mask.
+        Input boolean mask, where mask is applied where True.
     log : logedit.Logedit
         The open log in which NaNs/Infs will be mentioned, if existent.
     name : str; optional
@@ -192,8 +192,9 @@ def check_nans(data, mask, log, name=''):
         Output mask where 0 will be written where the input data array has NaNs
         or infs.
     """
-    data = np.ma.masked_where(mask == 0, np.copy(data))
-    masked = np.ma.masked_invalid(data).mask
+    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
+    masked = np.ma.getmaskarray(data)
     inan = np.where(masked)
     num_nans = np.sum(masked)
     num_pixels = np.size(data)
@@ -206,7 +207,7 @@ def check_nans(data, mask, log, name=''):
     elif num_nans > 0:
         log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
                      f"{perc_nans:.2f}% of all pixels.")
-        mask[inan] = 0
+        mask[inan] = True
     if perc_nans > 10:
         log.writelog("  WARNING: Your region of interest may be off the edge "
                      "of the detector subarray.  Masking NaN/inf regions and "
@@ -486,8 +487,9 @@ def normalize_spectrum(meta, optspec, opterr=None, optmask=None, scandir=None):
     opterr : ndarray; optional
         The noise array to normalize using optspec, by default None.
     optmask : ndarray (1D); optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
     scandir : ndarray; optional
         For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
         Defaults to None which is fine for JWST data, but must be provided
@@ -551,8 +553,9 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
     optspec : ndarray
         Optimally extracted spectra, 2D array (time, nx)
     optmask : ndarray (1D); optional
-        A mask array to use if optspec is not a masked array. Defaults to None
-        in which case only the invalid values of optspec will be masked.
+        A boolean mask array to use if optspec is not a masked array. Defaults
+        to None in which case only the invalid values of optspec will be
+        masked. Will mask the values where the mask value is set to True.
     wave_min : float; optional
         Minimum wavelength for binned lightcurves, as given in the S4 .ecf
         file. Defaults to None which does not impose a lower limit.
@@ -670,7 +673,7 @@ def read_time(meta, data, log):
 
 
 def manmask(data, meta, log):
-    '''Manually mask input bad pixels.
+    '''Manually mask input bad pixels specified through meta.manmask.
 
     Parameters
     ----------
@@ -690,7 +693,7 @@ def manmask(data, meta, log):
                  mute=(not meta.verbose))
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]
-        data['mask'][:, rowstart:rowend, colstart:colend] = 0
+        data['mask'][:, rowstart:rowend, colstart:colend] = True
 
     return data
 
@@ -726,10 +729,10 @@ def interp_masked(data, meta, i, log):
     nx = flux.shape[1]
     ny = flux.shape[0]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
-    points = np.where(mask == 1)
+    points = np.where(mask)
     # x,y positions of not masked pixels
     points_t = np.array(points).transpose()
-    values = flux[np.where(mask == 1)]  # flux values of not masked pixels
+    values = flux[np.where(mask)]  # flux values of not masked pixels
 
     # Use scipy.interpolate.griddata to interpolate
     if meta.interp_method == 'nearest':

@@ -171,7 +171,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     mask : ndarray
-        A mask array.
+        A boolean mask array, where True values are masked.
     x1 : ndarray
     x2 : ndarray
     deg : int; optional
@@ -231,20 +231,20 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
             xvals = np.concatenate((range(x1[j]),
                                     range(x2[j]+1, nx))).astype(int)
             # If too few good pixels then average
-            too_few_pix = (np.sum(mask[j, :x1[j]]) < deg
-                           or np.sum(mask[j, x2[j]+1:nx]) < deg)
+            too_few_pix = (np.sum(~mask[j, :x1[j]]) < deg
+                           or np.sum(~mask[j, x2[j]+1:nx]) < deg)
             if too_few_pix:
                 degs[j] = 0
             while not nobadpixels:
                 try:
-                    goodxvals = xvals[np.where(mask[j, xvals])]
+                    goodxvals = xvals[np.where(~mask[j, xvals])]
                 except:
                     # FINDME: Need to change this except to only catch the
                     # specific type of exception we expect
                     print("****Warning: Background subtraction failed!****")
                     print(j)
                     print(xvals)
-                    print(np.where(mask[j, xvals]))
+                    print(np.where(~mask[j, xvals]))
                     return
                 dataslice = dataim[j, goodxvals]
                 # Check for at least 1 good x value
@@ -278,7 +278,7 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
                     loc = np.argmax(stdevs)
                     # Mask data point if > threshold
                     if stdevs[loc] > threshold:
-                        mask[j, goodxvals[loc]] = 0
+                        mask[j, goodxvals[loc]] = True
                     else:
                         nobadpixels = True  # exit while loop
             # Evaluate background model at all points, write model to

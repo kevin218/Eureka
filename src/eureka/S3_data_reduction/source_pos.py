@@ -43,7 +43,7 @@ def source_pos_wrapper(data, meta, log, m, integ=0):
         source positions in parallel.
     '''
     # Mask any clipped values
-    flux = np.ma.masked_where(~data.mask.values, data.flux.values)
+    flux = np.ma.masked_where(data.mask.values, data.flux.values)
 
     if meta.src_pos_type == 'hst':
         guess = data.guess.values[0]
@@ -185,8 +185,8 @@ def source_pos_median(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 2D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -228,8 +228,8 @@ def source_pos_max(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 2D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -276,8 +276,8 @@ def source_pos_FWM(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 2D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
@@ -363,8 +363,8 @@ def source_pos_gauss(flux, meta, m, n=0, plot=True):
 
     Parameters
     ----------
-    flux : ndarray
-        The 3D array of flux values.
+    flux : np.ma.masked_array (2D)
+        The 2D image from which to get the source position.
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     m : int
