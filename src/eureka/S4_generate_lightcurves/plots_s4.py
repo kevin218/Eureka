@@ -197,7 +197,7 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     plt.figure(4101, figsize=(8, 8))
     plt.clf()
     if meta.time_axis == 'y':
-        plt.pcolormesh(wave_1d[iwmin:iwmax], np.arange(meta.n_int),
+        plt.pcolormesh(wave_1d[iwmin:iwmax], np.arange(meta.n_int)+0.5,
                        norm_lcdata, vmin=meta.vmin, vmax=meta.vmax,
                        cmap=cmap)
         plt.xlim(meta.wave_min, meta.wave_max)
