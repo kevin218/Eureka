@@ -77,7 +77,7 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
     ax1 = fig1.gca()
     ax2 = fig2.gca()
     if meta.time_axis == 'y':
-        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int),
+        im1 = ax1.pcolormesh(wave_1d, np.arange(meta.n_int)+0.5,
                              normspec, vmin=meta.vmin, vmax=meta.vmax,
                              cmap=cmap)
         im2 = ax2.imshow(normspec, origin='lower', aspect='auto',
