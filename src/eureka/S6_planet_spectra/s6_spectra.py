@@ -1447,9 +1447,9 @@ def compute_fn_poet(meta, log, fit_methods):
                      cos2_amp[i][:, np.newaxis]/2 *
                      np.cos(4*np.pi/360*(deg-cos2_off[i][:, np.newaxis])))
         # Apply normalizing offset
-        phaseVars += 1 - (phaseVars[:,ieclipse])[:, np.newaxis]
+        phaseVars += 1 - (phaseVars[:, ieclipse])[:, np.newaxis]
         # Compute nightside flux (at deg = 180)
-        fluxes = fp[i]*phaseVars[:,0]
+        fluxes = fp[i]*phaseVars[:, 0]
         flux = np.percentile(fluxes, [16, 50, 84])[[1, 2, 0]]
         flux[1] -= flux[0]
         flux[2] = flux[0]-flux[2]
