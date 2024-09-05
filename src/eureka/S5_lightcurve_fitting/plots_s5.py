@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -98,8 +99,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         residuals = flux - model_lc
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
@@ -231,8 +231,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
@@ -345,7 +344,7 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        if 'time_avg' not in dir():
+        if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
             break
         flux = np.ma.copy(lc.flux)
@@ -372,7 +371,7 @@ def plot_rms(lc, model, meta, fitter):
         maxbins = residuals.size//10
         if maxbins < 2:
             maxbins = residuals.size//2
-        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, 
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals,
                                                     maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
@@ -449,7 +448,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    
+
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']

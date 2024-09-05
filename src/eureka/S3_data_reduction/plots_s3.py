@@ -68,16 +68,6 @@ def lc_nodriftcorr(meta, wave_1d, optspec, optmask=None, scandir=None):
     else:
         pmin = optspec.x[0].values-0.5
         pmax = optspec.x[-1].values+0.5
-    if not hasattr(meta, 'vmin') or meta.vmin is None:
-        meta.vmin = 0.97
-    if not hasattr(meta, 'vmax') or meta.vmin is None:
-        meta.vmax = 1.03
-    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
-        meta.time_axis = 'y'
-    elif meta.time_axis not in ['y', 'x']:
-        print("WARNING: meta.time_axis is not one of ['y', 'x']!"
-              " Using 'y' by default.")
-        meta.time_axis = 'y'
 
     cmap = plt.cm.RdYlBu_r.copy()
     fig1 = plt.figure(3101, figsize=(8, 8))
@@ -155,11 +145,13 @@ def image_and_background(data, meta, log, m):
     xmin, xmax, ymin, ymax = get_bounds(data.flux.x.values, data.flux.y.values)
 
     intstart = data.attrs['intstart']
-    subdata = np.ma.masked_where(~data.mask.values, data.flux.values)
-    subbg = np.ma.masked_where(~data.mask.values, data.bg.values)
+    subdata = np.ma.masked_invalid(data.flux.values)
+    subbg = np.ma.masked_invalid(data.bg.values)
+    subdata = np.ma.masked_where(~data.mask.values, subdata)
+    subbg = np.ma.masked_where(~data.mask.values, subbg)
 
     # Determine bounds for subdata
-    stddev = np.std(subdata)
+    stddev = np.ma.std(subdata)
     vmin = -3*stddev
     vmax = 5*stddev
     # Determine bounds for BG frame
@@ -331,7 +323,7 @@ def source_position(meta, x_dim, pos_max, m, n,
         plt.axvline(y_pos, ls='-', label='Weighted Row')
     plt.axvline(pos_max, ls='--', label='Brightest Row', c='C3')
     plt.ylabel('Row Flux')
-    plt.xlabel('Row Pixel Position')
+    plt.xlabel('Row Relative Pixel Position')
     plt.legend()
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
@@ -975,7 +967,6 @@ def phot_2d_frame(data, meta, m, i):
     """
     plt.figure(3306, figsize=(8, 8))
     plt.clf()
-    plt.suptitle('2D frame with centroid and apertures')
 
     flux, centroid_x, centroid_y = \
         data.flux[i], data.centroid_x[i], data.centroid_y[i]
@@ -992,7 +983,7 @@ def phot_2d_frame(data, meta, m, i):
                     extent=[xmin, xmax, ymin, ymax])
     plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                 label='centroid')
-    plt.title('Full 2D frame')
+    plt.title('Full 2D frame\nwith centroid and apertures')
     plt.ylabel('y pixels')
     plt.xlabel('x pixels')
 
@@ -1008,9 +999,9 @@ def phot_2d_frame(data, meta, m, i):
 
         # make patch of hexagon
         ap1 = patches.PathPatch(hex1, color='r',
-                                fill=False, lw=3, alpha=0.7, 
+                                fill=False, lw=3, alpha=0.7,
                                 label='target aperture')
-        
+
         xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
             2*np.pi*np.arange(7)/6)
         yvert = centroid_y.data.tolist() + meta.skyin*np.cos(
@@ -1018,9 +1009,9 @@ def phot_2d_frame(data, meta, m, i):
         hex2 = Path(np.vstack((xvert, yvert)).T)
 
         ap2 = patches.PathPatch(hex2, color='w',
-                                fill=False, lw=4, alpha=0.8, 
+                                fill=False, lw=4, alpha=0.8,
                                 label='sky aperture')
-        
+
         xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
             2*np.pi*np.arange(7)/6)
         yvert = centroid_y.data.tolist() + meta.skyout*np.cos(
@@ -1037,7 +1028,7 @@ def phot_2d_frame(data, meta, m, i):
                          fill=False, lw=4, alpha=0.8, label='sky aperture')
         ap3 = plt.Circle((centroid_x, centroid_y), meta.skyout, color='w',
                          fill=False, lw=4, alpha=0.8)
-        
+
     plt.gca().add_patch(ap1)
     plt.gca().add_patch(ap2)
     plt.gca().add_patch(ap3)
@@ -1047,7 +1038,7 @@ def phot_2d_frame(data, meta, m, i):
     plt.ylim(0, flux.shape[0])
     plt.xlabel('x pixels')
     plt.ylabel('y pixels')
-    plt.legend()
+    plt.legend(loc=1)
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
@@ -1060,13 +1051,12 @@ def phot_2d_frame(data, meta, m, i):
     if meta.isplots_S3 >= 5:
         plt.figure(3504, figsize=(6, 5))
         plt.clf()
-        plt.suptitle('2D frame with centroid and apertures (zoom-in version)')
+        plt.title('Zoomed-in 2D frame\nwith centroid and apertures')
 
         im = plt.imshow(flux, vmin=vmin, vmax=vmax, origin='lower',
                         aspect='equal', extent=[xmin, xmax, ymin, ymax])
         plt.scatter(centroid_x, centroid_y, marker='x', s=25, c='r',
                     label='centroid')
-        plt.title('Zoom into 2D frame')
         plt.ylabel('y pixels')
         plt.xlabel('x pixels')
 
@@ -1081,9 +1071,9 @@ def phot_2d_frame(data, meta, m, i):
 
             # make patch of hexagon
             ap1 = patches.PathPatch(hex1, color='r',
-                                    fill=False, lw=3, alpha=0.7, 
+                                    fill=False, lw=3, alpha=0.7,
                                     label='target aperture')
-            
+
             # to make a hexagon, make the vertices and add them into a path
             xvert = centroid_x.data.tolist() - meta.skyin*np.sin(
                 2*np.pi*np.arange(7)/6)
@@ -1093,9 +1083,9 @@ def phot_2d_frame(data, meta, m, i):
 
             # make patch of hexagon
             ap2 = patches.PathPatch(hex2, color='w',
-                                    fill=False, lw=4, alpha=0.8, 
+                                    fill=False, lw=4, alpha=0.8,
                                     label='sky aperture')
-            
+
             # to make a hexagon, make the vertices and add them into a path
             xvert = centroid_x.data.tolist() - meta.skyout*np.sin(
                 2*np.pi*np.arange(7)/6)
@@ -1109,7 +1099,7 @@ def phot_2d_frame(data, meta, m, i):
         else:
             # circular apertures
             ap1 = plt.Circle((centroid_x, centroid_y), meta.photap, color='r',
-                             fill=False, lw=3, alpha=0.7, 
+                             fill=False, lw=3, alpha=0.7,
                              label='target aperture')
             ap2 = plt.Circle((centroid_x, centroid_y), meta.skyin, color='w',
                              fill=False, lw=4, alpha=0.8, label='sky aperture')
@@ -1130,7 +1120,7 @@ def phot_2d_frame(data, meta, m, i):
         plt.ylim(ylim_min, ylim_max)
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
-        plt.legend()
+        plt.legend(loc=1)
 
         fname = (f'figs{os.sep}fig3504_file{file_number}_int{int_number}'
                  f'_2D_Frame_Zoom' + plots.figure_filetype)
@@ -1169,12 +1159,12 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
     """
     plt.figure(3307)
     plt.clf()
-    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2))
+    fig, ax = plt.subplots(2, 1, num=3307, figsize=(8.2, 4.2),
+                           gridspec_kw={'hspace': 0.0})
 
     cmap = plt.cm.viridis.copy()
     ax[0].imshow(flux_w_oneoverf, origin='lower',
                  norm=LogNorm(vmin=0.1, vmax=40), cmap=cmap)
-    ax[0].set_title('Before 1/f correction')
     ax[0].set_ylabel('y pixels')
 
     flux = data.flux.values[i]
@@ -1190,7 +1180,8 @@ def phot_2d_frame_oneoverf(data, meta, m, i, flux_w_oneoverf):
 
     file_number = str(m).zfill(int(np.floor(np.log10(meta.num_data_files))+1))
     int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-    fig.suptitle((f'Segment {file_number}, Integration {int_number}'), y=0.99)
+    ax[0].set_title(f'Segment {file_number}, Integration {int_number}\n\n'
+                    'Before 1/f correction')
     fname = (f'figs{os.sep}fig3307_file{file_number}_int{int_number}'
              f'_2D_Frame_OneOverF' + plots.figure_filetype)
     plt.savefig(meta.outputdir + fname, dpi=250)
@@ -1218,19 +1209,24 @@ def phot_2d_frame_diff(data, meta):
     - 2022-08-02 Sebastian Zieba
         Initial version
     """
-    for i in range(meta.nplots):
+    nplots = meta.nplots
+    if nplots == meta.n_int:
+        # Need to reduce by 1 since we're doing differences
+        nplots -= 1
+
+    for i in range(nplots):
         plt.figure(3505)
         plt.clf()
-        plt.suptitle('2D frame differences')
         flux1 = data.flux.values[i]
         flux2 = data.flux.values[i+1]
-        plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
+        im = plt.imshow(flux2-flux1, origin='lower', vmin=-600, vmax=600)
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
-        plt.colorbar(label='Delta Flux (electrons)')
+        add_colorbar(im, label='Delta Flux (electrons)')
 
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int)) + 1))
-        plt.suptitle((f'Integration {int_number}'), y=0.99)
+        plt.title('2D frame differences\n'
+                  f'Integration {int_number}')
         fname = (f'figs{os.sep}fig3505_int{int_number}_2D_Frame_Diff'
                  + plots.figure_filetype)
         plt.savefig(meta.outputdir + fname, dpi=250)
@@ -1360,7 +1356,6 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
                         vmin=0.98, vmax=1.02, cmap=cmap)
 
         # Figure settings
-        plt.title('Tilt Identification')
         plt.xticks(np.arange(0, flux_tilt.shape[1], 1),
                    (np.arange(asb_xpos_min, asb_xpos_max, 1)),
                    rotation='vertical')
@@ -1380,8 +1375,8 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
         file_number = str(m).zfill(int(np.floor(np.log10(
             meta.num_data_files))+1))
         int_number = str(i).zfill(int(np.floor(np.log10(meta.n_int))+1))
-        plt.suptitle((f'Batch {file_number}, Integration {int_number}'),
-                     y=0.99)
+        plt.title('Tilt Identification\n'
+                  f'Batch {file_number}, Integration {int_number}')
         fname = (f'figs{os.sep}tilt_events{os.sep}'
                  f'fig3507a_file{file_number}_int{int_number}'
                  f'_tilt_events' + plots.figure_filetype)
@@ -1395,11 +1390,12 @@ def tilt_events(meta, data, log, m, position, saved_refrence_tilt_frame):
 
     # Figure fig3507b
     # Create .gif per batch
-    log.writelog('  Creating batch tilt event GIF',
-                 mute=(not meta.verbose))
-    imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
-                    f'fig3507b_tilt_event_batch_{file_number}.gif',
-                    images, fps=20)
+    if meta.nbatch > 1:
+        log.writelog('  Creating batch tilt event GIF',
+                     mute=(not meta.verbose))
+        imageio.mimsave(meta.outputdir + f'figs{os.sep}' +
+                        f'fig3507b_tilt_event_batch_{file_number}.gif',
+                        images, fps=20)
 
     # Figure fig3507c
     # Create .gif of all tilt event segments combined

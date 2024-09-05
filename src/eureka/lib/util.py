@@ -25,15 +25,13 @@ COMMON_IMPORTS = np.array([
 ], dtype=object)
 
 
-def readfiles(meta, log):
+def readfiles(meta):
     """Read in the files saved in topdir + inputdir and save them to a list.
 
     Parameters
     ----------
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
-    log : logedit.Logedit
-        The current log.
 
     Returns
     -------
@@ -71,15 +69,34 @@ def readfiles(meta, log):
                              f'You likely need to change the inputdir in '
                              f'{meta.filename} to point to the folder '
                              f'containing the "{meta.suffix}.fits" files.')
-    else:
-        mute = hasattr(meta, 'verbose') and not meta.verbose
-        log.writelog(f'\nFound {meta.num_data_files} data file(s) '
-                     f'ending in {meta.suffix}.fits',
-                     mute=mute)
 
-        with fits.open(meta.segment_list[-1]) as hdulist:
-            # Figure out which instrument we are using
-            meta.inst = hdulist[0].header['INSTRUME'].lower()
+    meta = get_inst(meta, meta.segment_list[-1])
+
+    return meta
+
+
+def get_inst(meta, file):
+    with fits.open(file) as hdulist:
+        # Figure out which instrument we are using
+        meta.inst = getattr(meta, 'inst',
+                            hdulist[0].header['INSTRUME'].lower())
+        if meta.inst != 'wfc3':
+            # Also figure out which pipeline we need to use
+            # (spectra or images)
+            exp_type = getattr(meta, 'exp_type',
+                               hdulist[0].header['EXP_TYPE'])
+
+            if 'IMAGE' in exp_type:
+                # EXP_TYPE header is either MIR_IMAGE, NRC_IMAGE,
+                # NRC_TSIMAGE, NIS_IMAGE, or NRS_IMAGING
+                meta.photometry = getattr(meta, 'photometry', True)
+            else:
+                # EXP_TYPE doesn't say image, so it should be a spectrum
+                # (or someone is putting weird files into Eureka!)
+                meta.photometry = getattr(meta, 'photometry', False)
+        else:
+            # WFC3 photometry isn't supported
+            meta.photometry = getattr(meta, 'photometry', False)
 
     return meta
 
@@ -378,6 +395,9 @@ def find_fits(meta):
     if meta.inputdir[-1] != os.sep:
         meta.inputdir += os.sep
 
+    relevant_fnames = [fname for fname in fnames if folder in fname]
+    meta = get_inst(meta, relevant_fnames[-1])
+
     return meta
 
 
@@ -435,16 +455,21 @@ def binData_time(data, time, nbin=100, err=False):
     data = np.ma.copy(data)
     data = np.ma.masked_invalid(data)
 
-    binned, _, _ = binned_statistic(time, data, 
-                                    statistic=np.ma.mean, 
+    # Binned_statistic will copy data without keeping it a masked array
+    # so we have to manually remove invalid points
+    good_time = time[~data.mask]
+    good_data = data[~data.mask]
+
+    binned, _, _ = binned_statistic(good_time, good_data,
+                                    statistic='mean',
                                     bins=nbin)
     if err:
-        binned_count, _, _ = binned_statistic(time, data,
+        binned_count, _, _ = binned_statistic(good_time, good_data,
                                               statistic='count',
                                               bins=nbin)
         binned /= np.sqrt(binned_count)
 
-    # Need to mask invalid data in case there is an empty bin 
+    # Need to mask invalid data in case there is an empty bin
     # (leading to divide by zero)
     return np.ma.masked_invalid(binned)
 
@@ -577,7 +602,7 @@ def get_mad(meta, log, wave_1d, optspec, optmask=None,
                 mad = np.ma.mean(ediff[p])
                 log.writelog(f"Scandir {p} MAD = {int(np.round(mad))} ppm")
                 setattr(meta, f'mad_scandir{p}', mad)
-        
+
         if np.all(scandir == scandir[0]):
             # Only scanned in one direction, so get rid of the other
             ediff = ediff[scandir[0]]
@@ -901,3 +926,66 @@ def supersample(data, expand, type, axis=1):
               "or wave. No super-sampling applied.")
         zdata = data
     return zdata
+
+
+def add_meta_to_xarray(meta, data):
+    """Add meta information to the attributes of an xarray.
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in
+        data.attrs.
+    """
+    if not hasattr(meta, 'data_format'):
+        meta.data_format = 'eureka'
+
+    all_attrs = meta.params
+    for attr in all_attrs.keys():
+        attr_value = all_attrs[attr]
+        # None values cannot be saved, convert to string
+        if attr_value is None:
+            attr_value = 'None'
+        # Bibliography needs special handling
+        if attr == 'bibliography':
+            # Can't have different sized lists, must collapse
+            # citations for each citation flag.
+            attr_value = ['_ENDOFCITATION_'.join(citations)
+                          for citations in attr_value]
+        # Need to convert numpy arrays of strings to lists
+        if isinstance(attr_value, np.ndarray):
+            if '<U' in str(attr_value.dtype):
+                attr_value = attr_value.tolist()
+        # Save value to xarray attributes
+        data.attrs[attr] = attr_value
+
+
+def load_attrs_from_xarray(data):
+    """Function to load attrs from xarray file, ensuring
+    that potential conversions performed in add_meta_to_xarray()
+    are reversed.
+
+    Parameters
+    ----------
+    data : Xarray Dataset
+        The updated Dataset object, meta parameters can be accessed in
+        data.attrs.
+
+    Returns
+    -------
+    attrs : dict
+        Dictionary of attributes saved to the Xarray.
+    """
+    attrs = data.attrs
+    for attr in attrs.keys():
+        # Convert None strings back to None
+        if isinstance(attrs[attr], str) and attrs[attr] == 'None':
+            attrs[attr] = None
+        # Restructure bibliography correctly
+        if attr == 'bibliography':
+            attrs[attr] = [citations.split('_ENDOFCITATION_')
+                           for citations in attrs[attr]]
+
+    return attrs

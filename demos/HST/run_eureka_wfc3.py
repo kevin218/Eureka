@@ -13,11 +13,13 @@ eventlabel = 'wfc3'
 ecf_path = '.'+os.sep
 
 if __name__ == '__main__':
-    s3_spec, s3_meta = s3.reduce(eventlabel, ecf_path=ecf_path)
+    # To skip one or more stages that were already run,
+    # just comment them out below
 
-    s4_spec, s4_lc, s4_meta = s4.genlc(eventlabel, ecf_path=ecf_path,
-                                       s3_meta=s3_meta)
+    s3.reduce(eventlabel, ecf_path=ecf_path)
 
-    s5_meta = s5.fitlc(eventlabel, ecf_path=ecf_path, s4_meta=s4_meta)
+    s4.genlc(eventlabel, ecf_path=ecf_path)
 
-    s6_meta = s6.plot_spectra(eventlabel, ecf_path=ecf_path, s5_meta=s5_meta)
+    s5.fitlc(eventlabel, ecf_path=ecf_path)
+
+    s6.plot_spectra(eventlabel, ecf_path=ecf_path)
