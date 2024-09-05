@@ -810,7 +810,6 @@ def plot_fleck_star(lc, model, meta, fitter):
     limbdarks = [s for s in model.parameters.dict.keys() if 'u' in s] 
     counter = [s for s in limbdarks if '_' in s]
     nus = len(limbdarks) - len(counter)
-    print(nus)
     
     spotrad = np.zeros((lc.nchannel_fitted, nspots))
     spotlat = np.zeros((lc.nchannel_fitted, nspots))

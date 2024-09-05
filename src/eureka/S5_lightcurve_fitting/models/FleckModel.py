@@ -101,19 +101,21 @@ class FleckTransitModel(Model):
             nchan = 1
             channels = [channel, ]
             
-        if pid is None:
-            pid_iter = range(self.num_planets)
-        else:
-            pid_iter = [pid,]
-
         if pid is None or pid == 0:
+            pid_iter = range(self.num_planets)
             pid_id = ''
         else:
+            pid_iter = [pid,]
             pid_id = f'_pl{pid}'
 
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
+
+        # find number of spots
+        spotinds = [s for s in self.parameters.dict.keys() if 'spotrad' in s]   
+        counter = [s for s in spotinds if '_' in s]
+        nspots = len(spotinds) - len(counter)
 
         # Set all parameters
         lcfinal = np.array([])
@@ -124,7 +126,7 @@ class FleckTransitModel(Model):
                 chan = 0
 
             # channel ID
-            if c == 0:
+            if chan == 0:
                 channel_id = ''
             else:
                 channel_id = f'_{chan}'
@@ -140,20 +142,11 @@ class FleckTransitModel(Model):
                 pl_params = PlanetParams(self, pid, chan)
 
                 # Set spot/fleck parameters
-                nspots = 0
                 # set a star rotation for the star object
                 # not actually used in fast mode. 
                 # overwritten if user supplies and runs slow mode
                 self.starrot[:] = 100
                 fleck_fast = True
-
-                # find number of spots
-                spotinds = [s for s in self.parameters.dict.keys() if 'spotrad' in s]   
-                counter = 0
-                for s in spotinds:
-                    if '_' in s:
-                        counter += 1
-                nspots = len(spotinds) - counter
 
                 for n in range(nspots):
                     # read radii
@@ -161,19 +154,19 @@ class FleckTransitModel(Model):
                     if self.parameters.dict[item0][1] == 'free':
                         item0 += channel_id
                     value = self.parameters.dict[item0][0]
-                    self.spotrad[chan,n] = value
+                    self.spotrad[chan, n] = value
                     # read latitudes
                     item0 = 'spotlat' + str(n) + pid_id
                     if self.parameters.dict[item0][1] == 'free':
                         item0 += channel_id
                     value = self.parameters.dict[item0][0]
-                    self.spotlat[chan,n] = value
+                    self.spotlat[chan, n] = value
                     # read longitudes
                     item0 = 'spotlon' + str(n) + pid_id
                     if self.parameters.dict[item0][1] == 'free':
                         item0 += channel_id
                     value = self.parameters.dict[item0][0]
-                    self.spotlon[chan,n] = value
+                    self.spotlon[chan, n] = value
                 # read contrasts (same for all spots)
                 item0 = 'spotcon0' + pid_id
                 if self.parameters.dict[item0][1] == 'free':
