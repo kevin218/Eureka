@@ -10,7 +10,8 @@ except:
 import corner
 from scipy import stats
 import fleck
-from .models.BatmanModels import PlanetParams
+import starry
+from .models.AstroModel import PlanetParams
 import astropy.units as unit
 try:
     import arviz as az
@@ -902,3 +903,95 @@ def plot_fleck_star(lc, model, meta, fitter):
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
             plt.pause(0.2)
+            
+def plot_starry_star(lc, model, meta, fitter):
+    
+    # find number of spots
+    spotinds = [s for s in model.parameters.dict.keys() if 'spotrad' in s]   
+    counter = [s for s in spotinds if '_' in s]
+    nspots = len(spotinds) - len(counter)
+
+    # find number of limb darkening parametesr
+    limbdarks = [s for s in model.parameters.dict.keys() if 'u' in s] 
+    counter = [s for s in limbdarks if '_' in s]
+    nus = len(limbdarks) - len(counter)
+    
+    spotrad = np.zeros((lc.nchannel_fitted, nspots))
+    spotlat = np.zeros((lc.nchannel_fitted, nspots))
+    spotlon = np.zeros((lc.nchannel_fitted, nspots))
+    spotcon = np.zeros((lc.nchannel_fitted, nspots))
+    starrot = np.zeros((lc.nchannel_fitted))
+    starinc = np.zeros((lc.nchannel_fitted))
+
+    uarray = np.zeros((lc.nchannel_fitted, nus))
+
+    # Set spot parameters
+    
+    pid_id = ''
+
+    for channel in lc.fitted_channels:
+
+        # Initialize planet
+        pl_params = PlanetParams(model, 0, channel)
+
+        # channel ID
+        if channel == 0:
+            channel_id = ''
+        else:
+            channel_id = f'_{channel}'
+
+        for n in range(nspots):
+            # read radii
+            item0 = 'spotrad' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotrad[channel, n] = value
+            # read latitudes
+            item0 = 'spotlat' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotlat[channel, n] = value
+            # read longitudes
+            item0 = 'spotlon' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotlon[channel, n] = value
+            # read contrasts 
+            item0 = 'spotcon' + str(n) + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            value = model.parameters.dict[item0][0]
+            spotcon[channel,n] = value
+        # read stellar inclination
+        item0 = 'spotstari' + pid_id
+        if model.parameters.dict[item0][1] == 'free':
+            item0 += channel_id
+        value = model.parameters.dict[item0][0]
+        starinc[channel] = value
+        # read number of points
+        starres = model.parameters.dict['spotnpts'][0]
+        # read stellar rotation (if provided)
+        if 'spotrot' in model.parameters.dict.keys():
+            starrot[channel] = model.parameters.dict['spotrot'][0]
+    
+        fig = plt.figure(5306, figsize=(8, 6))
+        plt.clf()
+        ax = fig.add_axes([0,0,1,1])
+        map = starry.Map(ydeg=starres, udeg=nus)
+        for n in range(nspots):
+            map.spot(contrast=spotcon[channel,n], radius=spotrad[channel,n], lat = spotlat[channel,n], lon = spotlon[channel,n])
+        map.show(ax=ax)
+        if lc.white:
+            fname_tag = 'white'
+        else:
+            ch_number = str(channel).zfill(len(str(lc.nchannel)))
+            fname_tag = f'ch{ch_number}'
+        fname = (f'figs{os.sep}fig5307_{fname_tag}_starry_star_{fitter}'
+                 + plots.figure_filetype)
+        fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+        if not meta.hide_plots:
+            plt.pause(0.2)
+
