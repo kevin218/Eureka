@@ -13,7 +13,6 @@ dependencies:
     - dynesty[version='>1.0'] # Lower limit needed for specific arguments
     - emcee[version='>3.0.0'] # Lower limit needed for specific arguments
     - flake8 # Needed for testing
-    - fleck
     - george # Needed for GP
     - h5py
     - ipykernel
