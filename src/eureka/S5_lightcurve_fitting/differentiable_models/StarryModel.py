@@ -117,11 +117,12 @@ class StarryModel(PyMC3Model):
             # check for spots and set parameters
             if hasattr(self.parameters, 'spotrad0'):
                 # find number of spots
-                spotinds = [s for s in self.parameters.dict.keys() if 'spotrad' in s]   
+                spotinds = [s for s in self.parameters.dict.keys() 
+                            if 'spotrad' in s]   
                 counter = [s for s in spotinds if '_' in s]
                 nspots = len(spotinds) - len(counter)
 
-                #create arrays to hold values
+                # create arrays to hold values
                 spotrad = np.zeros((self.nchannel_fitted, nspots))
                 spotlat = np.zeros((self.nchannel_fitted, nspots))
                 spotlon = np.zeros((self.nchannel_fitted, nspots))
@@ -185,7 +186,7 @@ class StarryModel(PyMC3Model):
                                       prot=starrot[chan])
             else:
                 star = starry.Primary(starry.Map(udeg=self.udeg),
-                                    m=0, r=pl_params.Rs)
+                                      m=0, r=pl_params.Rs)
 
             if hasattr(self.parameters, 'limb_dark'):
                 if self.parameters.limb_dark.value == 'kipping2013':
@@ -339,7 +340,7 @@ class StarryModel(PyMC3Model):
                 fplanets = fplanets_eval
 
             if hasattr(self.parameters, 'spotrad0'):
-                #if has spots, renormalize so star flux doesn't fight with polynomial
+                # if has spots, renormalize so star flux=1
                 fstar = fstar/fstar[0]
                 
             result = [fstar, *fplanets]
@@ -401,11 +402,12 @@ class StarryModel(PyMC3Model):
             # check for spots and set parameters
             if hasattr(self.parameters, 'spotrad0'):
                 # find number of spots
-                spotinds = [s for s in self.parameters.dict.keys() if 'spotrad' in s]   
+                spotinds = [s for s in self.parameters.dict.keys() 
+                            if 'spotrad' in s]   
                 counter = [s for s in spotinds if '_' in s]
                 nspots = len(spotinds) - len(counter)
 
-                #create arrays to hold values
+                # create arrays to hold values
                 spotrad = np.zeros((self.nchannel_fitted, nspots))
                 spotlat = np.zeros((self.nchannel_fitted, nspots))
                 spotlon = np.zeros((self.nchannel_fitted, nspots))

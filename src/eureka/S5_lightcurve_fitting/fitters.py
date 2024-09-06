@@ -156,7 +156,7 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter=calling_function)
 
-    # Plot star spots for fleck
+    # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
     
@@ -444,7 +444,7 @@ def emceefitter(lc, model, meta, log, **kwargs):
         
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad0' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
+            plots.plot_starry_star(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -954,12 +954,12 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='dynesty')
 
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >=3:
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
         
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad0' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
+            plots.plot_starry_star(lc, model, meta, fitter='dynesty')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -1078,8 +1078,12 @@ def lmfitter(lc, model, meta, log, **kwargs):
         plots.plot_fit(lc, model, meta, fitter='lmfitter')
 
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5>=3:
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
+    
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad0' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:

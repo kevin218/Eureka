@@ -904,6 +904,7 @@ def plot_fleck_star(lc, model, meta, fitter):
         if not meta.hide_plots:
             plt.pause(0.2)
             
+
 def plot_starry_star(lc, model, meta, fitter):
     
     # find number of spots
@@ -923,16 +924,11 @@ def plot_starry_star(lc, model, meta, fitter):
     starrot = np.zeros((lc.nchannel_fitted))
     starinc = np.zeros((lc.nchannel_fitted))
 
-    uarray = np.zeros((lc.nchannel_fitted, nus))
-
     # Set spot parameters
     
     pid_id = ''
 
     for channel in lc.fitted_channels:
-
-        # Initialize planet
-        pl_params = PlanetParams(model, 0, channel)
 
         # channel ID
         if channel == 0:
@@ -964,7 +960,7 @@ def plot_starry_star(lc, model, meta, fitter):
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
-            spotcon[channel,n] = value
+            spotcon[channel, n] = value
         # read stellar inclination
         item0 = 'spotstari' + pid_id
         if model.parameters.dict[item0][1] == 'free':
@@ -979,10 +975,11 @@ def plot_starry_star(lc, model, meta, fitter):
     
         fig = plt.figure(5306, figsize=(8, 6))
         plt.clf()
-        ax = fig.add_axes([0,0,1,1])
+        ax = fig.add_axes([0, 0, 1, 1])
         map = starry.Map(ydeg=starres, udeg=nus)
         for n in range(nspots):
-            map.spot(contrast=spotcon[channel,n], radius=spotrad[channel,n], lat = spotlat[channel,n], lon = spotlon[channel,n])
+            map.spot(contrast=spotcon[channel, n], radius=spotrad[channel, n], 
+                     lat=spotlat[channel, n], lon=spotlon[channel, n])
         map.show(ax=ax)
         if lc.white:
             fname_tag = 'white'
