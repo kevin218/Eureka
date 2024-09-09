@@ -161,17 +161,22 @@ class StarryModel(PyMC3Model):
                         item0 += channel_id
                     value = self.parameters.dict[item0][0]
                     spotcon[chan, n] = value
-                # read stellar inclination
-                item0 = 'spotstari'
-                if self.parameters.dict[item0][1] == 'free':
-                    item0 += channel_id
-                value = self.parameters.dict[item0][0]
-                starinc[chan] = value
                 # read number of points
                 starres = self.parameters.dict['spotnpts'][0]
+                # read stellar inclination (if provided)
+                item0 = 'spotstari' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                if item0 in self.parameters.dict.keys():
+                    value = self.parameters.dict[item0][0]
+                    starinc[chan] = value
                 # read stellar rotation (if provided)
-                if 'spotrot' in self.parameters.dict.keys():
-                    starrot[chan] = self.parameters.dict['spotrot'][0]
+                item0 = 'spotrot' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                if item0 in self.parameters.dict.keys():
+                    starrot[chan] = self.parameters.dict[item0][0]
+                    fleck_fast = False
 
                 # Initialize map object and add spots
                 map = starry.Map(ydeg=starres, udeg=self.udeg)
@@ -446,17 +451,22 @@ class StarryModel(PyMC3Model):
                         item0 += channel_id
                     value = self.parameters.dict[item0][0]
                     spotcon[chan, n] = value
-                # read stellar inclination
-                item0 = 'spotstari'
-                if self.parameters.dict[item0][1] == 'free':
-                    item0 += channel_id
-                value = self.parameters.dict[item0][0]
-                starinc[chan] = value
                 # read number of points
                 starres = self.parameters.dict['spotnpts'][0]
+                # read stellar inclination (if provided)
+                item0 = 'spotstari' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                if item0 in self.parameters.dict.keys():
+                    value = self.parameters.dict[item0][0]
+                    starinc[chan] = value
                 # read stellar rotation (if provided)
-                if 'spotrot' in self.parameters.dict.keys():
-                    starrot[chan] = self.parameters.dict['spotrot'][0]
+                item0 = 'spotrot' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                if item0 in self.parameters.dict.keys():
+                    starrot[chan] = self.parameters.dict[item0][0]
+                    fleck_fast = False
 
                 # Initialize map object and add spots
                 map = starry.Map(ydeg=starres, udeg=self.udeg)

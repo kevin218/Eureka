@@ -172,17 +172,21 @@ class FleckTransitModel(Model):
                     item0 += channel_id
                 value = self.parameters.dict[item0][0]
                 spotcon[chan] = value
-                # read stellar inclination
+                # read number of points
+                npoints = self.parameters.dict['spotnpts'][0]
+                # read stellar inclination (if provided)
                 item0 = 'spotstari' + pid_id
                 if self.parameters.dict[item0][1] == 'free':
                     item0 += channel_id
-                value = self.parameters.dict[item0][0]
-                starinc[chan] = value
-                # read number of points
-                npoints = self.parameters.dict['spotnpts'][0]
+                if item0 in self.parameters.dict.keys():
+                    value = self.parameters.dict[item0][0]
+                    starinc[chan] = value
                 # read stellar rotation (if provided)
-                if 'spotrot' in self.parameters.dict.keys():
-                    starrot[chan] = self.parameters.dict['spotrot'][0]
+                item0 = 'spotrot' + pid_id
+                if self.parameters.dict[item0][1] == 'free':
+                    item0 += channel_id
+                if item0 in self.parameters.dict.keys():
+                    starrot[chan] = self.parameters.dict[item0][0]
                     fleck_fast = False
                             
                 # Set limb darkening parameters
