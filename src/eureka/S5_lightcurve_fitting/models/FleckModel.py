@@ -93,12 +93,10 @@ class FleckTransitModel(Model):
             nchan = 1
             channels = [channel, ]
             
-        if pid is None or pid == 0:
+        if pid is None:
             pid_iter = range(self.num_planets)
-            pid_id = ''
         else:
             pid_iter = [pid,]
-            pid_id = f'_pl{pid}'
 
         # Get the time
         if self.time is None:
@@ -130,7 +128,7 @@ class FleckTransitModel(Model):
                 channel_id = ''
             else:
                 channel_id = f'_ch{chan}'
-
+                
             time = self.time
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
@@ -140,6 +138,12 @@ class FleckTransitModel(Model):
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
+                
+                # Planet ID
+                if pid == 0:
+                    pid_id = ''
+                else:
+                    pid_id = f'_pl{pid}'
 
                 # Set spot/fleck parameters
                 # set a star rotation for the star object
