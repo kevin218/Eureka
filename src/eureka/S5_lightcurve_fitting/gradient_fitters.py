@@ -107,12 +107,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
         plots.plot_fit(lc, model, meta, fitter=calling_function)
         
     # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
-        
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad0' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter=calling_function)
+    if 'spotrad0' in model.longparamlist[0] and meta.isplots_S5 >= 3:
+        plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
@@ -269,13 +265,9 @@ def nutsfitter(lc, model, meta, log, **kwargs):
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='nuts')
         
-    # Plot star spots
-    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter='nuts')
-        
-    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad0' in model.longparamlist[0]:
-            plots.plot_starry_star(lc, model, meta, fitter='nuts')
+    # Plot star spots    
+    if 'spotrad0' in model.longparamlist[0] and meta.isplots_S5 >= 3:
+        plots.plot_starry_star(lc, model, meta, fitter='nuts')
 
     # Plot GP fit + components
     if model.GP and meta.isplots_S5 >= 1:
