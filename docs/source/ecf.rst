@@ -1158,10 +1158,10 @@ This file describes the transit/eclipse and systematics parameters and their pri
    - Star Spot Parameters
       - ``spotstari`` - The stellar inclination in degrees. Only matters when the star is rotating so that spots move appropriately relative to the planet, fix to 90 unless you're accounting for stellar rotation (fleck slow mode, see spotrot below), then place priors based on inclination measurements of the stellar inclination. Recommend using fast mode and fixing to 90 if this is not known! 
       - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise Eureka! will use fleck's fast mode which assumes the stellar rotation is >> transit time and spots are stationary)
-      - ``spotcon#`` - The spot contrast ratio. For fleck only assign one, for starry assign one per spot
-      - ``spotrad#`` - The spot radius. For fleck it is relative to the star, for starry it is in degrees
-      - ``spotlat#`` - The spot latitude. 
-      - ``spotlon#`` - The spot longitude. 
+      - ``spotcon#`` - The spot contrast ratio. For fleck only assign one, for starry assign one per spot. Replace the # with the spot number (starting with 0)
+      - ``spotrad#`` - The spot radius. For fleck it is relative to the star, for starry it is in degrees. Replace the # with the spot number (starting with 0)
+      - ``spotlat#`` - The spot latitude. 0 is the center of the star. Replace the # with the spot number (starting with 0)
+      - ``spotlon#`` - The spot longitude. 0 is the center of the star. Replace the # with the spot number (starting with 0)
       Fleck specific parameters:
       - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good. 
       Starry specific parameters:
