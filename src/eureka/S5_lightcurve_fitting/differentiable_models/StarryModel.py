@@ -185,6 +185,7 @@ class StarryModel(PyMC3Model):
                              radius=spotrad[chan, si],
                              lat=spotlat[chan, si], 
                              lon=spotlon[chan, si])
+                map.inc = starinc[chan]
 
                 # Initialize star object
                 star = starry.Primary(map, m=0, r=pl_params.Rs, 
@@ -475,6 +476,7 @@ class StarryModel(PyMC3Model):
                              radius=spotrad[chan, si],
                              lat=spotlat[chan, si], 
                              lon=spotlon[chan, si])
+                map.inc = starinc[chan]
 
                 # Initialize star object
                 star = starry.Primary(map, m=0, r=pl_params.Rs, 
