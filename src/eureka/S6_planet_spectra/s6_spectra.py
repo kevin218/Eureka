@@ -758,7 +758,7 @@ def compute_offset(meta, log, fit_methods):
     ampsin = load_s5_saves(meta, log, fit_methods)
     if all(np.all(v == 0) for v in ampsin):
         meta.y_param = f'Y{orderSuffix}1{suffix}'
-        ampsin = -load_s5_saves(meta, log, fit_methods)
+        ampsin = [-1*i for i in load_s5_saves(meta, log, fit_methods)]
         if all(np.all(v == 0) for v in ampsin):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
@@ -843,7 +843,7 @@ def compute_amp(meta, log, fit_methods):
     ampsin = load_s5_saves(meta, log, fit_methods)
     if all(np.all(v == 0) for v in ampsin):
         meta.y_param = f'Y{orderSuffix}1{suffix}'
-        ampsin = -load_s5_saves(meta, log, fit_methods)
+        ampsin = [-1*i for i in load_s5_saves(meta, log, fit_methods)]
         if all(np.all(v == 0) for v in ampsin):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
@@ -927,7 +927,6 @@ def compute_pc_offset_poet(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
-    # phi = np.linspace(-np.pi, np.pi, meta.pc_nstep)[np.newaxis]
     deg = np.linspace(180, -180, meta.pc_nstep)
     ss = meta.pc_stepsize
     for i in tqdm(range(meta.nspecchan)):
@@ -978,9 +977,9 @@ def compute_pc_offset(meta, log, fit_methods):
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                      'fitted parameters.  Attempting to load Y11.')
         meta.y_param = f'Y21{suffix}'
-        ampsin2 = -load_s5_saves(meta, log, fit_methods)
+        ampsin2 = [-1*i for i in load_s5_saves(meta, log, fit_methods)]
         meta.y_param = f'Y11{suffix}'
-        ampsin1 = -load_s5_saves(meta, log, fit_methods)
+        ampsin1 = [-1*i for i in load_s5_saves(meta, log, fit_methods)]
         if all(np.all(v == 0) for v in ampsin1):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
@@ -1092,7 +1091,6 @@ def compute_pc_amp_poet(meta, log, fit_methods):
 
     meta.spectrum_median = []
     meta.spectrum_err = []
-    # phi = np.linspace(-np.pi, np.pi, meta.pc_nstep)[np.newaxis]
     deg = np.linspace(180, -180, meta.pc_nstep)
     ss = meta.pc_stepsize
     for i in tqdm(range(meta.nspecchan)):
@@ -1157,9 +1155,9 @@ def compute_pc_amp(meta, log, fit_methods):
         log.writelog(f'  Parameter {meta.y_param} was not in the list of '
                      'fitted parameters.  Attempting to load Y11.')
         meta.y_param = f'Y21{suffix}'
-        ampsin2 = -load_s5_saves(meta, log, fit_methods)
+        ampsin2 = [-1*i for i in load_s5_saves(meta, log, fit_methods)]
         meta.y_param = f'Y11{suffix}'
-        ampsin1 = -load_s5_saves(meta, log, fit_methods)
+        ampsin1 = [-1*i for i in load_s5_saves(meta, log, fit_methods)]
         if all(np.all(v == 0) for v in ampsin1):
             # The parameter could not be found - skip it
             log.writelog(f'  Parameter {meta.y_param} was not in the list of '
@@ -1312,6 +1310,9 @@ def compute_fn(meta, log, fit_methods):
     if (('nuts' in fit_methods or 'exoplanet' in fit_methods) and
             'sinusoid_pc' not in meta.run_myfuncs):
         return compute_fn_starry(meta, log, fit_methods)
+    elif ('poet_pc' in meta.run_myfuncs and 
+            'sinusoid_pc' not in meta.run_myfuncs):
+        return compute_fn_poet(meta, log, fit_methods)
     elif ('quasilambert_pc' in meta.run_myfuncs):
         meta.spectrum_median = np.zeros(meta.nspecchan)
         meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
@@ -1367,6 +1368,89 @@ def compute_fn(meta, log, fit_methods):
     for i in range(meta.nspecchan):
         fluxes = fp[i]*(1-2*ampcos[i])
         flux = np.percentile(np.array(fluxes), [16, 50, 84])[[1, 2, 0]]
+        flux[1] -= flux[0]
+        flux[2] = flux[0]-flux[2]
+        meta.spectrum_median.append(flux[0])
+        meta.spectrum_err.append(flux[1:])
+
+    # Convert the lists to an array
+    meta.spectrum_median = np.array(meta.spectrum_median)
+    if meta.fitter == 'lsq':
+        meta.spectrum_err = np.ones((2, meta.nspecchan))*np.nan
+    else:
+        meta.spectrum_err = np.array(meta.spectrum_err).T
+
+    return meta
+
+
+def compute_fn_poet(meta, log, fit_methods):
+
+    # Save meta.y_param
+    y_param = meta.y_param
+
+    suffix = ''
+    if meta.planetNumber > 0:
+        suffix += f'_pl{meta.planetNumber}'
+    if meta.channelNumber > 0:
+        suffix += f'_ch{meta.channelNumber}'
+
+    # Load eclipse depth
+    meta.y_param = 'fp'+suffix
+    fp = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in fp):
+        # The parameter could not be found - try fpfs
+        meta.y_param = 'fpfs'+suffix
+        fp = load_s5_saves(meta, log, fit_methods)
+        if all(np.all(v == 0) for v in fp):
+            log.writelog('  Planet flux (fp or fpfs) was not in the list of '
+                         'fitted parameters')
+            log.writelog(f'  Skipping {y_param}')
+            return meta
+
+    # Load cosine offset terms
+    meta.y_param = 'cos2_off'+suffix
+    cos2_off = load_s5_saves(meta, log, fit_methods)
+    meta.y_param = 'cos1_off'+suffix
+    cos1_off = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in cos1_off):
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters.')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Load cosine amplitude terms
+    meta.y_param = 'cos2_amp'+suffix
+    cos2_amp = load_s5_saves(meta, log, fit_methods)
+    meta.y_param = 'cos1_amp'+suffix
+    cos1_amp = load_s5_saves(meta, log, fit_methods)
+    if all(np.all(v == 0) for v in cos1_amp):
+        # The parameter could not be found - skip it
+        log.writelog(f'  Parameter {meta.y_param} was not in the list of '
+                     'fitted parameters.')
+        log.writelog(f'  Skipping {y_param}')
+        return meta
+
+    # Reset meta.y_param
+    meta.y_param = y_param
+
+    meta.spectrum_median = []
+    meta.spectrum_err = []
+    # Only need to calculate the flux at two points,
+    # anti-stellar (180 deg) and sub-stellar (0 deg)
+    deg = np.array([180, 0])
+    ieclipse = 1
+    for i in range(meta.nspecchan):
+        # Compute phase curve
+        phaseVars = (cos1_amp[i][:, np.newaxis]/2 *
+                     np.cos(2*np.pi/360*(deg-cos1_off[i][:, np.newaxis])) +
+                     cos2_amp[i][:, np.newaxis]/2 *
+                     np.cos(4*np.pi/360*(deg-cos2_off[i][:, np.newaxis])))
+        # Apply normalizing offset
+        phaseVars += 1 - (phaseVars[:, ieclipse])[:, np.newaxis]
+        # Compute nightside flux (at deg = 180)
+        fluxes = fp[i]*phaseVars[:, 0]
+        flux = np.percentile(fluxes, [16, 50, 84])[[1, 2, 0]]
         flux[1] -= flux[0]
         flux[2] = flux[0]-flux[2]
         meta.spectrum_median.append(flux[0])
