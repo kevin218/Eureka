@@ -6,7 +6,7 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 from astropy.nddata import CCDData
 from astropy.stats import SigmaClip
-from photutils import MMMBackground, MedianBackground, Background2D
+from photutils.background import MMMBackground, MedianBackground, Background2D
 import os
 
 from ..lib import clipping
@@ -321,9 +321,10 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
     meta : eureka.lib.readECF.MetaClass
         The metadata object.
     mask : ndarray
-        A mask array.
+        A boolean mask array, where True values are masked.
     bgmask : ndarray
-        A background mask array.
+        A boolean background mask array, where True values are not part of the
+        background.
     deg : int; optional
         Polynomial order for column-by-column background subtraction.
         Default is 1.
@@ -357,10 +358,10 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
     # Initiate background image with zeros
     ny, nx = np.shape(dataim)
     bg = np.zeros((ny, nx))
-    mask2 = mask*bgmask
+    mask2 = mask | bgmask
     if deg < 0:
         # Calculate median background of entire frame
-        bg += np.median(dataim[np.where(mask2)])
+        bg += np.median(dataim[~mask2])
 
     elif deg is None:
         # No background subtraction
@@ -371,28 +372,27 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
         for j in tqdm(range(ny)):
             nobadpixels = False
             # Create x indices for background sections of frame
-            xvals = np.where(bgmask[j] == 1)[0]
+            xvals = np.where(~bgmask[j])[0]
             # If too few good pixels on either half of detector then
             # compute average
-            too_few_pixels = (np.sum(bgmask[j, :int(nx/2)]) < deg
-                              or np.sum(bgmask[j, int(nx/2):nx]) < deg)
+            too_few_pixels = (np.sum(~bgmask[j, :int(nx/2)]) < deg
+                              or np.sum(~bgmask[j, int(nx/2):nx]) < deg)
             if too_few_pixels:
                 degs[j] = 0
             while not nobadpixels:
                 try:
-                    goodxvals = xvals[np.where(bgmask[j, xvals])]
+                    goodxvals = xvals[~bgmask[j, xvals]]
                 except:
                     # FINDME: Need to change this except to only catch the
                     # specific type of exception we expect
                     print('column: ', j, 'xvals: ', xvals)
-                    print(np.where(mask[j, xvals]))
+                    print(np.where(~mask[j, xvals]))
                     return
                 dataslice = dataim[j, goodxvals]
                 # Check for at least 1 good x value
                 if len(goodxvals) == 0:
                     nobadpixels = True  # exit while loop
                     # Use coefficients from previous row
-
                 else:
                     # Fit along spatial direction with a polynomial of
                     # degree 'deg'
@@ -432,7 +432,7 @@ def fitbg2(dataim, meta, mask, bgmask, deg=1, threshold=5, isrotate=0,
 
                     # Mask data point if > threshold
                     if stdevs[loc] > threshold:
-                        bgmask[j, goodxvals[loc]] = 0
+                        bgmask[j, goodxvals[loc]] = True
                     else:
                         nobadpixels = True  # exit while loop
 
@@ -472,7 +472,7 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     img : np.ndarray
        Single exposure frame.
     mask : np.ndarray
-       Mask to remove the orders.
+       A boolean mask to remove the orders, where True values are masked.
     sigma : float; optional
        Sigma to remove above. Default is 5.
     bkg_estimator : str; optional
@@ -497,6 +497,9 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
         bkg = MMMBackground()
     elif bkg_estimator.lower() == 'median':
         bkg = MedianBackground()
+    else:
+        raise ValueError('Unrecognized bkg_estimator setting, '
+                         f'{bkg_estimator.lower()}')
 
     b = Background2D(img, box,
                      filter_size=filter_size,
@@ -506,20 +509,29 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     return b.background
 
 
-def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
+def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3]):
     """Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
 
     Parameters
     ----------
-    isplots : bool; optional
-       Plots intermediate steps for the background fitting routine.
-       Default is False.
+    data : Xarray Dataset
+        The Dataset object.
+    order_mask : np.ndarray
+       A boolean mask to remove the orders, where True values are part of
+       the orders.
+    readnoise : float; optional
+        The read noise level of the image in the same units as the data.
+        Used to generate the noise model of the image. Default value is 11.
+    sigclip : interable; optional
+       A list or array corresponding to the
+       sigma-level which should be clipped in the cosmic
+       ray removal routine. Default is [4, 4, 4].
 
     Returns
     -------
-    data : object
-       data object now contains new attribute `bkg_removed`.
+    data : Xarray Dataset
+       The updated Dataset object now contains new attribute `bkg_removed`.
     """
     # Removes cosmic rays
     # Loops through niters cycles to make sure all pesky
@@ -530,16 +542,16 @@ def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3], isplots=0):
     for i in tqdm(range(len(data.data))):
 
         ccd = CCDData((data.data[i])*units.electron)
-        mask = np.zeros(data.data[i].shape)
+        mask = np.zeros(data.data[i].shape, dtype=bool)
 
         for n in range(len(sigclip)):
             m1 = ccdp.cosmicray_lacosmic(ccd, readnoise=readnoise,
                                          sigclip=sigclip[n])
             ccd = CCDData(m1.data*units.electron)
-            mask[m1.mask] += 1
+            mask[m1.mask] = True
 
         rm_crs[i] = m1.data
-        rm_crs[i][mask >= 1] = np.nan
+        rm_crs[i][mask] = np.nan
 
         # removal from background
         rm_crs[i] = clipping.gauss_removal(rm_crs[i], ~order_mask,
