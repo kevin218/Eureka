@@ -24,15 +24,21 @@ def find_column_median_shifts(data, meta, m):
     new_center : int
         The central row of the detector where the trace is moved to.
     '''
+    # make a copy of the array
+    data = np.ma.masked_invalid(data)
+
     # get the dimensions of the data
     nb_rows = data.shape[0]
 
     # define an array of pixel positions (in their centers)
-    pix_centers = np.arange(nb_rows) + 0.5
+    pix_centers = np.arange(nb_rows)
+
+    # Do a super quick/simple background subtraction to reduce biases
+    data = np.copy(data) - np.ma.min(data, axis=0)
 
     # Compute the center of mass of each column
-    column_coms = (np.sum(pix_centers[:, None]*data, axis=0) /
-                   np.sum(data, axis=0))
+    column_coms = (np.ma.sum(pix_centers[:, None]*data, axis=0) /
+                   np.ma.sum(data, axis=0))
 
     # Smooth CoM values to get rid of outliers
     smooth_coms = smooth.medfilt(column_coms, 11)
@@ -40,8 +46,8 @@ def find_column_median_shifts(data, meta, m):
     smooth_coms[np.isnan(smooth_coms)] = \
         smooth_coms[~np.isnan(smooth_coms)][-1]
 
-    # Convert to interget pixels
-    int_coms = np.around(smooth_coms - 0.5).astype(int)
+    # Convert to integer pixels
+    int_coms = np.round(smooth_coms).astype(int)
 
     if meta.isplots_S3 >= 1:
         plots_s3.curvature(meta, column_coms, smooth_coms, int_coms, m)
