@@ -126,15 +126,15 @@ class StarryModel(PyMC3Model):
                 spotrad = np.zeros((self.nchannel_fitted, nspots))
                 spotlat = np.zeros((self.nchannel_fitted, nspots))
                 spotlon = np.zeros((self.nchannel_fitted, nspots))
-                spotcon = np.zeros((self.nchannel_fitted, nspots))
-                starrot = np.zeros((self.nchannel_fitted))
-                starinc = np.zeros((self.nchannel_fitted))
+                spotcon = np.ones((self.nchannel_fitted, nspots))
+                starrot = np.ones((self.nchannel_fitted))*100.
+                starinc = np.ones((self.nchannel_fitted))*90.
 
                 # channel ID
                 if chan == 0:
                     channel_id = ''
                 else:
-                    channel_id = f'_{chan}'
+                    channel_id = f'_ch{chan}'
 
                 for n in range(nspots):
                     # read radii
@@ -155,12 +155,12 @@ class StarryModel(PyMC3Model):
                         item0 += channel_id
                     value = self.parameters.dict[item0][0]
                     spotlon[chan, n] = value
-                # read contrasts (same for all spots)
-                item0 = 'spotcon0'
-                if self.parameters.dict[item0][1] == 'free':
-                    item0 += channel_id
-                value = self.parameters.dict[item0][0]
-                spotcon[chan] = value
+                    # read contrasts
+                    item0 = 'spotcon0'
+                    if self.parameters.dict[item0][1] == 'free':
+                        item0 += channel_id
+                    value = self.parameters.dict[item0][0]
+                    spotcon[chan, n] = value
                 # read stellar inclination
                 item0 = 'spotstari'
                 if self.parameters.dict[item0][1] == 'free':
@@ -411,15 +411,15 @@ class StarryModel(PyMC3Model):
                 spotrad = np.zeros((self.nchannel_fitted, nspots))
                 spotlat = np.zeros((self.nchannel_fitted, nspots))
                 spotlon = np.zeros((self.nchannel_fitted, nspots))
-                spotcon = np.zeros((self.nchannel_fitted, nspots))
-                starrot = np.zeros((self.nchannel_fitted))
-                starinc = np.zeros((self.nchannel_fitted))
+                spotcon = np.ones((self.nchannel_fitted, nspots))
+                starrot = np.ones((self.nchannel_fitted))*100.
+                starinc = np.ones((self.nchannel_fitted))*90.
 
                 # channel ID
                 if chan == 0:
                     channel_id = ''
                 else:
-                    channel_id = f'_{chan}'
+                    channel_id = f'_ch{chan}'
 
                 for n in range(nspots):
                     # read radii

@@ -810,12 +810,12 @@ def plot_fleck_star(lc, model, meta, fitter):
     counter = [s for s in limbdarks if '_' in s]
     nus = len(limbdarks) - len(counter)
     
-    spotrad = np.zeros((lc.nchannel_fitted, nspots))
-    spotlat = np.zeros((lc.nchannel_fitted, nspots))
-    spotlon = np.zeros((lc.nchannel_fitted, nspots))
-    spotcon = np.zeros((lc.nchannel_fitted))
-    starrot = np.zeros((lc.nchannel_fitted))
-    starinc = np.zeros((lc.nchannel_fitted))
+    spotrad = np.zeros((self.nchannel_fitted, nspots))
+    spotlat = np.zeros((self.nchannel_fitted, nspots))
+    spotlon = np.zeros((self.nchannel_fitted, nspots))
+    spotcon = np.ones((self.nchannel_fitted))
+    starrot = np.ones((self.nchannel_fitted))*100.
+    starinc = np.ones((self.nchannel_fitted))*90.
 
     uarray = np.zeros((lc.nchannel_fitted, nus))
 
@@ -916,12 +916,12 @@ def plot_starry_star(lc, model, meta, fitter):
     counter = [s for s in limbdarks if '_' in s]
     nus = len(limbdarks) - len(counter)
     
-    spotrad = np.zeros((lc.nchannel_fitted, nspots))
-    spotlat = np.zeros((lc.nchannel_fitted, nspots))
-    spotlon = np.zeros((lc.nchannel_fitted, nspots))
-    spotcon = np.zeros((lc.nchannel_fitted, nspots))
-    starrot = np.zeros((lc.nchannel_fitted))
-    starinc = np.zeros((lc.nchannel_fitted))
+    spotrad = np.zeros((self.nchannel_fitted, nspots))
+    spotlat = np.zeros((self.nchannel_fitted, nspots))
+    spotlon = np.zeros((self.nchannel_fitted, nspots))
+    spotcon = np.ones((self.nchannel_fitted, nspots))
+    starrot = np.ones((self.nchannel_fitted))*100.
+    starinc = np.ones((self.nchannel_fitted))*90.
 
     # Set spot parameters
     

@@ -113,9 +113,9 @@ class FleckTransitModel(Model):
         spotrad = np.zeros((self.nchannel_fitted, nspots))
         spotlat = np.zeros((self.nchannel_fitted, nspots))
         spotlon = np.zeros((self.nchannel_fitted, nspots))
-        spotcon = np.zeros((self.nchannel_fitted))
-        starrot = np.zeros((self.nchannel_fitted))
-        starinc = np.zeros((self.nchannel_fitted))
+        spotcon = np.ones((self.nchannel_fitted))
+        starrot = np.ones((self.nchannel_fitted))*100.
+        starinc = np.ones((self.nchannel_fitted))*90.
 
         # Set all parameters
         lcfinal = np.array([])
@@ -129,7 +129,7 @@ class FleckTransitModel(Model):
             if chan == 0:
                 channel_id = ''
             else:
-                channel_id = f'_{chan}'
+                channel_id = f'_ch{chan}'
 
             time = self.time
             if self.multwhite:
@@ -145,7 +145,6 @@ class FleckTransitModel(Model):
                 # set a star rotation for the star object
                 # not actually used in fast mode. 
                 # overwritten if user supplies and runs slow mode
-                starrot[:] = 100
                 fleck_fast = True
 
                 for n in range(nspots):
