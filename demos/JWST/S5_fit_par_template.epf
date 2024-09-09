@@ -82,8 +82,8 @@ u2          0.2             'free'          0           1           U
 # for starry: assign one spotcon per spot (spotcon0, spotcon1, etc), spotnpts is the ydeg of the star map, spotrad is in degrees
 # NOTE: fleck contrast = 1 - starry contrast
 # ------------------
-# spotstari    90       'fixed'         90        1       N
-# spotrot      10       'fixed'         10        1       N
+# spotstari    90       'fixed'         
+# spotrot      10       'fixed'         
 # spotnpts     200      'independent
 # spotcon0     0.9      'free'          0         1       U
 # spotrad0     0.2      'free'          0         360     U
