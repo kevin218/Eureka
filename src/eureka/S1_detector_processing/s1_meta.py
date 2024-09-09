@@ -179,10 +179,11 @@ class S1MetaClass(MetaClass):
             self.p3thresh = getattr(self, 'p3thresh', 3)
             # Row-by-row BG subtraction (only useful for NIRCam)
             self.bg_row_by_row = getattr(self, 'bg_row_by_row', False)
-            # Left edge of exclusion region for row-by-row BG subtraction
-            self.bg_x1 = getattr(self, 'bg_x1', None)
-            # Right edge of exclusion region for row-by-row BG subtraction
-            self.bg_x2 = getattr(self, 'bg_x2', None)
+        # bg_x1 and bg_x2 also need to be defined if meta.masktrace is True
+        # Left edge of exclusion region for row-by-row BG subtraction
+        self.bg_x1 = getattr(self, 'bg_x1', None)
+        # Right edge of exclusion region for row-by-row BG subtraction
+        self.bg_x2 = getattr(self, 'bg_x2', None)
 
         # Diagnostics
         self.isplots_S1 = getattr(self, 'isplots_S1', 1)
