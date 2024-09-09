@@ -485,7 +485,7 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                             centerdriver.centerdriver(
                                 'mgmc_pri', data.flux.values, guess=1, trim=0,
                                 radius=None, size=None, meta=meta, i=None,
-                                m=None,
+                                m=None, mask=data.mask.values,
                                 saved_ref_median_frame=saved_ref_median_frame)
                         if saved_ref_median_frame is None:
                             saved_ref_median_frame = refrence_median_frame
@@ -509,16 +509,12 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                                               data.flux.shape[2]//2]
                             # Do a 2D gaussian fit to the whole frame
                             position_pri, extra = \
-                                centerdriver.centerdriver('fgc',
-                                                          data.flux.values[i],
-                                                          centroid_guess,
-                                                          0, 0, 0,
-                                                          mask=None, uncd=None,
-                                                          fitbg=1,
-                                                          maskstar=True,
-                                                          expand=1.0, psf=None,
-                                                          psfctr=None, i=i,
-                                                          m=m, meta=meta)
+                                centerdriver.centerdriver(
+                                    'fgc', data.flux.values[i], centroid_guess,
+                                    0, 0, 0, mask=data.mask.values[i],
+                                    uncd=None, fitbg=1, maskstar=True,
+                                    expand=1.0, psf=None, psfctr=None, i=i,
+                                    m=m, meta=meta)
 
                         if meta.oneoverf_corr is not None:
                             # Correct for 1/f

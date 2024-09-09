@@ -402,16 +402,19 @@ def find_fits(meta):
     return meta
 
 
-def binData(data, nbin=100, err=False):
+def binData(data, mask=None, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
     ----------
     data : ndarray (1D)
         The data to temporally bin.
-    nbin : int, optional
+    mask : ndarray (1D); optional
+        A boolean array of bad values (marked with True) that should be masked.
+        Defaults to None, in which case only non-finite values will be masked.
+    nbin : int; optional
         The number of bins there should be. By default 100.
-    err : bool, optional
+    err : bool; optional
         If True, divide the binned data by sqrt(N) to get the error on the
         mean. By default False.
 
@@ -420,19 +423,24 @@ def binData(data, nbin=100, err=False):
     binned : ndarray
         The binned data.
     """
+    if mask is None:
+        mask = ~np.isfinite(data)
+
     # Make a copy for good measure
-    data = np.ma.copy(data)
-    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
+
     # Make sure there's a whole number of bins
     data = data[:nbin*int(len(data)/nbin)]
+
     # Bin data
     binned = np.ma.mean(data.reshape(nbin, -1), axis=1)
     if err:
         binned /= np.sqrt(int(len(data)/nbin))
+
     return binned
 
 
-def binData_time(data, time, nbin=100, err=False):
+def binData_time(data, time, mask=None, nbin=100, err=False):
     """Temporally bin data for easier visualization.
 
     Parameters
@@ -441,6 +449,9 @@ def binData_time(data, time, nbin=100, err=False):
         The data to temporally bin.
     time : ndarray (1D)
         The time axis along which to bin
+    mask : ndarray (1D); optional
+        A boolean array of bad values (marked with True) that should be masked.
+        Defaults to None, in which case only non-finite values will be masked.
     nbin : int, optional
         The number of bins there should be. By default 100.
     err : bool, optional
@@ -452,14 +463,16 @@ def binData_time(data, time, nbin=100, err=False):
     binned : ndarray
         The binned data.
     """
+    if mask is None:
+        mask = ~np.isfinite(data)
+
     # Make a copy for good measure
-    data = np.ma.copy(data)
-    data = np.ma.masked_invalid(data)
+    data = np.ma.masked_where(mask, data)
 
     # Binned_statistic will copy data without keeping it a masked array
     # so we have to manually remove invalid points
-    good_time = time[~data.mask]
-    good_data = data[~data.mask]
+    good_time = time[~np.ma.getmaskarray(data.mask)]
+    good_data = data[~np.ma.getmaskarray(data.mask)]
 
     binned, _, _ = binned_statistic(good_time, good_data,
                                     statistic='mean',
