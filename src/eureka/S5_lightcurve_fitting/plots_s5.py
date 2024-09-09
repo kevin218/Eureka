@@ -10,19 +10,18 @@ except:
 import corner
 from scipy import stats
 import fleck
-import starry
-from .models.AstroModel import PlanetParams
 import astropy.units as unit
 try:
     import arviz as az
     from arviz.rcparams import rcParams as az_rcParams
+    import starry
 except:
     # PyMC3 hasn't been installed
     pass
 
 from ..lib import plots, util
 from ..lib.split_channels import split
-
+from .models.AstroModel import PlanetParams
 
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5101)
@@ -882,7 +881,7 @@ def plot_fleck_star(lc, model, meta, fitter):
 
         pl_params.u = uarray[channel]
     
-        fig = plt.figure(5306, figsize=(8, 6))
+        fig = plt.figure(5307, figsize=(8, 6))
         plt.clf()
         star = fleck.Star(spot_contrast=spotcon[channel], 
                           u_ld=pl_params.u,
@@ -898,7 +897,7 @@ def plot_fleck_star(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5306_{fname_tag}_fleck_star_{fitter}'
+        fname = (f'figs{os.sep}fig5307_{fname_tag}_fleck_star_{fitter}'
                  + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
@@ -973,7 +972,7 @@ def plot_starry_star(lc, model, meta, fitter):
         if 'spotrot' in model.parameters.dict.keys():
             starrot[channel] = model.parameters.dict['spotrot'][0]
     
-        fig = plt.figure(5306, figsize=(8, 6))
+        fig = plt.figure(5308, figsize=(8, 6))
         plt.clf()
         ax = fig.add_axes([0, 0, 1, 1])
         map = starry.Map(ydeg=starres, udeg=nus)
@@ -986,7 +985,7 @@ def plot_starry_star(lc, model, meta, fitter):
         else:
             ch_number = str(channel).zfill(len(str(lc.nchannel)))
             fname_tag = f'ch{ch_number}'
-        fname = (f'figs{os.sep}fig5307_{fname_tag}_starry_star_{fitter}'
+        fname = (f'figs{os.sep}fig5308_{fname_tag}_starry_star_{fitter}'
                  + plots.figure_filetype)
         fig.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
         if not meta.hide_plots:
