@@ -804,28 +804,16 @@ def plot_fleck_star(lc, model, meta, fitter):
     spotinds = [s for s in model.parameters.dict.keys() if 'spotrad' in s]   
     counter = [s for s in spotinds if '_' in s]
     nspots = len(spotinds) - len(counter)
-
-    # find number of limb darkening parametesr
-    limbdarks = [s for s in model.parameters.dict.keys() if 'u' in s] 
-    counter = [s for s in limbdarks if '_' in s]
-    nus = len(limbdarks) - len(counter)
     
-    spotrad = np.zeros((self.nchannel_fitted, nspots))
-    spotlat = np.zeros((self.nchannel_fitted, nspots))
-    spotlon = np.zeros((self.nchannel_fitted, nspots))
-    spotcon = np.ones((self.nchannel_fitted))
-    starrot = np.ones((self.nchannel_fitted))*100.
-    starinc = np.ones((self.nchannel_fitted))*90.
+    spotrad = np.zeros((lc.nchannel_fitted, nspots))
+    spotlat = np.zeros((lc.nchannel_fitted, nspots))
+    spotlon = np.zeros((lc.nchannel_fitted, nspots))
+    spotcon = np.ones((lc.nchannel_fitted))
+    starrot = np.ones((lc.nchannel_fitted))*100.
+    starinc = np.ones((lc.nchannel_fitted))*90.
 
-    uarray = np.zeros((lc.nchannel_fitted, nus))
 
     # Set spot/fleck parameters
-    # set a star rotation for the star object
-    # not actually used in fast mode. 
-    # overwritten if user supplies and runs slow mode
-    starrot[:] = 100 
-
-    pid_id = ''
 
     for channel in lc.fitted_channels:
 
@@ -836,55 +824,51 @@ def plot_fleck_star(lc, model, meta, fitter):
         if channel == 0:
             channel_id = ''
         else:
-            channel_id = f'_{channel}'
+            channel_id = f'_ch{channel}'
 
         for n in range(nspots):
             # read radii
-            item0 = 'spotrad' + str(n) + pid_id
+            item0 = 'spotrad' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotrad[channel, n] = value
             # read latitudes
-            item0 = 'spotlat' + str(n) + pid_id
+            item0 = 'spotlat' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotlat[channel, n] = value
             # read longitudes
-            item0 = 'spotlon' + str(n) + pid_id
+            item0 = 'spotlon' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotlon[channel, n] = value
         # read contrasts (same for all spots)
-        item0 = 'spotcon0' + pid_id
+        item0 = 'spotcon0'
         if model.parameters.dict[item0][1] == 'free':
             item0 += channel_id
         value = model.parameters.dict[item0][0]
         spotcon[channel] = value
-        # read stellar inclination
-        item0 = 'spotstari' + pid_id
-        if model.parameters.dict[item0][1] == 'free':
-            item0 += channel_id
-        value = model.parameters.dict[item0][0]
-        starinc[channel] = value
-        # read stellar rotation (if provided)
-        if 'spotrot' in model.parameters.dict.keys():
-            starrot[channel] = model.parameters.dict['spotrot'][0]
-
-        for ui in range(nus):   
-            item0 = 'u' + str(ui+1) + pid_id
+        # read stellar inclination (if provided)
+        if 'spotstari' in model.parameters.dict.keys():
+            item0 = 'spotstari' + pid_id
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
-            uarray[channel, ui] = model.parameters.dict[item0][0]
-
-        pl_params.u = uarray[channel]
+            starrot[chan] = model.parameters.dict[item0][0]
+        # read stellar rotation (if provided)
+        if 'spotrot' in model.parameters.dict.keys():
+            item0 = 'spotrot' + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            starrot[chan] = model.parameters.dict[item0][0]
+            fleck_fast = False
     
         fig = plt.figure(5307, figsize=(8, 6))
         plt.clf()
         star = fleck.Star(spot_contrast=spotcon[channel], 
-                          u_ld=pl_params.u,
+                          u_ld=[pl_params.u1, pl_params.u2],
                           rotation_period=starrot[channel])
         star.plot(spotlon[channel][:nspots, None]*unit.deg, 
                   spotlat[channel][:nspots, None]*unit.deg, 
@@ -910,22 +894,15 @@ def plot_starry_star(lc, model, meta, fitter):
     spotinds = [s for s in model.parameters.dict.keys() if 'spotrad' in s]   
     counter = [s for s in spotinds if '_' in s]
     nspots = len(spotinds) - len(counter)
-
-    # find number of limb darkening parametesr
-    limbdarks = [s for s in model.parameters.dict.keys() if 'u' in s] 
-    counter = [s for s in limbdarks if '_' in s]
-    nus = len(limbdarks) - len(counter)
     
-    spotrad = np.zeros((self.nchannel_fitted, nspots))
-    spotlat = np.zeros((self.nchannel_fitted, nspots))
-    spotlon = np.zeros((self.nchannel_fitted, nspots))
-    spotcon = np.ones((self.nchannel_fitted, nspots))
-    starrot = np.ones((self.nchannel_fitted))*100.
-    starinc = np.ones((self.nchannel_fitted))*90.
+    spotrad = np.zeros((lc.nchannel_fitted, nspots))
+    spotlat = np.zeros((lc.nchannel_fitted, nspots))
+    spotlon = np.zeros((lc.nchannel_fitted, nspots))
+    spotcon = np.ones((lc.nchannel_fitted, nspots))
+    starrot = np.ones((lc.nchannel_fitted))*100.
+    starinc = np.ones((lc.nchannel_fitted))*90.
 
     # Set spot parameters
-    
-    pid_id = ''
 
     for channel in lc.fitted_channels:
 
@@ -933,49 +910,52 @@ def plot_starry_star(lc, model, meta, fitter):
         if channel == 0:
             channel_id = ''
         else:
-            channel_id = f'_{channel}'
+            channel_id = f'_ch{channel}'
 
         for n in range(nspots):
             # read radii
-            item0 = 'spotrad' + str(n) + pid_id
+            item0 = 'spotrad' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotrad[channel, n] = value
             # read latitudes
-            item0 = 'spotlat' + str(n) + pid_id
+            item0 = 'spotlat' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotlat[channel, n] = value
             # read longitudes
-            item0 = 'spotlon' + str(n) + pid_id
+            item0 = 'spotlon' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotlon[channel, n] = value
             # read contrasts 
-            item0 = 'spotcon' + str(n) + pid_id
+            item0 = 'spotcon' + str(n)
             if model.parameters.dict[item0][1] == 'free':
                 item0 += channel_id
             value = model.parameters.dict[item0][0]
             spotcon[channel, n] = value
-        # read stellar inclination
-        item0 = 'spotstari' + pid_id
-        if model.parameters.dict[item0][1] == 'free':
-            item0 += channel_id
-        value = model.parameters.dict[item0][0]
-        starinc[channel] = value
         # read number of points
         starres = model.parameters.dict['spotnpts'][0]
+        # read stellar inclination (if provided)
+        if 'spotstari' in model.parameters.dict.keys():
+            item0 = 'spotstari' + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            starrot[chan] = model.parameters.dict[item0][0]
         # read stellar rotation (if provided)
         if 'spotrot' in model.parameters.dict.keys():
-            starrot[channel] = model.parameters.dict['spotrot'][0]
+            item0 = 'spotrot' + pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += channel_id
+            starrot[chan] = model.parameters.dict[item0][0]
     
         fig = plt.figure(5308, figsize=(8, 6))
         plt.clf()
         ax = fig.add_axes([0, 0, 1, 1])
-        map = starry.Map(ydeg=starres, udeg=nus)
+        map = starry.Map(ydeg=starres, udeg=2)
         for n in range(nspots):
             map.spot(contrast=spotcon[channel, n], radius=spotrad[channel, n], 
                      lat=spotlat[channel, n], lon=spotlon[channel, n])

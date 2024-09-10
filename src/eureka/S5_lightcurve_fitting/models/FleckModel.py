@@ -138,12 +138,6 @@ class FleckTransitModel(Model):
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
-                
-                # Planet ID
-                if pid == 0:
-                    pid_id = ''
-                else:
-                    pid_id = f'_pl{pid}'
 
                 # Set spot/fleck parameters
                 # set a star rotation for the star object
@@ -179,17 +173,16 @@ class FleckTransitModel(Model):
                 # read number of points
                 npoints = self.parameters.dict['spotnpts'][0]
                 # read stellar inclination (if provided)
-                item0 = 'spotstari' + pid_id
-                if self.parameters.dict[item0][1] == 'free':
-                    item0 += channel_id
-                if item0 in self.parameters.dict.keys():
-                    value = self.parameters.dict[item0][0]
-                    starinc[chan] = value
+                if 'spotstari' in self.parameters.dict.keys():
+                    item0 = 'spotstari'
+                    if self.parameters.dict[item0][1] == 'free':
+                        item0 += channel_id
+                    starrot[chan] = self.parameters.dict[item0][0]
                 # read stellar rotation (if provided)
-                item0 = 'spotrot' + pid_id
-                if self.parameters.dict[item0][1] == 'free':
-                    item0 += channel_id
-                if item0 in self.parameters.dict.keys():
+                if 'spotrot' in self.parameters.dict.keys():
+                    item0 = 'spotrot'
+                    if self.parameters.dict[item0][1] == 'free':
+                        item0 += channel_id
                     starrot[chan] = self.parameters.dict[item0][0]
                     fleck_fast = False
                             
@@ -209,7 +202,7 @@ class FleckTransitModel(Model):
                         (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
-                    light_curve = 1e12*np.ma.ones(time.shape)
+                    light_curve = 1e6*np.ma.ones(time.shape)
                     continue
 
                 # Use batman ld_profile name
@@ -233,7 +226,7 @@ class FleckTransitModel(Model):
                                   u_ld=pl_params.u, 
                                   rotation_period=starrot[chan])
                 # Make the transit model
-                fleck_times = np.linspace(time[0], time[-1], npoints)
+                fleck_times = np.linspace(time.data[0], time.data[-1], npoints)
                 fleck_transit = star.light_curve(
                     spotlon[chan][:, None]*unit.deg, 
                     spotlat[chan][:, None]*unit.deg, 
