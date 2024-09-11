@@ -396,8 +396,8 @@ def flag_bg_phot(data, meta, log):
                 nbadpix = ngoodpix - np.sum(~data['mask'][:, i, j].values)
                 nbadpix_total += nbadpix
     flag_percent = nbadpix_total/np.product(flux.shape)*100
-    log.writelog(f"  {flag_percent:.5f} of the pixels have been flagged as "
-                 "outliers\n", mute=(not meta.verbose))
+    log.writelog(f"    {flag_percent:.5f}% of the pixels have been flagged as "
+                 "outliers", mute=(not meta.verbose))
 
     return data
 

@@ -205,7 +205,7 @@ def check_nans(data, mask, log, name=''):
                      f"consider removing indices {inan} as their data quality "
                      f"may be poor.")
     elif num_nans > 0:
-        log.writelog(f"  {name} has {num_nans} NaNs/infs, which is "
+        log.writelog(f"    {name} has {num_nans} NaNs/infs, which is "
                      f"{perc_nans:.2f}% of all pixels.")
         mask[inan] = True
     if perc_nans > 10:
@@ -735,17 +735,17 @@ def interp_masked(data, meta, i, log):
         The updated Dataset object with requested pixels masked.
     """
     if i == 0:
-        log.writelog('  Interpolating masked values...',
+        log.writelog('    Interpolating masked values...',
                      mute=(not meta.verbose))
     flux = data.flux.values[i]
     mask = data.mask.values[i]
     nx = flux.shape[1]
     ny = flux.shape[0]
     grid_x, grid_y = np.mgrid[0:ny-1:complex(0, ny), 0:nx-1:complex(0, nx)]
-    points = np.where(mask)
+    points = np.where(~mask)
     # x,y positions of not masked pixels
     points_t = np.array(points).transpose()
-    values = flux[np.where(mask)]  # flux values of not masked pixels
+    values = flux[np.where(~mask)]  # flux values of not masked pixels
 
     # Use scipy.interpolate.griddata to interpolate
     if meta.interp_method == 'nearest':
