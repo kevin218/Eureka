@@ -451,9 +451,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     y, x = np.arange(sz[0]), np.arange(sz[1])
     yi, xi = np.linspace(0, sz[0]-1, isz[0]), np.linspace(0, sz[1]-1, isz[1])
     iimage = i2d.interp2d(image, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
-    imask = i2d.interp2d(mask, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
+    imask = i2d.interp2d(mask.astype(float), expand=iexpand, y=y, x=x,
+                         yi=yi, xi=xi)
     # Need to convert fractions to booleans
-    imask = imask < 0.5
+    imask = imask > 0.5
     if imerr is not None:
         iimerr = i2d.interp2d(imerr, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
 
@@ -469,7 +470,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
                              apFunc(iskyin, ictr, isz))
 
     # combine masks to mask all bad pixels and pixels outside annulus
-    skymask = skyann + imask + ~np.isfinite(iimage)  # flag NaNs to eliminate
+    skymask = skyann | imask | ~np.isfinite(iimage)  # flag NaNs to eliminate
     # from nskypix
 
     # Check for skyfrac violation
