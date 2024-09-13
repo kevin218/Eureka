@@ -44,7 +44,8 @@ def do_correction(input_model, bias_model, meta, log):
         trace_mask = input_model.trace_mask
 
         # Compute median of bias frame outside of trace
-        bias_median = np.nanmedian(bias_model.data[np.where(trace_mask)])
+        temp_data = np.ma.masked_where(trace_mask, bias_model.data)
+        bias_median = np.ma.median(temp_data)
 
         log.writelog('  Computing scale factor for superbias correction.')
         # Compute median of each integration/group outside of trace
@@ -52,9 +53,9 @@ def do_correction(input_model, bias_model, meta, log):
         nint, ngroup, nrow, ncol = input_model.data.shape
         scale_factor = np.zeros((nint, ngroup))
         for ii in range(nint):
-            data = input_model.data[ii]
             for jj in range(ngroup):
-                data_median = np.nanmedian(data[jj][np.where(trace_mask)])
+                data = np.ma.masked_where(trace_mask, input_model.data[ii][jj])
+                data_median = np.ma.median(data)
                 scale_factor[ii, jj] = data_median/bias_median
         mean_scale_factor = np.nanmean(scale_factor, axis=0)
         log.writelog('  Mean bias scale factors (by group): ' +
