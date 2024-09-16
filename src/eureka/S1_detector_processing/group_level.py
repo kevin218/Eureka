@@ -55,15 +55,12 @@ def GLBS(input_model, log, meta):
 
         grp_data = all_data[:, ngrp, :, :]
         grp_mask = np.zeros(grp_data.shape, dtype=bool)
-        dqmask = np.where((dq[:, ngrp, :, :] % 2 == 1) |
-                          (dq[:, ngrp, :, :] == 2))
-        grp_mask[dqmask] = True
+        grp_mask = (dq[:, ngrp, :, :] % 2 == 1) | (dq[:, ngrp, :, :] == 2)
+        grp_mask |= ~np.isfinite(all_data[:, ngrp, :, :])
 
         if meta.masktrace:
             trace_mask = np.broadcast_to(input_model.trace_mask,
-                                         (grp_data.shape[0],
-                                          grp_data.shape[1],
-                                          grp_data.shape[2]))
+                                         grp_data.shape)
             grp_mask |= trace_mask
 
         xrdata = (['time', 'y', 'x'], grp_data)

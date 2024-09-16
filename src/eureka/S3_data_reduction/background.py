@@ -213,9 +213,9 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
     if deg < 0:
         # Calculate median background of entire frame
         # Assumes all x1 and x2 values are the same
-        submask = np.concatenate((mask[:, :x1[0]].T, mask[:, x2[0]+1:nx].T)).T
+        submask = np.concatenate((mask[:, :x1[0]].T, mask[:, x2[0]+1:].T)).T
         subdata = np.concatenate((dataim[:, :x1[0]].T,
-                                  dataim[:, x2[0]+1:nx].T)).T
+                                  dataim[:, x2[0]+1:].T)).T
         bg = np.zeros((ny, nx)) + np.median(subdata[np.where(submask)])
     elif deg is None:
         # No background subtraction
@@ -232,12 +232,12 @@ def fitbg(dataim, meta, mask, x1, x2, deg=1, threshold=5, isrotate=0,
                                     range(x2[j]+1, nx))).astype(int)
             # If too few good pixels then average
             too_few_pix = (np.sum(~mask[j, :x1[j]]) < deg
-                           or np.sum(~mask[j, x2[j]+1:nx]) < deg)
+                           or np.sum(~mask[j, x2[j]+1:]) < deg)
             if too_few_pix:
                 degs[j] = 0
             while not nobadpixels:
                 try:
-                    goodxvals = xvals[np.where(~mask[j, xvals])]
+                    goodxvals = xvals[~mask[j, xvals]]
                 except:
                     # FINDME: Need to change this except to only catch the
                     # specific type of exception we expect
