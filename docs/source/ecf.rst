@@ -168,7 +168,7 @@ Right edge of exclusion region for row-by-row background subtraction.
 
 masktrace
 '''''''''
-Boolean, creates a mask centered on the trace prior to GLBS for curved traces
+Boolean, creates a mask centered on the trace prior to GLBS for curved traces. ``bg_y1`` and ``bg_y2`` will be ignored if ``masktrace`` is ``True`` since the trace will already be masked.
 
 window_len
 ''''''''''

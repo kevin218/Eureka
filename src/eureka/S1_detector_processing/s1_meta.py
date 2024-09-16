@@ -140,6 +140,12 @@ class S1MetaClass(MetaClass):
         # Mask curved traces
         self.masktrace = getattr(self, 'masktrace', False)
         if self.masktrace:
+            # Override bg_y1 and bg_y2 if masking the trace
+            print('  Overriding meta.bg_y1 and meta.bg_y2 since you set '
+                  'meta.masktrace to True, and the bg_y1 and bg_y2 parameters '
+                  'are not needed when masking the trace.')
+            self.bg_y1 = 17
+            self.bg_y2 = 16
             # Force these to be specified if masking the trace
             self.window_len = getattr(self, 'window_len')
             self.expand_mask = getattr(self, 'expand_mask')
