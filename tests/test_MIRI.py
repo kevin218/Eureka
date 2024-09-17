@@ -92,7 +92,7 @@ def test_MIRI(capsys):
         s5_meta2 = deepcopy(s5_meta)
         s5_meta2.fit_method = '[exoplanet,nuts]'
         s5_meta2.run_myfuncs = s5_meta2.run_myfuncs.replace(
-            'batman_tr,batman_ecl,sinusoid_pc', 'starry')
+            'fleck_tr,batman_ecl,sinusoid_pc', 'starry')
         s5_meta2.fit_par = './s5_fit_par_starry.epf'
         s5_meta2.tune = 10
         s5_meta2.draws = 100

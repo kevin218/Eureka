@@ -25,22 +25,22 @@ class FleckTransitModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'fleck transit'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
-        self.name = 'fleck transit'
 
         log = kwargs.get('log')
 
         # Store the ld_profile
         self.ld_from_S4 = kwargs.get('ld_from_S4')
-        ld_func = ld_profile(self.parameters.limb_dark.value, 
+        ld_func = ld_profile(self.parameters.limb_dark.value,
                              use_gen_ld=self.ld_from_S4)
         len_params = len(inspect.signature(ld_func).parameters)
         self.coeffs = ['u{}'.format(n) for n in range(len_params)[1:]]
 
         self.ld_from_file = kwargs.get('ld_from_file')
-        
+
         # Replace u parameters with generated limb-darkening values
         if self.ld_from_S4 or self.ld_from_file:
             log.writelog("Using the following limb-darkening values:")
@@ -66,7 +66,7 @@ class FleckTransitModel(Model):
                             self.parameters.dict[item][-3] = ld_val
                         # Update the non-dictionary form as well
                         setattr(self.parameters, item,
-                                self.parameters.dict[item])                     
+                                self.parameters.dict[item])
 
     def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
@@ -92,7 +92,7 @@ class FleckTransitModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
-            
+
         if pid is None:
             pid_iter = range(self.num_planets)
         else:
@@ -102,19 +102,6 @@ class FleckTransitModel(Model):
         if self.time is None:
             self.time = kwargs.get('time')
 
-        # find number of spots
-        spotinds = [s for s in self.parameters.dict.keys() if 'spotrad' in s]   
-        counter = [s for s in spotinds if '_' in s]
-        nspots = len(spotinds) - len(counter)
-        
-        # Get relevant spot parameters
-        spotrad = np.zeros((self.nchannel_fitted, nspots))
-        spotlat = np.zeros((self.nchannel_fitted, nspots))
-        spotlon = np.zeros((self.nchannel_fitted, nspots))
-        spotcon = np.ones((self.nchannel_fitted))
-        starrot = np.ones((self.nchannel_fitted))*100.
-        starinc = np.ones((self.nchannel_fitted))*90.
-
         # Set all parameters
         lcfinal = np.array([])
         for c in range(nchan):
@@ -123,123 +110,93 @@ class FleckTransitModel(Model):
             else:
                 chan = 0
 
-            # channel ID
-            if chan == 0:
-                channel_id = ''
-            else:
-                channel_id = f'_ch{chan}'
-                
             time = self.time
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
-                
+
             light_curve = np.ma.ones(time.shape)
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
 
-                # Set spot/fleck parameters
-                # set a star rotation for the star object
-                # not actually used in fast mode. 
-                # overwritten if user supplies and runs slow mode
-                fleck_fast = True
-
-                for n in range(nspots):
-                    # read radii
-                    item0 = 'spotrad' + str(n) + pid_id
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotrad[chan, n] = value
-                    # read latitudes
-                    item0 = 'spotlat' + str(n) + pid_id
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotlat[chan, n] = value
-                    # read longitudes
-                    item0 = 'spotlon' + str(n) + pid_id
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotlon[chan, n] = value
-                # read contrasts (same for all spots)
-                item0 = 'spotcon0' + pid_id
-                if self.parameters.dict[item0][1] == 'free':
-                    item0 += channel_id
-                value = self.parameters.dict[item0][0]
-                spotcon[chan] = value
-                # read number of points
-                npoints = self.parameters.dict['spotnpts'][0]
-                # read stellar inclination (if provided)
-                if 'spotstari' in self.parameters.dict.keys():
-                    item0 = 'spotstari'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    starrot[chan] = self.parameters.dict[item0][0]
-                # read stellar rotation (if provided)
-                if 'spotrot' in self.parameters.dict.keys():
-                    item0 = 'spotrot'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    starrot[chan] = self.parameters.dict[item0][0]
-                    fleck_fast = False
-                            
                 # Set limb darkening parameters
                 uarray = []
-                for u in self.coeffs:
-                    index = np.where(np.array(self.paramtitles) == u)[0]
-                    if len(index) != 0:
-                        item = self.longparamlist[chan][index[0]]
-                        uarray.append(self.parameters.dict[item][0])
+                for uind in range(1, len(self.coeffs)+1):
+                    uarray.append(getattr(pl_params, f'u{uind}'))
                 pl_params.u = uarray
                 pl_params.limb_dark = self.parameters.dict['limb_dark'][0]
 
                 # Enforce physicality to avoid crashes from batman by returning
                 # something that should be a horrible fit
-                if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
-                        (1 < pl_params.a) and (0 <= pl_params.ecc < 1)):
+                if not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
+                        (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                        (-1 <= pl_params.esinw <= 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
                     continue
 
                 # Use batman ld_profile name
-                if self.parameters.limb_dark.value == '4-parameter':
-                    pl_params.limb_dark = 'nonlinear'
+                if self.parameters.limb_dark.value not in ['quadratic',
+                                                           'kipping2013']:
+                    raise ValueError('limb_dark was set to "'
+                                     f'{self.parameters.limb_dark.value}" in '
+                                     'your EPF, while the fleck transit model '
+                                     'only allows "quadratic" or '
+                                     '"kipping2013".')
                 elif self.parameters.limb_dark.value == 'kipping2013':
                     # Enforce physicality to avoid crashes from batman by
                     # returning something that should be a horrible fit
                     if pl_params.u[0] <= 0:
                         # Returning nans or infs breaks the fits, so this was
                         # the best I could think of
-                        lcfinal = 1e12*np.ma.ones(time.shape)
+                        lcfinal = 1e6*np.ma.ones(time.shape)
                         continue
                     pl_params.limb_dark = 'quadratic'
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
                     u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
                     pl_params.u = np.array([u1, u2])
 
+                # create arrays to hold values
+                spotrad = np.zeros(0)
+                spotlat = np.zeros(0)
+                spotlon = np.zeros(0)
+                spotcon = np.zeros(0)
+
+                for n in range(pl_params.nspots):
+                    # read radii, latitudes, longitudes, and contrasts
+                    spotrad = np.concatenate([
+                        spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+                    spotlat = np.concatenate([
+                        spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+                    spotlon = np.concatenate([
+                        spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+                    spotcon = np.concatenate([
+                        spotcon, [getattr(pl_params, f'spotcon{n}'),]])
+
+                if pl_params.spotnpts is None:
+                    # Have a default spotnpts for fleck
+                    pl_params.spotnpts = 300
+
                 # Make the star object
-                star = fleck.Star(spot_contrast=spotcon[chan], 
-                                  u_ld=pl_params.u, 
-                                  rotation_period=starrot[chan])
+                star = fleck.Star(spot_contrast=spotcon[chan],
+                                  u_ld=pl_params.u,
+                                  rotation_period=pl_params.spotrot)
                 # Make the transit model
-                fleck_times = np.linspace(time.data[0], time.data[-1], npoints)
+                fleck_times = np.linspace(time.data[0], time.data[-1],
+                                          pl_params.spotnpts)
                 fleck_transit = star.light_curve(
-                    spotlon[chan][:, None]*unit.deg, 
-                    spotlat[chan][:, None]*unit.deg, 
-                    spotrad[chan][:, None],
-                    starinc[chan]*unit.deg, 
+                    spotlon[:, None]*unit.deg,
+                    spotlat[:, None]*unit.deg,
+                    spotrad[:, None],
+                    pl_params.spotstari*unit.deg,
                     planet=pl_params, times=fleck_times,
-                    fast=fleck_fast).flatten()
+                    fast=pl_params.fleck_fast).flatten()
                 m_transit = np.interp(time, fleck_times, fleck_transit)
-                
+
                 light_curve *= m_transit/m_transit[0]
 
             lcfinal = np.append(lcfinal, light_curve)
 
         return lcfinal
-
-

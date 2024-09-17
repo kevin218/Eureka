@@ -62,7 +62,7 @@ class PlanetParams():
             self.channel_id = ''
         else:
             self.channel_id = f'_ch{self.channel}'
-        # Set transit/eclipse parameters
+        # Transit/eclipse parameters
         self.t0 = None
         self.rprs = None
         self.rp = None
@@ -77,20 +77,37 @@ class PlanetParams():
         self.fpfs = None
         self.fp = None
         self.t_secondary = None
+        # POET phase curve parameters
         self.cos1_amp = 0.
         self.cos1_off = 0.
         self.cos2_amp = 0.
         self.cos2_off = 0.
+        # Sinusoidal phase curve parameters
         self.AmpCos1 = 0.
         self.AmpSin1 = 0.
         self.AmpCos2 = 0.
         self.AmpSin2 = 0.
+        # Quasi-Lambertian parameters
         self.quasi_gamma = 0.
         self.quasi_offset = 0.
+        # Limb-darkening parameters
         self.u1 = 0.
         self.u2 = 0.
         self.u3 = 0.
         self.u4 = 0.
+        # Fleck/starry star-spot parameters
+        # Figure out how many star spots
+        self.nspots = len([s for s in model.parameters.dict.keys()
+                           if 'spotrad' in s and '_' not in s])
+        for n in range(self.nspots):
+            setattr(self, f'spotrad{n}', 0)
+            setattr(self, f'spotlat{n}', 0)
+            setattr(self, f'spotlon{n}', 0)
+            setattr(self, f'spotcon{n}', 0)
+        if self.nspots > 0:
+            self.spotstari = 90
+            self.spotrot = None
+            self.spotnpts = None
 
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
@@ -238,6 +255,10 @@ class PlanetParams():
             self.w = None
             self.ecosw = 0
             self.esinw = 0
+
+        if self.spotrot is None:
+            self.spotrot = 100
+            self.fleck_fast = True
 
 
 class AstroModel(Model):

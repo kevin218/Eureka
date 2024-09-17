@@ -113,79 +113,37 @@ class StarryModel(PyMC3Model):
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=False)
 
-            # Initialize star object
-            # check for spots and set parameters
-            if hasattr(self.parameters, 'spotrad0'):
-                # find number of spots
-                spotinds = [s for s in self.parameters.dict.keys() 
-                            if 'spotrad' in s]   
-                counter = [s for s in spotinds if '_' in s]
-                nspots = len(spotinds) - len(counter)
-
+            if pl_params.nspots > 0:
+                # Check for spots and set spot parameters if needed
                 # create arrays to hold values
-                spotrad = tt.zeros((self.nchannel_fitted, nspots))
-                spotlat = tt.zeros((self.nchannel_fitted, nspots))
-                spotlon = tt.zeros((self.nchannel_fitted, nspots))
-                spotcon = tt.zeros((self.nchannel_fitted, nspots))
-                starrot = tt.ones((self.nchannel_fitted))*100.
-                starinc = tt.ones((self.nchannel_fitted))*90.
+                spotrad = tt.zeros(0)
+                spotlat = tt.zeros(0)
+                spotlon = tt.zeros(0)
+                spotcon = tt.zeros(0)
 
-                # channel ID
-                if chan == 0:
-                    channel_id = ''
-                else:
-                    channel_id = f'_ch{chan}'
-
-                for n in range(nspots):
-                    # read radii
-                    item0 = 'spotrad' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = getattr(self.model, item0)
-                    setattr(spotrad[chan, n], item0, value)
-                    # read latitudes
-                    item0 = 'spotlat' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    setattr(spotlat[chan, n], item0, value)
-                    # read longitudes
-                    item0 = 'spotlon' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    setattr(spotlon[chan, n], item0, value)
-                    # read contrasts
-                    item0 = 'spotcon0'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    setattr(spotcon[chan, n], item0, value)
-                # read number of points
-                starres = self.parameters.dict['spotnpts'][0]
-                # read stellar inclination (if provided)
-                if 'spotstari' in self.parameters.dict.keys():
-                    item0 = 'spotstari'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    setattr(starrot[chan], item0, value)
-                # read stellar rotation (if provided)
-                if 'spotrot' in self.parameters.dict.keys():
-                    item0 = 'spotrot'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    setattr(starrot[inc], item0, value)
+                for n in range(pl_params.nspots):
+                    # read radii, latitudes, longitudes, and contrasts
+                    spotrad = tt.concatenate([
+                        spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+                    spotlat = tt.concatenate([
+                        spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+                    spotlon = tt.concatenate([
+                        spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+                    spotcon = tt.concatenate([
+                        spotcon, [getattr(pl_params, f'spotcon{n}'),]])
 
                 # Initialize map object and add spots
-                map = starry.Map(ydeg=starres, udeg=self.udeg)
-                for si in range(nspots):
-                    map.spot(contrast=spotcon[chan, si], 
-                             radius=spotrad[chan, si],
-                             lat=spotlat[chan, si], 
-                             lon=spotlon[chan, si])
-                map.inc = starinc[chan]
+                map = starry.Map(ydeg=pl_params.spotnpts, udeg=self.udeg,
+                                 inc=pl_params.spotstari)
+                for n in range(pl_params.nspots):
+                    map.spot(contrast=spotcon[n], radius=spotrad[n],
+                             lat=spotlat[n], lon=spotlon[n])
 
                 # Initialize star object
-                star = starry.Primary(map, m=0, r=pl_params.Rs, 
-                                      prot=starrot[chan])
+                star = starry.Primary(map, m=0, r=pl_params.Rs,
+                                      prot=pl_params.spotrot)
             else:
+                # Initialize star object without any spots
                 star = starry.Primary(starry.Map(udeg=self.udeg),
                                       m=0, r=pl_params.Rs)
 
@@ -343,7 +301,7 @@ class StarryModel(PyMC3Model):
             if hasattr(self.parameters, 'spotrad0'):
                 # if has spots, renormalize so star flux=1
                 fstar = fstar/fstar[0]
-                
+
             result = [fstar, *fplanets]
 
             if piecewise:
@@ -400,84 +358,41 @@ class StarryModel(PyMC3Model):
             # Initialize PlanetParams object
             pl_params = PlanetParams(self, 0, chan, eval=True)
 
-            # check for spots and set parameters
-            if hasattr(self.parameters, 'spotrad0'):
-                # find number of spots
-                spotinds = [s for s in self.parameters.dict.keys() 
-                            if 'spotrad' in s]   
-                counter = [s for s in spotinds if '_' in s]
-                nspots = len(spotinds) - len(counter)
-
+            if pl_params.nspots > 0:
+                # Check for spots and set spot parameters if needed
                 # create arrays to hold values
-                spotrad = np.zeros((self.nchannel_fitted, nspots))
-                spotlat = np.zeros((self.nchannel_fitted, nspots))
-                spotlon = np.zeros((self.nchannel_fitted, nspots))
-                spotcon = np.zeros((self.nchannel_fitted, nspots))
-                starrot = np.ones((self.nchannel_fitted))*100.
-                starinc = np.ones((self.nchannel_fitted))*90.
+                spotrad = np.zeros(0)
+                spotlat = np.zeros(0)
+                spotlon = np.zeros(0)
+                spotcon = np.zeros(0)
 
-                # channel ID
-                if chan == 0:
-                    channel_id = ''
-                else:
-                    channel_id = f'_ch{chan}'
+                for n in range(pl_params.nspots):
+                    # read radii, latitudes, longitudes, and contrasts
+                    spotrad = np.concatenate([
+                        spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+                    spotlat = np.concatenate([
+                        spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+                    spotlon = np.concatenate([
+                        spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+                    spotcon = np.concatenate([
+                        spotcon, [getattr(pl_params, f'spotcon{n}'),]])
 
-                for n in range(nspots):
-                    # read radii
-                    item0 = 'spotrad' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotrad[chan, n] = value
-                    # read latitudes
-                    item0 = 'spotlat' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotlat[chan, n] = value
-                    # read longitudes
-                    item0 = 'spotlon' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotlon[chan, n] = value
-                    # read contrasts 
-                    item0 = 'spotcon' + str(n)
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    spotcon[chan, n] = value
-                # read number of points
-                starres = self.parameters.dict['spotnpts'][0]
-                # read stellar inclination (if provided)
-                if 'spotstari' in self.parameters.dict.keys():
-                    item0 = 'spotstari'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    starinc[chan] = value
-                # read stellar rotation (if provided)
-                if 'spotrot' in self.parameters.dict.keys():
-                    item0 = 'spotrot'
-                    if self.parameters.dict[item0][1] == 'free':
-                        item0 += channel_id
-                    value = self.parameters.dict[item0][0]
-                    starrot[chan] = value
+                if pl_params.spotnpts is None:
+                    # Have a default spotnpts for starry
+                    pl_params.spotnpts = 30
 
                 # Initialize map object and add spots
-                map = starry.Map(ydeg=starres, udeg=self.udeg)
-                for si in range(nspots):
-                    map.spot(contrast=spotcon[chan, si], 
-                             radius=spotrad[chan, si],
-                             lat=spotlat[chan, si], 
-                             lon=spotlon[chan, si])
-                map.inc = starinc[chan]
+                map = starry.Map(ydeg=pl_params.spotnpts, udeg=self.udeg,
+                                 inc=pl_params.spotstari)
+                for n in range(pl_params.nspots):
+                    map.spot(contrast=spotcon[n], radius=spotrad[n],
+                             lat=spotlat[n], lon=spotlon[n])
 
                 # Initialize star object
-                star = starry.Primary(map, m=0, r=pl_params.Rs, 
-                                      prot=starrot[chan])
-            else:           
-                # Initialize star object
+                star = starry.Primary(map, m=0, r=pl_params.Rs,
+                                      prot=pl_params.spotrot)
+            else:
+                # Initialize star object without any spots
                 star = starry.Primary(starry.Map(udeg=self.udeg),
                                       m=0, r=pl_params.Rs)
 
