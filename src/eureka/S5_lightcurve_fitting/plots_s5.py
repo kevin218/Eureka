@@ -799,77 +799,37 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_fleck_star(lc, model, meta, fitter):
-    # find number of spots
-    spotinds = [s for s in model.parameters.dict.keys() if 'spotrad' in s]
-    counter = [s for s in spotinds if '_' in s]
-    nspots = len(spotinds) - len(counter)
-
-    spotrad = np.zeros((lc.nchannel_fitted, nspots))
-    spotlat = np.zeros((lc.nchannel_fitted, nspots))
-    spotlon = np.zeros((lc.nchannel_fitted, nspots))
-    spotcon = np.ones((lc.nchannel_fitted))
-    starrot = np.ones((lc.nchannel_fitted))*100.
-    starinc = np.ones((lc.nchannel_fitted))*90.
-
-    # Set spot/fleck parameters
     for channel in lc.fitted_channels:
         # Initialize planet
         pl_params = PlanetParams(model, 0, channel)
 
-        # channel ID
-        if channel == 0:
-            channel_id = ''
-        else:
-            channel_id = f'_ch{channel}'
+        # create arrays to hold values
+        spotrad = np.zeros(0)
+        spotlat = np.zeros(0)
+        spotlon = np.zeros(0)
 
-        for n in range(nspots):
-            # read radii
-            item0 = 'spotrad' + str(n)
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += channel_id
-            value = model.parameters.dict[item0][0]
-            spotrad[channel, n] = value
-            # read latitudes
-            item0 = 'spotlat' + str(n)
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += channel_id
-            value = model.parameters.dict[item0][0]
-            spotlat[channel, n] = value
-            # read longitudes
-            item0 = 'spotlon' + str(n)
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += channel_id
-            value = model.parameters.dict[item0][0]
-            spotlon[channel, n] = value
-        # read contrasts (same for all spots)
-        item0 = 'spotcon0'
-        if model.parameters.dict[item0][1] == 'free':
-            item0 += channel_id
-        value = model.parameters.dict[item0][0]
-        spotcon[channel] = value
-        # read stellar inclination (if provided)
-        if 'spotstari' in model.parameters.dict.keys():
-            item0 = 'spotstari'
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += channel_id
-            starrot[channel] = model.parameters.dict[item0][0]
-        # read stellar rotation (if provided)
-        if 'spotrot' in model.parameters.dict.keys():
-            item0 = 'spotrot'
-            if model.parameters.dict[item0][1] == 'free':
-                item0 += channel_id
-            starrot[channel] = model.parameters.dict[item0][0]
-            fleck_fast = False
+        for n in range(pl_params.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            spotrad = np.concatenate([
+                spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+            spotlat = np.concatenate([
+                spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+            spotlon = np.concatenate([
+                spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+
+        if pl_params.spotnpts is None:
+            # Have a default spotnpts for fleck
+            pl_params.spotnpts = 300
 
         fig = plt.figure(5307, figsize=(8, 6))
         plt.clf()
-        star = fleck.Star(spot_contrast=spotcon[channel],
-                          u_ld=[pl_params.u1, pl_params.u2],
-                          rotation_period=starrot[channel])
-        star.plot(spotlon[channel][:nspots, None]*unit.deg,
-                  spotlat[channel][:nspots, None]*unit.deg,
-                  spotrad[channel][:nspots, None],
-                  starinc[channel]*unit.deg,
+        star = fleck.Star(spot_contrast=pl_params.spotcon0,
+                          u_ld=pl_params.u,
+                          rotation_period=pl_params.spotrot)
+        star.plot(spotlon[:, None]*unit.deg,
+                  spotlat[:, None]*unit.deg,
+                  spotrad[:, None],
+                  pl_params.spotstari*unit.deg,
                   planet=pl_params, time=0.0)
 
         if lc.white:

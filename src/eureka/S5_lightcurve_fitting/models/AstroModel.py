@@ -1,6 +1,7 @@
 import numpy as np
 import astropy.constants as const
 from copy import deepcopy
+import inspect
 
 try:
     import theano
@@ -16,6 +17,7 @@ except ImportError:
 
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
+from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
 
@@ -248,6 +250,24 @@ class PlanetParams():
             if eval:
                 value = value.value
             setattr(self, 'Rs', value)
+
+        # Nicely packaging limb-darkening coefficients
+        if not hasattr(model.paramts, 'limb_dark'):
+            self.limb_dark = 'uniform'
+        else:
+            self.limb_dark = model.parameters.limb_dark.value
+        ld_func = ld_profile(self.limb_dark)
+        len_params = len(inspect.signature(ld_func).parameters)
+        coeffs = ['u{}'.format(n) for n in range(1, len_params)]
+        self.u = [getattr(self, coeff) for coeff in coeffs]
+        if self.limb_dark == '4-parameter':
+            self.limb_dark = 'nonlinear'
+        elif self.limb_dark == 'kipping2013':
+            self.limb_dark = 'quadratic'
+            self.u_original = np.copy(self.u)
+            u1 = 2*np.sqrt(self.u[0])*self.u[1]
+            u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
+            self.u = np.array([u1, u2])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
