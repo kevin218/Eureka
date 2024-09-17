@@ -132,6 +132,10 @@ class StarryModel(PyMC3Model):
                     spotcon = tt.concatenate([
                         spotcon, [getattr(pl_params, f'spotcon{n}'),]])
 
+                if pl_params.spotnpts is None:
+                    # Have a default spotnpts for starry
+                    pl_params.spotnpts = 30
+
                 # Initialize map object and add spots
                 map = starry.Map(ydeg=pl_params.spotnpts, udeg=self.udeg,
                                  inc=pl_params.spotstari)
