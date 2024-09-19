@@ -89,7 +89,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
 
     # Plot star spots starting point
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        plots.plot_fleck_star(lc, model, meta, fitter=calling_function+'StartingPoint')
+        plots.plot_fleck_star(lc, model, meta,
+                              fitter=calling_function+'StartingPoint')
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta,

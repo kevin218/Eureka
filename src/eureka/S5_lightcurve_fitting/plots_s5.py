@@ -23,6 +23,7 @@ from ..lib import plots, util
 from ..lib.split_channels import split
 from .models.AstroModel import PlanetParams
 
+
 def plot_fit(lc, model, meta, fitter, isTitle=True):
     """Plot the fitted model over the data. (Figs 5101)
 

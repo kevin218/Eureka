@@ -69,7 +69,8 @@ def exoplanetfitter(lc, model, meta, log, calling_function='exoplanet',
 
     # Plot star spots
     if 'spotrad' in model.longparamlist[0] and meta.isplots_S5 >= 3:
-        plots.plot_starry_star(lc, model, meta, fitter=calling_function+'StartingPoint')
+        plots.plot_starry_star(lc, model, meta,
+                               fitter=calling_function+'StartingPoint')
 
     log.writelog('Running exoplanet optimizer...')
     with model.model:
