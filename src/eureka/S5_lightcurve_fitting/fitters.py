@@ -87,6 +87,14 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
             plots.plot_GP_components(lc, model, meta,
                                      fitter=calling_function+'StartingPoint')
 
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter=calling_function+'StartingPoint')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter=calling_function+'StartingPoint')
+
     def neg_lnprob(theta, lc, model, prior1, prior2, priortype, freenames):
         return -lnprob(theta, lc, model, prior1, prior2, priortype, freenames)
     global lsq_t0
@@ -159,9 +167,8 @@ def lsqfitter(lc, model, meta, log, calling_function='lsq', **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter=calling_function)
-    
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad0' in model.longparamlist[0]:
+        if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter=calling_function)
 
     # Plot GP fit + components
@@ -326,6 +333,14 @@ def emceefitter(lc, model, meta, log, **kwargs):
             plots.plot_GP_components(lc, model, meta,
                                      fitter='emceeStartingPoint')
 
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='emceeStartingPoint')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter='emceeStartingPoint')
+
     # Initialize tread pool
     if meta.ncpu > 1:
         pool = Pool(meta.ncpu)
@@ -437,13 +452,12 @@ def emceefitter(lc, model, meta, log, **kwargs):
     # Plot fit
     if meta.isplots_S5 >= 1:
         plots.plot_fit(lc, model, meta, fitter='emcee')
-    
+
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='emcee')
-        
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad0' in model.longparamlist[0]:
+        if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='emcee')
 
     # Plot GP fit + components
@@ -851,6 +865,14 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
             plots.plot_GP_components(lc, model, meta,
                                      fitter='dynestyStartingPoint')
 
+    # Plot star spots starting point
+    if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        plots.plot_fleck_star(lc, model, meta, fitter='dynestyStartingPoint')
+    if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
+        if 'spotrad' in model.longparamlist[0]:
+            plots.plot_starry_star(lc, model, meta,
+                                   fitter='dynestyStartingPoint')
+
     # START DYNESTY
     l_args = [lc, model, freenames]
 
@@ -956,9 +978,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='dynesty')
-        
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad0' in model.longparamlist[0]:
+        if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='dynesty')
 
     # Plot GP fit + components
@@ -1080,9 +1101,8 @@ def lmfitter(lc, model, meta, log, **kwargs):
     # Plot star spots
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
-    
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if 'spotrad0' in model.longparamlist[0]:
+        if '' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components

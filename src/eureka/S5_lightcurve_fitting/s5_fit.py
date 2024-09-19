@@ -671,7 +671,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        num_planets=meta.num_planets)
         modellist.append(t_eclipse)
     if 'fleck_tr' in meta.run_myfuncs:
-        t_transit = m.FleckTransitModel(parameters=params, 
+        t_transit = m.FleckTransitModel(parameters=params,
                                         fmt='r--', log=log, time=time,
                                         time_units=time_units,
                                         freenames=freenames,

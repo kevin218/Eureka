@@ -101,15 +101,20 @@ class PlanetParams():
         # Figure out how many star spots
         self.nspots = len([s for s in model.parameters.dict.keys()
                            if 'spotrad' in s and '_' not in s])
-        for n in range(self.nspots):
-            setattr(self, f'spotrad{n}', 0)
-            setattr(self, f'spotlat{n}', 0)
-            setattr(self, f'spotlon{n}', 0)
-            setattr(self, f'spotcon{n}', 0)
-        if self.nspots > 0:
-            self.spotstari = 90
-            self.spotrot = None
-            self.spotnpts = None
+        self.spotrad = 0.
+        self.spotlat = 0.
+        self.spotlon = 0.
+        self.spotcon = 0.
+        for n in range(1, self.nspots):
+            # read radii, latitudes, longitudes, and contrasts
+            spot_id = f'{n}'
+            setattr(self, f'spotrad{spot_id}', 0)
+            setattr(self, f'spotlat{spot_id}', 0)
+            setattr(self, f'spotlon{spot_id}', 0)
+            setattr(self, f'spotcon{spot_id}', 0)
+        self.spotstari = 90
+        self.spotrot = None
+        self.spotnpts = None
 
         for item in self.__dict__.keys():
             item0 = item+self.pid_id
@@ -121,8 +126,9 @@ class PlanetParams():
                     value = value.value
                 setattr(self, item, value)
             except KeyError:
-                if item in [f'u{i}' for i in range(1, 5)]:
-                    # Limb darkening probably doesn't vary with planet
+                if (item in [f'u{i}' for i in range(1, 5)] or
+                        'spot' == item[:4]):
+                    # Limb darkening and spots probably don't vary with planet
                     try:
                         item0 = item
                         if model.parameters.dict[item0][1] == 'free':
@@ -252,7 +258,7 @@ class PlanetParams():
             setattr(self, 'Rs', value)
 
         # Nicely packaging limb-darkening coefficients
-        if not hasattr(model.paramts, 'limb_dark'):
+        if not hasattr(model.parameters, 'limb_dark'):
             self.limb_dark = 'uniform'
         else:
             self.limb_dark = model.parameters.limb_dark.value
@@ -264,10 +270,15 @@ class PlanetParams():
             self.limb_dark = 'nonlinear'
         elif self.limb_dark == 'kipping2013':
             self.limb_dark = 'quadratic'
-            self.u_original = np.copy(self.u)
-            u1 = 2*np.sqrt(self.u[0])*self.u[1]
-            u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
-            self.u = np.array([u1, u2])
+            if eval:
+                self.u_original = np.copy(self.u)
+                u1 = 2*np.sqrt(self.u[0])*self.u[1]
+                u2 = np.sqrt(self.u[0])*(1-2*self.u[1])
+                self.u = np.array([u1, u2])
+            else:
+                u1 = 2*tt.sqrt(self.u1)*self.u2
+                u2 = tt.sqrt(self.u1)*(1-2*self.u2)
+                self.u = np.array([u1, u2])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
@@ -277,7 +288,8 @@ class PlanetParams():
             self.esinw = 0
 
         if self.spotrot is None:
-            self.spotrot = 100
+            # spotrot will default to 10k years (important if t0 is not ~0)
+            self.spotrot = 3650000
             self.fleck_fast = True
 
 

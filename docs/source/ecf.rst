@@ -1154,19 +1154,19 @@ This file describes the transit/eclipse and systematics parameters and their pri
       - ``osc_t1`` - This offset determined the start phase of the sinusoidal function.
 
          The time-dependent amplitude and period are defined as follows: ``amp = osc_amp * np.exp(-osc_amp_decay * (time - osc_t0))`` and ``per = osc_per * np.exp(-osc_per_decay * (time - osc_t0))``.  The damped oscillator model is then defined as: ``osc = 1 + amp * np.sin(2 * np.pi * (time - osc_t1) / per)``.  Note that ``osc[time < osc_t0] = 1``.
-         
+
    - Star Spot Parameters
-      - ``spotstari`` - The stellar inclination in degrees. Only matters when the star is rotating so that spots move appropriately relative to the planet, do not need to set unless you're accounting for stellar rotation (fleck slow mode, see spotrot below), then place priors based on inclination measurements of the stellar inclination. Recommend using fast mode if this is not known! If running multwhite or shard fits, this should be set to 'shared'.
-      - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise Eureka! will use fleck's fast mode which assumes the stellar rotation is >> transit time and spots are stationary). If running multwhite or shard fits, this should be set to 'shared'.
-      - ``spotcon#`` - The spot contrast ratio. For fleck only assign one, for starry assign one per spot. Replace the # with the spot number (starting with 0)
-      - ``spotrad#`` - The spot radius. For fleck it is relative to the star, for starry it is in degrees. Replace the # with the spot number (starting with 0)
-      - ``spotlat#`` - The spot latitude in degrees. 0 is the center of the star. Replace the # with the spot number (starting with 0)
-      - ``spotlon#`` - The spot longitude in degrees. 0 is the center of the star. Replace the # with the spot number (starting with 0)
+      - ``spotstari`` - The stellar inclination in degrees. Only matters when the star is rotating so that spots move appropriately relative to the planet, do not need to set unless you're accounting for stellar rotation (fleck slow mode, see ``spotrot`` below), then place priors based on inclination measurements of the stellar inclination. Recommend using fast mode if this is not known! If running multwhite or shared fits, this should be set to 'shared'.
+      - ``spotrot`` - The stellar rotation rate in days. For fleck, only assign if you'd like to run in slow mode! (In slow mode the star rotates and spots move appropriately. Otherwise, Eureka! will use fleck's fast mode which assumes the stellar rotation is >> transit time and spots are stationary). If running multwhite or shared fits, this should be set to 'shared'.
+      - ``spotcon#`` - The spot contrast ratio. Fleck only supports a single contrast ratio that is used for all spots, but for starry assign one value per spot. Replace the # with the spot number (starting with nothing (just ``spotcon``) for spot #0, and then ``spotcon1`` for the next spot)
+      - ``spotrad#`` - The spot radius relative to the star. Replace the # with the spot number (starting with nothing (just ``spotrad``) for spot #0, and then ``spotrad1`` for the next spot)
+      - ``spotlat#`` - The spot latitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlat``) for spot #0, and then ``spotlat1`` for the next spot)
+      - ``spotlon#`` - The spot longitude in degrees. 0 is the center of the star (at time=0 if you have set the ``spotrot`` parameter). Replace the # with the spot number (starting with nothing (just ``spotlon``) for spot #0, and then ``spotlon1`` for the next spot)
       Fleck specific parameters:
-      - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good. 
+      - ``spotnpts`` - The number of temporal points to evalaute at. ~200-500 is good.
       Starry specific parameters:
       - ``spotnpts`` - The degree of spherical harmonics on the star (ydeg). ~30 is needed to appropriately model the spot.
-   
+
    - Systematics Parameters. Depends on the model specified in the Stage 5 ECF.
       - ``c0--c9`` - Coefficients for 0th to 3rd order polynomials.
 

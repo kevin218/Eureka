@@ -123,14 +123,22 @@ class StarryModel(PyMC3Model):
 
                 for n in range(pl_params.nspots):
                     # read radii, latitudes, longitudes, and contrasts
+                    if n > 0:
+                        spot_id = f'{n}'
+                    else:
+                        spot_id = ''
                     spotrad = tt.concatenate([
-                        spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+                        spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
                     spotlat = tt.concatenate([
-                        spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+                        spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
                     spotlon = tt.concatenate([
-                        spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+                        spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
                     spotcon = tt.concatenate([
-                        spotcon, [getattr(pl_params, f'spotcon{n}'),]])
+                        spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
+
+                # Apply some conversions since inputs are in fleck units
+                spotrad *= 90
+                spotcon = 1-spotcon
 
                 if pl_params.spotnpts is None:
                     # Have a default spotnpts for starry
@@ -151,23 +159,19 @@ class StarryModel(PyMC3Model):
                 star = starry.Primary(starry.Map(udeg=self.udeg),
                                       m=0, r=pl_params.Rs)
 
-            if hasattr(self.parameters, 'limb_dark'):
-                if self.parameters.limb_dark.value == 'kipping2013':
-                    # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*tt.sqrt(pl_params.u1)*pl_params.u2
-                    star.map[2] = tt.sqrt(pl_params.u1)*(1-2*pl_params.u2)
-                elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = pl_params.u1
-                    star.map[2] = pl_params.u2
-                elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = pl_params.u1
-                elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: Our StarryModel is not yet able to '
-                               f'handle {self.parameters.limb_dark.value} '
-                               f'limb darkening.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
-                    raise ValueError(message)
+            if pl_params.limb_dark == 'quadratic':
+                # PlanetParams takes care of doing kipping2013->quadratic
+                star.map[1] = pl_params.u1
+                star.map[2] = pl_params.u2
+            elif pl_params.limb_dark == 'linear':
+                star.map[1] = pl_params.u1
+            elif pl_params.limb_dark != 'uniform':
+                message = (f'ERROR: Our StarryModel is not yet able to '
+                           f'handle {self.parameters.limb_dark.value} '
+                           f'limb darkening.\n'
+                           f'       limb_dark must be one of uniform, '
+                           f'linear, quadratic, or kipping2013.')
+                raise ValueError(message)
 
             # Setup each planet
             planets = []
@@ -302,8 +306,8 @@ class StarryModel(PyMC3Model):
                     fplanets_eval.append(fplanet.eval())
                 fplanets = fplanets_eval
 
-            if hasattr(self.parameters, 'spotrad0'):
-                # if has spots, renormalize so star flux=1
+            if hasattr(self.parameters, 'spotrad'):
+                # Re-normalize to avoid degenaricies with c0
                 fstar = fstar/fstar[0]
 
             result = [fstar, *fplanets]
@@ -372,14 +376,22 @@ class StarryModel(PyMC3Model):
 
                 for n in range(pl_params.nspots):
                     # read radii, latitudes, longitudes, and contrasts
+                    if n > 0:
+                        spot_id = f'{n}'
+                    else:
+                        spot_id = ''
                     spotrad = np.concatenate([
-                        spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+                        spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
                     spotlat = np.concatenate([
-                        spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+                        spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
                     spotlon = np.concatenate([
-                        spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+                        spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
                     spotcon = np.concatenate([
-                        spotcon, [getattr(pl_params, f'spotcon{n}'),]])
+                        spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
+
+                # Apply some conversions since inputs are in fleck units
+                spotrad *= 90
+                spotcon = 1-spotcon
 
                 if pl_params.spotnpts is None:
                     # Have a default spotnpts for starry
@@ -400,23 +412,18 @@ class StarryModel(PyMC3Model):
                 star = starry.Primary(starry.Map(udeg=self.udeg),
                                       m=0, r=pl_params.Rs)
 
-            if hasattr(self.parameters, 'limb_dark'):
-                if self.parameters.limb_dark.value == 'kipping2013':
-                    # Transform stellar variables to uniform used by starry
-                    star.map[1] = 2*np.sqrt(pl_params.u1)*pl_params.u2
-                    star.map[2] = np.sqrt(pl_params.u1)*(1-2*pl_params.u2)
-                elif self.parameters.limb_dark.value == 'quadratic':
-                    star.map[1] = pl_params.u1
-                    star.map[2] = pl_params.u2
-                elif self.parameters.limb_dark.value == 'linear':
-                    star.map[1] = pl_params.u1
-                elif self.parameters.limb_dark.value != 'uniform':
-                    message = (f'ERROR: Our StarryModel is not yet able to '
-                               f'handle {self.parameters.limb_dark.value} '
-                               f'limb darkening.\n'
-                               f'       limb_dark must be one of uniform, '
-                               f'linear, quadratic, or kipping2013.')
-                    raise ValueError(message)
+            if pl_params.limb_dark == 'quadratic':
+                # PlanetParams takes care of doing kipping2013->quadratic
+                star.map[1:] = pl_params.u
+            elif pl_params.limb_dark == 'linear':
+                star.map[1] = pl_params.u1
+            elif pl_params.limb_dark != 'uniform':
+                message = (f'ERROR: Our StarryModel is not yet able to '
+                           f'handle {self.parameters.limb_dark.value} '
+                           f'limb darkening.\n'
+                           f'       limb_dark must be one of uniform, '
+                           f'linear, quadratic, or kipping2013.')
+                raise ValueError(message)
 
             # Setup each planet
             planets = []

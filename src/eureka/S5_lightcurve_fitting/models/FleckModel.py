@@ -77,19 +77,30 @@ class TransitModel():
 
         for n in range(pl_params.nspots):
             # read radii, latitudes, longitudes, and contrasts
+            if n > 0:
+                spot_id = f'{n}'
+            else:
+                spot_id = ''
             spotrad = np.concatenate([
-                spotrad, [getattr(pl_params, f'spotrad{n}'),]])
+                spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
             spotlat = np.concatenate([
-                spotlat, [getattr(pl_params, f'spotlat{n}'),]])
+                spotlat, [getattr(pl_params, f'spotlat{spot_id}'),]])
             spotlon = np.concatenate([
-                spotlon, [getattr(pl_params, f'spotlon{n}'),]])
+                spotlon, [getattr(pl_params, f'spotlon{spot_id}'),]])
 
         if pl_params.spotnpts is None:
             # Have a default spotnpts for fleck
             pl_params.spotnpts = 300
 
+        inverse = False
+        if pl_params.rp < 0:
+            # The planet's radius is negative, so need to do some tricks to
+            # avoid errors
+            inverse = True
+            pl_params.rp *= -1
+
         # Make the star object
-        star = fleck.Star(spot_contrast=pl_params.spotcon0,
+        star = fleck.Star(spot_contrast=pl_params.spotcon,
                           u_ld=pl_params.u,
                           rotation_period=pl_params.spotrot)
 
@@ -104,5 +115,12 @@ class TransitModel():
             planet=pl_params, times=fleck_times,
             fast=pl_params.fleck_fast).flatten()
         lc = np.interp(self.t, fleck_times, fleck_transit)
+
+        # Re-normalize to avoid degenaricies with c0
+        lc /= lc[0]
+
+        if inverse:
+            # Invert the transit feature if rp<0
+            lc = 2. - lc
 
         return lc
