@@ -267,10 +267,6 @@ class BatmanEclipseModel(Model):
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
 
-                # Set limb darkening parameters
-                # pl_params.u = []
-                # pl_params.limb_dark = 'uniform'
-
                 # Enforce physicality to avoid crashes
                 if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
                         (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and

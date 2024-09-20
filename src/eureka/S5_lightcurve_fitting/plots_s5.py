@@ -800,6 +800,19 @@ def plot_GP_components(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_fleck_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the fleck star spots (Figs 5307)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.models.CompositeModel
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
     for channel in lc.fitted_channels:
         # Initialize PlanetParams object
         pl_params = PlanetParams(model, 0, channel)
@@ -851,6 +864,19 @@ def plot_fleck_star(lc, model, meta, fitter):
 
 
 def plot_starry_star(lc, model, meta, fitter):
+    """Plot the location and contrast of the starry star spots (Figs 5308)
+
+    Parameters
+    ----------
+    lc : eureka.S5_lightcurve_fitting.lightcurve.LightCurve
+        The lightcurve data object.
+    model : eureka.S5_lightcurve_fitting.differentiable_models.CompositePyMC3Model  # noqa: E501
+        The fitted composite model.
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    fitter : str
+        The name of the fitter (for plot filename).
+    """
     for channel in lc.fitted_channels:
         # Initialize PlanetParams object
         pl_params = PlanetParams(model, 0, channel, eval=True)

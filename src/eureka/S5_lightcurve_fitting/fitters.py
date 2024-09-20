@@ -1103,7 +1103,7 @@ def lmfitter(lc, model, meta, log, **kwargs):
     if 'fleck_tr' in meta.run_myfuncs and meta.isplots_S5 >= 3:
         plots.plot_fleck_star(lc, model, meta, fitter='lmfitter')
     if 'starry' in meta.run_myfuncs and meta.isplots_S5 >= 3:
-        if '' in model.longparamlist[0]:
+        if 'spotrad' in model.longparamlist[0]:
             plots.plot_starry_star(lc, model, meta, fitter='lmfitter')
 
     # Plot GP fit + components
