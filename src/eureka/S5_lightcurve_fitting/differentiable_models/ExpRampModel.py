@@ -10,7 +10,7 @@ logger = logging.getLogger("theano.tensor.opt")
 logger.setLevel(logging.ERROR)
 
 from . import PyMC3Model
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class ExpRampModel(PyMC3Model):
@@ -25,6 +25,7 @@ class ExpRampModel(PyMC3Model):
         """
         # Inherit from PyMC3Model class
         super().__init__(**kwargs)
+        self.name = 'exp. ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -37,17 +38,17 @@ class ExpRampModel(PyMC3Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
+        self._time = np.ma.masked_invalid(time_array)
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time[0])
-                self.time_local = np.array(self.time_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
                 self.time_local = self.time - self.time[0]
 
@@ -76,10 +77,10 @@ class ExpRampModel(PyMC3Model):
             nchan = 1
             channels = [channel, ]
 
-        ramp_coeffs = np.zeros((nchan, 12)).tolist()
+        ramp_coeffs = np.zeros((nchan, 4)).tolist()
 
         if eval:
-            lib = np
+            lib = np.ma
             model = self.fit
         else:
             lib = tt
@@ -92,15 +93,11 @@ class ExpRampModel(PyMC3Model):
             else:
                 chan = 0
 
-            for i in range(12):
-                try:
-                    if chan == 0:
-                        ramp_coeffs[c][i] = getattr(model, f'r{i}')
-                    else:
-                        ramp_coeffs[c][i] = getattr(model,
-                                                    f'r{i}_{chan}')
-                except AttributeError:
-                    pass
+            for i in range(4):
+                if chan == 0:
+                    ramp_coeffs[c][i] = getattr(model, f'r{i}', 0)
+                else:
+                    ramp_coeffs[c][i] = getattr(model, f'r{i}_ch{chan}', 0)
 
         ramp_flux = lib.zeros(0)
         for c in range(nchan):
@@ -114,12 +111,8 @@ class ExpRampModel(PyMC3Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11 = ramp_coeffs[c]
-            lcpiece = (r0*lib.exp(-r1*time + r2) +
-                       r3*lib.exp(-r4*time + r5) +
-                       r6*lib.exp(-r7*time + r8) +
-                       r9*lib.exp(-r10*time + r11) +
-                       1)
+            r0, r1, r2, r3 = ramp_coeffs[c]
+            lcpiece = (1 + r0*lib.exp(-r1*time) + r2*lib.exp(-r3*time))
             ramp_flux = lib.concatenate([ramp_flux, lcpiece])
 
         return ramp_flux

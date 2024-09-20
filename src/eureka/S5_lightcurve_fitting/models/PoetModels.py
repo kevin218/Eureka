@@ -2,8 +2,8 @@ import numpy as np
 import batman as bm
 
 from .Model import Model
-from .BatmanModels import BatmanTransitModel, BatmanEclipseModel, \
-    PlanetParams, get_ecl_midpt
+from .AstroModel import PlanetParams, get_ecl_midpt
+from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from ...lib.split_channels import split
 
 
@@ -20,8 +20,9 @@ class PoetTransitModel(BatmanTransitModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model class
+        # Inherit from BatmanTransitModel class
         super().__init__(**kwargs)
+        self.name = 'poet transit'
         # Define transit model to be used
         self.transit_model = TransitModel
 
@@ -39,102 +40,46 @@ class PoetEclipseModel(BatmanEclipseModel):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model class
+        # Inherit from BatmanEclipseModel class
         super().__init__(**kwargs)
+        self.name = 'poet eclipse'
         # Define transit model to be used
         self.transit_model = TransitModel
 
 
 class PoetPCModel(Model):
     """Phase Curve Model"""
-    def __init__(self, transit_model=None, eclipse_model=None, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the phase curve model
 
         Parameters
         ----------
-        transit_model : eureka.S5_lightcurve_fitting.models.Model; optional
-            The transit model to use for this phase curve model.
-            Defaults to None.
-        eclipse_model : eureka.S5_lightcurve_fitting.models.Model; optional
-            The eclipse model to use for this phase curve model.
-            Defaults to None.
         **kwargs : dict
             Additional parameters to pass to
             eureka.S5_lightcurve_fitting.models.Model.__init__().
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        self.components = []
-        self.transit_model = transit_model
-        self.eclipse_model = eclipse_model
-        if transit_model is not None:
-            self.components.append(self.transit_model)
-        if eclipse_model is not None:
-            self.components.append(self.eclipse_model)
-        
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'poet phase curve'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
 
-        # Check if should enforce positivity
-        if not hasattr(self, 'force_positivity'):
-            self.force_positivity = False
+        # Set default to not force positivity
+        self.force_positivity = getattr(self, 'force_positivity', False)
 
-    @property
-    def time(self):
-        """A getter for the time."""
-        return self._time
-
-    @time.setter
-    def time(self, time_array):
-        """A setter for the time."""
-        time_array = np.ma.masked_array(time_array)
-        self._time = time_array
-        if self.transit_model is not None:
-            self.transit_model.time = time_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.time = time_array
-
-    @property
-    def nints(self):
-        """A getter for the nints."""
-        return self._nints
-
-    @nints.setter
-    def nints(self, nints_array):
-        """A setter for the nints."""
-        self._nints = nints_array
-        if self.transit_model is not None:
-            self.transit_model.nints = nints_array
-        if self.eclipse_model is not None:
-            self.eclipse_model.nints = nints_array
-
-    def update(self, newparams, **kwargs):
-        """Update the model with new parameter values.
-
-        Parameters
-        ----------
-        newparams : ndarray
-            New parameter values.
-        **kwargs : dict
-            Additional parameters to pass to
-            eureka.S5_lightcurve_fitting.models.Model.update().
-        """
-        super().update(newparams, **kwargs)
-        if self.transit_model is not None:
-            self.transit_model.update(newparams, **kwargs)
-        if self.eclipse_model is not None:
-            self.eclipse_model.update(newparams, **kwargs)
-
-    def eval(self, channel=None, **kwargs):
+    def eval(self, channel=None, pid=None, **kwargs):
         """Evaluate the function with the given values.
 
         Parameters
         ----------
         channel : int; optional
             If not None, only consider one of the channels. Defaults to None.
+        pid : int; optional
+            Planet ID, default is None which combines the models from
+            all planets.
         **kwargs : dict
             Must pass in the time array here if not already set.
 
@@ -150,10 +95,15 @@ class PoetPCModel(Model):
             nchan = 1
             channels = [channel, ]
 
+        if pid is None:
+            pid_iter = range(self.num_planets)
+        else:
+            pid_iter = [pid,]
+
         # Get the time
         if self.time is None:
-            self.time = kwargs.get('time')                   
-        
+            self.time = kwargs.get('time')
+
         # Set all parameters
         lcfinal = np.ma.array([])
         for c in range(nchan):
@@ -167,13 +117,9 @@ class PoetPCModel(Model):
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
 
-            light_curve = np.ma.zeros(time.shape)
-            for pid in range(self.num_planets):
+            for pid in pid_iter:
                 # Initialize planet
                 poet_params = PlanetParams(self, pid, chan)
-
-                poet_params.limb_dark = 'uniform'
-                poet_params.u = []
 
                 if poet_params.t_secondary is None:
                     # If not explicitly fitting for the time of eclipse, get
@@ -185,45 +131,31 @@ class PoetPCModel(Model):
                 p = poet_params.per
                 t1 = poet_params.cos1_off*p/360. - poet_params.t_secondary
                 t2 = poet_params.cos2_off*p/360. - poet_params.t_secondary
-                phaseVars = (poet_params.cos1_amp/2 * 
+                phaseVars = (poet_params.cos1_amp/2 *
                              np.cos(2*np.pi*(time+t1)/p) +
                              poet_params.cos2_amp/2 *
                              np.cos(4*np.pi*(time+t2)/p))
                 # Apply normalizing offset
                 ieclipse = np.argmin(np.abs(time-poet_params.t_secondary))
                 phaseVars += 1 - phaseVars[ieclipse]
-                
+
                 # If requested, force positive phase variations
                 if self.force_positivity and np.ma.any(phaseVars < 0):
                     # Returning nans or infs breaks the fits, so this was
                     # the best I could think of
-                    phaseVars = 1e12*np.ma.ones(time.shape)
+                    phaseVars = 1e8*np.ma.ones(time.shape)
 
-                # Compute eclipse model
-                if self.eclipse_model is None:
-                    eclipse = 1
-                else:
-                    eclipse = self.eclipse_model.eval(channel=chan,
-                                                      pid=pid) - 1
+            lcfinal = np.ma.append(lcfinal, phaseVars)
 
-                light_curve += eclipse*phaseVars
+        return lcfinal
 
-            lcfinal = np.ma.append(lcfinal, light_curve)
-
-        if self.transit_model is None:
-            transit = 1
-        else:
-            transit = self.transit_model.eval(channel=channel)
-
-        return transit + lcfinal
-   
 
 class TransitModel():
     """
     Class for generating model transit light curves.
     """
     def __init__(self, params, t, transittype="primary"):
-        """ 
+        """
         Initializes model parameters and computes planet-star-distance
 
         Parameters
@@ -293,20 +225,20 @@ class TransitModel():
 
         # Handle the case of inverse transits (rp < 0)
         self.inverse = False
-        if params.rprs < 0.: 
+        if params.rprs < 0.:
             self.inverse = True
 
         if self.transittype == 'primary':
             # Primary transit
-            if self.limb_dark == "quadratic": 
+            if self.limb_dark == "quadratic":
                 lc = trquad(self.z, params.rprs, params.u[0], params.u[1])
             elif self.limb_dark == "linear":
                 lc = trquad(self.z, params.rprs, params.u[0], 0)
             elif self.limb_dark == "nonlinear":
                 lc = trnlldsp(self.z, params.rprs, params.u)
-            elif self.limb_dark == "uniform": 
+            elif self.limb_dark == "uniform":
                 lc = uniform(self.z, params.rprs)
-            else: 
+            else:
                 raise Exception('Invalid limb darkening option.  '
                                 + 'POET supports linear, quadratic, '
                                 + '4-parameter, and uniform.')
@@ -314,14 +246,14 @@ class TransitModel():
                 lc = 2. - lc
         elif self.transittype == 'secondary':
             # Secondary eclipse
-            lc = bm._eclipse._eclipse(self.z, np.abs(params.rprs), 
+            lc = bm._eclipse._eclipse(self.z, np.abs(params.rprs),
                                       params.fpfs, self.nthreads)
         return lc
-    
+
 
 def uniform(z, rprs):
     """
-    This function computes the primary transit shape 
+    This function computes the primary transit shape
     using equations provided by Mandel & Agol (2002).
 
     Parameters
@@ -340,7 +272,7 @@ def uniform(z, rprs):
     -----
     History:
 
-    - 2010-11-27 Kevin Stevenson 
+    - 2010-11-27 Kevin Stevenson
         Original version
     - 2024-01-28 Kevin Stevenson
         Updated for Eureka!
@@ -365,8 +297,8 @@ def uniform(z, rprs):
 
 def trnlldsp(z, rprs, u):
     """
-    This function computes the primary transit shape using non-linear 
-    limb-darkening equations for a "small planet" (rprs <= 0.1), 
+    This function computes the primary transit shape using non-linear
+    limb-darkening equations for a "small planet" (rprs <= 0.1),
     as provided by Mandel & Agol (2002).
 
     Parameters
@@ -539,8 +471,8 @@ def trquad(z, rprs, u1, u2):
         # eta_1
 
         etad[ndxuse] = 1. / 2. / np.pi \
-            * (kap1 + rprs ** 2 * (rprs ** 2 + 2. * z[ndxuse] ** 2) 
-               * kap0 - (1. + 5. * rprs ** 2 + z[ndxuse] ** 2) 
+            * (kap1 + rprs ** 2 * (rprs ** 2 + 2. * z[ndxuse] ** 2)
+               * kap0 - (1. + 5. * rprs ** 2 + z[ndxuse] ** 2)
                / 4. * np.sqrt((1. - x1[ndxuse]) * (x2[ndxuse] - 1.)))
 
     # Case 5, 6, 7 - the edge of planet lies at origin of star
@@ -615,9 +547,9 @@ def trquad(z, rprs, u1, u2):
                * rprs ** 2 - 4.) * Ek - 3. * x3[ndxuse] / x1[ndxuse]
                * ellpic_bulirsch(n, q))
         notused4 = np.where(
-            ((z[notusedyet] <= 0.5 + np.abs(rprs - 0.5)) | 
+            ((z[notusedyet] <= 0.5 + np.abs(rprs - 0.5)) |
              (z[notusedyet] >= 1.0 + rprs))
-            & ((rprs <= 0.5) | (z[notusedyet] <= np.abs(1.0 - rprs)) | 
+            & ((rprs <= 0.5) | (z[notusedyet] <= np.abs(1.0 - rprs)) |
                (z[notusedyet] >= rprs)))
 
         if np.size(notused4) == 0:
@@ -715,8 +647,8 @@ def ellke(k):
         elliptic integral of the first kind
     kk : 1D array
         elliptic integral of the second kind
-        
-    
+
+
     Notes
     -----
     History:
@@ -768,17 +700,17 @@ def ellpic_bulirsch(n, k):
     Parameters
     ----------
     n : float
-        An intermediate value describing the shape of the transit at a point 
+        An intermediate value describing the shape of the transit at a point
         in time.
     k : float
-        Another intermediate value describing the shape of the transit at a 
+        Another intermediate value describing the shape of the transit at a
         point in time.
 
     Returns
     -------
     ellpic : ndarray
         The elliptical integral
-    
+
     Notes
     -----
     History:

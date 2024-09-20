@@ -26,6 +26,7 @@ ctr_cutout_size  7           # Cutoff size all around the centroid after the coa
 oneoverf_corr    median      # Options: None, meanerr, median
 oneoverf_dist    300         # How many pixels away from the centroid should be considered as background? (used for 1/f correction)
 skip_apphot_bg   True        # Skips the background subtraction during the aperture photometry step
+aperture_shape   circle      # Shape of extraction aperture: options are 'circle' or 'hexagon'
 photap           60          # Size of photometry aperture in pixels
 skyin            70          # Inner sky annulus edge, in pixels
 skywidth         20          # Width of the sky annulus, in pixels
@@ -38,7 +39,7 @@ nplots          5           # How many of each type of figure do you want to mak
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
 hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
-verbose         False       # If True, more details will be printed about steps
+verbose         True        # If True, more details will be printed about steps
 
 # Project directory
 topdir     ../tests

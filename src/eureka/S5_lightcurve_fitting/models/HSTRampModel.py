@@ -2,7 +2,7 @@ import numpy as np
 
 from .Model import Model
 from ...lib.readEPF import Parameters
-from ...lib.split_channels import split
+from ...lib.split_channels import split, get_trim
 
 
 class HSTRampModel(Model):
@@ -20,6 +20,7 @@ class HSTRampModel(Model):
         """
         # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'hst ramp'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'systematic'
@@ -35,7 +36,7 @@ class HSTRampModel(Model):
             self.parameters = Parameters(**params)
 
         # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, 7))
+        self.coeffs = np.zeros((self.nchannel_fitted, 6))
         self._parse_coeffs()
 
     @property
@@ -46,17 +47,17 @@ class HSTRampModel(Model):
     @time.setter
     def time(self, time_array):
         """A setter for the time."""
-        self._time = time_array
+        self._time = np.ma.masked_invalid(time_array)
         if self.time is not None:
             # Convert to local time
             if self.multwhite:
-                self.time_local = []
+                self.time_local = np.ma.zeros(self.time.shape)
                 for chan in self.fitted_channels:
                     # Split the arrays that have lengths
                     # of the original time axis
-                    time = split([self.time, ], self.nints, chan)[0]
-                    self.time_local.extend(time - time[0])
-                self.time_local = np.array(self.time_local)
+                    trim1, trim2 = get_trim(self.nints, chan)
+                    time = self.time[trim1:trim2]
+                    self.time_local[trim1:trim2] = time-time[0]
             else:
                 self.time_local = self.time - self.time[0]
 
@@ -76,13 +77,13 @@ class HSTRampModel(Model):
             else:
                 chan = 0
 
-            for i in range(7):
+            for i in range(6):
                 try:
                     if chan == 0:
                         self.coeffs[c, i] = self.parameters.dict[f'h{i}'][0]
                     else:
                         self.coeffs[c, i] = \
-                            self.parameters.dict[f'h{i}_{chan}'][0]
+                            self.parameters.dict[f'h{i}_ch{chan}'][0]
                 except KeyError:
                     pass
 
@@ -105,7 +106,7 @@ class HSTRampModel(Model):
         else:
             nchan = 1
             channels = [channel, ]
-        
+
         # Get the time
         if self.time is None:
             self.time = kwargs.get('time')
@@ -122,12 +123,14 @@ class HSTRampModel(Model):
             if self.multwhite:
                 # Split the arrays that have lengths of the original time axis
                 time = split([time, ], self.nints, chan)[0]
-            
-            h0, h1, h2, h3, h4, h5, h6 = self.coeffs[c]
+
+            h0, h1, h2, h3, h4, h5 = self.coeffs[c]
             # Batch time is relative to the start of each HST orbit
             # h5 is the orbital period of HST (~96 minutes)
-            self.time_batch = (time-h6) % h5
-            lcpiece = (1+h0*np.exp(-h1*self.time_batch + h2)
-                       + h3*self.time_batch + h4*self.time_batch**2)
+            self.time_batch = (time - h5) % h4
+            lcpiece = (1 +
+                       h0*np.exp(-h1*self.time_batch) +
+                       h2*self.time_batch +
+                       h3*self.time_batch**2)
             lcfinal = np.append(lcfinal, lcpiece)
         return lcfinal

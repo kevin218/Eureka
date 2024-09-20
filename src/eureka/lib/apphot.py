@@ -10,7 +10,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
            expand=1, order=1,
            aperr=False, nappix=False, skylev=False, skyerr=False,
            nskypix=False, nskyideal=False, status=False, isbeta=False,
-           betaper=False):
+           betaper=False, aperture_shape=None):
     """
     Perform aperture photometry on the input image.
 
@@ -81,6 +81,9 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         parameter (beta).
     betaper  : Scalar
         Returns aperture size used for beta.
+    aperture_shape : String
+        Specifies shape of the extraction aperture used, currently
+        only "circle" and "hexagon" are supported.
 
     Returns
     -------
@@ -159,6 +162,10 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
         fractional, unexpanded pixels.
     - 21-07-2010: patricio
         Converted to python.
+    - 2024-06-05: Yoni Brande, jbrande@ku.edu
+        Added ability for non-circular apertures with aperture_shape
+        parameter. Currently supporting hexagonal apertures for
+        eureka!
 
     Examples
     --------
@@ -448,10 +455,17 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     if imerr is not None:
         iimerr = i2d.interp2d(imerr, expand=iexpand, y=y, x=x, yi=yi, xi=xi)
 
+    # Specify aperture shape function
+    if aperture_shape == "hexagon":
+        apFunc = di.hex
+    else:
+        apFunc = di.disk
+
     # SKY
     # make sky annulus mask
-    skyann = np.bitwise_xor(di.disk(iskyout, ictr, isz),
-                            di.disk(iskyin, ictr, isz))
+    skyann = np.bitwise_xor(apFunc(iskyout, ictr, isz),
+                            apFunc(iskyin, ictr, isz))
+
     skymask = skyann * imask * np.isfinite(iimage)  # flag NaNs to eliminate
     # from nskypix
 
@@ -461,9 +475,11 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
     szsky = (int(np.ceil(iskyout)) * 2 + 3) * np.array([1, 1], dtype=int)
     ctrsky = (ictr % 1.0) + np.ceil(iskyout) + 1.0
     # nskyideal = all pixels in sky
-    ret[nskyideal] = (np.sum(np.bitwise_xor(di.disk(iskyout, ctrsky, szsky),
-                                            di.disk(iskyin, ctrsky, szsky)))
+    ret[nskyideal] = (np.sum(
+                      np.bitwise_xor(apFunc(iskyout, ctrsky, szsky),
+                                     apFunc(iskyin, ctrsky, szsky)))
                       / iexpand**2.0)
+
     if ret[nskypix] < iskyfrac * ret[nskyideal]:
         status |= statsky
 
@@ -531,7 +547,7 @@ def apphot(meta, image, ctr, photap, skyin, skyout, betahw, targpos,
 
     # APERTURE
     # make aperture mask, extract data and mask
-    apmask, dstatus = di.disk(iphotap, ictr, isz, status=True)
+    apmask, dstatus = apFunc(iphotap, ictr, isz, status=True)
     if dstatus:  # is the aperture fully on the image?
         status |= statap
 

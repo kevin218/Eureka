@@ -7,16 +7,16 @@ class Params():
     """
     Define damped oscillator parameters.
     """
-    def __init__(self, model):  
-        """ 
+    def __init__(self, model):
+        """
         Set attributes to Params object.
 
         Parameters
         ----------
         model : object
-            The model.eval object that contains a dictionary of parameter names 
+            The model.eval object that contains a dictionary of parameter names
             and their current values.
-        """      
+        """
         # Set parameters
         self.osc_amp = None
         self.osc_amp_decay = 0.
@@ -44,8 +44,9 @@ class DampedOscillatorModel(Model):
             Can pass in the parameters, longparamlist, nchan, and
             paramtitles arguments here.
         """
-        # Inherit from Model calss
+        # Inherit from Model class
         super().__init__(**kwargs)
+        self.name = 'damped oscillator'
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
@@ -77,7 +78,7 @@ class DampedOscillatorModel(Model):
             self.time = kwargs.get('time')
 
         # Set all parameters
-        lcfinal = np.array([])
+        lcfinal = np.ma.masked_array([])
         for c in range(nchan):
             if self.nchannel_fitted > 1:
                 chan = channels[c]
@@ -93,13 +94,13 @@ class DampedOscillatorModel(Model):
             params = Params(self)
 
             # Compute damped oscillator
-            amp = params.osc_amp * np.exp(-params.osc_amp_decay * 
+            amp = params.osc_amp * np.exp(-params.osc_amp_decay *
                                           (time - params.osc_t0))
-            per = params.osc_per * np.exp(-params.osc_per_decay * 
+            per = params.osc_per * np.exp(-params.osc_per_decay *
                                           (time - params.osc_t0))
             osc = 1 + amp * np.sin(2 * np.pi * (time - params.osc_t1) / per)
             osc[time < params.osc_t0] = 1
 
-            lcfinal = np.append(lcfinal, osc)
+            lcfinal = np.ma.append(lcfinal, osc)
 
         return lcfinal

@@ -2,7 +2,7 @@
 
 # Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
 
-ncpu            1           # Number of CPUs
+ncpu            4           # Number of CPUs
 nfiles          1           # The number of data files to analyze simultaneously
 max_memory      0.5         # The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
 indep_batches   False       # Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
@@ -24,7 +24,7 @@ bg_thresh       [5,5]       # Double-iteration X-sigma threshold for outlier rej
 # Photometric extraction parameters
 interp_method   linear      # Interpolate bad pixels. Options: None (if no interpolation should be performed), linear, nearest, cubic
 ctr_guess       [698, 516]  # Initial guess of centroid position. If None, will first perform centroiding on whole frame (can sometimes fail)
-ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method. 
+ctr_cutout_size 10          # Cutoff size all around the centroid after the coarse centroid calculation or first centroid guess when using the mgmc method.
 centroid_method mgmc        # Method used for centroiding. Options: mgmc, fgc
 oneoverf_corr   None        # Options: None, meanerr, median
 skip_apphot_bg  False       # Skips the background subtraction during the aperture photometry step
@@ -38,9 +38,9 @@ gauss_frame     15          # (mgmc method param) Half-width away from second ce
 isplots_S3      3           # Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
 nplots          5           # How many of each type of figure do you want to make per file?
 testing_S3      False       # Boolean, set True to only use last file and generate select figures
-hide_plots      False       # If True, plots will automatically be closed rather than popping up
+hide_plots      True        # If True, plots will automatically be closed rather than popping up
 save_output     True        # Save outputs for use in S4
-save_fluxdata   True        # Save FluxData outputs for debugging or use with other tools (can be quite large files)
+save_fluxdata   False       # Save the much larger FluxData.h5 outputs which can be useful for debugging or comparisons between different pipelines
 verbose         True        # If True, more details will be printed about steps
 
 # Project directory

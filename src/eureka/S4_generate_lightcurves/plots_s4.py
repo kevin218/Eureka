@@ -29,21 +29,24 @@ def binned_lightcurve(meta, log, lc, i, white=False):
                      f'{meta.wave_max:.3f}')
         # Normalize the light curve
         norm_lcdata, norm_lcerr = util.normalize_spectrum(
-            meta, lc.flux_white, lc.err_white)
+            meta, lc.flux_white, lc.err_white,
+            scandir=getattr(lc, 'scandir', None))
         i = 0
         fname_tag = 'white'
     elif meta.photometry:
         fig.suptitle(f'Photometric Lightcurve at {meta.phot_wave} microns')
         # Normalize the light curve
-        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
-                                                          lc['err'][i])
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(
+            meta, lc['data'][i], lc['err'][i],
+            scandir=getattr(lc, 'scandir', None))
         fname_tag = 'phot'
     else:
         fig.suptitle(f'Bandpass {i}: {lc.wave_low.values[i]:.3f} - '
                      f'{lc.wave_hi.values[i]:.3f}')
         # Normalize the light curve
-        norm_lcdata, norm_lcerr = util.normalize_spectrum(meta, lc['data'][i],
-                                                          lc['err'][i])
+        norm_lcdata, norm_lcerr = util.normalize_spectrum(
+            meta, lc['data'][i], lc['err'][i],
+            scandir=getattr(lc, 'scandir', None))
         ch_number = str(i).zfill(int(np.floor(np.log10(meta.nspecchan))+1))
         fname_tag = f'ch{ch_number}'
 
@@ -153,7 +156,7 @@ def driftxwidth(meta, lc):
         plt.pause(0.2)
 
 
-def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
+def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None, scandir=None):
     '''Plot a 2D light curve with drift correction. (Fig 4101)
 
     Parameters
@@ -168,6 +171,10 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
     optmask : Xarray DataArray; optional
         A mask array to use if optspec is not a masked array. Defaults to None
         in which case only the invalid values of optspec will be masked.
+    scandir : ndarray; optional
+        For HST spatial scanning mode, 0=forward scan and 1=reverse scan.
+        Defaults to None which is fine for JWST data, but must be provided
+        for HST data (can be all zero values if not spatial scanning mode).
     '''
     optspec = np.ma.masked_invalid(optspec_in.values)
     optspec = np.ma.masked_where(optmask.values, optspec)
@@ -178,15 +185,10 @@ def lc_driftcorr(meta, wave_1d, optspec_in, optmask=None):
     iwmax = np.nanargmin(np.abs(wave_1d-wmax))
 
     # Normalize the light curve
-    norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax])
+    norm_lcdata = util.normalize_spectrum(meta, optspec[:, iwmin:iwmax],
+                                          scandir=scandir)
 
-    if not hasattr(meta, 'vmin') or meta.vmin is None:
-        meta.vmin = 0.97
-    if not hasattr(meta, 'vmax') or meta.vmin is None:
-        meta.vmax = 1.03
-    if not hasattr(meta, 'time_axis') or meta.time_axis is None:
-        meta.time_axis = 'y'
-    elif meta.time_axis not in ['y', 'x']:
+    if meta.time_axis not in ['y', 'x']:
         print("WARNING: meta.time_axis is not one of ['y', 'x']!"
               " Using 'y' by default.")
         meta.time_axis = 'y'
@@ -296,6 +298,49 @@ def cc_vals(meta, vals, n):
 
     int_number = str(n).zfill(int(np.floor(np.log10(meta.n_int))+1))
     fname = ('figs'+os.sep+f'fig4302_int{int_number}_CC_Vals' +
+             plots.figure_filetype)
+    plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
+    if not meta.hide_plots:
+        plt.pause(0.2)
+
+
+def plot_extrapolated_throughput(meta, throughput_wavelengths, throughput,
+                                 wav_poly, throughput_poly, mode):
+    '''Make the extrapolated throughput plot (Fig 4303).
+
+    Parameters
+    ----------
+    meta : eureka.lib.readECF.MetaClass
+        The metadata object.
+    throughput_wavelengths : ndarray
+        The throughput wavelengths from ExoTiC-LD. Units of Angstroms.
+    throughput : ndarray
+        The ethroughput wavelengths from ExoTiC-LD. Unitless, spanning 0-1.
+    wav_poly : ndarray
+        The throughput wavelengths where extrapolating beyond the ExoTiC-LD
+        wavelenths. Units of Angstroms.
+    throughput_poly : ndarray
+        The extrapolated throughput values. Unitless, spanning 0-1.
+    mode : str
+        The string describing the observatory, instrument, and filter combo,
+        from the supported list at
+        https://exotic-ld.readthedocs.io/en/latest/views/supported_instruments.html
+    '''
+    plt.figure(4303, figsize=(8, 8))
+    plt.clf()
+    plt.title(mode)
+    plt.plot(throughput_wavelengths/1e4, 100*throughput,
+             label='ExoTiC-LD Throughput')
+    plt.plot(wav_poly/1e4, 100*throughput_poly, zorder=1,
+             label='Extrapolated Throughput')
+    plt.xlim(min([throughput_wavelengths[0], wav_poly[0]])/1e4,
+             max([throughput_wavelengths[-1], wav_poly[-1]])/1e4,)
+    plt.ylim(0)
+    plt.ylabel('Throughput (%)')
+    plt.xlabel('Wavelength ($\\mu$m)')
+    plt.legend(loc='best')
+
+    fname = ('figs'+os.sep+'fig4303_ExtrapolatedThroughput' +
              plots.figure_filetype)
     plt.savefig(meta.outputdir+fname, bbox_inches='tight', dpi=300)
     if not meta.hide_plots:

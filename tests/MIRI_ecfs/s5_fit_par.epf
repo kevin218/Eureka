@@ -12,7 +12,7 @@ fp			0.00721333946967835	'free'			0.008000		0.006000	N
 # ------------------
 # Orbital parameters
 # ------------------
-per			0.766894378762		'white_fixed'	0.7668944		0.0000003	N	
+per			0.766894378762		'white_fixed'	0.7668944		0.0000003	N
 t0   		0.520935022161196	'white_free'	0.5209350221611 0.0001		N
 time_offset	0					'independent'
 inc  		79.0448701805676	'white_fixed'	79.044870180567	1			N	# Exoplanet Archive value for b is seemingly not helpful
@@ -34,7 +34,7 @@ AmpSin1		0.0119516726947867	'free'			-1				1			U
 # --------------------
 # Systematic variables
 # Polynomial model variables (c0--c9 for 0th--3rd order polynomials in time); Fitting at least c0 is very strongly recommended!
-# Exponential ramp model variables (r0--r2 for one exponential ramp, r3--r5 for a second exponential ramp)
+# Exponential ramp model variables (r0--r1 for one exponential ramp, r2--r3 for a second exponential ramp)
 # GP model parameters (A, WN, m1, m2) in log scale
 # Step-function model variables (step# and steptime# for step-function model #; e.g. step0 and steptime0)
 # Drift model variables (xpos, ypos, xwidth, ywidth)
@@ -56,5 +56,4 @@ scatter_mult	1				'free'			0.5				2			U
 # ---------------------------------------
 # Light travel time correction parameters
 # ---------------------------------------
-Rs			0.697				'independent'
-Ms			0.66				'independent'
+Rs			0.697				'fixed'

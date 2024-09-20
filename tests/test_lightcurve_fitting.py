@@ -80,12 +80,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         self.t_model = models.BatmanTransitModel(parameters=params,
                                                  name='transit', fmt='r--',
                                                  freenames=freenames,
@@ -120,12 +116,8 @@ class TestModels(unittest.TestCase):
         meta.sharedp = False
         meta.multwhite = False
         meta.num_planets = 1
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.e_model = models.BatmanEclipseModel(parameters=params,
                                                  name='transit', fmt='r--',
@@ -174,12 +166,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.BatmanTransitModel(parameters=params,
                                                  name='transit', fmt='r--',
@@ -226,14 +214,14 @@ class TestModels(unittest.TestCase):
         params.inc = 89.7, 'free', 80., 90., 'U'
         params.a = 18.2, 'free', 15., 20., 'U'
         params.ecc = 0., 'fixed'
-        params.w = 90., 'fixed' 
+        params.w = 90., 'fixed'
         params.rp1 = 0.12, 'free', 0.0, 0.4, 'U'
         params.per1 = 5.721490, 'fixed'
         params.t01 = 0.28, 'free', 0, 1, 'U'
         params.inc1 = 89.5, 'free', 80., 90., 'U'
         params.a1 = 8.2, 'free', 15., 20., 'U'
         params.ecc1 = 0.1, 'fixed'
-        params.w1 = 90., 'fixed' 
+        params.w1 = 90., 'fixed'
         params.limb_dark = 'linear', 'independent'
         params.u1 = 0.2, 'free', 0., 1., 'U'
 
@@ -244,12 +232,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         self.t_poet_tr = models.PoetTransitModel(parameters=params,
                                                  name='poet_tr', fmt='r--',
                                                  freenames=freenames,
@@ -284,12 +268,8 @@ class TestModels(unittest.TestCase):
         meta.sharedp = False
         meta.multwhite = False
         meta.num_planets = 1
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_poet_ecl = models.PoetEclipseModel(parameters=params,
                                                   name='eclipse', fmt='r--',
@@ -336,12 +316,8 @@ class TestModels(unittest.TestCase):
         meta.num_planets = 1
         meta.ld_from_S4 = False
         meta.ld_file = None
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_model = models.PoetTransitModel(parameters=params,
                                                name='transit', fmt='r--',
@@ -393,12 +369,8 @@ class TestModels(unittest.TestCase):
         meta = MetaClass()
         meta.sharedp = False
         meta.multwhite = False
-        longparamlist, paramtitles = s5_fit.make_longparamlist(meta, params, 1)
-        freenames = []
-        for key in params.dict:
-            if params.dict[key][1] in ['free', 'shared', 'white_free',  
-                                       'white_fixed']:
-                freenames.append(key)
+        longparamlist, paramtitles, freenames = \
+            s5_fit.make_longparamlist(meta, params, 1)
         log = logedit.Logedit(f'.{os.sep}data{os.sep}test.log')
         self.t_lorentzian = models.LorentzianModel(parameters=params,
                                                    name='transit', fmt='r--',
@@ -419,10 +391,9 @@ class TestModels(unittest.TestCase):
     def test_exponentialmodel(self):
         """Tests for the ExponentialModel class"""
         # Create the model
-        freenames = ['r0', 'r1', 'r2']
+        freenames = ['r0', 'r1']
         self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
-                                                         'r1': [0.05, 'free'],
-                                                         'r2': [0.01, 'free']},
+                                                         'r1': [0.05, 'free']},
                                              freenames=freenames,
                                              nchan=1)
 
@@ -432,13 +403,11 @@ class TestModels(unittest.TestCase):
         self.assertEqual(vals.size, self.time.size)
 
         # Create the model
-        freenames = ['r0', 'r1', 'r2', 'r3', 'r4', 'r5']
+        freenames = ['r0', 'r1', 'r2', 'r3']
         self.exp_model = models.ExpRampModel(coeff_dict={'r0': [1., 'free'],
                                                          'r1': [0.05, 'free'],
-                                                         'r2': [0.01, 'free'],
-                                                         'r3': [1., 'free'],
-                                                         'r4': [0.05, 'free'],
-                                                         'r5': [0.01, 'free']},
+                                                         'r2': [1., 'free'],
+                                                         'r3': [0.05, 'free']},
                                              freenames=freenames,
                                              nchan=1)
 

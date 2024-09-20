@@ -95,11 +95,10 @@ default='none') # max number of processes to create
         '''
         with datamodels.RampModel(input) as input_model:
 
-            if (hasattr(self.s1_meta, 'remove_390hz')
-                    and self.s1_meta.remove_390hz):
+            if self.s1_meta.remove_390hz:
                 input_model = remove390.run(input_model, self.s1_log,
                                             self.s1_meta)
-                
+
                 # Need to apply these steps afterward to remove 390 Hz
                 if not self.s1_meta.skip_firstframe:
                     self.firstframe = FirstFrameStep()
@@ -110,8 +109,7 @@ default='none') # max number of processes to create
                     self.lastframe.skip = self.s1_meta.skip_lastframe
                     input_model = self.lastframe(input_model)
 
-            if hasattr(self.s1_meta, 
-                       'mask_groups') and self.s1_meta.mask_groups:
+            if self.s1_meta.mask_groups:
                 self.s1_log.writelog('Manually marking groups '
                                      f'{self.s1_meta.mask_groups} as '
                                      'DO_NOT_USE.')
@@ -120,27 +118,22 @@ default='none') # max number of processes to create
                         np.bitwise_or(input_model.groupdq[:, index, :, :],
                                       dqflags.group['DO_NOT_USE'])
 
-            if hasattr(self.s1_meta, 
-                       'update_sat_flags') and self.s1_meta.update_sat_flags:
-                input_model = update_saturation.update_sat(input_model, 
-                                                           self.s1_log, 
+            if self.s1_meta.update_sat_flags:
+                input_model = update_saturation.update_sat(input_model,
+                                                           self.s1_log,
                                                            self.s1_meta)
 
-            if hasattr(self.s1_meta, 'masktrace') and self.s1_meta.masktrace:
+            if self.s1_meta.masktrace:
                 input_model = group_level.mask_trace(input_model,
                                                      self.s1_log,
                                                      self.s1_meta)
-            
-            if hasattr(self.s1_meta, 
-                       'refpix_corr') and self.s1_meta.refpix_corr:
+
+            if self.s1_meta.refpix_corr:
                 input_model = group_level.custom_ref_pixel(input_model,
                                                            self.s1_log,
                                                            self.s1_meta)
-            
-            if (hasattr(self.s1_meta, 'grouplevel_bg') and
-                    self.s1_meta.grouplevel_bg and
-                    (not hasattr(self.s1_meta, 'remove_390hz') 
-                     or not self.s1_meta.remove_390hz)):
+
+            if self.s1_meta.grouplevel_bg and not self.s1_meta.remove_390hz:
                 input_model = group_level.GLBS(input_model,
                                                self.s1_log,
                                                self.s1_meta)
@@ -209,7 +202,7 @@ default='none') # max number of processes to create
                     # Want each frame and pixel weighted equally
 
                     # Overwrite the entire optimal calculation function
-                    # Pipeline version 1.3.3
+                    # Pipeline version 1.13.4
                     stcal.ramp_fitting.ols_fit.calc_opt_sums = \
                         calc_opt_sums_uniform_weight
                 elif self.weighting == 'custom':
@@ -352,8 +345,8 @@ def custom_power(snr, snr_bounds, exponents):
     return pow_wt.ravel()
 
 
-def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
-                                 xvalues, good_pix):
+def calc_opt_sums_uniform_weight(ramp_data, rn_sect, gain_sect, data_masked,
+                                 mask_2d, xvalues, good_pix):
     """Adjusted version of calc_opt_sums() function from stcal ramp fitting.
 
     Now weights are all equal to 1, except for those that correspond to NaN or
@@ -369,6 +362,8 @@ def calc_opt_sums_uniform_weight(rn_sect, gain_sect, data_masked, mask_2d,
 
     Parameters
     ----------
+    ramp_data : RampData
+        Input data necessary for computing ramp fitting. (Unused)
     rn_sect : float, 2D array
         read noise values for all pixels in data section
     gain_sect : float, 2D array

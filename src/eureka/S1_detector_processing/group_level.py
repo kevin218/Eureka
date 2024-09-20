@@ -40,7 +40,7 @@ def GLBS(input_model, log, meta):
     meta.inst = input_model.meta.instrument.name.lower()
     meta.n_int = all_data.shape[0]
     meta.int_start = 0
-    if not hasattr(meta, 'nplots') or meta.nplots is None:
+    if meta.nplots is None:
         meta.int_end = meta.n_int
     elif meta.int_start+meta.nplots > meta.n_int:
         # Too many figures requested, so reduce it
@@ -48,7 +48,7 @@ def GLBS(input_model, log, meta):
     else:
         meta.int_end = meta.int_start+meta.nplots
     if meta.inst == 'miri':
-        meta.isrotate = False
+        meta.isrotate = 0
 
     for ngrp in range(all_data.shape[1]):
         log.writelog(f'  Starting group {ngrp}.')
@@ -59,7 +59,7 @@ def GLBS(input_model, log, meta):
                           (dq[:, ngrp, :, :] == 2))
         grp_mask[dqmask] = 0
 
-        if hasattr(meta, 'masktrace') and meta.masktrace:
+        if meta.masktrace:
             trace_mask = np.broadcast_to(input_model.trace_mask,
                                          (grp_data.shape[0],
                                           grp_data.shape[1],
@@ -84,7 +84,7 @@ def GLBS(input_model, log, meta):
 
         # Perform BG subtraction along dispersion direction
         # (only useful for NIRCam data)
-        if hasattr(meta, 'bg_disp') and meta.bg_disp:
+        if meta.bg_row_by_row:
             meta.bg_dir = 'RxR'
             if ngrp == all_data.shape[1]-1:
                 isplots_S1 = meta.isplots_S1
@@ -194,7 +194,7 @@ def custom_ref_pixel(input_model, log, meta):
                               (dq[nint, ngrp, :, :] == 2))
             intgrp_data[dqmask] = np.nan
 
-            if hasattr(meta, 'masktrace') and meta.masktrace:
+            if meta.masktrace:
                 intgrp_data *= input_model.trace_mask
 
             odd_med = np.nanmedian(intgrp_data[odd_row_ref, :])

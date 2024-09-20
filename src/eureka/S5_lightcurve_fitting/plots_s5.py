@@ -1,8 +1,12 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from mc3.stats import time_avg
+try:
+    from mc3.stats import time_avg
+except:
+    print("Could not import MC3. No Allan variance plots will be produced.")
 import corner
 from scipy import stats
 try:
@@ -92,8 +96,7 @@ def plot_fit(lc, model, meta, fitter, isTitle=True):
         residuals = flux - model_lc
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or meta.nbin_plot is None or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
@@ -225,8 +228,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
             new_timet = new_time
 
         # Get binned data and times
-        if not hasattr(meta, 'nbin_plot') or not meta.nbin_plot or \
-           meta.nbin_plot > len(time):
+        if not meta.nbin_plot or meta.nbin_plot > len(time):
             binned_time = time
             binned_flux = flux
             binned_unc = unc
@@ -294,7 +296,6 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
                     zorder=10)
 
             # Set nice axis limits
-            max_astro = np.ma.max(model_phys)
             ax.set_ylim(-3*sigma, max_astro+3*sigma)
             ax.set_xlim(np.ma.min(time), np.ma.max(time))
             # Save/show the figure
@@ -311,7 +312,7 @@ def plot_phase_variations(lc, model, meta, fitter, isTitle=True):
 
 
 def plot_rms(lc, model, meta, fitter):
-    """Plot an Allan plot to look for red noise. (Figs 5301)
+    """Create an Allan variance plot to look for red noise. (Figs 5301)
 
     Parameters
     ----------
@@ -340,6 +341,9 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
+        if 'mc3.stats' not in sys.modules:
+            # If MC3 failed to load, exit for loop
+            break
         flux = np.ma.copy(lc.flux)
         model_lc = np.ma.copy(model_eval)
 
@@ -364,7 +368,7 @@ def plot_rms(lc, model, meta, fitter):
         maxbins = residuals.size//10
         if maxbins < 2:
             maxbins = residuals.size//2
-        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals, 
+        rms, rmslo, rmshi, stderr, binsz = time_avg(residuals,
                                                     maxbins=maxbins,
                                                     binstep=1)
         normfactor = 1e-6
@@ -441,7 +445,7 @@ def plot_corner(samples, lc, meta, freenames, fitter):
         Moved plotting code to a separate function.
     """
     ndim = len(freenames)+1  # One extra for the 1D histogram
-    
+
     # Don't allow offsets or scientific notation in tick labels
     old_useOffset = rcParams['axes.formatter.useoffset']
     old_xtick_labelsize = rcParams['xtick.labelsize']
