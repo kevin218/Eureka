@@ -647,10 +647,19 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
             unit = 'micron'
         wave_low *= getattr(astropy.units, unit).to('m')
         wave_hi *= getattr(astropy.units, unit).to('m')
-        t_spiderman = m.SpidermanModel(parameters=params, name='spiderman',
-                                       nchan=nchannel_fitted,
-                                       paramtitles=paramtitles, l1=wave_low,
-                                       l2=wave_hi)
+        t_spiderman = m.SpidermanModel(parameters=params,
+                                       fmt='r--', log=log, time=time,
+                                       time_units=time_units,
+                                       freenames=freenames,
+                                       longparamlist=lc_model.longparamlist,
+                                       nchannel=chanrng,
+                                       nchannel_fitted=nchannel_fitted,
+                                       fitted_channels=fitted_channels,
+                                       paramtitles=paramtitles,
+                                       multwhite=lc_model.multwhite,
+                                       nints=lc_model.nints,
+                                       num_planets=meta.num_planets,
+                                       l1=wave_low, l2=wave_hi)
         modellist.append(t_spiderman)
     if 'batman_tr' in meta.run_myfuncs:
         t_transit = BatmanTransitModel(parameters=params,

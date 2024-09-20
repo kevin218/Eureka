@@ -133,7 +133,7 @@ class BatmanTransitModel(Model):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
-                    continue
+                    break
 
                 # Make the transit model
                 m_transit = self.transit_model(pl_params, time,
