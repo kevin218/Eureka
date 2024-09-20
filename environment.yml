@@ -36,6 +36,7 @@ dependencies:
     - tqdm
     - pip:
         - astraeus@git+https://github.com/kevin218/Astraeus@main
+        - catwoman
         - celerite2 # Needed for GP
         - crds
         - exotic-ld==3.2.0 # Lower limit needed for updated JWST sensitivity files, upper limit needed for breaking changes

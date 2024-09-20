@@ -39,6 +39,7 @@ dependencies:
     - pip:
         - arviz==0.12.1
         - astraeus@git+https://github.com/kevin218/Astraeus@main
+        - catwoman
         - celerite2 # Needed for GP
         - crds
         - exoplanet
