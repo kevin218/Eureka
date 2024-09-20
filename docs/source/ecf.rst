@@ -1082,11 +1082,12 @@ This file describes the transit/eclipse and systematics parameters and their pri
 
 ``Name    Value    Free    PriorPar1    PriorPar2    PriorType``
 
-``Name`` defines the specific parameter being fit for. Available options are:
+``Name`` defines the specific parameter being fit for. When fitting for multiple channels simultaneously, you can add optionally add ``_ch#`` after the parameter (e.g., ``rprs``, ``rprs_ch1``, ``rprs_ch2``, etc.) to set channel-specific priors; if you don't manually set a different prior for each channel, the code will default to the prior for the 0th channel (e.g., ``rprs``).
+Available fitting parameters are:
    - BATMAN/POET Transit and Eclipse Depth Parameters
       - ``rp`` or ``rprs`` - planet-to-star radius ratio, for the transit models.
       - ``fp`` or ``fpfs`` - planet-to-star flux ratio, for the eclipse models.
-      When fitting for multiple planets, add a number after the parameter (e.g., ``rprs``, ``rprs1``, ``rprs2``, etc.).  This also applies to the planet orbital parameters below.
+      When fitting for multiple planets, add ``_pl#`` after the parameter (e.g., ``rprs``, ``rprs_pl1``, ``rprs_pl2``, etc.).  This also applies to the planetaty orbital parameters below.
    - BATMAN/POET/Starry Orbital Parameters
       - ``per`` - orbital period (in days)
       - ``t0`` - transit time (in the same units as your input data - most likely BMJD_TDB)
