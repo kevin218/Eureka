@@ -66,6 +66,9 @@ class PlanetParams():
         self.t0 = None
         self.rprs = None
         self.rp = None
+        self.rprs2 = None
+        self.rp2 = None
+        self.phi = 90.
         self.inc = None
         self.ars = None
         self.a = None
@@ -133,6 +136,23 @@ class PlanetParams():
             if eval:
                 value = value.value
             setattr(self, 'rp', value)
+        # Allow for rp2 or rprs2
+        if (self.rprs2 is None) and ('rp2' in model.parameters.dict.keys()):
+            item0 = 'rp2' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'rprs2', value)
+        if (self.rp2 is None) and ('rprs2' in model.parameters.dict.keys()):
+            item0 = 'rprs2' + self.pid_id
+            if model.parameters.dict[item0][1] == 'free':
+                item0 += self.channel_id
+            value = getattr(parameterObject, item0)
+            if eval:
+                value = value.value
+            setattr(self, 'rp2', value)
         # Allow for a or ars
         if (self.ars is None) and ('a' in model.parameters.dict.keys()):
             item0 = 'a' + self.pid_id

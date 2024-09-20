@@ -569,6 +569,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     else:
         BatmanTransitModel = m.BatmanTransitModel
         BatmanEclipseModel = m.BatmanEclipseModel
+        CatwomanTransitModel = m.CatwomanTransitModel
         PoetTransitModel = m.PoetTransitModel
         PoetEclipseModel = m.PoetEclipseModel
         PoetPCModel = m.PoetPCModel
@@ -670,6 +671,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        nints=lc_model.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_eclipse)
+    if 'catwoman_tr' in meta.run_myfuncs:
+        t_transit = CatwomanTransitModel(parameters=params,
+                                         fmt='r--', log=log, time=time,
+                                         time_units=time_units,
+                                         freenames=freenames,
+                                         longparamlist=lc_model.longparamlist,
+                                         nchannel=chanrng,
+                                         nchannel_fitted=nchannel_fitted,
+                                         fitted_channels=fitted_channels,
+                                         paramtitles=paramtitles,
+                                         ld_from_S4=meta.use_generate_ld,
+                                         ld_from_file=meta.ld_file,
+                                         ld_coeffs=ldcoeffs,
+                                         recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                         compute_ltt=meta.compute_ltt,
+                                         multwhite=lc_model.multwhite,
+                                         nints=lc_model.nints,
+                                         num_planets=meta.num_planets)
+        modellist.append(t_transit)
     if 'poet_tr' in meta.run_myfuncs:
         t_poet_tr = PoetTransitModel(parameters=params,
                                      fmt='r--', log=log, time=time,
