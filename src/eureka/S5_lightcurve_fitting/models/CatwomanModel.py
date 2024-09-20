@@ -1,8 +1,9 @@
 import numpy as np
+from functools import partial
 try:
     import catwoman
 except ImportError:
-    print("Could not import batman. Functionality may be limited.")
+    print("Could not import catwoman. Functionality may be limited.")
 
 from .BatmanModels import BatmanTransitModel
 
@@ -24,7 +25,9 @@ class CatwomanTransitModel(BatmanTransitModel):
         super().__init__(**kwargs)
         self.name = 'catwoman transit'
         # Define transit model to be used
-        self.transit_model = catwoman.TransitModel
+        self.transit_model = partial(catwoman.TransitModel,
+                                     max_err=kwargs['max_err'],
+                                     fac=kwargs['fac'])
 
         if ('rp2' not in self.longparamlist[0]
                 and 'rprs2' not in self.longparamlist[0]):

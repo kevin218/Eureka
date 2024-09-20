@@ -688,7 +688,9 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
                                          nints=lc_model.nints,
-                                         num_planets=meta.num_planets)
+                                         num_planets=meta.num_planets,
+                                         fac=meta.catwoman_fac,
+                                         max_err=meta.catwoman_max_err)
         modellist.append(t_transit)
     if 'poet_tr' in meta.run_myfuncs:
         t_poet_tr = PoetTransitModel(parameters=params,

@@ -110,6 +110,10 @@ class S5MetaClass(MetaClass):
             # Set this to False if not relevant
             self.recenter_ld_prior = getattr(self, 'recenter_ld_prior', False)
 
+        # Catwoman convergence-aiding parameters
+        self.catwoman_fac = getattr(self, 'catwoman_fac', None)
+        self.catwoman_max_err = getattr(self, 'catwoman_max_err', 1.0)
+
         # General fitter, fitparams CSV file to resume from
         self.old_fitparams = getattr(self, 'old_fitparams', None)
 
