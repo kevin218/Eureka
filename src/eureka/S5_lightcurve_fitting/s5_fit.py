@@ -554,25 +554,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
 
-    if meta.testing_model:
-        # FINDME: Use this area to add systematics into the data
-        # when testing new systematics models. In this case, I'm
-        # introducing an exponential ramp to test m.ExpRampModel().
-        log.writelog('***Adding exponential ramp systematic to light curve***')
-        fakeramp = m.ExpRampModel(parameters=params, name='ramp', fmt='r--',
-                                  log=log, time=time,
-                                  longparamlist=lc_model.longparamlist,
-                                  nchannel=chanrng,
-                                  nchannel_fitted=nchannel_fitted,
-                                  fitted_channels=fitted_channels,
-                                  paramtitles=paramtitles)
-        fakeramp.coeffs = (np.array([-1, 40, -3, 0, 0, 0]).reshape(1, -1)
-                           * np.ones(nchannel_fitted))
-        flux *= fakeramp.eval(time=time)
-        lc_model.flux = flux
-
     if 'starry' in meta.run_myfuncs:
-        use_starry = True
         StarryModel = dm.StarryModel
         SinusoidModel = dm.SinusoidPhaseCurveModel
         QuasiLambertianPhaseCurve = dm.QuasiLambertianPhaseCurve
@@ -585,7 +567,6 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         AstroModel = dm.AstroModel
         CompositeModel = dm.CompositePyMC3Model
     else:
-        use_starry = False
         BatmanTransitModel = m.BatmanTransitModel
         BatmanEclipseModel = m.BatmanEclipseModel
         PoetTransitModel = m.PoetTransitModel
@@ -604,16 +585,29 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
         AstroModel = m.AstroModel
         CompositeModel = m.CompositeModel
 
-    freenames = []
-    for key in params.dict:
-        if params.dict[key][1] in ['free', 'shared', 'white_free',
-                                   'white_fixed']:
-            freenames.append(key)
-    freenames = np.array(freenames)
+    if meta.testing_model:
+        # FINDME: Use this area to add systematics into the data
+        # when testing new systematics models. In this case, I'm
+        # introducing an exponential ramp to test m.ExpRampModel().
+        log.writelog('***Adding exponential ramp systematic to light curve***')
+        fakeramp = ExpRampModel(parameters=params, fmt='r--',
+                                log=log, time=time, time_units=time_units,
+                                freenames=freenames,
+                                longparamlist=lc_model.longparamlist,
+                                nchannel=chanrng,
+                                nchannel_fitted=nchannel_fitted,
+                                fitted_channels=fitted_channels,
+                                paramtitles=paramtitles,
+                                multwhite=lc_model.multwhite,
+                                nints=lc_model.nints)
+        fakeramp.coeffs = (np.array([-1, 40, 0, 0]).reshape(1, -1)
+                           * np.ones(nchannel_fitted))
+        flux *= fakeramp.eval(time=time)
+        lc_model.flux = flux
 
     # Make the astrophysical and detector models
     modellist = []
-    if use_starry:
+    if 'starry' in meta.run_myfuncs:
         # Fixed any masked uncertainties
         masked = np.logical_or(np.ma.getmaskarray(flux),
                                np.ma.getmaskarray(flux_err))
@@ -725,21 +719,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 nints=lc_model.nints,
                                 num_planets=meta.num_planets)
         modellist.append(t_poet_pc)
-    if 'sinusoid_pc' in meta.run_myfuncs and use_starry:
-        t_phase = SinusoidModel(parameters=params,
-                                fmt='r--', log=log, time=time,
-                                time_units=time_units,
-                                freenames=freenames,
-                                longparamlist=lc_model.longparamlist,
-                                nchannel=chanrng,
-                                nchannel_fitted=nchannel_fitted,
-                                fitted_channels=fitted_channels,
-                                paramtitles=paramtitles,
-                                multwhite=lc_model.multwhite,
-                                nints=lc_model.nints,
-                                num_planets=meta.num_planets)
-        modellist.append(t_phase)
-    elif 'sinusoid_pc' in meta.run_myfuncs:
+    if 'sinusoid_pc' in meta.run_myfuncs:
         t_phase = SinusoidModel(parameters=params,
                                 fmt='r--', log=log, time=time,
                                 time_units=time_units,

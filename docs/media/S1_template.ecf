@@ -23,6 +23,10 @@ jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection thresho
 custom_linearity    False
 linearity_file      /path/to/custom/linearity/fits/file
 
+# Custom pixel mask file
+custom_mask         False
+mask_file           /path/to/custom/pixel/mask/fits/file
+
 # Custom bias when using NIRSpec G395H
 bias_correction     None    # Bias correction options: [mean, group_level, smooth, None], requires masktrace=True
 bias_group          1       # Group number options: [1, 2, ..., each]

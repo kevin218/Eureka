@@ -54,7 +54,15 @@ Boolean. If True, allows user to supply a custom linearity correction file and o
 
 linearity_file
 ''''''''''''''
-The fully qualified path to the custom linearity correction file to use if custom_linearity is True.
+The fully qualified path to the custom linearity correction file to use if custom_linearity is True. The linearity file should be a FITS file that is formatted like the ``linearity`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/linearity/reference_files.html#linearity-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__, with any desired changes made to the values of the file.
+
+custom_mask
+'''''''''''
+Boolean. If True, allows user to supply a custom bad pixel mask file and overwrite the default file.
+
+mask_file
+'''''''''
+The fully qualified path to the custom bad pixel mask file to use if custom_mask is True. The mask file should be a FITS file that is formatted like the ``mask`` `reference file <https://jwst-pipeline.readthedocs.io/en/latest/jwst/dq_init/reference_files.html#mask-reference-file>`__ from `CRDS <https://jwst-crds.stsci.edu/>`__ with any additional bad pixels marked by changing the pixel value to the "DO_NOT_USE" value (see `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#data-quality-flags>`__ for more details on data quality flags)
 
 bias_correction
 '''''''''''''''
@@ -676,6 +684,10 @@ wave_min & wave_max
 '''''''''''''''''''
 Start and End of the wavelength range being considered. Set to None to use the shortest/longest extracted wavelength from Stage 3.
 
+wave_input
+'''''''''''''''''''
+Path to a user supplied txt file with pre-defined wavelength bins. Two columns (separated by whitespace): first column is the lower edge of the wavelength bins and the second column is the upper edge of the wavelength bins.
+
 
 allapers
 ''''''''
@@ -853,6 +865,10 @@ allapers
 ''''''''
 Boolean to determine whether Stage 5 is run on all the apertures considered in Stage 4. If False, will just use the most recent output in the input directory.
 
+multwhite
+'''''''''
+Boolean to determine whether to run a joint fit of multiple white light curves. If True, must use inputdirlist.
+
 fit_par
 '''''''
 Path to Stage 5 priors and fit parameter file.
@@ -1000,6 +1016,10 @@ NUTS Fitting Parameters
 '''''''''''''''''''''''
 The following set the parameters for running PyMC3's NUTS sampler. These options are described in more detail in: https://docs.pymc.io/en/v3/api/inference.html#pymc3.sampling.sample
 
+exoplanet_first
+'''''''''''''''
+Boolean to determine whether to run exoplanet optimizer before NUTS. This is generally not recommended, but it can sometimes be helpful if your initial manual guess is quite poor.
+
 tune
 ^^^^
 Number of iterations to tune. Samplers adjust the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition to the number specified in the draws argument.
@@ -1039,6 +1059,12 @@ If True, plots will automatically be closed rather than popping up on the screen
 topdir + inputdir
 '''''''''''''''''
 The path to the directory containing the Stage 4 JWST data. Directories containing spaces should be enclosed in quotation marks.
+
+
+topdir + inputdirlist
+'''''''''''''''''''''
+List of paths to the additional white lightcurve directories. topdir + inputdir contains the first white lightcurve, while this list contains additional lightcurves. Each item must be enclosed in quotation marks. Ensure there are brakets around the list.
+For example, to simultaneously fit white light curves of WASP-39b from NIRSpec/G395H NRS1 & NRS2 and MIRI/LRS, you might set ``topdir`` to ``/home/User/Data/WASP-39b``, ``inputdir`` to ``NIRSpec/NRS1/Stage4_white/S4_2024-06-04_nirspec_fs_template_run1/``, and ``inputdirlist`` to ``['NIRSpec/NRS2/Stage4_white/S4_2024-06-04_nirspec_fs_template_run1/','MIRI/LRS/Stage4_white/S4_2024-06-04_miri_lrs_template_run1/']``.
 
 
 topdir + outputdir
@@ -1134,20 +1160,17 @@ This file describes the transit/eclipse and systematics parameters and their pri
          The polynomial coefficients are numbered as increasing powers (i.e. ``c0`` a constant, ``c1`` linear, etc.).
          The x-values of the polynomial are the time with respect to the mean of the time of the lightcurve time array.
          Polynomial fits should include at least ``c0`` for usable results.
-      - ``r0--r2`` and ``r3--r5`` - Coefficients for the first and second exponential ramp models.
+      - ``r0--r1`` and ``r2--r3`` - Coefficients for the first and second exponential ramp models.
 
-         The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local + r2) + r3*np.exp(-r4*time_local + r5) + 1``,
-         where ``r0--r2`` describe the first ramp, and ``r3--r5`` the second. ``time_local`` is the time relative to the first frame of the dataset.
-         If you only want to fit a single ramp, you can omit ``r3--r5`` or set them as fixed to ``0``.
-         Users should not fit all three parameters from each model at the same time as there are significant degeneracies between the ``r0`` and ``r2`` parameters (and ``r3`` and ``r5`` parameters).
-         One option is to set ``r0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``r0--r1`` and set ``r2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
-      - ``h0--h6`` - Coefficients for the HST exponential + polynomial ramp model.
+         The exponential ramp model is defined as follows: ``r0*np.exp(-r1*time_local) + r2*np.exp(-r3*time_local) + 1``,
+         where ``r0--r1`` describe the first ramp, and ``r2--r3`` the second. ``time_local`` is the time relative to the first frame of the dataset.
+         If you only want to fit a single ramp, you can omit ``r2--r3`` or set them as fixed to ``0``.
+
+      - ``h0--h5`` - Coefficients for the HST exponential + polynomial ramp model.
 
          The HST ramp model is defined as follows: ``1 + h0*np.exp(-h1*time_batch + h2) + h3*time_batch + h4*time_batch**2``,
-         where ``h0--h2`` describe the exponential ramp per HST orbit, ``h3--h4`` describe the polynomial (up to order two) per HST orbit,  ``h5`` is the orbital period of HST (in the same time units as the data, usually days), and ``h6`` is the time offset when computing ``time_batch``.  A good starting point for ``h5`` is 0.066422 days and ``h6`` is 0.03 days.  ``time_batch = (time_local-h6) % h5``.
-         If you want to fit a linear trend in time, you can omit ``h4`` or fix it to ``0``.
-         Users should not fit all three parameters from the exponential model at the same time as there are significant degeneracies between the ``h0`` and ``h2`` parameters.
-         One option is to set ``h0`` to the sign of the ramp (-1 for decaying, 1 for rising) while fitting for the remaining coefficients.  Another option is to fit for ``h0--h1`` and set ``h2`` to zero.  This option works well when fitting spectroscopic light curves that could be rising or decaying.
+         where ``h0--h1`` describe the exponential ramp per HST orbit, ``h2--h3`` describe the polynomial (up to order two) per HST orbit, ``h4`` is the orbital period of HST (in the same time units as the data, usually days), and ``h5`` is the time offset when computing ``time_batch``.  A good starting point for ``h4`` is 0.066422 days and ``h5`` is 0.03 days.  ``time_batch = (time_local-h5) % h4``.
+         If you want to fit a linear trend in time, you can omit ``h3`` or fix it to ``0``.
 
       - ``step0`` and ``steptime0`` - The step size and time for the first step function (useful for removing mirror segment tilt events).
 
@@ -1206,8 +1229,8 @@ timescales. It is also possible to plot
 'fn' (the nightside flux from a sinusoidal phase curve),
 'pc_offset' (the sinusoidal offset of the phase curve),
 'pc_amp' (the sinusoidal amplitude of the phase curve),
-'pc_offset2' (the second order sinusoidal offset of the phase curve), and
-'pc_amp2' (the second order sinusoidal amplitude of the phase curve).
+'offset_order1' or 'offset_order2' (the first or second order sinusoidal offset of the phase curve), and
+'amp_order1' or 'amp_order2' (the first or second order sinusoidal amplitude of the phase curve).
 y_params can also be formatted as a list to make many different plots. A "cleaned" version
 of y_params will be used in the filenames of the figures and save files relevant for that y_param
 (e.g. '1/r1' would not work in a filename, so it becomes '1-r1').
@@ -1237,6 +1260,14 @@ x_unit
 ''''''
 The x-unit to use in the plot. This can be any unit included in astropy.units.spectral
 (e.g. um, nm, Hz, etc.) but cannot include wavenumber units.
+
+pc_nstep
+''''''''
+The number of time steps used to sample the phase variation when computing the phase curve amplitude and offset.  Defaults to 1000.
+
+pc_stepsize
+'''''''''''
+Computing uncertainties on the phase curve amplitude and offset can be slow; however, thinning the number of MCMC samples will speed up the calculation.  Increasing ``pc_stepsize`` to larger integer values will steadily decrease the computation time at the cost of accuracy.  Defaults to 50.  Use 1 for no thinning.
 
 ncol
 ''''

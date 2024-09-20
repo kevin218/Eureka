@@ -38,6 +38,28 @@ def preparation_step(meta, log):
     meta, log = separate_direct(meta, log)
     meta, log = separate_scan_direction(meta, log)
 
+    if meta.segment_list[0].endswith('flt.fits'):
+        # FLT files subtract first from last, 2 reads
+        meta.nreads = 1
+    else:
+        meta.nreads_full = 0
+        nreads_list = []
+        for fname in meta.segment_list:
+            with fits.open(fname) as file:
+                nreads_temp = file[1].header['SAMPNUM']
+                if meta.nreads_full < nreads_temp:
+                    meta.nreads_full = nreads_temp
+                if nreads_temp not in nreads_list:
+                    nreads_list.append(nreads_temp)
+        meta.nreads = meta.nreads_full-1
+
+        # Input observations have inconsistent number of reads.
+        # Going to need to pad with NaNs.
+        if len(nreads_list) > 1:
+            log.writelog("WARNING: Input spectra have inconsistent numbers "
+                         "of reads. Padding arrays with NaN values to make "
+                         "all arrays the same size.")
+
     # Calculate centroid of direct image(s)
     # meta.centroid order is (y,x)
     meta.centroid = hst.imageCentroid(meta.direct_list, meta.centroidguess,
@@ -165,11 +187,6 @@ def conclusion_step(data, meta, log):
     log : logedit.Logedit
         The updated log.
     """
-
-    if len(np.shape(np.array(meta.centroids, dtype=object))) < 2:
-        raise AssertionError("ERROR: Input spectra have inconsistent numbers "
-                             "of reads. Ensure each spatially scanned "
-                             "spectrum is the same size.")
 
     meta.centroids = np.array(meta.centroids)
     meta.guess = np.array(meta.guess)
@@ -348,7 +365,14 @@ def separate_scan_direction(meta, log):
             meta.scandir[m] = 1
             meta.n_scan1 += 1
         else:
-            log.writelog(f'WARNING: Unknown scan direction for file {m}.')
+            log.writelog(f'WARNING: Unknown scan direction for file {m},'
+                         f' {meta.segment_list[m]}.')
+            # Guess based on closest postarg2 value
+            if np.abs(meta.postarg2[m]-scan0) < np.abs(meta.postarg2[m]-scan1):
+                meta.n_scan0 += 1
+            else:
+                meta.scandir[m] = 1
+                meta.n_scan1 += 1
 
     log.writelog(f"# of files in scan direction 0: {meta.n_scan0}",
                  mute=(not meta.verbose))
@@ -409,30 +433,51 @@ def read(filename, data, meta, log):
                             -1*data.attrs['shdr']['LTV1']]]
         data.attrs['exptime'] = data.attrs['mhdr']['EXPTIME']
         flux_units = data.attrs['shdr']['BUNIT']
+        temp_scandir = meta.scandir[filename == meta.segment_list]
 
         # Determine if we are using IMA or FLT files
-        if filename.endswith('flt.fits'):
-            # FLT files subtract first from last, 2 reads
-            meta.nreads = 1
+        if not filename.endswith('flt.fits'):
+            meta.nreads_local = data.attrs['shdr']['SAMPNUM']
         else:
-            meta.nreads = data.attrs['shdr']['SAMPNUM']
+            meta.nreads_local = 1
 
-        sci = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flux
-        err = np.zeros((meta.nreads, meta.ny, meta.nx))  # Error
-        dq = np.zeros((meta.nreads, meta.ny, meta.nx))  # Flags
-        jd = []
-        for j, rd in enumerate(range(meta.nreads, 0, -1)):
+        start = 0
+        end = meta.nreads_local
+        if meta.nreads_local != meta.nreads_full:
+            # File had one fewer read, figure out which side to pad with NaN
+            if temp_scandir == 0:
+                start = 0
+                end = meta.nreads_local
+            else:
+                start = 1
+                end = meta.nreads_local+1
+
+        shape = (meta.nreads_full, meta.ny, meta.nx)
+        sci = np.full(shape, np.nan)  # Flux
+        err = np.full(shape, np.nan)  # Error
+        dq = np.full(shape, np.nan)  # Flags
+        jd = np.full(meta.nreads_full, np.nan)  # Time
+        # Important to use nreads_local instead of nreads below
+        for j, rd in zip(range(start, end), range(meta.nreads_local, 0, -1)):
             sci[j] = hdulist['SCI', rd].data
             err[j] = hdulist['ERR', rd].data
             dq[j] = hdulist['DQ', rd].data
-            jd.append(2400000.5+hdulist['SCI', rd].header['ROUTTIME']
-                      - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
-        jd = np.array(jd)
+            jd[j] = (2400000.5+hdulist['SCI', rd].header['ROUTTIME']
+                     - 0.5*hdulist['SCI', rd].header['DELTATIM']/3600/24)
+
+    # Find the indices where there were actually reads (to use lower down)
+    goodInds = ~np.all(np.isnan(sci), axis=(1, 2))
 
     ra = data.attrs['mhdr']['RA_TARG']*np.pi/180
     dec = data.attrs['mhdr']['DEC_TARG']*np.pi/180
     frametime = (2400000.5+0.5*(data.attrs['mhdr']['EXPSTART']
                                 + data.attrs['mhdr']['EXPEND']))
+
+    # Make sure there aren't any NaN times so that concat works later
+    # Increment by something smaller than t_exp for safety
+    t_exp = np.nanmedian(np.diff(jd))
+    jd[np.where(np.isnan(jd))[0]] = jd[np.where(np.isnan(jd))[0]-1] + t_exp/10
+
     if meta.horizonsfile is not None:
         horizon_path = os.path.join(meta.hst_cal,
                                     *meta.horizonsfile.split(os.sep))
@@ -466,13 +511,14 @@ def read(filename, data, meta, log):
                                      name='dq')
 
     # Calculate centroids for each frame
-    centroids = np.zeros((meta.nreads, 2))
+    centroids = np.full((meta.nreads_full, 2), np.nan)
     # Figure out which direct image is the relevant one for this observation
     image_number = np.where(meta.segment_list == filename)[0][0]
     centroid_index = meta.direct_index[image_number]
     # Use the same centroid for each read
-    centroids[:, 0] = meta.centroid[centroid_index][0]
-    centroids[:, 1] = meta.centroid[centroid_index][1]
+    # Only set the centroids of non-NaN reads
+    centroids[goodInds, 0] = meta.centroid[centroid_index][0]
+    centroids[goodInds, 1] = meta.centroid[centroid_index][1]
     meta.centroids.append(centroids)
 
     # Calculate trace
@@ -481,7 +527,7 @@ def read(filename, data, meta, log):
                      f"filter/grism...", mute=(not meta.verbose))
     xrange = np.arange(0, meta.nx)
     # wavelength in microns
-    wave = hst.calibrateLambda(xrange, centroids[0], meta.filter)/1e4
+    wave = hst.calibrateLambda(xrange, centroids[goodInds][0], meta.filter)/1e4
     # Assume no skew over the detector
     wave_2d = wave*np.ones((meta.ny, 1))
     wave_units = 'microns'
@@ -524,9 +570,7 @@ def read(filename, data, meta, log):
     diffdata.attrs['mhdr'] = data.attrs['mhdr']
     diffdata.attrs['filename'] = data.attrs['filename']
 
-    diffdata['scandir'] = (['time'], np.repeat(meta.scandir[filename ==
-                                                            meta.segment_list],
-                                               meta.nreads))
+    diffdata['scandir'] = (['time'], np.repeat(temp_scandir, meta.nreads))
 
     return diffdata, meta, log
 
@@ -603,13 +647,12 @@ def difference_frames(data, meta, log):
     log : logedit.Logedit
         The current log.
     '''
-    if meta.nreads > 1 and meta.firstInBatch:
-        log.writelog('  Differencing non-destructive reads...',
-                     mute=(not meta.verbose))
-
-    if meta.nreads > 1:
+    if meta.nreads_full > 1:
         # Subtract pairs of subframes
-        meta.nreads -= 1
+        if meta.firstInBatch:
+            log.writelog('  Differencing non-destructive reads...',
+                         mute=(not meta.verbose))
+
         difftime = data.time[:-1] + 0.5*np.ediff1d(data.time)
         diffflux = np.zeros((meta.nreads, meta.ny, meta.nx))
         differr = np.zeros((meta.nreads, meta.ny, meta.nx))
@@ -628,6 +671,9 @@ def difference_frames(data, meta, log):
     diffmask = np.zeros((meta.nreads, meta.ny, meta.nx))
     guess = np.zeros((meta.nreads), dtype=int)
     for n in range(meta.nreads):
+        if np.all(np.isnan(diffflux[n])):
+            # This file had one fewer read, so skip this "filler" read
+            continue
         diffmask[n] = data['flatmask'][0][0]
         if meta.nreads > 1:
             diffmask[n][np.where(differr[n] > meta.diffthresh *
@@ -651,9 +697,12 @@ def difference_frames(data, meta, log):
     if meta.firstInBatch:
         log.writelog('  Computing scan height...',
                      mute=(not meta.verbose))
-    scanHeight = []
-    for i in range(meta.n_int):
-        scannedData = np.sum(data.flux[i], axis=1)
+    scanHeight = np.zeros(meta.nreads)
+    for i in range(meta.nreads):
+        if np.all(np.isnan(diffflux[i])):
+            # This file had one fewer read, so skip this "filler" read
+            continue
+        scannedData = np.sum(diffflux[i], axis=1)
         xmin = np.min(guess)
         xmax = np.max(guess)
         scannedData /= np.median(scannedData[xmin:xmax+1])
@@ -661,7 +710,7 @@ def difference_frames(data, meta, log):
         yrng = range(meta.ny)
         spline = spi.UnivariateSpline(yrng, scannedData[yrng], k=3, s=0)
         roots = spline.roots()
-        scanHeight.append(roots[1]-roots[0])
+        scanHeight[i] = roots[1]-roots[0]
 
     # Create Xarray Dataset with updated time axis for differenced frames
     flux_units = data.flux.attrs['flux_units']
@@ -775,7 +824,7 @@ def fit_bg(dataim, datamask, datav0, datavariance, guess, n, meta, isplots=0):
 
     bg, mask = background.fitbg(dataim, meta, datamask, y1, y2,
                                 deg=meta.bg_deg, threshold=meta.p3thresh,
-                                isrotate=meta.isrotate, isplots=isplots)
+                                isrotate=2, isplots=isplots)
 
     # Calculate variance assuming background dominated rather than
     # read noise dominated
@@ -817,10 +866,13 @@ def correct_drift2D(data, meta, log, m):
         return
 
     log.writelog("  Calculating 2D drift...", mute=(not meta.verbose))
-    drift2D = np.zeros((meta.n_int, 2))
+    drift2D = np.full((meta.n_int, 2), np.nan)
     if meta.ncpu == 1:
         # Only 1 CPU
         for n in range(meta.n_int):
+            if np.all(np.isnan(data.flux[n])):
+                # This file had one fewer read, so skip this "filler" read
+                continue
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
@@ -834,6 +886,9 @@ def correct_drift2D(data, meta, log, m):
         # Multiple CPUs
         pool = mp.Pool(meta.ncpu)
         for n in range(meta.n_int):
+            if np.all(np.isnan(data.flux[n])):
+                # This file had one fewer read, so skip this "filler" read
+                continue
             # Get read number
             r = n % meta.nreads
             # Get index of reference frame
@@ -899,6 +954,9 @@ def correct_drift2D(data, meta, log, m):
     kx, ky = (1, 1)  # FINDME: should be using (3,3)
     # Correct for drift
     for n in range(meta.n_int):
+        if np.all(np.isnan(drift2D[n])):
+            # This file had one fewer read, so skip this "filler" read
+            continue
         # Need to swap ix and iy because of numpy
         spline = spi.RectBivariateSpline(iy, ix, data.flux[n], kx=kx,
                                          ky=ky, s=0)

@@ -4,7 +4,7 @@
 
 ncpu            4 # The number of CPU threads to use when running emcee or dynesty in parallel
 
-multwhite		False  # Are you simultaneously fitting multiple white lightcurves?
+multwhite		False  # Are you simultaneously fitting multiple white lightcurves? (if so, use inputdirlist and see docs)
 
 allapers        False  # Run S5 on all of the apertures considered in S4? Otherwise will use newest output in the inputdir
 
@@ -45,6 +45,7 @@ run_sample      'auto'
 run_tol         0.1
 
 # PyMC3 NUTS fitter
+exoplanet_first False   # Initialize with an initial exoplanet optimizer call (generally not recommended, but can sometimes be helpful if your initial manual guess is quite poor)
 tune            3000
 draws           1500
 chains          3
@@ -69,6 +70,7 @@ topdir          /home/User/Data/JWST-Sim/NIRSpec/
 
 # Directories relative to topdir
 inputdir        Stage4   # The folder containing the outputs from Eureka!'s S4 pipeline (will be overwritten if calling S4 and S5 sequentially)
+inputdirlist	None     # list of extra folders to read in from after inputdir for multwhite fits. Must be strings.
 outputdir       Stage5
 
 # inputdirlist    []       # A list of additional Stage 4 input folders to use in a joint white lightcurve fit (e.g., NIRSpec NRS1+NRS2, or NIRCam+MIRI). Only relevant if multwhite is set to True

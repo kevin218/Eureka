@@ -151,6 +151,12 @@ class PlanetParams():
                 value = value.value
             setattr(self, 'a', value)
         # Allow for (ecc, w) or (ecosw, esinw)
+        if (self.ecosw is None) and self.ecc == 0:
+            self.ecosw = 0.
+            self.esinw = 0.
+        elif (self.ecc is None) and self.ecosw == 0 and self.sinw == 0:
+            self.ecc = 0.
+            self.w = None
         if (self.ecosw is None) and ('ecc' in model.parameters.dict.keys()):
             item0 = 'ecc' + self.pid_id
             item1 = 'w' + self.pid_id
@@ -213,7 +219,15 @@ class PlanetParams():
             item0 = 'Rs'
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
-            value = getattr(parameterObject, item0)
+            try:
+                value = getattr(parameterObject, item0)
+            except AttributeError as message:
+                message = ('Missing required parameter Rs in your EPF. Make'
+                           ' sure it is not set to \'independent\' as'
+                           ' this is no longer a supported option; you can set'
+                           ' these parameters to fixed if you want to maintain'
+                           ' the old \'independent\' behavior.')
+                raise AssertionError(message)
             if eval:
                 value = value.value
             setattr(self, 'Rs', value)
@@ -457,7 +471,7 @@ def eccentric_anomaly(model, t, lib=np, xtol=1e-10):
     ma_peri = ea_peri - model.ecc*np.sin(ea_peri)
     t_peri = (model.t0 - (ma_peri/(2.*np.pi)*model.per))
 
-    if lib != np:
+    if lib not in [np, np.ma]:
         t_peri = t_peri + model.per*(lib.lt(t_peri, 0))
     elif t_peri < 0:
         t_peri = t_peri + model.per
@@ -561,7 +575,7 @@ def FSSI(Y, x, f, fP, lib=np):
     c2 = ((2.*d0 + d1)*dy - 3.*dx)/dy2
     c3 = ((d0 + d1)*dy - 2.*dx)/(dy2*dy)
 
-    if lib == np:
+    if lib in [np, np.ma]:
         j = np.searchsorted(y1, Y)
         # Protect against indexing beyond the size of the array
         j[j >= y1.size] = y1.size-1

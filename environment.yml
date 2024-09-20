@@ -43,6 +43,8 @@ dependencies:
         - jwst==1.15.1
         - mc3 # Needed for uncertainties in the Allan variance plots in S5
         - myst-parser # Needed for documentation
+        - numpy>=1.20.0,<=1.23 # Upper limit needed for Apple silicon and for theano, starry, and pymc3
+        - scipy>=1.8.0 # Lower limit needed for scipy.spatial.QhullError
         - setuptools_scm # Needed for version number
         - sphinx-rtd-theme # Needed for documentation
         - stcal>=1.0.0 # Lower limit needed for our create_integration_model function

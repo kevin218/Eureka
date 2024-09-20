@@ -51,11 +51,6 @@ class PyMC3Model(Model):
         for key in self.parameters.dict.keys():
             setattr(self.fit, key, getattr(self.parameters, key).value)
 
-        if hasattr(self.fit, 'ecosw') and hasattr(self.fit, 'esinw'):
-            # ecosw and esinw are defined; convert them to ecc and w
-            self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
-            self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180/np.pi
-
     def __mul__(self, other):
         """Multiply model components to make a combined model.
 
@@ -138,11 +133,6 @@ class PyMC3Model(Model):
             self.parameters.dict[arg][0] = val
             getattr(self.parameters, arg).value = val
             setattr(self.fit, arg, val)
-
-        if hasattr(self.fit, 'ecosw') and hasattr(self.fit, 'esinw'):
-            # ecosw and esinw are defined; convert them to ecc and w
-            self.fit.ecc = np.sqrt(self.fit.ecosw**2 + self.fit.esinw**2)
-            self.fit.w = np.arctan2(self.fit.esinw, self.fit.ecosw)*180/np.pi
 
         for component in self.components:
             component.update(newparams, **kwargs)
@@ -231,8 +221,8 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                                         testval=param.value))
                         elif any(substring in parname
                                  for substring in ['per', 'scatter_mult',
-                                                   'scatter_ppm', 'c0', 'r1',
-                                                   'r4', 'r7', 'r10']):
+                                                   'scatter_ppm', 'c0',
+                                                   'r1', 'r3']):
                             setattr(self.model, parname,
                                     BoundedNormal_0(
                                         parname,
@@ -260,15 +250,6 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
                                     lower=param.priorpar1,
                                     upper=param.priorpar2,
                                     testval=param.value)))
-
-            if hasattr(self.model, 'ecosw') and hasattr(self.model, 'esinw'):
-                # ecosw and esinw are defined; convert them to ecc and w
-                setattr(self.model, 'ecc', pm.Deterministic(
-                        'ecc', tt.sqrt(tt.sqr(self.model.ecosw)
-                                       + tt.sqr(self.model.esinw))))
-                setattr(self.model, 'w', pm.Deterministic(
-                        'w', tt.arctan2(self.model.esinw,
-                                        self.model.ecosw)*180/np.pi))
 
     def setup(self, time, flux, lc_unc, newparams):
         """Setup a model for evaluation and fitting.
@@ -462,9 +443,41 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         flux : ndarray
             The evaluated systematics model predictions at the times self.time.
         """
-        # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.syseval(self, channel=channel, incl_GP=incl_GP,
-                                      eval=eval, **kwargs)
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
+        else:
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+
+        if eval:
+            flux = np.ma.ones(flux_length)
+        else:
+            flux = tt.ones(flux_length)
+
+        # Evaluate flux at each component
+        for component in self.components:
+            if component.modeltype == 'systematic':
+                if component.time is None:
+                    component.time = self.time
+                flux *= component.eval(channel=channel, eval=eval, **kwargs)
+
+        if incl_GP:
+            flux += self.GPeval(flux, channel=channel, eval=eval, **kwargs)
+
+        return flux
 
     def GPeval(self, fit, channel=None, eval=True, **kwargs):
         """Evaluate the GP model components only.
@@ -486,9 +499,36 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         flux : ndarray
             The evaluated GP model predictions at the times self.time.
         """
-        # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.GPeval(self, fit, channel=channel,
-                                     eval=eval, **kwargs)
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        if channel is None:
+            nchan = self.nchannel_fitted
+        else:
+            nchan = 1
+
+        if self.multwhite and channel is None:
+            # Evaluating all channels of a multwhite fit
+            flux_length = len(self.time)
+        elif self.multwhite:
+            # Evaluating a single channel of a multwhite fit
+            flux_length = self.nints[channel]
+        else:
+            # Evaluating a non-multwhite fit (individual or shared)
+            flux_length = len(self.time)*nchan
+
+        if eval:
+            flux = np.ma.zeros(flux_length)
+        else:
+            flux = tt.zeros(flux_length)
+
+        # Evaluate flux
+        for component in self.components:
+            if component.modeltype == 'GP':
+                flux = component.eval(fit, channel=channel, eval=eval,
+                                      **kwargs)
+        return flux
 
     def physeval(self, channel=None, interp=False, eval=True, **kwargs):
         """Evaluate the physical model components only.
@@ -516,9 +556,83 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
             The value of self.time if interp==False, otherwise the time points
             used in the temporally interpolated model.
         """
-        # Inherit from CompositeModel but add eval argument for PyMC3 models
-        return CompositeModel.physeval(self, channel=channel, interp=interp,
-                                       eval=eval, **kwargs)
+        # Get the time
+        if self.time is None:
+            self.time = kwargs.get('time')
+
+        if channel is None:
+            nchan = self.nchannel_fitted
+            channels = self.fitted_channels
+        else:
+            nchan = 1
+            channels = [channel]
+
+        if interp:
+            if self.multwhite:
+                new_time = []
+                nints_interp = []
+                for chan in channels:
+                    # Split the arrays that have lengths of
+                    # the original time axis
+                    time = split([self.time, ], self.nints, chan)[0]
+
+                    # Remove masked points at the start or end to avoid
+                    # extrapolating out to those points
+                    time = time[~np.ma.getmaskarray(time)]
+
+                    # Get time step on full time array to ensure good steps
+                    dt = np.min(np.diff(time))
+
+                    # Interpolate as needed
+                    steps = int(np.round((time[-1]-time[0])/dt+1))
+                    nints_interp.append(steps)
+                    new_time.extend(np.linspace(time[0], time[-1], steps,
+                                                endpoint=True))
+                new_time = np.array(new_time)
+            else:
+                time = self.time
+
+                # Remove masked points at the start or end to avoid
+                # extrapolating out to those points
+                time = time[~np.ma.getmaskarray(time)]
+
+                # Get time step on full time array to ensure good steps
+                dt = np.min(np.diff(time))
+
+                # Interpolate as needed
+                dt = time[1]-time[0]
+                steps = int(np.round((time[-1]-time[0])/dt+1))
+                nints_interp = np.ones(nchan)*steps
+                new_time = np.linspace(time[0], time[-1], steps, endpoint=True)
+        else:
+            new_time = self.time
+            if self.multwhite and channel is not None:
+                # Split the arrays that have lengths of the original time axis
+                new_time = split([new_time, ], self.nints, channel)[0]
+            nints_interp = self.nints
+
+        if eval:
+            lib = np.ma
+        else:
+            lib = tt
+
+        # Setup the flux array
+        if self.multwhite:
+            flux = lib.ones(len(new_time))
+        else:
+            flux = lib.ones(len(new_time)*nchan)
+
+        # Evaluate flux at each component
+        for component in self.components:
+            if component.modeltype == 'physical':
+                if interp:
+                    flux *= component.interp(new_time, nints_interp,
+                                             channel=channel, eval=eval,
+                                             **kwargs)
+                else:
+                    flux *= component.eval(channel=channel, eval=eval,
+                                           **kwargs)
+        return flux, new_time, nints_interp
 
     def compute_fp(self, theta=0):
         """Compute the planetary flux at an arbitrary orbital position.
