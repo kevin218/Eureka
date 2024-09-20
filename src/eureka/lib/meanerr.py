@@ -26,7 +26,8 @@ def meanerr(data, derr, mask=None, err=False, status=False):
     meanerr: ndarray
         This function returns the error-weighted mean of the unmasked
         elements of Data. If err or status were set to True, then the
-        returned data be a tuple including one or both of the below parameters.
+        returned data will be a tuple including one or both of the following
+        parameters.
     err: ndarray; optional.
         Only returned if the argument "err" was set to True.
         Contains the error on the computed error-weighted mean.

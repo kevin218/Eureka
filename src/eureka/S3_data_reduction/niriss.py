@@ -1,10 +1,3 @@
-# NIRISS specific rountines go here
-#
-# Written by: Adina Feinstein
-# Last updated by: Taylor Bell
-# Last updated date: Sept 09, 2024
-#
-####################################
 import itertools
 import numpy as np
 import ccdproc as ccdp

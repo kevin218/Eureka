@@ -706,7 +706,7 @@ def manmask(data, meta, log):
                  mute=(not meta.verbose))
     for i in range(len(meta.manmask)):
         colstart, colend, rowstart, rowend = meta.manmask[i]
-        data['mask'][:, rowstart:rowend, colstart:colend] = True
+        data['mask'][:, rowstart:rowend+1, colstart:colend+1] = True
 
     return data
 

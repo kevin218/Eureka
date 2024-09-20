@@ -290,7 +290,7 @@ def residuals(params, x, data, mask, weights, bgpars, fitbg):
 
 
 def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
-                mask=None, weights=None, maskg=False, yxguess=None):
+                mask=None, weights=None, maskg=False, yxguess=None, radius=3):
     """Fits an N-dimensional Gaussian to (value, coordinate) data.
 
     Parameters
@@ -330,10 +330,13 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
         minimization, for scientific data the weights should be
         1/sqrt(variance).
     maskg : bool; optional
-        If true, mask the gaussian.
+        If true, mask the gaussian. Defaults to False.
     yxguess : tuple; optional
         A guess at just the centroid. Defaults to None which uses the data
         point with the highest value.
+    radius : int; optional
+        The radius over which the fitted gaussian should be masked if maskg
+        was set to True.
 
     Returns
     -------
@@ -528,8 +531,7 @@ def fitgaussian(y, x=None, bgpars=None, fitbg=0, guess=None,
             center = yxguess
         elif guess is not None:
             center = guess[1]
-        # FINDME: we shouldn't force a radius of only 3 pixels...
-        medmask += ~d.disk(3, center, np.shape(y))
+        medmask += ~d.disk(radius, center, np.shape(y))
 
     # Estimate the median of the image:
     medbg = np.ma.median(y)

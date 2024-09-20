@@ -509,7 +509,7 @@ def bkg_sub(img, mask, sigma=5, bkg_estimator='median',
     return b.background
 
 
-def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 2, 3]):
+def fitbg3(data, order_mask, readnoise=11, sigclip=[4, 4, 4]):
     """Fit sky background with out-of-spectra data. Optimized to remove
     the 1/f noise in the NIRISS spectra (works in the y-direction).
 

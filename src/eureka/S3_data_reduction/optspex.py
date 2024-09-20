@@ -404,9 +404,9 @@ def profile_wavelet2D(subdata, mask, wavelet, numlvls, isplots=0):
         plt.figure(3703)
         plt.clf()
         # plt.suptitle(str(j) + "," + str(iternum))
-        plt.plot(subdata[int(ny/2)].data, 'ro')
-        plt.plot(subdata[int(ny/2)], 'bo')
-        plt.plot(profile[int(ny/2)], 'g-')
+        plt.plot(subdata[ny//2].data, 'ro')
+        plt.plot(subdata[ny//2], 'bo')
+        plt.plot(profile[ny//2], 'g-')
 
         plt.figure(3704)
         plt.clf()
@@ -843,7 +843,6 @@ def optimize(meta, subdata, mask, bg, spectrum, Q, v0, p5thresh=10,
                 # Ignore warnings about columns that are completely masked
                 denom = np.ma.sum(profile*profile*~submask/variance, axis=0)
             denom = np.ma.masked_where(denom == 0, denom)
-            denom[np.where(denom == 0)] = np.inf
             spectrum = np.ma.sum(profile*~submask*subdata/variance,
                                  axis=0)/denom
 

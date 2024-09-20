@@ -297,13 +297,14 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 else:
                     meta.int_end = meta.int_start+meta.nplots
 
+                # Initialize bad pixel mask (False = good, True = bad)
+                data['mask'] = (['time', 'y', 'x'],
+                                np.zeros(data.flux.shape, dtype=bool))
+
                 # Perform BG subtraction along dispersion direction
                 # for untrimmed NIRCam spectroscopic data
                 if meta.bg_row_by_row:
                     meta.bg_dir = 'RxR'
-                    # Create bad pixel mask (False = good, True = bad)
-                    data['mask'] = (['time', 'y', 'x'],
-                                    np.zeros(data.flux.shape, dtype=bool))
                     data = bg.BGsubtraction(data, meta, log,
                                             m, meta.isplots_S3)
                     meta.bg_row_by_row = False
@@ -316,10 +317,6 @@ def reduce(eventlabel, ecf_path=None, s2_meta=None, input_meta=None):
                 # Trim data to subarray region of interest
                 # Dataset object no longer contains untrimmed data
                 data, meta = util.trim(data, meta)
-
-                # Create bad pixel mask (False = good, True = bad)
-                data['mask'] = (['time', 'y', 'x'],
-                                np.zeros(data.flux.shape, dtype=bool))
 
                 # Check if arrays have NaNs/infs
                 log.writelog('  Masking NaNs/infs in data arrays...',

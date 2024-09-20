@@ -388,7 +388,7 @@ def flag_bg_phot(data, meta, log):
                   desc='  Looping over rows for outlier removal'):
         for j in range(flux.shape[2]):  # Loops over Columns
             ngoodpix = np.sum(~mask[:, i, j])
-            data['mask'][:, i, j] += sigrej.sigrej(flux[:, i, j],
+            data['mask'][:, i, j] |= sigrej.sigrej(flux[:, i, j],
                                                    meta.bg_thresh,
                                                    mask[:, i, j], estsig)
             if any(data['mask'][:, i, j].values):

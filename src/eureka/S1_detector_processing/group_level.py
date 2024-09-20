@@ -54,7 +54,6 @@ def GLBS(input_model, log, meta):
         log.writelog(f'  Starting group {ngrp}.')
 
         grp_data = all_data[:, ngrp, :, :]
-        grp_mask = np.zeros(grp_data.shape, dtype=bool)
         grp_mask = (dq[:, ngrp, :, :] % 2 == 1) | (dq[:, ngrp, :, :] == 2)
         grp_mask |= ~np.isfinite(all_data[:, ngrp, :, :])
 
