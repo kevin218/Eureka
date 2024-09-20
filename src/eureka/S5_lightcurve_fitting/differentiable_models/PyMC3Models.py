@@ -175,7 +175,7 @@ class CompositePyMC3Model(PyMC3Model, CompositeModel):
         with self.model:
             for parname in self.parameters.params:
                 param = getattr(self.parameters, parname)
-                if param.ptype in ['fixed']:
+                if param.ptype in ['fixed', 'independent']:
                     setattr(self.model, parname, param.value)
                     self.model.named_vars[parname] = param.value
                 elif param.ptype not in ['free', 'shared', 'white_free',

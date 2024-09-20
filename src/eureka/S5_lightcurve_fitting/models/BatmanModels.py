@@ -123,38 +123,17 @@ class BatmanTransitModel(Model):
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
 
-                # Set limb darkening parameters
-                uarray = []
-                for uind in range(1, len(self.coeffs)+1):
-                    uarray.append(getattr(pl_params, f'u{uind}'))
-                pl_params.u = uarray
-                pl_params.limb_dark = self.parameters.dict['limb_dark'][0]
-
                 # Enforce physicality to avoid crashes from batman by returning
                 # something that should be a horrible fit
-                if not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
-                        (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
-                        (-1 <= pl_params.esinw <= 1)):
+                if (not ((0 < pl_params.per) and (0 < pl_params.inc <= 90) and
+                         (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
+                         (-1 <= pl_params.esinw <= 1))
+                    or (self.parameters.limb_dark.value == 'kipping2013' and
+                        pl_params.u_original[0] <= 0)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
                     continue
-
-                # Use batman ld_profile name
-                if self.parameters.limb_dark.value == '4-parameter':
-                    pl_params.limb_dark = 'nonlinear'
-                elif self.parameters.limb_dark.value == 'kipping2013':
-                    # Enforce physicality to avoid crashes from batman by
-                    # returning something that should be a horrible fit
-                    if pl_params.u[0] <= 0:
-                        # Returning nans or infs breaks the fits, so this was
-                        # the best I could think of
-                        light_curve = 1e6*np.ma.ones(time.shape)
-                        continue
-                    pl_params.limb_dark = 'quadratic'
-                    u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
-                    u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
-                    pl_params.u = np.array([u1, u2])
 
                 # Make the transit model
                 m_transit = self.transit_model(pl_params, time,
@@ -287,10 +266,6 @@ class BatmanEclipseModel(Model):
             for pid in pid_iter:
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
-
-                # Set limb darkening parameters
-                pl_params.u = []
-                pl_params.limb_dark = 'uniform'
 
                 # Enforce physicality to avoid crashes
                 if not ((0 < pl_params.per) and (0 < pl_params.inc < 90) and
