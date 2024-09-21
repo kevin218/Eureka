@@ -1,4 +1,3 @@
-import numpy as np
 from functools import partial
 try:
     import catwoman
@@ -31,4 +30,5 @@ class CatwomanTransitModel(BatmanTransitModel):
 
         if ('rp2' not in self.longparamlist[0]
                 and 'rprs2' not in self.longparamlist[0]):
-            raise AssertionError('You must include an rp2 parameter in your EPF when using catwoman.')
+            raise AssertionError('You must include an rp2 parameter in your '
+                                 'EPF when using catwoman.')

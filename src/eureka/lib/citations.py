@@ -752,8 +752,8 @@ CITATIONS = {
                     primaryClass = {astro-ph.IM},
                     adsurl = {https://ui.adsabs.harvard.edu/abs/2020JOSS....5.2382J},
                     adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-                }""",
-				r"""@software{catwoman:ascl,
+                  }""",
+                 r"""@software{catwoman:ascl,
                     author = {{Jones}, Kathryn and {Espinoza}, N{\'e}stor},
                     title = "{catwoman: Transit modeling Python package for asymmetric light curves}",
                     howpublished = {Astrophysics Source Code Library, record ascl:2108.007},
@@ -762,5 +762,5 @@ CITATIONS = {
                     eid = {ascl:2108.007},
                     adsurl = {https://ui.adsabs.harvard.edu/abs/2021ascl.soft08007J},
                     adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-                }"""]
+                  }"""]
 }
