@@ -735,5 +735,15 @@ CITATIONS = {
                     adsnote = {Provided by the SAO/NASA Astrophysics Data System}
                 }"""
                ],
+    "fleck": [r"""@software{2022ascl.soft03009M,
+                author = {{Morris}, Brett M.},
+                title = "{fleck: Fast starspot rotational modulation light curves}",
+                howpublished = {Astrophysics Source Code Library, record ascl:2203.009},
+                year = 2022,
+                month = mar,
+                eid = {ascl:2203.009},
+                adsurl = {https://ui.adsabs.harvard.edu/abs/2022ascl.soft03009M},
+                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+               }"""
+              ],
 }
-
